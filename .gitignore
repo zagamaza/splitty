@@ -1,0 +1,11 @@
+/logs/
+html/
+.DS_Store
+.idea/
+
+# code coverage report
+cover.out
+
+# internal binary
+/app/app
+.env
