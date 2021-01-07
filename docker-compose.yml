@@ -1,0 +1,24 @@
+telegram-bot:
+    build: .
+    hostname: telegram-bot
+    restart: always
+    container_name: telegram-bot
+
+    log_driver: "json-file"
+    log_opt:
+        max-size: "10m"
+        max-file: "5"
+
+    environment:
+        - TELEGRAM_TOKEN
+        - TELEGRAM_GROUP
+        - MASHAPE_TOKEN
+        - DEBUG=true
+    volumes:
+        - ./logs:/srv/logs
+        - ./html:/srv/html
+
+    ports:
+        - "18001:18001" # RJTC_PORT
+
+    command: /srv/telegram-rt-bot --super=umputun --super=bobuk --super=grayru --super=ksenks
