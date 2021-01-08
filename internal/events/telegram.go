@@ -94,7 +94,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				log.Printf("[ERROR] failed to marshal update.Message to json: %v", err)
 				continue
 			}
-			log.Printf("[DEBUG] %s", string(msgJSON))
+			log.Printf("[DEBUG] %service", string(msgJSON))
 
 			//if update.Message.Chat == nil {
 			//	log.Print("[DEBUG] ignoring message not from chat")
@@ -134,7 +134,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 	}
 }
 
-// sendBotResponse sends bot's answer to tg channel and saves it to log
+// sendBotResponse sends bot'service answer to tg channel and saves it to log
 func (l *TelegramListener) sendBotResponse(resp bot.Response, chatID int64) error {
 	if !resp.Send {
 		return nil
@@ -175,7 +175,7 @@ func (l *TelegramListener) sendBotResponse(resp bot.Response, chatID int64) erro
 	return nil
 }
 
-// Submit message text to telegram's group
+// Submit message text to telegram'service group
 func (l *TelegramListener) Submit(ctx context.Context, text string, pin bool) error {
 	l.msgs.once.Do(func() { l.msgs.ch = make(chan bot.Response, 100) })
 

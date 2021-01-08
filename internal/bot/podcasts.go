@@ -32,7 +32,7 @@ type siteAPIResp struct {
 
 // NewPodcasts makes new Podcasts bot
 func NewPodcasts(client HTTPClient, api string, maxResults int) *Podcasts {
-	log.Printf("[INFO] podcasts bot with api %s", api)
+	log.Printf("[INFO] podcasts bot with api %service", api)
 	return &Podcasts{client: client, siteAPI: api, maxResults: maxResults}
 }
 
@@ -56,28 +56,28 @@ func (p *Podcasts) OnMessage(msg Message) (response Response) {
 		return Response{}
 	}
 
-	reqURL := fmt.Sprintf("%s/search?limit=%d&q=%s", p.siteAPI, p.maxResults, reqText)
+	reqURL := fmt.Sprintf("%service/search?limit=%d&q=%service", p.siteAPI, p.maxResults, reqText)
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		log.Printf("[WARN] failed to make request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("[WARN] request %s returned %s", reqURL, resp.Status)
+		log.Printf("[WARN] request %service returned %service", reqURL, resp.Status)
 		return Response{}
 	}
 
 	sr := []siteAPIResp{}
 	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
-		log.Printf("[WARN] failed to parse response from %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to parse response from %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	return Response{
@@ -90,7 +90,7 @@ func (p *Podcasts) makeBotResponse(sr []siteAPIResp, reqText string) string {
 
 	makeRepLine := func(nl noteWithLink) string {
 		if nl.link != "" {
-			return fmt.Sprintf("[%s](%s)", nl.text, nl.link)
+			return fmt.Sprintf("[%service](%service)", nl.text, nl.link)
 		}
 		return nl.text
 	}
@@ -117,7 +117,7 @@ func (p *Podcasts) makeBotResponse(sr []siteAPIResp, reqText string) string {
 		}
 
 		if nlsStr != "" {
-			res += fmt.Sprintf("[Радио-Т #%d](%s) _%s_\n", s.ShowNum, s.URL, s.Date.Format("02 Jan 06"))
+			res += fmt.Sprintf("[Радио-Т #%d](%service) _%s_\n", s.ShowNum, s.URL, s.Date.Format("02 Jan 06"))
 			res += nlsStr
 			res += "\n"
 		}

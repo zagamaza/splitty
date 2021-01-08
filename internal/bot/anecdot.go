@@ -45,12 +45,12 @@ func (a Anecdote) rzhunemogu() (response Response) {
 
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
-		log.Printf("[WARN] failed to make request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	resp, err := a.client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer resp.Body.Close()
@@ -88,12 +88,12 @@ func (a Anecdote) chuck() (response Response) {
 	reqURL := "http://api.icndb.com/jokes/random"
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
-		log.Printf("[WARN] failed to make request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	resp, err := a.client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer resp.Body.Close()

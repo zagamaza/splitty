@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/reporter"
-	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
@@ -21,6 +20,7 @@ import (
 	"github.com/almaznur91/splitty/internal/events"
 	"github.com/go-pkgz/lgr"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/xlab/closer"
 )
 
 var opts struct {
@@ -43,9 +43,10 @@ var opts struct {
 var revision = "local"
 
 func main() {
-	ctx := context.TODO()
+	defer closer.Close()
+	ctx := context.Background()
 
-	fmt.Printf("radio-t bot, %s\n", revision)
+	fmt.Printf("radio-t bot, %service\n", revision)
 	if _, err := flags.Parse(&opts); err != nil {
 		log.Err(err).Msg("[ERROR] failed to parse flags")
 		os.Exit(1)
@@ -62,22 +63,27 @@ func main() {
 	setupLog(opts.Dbg)
 
 	rand.Seed(int64(time.Now().Nanosecond()))
-	database, _, err := initMongoConnection(ctx, cfg)
-	mongoMineRepository := repository.New(database)
-	mineService := service.New(mongoMineRepository)
 
-	if err := initTelegramConfig(ctx, cfg, mineService); err != nil {
-		log.Fatal().Err(err).Msg("[ERROR] telegram listener failed")
+	app, cl, err := initApp(ctx, cfg)
+	if err != nil {
+		log.Error().Err(err).Msg("Can not init application")
+		return
+	}
+	closer.Bind(cl)
 
+	if err := app.Do(ctx); err != nil {
+		log.Error().Err(err).Msg("telegram listener failed")
+		return
 	}
 }
 
-func initTelegramConfig(ctx context.Context, cfg *config, sc service.Service) error {
+func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserService, rs *service.RoomService) (*events.TelegramListener, error) {
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
 	if err != nil {
-		log.Fatal().Err(err).Msg("[ERROR] can't make telegram bot")
+		log.Error().Err(err).Msg("[ERROR] can't make telegram bot")
+		return nil, err
 	}
 	tbAPI.Debug = cfg.LogLevel == "debug"
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
@@ -93,7 +99,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc service.Service) er
 		bot.NewNews(httpClient, "https://news.radio-t.com/api", opts.NewsArticles),
 		bot.NewAnecdote(httpClient),
 		bot.NewStackOverflow(),
-		bot.NewStart(sc),
+		bot.NewStart(sc, rs),
 		bot.NewDuck(opts.MashapeToken, httpClient),
 		bot.NewPodcasts(httpClient, "https://radio-t.com/site-api", 5),
 		bot.NewPrepPost(httpClient, "https://radio-t.com/site-api", 5*time.Minute),
@@ -106,7 +112,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc service.Service) er
 		log.Printf("[ERROR] failed to load sysbot, %v", err)
 	}
 
-	tgListener := events.TelegramListener{
+	tgListener := &events.TelegramListener{
 		TbAPI:        tbAPI,
 		Bots:         multiBot,
 		Debug:        opts.Dbg,
@@ -116,10 +122,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc service.Service) er
 		SuperUsers:   cfg.SuperUsers,
 	}
 
-	if err := tgListener.Do(ctx); err != nil {
-		log.Fatal().Err(err).Msg("[ERROR] telegram listener failed")
-	}
-	return nil
+	return tgListener, nil
 }
 
 func setupLog(dbg bool) {
@@ -142,7 +145,7 @@ func initLogger(c *config) error {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 	case "json":
 	default:
-		return fmt.Errorf("unknown output format %s", c.LogFmt)
+		return fmt.Errorf("unknown output format %service", c.LogFmt)
 	}
 	return nil
 }

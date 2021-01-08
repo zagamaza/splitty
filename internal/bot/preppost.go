@@ -32,12 +32,12 @@ var errNotPost = errors.New("not prep post")
 
 // NewPrepPost makes new PrepPost bot sending and pinning message "Начался сбор тем"
 func NewPrepPost(client HTTPClient, api string, d time.Duration) *PrepPost {
-	log.Printf("[INFO] prep-post bot with api %s", api)
+	log.Printf("[INFO] prep-post bot with api %service", api)
 	return &PrepPost{client: client, siteAPI: api, checkDuration: d}
 }
 
 // OnMessage reacts on any message and, from time to time (every checkDuration) hits site api
-// and gets the latest prep article. In case if article's url changed returns pinned response.
+// and gets the latest prep article. In case if article'service url changed returns pinned response.
 // Skips the first check to avoid false-positive on restart
 func (p *PrepPost) OnMessage(Message) (response Response) {
 
@@ -62,33 +62,33 @@ func (p *PrepPost) OnMessage(Message) (response Response) {
 	}()
 
 	if p.last.prepPost.URL != "" && pi.URL != p.last.prepPost.URL {
-		log.Printf("[INFO] detected new prep topic %s", pi.URL)
-		return Response{Send: true, Pin: true, Text: fmt.Sprintf("Сбор тем начался - %s", pi.URL)}
+		log.Printf("[INFO] detected new prep topic %service", pi.URL)
+		return Response{Send: true, Pin: true, Text: fmt.Sprintf("Сбор тем начался - %service", pi.URL)}
 	}
 	return Response{}
 }
 
 func (p *PrepPost) recentPrepPost() (pi postInfo, err error) {
 
-	reqURL := fmt.Sprintf("%s/last/1?categories=prep", p.siteAPI)
+	reqURL := fmt.Sprintf("%service/last/1?categories=prep", p.siteAPI)
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
-		return pi, errors.Wrapf(err, "failed to make request %s", reqURL)
+		return pi, errors.Wrapf(err, "failed to make request %service", reqURL)
 	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return pi, errors.Wrapf(err, "failed to send request %s", reqURL)
+		return pi, errors.Wrapf(err, "failed to send request %service", reqURL)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return pi, errors.Errorf("request %s returned %d", reqURL, resp.StatusCode)
+		return pi, errors.Errorf("request %service returned %d", reqURL, resp.StatusCode)
 	}
 
 	posts := []postInfo{}
 	if err := json.NewDecoder(resp.Body).Decode(&posts); err != nil {
-		return pi, errors.Wrapf(err, "failed to parse response from %s", reqURL)
+		return pi, errors.Wrapf(err, "failed to parse response from %service", reqURL)
 	}
 
 	if len(posts) > 0 {

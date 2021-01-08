@@ -75,25 +75,25 @@ func NewExporter(fileRecipient FileRecipient, storage Storage, params ExporterPa
 
 // Export to html with showNum
 func (e *Exporter) Export(showNum int, yyyymmdd int) error {
-	from := fmt.Sprintf("%s/%s.log", e.InputRoot, time.Now().Format("20060102")) // current day by default
+	from := fmt.Sprintf("%service/%service.log", e.InputRoot, time.Now().Format("20060102")) // current day by default
 	if yyyymmdd != 0 {
-		from = fmt.Sprintf("%s/%d.log", e.InputRoot, yyyymmdd)
+		from = fmt.Sprintf("%service/%d.log", e.InputRoot, yyyymmdd)
 	}
-	to := fmt.Sprintf("%s/radio-t-%d.html", e.OutputRoot, showNum)
+	to := fmt.Sprintf("%service/radio-t-%d.html", e.OutputRoot, showNum)
 
 	messages, err := readMessages(from, e.ExporterParams.BroadcastUsers)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read messages from %s", from)
+		return errors.Wrapf(err, "failed to read messages from %service", from)
 	}
 
 	fh, err := os.OpenFile(to, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666) // nolint
 	if err != nil {
-		return errors.Wrapf(err, "failed to open destination file %s", to)
+		return errors.Wrapf(err, "failed to open destination file %service", to)
 	}
 
 	defer func() {
 		if err := fh.Close(); err != nil {
-			log.Printf("[WARN] failed to close %s, %v", fh.Name(), err)
+			log.Printf("[WARN] failed to close %service, %v", fh.Name(), err)
 		}
 	}()
 
@@ -103,10 +103,10 @@ func (e *Exporter) Export(showNum int, yyyymmdd int) error {
 	}
 
 	if _, err = fh.WriteString(h); err != nil {
-		return errors.Wrapf(err, "failed to write HTML to file %s", to)
+		return errors.Wrapf(err, "failed to write HTML to file %service", to)
 	}
 
-	log.Printf("[INFO] exported %d lines to %s", len(messages), to)
+	log.Printf("[INFO] exported %d lines to %service", len(messages), to)
 	return nil
 }
 
@@ -183,7 +183,7 @@ func (e *Exporter) maybeDownloadFile(fileID string) error {
 
 	fileExists, err := e.storage.FileExists(fileID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to check if file %s exists", fileID)
+		return errors.Wrapf(err, "failed to check if file %service exists", fileID)
 	}
 
 	if fileExists {
@@ -191,22 +191,22 @@ func (e *Exporter) maybeDownloadFile(fileID string) error {
 		return nil
 	}
 
-	log.Printf("[DEBUG] downloading file %s", fileID)
+	log.Printf("[DEBUG] downloading file %service", fileID)
 	body, err := e.fileRecipient.GetFile(fileID)
 	if err != nil {
-		return errors.Wrapf(err, "failed to get file body for %s", fileID)
+		return errors.Wrapf(err, "failed to get file body for %service", fileID)
 	}
 	defer body.Close()
 
 	bodyBytes, err := ioutil.ReadAll(body)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read file body for %s", fileID)
+		return errors.Wrapf(err, "failed to read file body for %service", fileID)
 	}
-	log.Printf("[DEBUG] downloaded file %s", fileID)
+	log.Printf("[DEBUG] downloaded file %service", fileID)
 
 	fileURL, err := e.storage.CreateFile(fileID, bodyBytes)
 	if err != nil {
-		return errors.Wrapf(err, "failed to create file %s", fileID)
+		return errors.Wrapf(err, "failed to create file %service", fileID)
 	}
 
 	e.fileIDToURL[fileID] = fileURL
@@ -222,7 +222,7 @@ func readMessages(path string, broadcastUsers SuperUser) ([]bot.Message, error) 
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			log.Printf("[WARN] can't close %s", file.Name())
+			log.Printf("[WARN] can't close %service", file.Name())
 		}
 	}()
 
@@ -238,7 +238,7 @@ func readMessages(path string, broadcastUsers SuperUser) ([]bot.Message, error) 
 		msg := bot.Message{}
 		line := scanner.Text()
 		if err := json.Unmarshal([]byte(line), &msg); err != nil {
-			log.Printf("[ERROR] failed to unmarshal %s, error=%v", line, err)
+			log.Printf("[ERROR] failed to unmarshal %service, error=%v", line, err)
 			continue
 		}
 
@@ -349,7 +349,7 @@ func getDecoration(entity bot.Entity, body []rune) (string, string) {
 		return "<u>", "</u>"
 
 	case "strikethrough":
-		return "<s>", "</s>"
+		return "<service>", "</service>"
 
 	case "code":
 		return "<code>", "</code>"
@@ -358,7 +358,7 @@ func getDecoration(entity bot.Entity, body []rune) (string, string) {
 		return "<pre>", "</pre>"
 
 	case "text_link":
-		return fmt.Sprintf("<a href=\"%s\">", entity.URL), "</a>"
+		return fmt.Sprintf("<a href=\"%service\">", entity.URL), "</a>"
 
 	case "url":
 		urlRaw := string(body)
@@ -366,7 +366,7 @@ func getDecoration(entity bot.Entity, body []rune) (string, string) {
 		// fix links without scheme so they will be non-relative in browser
 		u, err := url.Parse(urlRaw)
 		if err != nil {
-			log.Printf("[ERROR] failed parse URL %s", urlRaw)
+			log.Printf("[ERROR] failed parse URL %service", urlRaw)
 		} else {
 			if u.Scheme == "" {
 				u.Scheme = "https"
@@ -374,17 +374,17 @@ func getDecoration(entity bot.Entity, body []rune) (string, string) {
 			}
 		}
 
-		return fmt.Sprintf("<a href=\"%s\">", urlRaw), "</a>"
+		return fmt.Sprintf("<a href=\"%service\">", urlRaw), "</a>"
 
 	case "mention":
-		return fmt.Sprintf("<a class=\"mention\" href=\"https://t.me/%s\">", string(body[1:])), "</a>"
-		// body[1:] because first symbol in mention is "@" it's not needed for link
+		return fmt.Sprintf("<a class=\"mention\" href=\"https://t.me/%service\">", string(body[1:])), "</a>"
+		// body[1:] because first symbol in mention is "@" it'service not needed for link
 
 	case "email":
-		return fmt.Sprintf("<a href=\"mailto:%s\">", string(body)), "</a>"
+		return fmt.Sprintf("<a href=\"mailto:%service\">", string(body)), "</a>"
 
 	case "phone_number":
-		return fmt.Sprintf("<a href=\"tel:%s\">", cleanPhoneNumber(string(body))), "</a>"
+		return fmt.Sprintf("<a href=\"tel:%service\">", cleanPhoneNumber(string(body))), "</a>"
 
 	// intentionally ignored:
 	case "text_mention": // for users without usernames

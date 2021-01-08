@@ -45,12 +45,12 @@ func (s StackOverflow) OnMessage(msg Message) (response Response) {
 
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
-		log.Printf("[WARN] failed to prep request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to prep request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer resp.Body.Close()
@@ -67,7 +67,7 @@ func (s StackOverflow) OnMessage(msg Message) (response Response) {
 
 	r := soRecs.Items[rand.Intn(len(soRecs.Items))]
 	return Response{
-		Text: fmt.Sprintf("[%s](%s) %s", r.Title, r.Link, strings.Join(r.Tags, ",")),
+		Text: fmt.Sprintf("[%service](%service) %service", r.Title, r.Link, strings.Join(r.Tags, ",")),
 		Send: true,
 	}
 }

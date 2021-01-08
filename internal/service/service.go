@@ -18,15 +18,22 @@ type Service interface {
 	EmptyMine(ctx context.Context, name string) (diamondCount int, err error)
 }
 
-func New(r repository.MineRepository) *SimpleMineService {
-	return &SimpleMineService{r: r}
+func NewUserService(r repository.UserRepository) *UserService {
+	return &UserService{r: r}
+}
+func NewRoomService(r repository.RoomRepository) *RoomService {
+	return &RoomService{r: r}
 }
 
-type SimpleMineService struct {
-	r repository.MineRepository
+type UserService struct {
+	r repository.UserRepository
 }
 
-func (s *SimpleMineService) UpsertUser(ctx context.Context, user *tbapi.User) error {
+type RoomService struct {
+	r repository.RoomRepository
+}
+
+func (s *UserService) UpsertUser(ctx context.Context, user *tbapi.User) error {
 	u, err := ToUserEntity(ctx, user)
 	if err != nil {
 		log.Err(err)
@@ -34,7 +41,7 @@ func (s *SimpleMineService) UpsertUser(ctx context.Context, user *tbapi.User) er
 	return s.r.UpsertUser(ctx, u)
 }
 
-func (s *SimpleMineService) GetDiamonds(ctx context.Context, mineName string) (int, error) {
+func (s *UserService) GetDiamonds(ctx context.Context, mineName string) (int, error) {
 	m, err := s.r.FindByName(ctx, mineName)
 	if err == mongo.ErrNoDocuments {
 		return 0, echo.ErrNotFound
@@ -54,7 +61,7 @@ func (s *SimpleMineService) GetDiamonds(ctx context.Context, mineName string) (i
 	return dc, nil
 }
 
-func (s *SimpleMineService) GetAllMines(ctx context.Context) ([]repository.Mine, error) {
+func (s *UserService) GetAllMines(ctx context.Context) ([]repository.Mine, error) {
 	r, err := s.r.GetAllMines(ctx)
 	if err == mongo.ErrNoDocuments {
 		return nil, echo.ErrNotFound
@@ -62,11 +69,11 @@ func (s *SimpleMineService) GetAllMines(ctx context.Context) ([]repository.Mine,
 	return r, err
 }
 
-func (s *SimpleMineService) AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error) {
+func (s *UserService) AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error) {
 	return s.r.AddDiamondMine(ctx, m)
 }
 
-func (s *SimpleMineService) EmptyMine(ctx context.Context, name string) (diamondCount int, err error) {
+func (s *UserService) EmptyMine(ctx context.Context, name string) (diamondCount int, err error) {
 	r, err := s.r.EmptyMine(ctx, name)
 	if err == mongo.ErrNoDocuments {
 		return 0, echo.ErrNotFound

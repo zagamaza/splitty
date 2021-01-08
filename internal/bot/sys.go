@@ -29,7 +29,7 @@ type sysCommand struct {
 
 // NewSys makes new sys bot and load data to []say and basic map
 func NewSys(dataLocation string) (*Sys, error) {
-	log.Printf("[INFO] created sys bot, data location=%s", dataLocation)
+	log.Printf("[INFO] created sys bot, data location=%service", dataLocation)
 	res := Sys{dataLocation: dataLocation}
 	if err := res.loadBasicData(); err != nil {
 		return nil, err
@@ -83,7 +83,7 @@ func (p *Sys) loadBasicData() error {
 	for _, line := range bdata {
 		elems := strings.Split(line, "|")
 		if len(elems) != 3 {
-			log.Printf("[DEBUG] bad format %s, ignored", line)
+			log.Printf("[DEBUG] bad format %service, ignored", line)
 			continue
 		}
 		sysCommand := sysCommand{
@@ -92,7 +92,7 @@ func (p *Sys) loadBasicData() error {
 			triggers:    strings.Split(elems[0], ";"),
 		}
 		p.commands = append(p.commands, sysCommand)
-		log.Printf("[DEBUG] loaded basic response, %v, %s", sysCommand.triggers, sysCommand.message)
+		log.Printf("[DEBUG] loaded basic response, %v, %service", sysCommand.triggers, sysCommand.message)
 	}
 	return nil
 }
@@ -110,7 +110,7 @@ func (p *Sys) loadSayData() error {
 func readLines(path string) ([]string, error) {
 	f, err := os.Open(filepath.Clean(path))
 	if err != nil {
-		return nil, errors.Wrapf(err, "can't open %s", path)
+		return nil, errors.Wrapf(err, "can't open %service", path)
 	}
 	defer f.Close() //nolint
 

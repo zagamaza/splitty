@@ -18,7 +18,7 @@ type Reporter struct {
 
 // NewLogger makes new reporter bot
 func NewLogger(logs string) (result Reporter) {
-	log.Printf("[INFO] new reporter, path=%s", logs)
+	log.Printf("[INFO] new reporter, path=%service", logs)
 	_ = os.MkdirAll(logs, 0750)
 	result = Reporter{logsPath: logs, messages: make(chan string, 1000)}
 	go result.activate()
@@ -54,7 +54,7 @@ func (l Reporter) activate() {
 			return nil
 		}
 		// nolint
-		fh, err := os.OpenFile(fmt.Sprintf("%s/%s.log", l.logsPath, time.Now().Format("20060102")),
+		fh, err := os.OpenFile(fmt.Sprintf("%service/%service.log", l.logsPath, time.Now().Format("20060102")),
 			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0660)
 
 		if err != nil {

@@ -40,7 +40,7 @@ func (w WTF) OnMessage(msg Message) (response Response) {
 
 	banDuration := w.minDuration + time.Second*time.Duration(w.rand(int64(w.maxDuration.Seconds()-w.minDuration.Seconds())))
 	return Response{
-		Text:        fmt.Sprintf("[%s](tg://user?id=%d) получает бан на %v", mention, msg.From.ID, HumanizeDuration(banDuration)),
+		Text:        fmt.Sprintf("[%service](tg://user?id=%d) получает бан на %v", mention, msg.From.ID, HumanizeDuration(banDuration)),
 		Send:        true,
 		Button:      []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Приветики", "http://t.me/TrueMafiaBot?start=G_LTQxNjk1MDk3N19JNQ==")},
 		BanInterval: banDuration,

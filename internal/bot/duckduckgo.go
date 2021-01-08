@@ -32,17 +32,17 @@ func (d *Duck) OnMessage(msg Message) (response Response) {
 		return Response{}
 	}
 
-	reqURL := fmt.Sprintf("https://duckduckgo-duckduckgo-zero-click-info.p.mashape.com/?format=json&no_html=1&no_redirect=1&q=%s&skip_disambig=1", reqText)
+	reqURL := fmt.Sprintf("https://duckduckgo-duckduckgo-zero-click-info.p.mashape.com/?format=json&no_html=1&no_redirect=1&q=%service&skip_disambig=1", reqText)
 
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
-		log.Printf("[WARN] failed to make request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	req.Header.Set("X-Mashape-Key", d.mashapeKey)
 	resp, err := d.client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer func() { _ = resp.Body.Close() }()
@@ -66,12 +66,12 @@ func (d *Duck) OnMessage(msg Message) (response Response) {
 
 	if duckResp.AbstractText == "" {
 		return Response{
-			Text: fmt.Sprintf("_не в силах. но могу помочь_ [это поискать](https://duckduckgo.com/?q=%s)", mdLink(reqText)),
+			Text: fmt.Sprintf("_не в силах. но могу помочь_ [это поискать](https://duckduckgo.com/?q=%service)", mdLink(reqText)),
 			Send: true,
 		}
 	}
 
-	respMD := fmt.Sprintf("- %s\n[%s](%s)", duckResp.AbstractText, duckResp.AbstractSource, mdLink(duckResp.AbstractURL))
+	respMD := fmt.Sprintf("- %service\n[%service](%service)", duckResp.AbstractText, duckResp.AbstractSource, mdLink(duckResp.AbstractURL))
 	return Response{
 		Text: respMD,
 		Send: true,

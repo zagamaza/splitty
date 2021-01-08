@@ -9,14 +9,16 @@ import (
 // StackOverflow bot, returns from "https://api.stackexchange.com/2.2/questions?order=desc&sort=activity&site=stackoverflow"
 // reacts on "so!" prefix, i.e. "so! golang"
 type Start struct {
-	sc service.Service
+	sc *service.UserService
+	rs *service.RoomService
 }
 
 // NewStackOverflow makes a bot for SO
-func NewStart(service service.Service) *Start {
+func NewStart(s *service.UserService, rs *service.RoomService) *Start {
 	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Start{
-		sc: service,
+		sc: s,
+		rs: rs,
 	}
 }
 
@@ -30,7 +32,6 @@ func (s Start) OnMessage(msg Message) (response Response) {
 	if !contains(s.ReactOn(), msg.Text) {
 		return Response{}
 	}
-
 	return Response{
 		Text:    "Приветики",
 		Button:  []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Приветики", "http://t.me/ZagaMaza1_bot?start=G_LTQxNjk1MDk3N19JNQ==")},

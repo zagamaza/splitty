@@ -88,7 +88,7 @@ func TestTelegramListener_DoWithBots(t *testing.T) {
 	bots.On("OnMessage", mock.MatchedBy(func(msg bot.Message) bool {
 		t.Logf("on-message: %+v", msg)
 		return msg.Text == "text 123" && msg.From.Username == "user"
-	})).Return(bot.Response{Send: true, Text: "bot's answer"})
+	})).Return(bot.Response{Send: true, Text: "bot'service answer"})
 
 	msgLogger.On("Save", mock.MatchedBy(func(msg *bot.Message) bool {
 		t.Logf("save: %+v", msg)
@@ -96,13 +96,13 @@ func TestTelegramListener_DoWithBots(t *testing.T) {
 	}))
 	msgLogger.On("Save", mock.MatchedBy(func(msg *bot.Message) bool {
 		t.Logf("save: %+v", msg)
-		return msg.Text == "bot's answer"
+		return msg.Text == "bot'service answer"
 	}))
 
 	tbAPI.On("Send", mock.MatchedBy(func(c tbapi.MessageConfig) bool {
 		t.Logf("send: %+v", c)
-		return c.Text == "bot's answer"
-	})).Return(tbapi.Message{Text: "bot's answer", From: &tbapi.User{UserName: "user"}}, nil)
+		return c.Text == "bot'service answer"
+	})).Return(tbapi.Message{Text: "bot'service answer", From: &tbapi.User{UserName: "user"}}, nil)
 
 	err := l.Do(ctx)
 	assert.EqualError(t, err, "telegram update chan closed")
@@ -255,7 +255,7 @@ func TestTelegramListener_DoWithBotBan(t *testing.T) {
 	bots.On("OnMessage", mock.MatchedBy(func(msg bot.Message) bool {
 		t.Logf("on-message: %+v", msg)
 		return msg.Text == "text 123" && msg.From.Username == "user"
-	})).Return(bot.Response{Send: true, Text: "bot's answer", BanInterval: 2 * time.Minute})
+	})).Return(bot.Response{Send: true, Text: "bot'service answer", BanInterval: 2 * time.Minute})
 
 	msgLogger.On("Save", mock.MatchedBy(func(msg *bot.Message) bool {
 		t.Logf("save: %+v", msg)
@@ -263,13 +263,13 @@ func TestTelegramListener_DoWithBotBan(t *testing.T) {
 	}))
 	msgLogger.On("Save", mock.MatchedBy(func(msg *bot.Message) bool {
 		t.Logf("save: %+v", msg)
-		return msg.Text == "bot's answer"
+		return msg.Text == "bot'service answer"
 	}))
 
 	tbAPI.On("Send", mock.MatchedBy(func(c tbapi.MessageConfig) bool {
 		t.Logf("send: %+v", c)
-		return c.Text == "bot's answer"
-	})).Return(tbapi.Message{Text: "bot's answer", From: &tbapi.User{UserName: "user"}}, nil)
+		return c.Text == "bot'service answer"
+	})).Return(tbapi.Message{Text: "bot'service answer", From: &tbapi.User{UserName: "user"}}, nil)
 
 	tbAPI.On("RestrictChatMember", mock.Anything).Return(tbapi.APIResponse{Ok: true}, nil)
 
@@ -316,12 +316,12 @@ func TestTelegramListener_DoPinMessages(t *testing.T) {
 	bots.On("OnMessage", mock.MatchedBy(func(msg bot.Message) bool {
 		t.Logf("on-message: %+v", msg)
 		return msg.Text == "text 123" && msg.From.Username == "user"
-	})).Return(bot.Response{Send: true, Text: "bot's answer", Pin: true})
+	})).Return(bot.Response{Send: true, Text: "bot'service answer", Pin: true})
 
 	tbAPI.On("Send", mock.MatchedBy(func(c tbapi.MessageConfig) bool {
 		t.Logf("send: %+v", c)
-		return c.Text == "bot's answer"
-	})).Return(tbapi.Message{MessageID: 456, Text: "bot's answer", From: &tbapi.User{UserName: "user"}}, nil)
+		return c.Text == "bot'service answer"
+	})).Return(tbapi.Message{MessageID: 456, Text: "bot'service answer", From: &tbapi.User{UserName: "user"}}, nil)
 
 	tbAPI.On("PinChatMessage", mock.MatchedBy(func(c tbapi.PinChatMessageConfig) bool {
 		t.Logf("pin chat message: %+v", c)
@@ -370,12 +370,12 @@ func TestTelegramListener_DoUnpinMessages(t *testing.T) {
 	bots.On("OnMessage", mock.MatchedBy(func(msg bot.Message) bool {
 		t.Logf("on-message: %+v", msg)
 		return msg.Text == "text 123" && msg.From.Username == "user"
-	})).Return(bot.Response{Send: true, Text: "bot's answer", Unpin: true})
+	})).Return(bot.Response{Send: true, Text: "bot'service answer", Unpin: true})
 
 	tbAPI.On("Send", mock.MatchedBy(func(c tbapi.MessageConfig) bool {
 		t.Logf("send: %+v", c)
-		return c.Text == "bot's answer"
-	})).Return(tbapi.Message{MessageID: 456, Text: "bot's answer", From: &tbapi.User{UserName: "user"}}, nil)
+		return c.Text == "bot'service answer"
+	})).Return(tbapi.Message{MessageID: 456, Text: "bot'service answer", From: &tbapi.User{UserName: "user"}}, nil)
 
 	tbAPI.On("UnpinChatMessage", mock.MatchedBy(func(c tbapi.UnpinChatMessageConfig) bool {
 		t.Logf("unpin chat message: %+v", c)
@@ -419,8 +419,8 @@ func TestTelegramListener_DoNotSaveMessagesFromOtherChats(t *testing.T) {
 	close(updChan)
 	tbAPI.On("GetUpdatesChan", mock.Anything).Return(tbapi.UpdatesChannel(updChan), nil)
 
-	bots.On("OnMessage", mock.Anything).Return(bot.Response{Send: true, Text: "bot's answer"})
-	tbAPI.On("Send", mock.Anything).Return(tbapi.Message{Text: "bot's answer", From: &tbapi.User{UserName: "user"}}, nil)
+	bots.On("OnMessage", mock.Anything).Return(bot.Response{Send: true, Text: "bot'service answer"})
+	tbAPI.On("Send", mock.Anything).Return(tbapi.Message{Text: "bot'service answer", From: &tbapi.User{UserName: "user"}}, nil)
 
 	err := l.Do(ctx)
 	assert.EqualError(t, err, "telegram update chan closed")

@@ -51,9 +51,9 @@ func TestExporter_Export(t *testing.T) {
 
 	for i, tt := range tbl {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			from := fmt.Sprintf("%s/%s.log", e.InputRoot, time.Now().Format("20060102"))
+			from := fmt.Sprintf("%service/%service.log", e.InputRoot, time.Now().Format("20060102"))
 			if tt.yyyymmdd != 0 {
-				from = fmt.Sprintf("%s/%d.log", e.InputRoot, tt.yyyymmdd)
+				from = fmt.Sprintf("%service/%d.log", e.InputRoot, tt.yyyymmdd)
 			}
 			err := createFile(from, msgs)
 			assert.NoError(t, err)
@@ -399,7 +399,7 @@ func TestExporter_format(t *testing.T) {
 		{
 			"some text here",
 			&[]bot.Entity{{Type: "strikethrough", Offset: 5, Length: 4}},
-			"some <s>text</s> here",
+			"some <service>text</service> here",
 		},
 		{
 			"here is some link",

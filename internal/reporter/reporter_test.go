@@ -35,7 +35,7 @@ func TestNewLogger(t *testing.T) {
 				reporter.Save(&msg)
 			}
 			time.Sleep(tt.timeout)
-			logfile := fmt.Sprintf("%s/%s.log", logs, time.Now().Format("20060102"))
+			logfile := fmt.Sprintf("%service/%service.log", logs, time.Now().Format("20060102"))
 			assert.FileExists(t, logfile)
 			err := os.Remove(logfile)
 			assert.NoError(t, err)

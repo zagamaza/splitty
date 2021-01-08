@@ -19,7 +19,7 @@ import (
 //go:generate mockery -inpkg -name Interface -case snake
 //go:generate mockery -name SuperUser -case snake
 
-// genHelpMsg construct help message from bot's ReactOn
+// genHelpMsg construct help message from bot'service ReactOn
 func genHelpMsg(com []string, msg string) string {
 	return strings.Join(com, ", ") + " _– " + msg + "_\n"
 }
@@ -31,7 +31,7 @@ type Interface interface {
 	Help() string
 }
 
-// Response describes bot's answer on particular message
+// Response describes bot'service answer on particular message
 type Response struct {
 	Text        string
 	Button      []tgbotapi.InlineKeyboardButton
@@ -203,7 +203,7 @@ func contains(s []string, e string) bool {
 func makeHTTPRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to make request %s", url)
+		return nil, errors.Wrapf(err, "failed to make request %service", url)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")

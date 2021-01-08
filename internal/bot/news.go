@@ -23,7 +23,7 @@ type newsArticle struct {
 
 // NewNews makes new News bot
 func NewNews(client HTTPClient, api string, max int) *News {
-	log.Printf("[INFO] news bot with api %s", api)
+	log.Printf("[INFO] news bot with api %service", api)
 	return &News{client: client, newsAPI: api, numArticles: max}
 }
 
@@ -38,18 +38,18 @@ func (n News) OnMessage(msg Message) (response Response) {
 		return Response{}
 	}
 
-	reqURL := fmt.Sprintf("%s/v1/news/last/%d", n.newsAPI, n.numArticles)
-	log.Printf("[DEBUG] request %s", reqURL)
+	reqURL := fmt.Sprintf("%service/v1/news/last/%d", n.newsAPI, n.numArticles)
+	log.Printf("[DEBUG] request %service", reqURL)
 
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
-		log.Printf("[WARN] failed to make request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 
 	resp, err := n.client.Do(req)
 	if err != nil {
-		log.Printf("[WARN] failed to send request %s, error=%v", reqURL, err)
+		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
 		return Response{}
 	}
 	defer resp.Body.Close()
@@ -62,7 +62,7 @@ func (n News) OnMessage(msg Message) (response Response) {
 
 	var lines []string
 	for _, a := range articles {
-		lines = append(lines, fmt.Sprintf("- [%s](%s) %s", a.Title, a.Link, a.Ts.Format("2006-01-02")))
+		lines = append(lines, fmt.Sprintf("- [%service](%service) %service", a.Title, a.Link, a.Ts.Format("2006-01-02")))
 	}
 	return Response{
 		Text: strings.Join(lines, "\n") + "\n- [все новости и темы](https://news.radio-t.com)",
