@@ -112,6 +112,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc service.Service) er
 		Debug:        opts.Dbg,
 		MsgLogger:    reporter.NewLogger(opts.LogsPath),
 		IdleDuration: opts.IdleDuration,
+		Service:      sc,
 		SuperUsers:   cfg.SuperUsers,
 	}
 

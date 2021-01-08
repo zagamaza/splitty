@@ -4,6 +4,7 @@ import (
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Mine struct {
@@ -12,12 +13,19 @@ type Mine struct {
 	DiamondCount int    `json:"diamond_count" bson:"diamond_count"`
 }
 
+type User struct {
+	ID          int    `json:"id" bson:"id"`
+	Username    string `json:"userName" bson:"user_name"`
+	DisplayName string `json:"displayName" bson:"display_name"`
+}
+
 type MineRepository interface {
 	UpdateMine(ctx context.Context, mineName string, newCount int) error
 	FindByName(ctx context.Context, mineName string) (*Mine, error)
 	GetAllMines(ctx context.Context) ([]Mine, error)
 	AddDiamondMine(ctx context.Context, m *Mine) (*Mine, error)
 	EmptyMine(ctx context.Context, mineName string) (diamondCount int, err error)
+	UpsertUser(ctx context.Context, u *User) error
 }
 
 type MongoMineRepository struct {
@@ -25,7 +33,19 @@ type MongoMineRepository struct {
 }
 
 func New(col *mongo.Database) *MongoMineRepository {
-	return &MongoMineRepository{col: col.Collection("mine")}
+	return &MongoMineRepository{col: col.Collection("user")}
+}
+
+func (r MongoMineRepository) UpsertUser(ctx context.Context, u *User) error {
+	opts := options.Update().SetUpsert(true)
+	filter := r.col.FindOne(ctx, bson.D{{"id", bson.D{{"$eq", u.ID}}}})
+	update := bson.D{{"$set", bson.D{{"user_name", u.Username}, {"display_name", u.DisplayName}}}}
+	_, err := r.col.UpdateOne(ctx, filter, update, opts)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r MongoMineRepository) FindByName(ctx context.Context, mineName string) (*Mine, error) {

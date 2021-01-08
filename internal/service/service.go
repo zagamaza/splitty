@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/repository"
+	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -10,6 +11,7 @@ import (
 )
 
 type Service interface {
+	UpsertUser(ctx context.Context, user *tbapi.User) error
 	GetDiamonds(ctx context.Context, mineName string) (int, error)
 	GetAllMines(ctx context.Context) ([]repository.Mine, error)
 	AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error)
@@ -22,6 +24,14 @@ func New(r repository.MineRepository) *SimpleMineService {
 
 type SimpleMineService struct {
 	r repository.MineRepository
+}
+
+func (s *SimpleMineService) UpsertUser(ctx context.Context, user *tbapi.User) error {
+	u, err := ToUserEntity(ctx, user)
+	if err != nil {
+		log.Err(err)
+	}
+	return s.r.UpsertUser(ctx, u)
 }
 
 func (s *SimpleMineService) GetDiamonds(ctx context.Context, mineName string) (int, error) {

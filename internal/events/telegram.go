@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"github.com/almaznur91/splitty/internal/service"
 	"log"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ type TelegramListener struct {
 	IdleDuration time.Duration
 	SuperUsers   SuperUser
 	chatID       int64
+	Service      service.Service
 
 	msgs struct {
 		once sync.Once
@@ -94,10 +96,10 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 			log.Printf("[DEBUG] %s", string(msgJSON))
 
-			if update.Message.Chat == nil {
-				log.Print("[DEBUG] ignoring message not from chat")
-				continue
-			}
+			//if update.Message.Chat == nil {
+			//	log.Print("[DEBUG] ignoring message not from chat")
+			//	continue
+			//}
 
 			fromChat := update.Message.Chat.ID
 
@@ -106,12 +108,16 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				l.MsgLogger.Save(msg) // save an incoming update to report
 			}
 
+			if err := l.Service.UpsertUser(ctx, update.Message.From); err != nil {
+				log.Printf("[WARN] failed to respond on update, %v", err)
+			}
+
 			log.Printf("[DEBUG] incoming msg: %+v", msg)
 
 			resp := l.Bots.OnMessage(*msg)
 
 			if err := l.sendBotResponse(resp, fromChat); err != nil {
-				log.Printf("[WARN] failed to respond on update, %v", err)
+				log.Printf("[ERROR] failed to respond on update, %v", err)
 			}
 
 		case resp := <-l.msgs.ch: // publish messages from outside clients
