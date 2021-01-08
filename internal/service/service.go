@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
+	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
-	"splitty/internal/repository"
 )
 
 type Service interface {

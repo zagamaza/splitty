@@ -10,7 +10,7 @@ import (
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 
-	"splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/bot"
 )
 
 //go:generate mockery -inpkg -name tbAPI -case snake

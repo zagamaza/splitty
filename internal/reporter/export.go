@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/almaznur91/splitty/internal/bot"
 	"github.com/pkg/errors"
-	"splitty/internal/bot"
 )
 
 // Exporter performs conversion from log file to html

@@ -8,10 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/almaznur91/splitty/internal/bot/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"splitty/internal/bot/mocks"
 )
 
 func TestAnecdot_Help(t *testing.T) {

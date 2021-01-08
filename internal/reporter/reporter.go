@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/bot"
 )
 
 // Reporter collects all messages and saves to plain file

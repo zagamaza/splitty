@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/reporter"
+	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/almaznur91/splitty/internal/service"
 	"github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -11,16 +14,13 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"splitty/internal/reporter"
-	"splitty/internal/repository"
-	"splitty/internal/service"
 	"strings"
 	"time"
 
+	"github.com/almaznur91/splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/events"
 	"github.com/go-pkgz/lgr"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"splitty/internal/bot"
-	"splitty/internal/events"
 )
 
 var opts struct {

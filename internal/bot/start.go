@@ -1,9 +1,9 @@
 package bot
 
 import (
+	"github.com/almaznur91/splitty/internal/service"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
-	"splitty/internal/service"
 )
 
 // StackOverflow bot, returns from "https://api.stackexchange.com/2.2/questions?order=desc&sort=activity&site=stackoverflow"

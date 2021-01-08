@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/almaznur91/splitty/internal/bot/mocks"
 	"github.com/stretchr/testify/require"
-	"splitty/internal/bot/mocks"
 )
 
 func TestWTF_OnMessage(t *testing.T) {
