@@ -89,18 +89,9 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserServic
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
 	multiBot := bot.MultiBot{
-		bot.NewBroadcastStatus(
-			ctx,
-			bot.BroadcastParams{
-				URL:          "https://stream.radio-t.com",
-				PingInterval: 10 * time.Second,
-				DelayToOff:   time.Minute,
-				Client:       http.Client{Timeout: 5 * time.Second}}),
 		bot.NewNews(httpClient, "https://news.radio-t.com/api", opts.NewsArticles),
-		bot.NewAnecdote(httpClient),
 		bot.NewStackOverflow(),
 		bot.NewStart(sc, rs),
-		bot.NewDuck(opts.MashapeToken, httpClient),
 		bot.NewPodcasts(httpClient, "https://radio-t.com/site-api", 5),
 		bot.NewPrepPost(httpClient, "https://radio-t.com/site-api", 5*time.Minute),
 		bot.NewWTF(time.Hour*24, 7*time.Hour*24, opts.SuperUsers),
@@ -118,7 +109,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserServic
 		Debug:        opts.Dbg,
 		MsgLogger:    reporter.NewLogger(opts.LogsPath),
 		IdleDuration: opts.IdleDuration,
-		Service:      sc,
+		Service:      *sc,
 		SuperUsers:   cfg.SuperUsers,
 	}
 

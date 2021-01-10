@@ -16,6 +16,9 @@ type Service interface {
 	GetAllMines(ctx context.Context) ([]repository.Mine, error)
 	AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error)
 	EmptyMine(ctx context.Context, name string) (diamondCount int, err error)
+	CreateRoom(ctx context.Context, user *tbapi.User) (*repository.Room, error)
+	JoinToRoom(ctx context.Context, u *tbapi.User, roomId string) error
+	FindById(ctx context.Context, id string) (*repository.Room, error)
 }
 
 func NewUserService(r repository.UserRepository) *UserService {
@@ -33,16 +36,33 @@ type RoomService struct {
 	r repository.RoomRepository
 }
 
-func (s *UserService) UpsertUser(ctx context.Context, user *tbapi.User) error {
-	u, err := ToUserEntity(ctx, user)
-	if err != nil {
-		log.Err(err)
-	}
-	return s.r.UpsertUser(ctx, u)
+func (rs *RoomService) JoinToRoom(ctx context.Context, tgU *tbapi.User, roomId string) error {
+	u := ToUserEntity(ctx, tgU)
+	return rs.r.JoinToRoom(ctx, u, roomId)
 }
 
-func (s *UserService) GetDiamonds(ctx context.Context, mineName string) (int, error) {
-	m, err := s.r.FindByName(ctx, mineName)
+func (rs *RoomService) FindById(ctx context.Context, id string) (*repository.Room, error) {
+	return rs.r.FindById(ctx, id)
+}
+
+func (rs *RoomService) CreateRoom(ctx context.Context, user *tbapi.User) (*repository.Room, error) {
+	u := ToUserEntity(ctx, user)
+	r := &repository.Room{
+		Users: []repository.User{*u},
+		Name:  "Тестовая",
+	}
+	rId, err := rs.r.SaveRoom(ctx, r)
+	r.ID = rId
+	return r, err
+}
+
+func (us *UserService) UpsertUser(ctx context.Context, user *tbapi.User) error {
+	u := ToUserEntity(ctx, user)
+	return us.r.UpsertUser(ctx, u)
+}
+
+func (us *UserService) GetDiamonds(ctx context.Context, mineName string) (int, error) {
+	m, err := us.r.FindByName(ctx, mineName)
 	if err == mongo.ErrNoDocuments {
 		return 0, echo.ErrNotFound
 	}
@@ -51,30 +71,30 @@ func (s *UserService) GetDiamonds(ctx context.Context, mineName string) (int, er
 	}
 	log.Debug().Interface("result", m).Msg("found mine ")
 	if m.DiamondCount <= 0 {
-		return s.EmptyMine(ctx, m.Name)
+		return us.EmptyMine(ctx, m.Name)
 	}
 	dc := rand.Intn(m.DiamondCount)
 	nc := m.DiamondCount - dc
-	if err := s.r.UpdateMine(ctx, m.Name, nc); err != nil {
+	if err := us.r.UpdateMine(ctx, m.Name, nc); err != nil {
 		return 0, err
 	}
 	return dc, nil
 }
 
-func (s *UserService) GetAllMines(ctx context.Context) ([]repository.Mine, error) {
-	r, err := s.r.GetAllMines(ctx)
+func (us *UserService) GetAllMines(ctx context.Context) ([]repository.Mine, error) {
+	r, err := us.r.GetAllMines(ctx)
 	if err == mongo.ErrNoDocuments {
 		return nil, echo.ErrNotFound
 	}
 	return r, err
 }
 
-func (s *UserService) AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error) {
-	return s.r.AddDiamondMine(ctx, m)
+func (us *UserService) AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error) {
+	return us.r.AddDiamondMine(ctx, m)
 }
 
-func (s *UserService) EmptyMine(ctx context.Context, name string) (diamondCount int, err error) {
-	r, err := s.r.EmptyMine(ctx, name)
+func (us *UserService) EmptyMine(ctx context.Context, name string) (diamondCount int, err error) {
+	r, err := us.r.EmptyMine(ctx, name)
 	if err == mongo.ErrNoDocuments {
 		return 0, echo.ErrNotFound
 	}

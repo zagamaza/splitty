@@ -6,11 +6,11 @@ import (
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-func ToUserEntity(ctx context.Context, u *tbapi.User) (*repository.User, error) {
+func ToUserEntity(ctx context.Context, u *tbapi.User) *repository.User {
 	q := &repository.User{
 		ID:          u.ID,
 		Username:    u.UserName,
 		DisplayName: u.FirstName + " " + u.LastName,
 	}
-	return q, nil
+	return q
 }

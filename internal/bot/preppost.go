@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"net/http"
 	"time"
@@ -39,10 +40,10 @@ func NewPrepPost(client HTTPClient, api string, d time.Duration) *PrepPost {
 // OnMessage reacts on any message and, from time to time (every checkDuration) hits site api
 // and gets the latest prep article. In case if article'service url changed returns pinned response.
 // Skips the first check to avoid false-positive on restart
-func (p *PrepPost) OnMessage(Message) (response Response) {
+func (p *PrepPost) OnMessage(api.Message) (response api.Response) {
 
 	if time.Since(p.last.checked) < p.checkDuration {
-		return Response{}
+		return api.Response{}
 	}
 
 	defer func() {
@@ -54,7 +55,7 @@ func (p *PrepPost) OnMessage(Message) (response Response) {
 		if err != errNotPost {
 			log.Printf("[WARN] failed to check for new post, %v", err)
 		}
-		return Response{}
+		return api.Response{}
 	}
 
 	defer func() {
@@ -63,9 +64,9 @@ func (p *PrepPost) OnMessage(Message) (response Response) {
 
 	if p.last.prepPost.URL != "" && pi.URL != p.last.prepPost.URL {
 		log.Printf("[INFO] detected new prep topic %service", pi.URL)
-		return Response{Send: true, Pin: true, Text: fmt.Sprintf("Сбор тем начался - %service", pi.URL)}
+		return api.Response{Send: true, Pin: true, Text: fmt.Sprintf("Сбор тем начался - %service", pi.URL)}
 	}
-	return Response{}
+	return api.Response{}
 }
 
 func (p *PrepPost) recentPrepPost() (pi postInfo, err error) {

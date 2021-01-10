@@ -3,6 +3,7 @@ package bot
 import (
 	"bufio"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"math/rand"
 	"os"
@@ -50,28 +51,28 @@ func (p Sys) Help() (line string) {
 }
 
 // OnMessage implements bot.Interface
-func (p Sys) OnMessage(msg Message) (response Response) {
+func (p Sys) OnMessage(msg api.Message) (response api.Response) {
 	if !contains(p.ReactOn(), msg.Text) {
-		return Response{}
+		return api.Response{}
 	}
 
 	if strings.EqualFold(msg.Text, "say!") {
 		if p.say != nil && len(p.say) > 0 {
-			return Response{
+			return api.Response{
 				Text: fmt.Sprintf("_%s_", p.say[rand.Intn(len(p.say))]),
 				Send: true,
 			}
 		}
-		return Response{}
+		return api.Response{}
 	}
 
 	for _, bot := range p.commands {
 		if found := contains(bot.triggers, strings.ToLower(msg.Text)); found {
-			return Response{Text: bot.message, Send: true}
+			return api.Response{Text: bot.message, Send: true}
 		}
 	}
 
-	return Response{}
+	return api.Response{}
 }
 
 func (p *Sys) loadBasicData() error {

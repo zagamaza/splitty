@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/service"
 	"log"
 	"sync"
@@ -27,11 +28,11 @@ type TelegramListener struct {
 	IdleDuration time.Duration
 	SuperUsers   SuperUser
 	chatID       int64
-	Service      service.Service
+	Service      service.UserService
 
 	msgs struct {
 		once sync.Once
-		ch   chan bot.Response
+		ch   chan api.Response
 	}
 }
 
@@ -45,7 +46,7 @@ type tbAPI interface {
 }
 
 type msgLogger interface {
-	Save(msg *bot.Message)
+	Save(msg *api.Message)
 }
 
 // Do process all events, blocked call
@@ -56,7 +57,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 	//}
 
 	l.msgs.once.Do(func() {
-		l.msgs.ch = make(chan bot.Response, 100)
+		l.msgs.ch = make(chan api.Response, 100)
 		if l.IdleDuration == 0 {
 			l.IdleDuration = 30 * time.Second
 		}
@@ -126,7 +127,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 
 		case <-time.After(l.IdleDuration): // hit bots on idle timeout
-			resp := l.Bots.OnMessage(bot.Message{Text: "idle"})
+			resp := l.Bots.OnMessage(api.Message{Text: "idle"})
 			if err := l.sendBotResponse(resp, l.chatID); err != nil {
 				log.Printf("[WARN] failed to respond on idle, %v", err)
 			}
@@ -135,7 +136,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(resp bot.Response, chatID int64) error {
+func (l *TelegramListener) sendBotResponse(resp api.Response, chatID int64) error {
 	if !resp.Send {
 		return nil
 	}
@@ -177,12 +178,12 @@ func (l *TelegramListener) sendBotResponse(resp bot.Response, chatID int64) erro
 
 // Submit message text to telegram'service group
 func (l *TelegramListener) Submit(ctx context.Context, text string, pin bool) error {
-	l.msgs.once.Do(func() { l.msgs.ch = make(chan bot.Response, 100) })
+	l.msgs.once.Do(func() { l.msgs.ch = make(chan api.Response, 100) })
 
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
-	case l.msgs.ch <- bot.Response{Text: text, Pin: pin, Send: true, Preview: true}:
+	case l.msgs.ch <- api.Response{Text: text, Pin: pin, Send: true, Preview: true}:
 	}
 	return nil
 }
@@ -203,8 +204,8 @@ func (l *TelegramListener) saveBotMessage(msg *tbapi.Message, fromChat int64) {
 	l.MsgLogger.Save(l.transform(msg))
 }
 
-func (l *TelegramListener) transform(msg *tbapi.Message) *bot.Message {
-	message := bot.Message{
+func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
+	message := api.Message{
 		ID:   msg.MessageID,
 		Sent: msg.Time(),
 		Text: msg.Text,
@@ -215,7 +216,7 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *bot.Message {
 	}
 
 	if msg.From != nil {
-		message.From = bot.User{
+		message.From = api.User{
 			ID:          msg.From.ID,
 			Username:    msg.From.UserName,
 			DisplayName: msg.From.FirstName + " " + msg.From.LastName,
@@ -229,7 +230,7 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *bot.Message {
 	case msg.Photo != nil && len(*msg.Photo) > 0:
 		sizes := *msg.Photo
 		lastSize := sizes[len(sizes)-1]
-		message.Image = &bot.Image{
+		message.Image = &api.Image{
 			FileID:   lastSize.FileID,
 			Width:    lastSize.Width,
 			Height:   lastSize.Height,
@@ -241,21 +242,21 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *bot.Message {
 	return &message
 }
 
-func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[]bot.Entity {
+func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	if entities == nil || len(*entities) == 0 {
 		return nil
 	}
 
-	var result []bot.Entity
+	var result []api.Entity
 	for _, entity := range *entities {
-		e := bot.Entity{
+		e := api.Entity{
 			Type:   entity.Type,
 			Offset: entity.Offset,
 			Length: entity.Length,
 			URL:    entity.URL,
 		}
 		if entity.User != nil {
-			e.User = &bot.User{
+			e.User = &api.User{
 				ID:          entity.User.ID,
 				Username:    entity.User.UserName,
 				DisplayName: entity.User.FirstName + " " + entity.User.LastName,

@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -28,7 +30,7 @@ type User struct {
 }
 
 type Room struct {
-	ID           int    `json:"id" bson:"_id"`
+	ID           string `json:"id" bson:"_id"`
 	Name         string `json:"name" bson:"name"`
 	Users        []User `json:"users" bson:"users"`
 	Transactions []Transaction
@@ -44,7 +46,9 @@ type UserRepository interface {
 }
 
 type RoomRepository interface {
-	JoinToRoom(ctx context.Context, user *User, roomId int) error
+	FindById(ctx context.Context, id string) (*Room, error)
+	JoinToRoom(ctx context.Context, u *User, roomId string) error
+	SaveRoom(ctx context.Context, r *Room) (string, error)
 }
 
 type MongoUserRepository struct {
@@ -63,10 +67,35 @@ func NewRoomRepository(col *mongo.Database) *MongoRoomRepository {
 	return &MongoRoomRepository{col: col.Collection("room")}
 }
 
-func (r MongoRoomRepository) JoinToRoom(ctx context.Context, u *User, roomId int) error {
+func (r MongoRoomRepository) FindById(ctx context.Context, id string) (*Room, error) {
+	res := r.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", id}}}})
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	rm := &Room{}
+	if err := res.Decode(rm); err != nil {
+		return nil, err
+	}
+	return rm, nil
+}
+
+func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u *User, roomId string) error {
 	filter := bson.D{{"_id", bson.D{{"$eq", roomId}}}}
-	_, err := r.col.UpdateOne(ctx, filter, bson.D{{"$pull", bson.D{{"users", u}}}})
+	_, err := rr.col.UpdateOne(ctx, filter, bson.D{{"$pull", bson.D{{"users", u}}}})
 	return err
+}
+
+func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *Room) (string, error) {
+	res, err := rr.col.InsertOne(ctx, r)
+	if res == nil || res.InsertedID == nil {
+		return "", errors.New("insert failed")
+	}
+	return res.InsertedID.(primitive.ObjectID).String(), err
+}
+
+func (rr MongoRoomRepository) hasRoom(ctx context.Context, u *User) (bool, error) {
+	resp, err := rr.col.CountDocuments(ctx, bson.D{{"_id", bson.D{{"$eq", u.ID}}}})
+	return resp > 0, err
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u *User) error {
@@ -79,16 +108,6 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u *User) error {
 		return err
 	}
 	return nil
-}
-
-func (r MongoRoomRepository) SaveRoom(ctx context.Context, u *User) error {
-	_, err := r.col.InsertOne(ctx, u)
-	return err
-}
-
-func (r MongoRoomRepository) hasRoom(ctx context.Context, u *User) (bool, error) {
-	resp, err := r.col.CountDocuments(ctx, bson.D{{"_id", bson.D{{"$eq", u.ID}}}})
-	return resp > 0, err
 }
 
 func (r MongoUserRepository) FindByName(ctx context.Context, mineName string) (*Mine, error) {

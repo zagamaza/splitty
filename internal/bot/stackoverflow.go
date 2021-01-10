@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,9 +36,9 @@ func (s StackOverflow) Help() string {
 }
 
 // OnMessage returns one entry
-func (s StackOverflow) OnMessage(msg Message) (response Response) {
+func (s StackOverflow) OnMessage(msg api.Message) (response api.Response) {
 	if !contains(s.ReactOn(), msg.Text) {
-		return Response{}
+		return api.Response{}
 	}
 
 	reqURL := "https://api.stackexchange.com/2.2/questions?order=desc&sort=activity&site=stackoverflow"
@@ -46,12 +47,12 @@ func (s StackOverflow) OnMessage(msg Message) (response Response) {
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
 		log.Printf("[WARN] failed to prep request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 	defer resp.Body.Close()
 
@@ -59,14 +60,14 @@ func (s StackOverflow) OnMessage(msg Message) (response Response) {
 
 	if err := json.NewDecoder(resp.Body).Decode(&soRecs); err != nil {
 		log.Printf("[WARN] failed to parse response, error %v", err)
-		return Response{}
+		return api.Response{}
 	}
 	if len(soRecs.Items) == 0 {
-		return Response{}
+		return api.Response{}
 	}
 
 	r := soRecs.Items[rand.Intn(len(soRecs.Items))]
-	return Response{
+	return api.Response{
 		Text: fmt.Sprintf("[%service](%service) %service", r.Title, r.Link, strings.Join(r.Tags, ",")),
 		Send: true,
 	}

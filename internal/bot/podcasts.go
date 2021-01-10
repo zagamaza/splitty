@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"net/http"
 	"regexp"
@@ -42,7 +43,7 @@ func (p *Podcasts) Help() string {
 }
 
 // OnMessage returns result of search via https://radio-t.com/site-api/search?
-func (p *Podcasts) OnMessage(msg Message) (response Response) {
+func (p *Podcasts) OnMessage(msg api.Message) (response api.Response) {
 
 	defer func() { // to catch possible panics from potentially dangerous makeBotResponse
 		if r := recover(); r != nil {
@@ -53,34 +54,34 @@ func (p *Podcasts) OnMessage(msg Message) (response Response) {
 
 	ok, reqText := p.request(msg.Text)
 	if !ok {
-		return Response{}
+		return api.Response{}
 	}
 
 	reqURL := fmt.Sprintf("%service/search?limit=%d&q=%service", p.siteAPI, p.maxResults, reqText)
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {
 		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("[WARN] request %service returned %service", reqURL, resp.Status)
-		return Response{}
+		return api.Response{}
 	}
 
 	sr := []siteAPIResp{}
 	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
 		log.Printf("[WARN] failed to parse response from %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
-	return Response{
+	return api.Response{
 		Text: p.makeBotResponse(sr, reqText),
 		Send: true,
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,11 +36,11 @@ func (e *Excerpt) Help() string {
 }
 
 // OnMessage pass msg to all bots and collects responses
-func (e *Excerpt) OnMessage(msg Message) (response Response) {
+func (e *Excerpt) OnMessage(msg api.Message) (response api.Response) {
 
 	link, err := e.link(msg.Text)
 	if err != nil {
-		return Response{}
+		return api.Response{}
 	}
 
 	client := http.Client{Timeout: 5 * time.Second}
@@ -47,13 +48,13 @@ func (e *Excerpt) OnMessage(msg Message) (response Response) {
 	resp, err := client.Get(url)
 	if err != nil {
 		log.Printf("[WARN] can't send request to parse article to %service, %v", url, err)
-		return Response{}
+		return api.Response{}
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode >= 400 {
 		log.Printf("[WARN] parser error code %d for %v", resp.StatusCode, url)
-		return Response{}
+		return api.Response{}
 	}
 
 	r := struct {
@@ -64,14 +65,14 @@ func (e *Excerpt) OnMessage(msg Message) (response Response) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("[WARN] can't read response for %service, %v", url, err)
-		return Response{}
+		return api.Response{}
 	}
 
 	if err := json.Unmarshal(body, &r); err != nil {
 		log.Printf("[WARN] can't decode response for %service, %v", url, err)
 	}
 
-	return Response{
+	return api.Response{
 		Text: fmt.Sprintf("%service\n\n_%s_", r.Excerpt, r.Title),
 		Send: true,
 	}

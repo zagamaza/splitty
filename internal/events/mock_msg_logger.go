@@ -3,7 +3,7 @@
 package events
 
 import (
-	bot "github.com/almaznur91/splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/api"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -13,6 +13,6 @@ type mockMsgLogger struct {
 }
 
 // Save provides a mock function with given fields: msg
-func (_m *mockMsgLogger) Save(msg *bot.Message) {
+func (_m *mockMsgLogger) Save(msg *api.Message) {
 	_m.Called(msg)
 }

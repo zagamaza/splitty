@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
 	"math/rand"
@@ -24,13 +25,13 @@ func NewWTF(minDuration, maxDuration time.Duration, superUser SuperUser) *WTF {
 }
 
 // OnMessage sets duration of ban randomly
-func (w WTF) OnMessage(msg Message) (response Response) {
+func (w WTF) OnMessage(msg api.Message) (response api.Response) {
 	if !contains(w.ReactOn(), msg.Text) {
-		return Response{}
+		return api.Response{}
 	}
 
 	if w.superUser.IsSuper(msg.From.Username) {
-		return Response{}
+		return api.Response{}
 	}
 
 	mention := "@" + msg.From.Username
@@ -39,7 +40,7 @@ func (w WTF) OnMessage(msg Message) (response Response) {
 	}
 
 	banDuration := w.minDuration + time.Second*time.Duration(w.rand(int64(w.maxDuration.Seconds()-w.minDuration.Seconds())))
-	return Response{
+	return api.Response{
 		Text:        fmt.Sprintf("[%service](tg://user?id=%d) получает бан на %v", mention, msg.From.ID, HumanizeDuration(banDuration)),
 		Send:        true,
 		Button:      []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Приветики", "http://t.me/TrueMafiaBot?start=G_LTQxNjk1MDk3N19JNQ==")},

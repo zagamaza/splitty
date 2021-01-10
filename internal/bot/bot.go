@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
 	"net/http"
@@ -26,20 +27,9 @@ func genHelpMsg(com []string, msg string) string {
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
-	OnMessage(msg Message) (response Response)
+	OnMessage(msg api.Message) (response api.Response)
 	ReactOn() []string
 	Help() string
-}
-
-// Response describes bot'service answer on particular message
-type Response struct {
-	Text        string
-	Button      []tgbotapi.InlineKeyboardButton
-	Send        bool          // status
-	Pin         bool          // enable pin
-	Unpin       bool          // enable unpin
-	Preview     bool          // enable web preview
-	BanInterval time.Duration // bots banning user set the interval
 }
 
 // HTTPClient wrap http.Client to allow mocking
@@ -50,45 +40,6 @@ type HTTPClient interface {
 // SuperUser defines interface checking ig user name in su list
 type SuperUser interface {
 	IsSuper(userName string) bool
-}
-
-// Message is primary record to pass data from/to bots
-type Message struct {
-	ID       int
-	From     User
-	ChatID   int64
-	Sent     time.Time
-	HTML     string    `json:",omitempty"`
-	Text     string    `json:",omitempty"`
-	Entities *[]Entity `json:",omitempty"`
-	Image    *Image    `json:",omitempty"`
-}
-
-// Entity represents one special entity in a text message.
-// For example, hashtags, usernames, URLs, etc.
-type Entity struct {
-	Type   string
-	Offset int
-	Length int
-	URL    string `json:",omitempty"` // For “text_link” only, url that will be opened after user taps on the text
-	User   *User  `json:",omitempty"` // For “text_mention” only, the mentioned user
-}
-
-// Image represents image
-type Image struct {
-	// FileID corresponds to Telegram file_id
-	FileID   string
-	Width    int
-	Height   int
-	Caption  string    `json:",omitempty"`
-	Entities *[]Entity `json:",omitempty"`
-}
-
-// User defines user info of the Message
-type User struct {
-	ID          int
-	Username    string
-	DisplayName string
 }
 
 // MultiBot combines many bots to one virtual
@@ -112,9 +63,9 @@ func (b MultiBot) Help() string {
 
 // OnMessage pass msg to all bots and collects reposnses (combining all of them)
 //noinspection GoShadowedVar
-func (b MultiBot) OnMessage(msg Message) (response Response) {
+func (b MultiBot) OnMessage(msg api.Message) (response api.Response) {
 	if contains([]string{"help", "/help", "help!"}, msg.Text) {
-		return Response{
+		return api.Response{
 			Text: b.Help(),
 			Send: true,
 		}
@@ -172,7 +123,7 @@ func (b MultiBot) OnMessage(msg Message) (response Response) {
 	})
 
 	log.Printf("[DEBUG] answers %d, send %v", len(lines), len(lines) > 0)
-	return Response{
+	return api.Response{
 		Text:        strings.Join(lines, "\n"),
 		Button:      buttons,
 		Send:        len(lines) > 0,

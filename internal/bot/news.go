@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"strings"
 	"time"
@@ -33,9 +34,9 @@ func (n News) Help() string {
 }
 
 // OnMessage returns N last news articles
-func (n News) OnMessage(msg Message) (response Response) {
+func (n News) OnMessage(msg api.Message) (response api.Response) {
 	if !contains(n.ReactOn(), msg.Text) {
-		return Response{}
+		return api.Response{}
 	}
 
 	reqURL := fmt.Sprintf("%service/v1/news/last/%d", n.newsAPI, n.numArticles)
@@ -44,27 +45,27 @@ func (n News) OnMessage(msg Message) (response Response) {
 	req, err := makeHTTPRequest(reqURL)
 	if err != nil {
 		log.Printf("[WARN] failed to make request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 
 	resp, err := n.client.Do(req)
 	if err != nil {
 		log.Printf("[WARN] failed to send request %service, error=%v", reqURL, err)
-		return Response{}
+		return api.Response{}
 	}
 	defer resp.Body.Close()
 
 	articles := []newsArticle{}
 	if err = json.NewDecoder(resp.Body).Decode(&articles); err != nil {
 		log.Printf("[WARN] failed to parse response, error %v", err)
-		return Response{}
+		return api.Response{}
 	}
 
 	var lines []string
 	for _, a := range articles {
 		lines = append(lines, fmt.Sprintf("- [%service](%service) %service", a.Title, a.Link, a.Ts.Format("2006-01-02")))
 	}
-	return Response{
+	return api.Response{
 		Text: strings.Join(lines, "\n") + "\n- [все новости и темы](https://news.radio-t.com)",
 		Send: true,
 	}

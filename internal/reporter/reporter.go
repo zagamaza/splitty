@@ -3,11 +3,10 @@ package reporter
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/api"
 	"log"
 	"os"
 	"time"
-
-	"github.com/almaznur91/splitty/internal/bot"
 )
 
 // Reporter collects all messages and saves to plain file
@@ -26,7 +25,7 @@ func NewLogger(logs string) (result Reporter) {
 }
 
 // Save to log channel, non-blocking and skip if needed
-func (l Reporter) Save(msg *bot.Message) {
+func (l Reporter) Save(msg *api.Message) {
 	if msg.Text == "" && msg.Image == nil {
 		log.Print("[DEBUG] message not saved to log: no text or image = irrelevant")
 		return
