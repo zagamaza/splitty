@@ -92,6 +92,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserServic
 		bot.NewNews(httpClient, "https://news.radio-t.com/api", opts.NewsArticles),
 		bot.NewStackOverflow(),
 		bot.NewStart(sc, rs),
+		bot.NewRoom(sc, rs),
 		bot.NewPodcasts(httpClient, "https://radio-t.com/site-api", 5),
 		bot.NewPrepPost(httpClient, "https://radio-t.com/site-api", 5*time.Minute),
 		bot.NewWTF(time.Hour*24, 7*time.Hour*24, opts.SuperUsers),

@@ -50,7 +50,7 @@ type Image struct {
 
 // User defines user info of the Message
 type User struct {
-	ID          int
-	Username    string
-	DisplayName string
+	ID          int    `json:"id" bson:"_id"`
+	Username    string `json:"userName" bson:"user_name"`
+	DisplayName string `json:"displayName" bson:"display_name"`
 }

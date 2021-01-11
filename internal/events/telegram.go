@@ -109,7 +109,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				l.MsgLogger.Save(msg) // save an incoming update to report
 			}
 
-			if err := l.Service.UpsertUser(ctx, update.Message.From); err != nil {
+			if err := l.Service.UpsertUser(ctx, msg.From); err != nil {
 				log.Printf("[WARN] failed to respond on update, %v", err)
 			}
 

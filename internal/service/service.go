@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/labstack/echo/v4"
@@ -11,13 +12,13 @@ import (
 )
 
 type Service interface {
-	UpsertUser(ctx context.Context, user *tbapi.User) error
+	UpsertUser(ctx context.Context, user tbapi.User) error
 	GetDiamonds(ctx context.Context, mineName string) (int, error)
 	GetAllMines(ctx context.Context) ([]repository.Mine, error)
 	AddDiamondMine(ctx context.Context, m *repository.Mine) (*repository.Mine, error)
 	EmptyMine(ctx context.Context, name string) (diamondCount int, err error)
-	CreateRoom(ctx context.Context, user *tbapi.User) (*repository.Room, error)
-	JoinToRoom(ctx context.Context, u *tbapi.User, roomId string) error
+	CreateRoom(ctx context.Context, user api.User) (*repository.Room, error)
+	JoinToRoom(ctx context.Context, u *api.User, roomId string) error
 	FindById(ctx context.Context, id string) (*repository.Room, error)
 }
 
@@ -36,8 +37,7 @@ type RoomService struct {
 	r repository.RoomRepository
 }
 
-func (rs *RoomService) JoinToRoom(ctx context.Context, tgU *tbapi.User, roomId string) error {
-	u := ToUserEntity(ctx, tgU)
+func (rs *RoomService) JoinToRoom(ctx context.Context, u api.User, roomId string) error {
 	return rs.r.JoinToRoom(ctx, u, roomId)
 }
 
@@ -45,10 +45,9 @@ func (rs *RoomService) FindById(ctx context.Context, id string) (*repository.Roo
 	return rs.r.FindById(ctx, id)
 }
 
-func (rs *RoomService) CreateRoom(ctx context.Context, user *tbapi.User) (*repository.Room, error) {
-	u := ToUserEntity(ctx, user)
+func (rs *RoomService) CreateRoom(ctx context.Context, u api.User) (*repository.Room, error) {
 	r := &repository.Room{
-		Users: []repository.User{*u},
+		Users: &[]api.User{u},
 		Name:  "Тестовая",
 	}
 	rId, err := rs.r.SaveRoom(ctx, r)
@@ -56,8 +55,7 @@ func (rs *RoomService) CreateRoom(ctx context.Context, user *tbapi.User) (*repos
 	return r, err
 }
 
-func (us *UserService) UpsertUser(ctx context.Context, user *tbapi.User) error {
-	u := ToUserEntity(ctx, user)
+func (us *UserService) UpsertUser(ctx context.Context, u api.User) error {
 	return us.r.UpsertUser(ctx, u)
 }
 
