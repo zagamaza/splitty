@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
-	"github.com/almaznur91/splitty/internal/service"
 	"log"
 	"sync"
 	"time"
@@ -28,7 +27,7 @@ type TelegramListener struct {
 	IdleDuration time.Duration
 	SuperUsers   SuperUser
 	chatID       int64
-	Service      service.UserService
+	Service      bot.UserService
 
 	msgs struct {
 		once sync.Once

@@ -4,13 +4,12 @@ import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
-	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
 type Service interface {
-	UpsertUser(ctx context.Context, user tbapi.User) error
-	CreateRoom(ctx context.Context, user api.User) (*repository.Room, error)
-	JoinToRoom(ctx context.Context, u *api.User, roomId string) error
+	UpsertUser(ctx context.Context, user api.User) error
+	CreateRoom(ctx context.Context, u api.User) (*repository.Room, error)
+	JoinToRoom(ctx context.Context, u api.User, roomId string) error
 	FindById(ctx context.Context, id string) (*repository.Room, error)
 }
 

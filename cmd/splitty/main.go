@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/reporter"
-	"github.com/almaznur91/splitty/internal/service"
 	"github.com/jessevdk/go-flags"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -77,7 +76,7 @@ func main() {
 	}
 }
 
-func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserService, rs *service.RoomService) (*events.TelegramListener, error) {
+func initTelegramConfig(ctx context.Context, cfg *config, sc bot.UserService, rs bot.RoomService) (*events.TelegramListener, error) {
 	httpClient := &http.Client{Timeout: 5 * time.Second}
 
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
@@ -110,7 +109,7 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserServic
 		Debug:        opts.Dbg,
 		MsgLogger:    reporter.NewLogger(opts.LogsPath),
 		IdleDuration: opts.IdleDuration,
-		Service:      *sc,
+		Service:      sc,
 		SuperUsers:   cfg.SuperUsers,
 	}
 
