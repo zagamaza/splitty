@@ -5,22 +5,33 @@ import (
 	"time"
 )
 
+const Day = 24 * time.Hour
+
 // Response describes bot'service answer on particular message
 type Response struct {
 	Text        string
-	Button      []tgbotapi.InlineKeyboardButton
-	Send        bool          // status
-	Pin         bool          // enable pin
-	Unpin       bool          // enable unpin
-	Preview     bool          // enable web preview
-	BanInterval time.Duration // bots banning user set the interval
+	Button      tgbotapi.InlineKeyboardMarkup //buttons
+	Send        bool                          // status
+	Pin         bool                          // enable pin
+	Unpin       bool                          // enable unpin
+	Preview     bool                          // enable web preview
+	BanInterval time.Duration                 // bots banning user set the interval
+}
+
+// Update is an update response, from GetUpdates.
+type Update struct {
+	UpdateID    int          `json:"update_id"`
+	Message     *Message     `json:"message"`
+	InlineQuery *InlineQuery `json:"inline_query"`
+	//ChosenInlineResult *ChosenInlineResult `json:"chosen_inline_result"`
+	CallbackQuery *CallbackQuery `json:"callback_query"`
 }
 
 // Message is primary record to pass data from/to bots
 type Message struct {
 	ID       int
 	From     User
-	ChatID   int64
+	Chat     *Chat
 	Sent     time.Time
 	HTML     string    `json:",omitempty"`
 	Text     string    `json:",omitempty"`
@@ -53,4 +64,28 @@ type User struct {
 	ID          int    `json:"id" bson:"_id"`
 	Username    string `json:"userName" bson:"user_name"`
 	DisplayName string `json:"displayName" bson:"display_name"`
+}
+
+// InlineQuery is a Query from Telegram for an inline request.
+type InlineQuery struct {
+	ID     string `json:"id"`
+	From   User   `json:"from"`
+	Query  string `json:"query"`
+	Offset string `json:"offset"`
+}
+
+// CallbackQuery is data sent when a keyboard button with callback data
+// is clicked.
+type CallbackQuery struct {
+	ID   string `json:"id"`
+	From User   `json:"from"`
+	//Message         Message `json:"message"`           // optional
+	InlineMessageID string `json:"inline_message_id"` // optional
+	//ChatInstance    string  `json:"chat_instance"`
+}
+
+// Chat contains information about the place a message was sent.
+type Chat struct {
+	ID   int64  `json:"id"`
+	Type string `json:"type"`
 }

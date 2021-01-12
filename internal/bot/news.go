@@ -34,8 +34,11 @@ func (n News) Help() string {
 }
 
 // OnMessage returns N last news articles
-func (n News) OnMessage(msg api.Message) (response api.Response) {
-	if !contains(n.ReactOn(), msg.Text) {
+func (n News) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
+		return api.Response{}
+	}
+	if !contains(n.ReactOn(), update.Message.Text) {
 		return api.Response{}
 	}
 

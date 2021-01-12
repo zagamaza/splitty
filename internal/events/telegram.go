@@ -104,18 +104,18 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			fromChat := update.Message.Chat.ID
 
-			msg := l.transform(update.Message)
+			upd := l.transformUpdate(update)
 			if fromChat == l.chatID {
-				l.MsgLogger.Save(msg) // save an incoming update to report
+				l.MsgLogger.Save(upd.Message) // save an incoming update to report
 			}
 
-			if err := l.Service.UpsertUser(ctx, msg.From); err != nil {
+			if err := l.Service.UpsertUser(ctx, upd.Message.From); err != nil {
 				log.Printf("[WARN] failed to respond on update, %v", err)
 			}
 
-			log.Printf("[DEBUG] incoming msg: %+v", msg)
+			log.Printf("[DEBUG] incoming msg: %+v", upd.Message)
 
-			resp := l.Bots.OnMessage(*msg)
+			resp := l.Bots.OnMessage(*upd)
 
 			if err := l.sendBotResponse(resp, fromChat); err != nil {
 				log.Printf("[ERROR] failed to respond on update, %v", err)
@@ -127,7 +127,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 
 		case <-time.After(l.IdleDuration): // hit bots on idle timeout
-			resp := l.Bots.OnMessage(api.Message{Text: "idle"})
+			resp := l.Bots.OnMessage(api.Update{Message: &api.Message{Text: "idle"}})
 			if err := l.sendBotResponse(resp, l.chatID); err != nil {
 				log.Printf("[WARN] failed to respond on idle, %v", err)
 			}
@@ -146,11 +146,7 @@ func (l *TelegramListener) sendBotResponse(resp api.Response, chatID int64) erro
 	tbMsg.ParseMode = tbapi.ModeMarkdown
 	tbMsg.DisableWebPagePreview = !resp.Preview
 
-	if len(resp.Button) != 0 {
-
-		markup := tbapi.NewInlineKeyboardMarkup(resp.Button)
-		tbMsg.ReplyMarkup = markup
-	}
+	tbMsg.ReplyMarkup = resp.Button
 
 	res, err := l.TbAPI.Send(tbMsg)
 	if err != nil {
@@ -205,14 +201,18 @@ func (l *TelegramListener) saveBotMessage(msg *tbapi.Message, fromChat int64) {
 }
 
 func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
+	if msg == nil {
+		return nil
+	}
 	message := api.Message{
 		ID:   msg.MessageID,
 		Sent: msg.Time(),
 		Text: msg.Text,
 	}
 
-	if msg.Chat != nil {
-		message.ChatID = msg.Chat.ID
+	message.Chat = &api.Chat{
+		ID:   msg.Chat.ID,
+		Type: msg.Chat.Type,
 	}
 
 	if msg.From != nil {
@@ -240,6 +240,24 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
 	}
 
 	return &message
+}
+
+func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
+	update := &api.Update{}
+
+	if u.CallbackQuery != nil {
+		update.CallbackQuery = &api.CallbackQuery{
+			ID: u.CallbackQuery.ID,
+			From: api.User{
+				ID:          u.CallbackQuery.From.ID,
+				Username:    u.CallbackQuery.From.UserName,
+				DisplayName: u.CallbackQuery.From.FirstName + " " + u.CallbackQuery.From.LastName,
+			},
+			InlineMessageID: u.CallbackQuery.InlineMessageID,
+		}
+	}
+	update.Message = l.transform(u.Message)
+	return update
 }
 
 func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {

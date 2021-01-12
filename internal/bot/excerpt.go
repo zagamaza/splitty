@@ -36,9 +36,11 @@ func (e *Excerpt) Help() string {
 }
 
 // OnMessage pass msg to all bots and collects responses
-func (e *Excerpt) OnMessage(msg api.Message) (response api.Response) {
-
-	link, err := e.link(msg.Text)
+func (e *Excerpt) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
+		return api.Response{}
+	}
+	link, err := e.link(update.Message.Text)
 	if err != nil {
 		return api.Response{}
 	}

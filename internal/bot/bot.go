@@ -27,7 +27,7 @@ func genHelpMsg(com []string, msg string) string {
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
-	OnMessage(msg api.Message) (response api.Response)
+	OnMessage(msg api.Update) (response api.Response)
 	ReactOn() []string
 	Help() string
 }
@@ -63,8 +63,8 @@ func (b MultiBot) Help() string {
 
 // OnMessage pass msg to all bots and collects reposnses (combining all of them)
 //noinspection GoShadowedVar
-func (b MultiBot) OnMessage(msg api.Message) (response api.Response) {
-	if contains([]string{"help", "/help", "help!"}, msg.Text) {
+func (b MultiBot) OnMessage(update api.Update) (response api.Response) {
+	if contains([]string{"help", "/help", "help!"}, update.Message.Text) {
 		return api.Response{
 			Text: b.Help(),
 			Send: true,
@@ -77,17 +77,15 @@ func (b MultiBot) OnMessage(msg api.Message) (response api.Response) {
 	var banInterval time.Duration
 	var mutex = &sync.Mutex{}
 
-	var buttons []tgbotapi.InlineKeyboardButton
+	var buttons tgbotapi.InlineKeyboardMarkup
 	wg := syncs.NewSizedGroup(4)
 	for _, bot := range b {
 		bot := bot
 		wg.Go(func(ctx context.Context) {
-			if resp := bot.OnMessage(msg); resp.Send {
+			if resp := bot.OnMessage(update); resp.Send {
 				resps <- resp.Text
 
-				if len(resp.Button) != 0 {
-					buttons = resp.Button
-				}
+				buttons = resp.Button
 
 				if resp.Pin {
 					atomic.AddInt32(&pin, 1)

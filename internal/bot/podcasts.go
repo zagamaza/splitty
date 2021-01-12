@@ -43,7 +43,10 @@ func (p *Podcasts) Help() string {
 }
 
 // OnMessage returns result of search via https://radio-t.com/site-api/search?
-func (p *Podcasts) OnMessage(msg api.Message) (response api.Response) {
+func (p *Podcasts) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
+		return api.Response{}
+	}
 
 	defer func() { // to catch possible panics from potentially dangerous makeBotResponse
 		if r := recover(); r != nil {
@@ -52,7 +55,7 @@ func (p *Podcasts) OnMessage(msg api.Message) (response api.Response) {
 		}
 	}()
 
-	ok, reqText := p.request(msg.Text)
+	ok, reqText := p.request(update.Message.Text)
 	if !ok {
 		return api.Response{}
 	}

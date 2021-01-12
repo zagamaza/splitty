@@ -36,8 +36,12 @@ func (s StackOverflow) Help() string {
 }
 
 // OnMessage returns one entry
-func (s StackOverflow) OnMessage(msg api.Message) (response api.Response) {
-	if !contains(s.ReactOn(), msg.Text) {
+func (s StackOverflow) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
+		return api.Response{}
+	}
+
+	if !contains(s.ReactOn(), update.Message.Text) {
 		return api.Response{}
 	}
 

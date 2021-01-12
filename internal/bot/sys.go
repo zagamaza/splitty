@@ -51,12 +51,16 @@ func (p Sys) Help() (line string) {
 }
 
 // OnMessage implements bot.Interface
-func (p Sys) OnMessage(msg api.Message) (response api.Response) {
-	if !contains(p.ReactOn(), msg.Text) {
+func (p Sys) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
 		return api.Response{}
 	}
 
-	if strings.EqualFold(msg.Text, "say!") {
+	if !contains(p.ReactOn(), update.Message.Text) {
+		return api.Response{}
+	}
+
+	if strings.EqualFold(update.Message.Text, "say!") {
 		if p.say != nil && len(p.say) > 0 {
 			return api.Response{
 				Text: fmt.Sprintf("_%s_", p.say[rand.Intn(len(p.say))]),
@@ -67,7 +71,7 @@ func (p Sys) OnMessage(msg api.Message) (response api.Response) {
 	}
 
 	for _, bot := range p.commands {
-		if found := contains(bot.triggers, strings.ToLower(msg.Text)); found {
+		if found := contains(bot.triggers, strings.ToLower(update.Message.Text)); found {
 			return api.Response{Text: bot.message, Send: true}
 		}
 	}

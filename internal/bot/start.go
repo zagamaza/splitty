@@ -33,12 +33,16 @@ func (s Start) Help() string {
 }
 
 // OnMessage returns one entry
-func (s Start) OnMessage(msg api.Message) (response api.Response) {
-	if !strings.Contains(msg.Text, s.ReactOn()[0]) {
+func (s Start) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
 		return api.Response{}
 	}
-	roomId := strings.ReplaceAll(msg.Text, "/start ", "")
-	err := s.rs.JoinToRoom(context.Background(), msg.From, roomId)
+
+	if !strings.Contains(update.Message.Text, s.ReactOn()[0]) {
+		return api.Response{}
+	}
+	roomId := strings.ReplaceAll(update.Message.Text, "/start ", "")
+	err := s.rs.JoinToRoom(context.Background(), update.Message.From, roomId)
 	if err != nil {
 		zlog.Error().Err(err).Msg("join to room failed")
 		return api.Response{}
@@ -75,19 +79,34 @@ func (r Room) Help() string {
 }
 
 // OnMessage returns one entry
-func (r Room) OnMessage(msg api.Message) (response api.Response) {
-	if !contains(r.ReactOn(), msg.Text) {
+func (r Room) OnMessage(u api.Update) (response api.Response) {
+	if u.Message == nil {
 		return api.Response{}
 	}
-	room, err := r.rs.CreateRoom(context.Background(), msg.From)
+
+	if !contains(r.ReactOn(), u.Message.Text) {
+		return api.Response{}
+	}
+	if u.Message.Chat.Type == "private" {
+		//todo сделать чтобы наименование бота тянулось из конфигов
+		buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить бота в свой чат", "http://t.me/ZagaMaza1_bot?startgroup=true")}
+		return api.Response{
+			Text:    "*Используйте эту команду в групповом чате*\n\nПосле добавления в группу не забудьте дать права администратора и повторно отправить команду /room",
+			Button:  tgbotapi.NewInlineKeyboardMarkup(buttons),
+			Send:    true,
+			Preview: false,
+		}
+	}
+	room, err := r.rs.CreateRoom(context.Background(), u.Message.From)
 	if err != nil {
 		zlog.Error().Err(err).Msg("crete room failed")
 		return api.Response{}
 	}
 	rId := room.ID.Hex()
+	buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Присоединиться", "http://t.me/ZagaMaza1_bot?start="+rId)}
 	return api.Response{
 		Text:    "Приветики",
-		Button:  []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Присоединиться", "http://t.me/ZagaMaza1_bot?start="+rId)},
+		Button:  tgbotapi.NewInlineKeyboardMarkup(buttons),
 		Send:    true,
 		Preview: false,
 	}

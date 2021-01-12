@@ -40,7 +40,10 @@ func NewPrepPost(client HTTPClient, api string, d time.Duration) *PrepPost {
 // OnMessage reacts on any message and, from time to time (every checkDuration) hits site api
 // and gets the latest prep article. In case if article'service url changed returns pinned response.
 // Skips the first check to avoid false-positive on restart
-func (p *PrepPost) OnMessage(api.Message) (response api.Response) {
+func (p *PrepPost) OnMessage(update api.Update) (response api.Response) {
+	if update.Message == nil {
+		return api.Response{}
+	}
 
 	if time.Since(p.last.checked) < p.checkDuration {
 		return api.Response{}
