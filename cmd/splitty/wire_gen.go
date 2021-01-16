@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"github.com/almaznur91/splitty/internal/bot"
 	"github.com/almaznur91/splitty/internal/events"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
@@ -23,7 +24,10 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	userService := service.NewUserService(mongoUserRepository)
 	mongoRoomRepository := repository.NewRoomRepository(database)
 	roomService := service.NewRoomService(mongoRoomRepository)
-	telegramListener, err := initTelegramConfig(cfg, userService, roomService)
+	start := bot.NewStart(userService, roomService)
+	room := bot.NewRoom(userService, roomService)
+	v := ProvideBotList(start, room)
+	telegramListener, err := initTelegramConfig(cfg, v)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -31,4 +35,10 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	return telegramListener, func() {
 		cleanup()
 	}, nil
+}
+
+// wire.go:
+
+func ProvideBotList(start *bot.Start, room *bot.Room) []bot.Interface {
+	return []bot.Interface{start, room}
 }
