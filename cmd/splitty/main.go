@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"math/rand"
-	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -78,8 +77,6 @@ func main() {
 }
 
 func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserService, rs *service.RoomService) (*events.TelegramListener, error) {
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
 	if err != nil {
 		log.Error().Err(err).Msg("[ERROR] can't make telegram bot")
@@ -89,19 +86,8 @@ func initTelegramConfig(ctx context.Context, cfg *config, sc *service.UserServic
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
 	multiBot := bot.MultiBot{
-		bot.NewNews(httpClient, "https://news.radio-t.com/api", opts.NewsArticles),
-		bot.NewStackOverflow(),
 		bot.NewStart(sc, rs),
 		bot.NewRoom(sc, rs),
-		bot.NewPodcasts(httpClient, "https://radio-t.com/site-api", 5),
-		bot.NewPrepPost(httpClient, "https://radio-t.com/site-api", 5*time.Minute),
-		bot.NewWTF(time.Hour*24, 7*time.Hour*24, opts.SuperUsers),
-	}
-
-	if sb, err := bot.NewSys(opts.SysData); err == nil {
-		multiBot = append(multiBot, sb)
-	} else {
-		log.Printf("[ERROR] failed to load sysbot, %v", err)
 	}
 
 	tgListener := &events.TelegramListener{

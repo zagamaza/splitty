@@ -24,7 +24,7 @@ func TestMultiBotHelp(t *testing.T) {
 
 func TestMultiBotReactsOnHelp(t *testing.T) {
 	b := &MockInterface{}
-	b.On("ReactOn").Return([]string{"help"})
+	b.On("HasReact").Return([]string{"help"})
 	b.On("Help").Return("help")
 
 	mb := MultiBot{b}
@@ -38,13 +38,13 @@ func TestMultiBotCombinesAllBotResponses(t *testing.T) {
 	msg := Message{Text: "cmd"}
 
 	b1 := &MockInterface{}
-	b1.On("ReactOn").Return([]string{"cmd"})
+	b1.On("HasReact").Return([]string{"cmd"})
 	b1.On("OnMessage", msg).Return(Response{
 		Text: "b1 resp",
 		Send: true,
 	})
 	b2 := &MockInterface{}
-	b2.On("ReactOn").Return([]string{"cmd"})
+	b2.On("HasReact").Return([]string{"cmd"})
 	b2.On("OnMessage", msg).Return(Response{
 		Text: "b2 resp",
 		Send: true,

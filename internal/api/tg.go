@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-const Day = 24 * time.Hour
-
 // Response describes bot'service answer on particular message
 type Response struct {
 	Text        string
@@ -77,10 +75,10 @@ type InlineQuery struct {
 // CallbackQuery is data sent when a keyboard button with callback data
 // is clicked.
 type CallbackQuery struct {
-	ID   string `json:"id"`
-	From User   `json:"from"`
-	//Message         Message `json:"message"`           // optional
-	InlineMessageID string `json:"inline_message_id"` // optional
+	ID              string   `json:"id"`
+	From            User     `json:"from"`
+	Message         *Message `json:"message"`           // optional
+	InlineMessageID string   `json:"inline_message_id"` // optional
 	//ChatInstance    string  `json:"chat_instance"`
 }
 
@@ -88,4 +86,11 @@ type CallbackQuery struct {
 type Chat struct {
 	ID   int64  `json:"id"`
 	Type string `json:"type"`
+}
+
+type TelegramMessage struct {
+	Chattable    []tgbotapi.Chattable
+	InlineConfig *tgbotapi.InlineConfig
+	Send         bool // status
+
 }

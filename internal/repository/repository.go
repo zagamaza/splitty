@@ -40,6 +40,7 @@ type RoomRepository interface {
 	FindById(ctx context.Context, id string) (*Room, error)
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
 	SaveRoom(ctx context.Context, r *Room) (primitive.ObjectID, error)
+	FindRoomsByUserId(ctx context.Context, id int) (*[]Room, error)
 }
 
 type MongoUserRepository struct {
@@ -111,11 +112,24 @@ func (rr MongoRoomRepository) hasUserInRoom(ctx context.Context, uId int, roomId
 	return resp > 0, err
 }
 
+func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[]Room, error) {
+	cur, err := rr.col.Find(ctx, bson.D{{"users._id", bson.D{{"$eq", id}}}})
+	if err != nil {
+		return nil, err
+	}
+	var m []Room
+	err = cur.All(ctx, &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {
 	opts := options.Update().SetUpsert(true)
-	filter := r.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", u.ID}}}})
-	update := bson.D{{"$set", bson.D{{"_id", u.ID}, {"user_name", u.Username}, {"display_name", u.DisplayName}}}}
-	_, err := r.col.UpdateOne(ctx, filter, update, opts)
+	f := bson.D{{"_id", bson.D{{"$eq", u.ID}}}}
+	update := bson.D{{"$set", u}}
+	_, err := r.col.UpdateOne(ctx, f, update, opts)
 
 	if err != nil {
 		return err
