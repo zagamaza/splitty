@@ -23,7 +23,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	userService := service.NewUserService(mongoUserRepository)
 	mongoRoomRepository := repository.NewRoomRepository(database)
 	roomService := service.NewRoomService(mongoRoomRepository)
-	telegramListener, err := initTelegramConfig(ctx, cfg, userService, roomService)
+	telegramListener, err := initTelegramConfig(cfg, userService, roomService)
 	if err != nil {
 		cleanup()
 		return nil, nil, err

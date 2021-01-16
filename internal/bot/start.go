@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-// StackOverflow bot, returns from "https://api.stackexchange.com/2.2/questions?order=desc&sort=activity&site=stackoverflow"
-// reacts on "so!" prefix, i.e. "so! golang"
 // send /room, after click on the button 'Присоединиться'
 type Start struct {
 	us *service.UserService

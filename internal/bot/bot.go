@@ -9,10 +9,6 @@ import (
 	"strings"
 )
 
-//go:generate mockery -name HTTPClient -case snake
-//go:generate mockery -inpkg -name Interface -case snake
-//go:generate mockery -name SuperUser -case snake
-
 // genHelpMsg construct help message from bot'service HasReact
 func genHelpMsg(com []string, msg string) string {
 	return strings.Join(com, ", ") + " _– " + msg + "_\n"
