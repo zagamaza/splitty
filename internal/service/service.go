@@ -12,6 +12,7 @@ type Service interface {
 	CreateRoom(ctx context.Context, user api.User) (*repository.Room, error)
 	JoinToRoom(ctx context.Context, u *api.User, roomId string) error
 	FindById(ctx context.Context, id string) (*repository.Room, error)
+	FindRoomsByUserId(ctx context.Context, id int) (*[]repository.Room, error)
 }
 
 func NewUserService(r repository.UserRepository) *UserService {
@@ -27,6 +28,10 @@ type UserService struct {
 
 type RoomService struct {
 	r repository.RoomRepository
+}
+
+func (rs *RoomService) FindRoomsByUserId(ctx context.Context, uId int) (*[]repository.Room, error) {
+	return rs.r.FindRoomsByUserId(ctx, uId)
 }
 
 func (rs *RoomService) JoinToRoom(ctx context.Context, u api.User, roomId string) error {

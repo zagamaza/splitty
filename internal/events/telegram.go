@@ -27,7 +27,6 @@ type TelegramListener struct {
 	Debug        bool
 	IdleDuration time.Duration
 	SuperUsers   SuperUser
-	chatID       int64
 	Service      service.UserService
 
 	msgs struct {
@@ -52,10 +51,6 @@ type msgLogger interface {
 // Do process all events, blocked call
 func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
-	//if l.chatID, err = l.getChatID(l.Group); err != nil {
-	//	return errors.Wrapf(err, "failed to get chat ID for group %q", l.Group)
-	//}
-
 	l.msgs.once.Do(func() {
 		l.msgs.ch = make(chan api.Response, 100)
 		if l.IdleDuration == 0 {
@@ -79,8 +74,6 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 		case update, ok := <-updates:
 
-			l.chatID = l.getChatID(update)
-
 			if !ok {
 				return errors.Errorf("telegram update chan closed")
 			}
@@ -97,17 +90,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 			log.Printf("[DEBUG] %service", string(msgJSON))
 
-			//if update.Message.Chat == nil {
-			//	log.Print("[DEBUG] ignoring message not from chat")
-			//	continue
-			//}
-
-			fromChat := update.Message.Chat.ID
-
 			upd := l.transformUpdate(update)
-			if fromChat == l.chatID {
-				l.MsgLogger.Save(upd.Message) // save an incoming update to report
-			}
 
 			if err := l.Service.UpsertUser(ctx, upd.Message.From); err != nil {
 				log.Printf("[WARN] failed to respond on update, %v", err)
@@ -115,60 +98,48 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			log.Printf("[DEBUG] incoming msg: %+v", upd.Message)
 
-			resp := l.Bots.OnMessage(*upd)
+			resp := l.Bots.OnMessage(ctx, upd)
 
-			if err := l.sendBotResponse(resp, fromChat); err != nil {
+			if err := l.sendBotResponse(resp); err != nil {
 				log.Printf("[ERROR] failed to respond on update, %v", err)
 			}
 
 		case resp := <-l.msgs.ch: // publish messages from outside clients
-			if err := l.sendBotResponse(resp, l.chatID); err != nil {
-				log.Printf("[WARN] failed to respond on rtjc event, %v", err)
-			}
+			//todo надо подумать надо ли нам это?
+			//if err := l.sendBotResponse(resp, 1); err != nil {
+			log.Printf("[WARN] failed to respond on rtjc event, %v %s", err, resp.Text)
+			//}
 
 		case <-time.After(l.IdleDuration): // hit bots on idle timeout
-			resp := l.Bots.OnMessage(api.Update{Message: &api.Message{Text: "idle"}})
-			if err := l.sendBotResponse(resp, l.chatID); err != nil {
-				log.Printf("[WARN] failed to respond on idle, %v", err)
-			}
+			//todo надо подумать надо ли нам это?
+			//resp := l.Bots.OnMessage(api.Update{Message: &api.Message{Text: "idle"}})
+			//if err := l.sendBotResponse(resp, l.chatID); err != nil {
+			log.Printf("[WARN] failed to respond on idle, %v", err)
+			//}
 		}
 	}
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(resp api.Response, chatID int64) error {
+func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 	if !resp.Send {
 		return nil
 	}
 
-	log.Printf("[DEBUG] bot response - %+v, pin: %t", resp.Text, resp.Pin)
-	tbMsg := tbapi.NewMessage(chatID, resp.Text)
-	tbMsg.ParseMode = tbapi.ModeMarkdown
-	tbMsg.DisableWebPagePreview = !resp.Preview
-
-	tbMsg.ReplyMarkup = resp.Button
-
-	res, err := l.TbAPI.Send(tbMsg)
-	if err != nil {
-		return errors.Wrapf(err, "can't send message to telegram %q", resp.Text)
+	if resp.InlineConfig != nil {
+		log.Printf("[INFO] bot response - %+v", resp.InlineConfig.InlineQueryID)
 	}
 
-	l.saveBotMessage(&res, chatID)
-
-	if resp.Pin {
-		_, err = l.TbAPI.PinChatMessage(tbapi.PinChatMessageConfig{ChatID: chatID, MessageID: res.MessageID, DisableNotification: true})
-		if err != nil {
-			return errors.Wrap(err, "can't pin message to telegram")
+	if len(resp.Chattable) > 0 {
+		for _, v := range resp.Chattable {
+			log.Printf("[INFO] bot response - %v", v)
+			r, err := l.TbAPI.Send(v)
+			if err != nil {
+				return errors.Wrapf(err, "can't send message to telegram %q", v)
+			}
+			l.saveBotMessage(&r)
 		}
 	}
-
-	if resp.Unpin {
-		_, err = l.TbAPI.UnpinChatMessage(tbapi.UnpinChatMessageConfig{ChatID: chatID})
-		if err != nil {
-			return errors.Wrap(err, "can't unpin message to telegram")
-		}
-	}
-
 	return nil
 }
 
@@ -184,19 +155,7 @@ func (l *TelegramListener) Submit(ctx context.Context, text string, pin bool) er
 	return nil
 }
 
-func (l *TelegramListener) getChatID(update tbapi.Update) int64 {
-	var chatId int64
-	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
-		chatId = update.CallbackQuery.Message.Chat.ID
-	}
-	chatId = update.Message.Chat.ID
-	return chatId
-}
-
-func (l *TelegramListener) saveBotMessage(msg *tbapi.Message, fromChat int64) {
-	if fromChat != l.chatID {
-		return
-	}
+func (l *TelegramListener) saveBotMessage(msg *tbapi.Message) {
 	l.MsgLogger.Save(l.transform(msg))
 }
 
@@ -253,7 +212,22 @@ func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
 				Username:    u.CallbackQuery.From.UserName,
 				DisplayName: u.CallbackQuery.From.FirstName + " " + u.CallbackQuery.From.LastName,
 			},
+			Message:         l.transform(u.CallbackQuery.Message),
 			InlineMessageID: u.CallbackQuery.InlineMessageID,
+		}
+	}
+
+	if u.InlineQuery != nil {
+		i := u.InlineQuery
+		update.InlineQuery = &api.InlineQuery{
+			ID:     i.ID,
+			Query:  i.Query,
+			Offset: i.Offset,
+			From: api.User{
+				ID:          i.From.ID,
+				Username:    i.From.UserName,
+				DisplayName: i.From.FirstName + " " + i.From.LastName,
+			},
 		}
 	}
 	update.Message = l.transform(u.Message)
