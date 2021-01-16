@@ -27,6 +27,11 @@ func NewStart(s *service.UserService, rs *service.RoomService) *Start {
 
 // OnMessage returns one entry
 func (s Start) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	//todo: думаю нужен отдельный бот и выставить его в самое начало, т.к. выполняется для всех запросов без условия
+	if err := s.us.UpsertUser(ctx, u.Message.From); err != nil {
+		log.Printf("[WARN] failed to respond on update, %v", err)
+	}
+
 	if !s.HasReact(u) {
 		return api.TelegramMessage{}
 	}
