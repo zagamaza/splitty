@@ -3,21 +3,30 @@ package bot
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
-	"github.com/almaznur91/splitty/internal/service"
+	"github.com/almaznur91/splitty/internal/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	zlog "github.com/rs/zerolog/log"
 	"log"
 	"strings"
 )
 
+type UserService interface {
+	UpsertUser(ctx context.Context, u api.User) error
+}
+
+type RoomService interface {
+	JoinToRoom(ctx context.Context, u api.User, roomId string) error
+	CreateRoom(ctx context.Context, u api.User) (*repository.Room, error)
+}
+
 // send /room, after click on the button 'Присоединиться'
 type Start struct {
-	us *service.UserService
-	rs *service.RoomService
+	us UserService
+	rs RoomService
 }
 
 // NewStackOverflow makes a bot for SO
-func NewStart(s *service.UserService, rs *service.RoomService) *Start {
+func NewStart(s UserService, rs RoomService) *Start {
 	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Start{
 		us: s,
@@ -61,12 +70,12 @@ func (s Start) HasReact(u *api.Update) bool {
 }
 
 type Room struct {
-	us *service.UserService
-	rs *service.RoomService
+	us UserService
+	rs RoomService
 }
 
 // NewRoom makes a bot for create new room
-func NewRoom(s *service.UserService, rs *service.RoomService) *Room {
+func NewRoom(s UserService, rs RoomService) *Room {
 	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Room{
 		us: s,

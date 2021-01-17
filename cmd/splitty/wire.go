@@ -14,7 +14,8 @@ import (
 
 func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, closer func(), err error) {
 	wire.Build(initMongoConnection, initTelegramConfig,
-		service.NewRoomService, service.NewUserService,
+		service.NewUserService, wire.Bind(new(bot.UserService), new(*service.UserService)),
+		service.NewRoomService, wire.Bind(new(bot.RoomService), new(*service.RoomService)),
 		ProvideBotList, bot.NewStart, bot.NewRoom,
 		repository.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*repository.MongoUserRepository)),
 		repository.NewRoomRepository, wire.Bind(new(repository.RoomRepository), new(*repository.MongoRoomRepository)),
