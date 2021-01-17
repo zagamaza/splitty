@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
-	"github.com/almaznur91/splitty/internal/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	zlog "github.com/rs/zerolog/log"
 	"log"
@@ -16,7 +15,7 @@ type UserService interface {
 
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
-	CreateRoom(ctx context.Context, u api.User) (*repository.Room, error)
+	CreateRoom(ctx context.Context, u api.User) (*api.Room, error)
 }
 
 // send /room, after click on the button 'Присоединиться'

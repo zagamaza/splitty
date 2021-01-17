@@ -22,10 +22,10 @@ type RoomService struct {
 	repository.RoomRepository
 }
 
-func (rs *RoomService) CreateRoom(ctx context.Context, u api.User) (*repository.Room, error) {
-	r := &repository.Room{
-		Users: &[]api.User{u},
-		Name:  "Тестовая",
+func (rs *RoomService) CreateRoom(ctx context.Context, u api.User) (*api.Room, error) {
+	r := &api.Room{
+		Members: &[]api.User{u},
+		Name:    "Тестовая",
 	}
 	rId, err := rs.RoomRepository.SaveRoom(ctx, r)
 	r.ID = rId
