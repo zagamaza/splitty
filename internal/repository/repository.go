@@ -11,36 +11,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Transaction struct {
-	ID    primitive.ObjectID `json:"id" bson:"id"`
-	Donor *api.User          `json:"donor" bson:"donor"`
-	//цель покупки
-	Sum        float32     `json:"sum" bson:"sum"`
-	Recipients *[]api.User `json:"recipients" bson:"recipients"`
-}
-
-type User struct {
-	ID          int    `json:"id" bson:"_id"`
-	Username    string `json:"userName" bson:"user_name"`
-	DisplayName string `json:"displayName" bson:"display_name"`
-}
-
-type Room struct {
-	ID           primitive.ObjectID `bson:"_id,omitempty"`
-	Name         string             `json:"name" bson:"name"`
-	Users        *[]api.User        `json:"users" bson:"users"`
-	Transactions *[]Transaction
-}
-
 type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) error
 }
 
 type RoomRepository interface {
-	FindById(ctx context.Context, id string) (*Room, error)
+	FindById(ctx context.Context, id string) (*api.Room, error)
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
-	SaveRoom(ctx context.Context, r *Room) (primitive.ObjectID, error)
-	FindRoomsByUserId(ctx context.Context, id int) (*[]Room, error)
+	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
+	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 }
 
 type MongoUserRepository struct {
@@ -59,7 +38,7 @@ func NewRoomRepository(col *mongo.Database) *MongoRoomRepository {
 	return &MongoRoomRepository{col: col.Collection("room")}
 }
 
-func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*Room, error) {
+func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Room, error) {
 	hex, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
@@ -68,7 +47,7 @@ func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*Room, e
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
-	rm := &Room{}
+	rm := &api.Room{}
 	if err := res.Decode(rm); err != nil {
 		return nil, err
 	}
@@ -90,7 +69,7 @@ func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u api.User, roomId
 	return err
 }
 
-func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *Room) (primitive.ObjectID, error) {
+func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error) {
 	res, err := rr.col.InsertOne(ctx, r)
 	if err != nil {
 		log.Error().Err(err).Msg("insert failed")
@@ -112,12 +91,12 @@ func (rr MongoRoomRepository) hasUserInRoom(ctx context.Context, uId int, roomId
 	return resp > 0, err
 }
 
-func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[]Room, error) {
+func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error) {
 	cur, err := rr.col.Find(ctx, bson.D{{"users._id", bson.D{{"$eq", id}}}})
 	if err != nil {
 		return nil, err
 	}
-	var m []Room
+	var m []api.Room
 	err = cur.All(ctx, &m)
 	if err != nil {
 		return nil, err
