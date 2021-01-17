@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
-	"github.com/almaznur91/splitty/internal/service"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"log"
@@ -16,9 +15,8 @@ import (
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
-	TbAPI   tbAPI
-	Bots    bot.Interface
-	Service service.UserService
+	TbAPI tbAPI
+	Bots  bot.Interface
 
 	msgs struct {
 		once sync.Once
@@ -71,10 +69,6 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			log.Printf("[DEBUG] %service", string(msgJSON))
 
 			upd := l.transformUpdate(update)
-
-			if err := l.Service.UpsertUser(ctx, upd.Message.From); err != nil {
-				log.Printf("[WARN] failed to respond on update, %v", err)
-			}
 
 			log.Printf("[DEBUG] incoming msg: %+v", upd.Message)
 

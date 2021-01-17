@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -49,7 +48,7 @@ func main() {
 	}
 }
 
-func initTelegramConfig(cfg *config, sc *service.UserService, rs *service.RoomService) (*events.TelegramListener, error) {
+func initTelegramConfig(cfg *config, bots []bot.Interface) (*events.TelegramListener, error) {
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
 	if err != nil {
 		log.Error().Err(err).Msg("[ERROR] can't make telegram bot")
@@ -58,15 +57,11 @@ func initTelegramConfig(cfg *config, sc *service.UserService, rs *service.RoomSe
 	tbAPI.Debug = cfg.LogLevel == "debug"
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
-	multiBot := bot.MultiBot{
-		bot.NewStart(sc, rs),
-		bot.NewRoom(sc, rs),
-	}
+	multiBot := bot.MultiBot(bots)
 
 	tgListener := &events.TelegramListener{
-		TbAPI:   tbAPI,
-		Bots:    multiBot,
-		Service: *sc,
+		TbAPI: tbAPI,
+		Bots:  multiBot,
 	}
 
 	return tgListener, nil
