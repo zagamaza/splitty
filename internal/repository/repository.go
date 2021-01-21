@@ -22,11 +22,29 @@ type RoomRepository interface {
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 }
 
+type ChatStateRepository interface {
+	Save(ctx context.Context, u api.ChatState) error
+	FindById(ctx context.Context, id int) (*api.ChatState, error)
+	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
+}
+
+type ButtonRepository interface {
+	Save(ctx context.Context, b api.Button) (primitive.ObjectID, error)
+	FindById(ctx context.Context, id string) (*api.Button, error)
+}
+
 type MongoUserRepository struct {
 	col *mongo.Collection
 }
 
 type MongoRoomRepository struct {
+	col *mongo.Collection
+}
+
+type MongoChatStateRepository struct {
+	col *mongo.Collection
+}
+type MongoButtonRepository struct {
 	col *mongo.Collection
 }
 
@@ -36,6 +54,14 @@ func NewUserRepository(col *mongo.Database) *MongoUserRepository {
 
 func NewRoomRepository(col *mongo.Database) *MongoRoomRepository {
 	return &MongoRoomRepository{col: col.Collection("room")}
+}
+
+func NewChatStateRepository(col *mongo.Database) *MongoChatStateRepository {
+	return &MongoChatStateRepository{col: col.Collection("chat_state")}
+}
+
+func NewButtonRepository(col *mongo.Database) *MongoButtonRepository {
+	return &MongoButtonRepository{col: col.Collection("button")}
 }
 
 func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Room, error) {
@@ -114,4 +140,78 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {
 		return err
 	}
 	return nil
+}
+
+func (csr MongoChatStateRepository) Save(ctx context.Context, cs api.ChatState) error {
+	res, err := csr.col.InsertOne(ctx, cs)
+	if err != nil {
+		log.Error().Err(err).Msg("insert failed")
+	}
+	if res != nil && res.InsertedID == nil {
+		return errors.New("insert failed")
+	}
+	return err
+}
+
+func (csr MongoChatStateRepository) FindById(ctx context.Context, id int) (*api.ChatState, error) {
+	res := csr.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", id}}}})
+	if res.Err() == mongo.ErrNoDocuments {
+		log.Warn().Err(res.Err()).Msgf("chat_state not found by id %v", id)
+		return nil, nil
+	}
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	cs := &api.ChatState{}
+	if err := res.Decode(cs); err != nil {
+		return nil, err
+	}
+	return cs, nil
+}
+
+func (csr MongoChatStateRepository) FindByUserId(ctx context.Context, userId int) (*api.ChatState, error) {
+	res := csr.col.FindOne(ctx, bson.D{{"user_id", bson.D{{"$eq", userId}}}})
+	if res.Err() == mongo.ErrNoDocuments {
+		log.Warn().Err(res.Err()).Msgf("chat_state not found by user_id %v", userId)
+		return nil, nil
+	}
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	cs := &api.ChatState{}
+	if err := res.Decode(cs); err != nil {
+		return nil, err
+	}
+	return cs, nil
+}
+
+func (csr MongoButtonRepository) Save(ctx context.Context, b api.Button) (primitive.ObjectID, error) {
+	res, err := csr.col.InsertOne(ctx, b)
+	if err != nil {
+		log.Error().Err(err).Msg("insert failed")
+	}
+	if res != nil && res.InsertedID == nil {
+		return primitive.NewObjectID(), errors.New("insert failed")
+	}
+	return res.InsertedID.(primitive.ObjectID), err
+}
+
+func (csr MongoButtonRepository) FindById(ctx context.Context, id string) (*api.Button, error) {
+	hex, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	res := csr.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", hex}}}})
+	if res.Err() == mongo.ErrNoDocuments {
+		log.Warn().Err(res.Err()).Msgf("button not found by id %v", id)
+		return nil, nil
+	}
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	b := &api.Button{}
+	if err := res.Decode(b); err != nil {
+		return nil, err
+	}
+	return b, nil
 }

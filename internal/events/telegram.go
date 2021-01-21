@@ -12,11 +12,21 @@ import (
 	"github.com/almaznur91/splitty/internal/bot"
 )
 
+type ChatStateService interface {
+	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
+}
+
+type ButtonService interface {
+	FindById(ctx context.Context, id string) (*api.Button, error)
+}
+
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
-	TbAPI tbAPI
-	Bots  bot.Interface
+	TbAPI            tbAPI
+	Bots             bot.Interface
+	ChatStateService ChatStateService
+	ButtonService    ButtonService
 
 	msgs struct {
 		once sync.Once
@@ -70,6 +80,14 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			upd := l.transformUpdate(update)
 
+			if err := l.populateBtn(ctx, upd); err != nil {
+				log.Printf("[ERROR] failed to populateBtn, %v", err)
+			}
+
+			if err := l.populateChatState(ctx, upd); err != nil {
+				log.Printf("[ERROR] failed to populateChatState, %v", err)
+			}
+
 			log.Printf("[DEBUG] incoming msg: %+v", upd.Message)
 
 			resp := l.Bots.OnMessage(ctx, upd)
@@ -79,6 +97,28 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 		}
 	}
+}
+
+func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) error {
+	if upd.CallbackQuery != nil {
+		btn, err := l.ButtonService.FindById(ctx, upd.CallbackQuery.Data)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find Button by id %q", err)
+		}
+		upd.Button = btn
+	}
+	return nil
+}
+
+func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Update) error {
+	if upd.Message != nil && upd.Message.Text != "" {
+		cs, err := l.ChatStateService.FindByUserId(ctx, upd.Message.From.ID)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find ChatState by id %q", err)
+		}
+		upd.ChatState = cs
+	}
+	return nil
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
@@ -158,6 +198,7 @@ func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
 			},
 			Message:         l.transform(u.CallbackQuery.Message),
 			InlineMessageID: u.CallbackQuery.InlineMessageID,
+			Data:            u.CallbackQuery.Data,
 		}
 	}
 

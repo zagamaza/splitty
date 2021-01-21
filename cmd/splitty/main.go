@@ -48,20 +48,28 @@ func main() {
 	}
 }
 
-func initTelegramConfig(cfg *config, bots []bot.Interface) (*events.TelegramListener, error) {
+func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
 	if err != nil {
 		log.Error().Err(err).Msg("[ERROR] can't make telegram bot")
 		return nil, err
 	}
-	tbAPI.Debug = cfg.LogLevel == "debug"
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
+	bcfg.BotName = tbAPI.Self.UserName
+	tbAPI.Debug = cfg.LogLevel == "debug"
+
+	return tbAPI, nil
+}
+
+func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, cs events.ChatStateService) (*events.TelegramListener, error) {
 	multiBot := bot.MultiBot(bots)
 
 	tgListener := &events.TelegramListener{
-		TbAPI: tbAPI,
-		Bots:  multiBot,
+		TbAPI:            tbAPI,
+		Bots:             multiBot,
+		ChatStateService: cs,
+		ButtonService:    bs,
 	}
 
 	return tgListener, nil
@@ -106,4 +114,11 @@ func initMongoConnection(ctx context.Context, cfg *config) (*mongo.Database, fun
 			log.Fatal().Err(err).Msg("error while connect to mongo")
 		}
 	}, nil
+}
+
+func initBotConfig(c *config) *bot.Config {
+	cfg := &bot.Config{
+		SuperUsers: c.SuperUsers,
+	}
+	return cfg
 }

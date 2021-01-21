@@ -18,18 +18,25 @@ type RoomService interface {
 	CreateRoom(ctx context.Context, u api.User) (*api.Room, error)
 }
 
+type Config struct {
+	BotName    string
+	SuperUsers []string
+}
+
 // send /room, after click on the button 'Присоединиться'
 type Start struct {
-	us UserService
-	rs RoomService
+	us  UserService
+	rs  RoomService
+	cgf *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewStart(s UserService, rs RoomService) *Start {
+func NewStart(s UserService, rs RoomService, cfg *Config) *Start {
 	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Start{
-		us: s,
-		rs: rs,
+		us:  s,
+		rs:  rs,
+		cgf: cfg,
 	}
 }
 
