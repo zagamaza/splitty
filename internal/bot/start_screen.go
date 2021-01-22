@@ -10,13 +10,13 @@ import (
 )
 
 type ChatStateService interface {
-	Save(ctx context.Context, u api.ChatState) error
+	Save(ctx context.Context, u *api.ChatState) error
 	FindById(ctx context.Context, id int) (*api.ChatState, error)
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
 }
 
 type ButtonService interface {
-	Save(ctx context.Context, u api.Button) (primitive.ObjectID, error)
+	Save(ctx context.Context, u *api.Button) (primitive.ObjectID, error)
 }
 
 // send /room, after click on the button 'Присоединиться'
@@ -47,7 +47,7 @@ func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Все комнаты", "http://t.me/ZagaMaza1_bot?start=")}
 
 	b := &api.Button{Action: "create_room"}
-	id, err := s.bs.Save(ctx, *b)
+	id, err := s.bs.Save(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return

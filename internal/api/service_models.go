@@ -15,7 +15,7 @@ type Room struct {
 }
 
 type Transaction struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id"`
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Description string             `json:"description" bson:"description"`
 	Donor       *User              `json:"donor" bson:"donor"`
 	Recipients  *[]User            `json:"recipients" bson:"recipients"`
@@ -31,7 +31,7 @@ type ChatState struct {
 
 // Button which is sent to the user as ReplyMarkup
 type Button struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CallbackData string             `json:"callbackData" bson:"callback_data"`
 	Action       string             `json:"action" bson:"action"`
 }

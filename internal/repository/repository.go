@@ -23,13 +23,13 @@ type RoomRepository interface {
 }
 
 type ChatStateRepository interface {
-	Save(ctx context.Context, u api.ChatState) error
+	Save(ctx context.Context, u *api.ChatState) error
 	FindById(ctx context.Context, id int) (*api.ChatState, error)
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
 }
 
 type ButtonRepository interface {
-	Save(ctx context.Context, b api.Button) (primitive.ObjectID, error)
+	Save(ctx context.Context, b *api.Button) (primitive.ObjectID, error)
 	FindById(ctx context.Context, id string) (*api.Button, error)
 }
 
@@ -142,7 +142,7 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {
 	return nil
 }
 
-func (csr MongoChatStateRepository) Save(ctx context.Context, cs api.ChatState) error {
+func (csr MongoChatStateRepository) Save(ctx context.Context, cs *api.ChatState) error {
 	res, err := csr.col.InsertOne(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("insert failed")
@@ -185,10 +185,11 @@ func (csr MongoChatStateRepository) FindByUserId(ctx context.Context, userId int
 	return cs, nil
 }
 
-func (csr MongoButtonRepository) Save(ctx context.Context, b api.Button) (primitive.ObjectID, error) {
+func (csr MongoButtonRepository) Save(ctx context.Context, b *api.Button) (primitive.ObjectID, error) {
 	res, err := csr.col.InsertOne(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("insert failed")
+		return primitive.NewObjectID(), err
 	}
 	if res != nil && res.InsertedID == nil {
 		return primitive.NewObjectID(), errors.New("insert failed")

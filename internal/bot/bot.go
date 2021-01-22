@@ -9,11 +9,6 @@ import (
 	"strings"
 )
 
-// genHelpMsg construct help message from bot'service HasReact
-func genHelpMsg(com []string, msg string) string {
-	return strings.Join(com, ", ") + " _– " + msg + "_\n"
-}
-
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
 	OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage)
@@ -31,9 +26,6 @@ type MultiBot []Interface
 // OnMessage pass msg to all bots and collects reposnses (combining all of them)
 //noinspection GoShadowedVar
 func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage) {
-	if contains([]string{"help", "/help", "help!"}, update.Message.Text) {
-		return api.TelegramMessage{}
-	}
 
 	resps := make(chan api.TelegramMessage)
 	btn := make(chan []tgbotapi.InlineKeyboardButton)

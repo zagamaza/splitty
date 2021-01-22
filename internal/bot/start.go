@@ -15,7 +15,7 @@ type UserService interface {
 
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
-	CreateRoom(ctx context.Context, u api.User) (*api.Room, error)
+	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
 }
 
 type Config struct {
@@ -42,13 +42,13 @@ func NewStart(s UserService, rs RoomService, cfg *Config) *Start {
 
 // OnMessage returns one entry
 func (s Start) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	if !s.HasReact(u) {
+		return api.TelegramMessage{}
+	}
+
 	//todo: думаю нужен отдельный бот и выставить его в самое начало, т.к. выполняется для всех запросов без условия
 	if err := s.us.UpsertUser(ctx, u.Message.From); err != nil {
 		log.Printf("[WARN] failed to respond on update, %v", err)
-	}
-
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
 	}
 
 	roomId := strings.ReplaceAll(u.Message.Text, "/start ", "")
@@ -109,7 +109,7 @@ func (r Room) OnMessage(ctx context.Context, u *api.Update) (response api.Telegr
 		}
 	}
 
-	room, err := r.rs.CreateRoom(ctx, u.Message.From)
+	room, err := r.rs.CreateRoom(ctx, &api.Room{})
 	if err != nil {
 		zlog.Error().Err(err).Msg("crete room failed")
 		return api.TelegramMessage{}
@@ -130,6 +130,9 @@ func (r Room) OnMessage(ctx context.Context, u *api.Update) (response api.Telegr
 
 // ReactOn keys
 func (r Room) HasReact(u *api.Update) bool {
+	if u.Message == nil {
+		return false
+	}
 	return strings.Contains(u.Message.Text, "/room")
 }
 
@@ -137,7 +140,8 @@ func getChatID(update *api.Update) int64 {
 	var chatId int64
 	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
 		chatId = update.CallbackQuery.Message.Chat.ID
+	} else {
+		chatId = update.Message.Chat.ID
 	}
-	chatId = update.Message.Chat.ID
 	return chatId
 }

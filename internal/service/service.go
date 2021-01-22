@@ -38,11 +38,7 @@ type ButtonService struct {
 	repository.ButtonRepository
 }
 
-func (rs *RoomService) CreateRoom(ctx context.Context, u api.User) (*api.Room, error) {
-	r := &api.Room{
-		Members: &[]api.User{u},
-		Name:    "Тестовая",
-	}
+func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, error) {
 	rId, err := rs.RoomRepository.SaveRoom(ctx, r)
 	r.ID = rId
 	return r, err

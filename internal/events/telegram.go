@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
@@ -65,18 +64,6 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			if !ok {
 				return errors.Errorf("telegram update chan closed")
 			}
-
-			if update.Message == nil {
-				log.Print("[DEBUG] empty message body")
-				continue
-			}
-
-			msgJSON, err := json.Marshal(update.Message)
-			if err != nil {
-				log.Printf("[ERROR] failed to marshal update.Message to json: %v", err)
-				continue
-			}
-			log.Printf("[DEBUG] %service", string(msgJSON))
 
 			upd := l.transformUpdate(update)
 

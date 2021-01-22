@@ -36,7 +36,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	mongoButtonRepository := repository.NewButtonRepository(database)
 	buttonService := service.NewButtonService(mongoButtonRepository)
 	startScreen := bot.NewStartScreen(chatStateService, buttonService)
-	v := ProvideBotList(start, room, startScreen)
+	roomCreating := bot.NewRoomCreating(chatStateService, buttonService, botConfig)
+	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
+	v := ProvideBotList(start, room, startScreen, roomCreating, roomSetName)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -49,6 +51,6 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(start *bot.Start, room *bot.Room, startScreen *bot.StartScreen) []bot.Interface {
-	return []bot.Interface{start, room}
+func ProvideBotList(start *bot.Start, room *bot.Room, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName) []bot.Interface {
+	return []bot.Interface{start, room, startScreen, rc, rsn}
 }
