@@ -5,7 +5,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
-	"log"
+	"github.com/rs/zerolog/log"
 	"sync"
 
 	"github.com/almaznur91/splitty/internal/bot"
@@ -68,19 +68,19 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			upd := l.transformUpdate(update)
 
 			if err := l.populateBtn(ctx, upd); err != nil {
-				log.Printf("[ERROR] failed to populateBtn, %v", err)
+				log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
 			}
 
 			if err := l.populateChatState(ctx, upd); err != nil {
-				log.Printf("[ERROR] failed to populateChatState, %v", err)
+				log.Error().Err(err).Stack().Msgf("failed to populateChatState")
 			}
 
-			log.Printf("[DEBUG] incoming msg: %+v", upd.Message)
+			log.Debug().Msgf("incoming msg: %+v", upd.Message)
 
 			resp := l.Bots.OnMessage(ctx, upd)
 
 			if err := l.sendBotResponse(resp); err != nil {
-				log.Printf("[ERROR] failed to respond on update, %v", err)
+				log.Error().Err(err).Stack().Msgf("failed to respond on update")
 			}
 		}
 	}
@@ -115,12 +115,12 @@ func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 	}
 
 	if resp.InlineConfig != nil {
-		log.Printf("[INFO] bot response - %+v", resp.InlineConfig.InlineQueryID)
+		log.Info().Msgf("bot response - %+v", resp.InlineConfig.InlineQueryID)
 	}
 
 	if len(resp.Chattable) > 0 {
 		for _, v := range resp.Chattable {
-			log.Printf("[INFO] bot response - %v", v)
+			log.Info().Msgf("bot response - %v", v)
 			_, err := l.TbAPI.Send(v)
 			if err != nil {
 				return errors.Wrapf(err, "can't send message to telegram %q", v)

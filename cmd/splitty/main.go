@@ -48,17 +48,24 @@ func main() {
 	}
 }
 
+type tgLogger struct {
+	zerolog.Logger
+}
+
+func (i *tgLogger) Println(v ...interface{}) { i.Print(v...) }
+
 func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
+	_ = tbapi.SetLogger(&tgLogger{log.Output(zerolog.ConsoleWriter{Out: os.Stdout})})
 	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
 	if err != nil {
-		log.Error().Err(err).Msg("[ERROR] can't make telegram bot")
+		log.Error().Err(err).Msg("can't make telegram bot")
 		return nil, err
 	}
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
 	bcfg.BotName = tbAPI.Self.UserName
 	tbAPI.Debug = cfg.LogLevel == "debug"
-
+	log.Info().Msgf("BotName: %s", bcfg.BotName)
 	return tbAPI, nil
 }
 

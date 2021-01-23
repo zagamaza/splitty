@@ -31,9 +31,7 @@ type Start struct {
 	cgf *Config
 }
 
-// NewStackOverflow makes a bot for SO
 func NewStart(s UserService, rs RoomService, cfg *Config) *Start {
-	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Start{
 		us:  s,
 		rs:  rs,
@@ -83,7 +81,6 @@ type Room struct {
 
 // NewRoom makes a bot for create new room
 func NewRoom(s UserService, rs RoomService) *Room {
-	log.Printf("[INFO] StackOverflow bot with https://api.stackexchange.com/2.2/questions")
 	return &Room{
 		us: s,
 		rs: rs,
