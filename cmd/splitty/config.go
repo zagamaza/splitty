@@ -11,6 +11,7 @@ type config struct {
 	DbName     string   `env:"DB_NAME" envDefault:"splitty"`
 	TgToken    string   `env:"TG_TOKEN" envDefault:"619387871:AAEsNI9nFiMzcB6KUWX5JWQT2TlV7DO5zUw"`
 	SuperUsers []string `env:"SUPER_USER" envSeparator:":" envDefault:"mazanur:zagirnur"`
+	TgDebug    bool     `env:"TG_DEBUG" envDefault:"false"`
 }
 
 func initConfig() (*config, error) {

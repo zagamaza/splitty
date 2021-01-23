@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
@@ -23,13 +24,15 @@ type ButtonService interface {
 type StartScreen struct {
 	css ChatStateService
 	bs  ButtonService
+	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewStartScreen(s ChatStateService, bs ButtonService) *StartScreen {
+func NewStartScreen(s ChatStateService, bs ButtonService, cfg *Config) *StartScreen {
 	return &StartScreen{
 		css: s,
 		bs:  bs,
+		cfg: cfg,
 	}
 }
 
@@ -43,8 +46,8 @@ func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api
 	tbMsg := tgbotapi.NewMessage(getChatID(u), "Главный экран")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	//TODO сделать чтобы наименование бота тянулось из конфигов
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Все комнаты", "http://t.me/ZagaMaza1_bot?start=")}
+	data := fmt.Sprintf("http://t.me/%s?start=", s.cfg.BotName)
+	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Все комнаты", data)}
 
 	b := &api.Button{Action: "create_room"}
 	id, err := s.bs.Save(ctx, b)

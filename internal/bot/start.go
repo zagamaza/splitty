@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	zlog "github.com/rs/zerolog/log"
@@ -75,15 +76,17 @@ func (s Start) HasReact(u *api.Update) bool {
 }
 
 type Room struct {
-	us UserService
-	rs RoomService
+	us  UserService
+	rs  RoomService
+	cgf *Config
 }
 
 // NewRoom makes a bot for create new room
-func NewRoom(s UserService, rs RoomService) *Room {
+func NewRoom(us UserService, rs RoomService, cfg *Config) *Room {
 	return &Room{
-		us: s,
-		rs: rs,
+		us:  us,
+		rs:  rs,
+		cgf: cfg,
 	}
 }
 
@@ -97,8 +100,8 @@ func (r Room) OnMessage(ctx context.Context, u *api.Update) (response api.Telegr
 		tbMsg := tgbotapi.NewMessage(getChatID(u), "*Используйте эту команду в групповом чате*\n\nПосле добавления в группу не забудьте дать права администратора и повторно отправить команду /room")
 		tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-		//TODO сделать чтобы наименование бота тянулось из конфигов
-		buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить бота в свой чат", "http://t.me/ZagaMaza1_bot?startgroup=true")}
+		joinUrl := fmt.Sprintf("http://t.me/%s?startgroup=true", r.cgf.BotName)
+		buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить бота в свой чат", joinUrl)}
 		tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons)
 
 		return api.TelegramMessage{
@@ -116,8 +119,8 @@ func (r Room) OnMessage(ctx context.Context, u *api.Update) (response api.Telegr
 	tbMsg := tgbotapi.NewMessage(getChatID(u), "Приветики")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	//TODO сделать чтобы наименование бота тянулось из конфигов
-	buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Присоединиться", "http://t.me/ZagaMaza1_bot?start="+rId)}
+	joinUrl := fmt.Sprintf("http://t.me/%s?start=%s", r.cgf.BotName, rId)
+	buttons := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Присоединиться", joinUrl)}
 	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(buttons)
 
 	return api.TelegramMessage{

@@ -65,7 +65,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				return errors.Errorf("telegram update chan closed")
 			}
 
-			upd := l.transformUpdate(update)
+			upd := transformUpdate(update)
 
 			if err := l.populateBtn(ctx, upd); err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
@@ -75,7 +75,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				log.Error().Err(err).Stack().Msgf("failed to populateChatState")
 			}
 
-			log.Debug().Msgf("incoming msg: %+v", upd.Message)
+			log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
 
 			resp := l.Bots.OnMessage(ctx, upd)
 
@@ -130,7 +130,7 @@ func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 	return nil
 }
 
-func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
+func transform(msg *tbapi.Message) *api.Message {
 	if msg == nil {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
 
 	switch {
 	case msg.Entities != nil && len(*msg.Entities) > 0:
-		message.Entities = l.transformEntities(msg.Entities)
+		message.Entities = transformEntities(msg.Entities)
 
 	case msg.Photo != nil && len(*msg.Photo) > 0:
 		sizes := *msg.Photo
@@ -165,14 +165,14 @@ func (l *TelegramListener) transform(msg *tbapi.Message) *api.Message {
 			Width:    lastSize.Width,
 			Height:   lastSize.Height,
 			Caption:  msg.Caption,
-			Entities: l.transformEntities(msg.CaptionEntities),
+			Entities: transformEntities(msg.CaptionEntities),
 		}
 	}
 
 	return &message
 }
 
-func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
+func transformUpdate(u tbapi.Update) *api.Update {
 	update := &api.Update{}
 
 	if u.CallbackQuery != nil {
@@ -183,7 +183,7 @@ func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
 				Username:    u.CallbackQuery.From.UserName,
 				DisplayName: u.CallbackQuery.From.FirstName + " " + u.CallbackQuery.From.LastName,
 			},
-			Message:         l.transform(u.CallbackQuery.Message),
+			Message:         transform(u.CallbackQuery.Message),
 			InlineMessageID: u.CallbackQuery.InlineMessageID,
 			Data:            u.CallbackQuery.Data,
 		}
@@ -202,11 +202,11 @@ func (l *TelegramListener) transformUpdate(u tbapi.Update) *api.Update {
 			},
 		}
 	}
-	update.Message = l.transform(u.Message)
+	update.Message = transform(u.Message)
 	return update
 }
 
-func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
+func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	if entities == nil || len(*entities) == 0 {
 		return nil
 	}
