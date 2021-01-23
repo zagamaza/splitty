@@ -23,6 +23,9 @@ type Update struct {
 	InlineQuery *InlineQuery `json:"inline_query"`
 	//ChosenInlineResult *ChosenInlineResult `json:"chosen_inline_result"`
 	CallbackQuery *CallbackQuery `json:"callback_query"`
+
+	ChatState *ChatState
+	Button    *Button
 }
 
 // Message is primary record to pass data from/to bots
@@ -79,7 +82,8 @@ type CallbackQuery struct {
 	From            User     `json:"from"`
 	Message         *Message `json:"message"`           // optional
 	InlineMessageID string   `json:"inline_message_id"` // optional
-	//ChatInstance    string  `json:"chat_instance"`
+	ChatInstance    string   `json:"chat_instance"`
+	Data            string   `json:"data"` // calback information
 }
 
 // Chat contains information about the place a message was sent.
