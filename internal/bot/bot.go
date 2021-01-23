@@ -5,7 +5,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-pkgz/syncs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"log"
+	"github.com/rs/zerolog/log"
 	"strings"
 )
 
@@ -48,7 +48,7 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 
 	message := &api.TelegramMessage{Chattable: []tgbotapi.Chattable{}}
 	for r := range resps {
-		log.Printf("[DEBUG] collect %q", r)
+		log.Debug().Msgf("collect %q", r)
 		message.Chattable = append(message.Chattable, r.Chattable...)
 		message.InlineConfig = r.InlineConfig
 		message.Send = true
