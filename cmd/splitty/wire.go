@@ -20,7 +20,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		service.NewButtonService, wire.Bind(new(bot.ButtonService), new(*service.ButtonService)),
 		wire.Bind(new(events.ChatStateService), new(*service.ChatStateService)),
 		wire.Bind(new(events.ButtonService), new(*service.ButtonService)),
-		ProvideBotList, bot.NewStart, bot.NewRoom, bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName,
+		ProvideBotList, bot.NewStart, bot.NewRoom, bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom,
 		repository.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*repository.MongoUserRepository)),
 		repository.NewRoomRepository, wire.Bind(new(repository.RoomRepository), new(*repository.MongoRoomRepository)),
 		repository.NewChatStateRepository, wire.Bind(new(repository.ChatStateRepository), new(*repository.MongoChatStateRepository)),
@@ -29,6 +29,6 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 	return nil, nil, nil
 }
 
-func ProvideBotList(start *bot.Start, room *bot.Room, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName) []bot.Interface {
-	return []bot.Interface{start, room, startScreen, rc, rsn}
+func ProvideBotList(start *bot.Start, room *bot.Room, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom) []bot.Interface {
+	return []bot.Interface{start, room, startScreen, rc, rsn, jr}
 }

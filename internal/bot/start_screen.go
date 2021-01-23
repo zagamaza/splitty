@@ -11,7 +11,7 @@ import (
 
 type ChatStateService interface {
 	Save(ctx context.Context, u *api.ChatState) error
-	FindById(ctx context.Context, id int) (*api.ChatState, error)
+	DeleteById(ctx context.Context, id primitive.ObjectID) error
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
 }
 

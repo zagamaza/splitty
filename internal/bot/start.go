@@ -16,6 +16,7 @@ type UserService interface {
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
 	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
+	FindById(ctx context.Context, id string) (*api.Room, error)
 }
 
 type Config struct {

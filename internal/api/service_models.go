@@ -24,14 +24,15 @@ type Transaction struct {
 
 // ChatState stores user state
 type ChatState struct {
-	UserId     int    `json:"userId" bson:"user_id"`
-	Action     string `json:"action" bson:"action"`
-	ExternalId string `json:"externalId" bson:"extern_id"`
+	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserId     int                `json:"userId" bson:"user_id"`
+	Action     string             `json:"action" bson:"action"`
+	ExternalId string             `json:"externalId" bson:"extern_id"`
 }
 
 // Button which is sent to the user as ReplyMarkup
 type Button struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CallbackData string             `json:"callbackData" bson:"callback_data"`
+	CallbackData []byte             `json:"callbackData" bson:"callback_data"`
 	Action       string             `json:"action" bson:"action"`
 }
