@@ -39,12 +39,18 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		log.Error().Err(err).Msg("")
 		return
 	}
+
+	err = s.rs.JoinToRoom(ctx, u.CallbackQuery.From, cd["RoomId"])
+	if err != nil {
+		log.Error().Err(err).Msgf("join room failed %v", cd["RoomId"])
+		return
+	}
+
 	room, err := s.rs.FindById(ctx, cd["RoomId"])
 	if err != nil {
 		log.Error().Err(err).Msgf("get room failed %v", cd["RoomId"])
 		return
 	}
-
 	text := "Экран комнаты *" + room.Name + "*\n\nУчастники:\n"
 	for _, v := range *room.Members {
 		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
@@ -52,6 +58,20 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 
 	tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, text)
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
+
+	b := &api.Button{Action: "join_room", CallbackData: u.Button.CallbackData}
+	cId, err := s.bs.Save(ctx, b)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
+
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	keyboard = append(keyboard, button1)
+	tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
+		InlineKeyboard: keyboard,
+	}
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{tbMsg},
