@@ -64,7 +64,7 @@ func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	log.Info().Msg("super users: " + strings.Join(cfg.SuperUsers, ","))
 
 	bcfg.BotName = tbAPI.Self.UserName
-	tbAPI.Debug = cfg.LogLevel == "debug"
+	tbAPI.Debug = cfg.TgDebug
 	log.Info().Msgf("BotName: %s", bcfg.BotName)
 	return tbAPI, nil
 }

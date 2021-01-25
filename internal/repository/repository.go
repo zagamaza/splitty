@@ -195,34 +195,44 @@ func (csr MongoChatStateRepository) DeleteById(ctx context.Context, id primitive
 	return nil
 }
 
-func (csr MongoButtonRepository) Save(ctx context.Context, b *api.Button) (primitive.ObjectID, error) {
-	res, err := csr.col.InsertOne(ctx, b)
-	if err != nil {
-		log.Error().Err(err).Msg("insert failed")
-		return primitive.NewObjectID(), err
+func (br MongoButtonRepository) Save(ctx context.Context, b *api.Button) (primitive.ObjectID, error) {
+	res, err := br.col.InsertOne(ctx, b)
+	if err != nil || res == nil || res.InsertedID == nil {
+		log.Error().Err(err).Stack().Msg("insert failed")
+		return primitive.NilObjectID, err
 	}
-	if res != nil && res.InsertedID == nil {
-		return primitive.NewObjectID(), errors.New("insert failed")
-	}
-	return res.InsertedID.(primitive.ObjectID), err
+	return res.InsertedID.(primitive.ObjectID), nil
 }
 
-func (csr MongoButtonRepository) FindById(ctx context.Context, id string) (*api.Button, error) {
+func (br MongoButtonRepository) SaveAll(ctx context.Context, b ...*api.Button) ([]*api.Button, error) {
+	i := make([]interface{}, len(b))
+	for idx, btn := range b {
+		i[idx] = btn
+	}
+	res, err := br.col.InsertMany(ctx, i)
+	if err != nil || res == nil || res.InsertedIDs == nil {
+		log.Error().Err(err).Stack().Msg("insert failed")
+		return b, err
+	}
+	for idx, id := range res.InsertedIDs {
+		b[idx].ID = id.(primitive.ObjectID)
+	}
+
+	return b, nil
+}
+
+func (br MongoButtonRepository) FindById(ctx context.Context, id string) (*api.Button, error) {
 	hex, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
-	res := csr.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", hex}}}})
-	if res.Err() == mongo.ErrNoDocuments {
-		log.Warn().Err(res.Err()).Msgf("button not found by id %v", id)
-		return nil, nil
-	}
+	res := br.col.FindOne(ctx, bson.M{"_id": hex})
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
-	b := &api.Button{}
-	if err := res.Decode(b); err != nil {
+	btn := &api.Button{}
+	if err = res.Decode(btn); err != nil {
 		return nil, err
 	}
-	return b, nil
+	return btn, nil
 }
