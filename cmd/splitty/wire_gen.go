@@ -29,8 +29,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	userService := service.NewUserService(mongoUserRepository)
 	mongoRoomRepository := repository.NewRoomRepository(database)
 	roomService := service.NewRoomService(mongoRoomRepository)
-	start := bot.NewStart(userService, roomService, botConfig)
-	room := bot.NewRoom(userService, roomService, botConfig)
+	helper := bot.NewHelper(userService, roomService, botConfig)
 	mongoChatStateRepository := repository.NewChatStateRepository(database)
 	chatStateService := service.NewChatStateService(mongoChatStateRepository)
 	mongoButtonRepository := repository.NewButtonRepository(database)
@@ -39,7 +38,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	roomCreating := bot.NewRoomCreating(chatStateService, buttonService, botConfig)
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService)
-	v := ProvideBotList(start, room, startScreen, roomCreating, roomSetName, joinRoom)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -52,6 +51,6 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(start *bot.Start, room *bot.Room, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom) []bot.Interface {
-	return []bot.Interface{start, room, startScreen, rc, rsn, jr}
+func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr}
 }

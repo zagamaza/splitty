@@ -74,3 +74,13 @@ func contains(s []string, e string) bool {
 	}
 	return false
 }
+
+func getChatID(update *api.Update) int64 {
+	var chatId int64
+	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
+		chatId = update.CallbackQuery.Message.Chat.ID
+	} else {
+		chatId = update.Message.Chat.ID
+	}
+	return chatId
+}
