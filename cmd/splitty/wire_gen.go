@@ -37,8 +37,10 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	startScreen := bot.NewStartScreen(chatStateService, buttonService, botConfig)
 	roomCreating := bot.NewRoomCreating(chatStateService, buttonService, botConfig)
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
-	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom)
+	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
+	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
+	operation := bot.NewOperation(chatStateService, buttonService, roomService, botConfig)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -51,6 +53,6 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr}
+func ProvideBotList(start *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation) []bot.Interface {
+	return []bot.Interface{start, startScreen, rc, rsn, jr, ar, o}
 }
