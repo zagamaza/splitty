@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
-	"log"
+	"github.com/rs/zerolog/log"
 )
 
 type UserService interface {
@@ -44,7 +44,7 @@ func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 		return api.TelegramMessage{}
 	}
 	if err := s.us.UpsertUser(ctx, getFrom(u)); err != nil {
-		log.Printf("[WARN] failed to respond on update, %v", err)
+		log.Error().Err(err).Msgf("failed to respond on update, %v", err)
 	}
 
 	return api.TelegramMessage{}

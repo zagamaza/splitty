@@ -70,7 +70,7 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 func (s RoomCreating) HasReact(u *api.Update) bool {
 	if u.Button != nil && u.CallbackQuery != nil {
 		return strings.Contains(u.Button.Action, "create_room")
-	} else if u.Message != nil {
+	} else if u.Message != nil || u.Message.Chat.Type == "private" {
 		return strings.Contains(u.Message.Text, "/start create_room")
 	}
 	return false

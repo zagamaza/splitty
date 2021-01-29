@@ -6,7 +6,6 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strings"
 )
 
 type ChatStateService interface {
@@ -81,5 +80,9 @@ func (s StartScreen) HasReact(u *api.Update) bool {
 	if u.Message == nil {
 		return false
 	}
-	return strings.Contains(u.Message.Text, "/start@") || u.Message.Text == "/start"
+	if u.Message.Chat.Type != "private" {
+		return u.Message.Text == "/start"
+	} else {
+		return u.Message.Text == "/start"+s.cfg.BotName
+	}
 }

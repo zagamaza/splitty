@@ -70,7 +70,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 
 // ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
 func (s Operation) HasReact(u *api.Update) bool {
-	if u.Message == nil {
+	if u.Message == nil || u.Message.Chat.Type != "private" {
 		return false
 	}
 	return strings.Contains(u.Message.Text, "/start transaction")
