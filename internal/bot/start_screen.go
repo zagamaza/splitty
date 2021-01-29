@@ -81,8 +81,8 @@ func (s StartScreen) HasReact(u *api.Update) bool {
 		return false
 	}
 	if u.Message.Chat.Type != "private" {
-		return u.Message.Text == "/start"
+		return u.Message.Text == start
 	} else {
-		return u.Message.Text == "/start"+s.cfg.BotName
+		return u.Message.Text == start+s.cfg.BotName
 	}
 }

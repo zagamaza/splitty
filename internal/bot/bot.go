@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+const start string = "/start"
+const startTransaction = start + " transaction"
+
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
 	OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage)

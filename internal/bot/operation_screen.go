@@ -81,7 +81,7 @@ func (s Operation) HasReact(u *api.Update) bool {
 	if u.Message == nil || u.Message.Chat.Type != "private" {
 		return false
 	}
-	return strings.Contains(u.Message.Text, "/start transaction")
+	return strings.Contains(u.Message.Text, startTransaction)
 }
 
 func containsUserId(users *[]api.User, id int) bool {
