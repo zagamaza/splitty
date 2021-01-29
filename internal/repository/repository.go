@@ -135,7 +135,7 @@ func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[
 
 func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error) {
 	cur, err := rr.col.Find(ctx, bson.M{
-		"users": bson.M{"users._id": userId},
+		"users": bson.M{"$elemMatch": bson.M{"_id": userId}},
 		"name":  bson.M{"$regex": ".*" + name + ".*"},
 	})
 	if err != nil {
