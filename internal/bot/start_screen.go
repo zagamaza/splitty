@@ -67,7 +67,7 @@ func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api
 		button2 = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Создать новую комнату", id.Hex())}
 	}
 
-	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/ZagaMaza1_bot?start=")}
+	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cfg.BotName+"?start=")}
 	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2, button3)
 
 	return api.TelegramMessage{

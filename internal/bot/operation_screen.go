@@ -59,7 +59,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Расход", recipientBtn.ID.Hex())}
 	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Приход", donorBtn.ID.Hex())}
-	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/ZagaMaza1_bot?start=")}
+	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cfg.BotName+"?start=")}
 	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2, button3)
 
 	return api.TelegramMessage{
