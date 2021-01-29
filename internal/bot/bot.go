@@ -84,3 +84,15 @@ func getChatID(update *api.Update) int64 {
 	}
 	return chatId
 }
+
+func getFrom(update *api.Update) api.User {
+	var user api.User
+	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
+		user = update.CallbackQuery.From
+	} else if update.Message != nil {
+		user = update.Message.From
+	} else {
+		user = update.InlineQuery.From
+	}
+	return user
+}

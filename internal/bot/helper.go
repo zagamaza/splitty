@@ -43,7 +43,7 @@ func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 	if !s.HasReact(u) {
 		return api.TelegramMessage{}
 	}
-	if err := s.us.UpsertUser(ctx, u.Message.From); err != nil {
+	if err := s.us.UpsertUser(ctx, getFrom(u)); err != nil {
 		log.Printf("[WARN] failed to respond on update, %v", err)
 	}
 
