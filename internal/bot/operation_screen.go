@@ -49,7 +49,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 		return
 	}
 
-	if containsUserId(room.Members, getFrom(u).ID) {
+	if !containsUserId(room.Members, getFrom(u).ID) {
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой комнате")},
 			Send:      true,

@@ -60,7 +60,7 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 
 		b, err := s.generateBtn(ctx, "join_room", map[string]string{"RoomId": v.ID.Hex()})
 		if err != nil {
-			return
+			continue
 		}
 
 		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())}

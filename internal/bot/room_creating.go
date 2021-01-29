@@ -27,7 +27,7 @@ func NewRoomCreating(s ChatStateService, bs ButtonService, cfg *Config) *RoomCre
 func (s RoomCreating) HasReact(u *api.Update) bool {
 	if u.Button != nil && u.CallbackQuery != nil {
 		return strings.Contains(u.Button.Action, "create_room")
-	} else if u.Message != nil || u.Message.Chat.Type == "private" {
+	} else if u.Message != nil && u.Message.Chat.Type == "private" {
 		return strings.Contains(u.Message.Text, "/start create_room")
 	}
 	return false

@@ -90,7 +90,7 @@ func getChatID(update *api.Update) int64 {
 
 func getFrom(update *api.Update) api.User {
 	var user api.User
-	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
+	if update.CallbackQuery != nil {
 		user = update.CallbackQuery.From
 	} else if update.Message != nil {
 		user = update.Message.From
