@@ -92,7 +92,7 @@ func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Ro
 	var err error
 	var rooms *[]api.Room
 	if u.InlineQuery.Query != "" {
-		rooms, err = s.rs.FindRoomsByLikeName(ctx, u.InlineQuery.Query)
+		rooms, err = s.rs.FindRoomsByLikeName(ctx, u.InlineQuery.From.ID, u.InlineQuery.Query)
 		if err != nil {
 			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
 		}
