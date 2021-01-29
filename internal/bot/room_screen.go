@@ -28,6 +28,14 @@ func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Conf
 	}
 }
 
+// ReactOn keys
+func (s JoinRoom) HasReact(u *api.Update) bool {
+	if u.Button == nil {
+		return false
+	}
+	return strings.Contains(u.Button.Action, "join_room")
+}
+
 // OnMessage returns one entry
 func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -85,12 +93,4 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
 	}
-}
-
-// ReactOn keys
-func (s JoinRoom) HasReact(u *api.Update) bool {
-	if u.Button == nil {
-		return false
-	}
-	return strings.Contains(u.Button.Action, "join_room")
 }

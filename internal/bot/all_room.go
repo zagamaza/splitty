@@ -28,6 +28,14 @@ func NewAllRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Confi
 	}
 }
 
+// ReactOn keys
+func (s AllRoom) HasReact(u *api.Update) bool {
+	if u.InlineQuery == nil {
+		return false
+	}
+	return true
+}
+
 // OnMessage returns one entry
 func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -78,14 +86,6 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 		InlineConfig: inlineConfig,
 		Send:         true,
 	}
-}
-
-// ReactOn keys
-func (s AllRoom) HasReact(u *api.Update) bool {
-	if u.InlineQuery == nil {
-		return false
-	}
-	return true
 }
 
 func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {

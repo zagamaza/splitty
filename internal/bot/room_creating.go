@@ -23,6 +23,16 @@ func NewRoomCreating(s ChatStateService, bs ButtonService, cfg *Config) *RoomCre
 	}
 }
 
+// ReactOn keys
+func (s RoomCreating) HasReact(u *api.Update) bool {
+	if u.Button != nil && u.CallbackQuery != nil {
+		return strings.Contains(u.Button.Action, "create_room")
+	} else if u.Message != nil || u.Message.Chat.Type == "private" {
+		return strings.Contains(u.Message.Text, "/start create_room")
+	}
+	return false
+}
+
 // OnMessage returns one entry
 func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -66,16 +76,6 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 
 }
 
-// ReactOn keys
-func (s RoomCreating) HasReact(u *api.Update) bool {
-	if u.Button != nil && u.CallbackQuery != nil {
-		return strings.Contains(u.Button.Action, "create_room")
-	} else if u.Message != nil || u.Message.Chat.Type == "private" {
-		return strings.Contains(u.Message.Text, "/start create_room")
-	}
-	return false
-}
-
 type RoomSetName struct {
 	css ChatStateService
 	bs  ButtonService
@@ -93,13 +93,26 @@ func NewRoomSetName(s ChatStateService, bs ButtonService, rs RoomService, cfg *C
 	}
 }
 
+// ReactOn keys
+func (rs RoomSetName) HasReact(u *api.Update) bool {
+	if u.ChatState == nil || u.Message.Text == "" {
+		return false
+	}
+	return strings.Contains(u.ChatState.Action, "create_room")
+}
+
 // OnMessage returns one entry
 func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
 	if !rs.HasReact(u) {
 		return api.TelegramMessage{}
 	}
-	defer rs.css.DeleteById(ctx, u.ChatState.ID)
+	defer func() {
+		err := rs.css.DeleteById(ctx, u.ChatState.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	}()
 
 	r := &api.Room{
 		Members: &[]api.User{u.Message.From},
@@ -131,12 +144,4 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
 	}
-}
-
-// ReactOn keys
-func (rs RoomSetName) HasReact(u *api.Update) bool {
-	if u.ChatState == nil || u.Message.Text == "" {
-		return false
-	}
-	return strings.Contains(u.ChatState.Action, "create_room")
 }

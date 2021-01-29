@@ -35,6 +35,18 @@ func NewStartScreen(s ChatStateService, bs ButtonService, cfg *Config) *StartScr
 	}
 }
 
+// ReactOn keys
+func (s StartScreen) HasReact(u *api.Update) bool {
+	if u.Message == nil {
+		return false
+	}
+	if u.Message.Chat.Type != "private" {
+		return u.Message.Text == start
+	} else {
+		return u.Message.Text == start+s.cfg.BotName
+	}
+}
+
 // OnMessage returns one entry
 func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -72,17 +84,5 @@ func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
-	}
-}
-
-// ReactOn keys
-func (s StartScreen) HasReact(u *api.Update) bool {
-	if u.Message == nil {
-		return false
-	}
-	if u.Message.Chat.Type != "private" {
-		return u.Message.Text == start
-	} else {
-		return u.Message.Text == start+s.cfg.BotName
 	}
 }

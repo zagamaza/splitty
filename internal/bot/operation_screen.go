@@ -27,6 +27,14 @@ func NewOperation(s ChatStateService, bs ButtonService, rs RoomService, cfg *Con
 	}
 }
 
+// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
+func (s Operation) HasReact(u *api.Update) bool {
+	if u.Message == nil || u.Message.Chat.Type != "private" {
+		return false
+	}
+	return strings.Contains(u.Message.Text, startTransaction)
+}
+
 // OnMessage returns one entry
 func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -36,16 +44,16 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	roomId := strings.ReplaceAll(u.Message.Text, "/start transaction", "")
 	room, err := s.rs.FindById(ctx, roomId)
 
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+
 	if containsUserId(room.Members, getFrom(u).ID) {
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой комнате")},
 			Send:      true,
 		}
-	}
-
-	if err != nil {
-		log.Error().Err(err).Msg("get room failed")
-		return
 	}
 
 	tbMsg := tgbotapi.NewMessage(getChatID(u), "Выбор операции для комнаты *"+room.Name+"*")
@@ -74,14 +82,6 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
 	}
-}
-
-// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
-func (s Operation) HasReact(u *api.Update) bool {
-	if u.Message == nil || u.Message.Chat.Type != "private" {
-		return false
-	}
-	return strings.Contains(u.Message.Text, startTransaction)
 }
 
 func containsUserId(users *[]api.User, id int) bool {
