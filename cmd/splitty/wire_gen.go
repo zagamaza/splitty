@@ -53,6 +53,6 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(start *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation) []bot.Interface {
-	return []bot.Interface{start, startScreen, rc, rsn, jr, ar, o}
+func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o}
 }

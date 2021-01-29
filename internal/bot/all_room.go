@@ -35,19 +35,8 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 		return api.TelegramMessage{}
 	}
 
-	var rooms *[]api.Room
-	var err error
-	if u.InlineQuery.Query != "" {
-		rooms, err = s.rs.FindRoomsByLikeName(ctx, u.InlineQuery.Query)
-		if err != nil {
-			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
-		}
-	} else {
-		rooms, err = s.rs.FindRoomsByUserId(ctx, u.InlineQuery.From.ID)
-		if err != nil {
-			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
-		}
-	}
+	rooms := s.findRoomsByUpdate(ctx, u)
+
 	var results []interface{}
 	for _, v := range *rooms {
 		text := "Экран комнаты *" + v.Name + "*\n\nУчастники:\n"
@@ -59,20 +48,14 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 			Text:      text,
 			ParseMode: tgbotapi.ModeMarkdown,
 		}
-
 		article.Description = "text"
-		callbackJson, err := json.Marshal(map[string]string{"RoomId": v.ID.Hex()})
+
+		b, err := s.generateBtn(ctx, "join_room", map[string]string{"RoomId": v.ID.Hex()})
 		if err != nil {
-			log.Error().Err(err).Msg("")
 			return
 		}
-		b := &api.Button{Action: "join_room", CallbackData: callbackJson}
-		cId, err := s.bs.Save(ctx, b)
-		if err != nil {
-			log.Error().Err(err).Msg("create btn failed")
-			return
-		}
-		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
+
+		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())}
 		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction")}
 
 		var keyboard [][]tgbotapi.InlineKeyboardButton
@@ -103,4 +86,38 @@ func (s AllRoom) HasReact(u *api.Update) bool {
 		return false
 	}
 	return true
+}
+
+func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {
+	var err error
+	var rooms *[]api.Room
+	if u.InlineQuery.Query != "" {
+		rooms, err = s.rs.FindRoomsByLikeName(ctx, u.InlineQuery.Query)
+		if err != nil {
+			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
+		}
+	} else {
+		rooms, err = s.rs.FindRoomsByUserId(ctx, u.InlineQuery.From.ID)
+		if err != nil {
+			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
+		}
+	}
+	return rooms
+
+}
+
+func (s AllRoom) generateBtn(ctx context.Context, action string, cd map[string]string) (*api.Button, error) {
+	callbackJson, err := json.Marshal(cd)
+	if err != nil {
+		log.Error().Err(err).Msg("Marshal failed")
+		return nil, err
+	}
+	b := &api.Button{Action: action, CallbackData: callbackJson}
+	cId, err := s.bs.Save(ctx, b)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return nil, err
+	}
+	b.ID = cId
+	return b, nil
 }
