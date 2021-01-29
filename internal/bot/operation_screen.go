@@ -35,6 +35,14 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	}
 	roomId := strings.ReplaceAll(u.Message.Text, "/start transaction", "")
 	room, err := s.rs.FindById(ctx, roomId)
+
+	if containsUserId(room.Members, getFrom(u).ID) {
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой комнате")},
+			Send:      true,
+		}
+	}
+
 	if err != nil {
 		log.Error().Err(err).Msg("get room failed")
 		return
@@ -74,4 +82,13 @@ func (s Operation) HasReact(u *api.Update) bool {
 		return false
 	}
 	return strings.Contains(u.Message.Text, "/start transaction")
+}
+
+func containsUserId(users *[]api.User, id int) bool {
+	for _, u := range *users {
+		if u.ID == id {
+			return true
+		}
+	}
+	return false
 }
