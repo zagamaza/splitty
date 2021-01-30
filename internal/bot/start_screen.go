@@ -40,19 +40,15 @@ func (s StartScreen) HasReact(u *api.Update) bool {
 	if u.Message == nil {
 		return false
 	}
-	if u.Message.Chat.Type != "private" {
+	if u.Message.Chat.Type == "private" {
 		return u.Message.Text == start
 	} else {
-		return u.Message.Text == start+s.cfg.BotName
+		return u.Message.Text == start+"@"+s.cfg.BotName
 	}
 }
 
 // OnMessage returns one entry
 func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
 
 	tbMsg := tgbotapi.NewMessage(getChatID(u), "Главный экран")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown

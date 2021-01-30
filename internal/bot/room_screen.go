@@ -39,10 +39,6 @@ func (s JoinRoom) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
-
 	var cd map[string]string
 	err := json.Unmarshal(u.Button.CallbackData, &cd)
 	if err != nil {

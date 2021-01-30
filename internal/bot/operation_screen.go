@@ -38,9 +38,6 @@ func (s Operation) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
 	roomId := strings.ReplaceAll(u.Message.Text, "/start transaction", "")
 	room, err := s.rs.FindById(ctx, roomId)
 

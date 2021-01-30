@@ -39,10 +39,6 @@ func (s AllRoom) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
-
 	rooms := s.findRoomsByUpdate(ctx, u)
 
 	var results []interface{}

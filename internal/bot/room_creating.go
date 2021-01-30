@@ -36,9 +36,6 @@ func (s RoomCreating) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
 	cs := &api.ChatState{UserId: int(getChatID(u)), Action: "create_room"}
 	err := s.css.Save(ctx, cs)
 	if err != nil {
@@ -104,9 +101,6 @@ func (rs RoomSetName) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if !rs.HasReact(u) {
-		return api.TelegramMessage{}
-	}
 	defer func() {
 		err := rs.css.DeleteById(ctx, u.ChatState.ID)
 		if err != nil {

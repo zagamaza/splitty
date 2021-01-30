@@ -37,8 +37,10 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 	for _, bot := range b {
 		bot := bot
 		wg.Go(func(ctx context.Context) {
-			if resp := bot.OnMessage(ctx, update); resp.Send {
-				resps <- resp
+			if bot.HasReact(update) {
+				if resp := bot.OnMessage(ctx, update); resp.Send {
+					resps <- resp
+				}
 			}
 		})
 	}
