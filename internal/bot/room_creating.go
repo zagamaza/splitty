@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
@@ -24,21 +23,28 @@ func NewRoomCreating(s ChatStateService, bs ButtonService, cfg *Config) *RoomCre
 	}
 }
 
+// ReactOn keys
+func (s RoomCreating) HasReact(u *api.Update) bool {
+	if u.Button != nil && u.CallbackQuery != nil {
+		return strings.Contains(u.Button.Action, "create_room")
+	} else if u.Message != nil && u.Message.Chat.Type == "private" {
+		return strings.Contains(u.Message.Text, "/start create_room")
+	}
+	return false
+}
+
 // OnMessage returns one entry
 func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
 	if !s.HasReact(u) {
 		return api.TelegramMessage{}
 	}
-	cs := &api.ChatState{UserId: u.CallbackQuery.From.ID, Action: "create_room"}
+	cs := &api.ChatState{UserId: int(getChatID(u)), Action: "create_room"}
 	err := s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
 		return
 	}
-
-	tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, "Введите название комнаты и отправьте сообщение.")
-	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
 	b := &api.Button{Action: "cancel"}
 	id, err := s.bs.Save(ctx, b)
@@ -49,24 +55,25 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Отмена", id.Hex())}
 	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cgf.BotName+"?start=help")}
 
-	var keyboard [][]tgbotapi.InlineKeyboardButton
-	keyboard = append(keyboard, button1, button2)
-	tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
-		InlineKeyboard: keyboard,
+	if u.CallbackQuery != nil {
+		tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, "Введите название комнаты и отправьте сообщение.")
+		var keyboard [][]tgbotapi.InlineKeyboardButton
+		tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(keyboard, button1, button2)}
+
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{tbMsg},
+			Send:      true,
+		}
+	} else {
+		tbMsg := tgbotapi.NewMessage(getChatID(u), "Введите название комнаты и отправьте сообщение.")
+		tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2)
+
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{tbMsg},
+			Send:      true,
+		}
 	}
 
-	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{tbMsg},
-		Send:      true,
-	}
-}
-
-// ReactOn keys
-func (s RoomCreating) HasReact(u *api.Update) bool {
-	if u.Button == nil || u.CallbackQuery == nil {
-		return false
-	}
-	return strings.Contains(u.Button.Action, "create_room")
 }
 
 type RoomSetName struct {
@@ -86,13 +93,26 @@ func NewRoomSetName(s ChatStateService, bs ButtonService, rs RoomService, cfg *C
 	}
 }
 
+// ReactOn keys
+func (rs RoomSetName) HasReact(u *api.Update) bool {
+	if u.ChatState == nil || u.Message.Text == "" {
+		return false
+	}
+	return strings.Contains(u.ChatState.Action, "create_room")
+}
+
 // OnMessage returns one entry
 func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
 	if !rs.HasReact(u) {
 		return api.TelegramMessage{}
 	}
-	defer rs.css.DeleteById(ctx, u.ChatState.ID)
+	defer func() {
+		err := rs.css.DeleteById(ctx, u.ChatState.ID)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	}()
 
 	r := &api.Room{
 		Members: &[]api.User{u.Message.From},
@@ -105,23 +125,10 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return api.TelegramMessage{}
 	}
 
-	rId := room.ID.Hex()
-	tbMsg := tgbotapi.NewMessage(getChatID(u), "Комната *"+room.Name+"* создана, попросить остальных участников присоединиться к группе")
+	tbMsg := tgbotapi.NewMessage(getChatID(u), "Комната *"+room.Name+"* создана, теперь добавьте бота в группу")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	callbackJson, err := json.Marshal(map[string]string{"RoomId": rId})
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
-	b := &api.Button{Action: "join_room", CallbackData: callbackJson}
-	cId, err := rs.bs.Save(ctx, b)
-	if err != nil {
-		log.Error().Err(err).Msg("create btn failed")
-		return
-	}
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
+	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}
 
 	cb := &api.Button{Action: "cancel"}
 	cancelId, err := rs.bs.Save(ctx, cb)
@@ -137,12 +144,4 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
 	}
-}
-
-// ReactOn keys
-func (rs RoomSetName) HasReact(u *api.Update) bool {
-	if u.ChatState == nil || u.Message.Text == "" {
-		return false
-	}
-	return strings.Contains(u.ChatState.Action, "create_room")
 }

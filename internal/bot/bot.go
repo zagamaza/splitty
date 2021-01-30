@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+const start string = "/start"
+const startTransaction = start + " transaction"
+
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
 	OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage)
@@ -83,4 +86,16 @@ func getChatID(update *api.Update) int64 {
 		chatId = update.Message.Chat.ID
 	}
 	return chatId
+}
+
+func getFrom(update *api.Update) api.User {
+	var user api.User
+	if update.CallbackQuery != nil {
+		user = update.CallbackQuery.From
+	} else if update.Message != nil {
+		user = update.Message.From
+	} else {
+		user = update.InlineQuery.From
+	}
+	return user
 }

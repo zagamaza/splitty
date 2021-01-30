@@ -15,15 +15,25 @@ type JoinRoom struct {
 	css ChatStateService
 	bs  ButtonService
 	rs  RoomService
+	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService) *JoinRoom {
+func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Config) *JoinRoom {
 	return &JoinRoom{
 		css: s,
 		bs:  bs,
 		rs:  rs,
+		cfg: cfg,
 	}
+}
+
+// ReactOn keys
+func (s JoinRoom) HasReact(u *api.Update) bool {
+	if u.Button == nil {
+		return false
+	}
+	return strings.Contains(u.Button.Action, "join_room")
 }
 
 // OnMessage returns one entry
@@ -56,7 +66,12 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 	}
 
-	tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, text)
+	tbMsg := tgbotapi.EditMessageTextConfig{
+		BaseEdit: tgbotapi.BaseEdit{
+			InlineMessageID: u.CallbackQuery.InlineMessageID,
+		},
+		Text: text,
+	}
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
 	b := &api.Button{Action: "join_room", CallbackData: u.Button.CallbackData}
@@ -66,9 +81,10 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		return
 	}
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
+	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction"+room.ID.Hex())}
 
 	var keyboard [][]tgbotapi.InlineKeyboardButton
-	keyboard = append(keyboard, button1)
+	keyboard = append(keyboard, button1, button2)
 	tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
 		InlineKeyboard: keyboard,
 	}
@@ -77,12 +93,4 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		Chattable: []tgbotapi.Chattable{tbMsg},
 		Send:      true,
 	}
-}
-
-// ReactOn keys
-func (s JoinRoom) HasReact(u *api.Update) bool {
-	if u.Button == nil {
-		return false
-	}
-	return strings.Contains(u.Button.Action, "join_room")
 }

@@ -20,6 +20,7 @@ type RoomRepository interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
 	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
+	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 }
 
 type ChatStateRepository interface {
@@ -31,6 +32,7 @@ type ChatStateRepository interface {
 
 type ButtonRepository interface {
 	Save(ctx context.Context, b *api.Button) (primitive.ObjectID, error)
+	SaveAll(ctx context.Context, b ...*api.Button) ([]*api.Button, error)
 	FindById(ctx context.Context, id string) (*api.Button, error)
 }
 
@@ -126,6 +128,21 @@ func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[
 	var m []api.Room
 	err = cur.All(ctx, &m)
 	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error) {
+	cur, err := rr.col.Find(ctx, bson.M{
+		"users": bson.M{"$elemMatch": bson.M{"_id": userId}},
+		"name":  bson.M{"$regex": ".*" + name + ".*"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var m []api.Room
+	if err = cur.All(ctx, &m); err != nil {
 		return nil, err
 	}
 	return &m, nil

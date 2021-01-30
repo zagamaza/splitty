@@ -3,7 +3,7 @@ package bot
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
-	"log"
+	"github.com/rs/zerolog/log"
 )
 
 type UserService interface {
@@ -15,6 +15,7 @@ type RoomService interface {
 	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
 	FindById(ctx context.Context, id string) (*api.Room, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
+	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 }
 
 type Config struct {
@@ -42,8 +43,8 @@ func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 	if !s.HasReact(u) {
 		return api.TelegramMessage{}
 	}
-	if err := s.us.UpsertUser(ctx, u.Message.From); err != nil {
-		log.Printf("[WARN] failed to respond on update, %v", err)
+	if err := s.us.UpsertUser(ctx, getFrom(u)); err != nil {
+		log.Error().Err(err).Msgf("failed to respond on update, %v", err)
 	}
 
 	return api.TelegramMessage{}

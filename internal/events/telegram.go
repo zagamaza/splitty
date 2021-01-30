@@ -40,6 +40,7 @@ type tbAPI interface {
 	UnpinChatMessage(config tbapi.UnpinChatMessageConfig) (tbapi.APIResponse, error)
 	GetChat(config tbapi.ChatConfig) (tbapi.Chat, error)
 	RestrictChatMember(config tbapi.RestrictChatMemberConfig) (tbapi.APIResponse, error)
+	AnswerInlineQuery(config tbapi.InlineConfig) (tbapi.APIResponse, error)
 }
 
 // Do process all events, blocked call
@@ -116,6 +117,10 @@ func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 
 	if resp.InlineConfig != nil {
 		log.Info().Msgf("bot response - %+v", resp.InlineConfig.InlineQueryID)
+		_, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
+		if err != nil {
+			return errors.Wrapf(err, "can't send query to telegram %q", resp.InlineConfig)
+		}
 	}
 
 	if len(resp.Chattable) > 0 {
