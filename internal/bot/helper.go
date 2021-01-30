@@ -40,9 +40,7 @@ func NewHelper(s UserService, rs RoomService, cfg *Config) *Helper {
 
 // OnMessage returns one entry
 func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	if !s.HasReact(u) {
-		return api.TelegramMessage{}
-	}
+
 	if err := s.us.UpsertUser(ctx, getFrom(u)); err != nil {
 		log.Error().Err(err).Msgf("failed to respond on update, %v", err)
 	}
