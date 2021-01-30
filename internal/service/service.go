@@ -22,6 +22,10 @@ func NewButtonService(r repository.ButtonRepository) *ButtonService {
 	return &ButtonService{r}
 }
 
+func NewOperationService(r repository.RoomRepository) *OperationService {
+	return &OperationService{r}
+}
+
 type UserService struct {
 	repository.UserRepository
 }
@@ -36,6 +40,10 @@ type ChatStateService struct {
 
 type ButtonService struct {
 	repository.ButtonRepository
+}
+
+type OperationService struct {
+	repository.RoomRepository
 }
 
 func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, error) {

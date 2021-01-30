@@ -40,7 +40,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
 	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
 	operation := bot.NewOperation(chatStateService, buttonService, roomService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation)
+	operationService := service.NewOperationService(mongoRoomRepository)
+	donorOperation := bot.NewDonorOperation(chatStateService, buttonService, operationService, botConfig)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation, donorOperation)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -53,6 +55,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o}
+func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation,
+	do *bot.DonorOperation) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o, do}
 }

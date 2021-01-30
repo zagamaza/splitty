@@ -60,7 +60,7 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 		}
 
 		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())}
-		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction")}
+		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation")}
 
 		var keyboard [][]tgbotapi.InlineKeyboardButton
 		keyboard = append(keyboard, button1, button2)

@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+type OperationService interface {
+}
+
 // Operation show screen with donar/recepient buttons
 type Operation struct {
 	css ChatStateService
@@ -27,18 +30,18 @@ func NewOperation(s ChatStateService, bs ButtonService, rs RoomService, cfg *Con
 	}
 }
 
-// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
+// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
 func (s Operation) HasReact(u *api.Update) bool {
 	if u.Message == nil || u.Message.Chat.Type != "private" {
 		return false
 	}
-	return strings.Contains(u.Message.Text, startTransaction)
+	return strings.Contains(u.Message.Text, startOperation)
 }
 
 // OnMessage returns one entry
 func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	roomId := strings.ReplaceAll(u.Message.Text, "/start transaction", "")
+	roomId := strings.ReplaceAll(u.Message.Text, "/start operation", "")
 	room, err := s.rs.FindById(ctx, roomId)
 
 	if err != nil {
@@ -88,4 +91,38 @@ func containsUserId(users *[]api.User, id int) bool {
 		}
 	}
 	return false
+}
+
+type DonorOperation struct {
+	css ChatStateService
+	bs  ButtonService
+	ts  OperationService
+	cfg *Config
+}
+
+// NewStackOverflow makes a bot for SO
+func NewDonorOperation(s ChatStateService, bs ButtonService, ts OperationService, cfg *Config) *DonorOperation {
+	return &DonorOperation{
+		css: s,
+		bs:  bs,
+		ts:  ts,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
+func (s DonorOperation) HasReact(u *api.Update) bool {
+	//if u.Message == nil || u.Message.Chat.Type != "private" {
+	return false
+	//}
+	//return strings.Contains(u.Message.Text, startOperation)
+}
+
+// OnMessage returns one entry
+func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "Выбор операции для комнаты ")},
+		Send:      true,
+	}
 }

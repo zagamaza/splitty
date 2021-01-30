@@ -6,15 +6,15 @@ import (
 )
 
 type Room struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Name         string             `json:"name" bson:"name"`
-	Chat         Chat               `json:"chat" bson:"chat"`
-	Members      *[]User            `json:"users" bson:"users"`
-	Transactions *[]Transaction     `json:"transactions" bson:"transactions"`
-	CreateAt     time.Time          `json:"createAt" bson:"create_at"`
+	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Name       string             `json:"name" bson:"name"`
+	Chat       Chat               `json:"chat" bson:"chat"`
+	Members    *[]User            `json:"users" bson:"users"`
+	Operations *[]Operation       `json:"operations" bson:"operations"`
+	CreateAt   time.Time          `json:"createAt" bson:"create_at"`
 }
 
-type Transaction struct {
+type Operation struct {
 	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	Description string             `json:"description" bson:"description"`
 	Donor       *User              `json:"donor" bson:"donor"`

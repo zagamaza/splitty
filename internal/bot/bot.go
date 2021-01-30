@@ -10,7 +10,7 @@ import (
 )
 
 const start string = "/start"
-const startTransaction = start + " transaction"
+const startOperation = start + " operation"
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
