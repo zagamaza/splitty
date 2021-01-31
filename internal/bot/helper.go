@@ -38,6 +38,11 @@ func NewHelper(s UserService, rs RoomService, cfg *Config) *Helper {
 	}
 }
 
+// ReactOn keys
+func (s Helper) HasReact(u *api.Update) bool {
+	return u.CallbackQuery != nil || u.Message != nil || u.InlineQuery != nil
+}
+
 // OnMessage returns one entry
 func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
@@ -46,9 +51,4 @@ func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 	}
 
 	return api.TelegramMessage{}
-}
-
-// ReactOn keys
-func (s Helper) HasReact(u *api.Update) bool {
-	return true
 }

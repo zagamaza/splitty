@@ -2,12 +2,10 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // send /room, after click on the button 'Присоединиться'
@@ -29,7 +27,7 @@ func NewAllRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Confi
 }
 
 // ReactOn keys
-func (s AllRoom) HasReact(u *api.Update) bool {
+func (arBot AllRoom) HasReact(u *api.Update) bool {
 	if u.InlineQuery == nil {
 		return false
 	}
@@ -37,83 +35,45 @@ func (s AllRoom) HasReact(u *api.Update) bool {
 }
 
 // OnMessage returns one entry
-func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+func (arBot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	rooms := s.findRoomsByUpdate(ctx, u)
+	rooms := arBot.findRoomsByUpdate(ctx, u)
 
 	var results []interface{}
-	for _, v := range *rooms {
-		text := "Экран комнаты *" + v.Name + "*\n\nУчастники:\n"
-		for _, v := range *v.Members {
-			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
-		}
-		article := tgbotapi.NewInlineQueryResultArticle(primitive.NewObjectID().Hex(), v.Name, text)
-		article.InputMessageContent = tgbotapi.InputTextMessageContent{
-			Text:      text,
-			ParseMode: tgbotapi.ModeMarkdown,
-		}
-		article.Description = "text"
+	for _, room := range *rooms {
 
-		b, err := s.generateBtn(ctx, "join_room", map[string]string{"RoomId": v.ID.Hex()})
-		if err != nil {
+		joinB := api.NewButton(joinRoom, &api.CallbackData{RoomId: room.ID.Hex()})
+		if _, err := arBot.bs.SaveAll(ctx, joinB); err != nil {
+			log.Error().Err(err).Msg("create btn failed")
 			continue
 		}
 
-		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())}
-		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation")}
-
-		var keyboard [][]tgbotapi.InlineKeyboardButton
-		keyboard = append(keyboard, button1, button2)
-		article.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{
-			InlineKeyboard: keyboard,
-		}
-
+		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room),
+			[][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+arBot.cfg.BotName+"?start=transaction"+room.ID.Hex())},
+			})
 		results = append(results, article)
 	}
 
-	inlineConfig := &tgbotapi.InlineConfig{
-		InlineQueryID: u.InlineQuery.ID,
-		IsPersonal:    true,
-		CacheTime:     0,
-		Results:       results,
-	}
-
 	return api.TelegramMessage{
-		InlineConfig: inlineConfig,
+		InlineConfig: NewInlineConfig(u.InlineQuery.ID, results),
 		Send:         true,
 	}
 }
 
-func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {
-	var err error
-	var rooms *[]api.Room
-	if u.InlineQuery.Query != "" {
-		rooms, err = s.rs.FindRoomsByLikeName(ctx, u.InlineQuery.From.ID, u.InlineQuery.Query)
-		if err != nil {
-			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
-		}
-	} else {
-		rooms, err = s.rs.FindRoomsByUserId(ctx, u.InlineQuery.From.ID)
-		if err != nil {
-			log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
-		}
+func createRoomInfoText(r *api.Room) string {
+	text := "Экран комнаты *" + r.Name + "*\n\nУчастники:\n"
+	for _, v := range *r.Members {
+		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 	}
-	return rooms
-
+	return text
 }
 
-func (s AllRoom) generateBtn(ctx context.Context, action string, cd map[string]string) (*api.Button, error) {
-	callbackJson, err := json.Marshal(cd)
+func (arBot AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {
+	rooms, err := arBot.rs.FindRoomsByLikeName(ctx, u.InlineQuery.From.ID, u.InlineQuery.Query)
 	if err != nil {
-		log.Error().Err(err).Msg("Marshal failed")
-		return nil, err
+		log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
 	}
-	b := &api.Button{Action: action, CallbackData: callbackJson}
-	cId, err := s.bs.Save(ctx, b)
-	if err != nil {
-		log.Error().Err(err).Msg("create btn failed")
-		return nil, err
-	}
-	b.ID = cId
-	return b, nil
+	return rooms
 }

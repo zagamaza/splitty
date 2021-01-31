@@ -26,13 +26,26 @@ type Operation struct {
 type ChatState struct {
 	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	UserId     int                `json:"userId" bson:"user_id"`
-	Action     string             `json:"action" bson:"action"`
+	Action     Action             `json:"action" bson:"action"`
 	ExternalId string             `json:"externalId" bson:"extern_id"`
 }
 
 // Button which is sent to the user as ReplyMarkup
 type Button struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CallbackData []byte             `json:"callbackData" bson:"callback_data"`
-	Action       string             `json:"action" bson:"action"`
+	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
+	Action       Action             `json:"action" bson:"action"`
+}
+
+type Action string
+
+type CallbackData struct {
+	RoomId string `json:"roomId" bson:"room_id,omitempty"`
+}
+
+func NewButton(action Action, data *CallbackData) *Button {
+	return &Button{
+		Action:       action,
+		CallbackData: data,
+	}
 }
