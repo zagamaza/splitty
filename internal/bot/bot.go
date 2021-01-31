@@ -6,6 +6,7 @@ import (
 	"github.com/go-pkgz/syncs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"runtime/debug"
 	"strings"
 )
 
@@ -37,6 +38,7 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 	for _, bot := range b {
 		bot := bot
 		wg.Go(func(ctx context.Context) {
+			defer handlePanic(bot)
 			if bot.HasReact(update) {
 				if resp := bot.OnMessage(ctx, update); resp.Send {
 					resps <- resp
@@ -60,6 +62,17 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 	}
 
 	return *message
+}
+func handlePanic(bot Interface) {
+	if err := recover(); err != nil {
+		switch e := err.(type) {
+		case error:
+			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
+		default:
+			log.Error().Stack().Msgf("panic! bot: %t, err: %v, sta", bot, err, string(debug.Stack()))
+
+		}
+	}
 }
 
 func (b MultiBot) HasReact(u *api.Update) bool {
