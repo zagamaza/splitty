@@ -50,5 +50,5 @@ func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 
 // ReactOn keys
 func (s Helper) HasReact(u *api.Update) bool {
-	return true
+	return u.CallbackQuery != nil || u.Message != nil || u.InlineQuery != nil
 }
