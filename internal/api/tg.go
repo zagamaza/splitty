@@ -98,3 +98,8 @@ type TelegramMessage struct {
 	Send         bool // status
 
 }
+
+func (u Update) IsPrivat() bool {
+	return u.Message != nil && u.Message.Chat.Type == "private" ||
+		u.CallbackQuery != nil && u.CallbackQuery.Message != nil && u.CallbackQuery.Message.Chat.Type == "private"
+}
