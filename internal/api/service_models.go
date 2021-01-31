@@ -33,6 +33,10 @@ type ChatState struct {
 // Button which is sent to the user as ReplyMarkup
 type Button struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	CallbackData []byte             `json:"callbackData" bson:"callback_data"`
+	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
 	Action       string             `json:"action" bson:"action"`
+}
+
+type CallbackData struct {
+	RoomId string `json:"roomId" bson:"room_id,omitempty"`
 }
