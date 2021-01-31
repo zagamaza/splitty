@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
@@ -56,12 +55,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	tbMsg := tgbotapi.NewMessage(getChatID(u), "Выбор операции для комнаты *"+room.Name+"*")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	cd, err := json.Marshal(map[string]string{"RoomId": room.ID.Hex()})
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
+	cd := &api.CallbackData{RoomId: roomId}
 	recipientBtn := &api.Button{Action: "recipient", CallbackData: cd}
 	donorBtn := &api.Button{Action: "donor", CallbackData: cd}
 	_, err = s.bs.SaveAll(ctx, recipientBtn, donorBtn)

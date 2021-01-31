@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -54,13 +53,13 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 		}
 		article.Description = "text"
 
-		b, err := s.generateBtn(ctx, "join_room", map[string]string{"RoomId": v.ID.Hex()})
+		b, err := s.generateBtn(ctx, "join_room", &api.CallbackData{RoomId: v.ID.Hex()})
 		if err != nil {
 			continue
 		}
 
 		button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())}
-		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction")}
+		button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction"+v.ID.Hex())}
 
 		var keyboard [][]tgbotapi.InlineKeyboardButton
 		keyboard = append(keyboard, button1, button2)
@@ -102,13 +101,8 @@ func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Ro
 
 }
 
-func (s AllRoom) generateBtn(ctx context.Context, action string, cd map[string]string) (*api.Button, error) {
-	callbackJson, err := json.Marshal(cd)
-	if err != nil {
-		log.Error().Err(err).Msg("Marshal failed")
-		return nil, err
-	}
-	b := &api.Button{Action: action, CallbackData: callbackJson}
+func (s AllRoom) generateBtn(ctx context.Context, action string, cd *api.CallbackData) (*api.Button, error) {
+	b := &api.Button{Action: action, CallbackData: cd}
 	cId, err := s.bs.Save(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")

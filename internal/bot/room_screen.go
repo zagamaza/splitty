@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -38,23 +37,17 @@ func (s JoinRoom) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
 
-	var cd map[string]string
-	err := json.Unmarshal(u.Button.CallbackData, &cd)
+	err := s.rs.JoinToRoom(ctx, u.CallbackQuery.From, roomId)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msgf("join room failed %v", roomId)
 		return
 	}
 
-	err = s.rs.JoinToRoom(ctx, u.CallbackQuery.From, cd["RoomId"])
+	room, err := s.rs.FindById(ctx, roomId)
 	if err != nil {
-		log.Error().Err(err).Msgf("join room failed %v", cd["RoomId"])
-		return
-	}
-
-	room, err := s.rs.FindById(ctx, cd["RoomId"])
-	if err != nil {
-		log.Error().Err(err).Msgf("get room failed %v", cd["RoomId"])
+		log.Error().Err(err).Msgf("get room failed %v", roomId)
 		return
 	}
 	text := "Экран комнаты *" + room.Name + "*\n\nУчастники:\n"
