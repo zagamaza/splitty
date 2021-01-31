@@ -13,6 +13,15 @@ import (
 const start string = "/start"
 const startTransaction = start + " transaction"
 
+//actions
+const (
+	joinRoom   api.Action = "join_room"
+	createRoom api.Action = "create_room"
+	recipient  api.Action = "recipient"
+	donor      api.Action = "donor"
+	cancel     api.Action = "cancel" //не нужен
+)
+
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
 	OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage)
