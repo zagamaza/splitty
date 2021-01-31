@@ -26,7 +26,7 @@ type Transaction struct {
 type ChatState struct {
 	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	UserId     int                `json:"userId" bson:"user_id"`
-	Action     string             `json:"action" bson:"action"`
+	Action     Action             `json:"action" bson:"action"`
 	ExternalId string             `json:"externalId" bson:"extern_id"`
 }
 
@@ -34,9 +34,11 @@ type ChatState struct {
 type Button struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
-	Action       string             `json:"action" bson:"action"`
+	Action       Action             `json:"action" bson:"action"`
 }
 
 type CallbackData struct {
 	RoomId string `json:"roomId" bson:"room_id,omitempty"`
 }
+
+type Action string

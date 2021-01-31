@@ -26,9 +26,9 @@ func NewRoomCreating(s ChatStateService, bs ButtonService, cfg *Config) *RoomCre
 // ReactOn keys
 func (s RoomCreating) HasReact(u *api.Update) bool {
 	if u.Button != nil && u.CallbackQuery != nil {
-		return strings.Contains(u.Button.Action, "create_room")
+		return u.Button.Action == createRoom
 	} else if u.Message != nil && u.Message.Chat.Type == "private" {
-		return strings.Contains(u.Message.Text, "/start create_room")
+		return strings.Contains(u.Message.Text, "/start "+string(createRoom))
 	}
 	return false
 }
@@ -36,14 +36,14 @@ func (s RoomCreating) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: "create_room"}
+	cs := &api.ChatState{UserId: int(getChatID(u)), Action: createRoom}
 	err := s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
 		return
 	}
 
-	b := &api.Button{Action: "cancel"}
+	b := &api.Button{Action: cancel}
 	id, err := s.bs.Save(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
@@ -95,7 +95,7 @@ func (rs RoomSetName) HasReact(u *api.Update) bool {
 	if u.ChatState == nil || u.Message.Text == "" {
 		return false
 	}
-	return strings.Contains(u.ChatState.Action, "create_room")
+	return u.ChatState.Action == createRoom
 }
 
 // OnMessage returns one entry
@@ -124,7 +124,7 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}
 
-	cb := &api.Button{Action: "cancel"}
+	cb := &api.Button{Action: cancel}
 	cancelId, err := rs.bs.Save(ctx, cb)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")

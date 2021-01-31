@@ -53,7 +53,7 @@ func (s AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Tel
 		}
 		article.Description = "text"
 
-		b, err := s.generateBtn(ctx, "join_room", &api.CallbackData{RoomId: v.ID.Hex()})
+		b, err := s.generateBtn(ctx, joinRoom, &api.CallbackData{RoomId: v.ID.Hex()})
 		if err != nil {
 			continue
 		}
@@ -101,7 +101,7 @@ func (s AllRoom) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Ro
 
 }
 
-func (s AllRoom) generateBtn(ctx context.Context, action string, cd *api.CallbackData) (*api.Button, error) {
+func (s AllRoom) generateBtn(ctx context.Context, action api.Action, cd *api.CallbackData) (*api.Button, error) {
 	b := &api.Button{Action: action, CallbackData: cd}
 	cId, err := s.bs.Save(ctx, b)
 	if err != nil {

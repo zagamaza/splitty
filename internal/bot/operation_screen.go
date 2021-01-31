@@ -56,8 +56,9 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
 	cd := &api.CallbackData{RoomId: roomId}
-	recipientBtn := &api.Button{Action: "recipient", CallbackData: cd}
-	donorBtn := &api.Button{Action: "donor", CallbackData: cd}
+
+	recipientBtn := &api.Button{Action: recipient, CallbackData: cd}
+	donorBtn := &api.Button{Action: donor, CallbackData: cd}
 	_, err = s.bs.SaveAll(ctx, recipientBtn, donorBtn)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")

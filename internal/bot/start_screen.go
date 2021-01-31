@@ -62,10 +62,10 @@ func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api
 
 	var button2 []tgbotapi.InlineKeyboardButton
 	if u.Message.Chat.Type != "private" {
-		button2 = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start=create_room")}
+		button2 = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start="+string(createRoom))}
 
 	} else {
-		b := &api.Button{Action: "create_room"}
+		b := &api.Button{Action: createRoom}
 		id, err := s.bs.Save(ctx, b)
 		if err != nil {
 			log.Error().Err(err).Msg("create btn failed")
