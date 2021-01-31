@@ -99,13 +99,18 @@ func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) err
 }
 
 func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Update) error {
+	var userId int
 	if upd.Message != nil && upd.Message.Text != "" {
-		cs, err := l.ChatStateService.FindByUserId(ctx, upd.Message.From.ID)
-		if err != nil {
-			return errors.Wrapf(err, "failed to find ChatState by id %q", err)
-		}
-		upd.ChatState = cs
+		userId = upd.Message.From.ID
+	} else if upd.CallbackQuery != nil && upd.CallbackQuery.Message != nil {
+		userId = upd.CallbackQuery.From.ID
 	}
+
+	cs, err := l.ChatStateService.FindByUserId(ctx, userId)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find ChatState by id %q", err)
+	}
+	upd.ChatState = cs
 	return nil
 }
 
