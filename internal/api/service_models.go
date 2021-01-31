@@ -37,8 +37,15 @@ type Button struct {
 	Action       Action             `json:"action" bson:"action"`
 }
 
+type Action string
+
 type CallbackData struct {
 	RoomId string `json:"roomId" bson:"room_id,omitempty"`
 }
 
-type Action string
+func NewButton(action Action, data *CallbackData) *Button {
+	return &Button{
+		Action:       action,
+		CallbackData: data,
+	}
+}
