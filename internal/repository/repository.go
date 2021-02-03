@@ -21,6 +21,8 @@ type RoomRepository interface {
 	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
+	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
+	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
 }
 
 type ChatStateRepository interface {
@@ -146,6 +148,29 @@ func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId in
 		return nil, err
 	}
 	return &m, nil
+}
+
+func (rr MongoRoomRepository) UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{"_id", bson.D{{"$eq", hex}}}}
+	_, err = rr.col.UpdateOne(ctx, bson.M{}, bson.M{"$pull": bson.M{"operations": bson.M{"_id": o.ID}}})
+	if err != nil {
+		return err
+	}
+
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{"$push", bson.D{{"operations", o}}}})
+	return err
+}
+
+func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error {
+	_, err := rr.col.UpdateOne(ctx, bson.M{}, bson.M{"$pull": bson.M{"operations": bson.M{"_id": operationId}}})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {

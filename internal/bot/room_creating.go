@@ -92,7 +92,7 @@ func NewRoomSetName(s ChatStateService, bs ButtonService, rs RoomService, cfg *C
 
 // ReactOn keys
 func (rs RoomSetName) HasReact(u *api.Update) bool {
-	if u.ChatState == nil || u.Message.Text == "" {
+	if u.ChatState == nil || u.Message == nil {
 		return false
 	}
 	return u.ChatState.Action == createRoom

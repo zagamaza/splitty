@@ -15,11 +15,15 @@ const startOperation = start + " operation"
 
 //actions
 const (
-	joinRoom   api.Action = "join_room"
-	createRoom api.Action = "create_room"
-	recipient  api.Action = "recipient"
-	donor      api.Action = "donor"
-	cancel     api.Action = "cancel" //не нужен
+	joinRoom             api.Action = "join_room"
+	createRoom           api.Action = "create_room"
+	recipient            api.Action = "recipient"
+	donor                api.Action = "donor"
+	addDonorOperation    api.Action = "add_donor_operation"
+	deleteDonorOperation api.Action = "delete_donor_operation"
+	donorOperation       api.Action = "donor_operation"
+	cancel               api.Action = "cancel" //не нужен
+	viewRoom             api.Action = "room"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
@@ -77,6 +81,7 @@ func handlePanic(bot Interface) {
 		switch e := err.(type) {
 		case error:
 			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
+			log.Error().Stack().Err(e).Msgf("panic! bot: %T", bot)
 		default:
 			log.Error().Stack().Msgf("panic! bot: %t, err: %v, sta", bot, err, string(debug.Stack()))
 
