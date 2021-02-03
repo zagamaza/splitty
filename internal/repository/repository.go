@@ -30,6 +30,7 @@ type ChatStateRepository interface {
 	FindById(ctx context.Context, id int) (*api.ChatState, error)
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
 	DeleteById(ctx context.Context, id primitive.ObjectID) error
+	DeleteByUserId(ctx context.Context, id int) error
 }
 
 type ButtonRepository interface {
@@ -231,6 +232,14 @@ func (csr MongoChatStateRepository) FindByUserId(ctx context.Context, userId int
 func (csr MongoChatStateRepository) DeleteById(ctx context.Context, id primitive.ObjectID) error {
 	_, err := csr.col.DeleteOne(ctx, bson.D{{"_id", bson.D{{"$eq", id}}}})
 	if err != nil {
+		log.Error().Err(err).Msg("delete failed")
+		return err
+	}
+	return nil
+}
+
+func (csr MongoChatStateRepository) DeleteByUserId(ctx context.Context, id int) error {
+	if _, err := csr.col.DeleteMany(ctx, bson.M{"user_id": id}); err != nil {
 		log.Error().Err(err).Msg("delete failed")
 		return err
 	}

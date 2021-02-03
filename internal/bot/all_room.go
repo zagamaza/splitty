@@ -42,8 +42,10 @@ func (arBot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response ap
 	var results []interface{}
 	for _, room := range *rooms {
 
-		joinB := api.NewButton(joinRoom, &api.CallbackData{RoomId: room.ID.Hex()})
-		if _, err := arBot.bs.SaveAll(ctx, joinB); err != nil {
+		data := &api.CallbackData{RoomId: room.ID.Hex()}
+		joinB := api.NewButton(joinRoom, data)
+		viewB := api.NewButton(viewRoom, data)
+		if _, err := arBot.bs.SaveAll(ctx, joinB, viewB); err != nil {
 			log.Error().Err(err).Msg("create btn failed")
 			continue
 		}
@@ -51,6 +53,7 @@ func (arBot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response ap
 		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room),
 			[][]tgbotapi.InlineKeyboardButton{
 				{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonData("Просмотр", viewB.ID.Hex())},
 				{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+arBot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 			})
 		results = append(results, article)

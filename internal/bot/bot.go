@@ -24,6 +24,7 @@ const (
 	donorOperation       api.Action = "donor_operation"
 	cancel               api.Action = "cancel" //не нужен
 	viewRoom             api.Action = "room"
+	viewStart            api.Action = "start"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true

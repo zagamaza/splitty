@@ -12,6 +12,7 @@ type ChatStateService interface {
 	Save(ctx context.Context, u *api.ChatState) error
 	DeleteById(ctx context.Context, id primitive.ObjectID) error
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
+	CleanChatState(ctx context.Context, state *api.ChatState)
 }
 
 type ButtonService interface {
@@ -37,7 +38,9 @@ func NewStartScreen(s ChatStateService, bs ButtonService, cfg *Config) *StartScr
 
 // ReactOn keys
 func (s StartScreen) HasReact(u *api.Update) bool {
-	if u.IsPrivat() {
+	if u.Button != nil && u.Button.Action == viewStart {
+		return true
+	} else if u.IsPrivat() {
 		return u.Message != nil && u.Message.Text == start
 	} else {
 		return u.Message != nil && u.Message.Text == start+"@"+s.cfg.BotName
@@ -46,6 +49,8 @@ func (s StartScreen) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+
+	defer s.css.CleanChatState(ctx, u.ChatState)
 
 	var createB tgbotapi.InlineKeyboardButton
 	if u.IsPrivat() {
@@ -59,13 +64,24 @@ func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response ap
 		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start=create_room")
 	}
 
-	tbMsg := NewMessage(getChatID(u), "Главный экран",
-		[][]tgbotapi.InlineKeyboardButton{
+	template := ScreenTemplate{
+		ChatId: getChatID(u),
+		Text:   "Главный экран",
+		Keyboard: &[][]tgbotapi.InlineKeyboardButton{
 			{NewButtonSwitchCurrent("Все комнаты", "")},
 			{createB},
-		})
+		},
+	}
+	var screen tgbotapi.Chattable
+	if u.CallbackQuery != nil {
+		template.MessageId = u.CallbackQuery.Message.ID
+		screen = BuildScreen(&template, editMessage)
+	} else {
+		screen = BuildScreen(&template, newMessage)
+	}
+
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{tbMsg},
+		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
 }
