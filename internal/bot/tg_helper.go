@@ -5,6 +5,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type ScreenTemplateType string
+
+const (
+	newMessage  ScreenTemplateType = "NEW_MESSAGE"
+	editMessage ScreenTemplateType = "EDIT_MESSAGE"
+	editInline  ScreenTemplateType = "EDIT_INLINE"
+)
+
 func NewInlineResultArticle(title, descr, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.InlineQueryResultArticle {
 	article := tgbotapi.NewInlineQueryResultArticleMarkdown(primitive.NewObjectID().Hex(), title, text)
 	article.Description = descr
@@ -60,5 +68,24 @@ func NewButtonSwitchCurrent(text, sw string) tgbotapi.InlineKeyboardButton {
 	return tgbotapi.InlineKeyboardButton{
 		Text:                         text,
 		SwitchInlineQueryCurrentChat: &sw,
+	}
+}
+
+type ScreenTemplate struct {
+	InlineId  string
+	ChatId    int64
+	MessageId int
+	Text      string
+	Keyboard  *[][]tgbotapi.InlineKeyboardButton
+}
+
+func BuildScreen(templ *ScreenTemplate, t ScreenTemplateType) tgbotapi.Chattable {
+	switch t {
+	case editMessage:
+		return NewEditMessage(templ.ChatId, templ.MessageId, templ.Text, *templ.Keyboard)
+	case editInline:
+		return NewEditInlineMessage(templ.InlineId, templ.Text, *templ.Keyboard)
+	default:
+		return NewMessage(templ.ChatId, templ.Text, *templ.Keyboard)
 	}
 }

@@ -82,3 +82,55 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		Send:      true,
 	}
 }
+
+// send /room, after click on the button 'Присоединиться'
+type ViewRoom struct {
+	bs  ButtonService
+	rs  RoomService
+	cfg *Config
+}
+
+// NewStackOverflow makes a bot for SO
+func NewViewRoom(bs ButtonService, rs RoomService, cfg *Config) *ViewRoom {
+	return &ViewRoom{
+		bs:  bs,
+		rs:  rs,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys
+func (vr ViewRoom) HasReact(u *api.Update) bool {
+	return u.Button != nil && u.Button.Action == viewRoom
+}
+
+// OnMessage returns one entry
+func (vr *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+	room, err := vr.rs.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Stack().Msgf("cannot find room, id:%s", roomId)
+		return
+	}
+	joinB := api.NewButton(joinRoom, u.Button.CallbackData)
+	if _, err := vr.bs.SaveAll(ctx, joinB); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+
+	screen := BuildScreen(
+		&ScreenTemplate{
+			ChatId:    getChatID(u),
+			MessageId: u.CallbackQuery.Message.ID,
+			Text:      createRoomInfoText(room),
+			Keyboard: &[][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+vr.cfg.BotName+"?start=operation"+room.ID.Hex())},
+			},
+		}, editMessage)
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
