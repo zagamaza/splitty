@@ -50,6 +50,12 @@ func NewMessage(chatId int64, text string, keyboard [][]tgbotapi.InlineKeyboardB
 	return tbMsg
 }
 
+func NewMessageWithoutBtn(chatId int64, text string) tgbotapi.MessageConfig {
+	tbMsg := tgbotapi.NewMessage(chatId, text)
+	tbMsg.ParseMode = tgbotapi.ModeMarkdown
+	return tbMsg
+}
+
 func NewButtonSwitchCurrent(text, sw string) tgbotapi.InlineKeyboardButton {
 	return tgbotapi.InlineKeyboardButton{
 		Text:                         text,

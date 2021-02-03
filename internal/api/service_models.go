@@ -19,7 +19,7 @@ type Operation struct {
 	Description string             `json:"description" bson:"description"`
 	Donor       *User              `json:"donor" bson:"donor"`
 	Recipients  *[]User            `json:"recipients" bson:"recipients"`
-	Sum         float32            `json:"sum" bson:"sum"`
+	Sum         int                `json:"sum" bson:"sum"`
 }
 
 // ChatState stores user state
@@ -34,17 +34,21 @@ type ChatState struct {
 type Button struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
 	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
+	Text         string             `json:"text" bson:"text"`
 	Action       Action             `json:"action" bson:"action"`
 }
 
 type Action string
 
 type CallbackData struct {
-	RoomId string `json:"roomId" bson:"room_id,omitempty"`
+	RoomId      string             `json:"roomId" bson:"room_id,omitempty"`
+	UserId      int                `json:"userId" bson:"user_id,omitempty"`
+	OperationId primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
 }
 
 func NewButton(action Action, data *CallbackData) *Button {
 	return &Button{
+		ID:           primitive.NewObjectID(),
 		Action:       action,
 		CallbackData: data,
 	}

@@ -51,7 +51,7 @@ func (arBot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response ap
 		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room),
 			[][]tgbotapi.InlineKeyboardButton{
 				{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+arBot.cfg.BotName+"?start=transaction"+room.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+arBot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 			})
 		results = append(results, article)
 	}
