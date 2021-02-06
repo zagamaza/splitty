@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
@@ -70,7 +71,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), "Выбор операции для комнаты *"+room.Name+"*",
 			[][]tgbotapi.InlineKeyboardButton{
 				{tgbotapi.NewInlineKeyboardButtonData("Расход", donorBtn.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonData("Приход", recipientBtn.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonData("Вернуть долг", recipientBtn.ID.Hex())},
 				{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cfg.BotName+"?start=")}}),
 		},
 		Send: true,
@@ -312,10 +313,14 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	//if user not created operation we not mast show other buttons
 	if operation.Donor.ID != getFrom(u).ID {
+		text := "Операция _" + operation.Description + "_ на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n" +
+			"Заплатил: " + fmt.Sprintf("[%s](tg://user?id=%d)\n", operation.Donor.DisplayName, operation.Donor.ID) + "\nУчастники:\n "
+		for _, v := range *operation.Recipients {
+			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
+		}
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{
-				NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID,
-					"Операция _"+operation.Description+"_ на сумму *"+strconv.Itoa(operation.Sum)+"*.\n\n",
+				NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID, text,
 					[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})},
 			Send: true,
 		}
