@@ -69,7 +69,7 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 		return
 	}
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
-	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=transaction"+room.ID.Hex())}
+	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation"+room.ID.Hex())}
 
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 	keyboard = append(keyboard, button1, button2)
