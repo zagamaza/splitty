@@ -14,6 +14,7 @@ import (
 type OperationService interface {
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
+	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 }
 
 // Operation show screen with donar/recepient buttons
@@ -125,7 +126,7 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		return
 	}
 
-	b := &api.Button{ID: primitive.NewObjectID(), Action: cancel}
+	b := api.NewButton(viewRoom, u.Button.CallbackData)
 	_, err = s.bs.Save(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
@@ -304,7 +305,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		}
 	}
 
-	cb := &api.Button{ID: primitive.NewObjectID(), Action: cancel}
+	cb := api.NewButton(viewRoom, u.Button.CallbackData)
 	_, err = s.bs.Save(ctx, cb)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
@@ -444,5 +445,82 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 			"Отлично. Операция успешно удалена",
 			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
 		Send: true,
+	}
+}
+
+// Operation show screen with donar/recepient buttons
+type ViewAllOperations struct {
+	css ChatStateService
+	bs  ButtonService
+	os  OperationService
+	cfg *Config
+}
+
+// NewStackOverflow makes a bot for SO
+func NewViewAllOperations(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *ViewAllOperations {
+	return &ViewAllOperations{
+		css: s,
+		bs:  bs,
+		os:  rs,
+		cfg: cfg,
+	}
+}
+
+func (bot ViewAllOperations) HasReact(u *api.Update) bool {
+	return hasAction(u, viewAllOperations)
+}
+
+func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+	page := u.Button.CallbackData.Page
+	size := 5
+	skip := page * size
+
+	ops, err := bot.os.GetAllOperations(ctx, roomId)
+	if err != nil {
+		return
+	}
+
+	var toSave []*api.Button
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+
+	for i := skip; i < skip+size && i < len(*ops); i++ {
+		op := (*ops)[i]
+		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+		toSave = append(toSave, opB)
+		text := fmt.Sprintf("[%s] %d - %s", op.Donor.DisplayName, op.Sum, op.Description)
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
+	}
+
+	var navRow []tgbotapi.InlineKeyboardButton
+	if page != 0 {
+		prevB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page - 1})
+		toSave = append(toSave, prevB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("<- prev", prevB.ID.Hex()))
+	}
+	if skip+size < len(*ops) {
+		nextB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
+		toSave = append(toSave, nextB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next ->", nextB.ID.Hex()))
+	}
+	if len(navRow) != 0 {
+		keyboard = append(keyboard, navRow)
+	}
+
+	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("К комнате", backB.ID.Hex()),
+	})
+
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
+		log.Error().Err(err).Msg("save buttons failed")
+		return
+	}
+
+	screen := createScreen(u, "Операции комнаты", &keyboard)
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
 	}
 }

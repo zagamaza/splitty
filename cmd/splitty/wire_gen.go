@@ -45,7 +45,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	addDonorOperation := bot.NewAddDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	donorOperation := bot.NewDonorOperation(buttonService, operationService, roomService, botConfig)
 	deleteDonorOperation := bot.NewDeleteDonorOperation(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation)
+	viewRoom := bot.NewViewRoom(buttonService, roomService, chatStateService, botConfig)
+	viewAllOperations := bot.NewViewAllOperations(chatStateService, buttonService, operationService, botConfig)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -59,6 +61,6 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 // wire.go:
 
 func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation,
-	do *bot.WantDonorOperation, ado *bot.AddDonorOperation, cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o, do, ado, cdo, ddo}
+	do *bot.WantDonorOperation, ado *bot.AddDonorOperation, cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o, do, ado, cdo, ddo, vr, vaop}
 }

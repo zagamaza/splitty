@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/rs/zerolog/log"
 )
 
 func NewUserService(r repository.UserRepository) *UserService {
@@ -50,4 +51,12 @@ func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, 
 	rId, err := rs.RoomRepository.SaveRoom(ctx, r)
 	r.ID = rId
 	return r, err
+}
+
+func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.ChatState) {
+	if state == nil {
+		return
+	} else if err := (*css).DeleteByUserId(ctx, state.UserId); err != nil {
+		log.Error().Err(err).Msg("")
+	}
 }

@@ -23,6 +23,7 @@ type RoomRepository interface {
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
+	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 }
 
 type ChatStateRepository interface {
@@ -30,6 +31,7 @@ type ChatStateRepository interface {
 	FindById(ctx context.Context, id int) (*api.ChatState, error)
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
 	DeleteById(ctx context.Context, id primitive.ObjectID) error
+	DeleteByUserId(ctx context.Context, id int) error
 }
 
 type ButtonRepository interface {
@@ -173,6 +175,23 @@ func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, operationId p
 	return nil
 }
 
+func (rr MongoRoomRepository) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
+	rid, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return nil, err
+	}
+	res := rr.col.FindOne(ctx, bson.M{"_id": rid})
+	if res.Err() != nil || res.Err() == mongo.ErrNoDocuments {
+		log.Warn().Err(res.Err()).Msgf("room not found by id %v", roomId)
+		return nil, res.Err()
+	}
+	r := &api.Room{}
+	if err := res.Decode(r); err != nil {
+		return nil, err
+	}
+	return r.Operations, nil
+}
+
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", u.ID}}}}
@@ -231,6 +250,14 @@ func (csr MongoChatStateRepository) FindByUserId(ctx context.Context, userId int
 func (csr MongoChatStateRepository) DeleteById(ctx context.Context, id primitive.ObjectID) error {
 	_, err := csr.col.DeleteOne(ctx, bson.D{{"_id", bson.D{{"$eq", id}}}})
 	if err != nil {
+		log.Error().Err(err).Msg("delete failed")
+		return err
+	}
+	return nil
+}
+
+func (csr MongoChatStateRepository) DeleteByUserId(ctx context.Context, id int) error {
+	if _, err := csr.col.DeleteMany(ctx, bson.M{"user_id": id}); err != nil {
 		log.Error().Err(err).Msg("delete failed")
 		return err
 	}

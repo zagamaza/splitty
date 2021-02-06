@@ -44,6 +44,7 @@ type CallbackData struct {
 	RoomId      string             `json:"roomId" bson:"room_id,omitempty"`
 	UserId      int                `json:"userId" bson:"user_id,omitempty"`
 	OperationId primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
+	Page        int                `json:"page" bson:"page,omitempty"`
 }
 
 func NewButton(action Action, data *CallbackData) *Button {

@@ -12,6 +12,7 @@ type ChatStateService interface {
 	Save(ctx context.Context, u *api.ChatState) error
 	DeleteById(ctx context.Context, id primitive.ObjectID) error
 	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
+	CleanChatState(ctx context.Context, state *api.ChatState)
 }
 
 type ButtonService interface {
@@ -37,48 +38,37 @@ func NewStartScreen(s ChatStateService, bs ButtonService, cfg *Config) *StartScr
 
 // ReactOn keys
 func (s StartScreen) HasReact(u *api.Update) bool {
-	if u.Message == nil {
-		return false
-	}
-	if u.Message.Chat.Type == "private" {
-		return u.Message.Text == start
+	if hasAction(u, viewStart) {
+		return true
+	} else if isPrivate(u) {
+		return u.Message != nil && u.Message.Text == start
 	} else {
-		return u.Message.Text == start+"@"+s.cfg.BotName
+		return u.Message != nil && u.Message.Text == start+"@"+s.cfg.BotName
 	}
 }
 
 // OnMessage returns one entry
-func (s StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	defer s.css.CleanChatState(ctx, u.ChatState)
 
-	tbMsg := tgbotapi.NewMessage(getChatID(u), "Главный экран")
-	tbMsg.ParseMode = tgbotapi.ModeMarkdown
-
-	empty := ""
-	kb := tgbotapi.InlineKeyboardButton{
-		SwitchInlineQueryCurrentChat: &empty,
-		Text:                         "Все комнаты",
-	}
-	button1 := []tgbotapi.InlineKeyboardButton{kb}
-
-	var button2 []tgbotapi.InlineKeyboardButton
-	if u.Message.Chat.Type != "private" {
-		button2 = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start="+string(createRoom))}
-
-	} else {
-		b := &api.Button{Action: createRoom}
-		id, err := s.bs.Save(ctx, b)
-		if err != nil {
-			log.Error().Err(err).Msg("create btn failed")
+	var createB tgbotapi.InlineKeyboardButton
+	if isPrivate(u) {
+		cb := api.NewButton(createRoom, nil)
+		if _, err := s.bs.SaveAll(ctx, cb); err != nil {
+			log.Error().Err(err).Msg("save btn failed")
 			return
 		}
-		button2 = []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Создать новую комнату", id.Hex())}
+		createB = tgbotapi.NewInlineKeyboardButtonData("Создать новую комнату", cb.ID.Hex())
+	} else {
+		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start=create_room")
 	}
 
-	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cfg.BotName+"?start=")}
-	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2, button3)
-
+	screen := createScreen(u, "Главный экран", &[][]tgbotapi.InlineKeyboardButton{
+		{NewButtonSwitchCurrent("Все комнаты", "")},
+		{createB},
+	})
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{tbMsg},
+		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
 }
