@@ -23,7 +23,6 @@ type RoomRepository interface {
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
-	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 }
 
 type ChatStateRepository interface {
@@ -173,23 +172,6 @@ func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, operationId p
 		return err
 	}
 	return nil
-}
-
-func (rr MongoRoomRepository) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
-	rid, err := primitive.ObjectIDFromHex(roomId)
-	if err != nil {
-		return nil, err
-	}
-	res := rr.col.FindOne(ctx, bson.M{"_id": rid})
-	if res.Err() != nil || res.Err() == mongo.ErrNoDocuments {
-		log.Warn().Err(res.Err()).Msgf("room not found by id %v", roomId)
-		return nil, res.Err()
-	}
-	r := &api.Room{}
-	if err := res.Decode(r); err != nil {
-		return nil, err
-	}
-	return r.Operations, nil
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {

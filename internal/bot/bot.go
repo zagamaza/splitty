@@ -81,11 +81,9 @@ func handlePanic(bot Interface) {
 	if err := recover(); err != nil {
 		switch e := err.(type) {
 		case error:
-			//log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
-			log.Error().Stack().Err(e).Msgf("panic! bot: %T", bot)
+			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
 		default:
 			log.Error().Stack().Msgf("panic! bot: %t, err: %v, sta", bot, err, string(debug.Stack()))
-
 		}
 	}
 }

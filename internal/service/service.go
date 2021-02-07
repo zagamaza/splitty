@@ -60,3 +60,12 @@ func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.Chat
 		log.Error().Err(err).Msg("")
 	}
 }
+
+func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
+	id, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		log.Err(err).Msgf("cannot find room id:", roomId)
+		return nil, err
+	}
+	return id.Operations, nil
+}
