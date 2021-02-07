@@ -8,6 +8,7 @@ import (
 
 type UserService interface {
 	UpsertUser(ctx context.Context, u api.User) error
+	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
 type RoomService interface {
@@ -46,7 +47,7 @@ func (s Helper) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s Helper) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	if err := s.us.UpsertUser(ctx, getFrom(u)); err != nil {
+	if err := s.us.UpsertUser(ctx, *getFrom(u)); err != nil {
 		log.Error().Err(err).Msgf("failed to respond on update, %v", err)
 	}
 

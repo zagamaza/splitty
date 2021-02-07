@@ -13,6 +13,7 @@ import (
 
 type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) error
+	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
 type RoomRepository interface {
@@ -172,6 +173,18 @@ func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, operationId p
 		return err
 	}
 	return nil
+}
+
+func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, error) {
+	res := r.col.FindOne(ctx, bson.D{{"_id", bson.D{{"$eq", id}}}})
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	cs := &api.User{}
+	if err := res.Decode(cs); err != nil {
+		return nil, err
+	}
+	return cs, nil
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {

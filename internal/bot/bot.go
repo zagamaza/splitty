@@ -15,17 +15,19 @@ const startOperation = start + " operation"
 
 //actions
 const (
-	joinRoom             api.Action = "join_room"
-	createRoom           api.Action = "create_room"
-	recipient            api.Action = "recipient"
-	donor                api.Action = "donor"
-	addDonorOperation    api.Action = "add_donor_operation"
-	deleteDonorOperation api.Action = "delete_donor_operation"
-	donorOperation       api.Action = "donor_operation"
-	viewRoom             api.Action = "room"
-	viewStart            api.Action = "start"
-	viewAllOperations    api.Action = "all_operations"
-	viewAllRooms         api.Action = "all_rooms"
+	joinRoom               api.Action = "join_room"
+	createRoom             api.Action = "create_room"
+	wantRecipientOperation api.Action = "want_recipient_operation"
+	wantDonorOperation     api.Action = "want_donor_operation"
+	addDonorOperation      api.Action = "add_donor_operation"
+	addRecipientOperation  api.Action = "add_recipient_operation"
+	deleteDonorOperation   api.Action = "delete_donor_operation"
+	donorOperation         api.Action = "donor_operation"
+	chooseRecipient        api.Action = "choose_recipient"
+	viewRoom               api.Action = "room"
+	viewStart              api.Action = "start"
+	viewAllOperations      api.Action = "all_operations"
+	viewAllRooms           api.Action = "all_rooms"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
@@ -107,7 +109,7 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func getFrom(update *api.Update) api.User {
+func getFrom(update *api.Update) *api.User {
 	var user api.User
 	if update.CallbackQuery != nil {
 		user = update.CallbackQuery.From
@@ -116,5 +118,5 @@ func getFrom(update *api.Update) api.User {
 	} else {
 		user = update.InlineQuery.From
 	}
-	return user
+	return &user
 }

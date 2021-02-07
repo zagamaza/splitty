@@ -23,7 +23,8 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		wire.Bind(new(events.ButtonService), new(*service.ButtonService)),
 		ProvideBotList, bot.NewHelper, bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom,
 		bot.NewAllRoomInline, bot.NewOperation, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation,
-		bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom,
+		bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation,
+		bot.NewWantRecepientOperation, bot.NewAddRecepientOperation,
 		repository.NewUserRepository, wire.Bind(new(repository.UserRepository), new(*repository.MongoUserRepository)),
 		repository.NewRoomRepository, wire.Bind(new(repository.RoomRepository), new(*repository.MongoRoomRepository)),
 		repository.NewChatStateRepository, wire.Bind(new(repository.ChatStateRepository), new(*repository.MongoChatStateRepository)),
@@ -35,6 +36,6 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName,
 	jr *bot.JoinRoom, ari *bot.AllRoomInline, o *bot.Operation, do *bot.WantDonorOperation, ado *bot.AddDonorOperation,
 	cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations,
-	ar *bot.AllRoom) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar}
+	ar *bot.AllRoom, cro *bot.ChooseRecepientOperation, wro *bot.WantRecepientOperation, aro *bot.AddRecepientOperation) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro}
 }
