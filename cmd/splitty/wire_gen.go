@@ -38,7 +38,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	roomCreating := bot.NewRoomCreating(chatStateService, buttonService, botConfig)
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
-	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
+	allRoomInline := bot.NewAllRoomInline(chatStateService, buttonService, roomService, botConfig)
 	operation := bot.NewOperation(chatStateService, buttonService, roomService, botConfig)
 	operationService := service.NewOperationService(mongoRoomRepository)
 	wantDonorOperation := bot.NewWantDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
@@ -47,7 +47,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	deleteDonorOperation := bot.NewDeleteDonorOperation(chatStateService, buttonService, operationService, botConfig)
 	viewRoom := bot.NewViewRoom(buttonService, roomService, chatStateService, botConfig)
 	viewAllOperations := bot.NewViewAllOperations(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoom, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations)
+	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -60,7 +61,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName, jr *bot.JoinRoom, ar *bot.AllRoom, o *bot.Operation,
-	do *bot.WantDonorOperation, ado *bot.AddDonorOperation, cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ar, o, do, ado, cdo, ddo, vr, vaop}
+func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName,
+	jr *bot.JoinRoom, ari *bot.AllRoomInline, o *bot.Operation, do *bot.WantDonorOperation, ado *bot.AddDonorOperation,
+	cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations,
+	ar *bot.AllRoom) []bot.Interface {
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar}
 }

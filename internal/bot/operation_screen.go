@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -321,8 +322,8 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		}
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{
-				NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID, text,
-					[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})},
+				createScreen(u, text,
+					&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})},
 			Send: true,
 		}
 	}
@@ -362,7 +363,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	text := "Операция _" + operation.Description + "_ на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
 	text += "Выбери участников, которые участвуют в расходе"
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID, text, keyboardButtons)},
+		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
 	}
 }
@@ -496,12 +497,12 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	if page != 0 {
 		prevB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page - 1})
 		toSave = append(toSave, prevB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("<- prev", prevB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow)+" prev", prevB.ID.Hex()))
 	}
 	if skip+size < len(*ops) {
 		nextB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next ->", nextB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next "+string(emoji.RightArrow), nextB.ID.Hex()))
 	}
 	if len(navRow) != 0 {
 		keyboard = append(keyboard, navRow)
@@ -510,7 +511,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("К комнате", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("В комнату", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {

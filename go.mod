@@ -16,6 +16,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
+	github.com/enescakir/emoji v1.0.0
 	go.mongodb.org/mongo-driver v1.4.4
 	golang.org/x/text v0.3.3
 	gopkg.in/yaml.v2 v2.2.8 // indirect
