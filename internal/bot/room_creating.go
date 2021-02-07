@@ -43,7 +43,7 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return
 	}
 
-	b := &api.Button{Action: cancel}
+	b := api.NewButton(viewStart, nil)
 	id, err := s.bs.Save(ctx, b)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
@@ -125,7 +125,7 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 
 	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}
 
-	cb := &api.Button{Action: cancel}
+	cb := api.NewButton(viewStart, nil)
 	cancelId, err := rs.bs.Save(ctx, cb)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")

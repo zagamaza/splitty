@@ -22,8 +22,9 @@ const (
 	addDonorOperation    api.Action = "add_donor_operation"
 	deleteDonorOperation api.Action = "delete_donor_operation"
 	donorOperation       api.Action = "donor_operation"
-	cancel               api.Action = "cancel" //не нужен
 	viewRoom             api.Action = "room"
+	viewStart            api.Action = "start"
+	viewAllOperations    api.Action = "all_operations"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
@@ -83,7 +84,6 @@ func handlePanic(bot Interface) {
 			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
 		default:
 			log.Error().Stack().Msgf("panic! bot: %t, err: %v, sta", bot, err, string(debug.Stack()))
-
 		}
 	}
 }
@@ -104,16 +104,6 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
-}
-
-func getChatID(update *api.Update) int64 {
-	var chatId int64
-	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
-		chatId = update.CallbackQuery.Message.Chat.ID
-	} else {
-		chatId = update.Message.Chat.ID
-	}
-	return chatId
 }
 
 func getFrom(update *api.Update) api.User {
