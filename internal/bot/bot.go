@@ -25,6 +25,7 @@ const (
 	viewRoom             api.Action = "room"
 	viewStart            api.Action = "start"
 	viewAllOperations    api.Action = "all_operations"
+	viewAllRooms         api.Action = "all_rooms"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true

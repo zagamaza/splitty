@@ -55,17 +55,19 @@ func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.Te
 	}
 
 	b := &api.Button{Action: joinRoom, CallbackData: u.Button.CallbackData}
-	cId, err := s.bs.Save(ctx, b)
+	viewOpsB := api.NewButton(viewAllOperations, u.Button.CallbackData)
+	startB := api.NewButton(viewStart, u.Button.CallbackData)
+	_, err = s.bs.SaveAll(ctx, b, viewOpsB, startB)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", cId.Hex())}
-	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation"+room.ID.Hex())}
 
 	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
-		button1,
-		button2,
+		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation"+room.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
 	})
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
@@ -108,7 +110,8 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	}
 	joinB := api.NewButton(joinRoom, u.Button.CallbackData)
 	viewOpsB := api.NewButton(viewAllOperations, u.Button.CallbackData)
-	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB); err != nil {
+	startB := api.NewButton(viewStart, u.Button.CallbackData)
+	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, startB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
@@ -117,6 +120,7 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
 	})
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{tgMsg},
