@@ -75,6 +75,7 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 		log.Debug().Msgf("collect %q", r)
 		message.Chattable = append(message.Chattable, r.Chattable...)
 		message.InlineConfig = r.InlineConfig
+		message.CallbackConfig = r.CallbackConfig
 		message.Send = true
 	}
 

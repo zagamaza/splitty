@@ -320,15 +320,22 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		for _, v := range *operation.Recipients {
 			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 		}
+		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{
-				createScreen(u, text,
-					&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})},
-			Send: true,
+			Chattable: []tgbotapi.Chattable{msg},
+			Send:      true,
 		}
 	}
 
 	*operation.Recipients = s.addOrDeleteRecipient(operation.Recipients, room.Members, u.Button.CallbackData.UserId)
+
+	if len(*operation.Recipients) < 1 {
+		callback := createCallback(u, "Выберите хотя бы одного человека", true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
 
 	if err = s.os.UpsertOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")

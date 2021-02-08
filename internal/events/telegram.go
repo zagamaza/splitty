@@ -41,6 +41,7 @@ type tbAPI interface {
 	GetChat(config tbapi.ChatConfig) (tbapi.Chat, error)
 	RestrictChatMember(config tbapi.RestrictChatMemberConfig) (tbapi.APIResponse, error)
 	AnswerInlineQuery(config tbapi.InlineConfig) (tbapi.APIResponse, error)
+	AnswerCallbackQuery(config tbapi.CallbackConfig) (tbapi.APIResponse, error)
 }
 
 // Do process all events, blocked call
@@ -121,21 +122,28 @@ func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 	}
 
 	if resp.InlineConfig != nil {
-		log.Info().Msgf("bot response - %+v", resp.InlineConfig.InlineQueryID)
-		_, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
+		response, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
 		if err != nil {
-			return errors.Wrapf(err, "can't send query to telegram %q", resp.InlineConfig)
+			return errors.Wrapf(err, "can't send query to telegram %v", response)
 		}
+		log.Debug().Msgf("bot response - %q", resp.InlineConfig)
 	}
 
 	if len(resp.Chattable) > 0 {
 		for _, v := range resp.Chattable {
-			log.Info().Msgf("bot response - %v", v)
-			_, err := l.TbAPI.Send(v)
+			response, err := l.TbAPI.Send(v)
 			if err != nil {
 				return errors.Wrapf(err, "can't send message to telegram %q", v)
 			}
+			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
+	}
+	if resp.CallbackConfig != nil {
+		response, err := l.TbAPI.AnswerCallbackQuery(*resp.CallbackConfig)
+		if err != nil {
+			return errors.Wrapf(err, "can't send calback to telegram %v", resp.CallbackConfig)
+		}
+		log.Debug().Msgf("bot response - %+v", response)
 	}
 	return nil
 }
