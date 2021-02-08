@@ -171,18 +171,24 @@ func (s AddDonorOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	defer func() {
-		err := s.css.DeleteById(ctx, u.ChatState.ID)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-		}
-	}()
-
-	purchaseText := s.defineText(u.Message.Text)
 	sum, err := s.defineSum(u.Message.Text)
+	purchaseText := s.defineText(u.Message.Text)
+
+	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
 	if err != nil {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
+		if _, err := s.bs.SaveAll(ctx, rb); err != nil {
+			log.Error().Err(err).Msg("save buttons failed")
+			return
+		}
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u),
+				string(emoji.Warning)+" Неверный формат данных. Введите сумму и цель покупки через пробел и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
+				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
+			Send: true,
+		}
 	}
+	defer s.css.CleanChatState(ctx, u.ChatState)
 
 	room, err := s.rs.FindById(ctx, u.ChatState.CallbackData.RoomId)
 	if err != nil {
@@ -213,8 +219,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()))
 	}
 
-	rb := &api.Button{ID: primitive.NewObjectID(), Action: viewRoom, CallbackData: &api.CallbackData{RoomId: room.ID.Hex()}}
-	ob := &api.Button{ID: primitive.NewObjectID(), Action: deleteDonorOperation, CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID}}
+	ob := api.NewButton(deleteDonorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
 	buttons = append(buttons, rb, ob)
 
 	if _, err = s.bs.SaveAll(ctx, buttons...); err != nil {
@@ -225,10 +230,10 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
 	keyboardButtons = append(keyboardButtons,
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Удалить операцию", ob.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
-	text := "Отлично. Операция _" + purchaseText + "_ на сумму *" + strconv.Itoa(sum) + "* добавлена.\n\n"
-	text += "Теперь выбери участников, которые участвуют в расходе"
+	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + strconv.Itoa(sum) + "* добавлена.\n\n"
+	text += "Теперь выбери участников, которые участвуют в расходе, нажми *Готово* если все участники участвуют в расходе"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
 		Send:      true,
@@ -306,15 +311,14 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		}
 	}
 
-	cb := api.NewButton(viewRoom, u.Button.CallbackData)
-	_, err = s.bs.Save(ctx, cb)
-	if err != nil {
-		log.Error().Err(err).Msg("create btn failed")
-		return
-	}
-
 	//if user not created operation we not mast show other buttons
 	if operation.Donor.ID != getFrom(u).ID {
+		cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
+		_, err = s.bs.Save(ctx, cb)
+		if err != nil {
+			log.Error().Err(err).Msg("create btn failed")
+			return
+		}
 		text := "Операция _" + operation.Description + "_ на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n" +
 			"Заплатил: " + fmt.Sprintf("[%s](tg://user?id=%d)\n", operation.Donor.DisplayName, operation.Donor.ID) + "\nУчастники:\n"
 		for _, v := range *operation.Recipients {
@@ -365,10 +369,10 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
 	keyboardButtons = append(keyboardButtons,
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Удалить операцию", ob.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
-	text := "Операция _" + operation.Description + "_ на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
-	text += "Выбери участников, которые участвуют в расходе"
+	text := "Операция *" + operation.Description + "* на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
+	text += "Выбери участников, которые участвуют в расходе, нажми *Готово* если все участники участвуют в расходе"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
@@ -391,10 +395,10 @@ func (s DonorOperation) addOrDeleteRecipient(recipients *[]api.User, members *[]
 func setSmile(users *[]api.User, id int) string {
 	for _, u := range *users {
 		if u.ID == id {
-			return "+ "
+			return string(emoji.CheckMarkButton) + " "
 		}
 	}
-	return "- "
+	return string(emoji.CrossMark) + " "
 }
 
 func deleteUser(users []api.User, userId int) []api.User {
@@ -619,19 +623,29 @@ func (s AddRecepientOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	defer s.css.CleanChatState(ctx, u.ChatState)
-
 	room, err := s.rs.FindById(ctx, u.ChatState.CallbackData.RoomId)
 	if err != nil {
 		log.Error().Err(err).Msg("get room failed")
 		return
 	}
 
+	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
+	if _, err = s.bs.SaveAll(ctx, rb); err != nil {
+		log.Error().Err(err).Msg("save buttons failed")
+		return
+	}
+
 	sum, err := s.defineSum(u.Message.Text)
 	if err != nil {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
-		return
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u),
+				string(emoji.Warning)+" Неверный формат данных.\nВведите сумму которую вы вернули выбранному человеку и отправьте боту\n\nНапример:\n_1000_",
+				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
+			Send: true,
+		}
 	}
+	defer s.css.CleanChatState(ctx, u.ChatState)
 
 	recipient, err := s.us.FindById(ctx, u.ChatState.CallbackData.UserId)
 	if err != nil {
@@ -648,13 +662,6 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	}
 	if err = s.os.UpsertOperation(ctx, operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
-	}
-
-	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
-
-	if _, err = s.bs.SaveAll(ctx, rb); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
 		return
 	}
 
