@@ -16,6 +16,8 @@ type OperationService interface {
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
+	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
+	GetAllUsersDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 }
 
 // Operation show screen with donar/recepient buttons

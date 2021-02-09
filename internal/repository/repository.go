@@ -229,7 +229,7 @@ func (csr MongoChatStateRepository) FindById(ctx context.Context, id int) (*api.
 func (csr MongoChatStateRepository) FindByUserId(ctx context.Context, userId int) (*api.ChatState, error) {
 	res := csr.col.FindOne(ctx, bson.D{{"user_id", bson.D{{"$eq", userId}}}})
 	if res.Err() == mongo.ErrNoDocuments {
-		log.Warn().Err(res.Err()).Msgf("chat_state not found by user_id %v", userId)
+		log.Debug().Err(res.Err()).Msgf("chat_state not found by user_id %v", userId)
 		return nil, nil
 	}
 	if res.Err() != nil {

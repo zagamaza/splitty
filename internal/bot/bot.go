@@ -28,6 +28,7 @@ const (
 	viewStart              api.Action = "start"
 	viewAllOperations      api.Action = "all_operations"
 	viewAllRooms           api.Action = "all_rooms"
+	viewAllDebts           api.Action = "all_debts"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
@@ -72,7 +73,7 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 
 	message := &api.TelegramMessage{Chattable: []tgbotapi.Chattable{}}
 	for r := range resps {
-		log.Debug().Msgf("collect %q", r)
+		log.Debug().Msgf("collect %v", r)
 		message.Chattable = append(message.Chattable, r.Chattable...)
 		message.InlineConfig = r.InlineConfig
 		message.CallbackConfig = r.CallbackConfig
@@ -87,7 +88,7 @@ func handlePanic(bot Interface) {
 		case error:
 			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
 		default:
-			log.Error().Stack().Msgf("panic! bot: %t, err: %v, sta", bot, err, string(debug.Stack()))
+			log.Error().Stack().Msgf("panic! bot: %t, err: %v, stack: %s", bot, err, string(debug.Stack()))
 		}
 	}
 }
