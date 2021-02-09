@@ -130,3 +130,18 @@ func createCallback(u *api.Update, text string, showAlert bool) *tgbotapi.Callba
 		CacheTime:       1,
 	}
 }
+
+func shortName(user *api.User) string {
+	sn := []rune(user.DisplayName)
+
+	if len(sn) > 10 {
+		split := strings.Split(string(sn), " ")
+		if len(split) > 1 && len(split[1]) > 0 {
+			sn = []rune(split[0] + " " + string([]rune(split[1])[0:1]) + ".")
+		}
+	}
+	if len(sn) > 10 {
+		return string(sn[0:10])
+	}
+	return string(sn)
+}

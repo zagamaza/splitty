@@ -41,13 +41,14 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 	var results []interface{}
 	for _, room := range *rooms {
-
 		data := &api.CallbackData{RoomId: room.ID.Hex()}
+
 		joinB := api.NewButton(joinRoom, data)
-		viewB := api.NewButton(viewRoom, data)
 		viewOpsB := api.NewButton(viewAllOperations, data)
+		viewDbtB := api.NewButton(viewAllDebts, data)
 		startB := api.NewButton(viewStart, data)
-		if _, err := bot.bs.SaveAll(ctx, joinB, viewB, viewOpsB, startB); err != nil {
+
+		if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB, startB); err != nil {
 			log.Error().Err(err).Msg("create btn failed")
 			continue
 		}
@@ -56,6 +57,7 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)},
 			{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
 		})
 		results = append(results, article)
@@ -104,10 +106,10 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 
 	var toSave []*api.Button
 	var keyboard [][]tgbotapi.InlineKeyboardButton
-	for _, room := range *rooms {
-		roomB := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
+	for i := skip; i < skip+size && i < len(*rooms); i++ {
+		roomB := api.NewButton(viewRoom, &api.CallbackData{RoomId: (*rooms)[i].ID.Hex()})
 		toSave = append(toSave, roomB)
-		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(room.Name, roomB.ID.Hex())})
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData((*rooms)[i].Name, roomB.ID.Hex())})
 	}
 
 	var navRow []tgbotapi.InlineKeyboardButton

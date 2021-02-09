@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
@@ -27,7 +26,7 @@ func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Conf
 }
 
 // ReactOn keys
-func (s JoinRoom) HasReact(u *api.Update) bool {
+func (bot JoinRoom) HasReact(u *api.Update) bool {
 	if u.Button == nil {
 		return false
 	}
@@ -35,42 +34,48 @@ func (s JoinRoom) HasReact(u *api.Update) bool {
 }
 
 // OnMessage returns one entry
-func (s JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 
-	err := s.rs.JoinToRoom(ctx, u.CallbackQuery.From, roomId)
+	err := bot.rs.JoinToRoom(ctx, u.CallbackQuery.From, roomId)
 	if err != nil {
 		log.Error().Err(err).Msgf("join room failed %v", roomId)
 		return
 	}
 
-	room, err := s.rs.FindById(ctx, roomId)
+	room, err := bot.rs.FindById(ctx, roomId)
 	if err != nil {
 		log.Error().Err(err).Msgf("get room failed %v", roomId)
 		return
 	}
-	text := "Экран комнаты *" + room.Name + "*\n\nУчастники:\n"
-	for _, v := range *room.Members {
-		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
-	}
 
-	b := &api.Button{Action: joinRoom, CallbackData: u.Button.CallbackData}
-	viewOpsB := api.NewButton(viewAllOperations, u.Button.CallbackData)
-	startB := api.NewButton(viewStart, u.Button.CallbackData)
-	_, err = s.bs.SaveAll(ctx, b, viewOpsB, startB)
-	if err != nil {
+	data := &api.CallbackData{RoomId: room.ID.Hex()}
+
+	joinB := api.NewButton(joinRoom, data)
+	viewOpsB := api.NewButton(viewAllOperations, data)
+	viewDbtB := api.NewButton(viewAllDebts, data)
+	startB := api.NewButton(viewStart, data)
+
+	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB, startB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
-	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", b.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+s.cfg.BotName+"?start=operation"+room.ID.Hex())},
+	text := createRoomInfoText(room)
+	keyboard := [][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())}}
+	if isPrivate(u) {
+		keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData("Мои долги", viewDbtB.ID.Hex())}}...)
+	}
+	keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
-	})
+		{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}}...)
+
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{screen},
+		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
 		Send:      true,
 	}
 }
@@ -108,22 +113,34 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		log.Error().Err(err).Stack().Msgf("cannot find room, id:%s", roomId)
 		return
 	}
-	joinB := api.NewButton(joinRoom, u.Button.CallbackData)
-	viewOpsB := api.NewButton(viewAllOperations, u.Button.CallbackData)
-	startB := api.NewButton(viewStart, u.Button.CallbackData)
-	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, startB); err != nil {
+
+	data := u.Button.CallbackData
+
+	joinB := api.NewButton(joinRoom, data)
+	viewOpsB := api.NewButton(viewAllOperations, data)
+	viewDbtB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId})
+	startB := api.NewButton(viewStart, data)
+
+	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB, startB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
-	tgMsg := createScreen(u, createRoomInfoText(room), &[][]tgbotapi.InlineKeyboardButton{
+	text := createRoomInfoText(room)
+	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())}}
+	if isPrivate(u) {
+		keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData("Мои долги", viewDbtB.ID.Hex())}}...)
+	}
+	keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
-	})
+		{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}}...)
+
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{tgMsg},
+		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
 		Send:      true,
 	}
 }

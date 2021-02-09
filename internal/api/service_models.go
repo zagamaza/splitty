@@ -23,6 +23,12 @@ type Operation struct {
 	Sum             int                `json:"sum" bson:"sum"`
 }
 
+type Debt struct {
+	Lender *User `json:"lender" bson:"lender"`
+	Debtor *User `json:"debtor" bson:"debtor"`
+	Sum    int   `json:"sum" bson:"sum"`
+}
+
 // ChatState stores user state
 type ChatState struct {
 	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
