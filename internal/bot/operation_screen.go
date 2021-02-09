@@ -14,7 +14,7 @@ import (
 
 type OperationService interface {
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
-	DeleteOperation(ctx context.Context, operationId primitive.ObjectID) error
+	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 }
 
@@ -440,7 +440,7 @@ func (s DeleteDonorOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.OperationId); err != nil {
+	if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, u.Button.CallbackData.OperationId); err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
