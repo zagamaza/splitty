@@ -120,3 +120,13 @@ func createScreen(u *api.Update, text string, keyboard *[][]tgbotapi.InlineKeybo
 		return NewMessage(getChatID(u), text, *keyboard)
 	}
 }
+
+func createCallback(u *api.Update, text string, showAlert bool) *tgbotapi.CallbackConfig {
+	return &tgbotapi.CallbackConfig{
+		CallbackQueryID: u.CallbackQuery.ID,
+		Text:            text,
+		ShowAlert:       showAlert,
+		URL:             "",
+		CacheTime:       1,
+	}
+}

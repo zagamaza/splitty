@@ -15,19 +15,20 @@ type Room struct {
 }
 
 type Operation struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Description string             `json:"description" bson:"description"`
-	Donor       *User              `json:"donor" bson:"donor"`
-	Recipients  *[]User            `json:"recipients" bson:"recipients"`
-	Sum         int                `json:"sum" bson:"sum"`
+	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Description     string             `json:"description" bson:"description"`
+	Donor           *User              `json:"donor" bson:"donor"`
+	Recipients      *[]User            `json:"recipients" bson:"recipients"`
+	IsDebtRepayment bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
+	Sum             int                `json:"sum" bson:"sum"`
 }
 
 // ChatState stores user state
 type ChatState struct {
-	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserId     int                `json:"userId" bson:"user_id"`
-	Action     Action             `json:"action" bson:"action"`
-	ExternalId string             `json:"externalId" bson:"extern_id"`
+	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserId       int                `json:"userId" bson:"user_id"`
+	Action       Action             `json:"action" bson:"action"`
+	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
 }
 
 // Button which is sent to the user as ReplyMarkup

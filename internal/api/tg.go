@@ -93,8 +93,9 @@ type Chat struct {
 }
 
 type TelegramMessage struct {
-	Chattable    []tgbotapi.Chattable
-	InlineConfig *tgbotapi.InlineConfig
-	Send         bool // status
+	Chattable      []tgbotapi.Chattable
+	InlineConfig   *tgbotapi.InlineConfig
+	CallbackConfig *tgbotapi.CallbackConfig
+	Send           bool // status
 
 }
