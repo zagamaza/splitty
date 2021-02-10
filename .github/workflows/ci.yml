@@ -20,11 +20,11 @@ jobs:
       - name: Build
         run: make build
 
-#      - name: Lint
-#        run: |
-#          go run github.com/golangci/golangci-lint/cmd/golangci-lint run
-#          go get -u golang.org/x/lint/golint
-#          /home/runner/go/bin/golint
+      - name: Lint
+        run: |
+          go run github.com/golangci/golangci-lint/cmd/golangci-lint run
+          go get -u golang.org/x/lint/golint
+          /home/runner/go/bin/golint
 
   publish:
     if: github.event_name == 'push' && (contains(github.ref, 'develop') || contains(github.ref, 'master'))
