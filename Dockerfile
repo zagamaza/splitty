@@ -1,19 +1,16 @@
-FROM umputun/baseimage:buildgo-latest as build
+FROM golang:1.15 AS builder
+WORKDIR /app
 
-ADD . /build
-WORKDIR  /build
-RUN go test -mod=vendor ./app/...
-RUN cd app && CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o /target/telegram-rt-bot -ldflags \
-    "-X main.revision=$(git rev-parse --abbrev-ref HEAD)-$(git describe --abbrev=7 --always --tags)-$(date +%Y%m%d-%H:%M:%S)"
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
 
+COPY . .
+RUN GOOS=linux CGO_ENABLED=0 go build -installsuffix cgo -o app ./cmd/splitty
 
-FROM umputun/baseimage:app
-COPY --from=build /target/telegram-rt-bot /srv/telegram-rt-bot
-COPY data/*.data /srv/data/
-COPY data/logs.html /srv/logs.html
-
-RUN chown -R app:app /srv
-
-EXPOSE 18001
-WORKDIR /srv
-CMD ["/srv/telegram-rt-bot"]
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates
+WORKDIR /app
+COPY --from=0 /app .
+CMD mkdir /var/data
+ENTRYPOINT ["/app/app"]
