@@ -55,10 +55,9 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData("Все операции", viewOpsB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)},
-			{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
 		})
 		results = append(results, article)
 	}
