@@ -345,7 +345,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	*operation.Recipients = s.addOrDeleteRecipient(operation.Recipients, room.Members, u.Button.CallbackData.UserId)
 
 	if len(*operation.Recipients) < 1 {
-		callback := createCallback(u, "Выберите хотя бы одного человека", true)
+		callback := createCallback(u, string(emoji.Warning)+"Выберите хотя бы одного человека", true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,
@@ -508,6 +508,13 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 	}
 	userId := getFrom(u).ID
 	donors := s.defineRecipients(userId, room)
+	if len(donors) < 1 {
+		callback := createCallback(u, string(emoji.Warning)+"У вас отсутствуют долги", true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
 
 	var buttons []*api.Button
 	var tgButtons []tgbotapi.InlineKeyboardButton

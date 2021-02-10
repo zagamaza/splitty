@@ -40,6 +40,13 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	if err != nil {
 		return
 	}
+	if len(*debts) < 1 {
+		callback := createCallback(u, string(emoji.Warning)+"У вас отсутствуют долги", true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
 
 	var toSave []*api.Button
 	var debtBtns []tgbotapi.InlineKeyboardButton
