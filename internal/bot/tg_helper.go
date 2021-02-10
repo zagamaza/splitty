@@ -160,7 +160,7 @@ func stringForAlign(s string, width int, spacesToEnd bool) string {
 	rs := []rune(s)
 	if len(rs) > width {
 		if len(rs) > 2 {
-			return string(rs[0:width-3]) + "...   "
+			return string(rs[0:width-1]) + "..."
 		} else {
 			return s
 		}

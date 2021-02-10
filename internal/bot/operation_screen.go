@@ -464,9 +464,10 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 	}
 
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID,
+		Chattable: []tgbotapi.Chattable{createScreen(u,
 			"Отлично. Операция успешно удалена",
-			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
+			&[][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
 		Send: true,
 	}
 }
@@ -737,8 +738,8 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
 		toSave = append(toSave, opB)
 		text := fmt.Sprintf("%s %s₽ %s",
-			stringForAlign(op.Description, 17, true),
-			stringForAlign(thousandSpace(op.Sum), 5, false),
+			stringForAlign(op.Description, 16, true),
+			stringForAlign(thousandSpace(op.Sum), 6, false),
 			stringForAlign("["+shortName(op.Donor)+"]", 13, false))
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
 	}
