@@ -40,6 +40,9 @@ func NewOperation(s ChatStateService, bs ButtonService, rs RoomService, cfg *Con
 
 // ReactOn keys, example = /start operation600e68d102ddac9888d0193e
 func (s Operation) HasReact(u *api.Update) bool {
+	if hasAction(u, viewStartOperation) {
+		return true
+	}
 	if u.Message == nil || u.Message.Chat.Type != "private" {
 		return false
 	}
@@ -49,7 +52,12 @@ func (s Operation) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	roomId := strings.ReplaceAll(u.Message.Text, "/start operation", "")
+	var roomId string
+	if isButton(u) {
+		roomId = u.Button.CallbackData.RoomId
+	} else {
+		roomId = strings.ReplaceAll(u.Message.Text, "/start operation", "")
+	}
 	room, err := s.rs.FindById(ctx, roomId)
 	if err != nil {
 		log.Error().Err(err).Msg("get room failed")
@@ -65,18 +73,19 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 
 	recipientBtn := &api.Button{Action: wantRecipientOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
 	donorBtn := &api.Button{Action: wantDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
-	_, err = s.bs.SaveAll(ctx, recipientBtn, donorBtn)
+	viewRoomB := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
+	_, err = s.bs.SaveAll(ctx, recipientBtn, donorBtn, viewRoomB)
 	if err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), "Выбор операции для комнаты *"+room.Name+"*",
-			[][]tgbotapi.InlineKeyboardButton{
+		Chattable: []tgbotapi.Chattable{createScreen(u, "Выбор операции для комнаты *"+room.Name+"*",
+			&[][]tgbotapi.InlineKeyboardButton{
 				{tgbotapi.NewInlineKeyboardButtonData("Расход", donorBtn.ID.Hex())},
 				{tgbotapi.NewInlineKeyboardButtonData("Вернуть долг", recipientBtn.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cfg.BotName+"?start=")}}),
+				{tgbotapi.NewInlineKeyboardButtonData("Отмена", viewRoomB.ID.Hex())}}),
 		},
 		Send: true,
 	}
@@ -455,9 +464,10 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 	}
 
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID,
+		Chattable: []tgbotapi.Chattable{createScreen(u,
 			"Отлично. Операция успешно удалена",
-			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
+			&[][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
 		Send: true,
 	}
 }
@@ -727,7 +737,10 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		op := (*ops)[i]
 		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
 		toSave = append(toSave, opB)
-		text := fmt.Sprintf("[%s] %d - %s", op.Donor.DisplayName, op.Sum, op.Description)
+		text := fmt.Sprintf("%s %s₽ %s",
+			stringForAlign(op.Description, 16, true),
+			stringForAlign(thousandSpace(op.Sum), 6, false),
+			stringForAlign("["+shortName(op.Donor)+"]", 13, false))
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
 	}
 
@@ -735,12 +748,12 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	if page != 0 {
 		prevB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page - 1})
 		toSave = append(toSave, prevB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow)+" prev", prevB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
 	if skip+size < len(*ops) {
 		nextB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next "+string(emoji.RightArrow), nextB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
 	}
 	if len(navRow) != 0 {
 		keyboard = append(keyboard, navRow)

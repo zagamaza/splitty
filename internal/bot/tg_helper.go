@@ -4,6 +4,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 	"strings"
 )
 
@@ -144,4 +145,28 @@ func shortName(user *api.User) string {
 		return string(sn[0:10])
 	}
 	return string(sn)
+}
+
+func thousandSpace(sum int) string {
+	s := strconv.Itoa(sum)
+	if sum > 999 {
+		return s[0:len(s)-3] + " " + s[len(s)-3:]
+	} else {
+		return s
+	}
+}
+
+func stringForAlign(s string, width int, spacesToEnd bool) string {
+	rs := []rune(s)
+	if len(rs) > width {
+		if len(rs) > 2 {
+			return string(rs[0:width-1]) + "..."
+		} else {
+			return s
+		}
+	} else if spacesToEnd {
+		return s + strings.Repeat(" ", (width-len(rs))*2)
+	} else {
+		return strings.Repeat(" ", (width-len(rs))*2) + s
+	}
 }

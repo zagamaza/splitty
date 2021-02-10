@@ -51,8 +51,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	chooseRecepientOperation := bot.NewChooseRecepientOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	wantRecepientOperation := bot.NewWantRecepientOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, botConfig)
+	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
 	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewAllDebts)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -69,6 +70,7 @@ func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.Ro
 	jr *bot.JoinRoom, ari *bot.AllRoomInline, o *bot.Operation, do *bot.WantDonorOperation, ado *bot.AddDonorOperation,
 	cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations,
 	ar *bot.AllRoom, cro *bot.ChooseRecepientOperation, wro *bot.WantRecepientOperation, aro *bot.AddRecepientOperation,
-	vad *bot.ViewAllDebts) []bot.Interface {
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro, vad}
+	vud *bot.ViewUserDebts, vad *bot.ViewAllDebts) []bot.Interface {
+
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro, vud, vad}
 }

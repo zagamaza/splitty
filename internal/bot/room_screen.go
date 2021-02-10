@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 )
@@ -54,26 +55,20 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	joinB := api.NewButton(joinRoom, data)
 	viewOpsB := api.NewButton(viewAllOperations, data)
 	viewDbtB := api.NewButton(viewAllDebts, data)
-	startB := api.NewButton(viewStart, data)
 
-	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB, startB); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
 	text := createRoomInfoText(room)
-	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())}}
-	if isPrivate(u) {
-		keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData("Мои долги", viewDbtB.ID.Hex())}}...)
+	buttons := []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("Операции", viewOpsB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
 	}
-	keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}}...)
-
+	keyboard := splitKeyboardButtons(buttons, 1)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
 		Send:      true,
@@ -114,31 +109,44 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		return
 	}
 
-	data := u.Button.CallbackData
-
-	joinB := api.NewButton(joinRoom, data)
+	data := &api.CallbackData{RoomId: roomId}
 	viewOpsB := api.NewButton(viewAllOperations, data)
-	viewDbtB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId})
-	startB := api.NewButton(viewStart, data)
+	toSave := []*api.Button{viewOpsB}
 
-	if _, err := bot.bs.SaveAll(ctx, joinB, viewOpsB, viewDbtB, startB); err != nil {
+	text := createRoomInfoText(room)
+	var buttons []tgbotapi.InlineKeyboardButton
+
+	if isPrivate(u) {
+		viewDbtB := api.NewButton(viewUserDebts, data)
+		startB := api.NewButton(viewStart, data)
+		startOpB := api.NewButton(viewStartOperation, data)
+		toSave = append(toSave, viewDbtB, startB, startOpB)
+
+		buttons = []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData(string(emoji.Plus)+" Добавить операцию", startOpB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать", room.Name),
+			tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex()),
+		}
+	} else {
+		joinB := api.NewButton(joinRoom, data)
+		viewDbtB := api.NewButton(viewAllDebts, data)
+		toSave = append(toSave, joinB, viewDbtB)
+		buttons = []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData("Все операции", viewOpsB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
+		}
+	}
+
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
-	text := createRoomInfoText(room)
-	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("Просмотр операций", viewOpsB.ID.Hex())}}
-	if isPrivate(u) {
-		keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData("Мои долги", viewDbtB.ID.Hex())}}...)
-	}
-	keyboard = append(keyboard, [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("В начало", startB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}}...)
-
+	keyboard := splitKeyboardButtons(buttons, 1)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
 		Send:      true,
