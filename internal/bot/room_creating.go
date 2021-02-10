@@ -53,7 +53,7 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cgf.BotName+"?start=help")}
 
 	if u.CallbackQuery != nil {
-		tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, "Введите название комнаты и отправьте сообщение.")
+		tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, "Введите название тусы и отправьте сообщение.")
 		var keyboard [][]tgbotapi.InlineKeyboardButton
 		tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(keyboard, button1, button2)}
 
@@ -62,7 +62,7 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 			Send:      true,
 		}
 	} else {
-		tbMsg := tgbotapi.NewMessage(getChatID(u), "Введите название комнаты и отправьте сообщение.")
+		tbMsg := tgbotapi.NewMessage(getChatID(u), "Введите название тусы и отправьте сообщение.")
 		tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2)
 
 		return api.TelegramMessage{
@@ -120,10 +120,10 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return api.TelegramMessage{}
 	}
 
-	tbMsg := tgbotapi.NewMessage(getChatID(u), "Комната *"+room.Name+"* создана, теперь добавьте бота в группу")
+	tbMsg := tgbotapi.NewMessage(getChatID(u), "Туса *"+room.Name+"* создана, теперь добавьте бота в группу")
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать комнату в свой чат", room.Name)}
+	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать тусу в свой чат", room.Name)}
 
 	cb := api.NewButton(viewStart, nil)
 	cancelId, err := rs.bs.Save(ctx, cb)

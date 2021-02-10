@@ -82,7 +82,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("В комнату", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -159,7 +159,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("В комнату", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {

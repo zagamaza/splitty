@@ -137,7 +137,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
-	screen := createScreen(u, "Мои комнаты", &keyboard)
+	screen := createScreen(u, "Мои тусы", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
@@ -145,7 +145,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 }
 
 func createRoomInfoText(r *api.Room) string {
-	text := "Экран комнаты *" + r.Name + "*\n\nУчастники:\n"
+	text := "Экран тусы *" + r.Name + "*\n\nУчастники:\n"
 	for _, v := range *r.Members {
 		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 	}

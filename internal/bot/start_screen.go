@@ -60,11 +60,11 @@ func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response ap
 			log.Error().Err(err).Msg("save btn failed")
 			return
 		}
-		allRoomB = tgbotapi.NewInlineKeyboardButtonData("Все комнаты", arb.ID.Hex())
-		createB = tgbotapi.NewInlineKeyboardButtonData("Создать новую комнату", cb.ID.Hex())
+		allRoomB = tgbotapi.NewInlineKeyboardButtonData("Все тусы", arb.ID.Hex())
+		createB = tgbotapi.NewInlineKeyboardButtonData("Создать новую тусу", cb.ID.Hex())
 	} else {
-		allRoomB = NewButtonSwitchCurrent("Все комнаты", "")
-		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую комнату", "http://t.me/"+s.cfg.BotName+"?start=create_room")
+		allRoomB = NewButtonSwitchCurrent("Все тусы", "")
+		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую тусу", "http://t.me/"+s.cfg.BotName+"?start=create_room")
 	}
 
 	screen := createScreen(u, "Главный экран", &[][]tgbotapi.InlineKeyboardButton{

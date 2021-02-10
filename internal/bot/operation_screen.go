@@ -66,7 +66,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 
 	if !containsUserId(room.Members, getFrom(u).ID) {
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой комнате")},
+			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой тусе")},
 			Send:      true,
 		}
 	}
@@ -81,7 +81,7 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	}
 
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{createScreen(u, "Выбор операции для комнаты *"+room.Name+"*",
+		Chattable: []tgbotapi.Chattable{createScreen(u, "Выбор операции для тусы *"+room.Name+"*",
 			&[][]tgbotapi.InlineKeyboardButton{
 				{tgbotapi.NewInlineKeyboardButtonData("Расход", donorBtn.ID.Hex())},
 				{tgbotapi.NewInlineKeyboardButtonData("Вернуть долг", recipientBtn.ID.Hex())},
@@ -769,7 +769,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("В комнату", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -777,7 +777,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		return
 	}
 
-	screen := createScreen(u, "Операции комнаты", &keyboard)
+	screen := createScreen(u, "Операции тусы", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
