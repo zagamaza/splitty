@@ -341,9 +341,15 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 		}
 		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})
+		var alert *tgbotapi.CallbackConfig
+		if operation.Donor.ID == getFrom(u).ID {
+			alert = createCallback(u, string(emoji.Warning)+"Отредактируйте операцию в чате с ботом", false)
+		}
+
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{msg},
-			Send:      true,
+			Chattable:      []tgbotapi.Chattable{msg},
+			CallbackConfig: alert,
+			Send:           true,
 		}
 	}
 
