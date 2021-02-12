@@ -328,7 +328,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	//if user not created operation we not mast show other buttons
-	if operation.Donor.ID != getFrom(u).ID {
+	if operation.Donor.ID != getFrom(u).ID || !isPrivate(u) {
 		cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
 		_, err = s.bs.Save(ctx, cb)
 		if err != nil {
