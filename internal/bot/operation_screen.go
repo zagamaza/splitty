@@ -6,6 +6,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
@@ -182,7 +183,7 @@ func (s AddDonorOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	sum, err := s.defineSum(u.Message.Text)
+	sum, err := defineSum(u.Message.Text)
 	purchaseText := s.defineText(u.Message.Text)
 
 	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
@@ -271,12 +272,16 @@ func (s AddDonorOperation) defineText(text string) string {
 	return strings.Join(words[1:], " ")
 }
 
-func (s AddDonorOperation) defineSum(text string) (int, error) {
+func defineSum(text string) (int, error) {
 	words := strings.Fields(text)
 	sum, err := strconv.Atoi(words[0])
 	if err != nil {
 		log.Error().Err(err).Msg("text to int not parsed")
 		return 0, err
+	}
+	if sum < 1 {
+		log.Error().Err(err).Msgf("sum can not be les zero $v", sum)
+		return 0, errors.New("sum can not be les zero")
 	}
 	return sum, nil
 }
@@ -654,7 +659,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		return
 	}
 
-	sum, err := s.defineSum(u.Message.Text)
+	sum, err := defineSum(u.Message.Text)
 	if err != nil {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		return api.TelegramMessage{
@@ -692,16 +697,6 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		Chattable: []tgbotapi.Chattable{forDonorMsg, forRecipientMsg},
 		Send:      true,
 	}
-}
-
-func (s AddRecepientOperation) defineSum(text string) (int, error) {
-	words := strings.Fields(text)
-	sum, err := strconv.Atoi(words[0])
-	if err != nil {
-		log.Error().Err(err).Msg("text to int not parsed")
-		return 0, err
-	}
-	return sum, nil
 }
 
 // Operation show screen with donar/recepient buttons
