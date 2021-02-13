@@ -67,7 +67,7 @@ func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response ap
 		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую тусу", "http://t.me/"+s.cfg.BotName+"?start=create_room")
 	}
 
-	screen := createScreen(u, "Главный экран", &[][]tgbotapi.InlineKeyboardButton{
+	screen := createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
 		{allRoomB},
 		{createB},
 	})

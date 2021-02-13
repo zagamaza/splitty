@@ -64,9 +64,9 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	text := createRoomInfoText(room)
 	buttons := []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex()),
-		tgbotapi.NewInlineKeyboardButtonData("Операции", viewOpsB.ID.Hex()),
-		tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex()),
-		tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Операции", viewOpsB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
 	}
 	keyboard := splitKeyboardButtons(buttons, 1)
 	return api.TelegramMessage{
@@ -135,9 +135,9 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		toSave = append(toSave, joinB, viewDbtB)
 		buttons = []tgbotapi.InlineKeyboardButton{
 			tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex()),
-			tgbotapi.NewInlineKeyboardButtonData("Все операции", viewOpsB.ID.Hex()),
-			tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex()),
-			tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
 		}
 	}
 
