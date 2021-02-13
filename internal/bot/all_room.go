@@ -7,7 +7,6 @@ import (
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
-	"strconv"
 )
 
 // send /room, after click on the button 'Присоединиться'
@@ -52,9 +51,9 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		}
 		var descr string
 		if debtorSum != 0 {
-			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", strconv.Itoa(debtorSum))
+			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", thousandSpace(debtorSum)+" ₽")
 		} else if lenderSum != 0 {
-			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", strconv.Itoa(lenderSum))
+			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", thousandSpace(lenderSum)+" ₽")
 		} else {
 			descr = fmt.Sprintf(string(emoji.WhiteCircle)) + "️Долгов нет"
 		}
