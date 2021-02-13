@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 )
@@ -55,9 +56,9 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData("Все операции", viewOpsB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData("Долги", viewDbtB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonURL("Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 		})
 		results = append(results, article)
 	}
@@ -115,12 +116,12 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	if page != 0 {
 		prevB := api.NewButton(viewAllRooms, &api.CallbackData{Page: page - 1})
 		toSave = append(toSave, prevB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("<- prev", prevB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
 	if skip+size < len(*rooms) {
 		nextB := api.NewButton(viewAllRooms, &api.CallbackData{Page: page + 1})
 		toSave = append(toSave, nextB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next ->", nextB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
 	}
 	if len(navRow) != 0 {
 		keyboard = append(keyboard, navRow)
@@ -137,7 +138,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
-	screen := createScreen(u, "Мои тусы", &keyboard)
+	screen := createScreen(u, "*Мои тусы*", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,

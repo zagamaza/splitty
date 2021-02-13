@@ -84,8 +84,8 @@ func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.T
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, "Выбор операции для тусы *"+room.Name+"*",
 			&[][]tgbotapi.InlineKeyboardButton{
-				{tgbotapi.NewInlineKeyboardButtonData("Расход", donorBtn.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonData("Вернуть долг", recipientBtn.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Расход", donorBtn.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Вернуть долг", recipientBtn.ID.Hex())},
 				{tgbotapi.NewInlineKeyboardButtonData("Отмена", viewRoomB.ID.Hex())}}),
 		},
 		Send: true,
@@ -778,7 +778,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		return
 	}
 
-	screen := createScreen(u, "Операции тусы", &keyboard)
+	screen := createScreen(u, "*Операции тусы*", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,

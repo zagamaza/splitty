@@ -67,12 +67,12 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	if page != 0 {
 		prevB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page - 1})
 		toSave = append(toSave, prevB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow)+" prev", prevB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
 	if skip+size < len(*debts) {
 		nextB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("next "+string(emoji.RightArrow), nextB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
 	}
 	keyboard := splitKeyboardButtons(debtBtns, 1)
 	if len(navRow) != 0 {
@@ -82,7 +82,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(string(emoji.BackArrow)+" Назад", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -90,7 +90,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 		return
 	}
 
-	screen := createScreen(u, "Мои долги", &keyboard)
+	screen := createScreen(u, "*Мои долги*", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
@@ -159,7 +159,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(string(emoji.BackArrow)+" Назад", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -167,7 +167,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 		return
 	}
 
-	screen := createScreen(u, "Мои долги", &keyboard)
+	screen := createScreen(u, "*Мои долги*", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
