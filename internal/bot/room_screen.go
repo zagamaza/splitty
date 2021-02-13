@@ -64,7 +64,7 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	text := createRoomInfoText(room)
 	buttons := []tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex()),
-		tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Операции", viewOpsB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex()),
 		tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex()),
 		tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex()),
 	}

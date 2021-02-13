@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 	"strings"
+	"time"
 )
 
 type RoomCreating struct {
@@ -112,6 +113,7 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		Members:    &[]api.User{u.Message.From},
 		Name:       u.Message.Text,
 		Operations: &[]api.Operation{},
+		CreateAt:   time.Now(),
 	}
 
 	room, err := rs.rs.CreateRoom(ctx, r)

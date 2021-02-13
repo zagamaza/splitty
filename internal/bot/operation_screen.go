@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type OperationService interface {
@@ -215,6 +216,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		Sum:         sum,
 		Donor:       &u.Message.From,
 		Recipients:  room.Members,
+		CreateAt:    time.Now(),
 	}
 	if err = s.os.UpsertOperation(ctx, operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
@@ -690,6 +692,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		Donor:           donor,
 		Recipients:      &[]api.User{*recipient},
 		IsDebtRepayment: true,
+		CreateAt:        time.Now(),
 	}
 	if err = s.os.UpsertOperation(ctx, operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")

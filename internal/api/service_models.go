@@ -21,6 +21,7 @@ type Operation struct {
 	Recipients      *[]User            `json:"recipients" bson:"recipients"`
 	IsDebtRepayment bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
 	Sum             int                `json:"sum" bson:"sum"`
+	CreateAt        time.Time          `json:"createAt" bson:"create_at"`
 }
 
 type Debt struct {
@@ -43,6 +44,7 @@ type Button struct {
 	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
 	Text         string             `json:"text" bson:"text"`
 	Action       Action             `json:"action" bson:"action"`
+	CreateAt     time.Time          `json:"createAt" bson:"create_at"`
 }
 
 type Action string
@@ -59,5 +61,6 @@ func NewButton(action Action, data *CallbackData) *Button {
 		ID:           primitive.NewObjectID(),
 		Action:       action,
 		CallbackData: data,
+		CreateAt:     time.Now(),
 	}
 }
