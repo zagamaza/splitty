@@ -7,6 +7,7 @@ import (
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"strconv"
 )
 
 // send /room, after click on the button 'Присоединиться'
@@ -14,15 +15,17 @@ type AllRoomInline struct {
 	css ChatStateService
 	bs  ButtonService
 	rs  RoomService
+	os  OperationService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, cfg *Config) *AllRoomInline {
+func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, os OperationService, cfg *Config) *AllRoomInline {
 	return &AllRoomInline{
 		css: s,
 		bs:  bs,
 		rs:  rs,
+		os:  os,
 		cfg: cfg,
 	}
 }
@@ -39,11 +42,24 @@ func (bot AllRoomInline) HasReact(u *api.Update) bool {
 func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
 	rooms := bot.findRoomsByUpdate(ctx, u)
+	userId := getFrom(u).ID
 
 	var results []interface{}
 	for _, room := range *rooms {
-		data := &api.CallbackData{RoomId: room.ID.Hex()}
+		debtorSum, lenderSum, err := bot.os.GetUserDebtAndLendSum(ctx, userId, room.ID.Hex())
+		if err != nil {
+			return
+		}
+		var descr string
+		if debtorSum != 0 {
+			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", strconv.Itoa(debtorSum))
+		} else if lenderSum != 0 {
+			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", strconv.Itoa(lenderSum))
+		} else {
+			descr = fmt.Sprintf(string(emoji.WhiteCircle)) + "️Долгов нет"
+		}
 
+		data := &api.CallbackData{RoomId: room.ID.Hex()}
 		joinB := api.NewButton(joinRoom, data)
 		viewOpsB := api.NewButton(viewAllOperations, data)
 		viewDbtB := api.NewButton(viewAllDebts, data)
@@ -54,12 +70,13 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 			continue
 		}
 
-		article := NewInlineResultArticle(room.Name, "", createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
+		article := NewInlineResultArticle(room.Name, descr, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
 		})
+
 		results = append(results, article)
 	}
 

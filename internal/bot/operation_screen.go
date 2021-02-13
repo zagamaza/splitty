@@ -19,6 +19,7 @@ type OperationService interface {
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
 	GetAllUsersDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
+	GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error)
 }
 
 // Operation show screen with donar/recepient buttons

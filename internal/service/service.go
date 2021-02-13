@@ -117,6 +117,24 @@ func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]a
 
 }
 
+func (s *OperationService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
+	debts, err := s.GetAllUsersDebts(ctx, userId, roomId)
+	if err != nil {
+		return 0, 0, err
+	}
+	var debtorSum int
+	var lenderSum int
+	for _, v := range *debts {
+		if v.Debtor.ID == userId {
+			debtorSum += v.Sum
+		}
+		if v.Lender.ID == userId {
+			lenderSum += v.Sum
+		}
+	}
+	return debtorSum, lenderSum, nil
+}
+
 func isUserBalanceValid(userBalance map[int]float64) bool {
 	var sum float64
 	for _, ub := range userBalance {
