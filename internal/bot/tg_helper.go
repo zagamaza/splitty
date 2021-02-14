@@ -99,6 +99,11 @@ func hasAction(update *api.Update, action api.Action) bool {
 		update.Button.Action == action
 }
 
+func hasMessage(update *api.Update) bool {
+	return update.Message != nil &&
+		update.Message.Text != ""
+}
+
 func getMessageId(u *api.Update) int {
 	return u.CallbackQuery.Message.ID
 }

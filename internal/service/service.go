@@ -72,7 +72,7 @@ func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) 
 	return room.Operations, nil
 }
 
-func (s *OperationService) GetAllUsersDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error) {
+func (s *OperationService) GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error) {
 	allDbt, err := s.GetAllDebts(ctx, roomId)
 	if err != nil {
 		return nil, err
@@ -81,6 +81,21 @@ func (s *OperationService) GetAllUsersDebts(ctx context.Context, userId int, roo
 	var uDbts []api.Debt
 	for _, debt := range *allDbt {
 		if debt.Lender.ID == userId || debt.Debtor.ID == userId {
+			uDbts = append(uDbts, debt)
+		}
+	}
+	return &uDbts, nil
+}
+
+func (s *OperationService) GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error) {
+	allDbt, err := s.GetAllDebts(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	var uDbts []api.Debt
+	for _, debt := range *allDbt {
+		if debt.Debtor.ID == userId {
 			uDbts = append(uDbts, debt)
 		}
 	}
@@ -118,7 +133,7 @@ func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]a
 }
 
 func (s *OperationService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
-	debts, err := s.GetAllUsersDebts(ctx, userId, roomId)
+	debts, err := s.GetUserInvolvedDebts(ctx, userId, roomId)
 	if err != nil {
 		return 0, 0, err
 	}

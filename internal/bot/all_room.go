@@ -70,10 +70,8 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		}
 
 		article := NewInlineResultArticle(room.Name, descr, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Все операции", viewOpsB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Долги", viewDbtB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonURL(string(emoji.Plus)+" Добавить операцию", "http://t.me/"+bot.cfg.BotName+"?start=operation"+room.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться ", joinB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonURL("Начать работу", "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
 		})
 
 		results = append(results, article)
@@ -146,7 +144,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	backB := api.NewButton(viewStart, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("В начало", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData("🔝 В начало", backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {

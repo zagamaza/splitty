@@ -36,7 +36,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	size := 5
 	skip := page * size
 
-	debts, err := bot.os.GetAllUsersDebts(ctx, userId, roomId)
+	debts, err := bot.os.GetUserInvolvedDebts(ctx, userId, roomId)
 	if err != nil {
 		return
 	}
@@ -59,7 +59,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 			dbtB = api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s %s %s [ %s ₽ ]", shortName(debt.Debtor), emoji.RightArrow, shortName(debt.Lender), thousandSpace(debt.Sum))
+		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), thousandSpace(debt.Sum), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 
@@ -69,21 +69,17 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 		toSave = append(toSave, prevB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
+	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
 	if skip+size < len(*debts) {
 		nextB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
 	}
-	keyboard := splitKeyboardButtons(debtBtns, 1)
-	if len(navRow) != 0 {
-		keyboard = append(keyboard, navRow)
-	}
 
-	backB := api.NewButton(viewRoom, u.Button.CallbackData)
-	toSave = append(toSave, backB)
-	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(string(emoji.BackArrow)+" Назад", backB.ID.Hex()),
-	})
+	keyboard := splitKeyboardButtons(debtBtns, 1)
+	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
@@ -119,6 +115,7 @@ func (bot ViewAllDebts) HasReact(u *api.Update) bool {
 
 func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
+	userId := getFrom(u).ID
 	page := u.Button.CallbackData.Page
 	size := 5
 	skip := page * size
@@ -133,10 +130,13 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	for i := skip; i < skip+size && i < len(*debts); i++ {
 		debt := (*debts)[i]
 		var dbtB *api.Button
-		dbtB = api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page})
-
+		if debt.Debtor.ID == userId {
+			dbtB = api.NewButton(chooseRecipient, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
+		} else {
+			dbtB = api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page})
+		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s %s %s [ %s ₽ ]", shortName(debt.Debtor), emoji.RightArrow, shortName(debt.Lender), thousandSpace(debt.Sum))
+		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), thousandSpace(debt.Sum), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 
@@ -144,30 +144,25 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	if page != 0 {
 		prevB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page - 1})
 		toSave = append(toSave, prevB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("⬅️", prevB.ID.Hex()))
 	}
+	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
 	if skip+size < len(*debts) {
 		nextB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
-		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("➡️", nextB.ID.Hex()))
 	}
-	keyboard := splitKeyboardButtons(debtBtns, 1)
-	if len(navRow) != 0 {
-		keyboard = append(keyboard, navRow)
-	}
-
-	backB := api.NewButton(viewRoom, u.Button.CallbackData)
-	toSave = append(toSave, backB)
-	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData(string(emoji.BackArrow)+" Назад", backB.ID.Hex()),
-	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
 		return
 	}
 
-	screen := createScreen(u, "*Мои долги*", &keyboard)
+	keyboard := splitKeyboardButtons(debtBtns, 1)
+	keyboard = append(keyboard, navRow)
+	screen := createScreen(u, "*Долги*", &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
