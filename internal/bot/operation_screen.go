@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +20,8 @@ type OperationService interface {
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
-	GetAllUsersDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
+	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
+	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error)
 }
 
@@ -248,7 +250,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
 	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + strconv.Itoa(sum) + "* добавлена.\n\n"
-	text += "Теперь выбери участников, которые участвуют в расходе, нажми *Готово* если все участники участвуют в расходе"
+	text += "Теперь удали тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
 		Send:      true,
@@ -397,7 +399,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
 	text := "Операция *" + operation.Description + "* на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
-	text += "Выбери участников, которые участвуют в расходе, нажми *Готово* если все участники участвуют в расходе"
+	text += "Удали тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
@@ -521,8 +523,12 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 		return
 	}
 	userId := getFrom(u).ID
-	donors := s.defineRecipients(userId, room)
-	if len(donors) < 1 {
+	debts, err := s.os.GetUserDebts(ctx, userId, room.ID.Hex())
+	if err != nil {
+		log.Error().Err(err).Msg("get user debts failed")
+		return
+	}
+	if len(*debts) < 1 {
 		callback := createCallback(u, string(emoji.Warning)+"У вас отсутствуют долги", true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
@@ -532,11 +538,11 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 
 	var buttons []*api.Button
 	var tgButtons []tgbotapi.InlineKeyboardButton
-	for _, v := range donors {
+	for _, v := range *debts {
 		b := &api.Button{ID: primitive.NewObjectID(),
 			Action:       chooseRecipient,
-			Text:         v.DisplayName,
-			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.ID}}
+			Text:         emoji.Sprintf("%d ₽➡️%s", v.Sum, v.Lender.DisplayName),
+			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.Lender.ID}}
 		buttons = append(buttons, b)
 		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()))
 	}
@@ -744,15 +750,30 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 
 	var toSave []*api.Button
 	var keyboard [][]tgbotapi.InlineKeyboardButton
-
+	sort.SliceStable(*ops, func(i, j int) bool {
+		if !(*ops)[j].IsDebtRepayment && (*ops)[i].IsDebtRepayment {
+			return false
+		} else if (*ops)[j].IsDebtRepayment && !(*ops)[i].IsDebtRepayment {
+			return true
+		} else {
+			return (*ops)[j].CreateAt.Before((*ops)[i].CreateAt)
+		}
+	})
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
-		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+		var opB *api.Button
+		var text string
+		if op.IsDebtRepayment {
+			opB = api.NewButton(viewAllOperations, u.Button.CallbackData)
+			text = fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(op.Donor), thousandSpace(op.Sum), shortName(&(*op.Recipients)[0])+"]")
+		} else {
+			opB = api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+			text = fmt.Sprintf("🛒%s %s₽ %s",
+				stringForAlign(op.Description, 11, true),
+				stringForAlign("💰"+thousandSpace(op.Sum), 6, false),
+				stringForAlign("👤"+shortName(op.Donor), 10, false))
+		}
 		toSave = append(toSave, opB)
-		text := fmt.Sprintf("%s %s₽ %s",
-			stringForAlign(op.Description, 16, true),
-			stringForAlign(thousandSpace(op.Sum), 6, false),
-			stringForAlign("["+shortName(op.Donor)+"]", 13, false))
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
 	}
 
@@ -762,20 +783,15 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		toSave = append(toSave, prevB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
+	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
 	if skip+size < len(*ops) {
 		nextB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
 	}
-	if len(navRow) != 0 {
-		keyboard = append(keyboard, navRow)
-	}
-
-	backB := api.NewButton(viewRoom, u.Button.CallbackData)
-	toSave = append(toSave, backB)
-	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("Назад", backB.ID.Hex()),
-	})
+	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
