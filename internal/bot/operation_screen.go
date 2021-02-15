@@ -250,7 +250,8 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
 	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + strconv.Itoa(sum) + "* добавлена.\n\n"
-	text += "Теперь удали тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе"
+	text += "Теперь отметь тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе\n\n"
+	text += "✅ - Участвует\n❌ - Не участвует"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
 		Send:      true,
@@ -333,7 +334,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	//if user not created operation we not mast show other buttons
-	if operation.Donor.ID != getFrom(u).ID || !isPrivate(u) {
+	if operation.Donor.ID != getFrom(u).ID {
 		cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
 		_, err = s.bs.Save(ctx, cb)
 		if err != nil {
@@ -346,15 +347,10 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
 		}
 		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})
-		var alert *tgbotapi.CallbackConfig
-		if operation.Donor.ID == getFrom(u).ID {
-			alert = createCallback(u, string(emoji.Warning)+"Отредактируйте операцию в чате с ботом", false)
-		}
 
 		return api.TelegramMessage{
-			Chattable:      []tgbotapi.Chattable{msg},
-			CallbackConfig: alert,
-			Send:           true,
+			Chattable: []tgbotapi.Chattable{msg},
+			Send:      true,
 		}
 	}
 
@@ -399,7 +395,8 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
 	text := "Операция *" + operation.Description + "* на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
-	text += "Удали тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе"
+	text += "Отметь тех, кто не участвует в расходе, по завершению нажми *Готово*\n\n"
+	text += "✅ - Участвует\n❌ - Не участвует"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
