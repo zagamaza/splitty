@@ -395,7 +395,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
 	text := "Операция *" + operation.Description + "* на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
-	text += "Отметь тех, кто не участвует в расходе, по завершению нажми *Готово*\n\n"
+	text += "Отметь тех, кто не участвует в расходе, по завершении нажми *Готово*\n\n"
 	text += "✅ - Участвует\n❌ - Не участвует"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
