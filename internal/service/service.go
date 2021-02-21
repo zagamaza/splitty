@@ -28,6 +28,9 @@ func NewButtonService(r repository.ButtonRepository) *ButtonService {
 func NewOperationService(r repository.RoomRepository) *OperationService {
 	return &OperationService{r}
 }
+func NewStatisticService(r repository.RoomRepository, s OperationService) *StatisticService {
+	return &StatisticService{r, s}
+}
 
 type UserService struct {
 	repository.UserRepository
@@ -47,6 +50,11 @@ type ButtonService struct {
 
 type OperationService struct {
 	repository.RoomRepository
+}
+
+type StatisticService struct {
+	repository.RoomRepository
+	OperationService
 }
 
 func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, error) {
@@ -70,6 +78,36 @@ func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) 
 		return nil, err
 	}
 	return room.Operations, nil
+}
+
+func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
+	room, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		log.Err(err).Msgf("cannot find room id:", roomId)
+		return nil, err
+	}
+	var debtOperations []api.Operation
+	for _, o := range *room.Operations {
+		if o.IsDebtRepayment {
+			debtOperations = append(debtOperations, o)
+		}
+	}
+	return &debtOperations, nil
+}
+
+func (s *OperationService) GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
+	room, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		log.Err(err).Msgf("cannot find room id:", roomId)
+		return nil, err
+	}
+	var spendOperations []api.Operation
+	for _, o := range *room.Operations {
+		if !o.IsDebtRepayment {
+			spendOperations = append(spendOperations, o)
+		}
+	}
+	return &spendOperations, nil
 }
 
 func (s *OperationService) GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error) {
@@ -132,24 +170,6 @@ func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]a
 
 }
 
-func (s *OperationService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
-	debts, err := s.GetUserInvolvedDebts(ctx, userId, roomId)
-	if err != nil {
-		return 0, 0, err
-	}
-	var debtorSum int
-	var lenderSum int
-	for _, v := range *debts {
-		if v.Debtor.ID == userId {
-			debtorSum += v.Sum
-		}
-		if v.Lender.ID == userId {
-			lenderSum += v.Sum
-		}
-	}
-	return debtorSum, lenderSum, nil
-}
-
 func isUserBalanceValid(userBalance map[int]float64) bool {
 	var sum float64
 	for _, ub := range userBalance {
@@ -201,4 +221,71 @@ func hasDebt(balance []*UserBalance) bool {
 type UserBalance struct {
 	user    api.User
 	balance float64
+}
+
+func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (int, error) {
+	room, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		return 0, err
+	}
+	var totalSpendSum int
+	for _, v := range *room.Operations {
+		if !v.IsDebtRepayment {
+			totalSpendSum += v.Sum
+		}
+	}
+	return totalSpendSum, nil
+}
+
+func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, roomId string) (int, error) {
+	room, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		return 0, err
+	}
+	var totalUserSpendSum float64
+	for _, v := range *room.Operations {
+		if !v.IsDebtRepayment && containsUserId(v.Recipients, userId) {
+			totalUserSpendSum += float64(v.Sum) / float64(len(*v.Recipients))
+		}
+	}
+	return int(totalUserSpendSum), nil
+}
+
+func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (int, error) {
+	debts, err := s.GetAllDebts(ctx, roomId)
+	if err != nil {
+		return 0, err
+	}
+	var allDebtsSum int
+	for _, v := range *debts {
+		allDebtsSum += v.Sum
+	}
+	return allDebtsSum, nil
+}
+
+func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
+	debts, err := s.GetUserInvolvedDebts(ctx, userId, roomId)
+	if err != nil {
+		return 0, 0, err
+	}
+	var debtorSum int
+	var lenderSum int
+	for _, v := range *debts {
+		if v.Debtor.ID == userId {
+			debtorSum += v.Sum
+		}
+		if v.Lender.ID == userId {
+			lenderSum += v.Sum
+		}
+	}
+	return debtorSum, lenderSum, nil
+}
+
+func containsUserId(users *[]api.User, id int) bool {
+	for _, u := range *users {
+		if u.ID == id {
+			return true
+		}
+	}
+	return false
 }
