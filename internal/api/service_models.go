@@ -11,7 +11,12 @@ type Room struct {
 	Chat       Chat               `json:"chat" bson:"chat"`
 	Members    *[]User            `json:"users" bson:"users"`
 	Operations *[]Operation       `json:"operations" bson:"operations"`
+	RoomStates RoomStatesUsers    `json:"roomStates" bson:"room_states"`
 	CreateAt   time.Time          `json:"createAt" bson:"create_at"`
+}
+
+type RoomStatesUsers struct {
+	Archived []int `json:"archived" bson:"archived,omitempty"`
 }
 
 type Operation struct {

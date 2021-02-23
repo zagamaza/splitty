@@ -24,8 +24,9 @@ type Update struct {
 	//ChosenInlineResult *ChosenInlineResult `json:"chosen_inline_result"`
 	CallbackQuery *CallbackQuery `json:"callback_query"`
 
-	ChatState *ChatState
-	Button    *Button
+	ChatState    *ChatState
+	Button       *Button
+	FromRedirect bool
 }
 
 // Message is primary record to pass data from/to bots
@@ -96,6 +97,6 @@ type TelegramMessage struct {
 	Chattable      []tgbotapi.Chattable
 	InlineConfig   *tgbotapi.InlineConfig
 	CallbackConfig *tgbotapi.CallbackConfig
+	Redirect       *Update
 	Send           bool // status
-
 }

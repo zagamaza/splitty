@@ -11,6 +11,7 @@ import (
 	"github.com/almaznur91/splitty/internal/events"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
@@ -39,7 +40,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
 	operationService := service.NewOperationService(mongoRoomRepository)
-	statisticService := ProvideStatisticService(operationService, mongoRoomRepository)
+	statisticService := service.NewStatisticService(mongoRoomRepository, operationService)
 	allRoomInline := bot.NewAllRoomInline(chatStateService, buttonService, roomService, statisticService, botConfig)
 	operation := bot.NewOperation(chatStateService, buttonService, roomService, botConfig)
 	wantDonorOperation := bot.NewWantDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
@@ -54,9 +55,12 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, botConfig)
 	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
 	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
+	viewSetting := bot.NewViewSetting(buttonService, roomService, chatStateService, botConfig)
+	archiveRoom := bot.NewArchiveRoom(buttonService, roomService, chatStateService, botConfig, viewSetting)
+	archivedRooms := bot.NewArchivedRooms(chatStateService, buttonService, roomService, botConfig)
 	statistic := bot.NewStatistic(buttonService, roomService, chatStateService, statisticService, botConfig)
 	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, statistic, viewAllDebtOperations)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, viewSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -69,15 +73,35 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.RoomCreating, rsn *bot.RoomSetName,
-	jr *bot.JoinRoom, ari *bot.AllRoomInline, o *bot.Operation, do *bot.WantDonorOperation, ado *bot.AddDonorOperation,
-	cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations,
-	ar *bot.AllRoom, cro *bot.ChooseRecepientOperation, wro *bot.WantRecepientOperation, aro *bot.AddRecepientOperation,
-	vud *bot.ViewUserDebts, vad *bot.ViewAllDebts, s *bot.Statistic, badp *bot.ViewAllDebtOperations) []bot.Interface {
+var bots = wire.NewSet(bot.NewHelper, bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewOperation, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantRecepientOperation, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewViewSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations)
 
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro, vud, vad, s, badp}
-}
+func ProvideBotList(
+	b1 *bot.Helper,
+	b2 *bot.StartScreen,
+	b3 *bot.RoomCreating,
+	b4 *bot.RoomSetName,
+	b5 *bot.JoinRoom,
+	b6 *bot.AllRoomInline,
+	b7 *bot.Operation,
+	b8 *bot.WantDonorOperation,
+	b9 *bot.AddDonorOperation,
+	b10 *bot.DonorOperation,
+	b11 *bot.DeleteDonorOperation,
+	b12 *bot.ViewRoom,
+	b13 *bot.ViewAllOperations,
+	b14 *bot.AllRoom,
+	b15 *bot.ChooseRecepientOperation,
+	b16 *bot.WantRecepientOperation,
+	b17 *bot.AddRecepientOperation,
+	b18 *bot.ViewUserDebts,
+	b19 *bot.ViewAllDebts,
+	b20 *bot.ViewSetting,
+	b21 *bot.ArchiveRoom,
+	b22 *bot.ArchivedRooms,
+	b23 *bot.Statistic,
+	b24 *bot.ViewAllDebtOperations,
 
-func ProvideStatisticService(operationService *service.OperationService, repository *repository.MongoRoomRepository) *service.StatisticService {
-	return service.NewStatisticService(repository, *operationService)
+) []bot.Interface {
+	return []bot.Interface{b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
+		b21, b22, b23, b24}
 }

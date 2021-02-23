@@ -28,8 +28,9 @@ func NewButtonService(r repository.ButtonRepository) *ButtonService {
 func NewOperationService(r repository.RoomRepository) *OperationService {
 	return &OperationService{r}
 }
-func NewStatisticService(r repository.RoomRepository, s OperationService) *StatisticService {
-	return &StatisticService{r, s}
+
+func NewStatisticService(r repository.RoomRepository, s *OperationService) *StatisticService {
+	return &StatisticService{r, *s}
 }
 
 type UserService struct {
