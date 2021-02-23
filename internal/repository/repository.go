@@ -21,9 +21,12 @@ type RoomRepository interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
 	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
+	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
+	ArchiveRoom(ctx context.Context, userId int, roomId string) error
+	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
 }
 
 type ChatStateRepository interface {
@@ -113,6 +116,29 @@ func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primit
 	return res.InsertedID.(primitive.ObjectID), err
 }
 
+func (rr MongoRoomRepository) ArchiveRoom(ctx context.Context, userId int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"_id": hex, "users._id": userId}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$addToSet": bson.M{"room_states.archived": userId}})
+	return err
+}
+
+func (rr MongoRoomRepository) UnArchiveRoom(ctx context.Context, userId int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"_id": hex, "users._id": userId}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.archived": userId}})
+	log.Error().Err(err).Msg("dsafdsa")
+	return err
+}
+
 func (rr MongoRoomRepository) hasRoom(ctx context.Context, u *api.User) (bool, error) {
 	resp, err := rr.col.CountDocuments(ctx, bson.D{{"_id", bson.D{{"$eq", u.ID}}}})
 	return resp > 0, err
@@ -124,8 +150,27 @@ func (rr MongoRoomRepository) hasUserInRoom(ctx context.Context, uId int, roomId
 	return resp > 0, err
 }
 
-func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error) {
-	cur, err := rr.col.Find(ctx, bson.D{{"users._id", bson.D{{"$eq", id}}}})
+func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, userId int) (*[]api.Room, error) {
+	cur, err := rr.col.Find(ctx, bson.M{
+		"users._id":            bson.M{"$eq": userId},
+		"room_states.archived": bson.M{"$ne": userId},
+	})
+	if err != nil {
+		return nil, err
+	}
+	var m []api.Room
+	err = cur.All(ctx, &m)
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+func (rr MongoRoomRepository) FindArchivedRoomsByUserId(ctx context.Context, userId int) (*[]api.Room, error) {
+	cur, err := rr.col.Find(ctx, bson.M{
+		"users._id":            bson.M{"$eq": userId},
+		"room_states.archived": bson.M{"$eq": userId},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +184,9 @@ func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, id int) (*[
 
 func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error) {
 	cur, err := rr.col.Find(ctx, bson.M{
-		"users": bson.M{"$elemMatch": bson.M{"_id": userId}},
-		"name":  bson.M{"$regex": ".*" + name + ".*"},
+		"users":                bson.M{"$elemMatch": bson.M{"_id": userId}},
+		"name":                 bson.M{"$regex": ".*" + name + ".*"},
+		"room_states.archived": bson.M{"$ne": userId},
 	})
 	if err != nil {
 		return nil, err

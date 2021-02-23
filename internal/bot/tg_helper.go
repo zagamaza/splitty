@@ -182,3 +182,16 @@ func stringForAlign(s string, width int, spacesToEnd bool) string {
 		return strings.Repeat(" ", (width-len(rs))*2) + s
 	}
 }
+
+func isArchived(room *api.Room, user *api.User) bool {
+	return containsInt(room.RoomStates.Archive, user.ID)
+}
+
+func containsInt(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
