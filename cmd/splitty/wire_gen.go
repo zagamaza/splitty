@@ -39,7 +39,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
 	operationService := service.NewOperationService(mongoRoomRepository)
-	allRoomInline := bot.NewAllRoomInline(chatStateService, buttonService, roomService, operationService, botConfig)
+	statisticService := ProvideStatisticService(operationService, mongoRoomRepository)
+	allRoomInline := bot.NewAllRoomInline(chatStateService, buttonService, roomService, statisticService, botConfig)
 	operation := bot.NewOperation(chatStateService, buttonService, roomService, botConfig)
 	wantDonorOperation := bot.NewWantDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	addDonorOperation := bot.NewAddDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
@@ -53,7 +54,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, botConfig)
 	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
 	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts)
+	statistic := bot.NewStatistic(buttonService, roomService, chatStateService, statisticService, botConfig)
+	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, buttonService, operationService, botConfig)
+	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, statistic, viewAllDebtOperations)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -70,7 +73,11 @@ func ProvideBotList(helper *bot.Helper, startScreen *bot.StartScreen, rc *bot.Ro
 	jr *bot.JoinRoom, ari *bot.AllRoomInline, o *bot.Operation, do *bot.WantDonorOperation, ado *bot.AddDonorOperation,
 	cdo *bot.DonorOperation, ddo *bot.DeleteDonorOperation, vr *bot.ViewRoom, vaop *bot.ViewAllOperations,
 	ar *bot.AllRoom, cro *bot.ChooseRecepientOperation, wro *bot.WantRecepientOperation, aro *bot.AddRecepientOperation,
-	vud *bot.ViewUserDebts, vad *bot.ViewAllDebts) []bot.Interface {
+	vud *bot.ViewUserDebts, vad *bot.ViewAllDebts, s *bot.Statistic, badp *bot.ViewAllDebtOperations) []bot.Interface {
 
-	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro, vud, vad}
+	return []bot.Interface{helper, startScreen, rc, rsn, jr, ari, o, do, ado, cdo, ddo, vr, vaop, ar, cro, wro, aro, vud, vad, s, badp}
+}
+
+func ProvideStatisticService(operationService *service.OperationService, repository *repository.MongoRoomRepository) *service.StatisticService {
+	return service.NewStatisticService(repository, *operationService)
 }

@@ -19,10 +19,11 @@ type OperationService interface {
 	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
+	GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
+	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
 	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
-	GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error)
 }
 
 // Operation show screen with donar/recepient buttons
@@ -249,7 +250,8 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
-	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + strconv.Itoa(sum) + "* добавлена.\n\n"
+	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + moneySpace(sum) + "* ₽ добавлена.\n"
+	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
 	text += "Теперь отметь тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе\n\n"
 	text += "✅ - Участвует\n❌ - Не участвует"
 	return api.TelegramMessage{
@@ -341,10 +343,11 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 			log.Error().Err(err).Msg("create btn failed")
 			return
 		}
-		text := "Операция _" + operation.Description + "_ на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n" +
-			"Заплатил: " + fmt.Sprintf("[%s](tg://user?id=%d)\n", operation.Donor.DisplayName, operation.Donor.ID) + "\nУчастники:\n"
+		text := "💰 Операция _" + operation.Description + "_ на сумму *" + moneySpace(operation.Sum) + "* ₽\n"
+		text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
+		text += "Заплатил: " + userLink(operation.Donor) + "\nУчастники:\n"
 		for _, v := range *operation.Recipients {
-			text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
+			text += "- " + userLink(&v) + "\n"
 		}
 		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})
 
@@ -394,7 +397,8 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
 
-	text := "Операция *" + operation.Description + "* на сумму *" + strconv.Itoa(operation.Sum) + "*.\n\n"
+	text := "💰 Операция *" + operation.Description + "* на сумму *" + moneySpace(operation.Sum) + "* ₽\n"
+	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
 	text += "Отметь тех, кто не участвует в расходе, по завершении нажми *Готово*\n\n"
 	text += "✅ - Участвует\n❌ - Не участвует"
 	return api.TelegramMessage{
@@ -469,7 +473,7 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 		return
 	}
 
-	rb := &api.Button{ID: primitive.NewObjectID(), Action: viewRoom, CallbackData: &api.CallbackData{RoomId: u.Button.CallbackData.RoomId}}
+	rb := &api.Button{ID: primitive.NewObjectID(), Action: viewAllOperations, CallbackData: &api.CallbackData{RoomId: u.Button.CallbackData.RoomId}}
 
 	if _, err := s.bs.SaveAll(ctx, rb); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
@@ -703,8 +707,8 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	}
 
 	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}}
-	forDonorMsg := createScreen(u, "Отлично. Долг для "+fmt.Sprintf("[%s](tg://user?id=%d)\n", recipient.DisplayName, recipient.ID)+" на сумму *"+strconv.Itoa(sum)+"* возвращен.\n\n", &keyboard)
-	forRecipientMsg := NewMessage(int64(recipient.ID), recipient.DisplayName+"\nВам был возвращен долг на сумму *"+strconv.Itoa(sum)+"* от "+fmt.Sprintf("[%s](tg://user?id=%d)\n", donor.DisplayName, donor.ID)+"", keyboard)
+	forDonorMsg := createScreen(u, "Отлично. Долг для "+userLink(recipient)+" на сумму *"+moneySpace(sum)+"* ₽ возвращен.\n\n", &keyboard)
+	forRecipientMsg := NewMessage(int64(recipient.ID), recipient.DisplayName+"\nВам был возвращен долг на сумму *"+moneySpace(sum)+"* ₽ от "+userLink(donor)+"", keyboard)
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{forDonorMsg, forRecipientMsg},
@@ -740,7 +744,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	size := 5
 	skip := page * size
 
-	ops, err := bot.os.GetAllOperations(ctx, roomId)
+	ops, err := bot.os.GetAllSpendOperations(ctx, roomId)
 	if err != nil {
 		return
 	}
@@ -758,18 +762,11 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	})
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
-		var opB *api.Button
-		var text string
-		if op.IsDebtRepayment {
-			opB = api.NewButton(viewAllOperations, u.Button.CallbackData)
-			text = fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(op.Donor), thousandSpace(op.Sum), shortName(&(*op.Recipients)[0])+"]")
-		} else {
-			opB = api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
-			text = fmt.Sprintf("🛒%s %s₽ %s",
-				stringForAlign(op.Description, 11, true),
-				stringForAlign("💰"+thousandSpace(op.Sum), 6, false),
-				stringForAlign("👤"+shortName(op.Donor), 10, false))
-		}
+		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+		text := fmt.Sprintf("🛒%s %s₽ %s",
+			stringForAlign(op.Description, 11, true),
+			stringForAlign("💰"+moneySpace(op.Sum), 6, false),
+			stringForAlign("👤"+shortName(op.Donor), 10, false))
 		toSave = append(toSave, opB)
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
 	}

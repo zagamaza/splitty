@@ -27,10 +27,12 @@ const (
 	viewRoom               api.Action = "room"
 	viewStart              api.Action = "start"
 	viewAllOperations      api.Action = "all_operations"
+	viewAllDebtOperations  api.Action = "all_dept_operations"
 	viewAllRooms           api.Action = "all_rooms"
 	viewUserDebts          api.Action = "user_debts"
 	viewAllDebts           api.Action = "all_debts"
 	viewStartOperation     api.Action = "start_operation"
+	statistics             api.Action = "statistics"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true

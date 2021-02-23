@@ -14,17 +14,17 @@ type AllRoomInline struct {
 	css ChatStateService
 	bs  ButtonService
 	rs  RoomService
-	os  OperationService
+	ss  StatisticService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, os OperationService, cfg *Config) *AllRoomInline {
+func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, ss StatisticService, cfg *Config) *AllRoomInline {
 	return &AllRoomInline{
 		css: s,
 		bs:  bs,
 		rs:  rs,
-		os:  os,
+		ss:  ss,
 		cfg: cfg,
 	}
 }
@@ -45,15 +45,15 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 	var results []interface{}
 	for _, room := range *rooms {
-		debtorSum, lenderSum, err := bot.os.GetUserDebtAndLendSum(ctx, userId, room.ID.Hex())
+		debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSum(ctx, userId, room.ID.Hex())
 		if err != nil {
 			return
 		}
 		var descr string
 		if debtorSum != 0 {
-			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", thousandSpace(debtorSum)+" ₽")
+			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", moneySpace(debtorSum)+" ₽")
 		} else if lenderSum != 0 {
-			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", thousandSpace(lenderSum)+" ₽")
+			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", moneySpace(lenderSum)+" ₽")
 		} else {
 			descr = fmt.Sprintf(string(emoji.WhiteCircle)) + "️Долгов нет"
 		}
@@ -162,7 +162,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 func createRoomInfoText(r *api.Room) string {
 	text := "Экран тусы *" + r.Name + "*\n\nУчастники:\n"
 	for _, v := range *r.Members {
-		text += fmt.Sprintf("- [%s](tg://user?id=%d)\n", v.DisplayName, v.ID)
+		text += "- " + userLink(&v) + "\n"
 	}
 	return text
 }

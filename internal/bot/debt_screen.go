@@ -59,7 +59,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 			dbtB = api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), thousandSpace(debt.Sum), shortName(debt.Lender))
+		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 
@@ -136,7 +136,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 			dbtB = api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), thousandSpace(debt.Sum), shortName(debt.Lender))
+		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 

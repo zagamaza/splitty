@@ -1,9 +1,11 @@
 package bot
 
 import (
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -152,13 +154,18 @@ func shortName(user *api.User) string {
 	return string(sn)
 }
 
-func thousandSpace(sum int) string {
+func userLink(user *api.User) string {
+	return fmt.Sprintf("[%s](tg://user?id=%d)", user.DisplayName, user.ID)
+}
+
+func moneySpace(sum int) string {
 	s := strconv.Itoa(sum)
-	if sum > 999 {
-		return s[0:len(s)-3] + " " + s[len(s)-3:]
-	} else {
-		return s
+	re := regexp.MustCompile("(\\d+)(\\d{3})")
+	for n := ""; n != s; {
+		n = s
+		s = re.ReplaceAllString(s, "$1 $2")
 	}
+	return s
 }
 
 func stringForAlign(s string, width int, spacesToEnd bool) string {
