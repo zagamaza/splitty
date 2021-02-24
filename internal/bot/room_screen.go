@@ -125,19 +125,21 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	viewDbtB := api.NewButton(viewAllDebts, data)
 	startB := api.NewButton(viewStart, data)
 	startOpB := api.NewButton(viewStartOperation, data)
+	settB := api.NewButton(viewSetting, data)
 	staticsB := api.NewButton(statistics, data)
 
 	text := createRoomInfoText(room)
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить операцию", startOpB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("💰 Операции", viewOpsB.ID.Hex()),
 			tgbotapi.NewInlineKeyboardButtonData("💸 Долги", viewDbtB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить операцию", startOpB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("📊 Статистика", staticsB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData("⚙️ Настройки", settB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonSwitch("📢 Отправить в чат", room.Name)},
-		{tgbotapi.NewInlineKeyboardButtonData("📊 Статистика", staticsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("🔝 В начало", startB.ID.Hex())},
 	}
 
-	if _, err := bot.bs.SaveAll(ctx, viewOpsB, viewDbtB, startB, startOpB, staticsB); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, viewOpsB, viewDbtB, startB, startOpB, staticsB, settB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}

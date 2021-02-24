@@ -51,26 +51,27 @@ func (s StartScreen) HasReact(u *api.Update) bool {
 func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	defer s.css.CleanChatState(ctx, u.ChatState)
 
-	var createB tgbotapi.InlineKeyboardButton
-	var allRoomB tgbotapi.InlineKeyboardButton
+	var screen tgbotapi.Chattable
 	if isPrivate(u) {
 		cb := api.NewButton(createRoom, new(api.CallbackData))
 		arb := api.NewButton(viewAllRooms, new(api.CallbackData))
-		if _, err := s.bs.SaveAll(ctx, cb, arb); err != nil {
+		archRB := api.NewButton(viewArchivedRooms, new(api.CallbackData))
+		if _, err := s.bs.SaveAll(ctx, cb, arb, archRB); err != nil {
 			log.Error().Err(err).Msg("save btn failed")
 			return
 		}
-		allRoomB = tgbotapi.NewInlineKeyboardButtonData("Все тусы", arb.ID.Hex())
-		createB = tgbotapi.NewInlineKeyboardButtonData("Создать новую тусу", cb.ID.Hex())
+		screen = createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData("👥 Все тусы", arb.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData("🗄 Архив", archRB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData("➕ Создать новую тусу", cb.ID.Hex())},
+		})
 	} else {
-		allRoomB = NewButtonSwitchCurrent("Все тусы", "")
-		createB = tgbotapi.NewInlineKeyboardButtonURL("Создать новую тусу", "http://t.me/"+s.cfg.BotName+"?start=create_room")
+		screen = createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
+			{NewButtonSwitchCurrent("Все тусы", "")},
+			{tgbotapi.NewInlineKeyboardButtonURL("Создать новую тусу", "http://t.me/"+s.cfg.BotName+"?start=create_room")},
+		})
 	}
 
-	screen := createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
-		{allRoomB},
-		{createB},
-	})
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,

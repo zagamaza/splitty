@@ -3,12 +3,10 @@ package events
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/bot"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"sync"
-
-	"github.com/almaznur91/splitty/internal/bot"
 )
 
 type ChatStateService interface {
@@ -26,11 +24,7 @@ type TelegramListener struct {
 	Bots             bot.Interface
 	ChatStateService ChatStateService
 	ButtonService    ButtonService
-
-	msgs struct {
-		once sync.Once
-		ch   chan api.Response
-	}
+	upds             chan tbapi.Update
 }
 
 type tbAPI interface {
@@ -79,12 +73,16 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
 
-			resp := l.Bots.OnMessage(ctx, upd)
-
-			if err := l.sendBotResponse(resp); err != nil {
-				log.Error().Err(err).Stack().Msgf("failed to respond on update")
-			}
+			l.processUpdate(ctx, upd)
 		}
+	}
+}
+
+func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
+	resp := l.Bots.OnMessage(ctx, upd)
+
+	if err := l.sendBotResponse(ctx, resp); err != nil {
+		log.Error().Err(err).Stack().Msgf("failed to respond on update")
 	}
 }
 
@@ -116,7 +114,7 @@ func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Updat
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
+func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) error {
 	if !resp.Send {
 		return nil
 	}
@@ -144,6 +142,14 @@ func (l *TelegramListener) sendBotResponse(resp api.TelegramMessage) error {
 			return errors.Wrapf(err, "can't send calback to telegram %v", resp.CallbackConfig)
 		}
 		log.Debug().Msgf("bot response - %+v", response)
+	}
+	if resp.Redirect != nil {
+		if resp.Redirect.FromRedirect {
+			log.Error().Stack().Msg("recursive multiple redirection")
+		} else {
+			resp.Redirect.FromRedirect = true
+			l.processUpdate(ctx, resp.Redirect)
+		}
 	}
 	return nil
 }
