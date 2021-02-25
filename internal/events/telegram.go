@@ -17,6 +17,10 @@ type ButtonService interface {
 	FindById(ctx context.Context, id string) (*api.Button, error)
 }
 
+type UserService interface {
+	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
+}
+
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
@@ -25,6 +29,7 @@ type TelegramListener struct {
 	ChatStateService ChatStateService
 	ButtonService    ButtonService
 	upds             chan tbapi.Update
+	UserService      UserService
 }
 
 type tbAPI interface {
@@ -62,6 +67,11 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			}
 
 			upd := transformUpdate(update)
+
+			upd.User, err = l.UserService.UpsertUser(ctx, *getFrom(upd))
+			if err != nil {
+				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
+			}
 
 			if err := l.populateBtn(ctx, upd); err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
@@ -174,6 +184,7 @@ func transform(msg *tbapi.Message) *api.Message {
 			ID:          msg.From.ID,
 			Username:    msg.From.UserName,
 			DisplayName: msg.From.FirstName + " " + msg.From.LastName,
+			UserLang:    msg.From.LanguageCode,
 		}
 	}
 
@@ -206,6 +217,7 @@ func transformUpdate(u tbapi.Update) *api.Update {
 				ID:          u.CallbackQuery.From.ID,
 				Username:    u.CallbackQuery.From.UserName,
 				DisplayName: u.CallbackQuery.From.FirstName + " " + u.CallbackQuery.From.LastName,
+				UserLang:    u.CallbackQuery.From.LanguageCode,
 			},
 			Message:         transform(u.CallbackQuery.Message),
 			InlineMessageID: u.CallbackQuery.InlineMessageID,
@@ -223,6 +235,7 @@ func transformUpdate(u tbapi.Update) *api.Update {
 				ID:          i.From.ID,
 				Username:    i.From.UserName,
 				DisplayName: i.From.FirstName + " " + i.From.LastName,
+				UserLang:    i.From.LanguageCode,
 			},
 		}
 	}
@@ -254,4 +267,16 @@ func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	}
 
 	return &result
+}
+
+func getFrom(update *api.Update) *api.User {
+	var user api.User
+	if update.CallbackQuery != nil {
+		user = update.CallbackQuery.From
+	} else if update.Message != nil {
+		user = update.Message.From
+	} else {
+		user = update.InlineQuery.From
+	}
+	return &user
 }

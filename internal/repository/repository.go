@@ -12,7 +12,7 @@ import (
 )
 
 type UserRepository interface {
-	UpsertUser(ctx context.Context, u api.User) error
+	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
@@ -238,12 +238,22 @@ func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, e
 	return cs, nil
 }
 
-func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) error {
+func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.User, error) {
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", u.ID}}}}
 	update := bson.D{{"$set", u}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
+	if err != nil {
+		return nil, err
+	}
+	return r.FindById(ctx, u.ID)
+}
 
+func (r MongoUserRepository) UpsertLangUser(ctx context.Context, userId int, lang string) error {
+	opts := options.Update().SetUpsert(true)
+	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
+	update := bson.D{{"$set", bson.M{"selected_lang": lang}}}
+	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return err
 	}

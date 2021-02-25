@@ -2,6 +2,7 @@ package api
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"golang.org/x/text/language"
 	"time"
 )
 
@@ -26,6 +27,7 @@ type Update struct {
 
 	ChatState    *ChatState
 	Button       *Button
+	User         *User
 	FromRedirect bool
 }
 
@@ -63,9 +65,23 @@ type Image struct {
 
 // User defines user info of the Message
 type User struct {
-	ID          int    `json:"id" bson:"_id"`
-	Username    string `json:"userName" bson:"user_name"`
-	DisplayName string `json:"displayName" bson:"display_name"`
+	ID           int    `json:"id" bson:"_id"`
+	Username     string `json:"userName" bson:"user_name"`
+	DisplayName  string `json:"displayName" bson:"display_name"`
+	UserLang     string `json:"userLang" bson:"user_lang"`
+	SelectedLang string `json:"selectedLang" bson:"selected_lang"`
+}
+
+func DefineLang(u *User) string {
+	if u.SelectedLang != "" {
+		return u.SelectedLang
+	} else {
+		if u.UserLang == language.English.String() || u.UserLang == language.Russian.String() {
+			return u.UserLang
+		} else {
+			return language.English.String()
+		}
+	}
 }
 
 // InlineQuery is a Query from Telegram for an inline request.

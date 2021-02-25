@@ -26,17 +26,14 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	if err != nil {
 		return nil, nil, err
 	}
-	mongoUserRepository := repository.NewUserRepository(database)
-	userService := service.NewUserService(mongoUserRepository)
-	mongoRoomRepository := repository.NewRoomRepository(database)
-	roomService := service.NewRoomService(mongoRoomRepository)
-	helper := bot.NewHelper(userService, roomService, botConfig)
 	mongoChatStateRepository := repository.NewChatStateRepository(database)
 	chatStateService := service.NewChatStateService(mongoChatStateRepository)
 	mongoButtonRepository := repository.NewButtonRepository(database)
 	buttonService := service.NewButtonService(mongoButtonRepository)
 	startScreen := bot.NewStartScreen(chatStateService, buttonService, botConfig)
 	roomCreating := bot.NewRoomCreating(chatStateService, buttonService, botConfig)
+	mongoRoomRepository := repository.NewRoomRepository(database)
+	roomService := service.NewRoomService(mongoRoomRepository)
 	roomSetName := bot.NewRoomSetName(chatStateService, buttonService, roomService, botConfig)
 	joinRoom := bot.NewJoinRoom(chatStateService, buttonService, roomService, botConfig)
 	operationService := service.NewOperationService(mongoRoomRepository)
@@ -52,6 +49,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
 	chooseRecepientOperation := bot.NewChooseRecepientOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	wantRecepientOperation := bot.NewWantRecepientOperation(chatStateService, buttonService, operationService, roomService, botConfig)
+	mongoUserRepository := repository.NewUserRepository(database)
+	userService := service.NewUserService(mongoUserRepository)
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, botConfig)
 	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
 	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
@@ -60,8 +59,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	archivedRooms := bot.NewArchivedRooms(chatStateService, buttonService, roomService, botConfig)
 	statistic := bot.NewStatistic(buttonService, roomService, chatStateService, statisticService, botConfig)
 	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(helper, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, viewSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations)
-	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, chatStateService)
+	v := ProvideBotList(startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, operation, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, viewSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations)
+	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, userService, chatStateService)
 	if err != nil {
 		cleanup()
 		return nil, nil, err
@@ -73,10 +72,9 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-var bots = wire.NewSet(bot.NewHelper, bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewOperation, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantRecepientOperation, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewViewSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations)
+var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewOperation, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantRecepientOperation, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewViewSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations)
 
 func ProvideBotList(
-	b1 *bot.Helper,
 	b2 *bot.StartScreen,
 	b3 *bot.RoomCreating,
 	b4 *bot.RoomSetName,
@@ -102,6 +100,6 @@ func ProvideBotList(
 	b24 *bot.ViewAllDebtOperations,
 
 ) []bot.Interface {
-	return []bot.Interface{b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
+	return []bot.Interface{b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
 		b21, b22, b23, b24}
 }
