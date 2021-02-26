@@ -1,14 +1,36 @@
 package bot
 
 import (
+	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/gookit/i18n"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"regexp"
 	"strconv"
 	"strings"
 )
+
+type UserService interface {
+	FindById(ctx context.Context, id int) (*api.User, error)
+}
+
+type RoomService interface {
+	JoinToRoom(ctx context.Context, u api.User, roomId string) error
+	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
+	FindById(ctx context.Context, id string) (*api.Room, error)
+	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
+	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
+	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
+	ArchiveRoom(ctx context.Context, userId int, roomId string) error
+	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
+}
+
+type Config struct {
+	BotName    string
+	SuperUsers []string
+}
 
 func NewInlineResultArticle(title, descr, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.InlineQueryResultArticle {
 	article := tgbotapi.NewInlineQueryResultArticleMarkdown(primitive.NewObjectID().Hex(), title, text)
@@ -194,4 +216,9 @@ func containsInt(s []int, e int) bool {
 		}
 	}
 	return false
+}
+
+// I18n define text by user lang
+func I18n(u *api.User, text string) string {
+	return i18n.Tr(api.DefineLang(u), text)
 }

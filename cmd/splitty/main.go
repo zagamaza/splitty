@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/gookit/i18n"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/text/language"
 	"math/rand"
 	"os"
 	"strings"
@@ -28,6 +30,8 @@ func main() {
 	if err != nil {
 		log.Err(err).Msg("Can not init config")
 	}
+
+	initI18n(cfg)
 
 	if err := initLogger(cfg); err != nil {
 		log.Fatal().Err(err).Msg("Can not init logger")
@@ -69,7 +73,7 @@ func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	return tbAPI, nil
 }
 
-func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, cs events.ChatStateService) (*events.TelegramListener, error) {
+func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, us events.UserService, cs events.ChatStateService) (*events.TelegramListener, error) {
 	multiBot := bot.MultiBot(bots)
 
 	tgListener := &events.TelegramListener{
@@ -77,6 +81,7 @@ func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.But
 		Bots:             multiBot,
 		ChatStateService: cs,
 		ButtonService:    bs,
+		UserService:      us,
 	}
 
 	return tgListener, nil
@@ -128,4 +133,12 @@ func initBotConfig(c *config) *bot.Config {
 		SuperUsers: c.SuperUsers,
 	}
 	return cfg
+}
+
+func initI18n(c *config) {
+	languages := map[string]string{
+		language.English.String(): "English",
+		language.Russian.String(): "Русский",
+	}
+	i18n.Init("conf/lang", c.DefaultLanguage, languages)
 }

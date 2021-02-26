@@ -14,6 +14,7 @@ import (
 func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, closer func(), err error) {
 	wire.Build(initMongoConnection, initTelegramApi, initTelegramConfig, initBotConfig,
 		service.NewUserService, wire.Bind(new(bot.UserService), new(*service.UserService)),
+		wire.Bind(new(events.UserService), new(*service.UserService)),
 		service.NewRoomService, wire.Bind(new(bot.RoomService), new(*service.RoomService)),
 		service.NewChatStateService, wire.Bind(new(bot.ChatStateService), new(*service.ChatStateService)),
 		service.NewButtonService, wire.Bind(new(bot.ButtonService), new(*service.ButtonService)),
@@ -31,7 +32,6 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 }
 
 var bots = wire.NewSet(
-	bot.NewHelper,
 	bot.NewStartScreen,
 	bot.NewRoomCreating,
 	bot.NewRoomSetName,
@@ -58,7 +58,6 @@ var bots = wire.NewSet(
 )
 
 func ProvideBotList(
-	b1 *bot.Helper,
 	b2 *bot.StartScreen,
 	b3 *bot.RoomCreating,
 	b4 *bot.RoomSetName,
@@ -84,6 +83,6 @@ func ProvideBotList(
 	b24 *bot.ViewAllDebtOperations,
 
 ) []bot.Interface {
-	return []bot.Interface{b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
+	return []bot.Interface{b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
 		b21, b22, b23, b24}
 }

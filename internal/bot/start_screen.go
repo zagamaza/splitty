@@ -60,15 +60,15 @@ func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response ap
 			log.Error().Err(err).Msg("save btn failed")
 			return
 		}
-		screen = createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData("👥 Все тусы", arb.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData("🗄 Архив", archRB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData("➕ Создать новую тусу", cb.ID.Hex())},
+		screen = createScreen(u, I18n(u.User, "scrn_main"), &[][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_rooms"), arb.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_archive"), archRB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_create_room"), cb.ID.Hex())},
 		})
 	} else {
-		screen = createScreen(u, "*Главный экран*", &[][]tgbotapi.InlineKeyboardButton{
-			{NewButtonSwitchCurrent("Все тусы", "")},
-			{tgbotapi.NewInlineKeyboardButtonURL("Создать новую тусу", "http://t.me/"+s.cfg.BotName+"?start=create_room")},
+		screen = createScreen(u, I18n(u.User, "scrn_main"), &[][]tgbotapi.InlineKeyboardButton{
+			{NewButtonSwitchCurrent(I18n(u.User, "btn_all_rooms"), "")},
+			{tgbotapi.NewInlineKeyboardButtonURL(I18n(u.User, "btn_create_room"), "http://t.me/"+s.cfg.BotName+"?start=create_room")},
 		})
 	}
 
