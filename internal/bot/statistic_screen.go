@@ -71,11 +71,11 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	}
 	var debtText string
 	if debtorSum != 0 {
-		debtText = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: *%v ₽*", moneySpace(debtorSum))
+		debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
 	} else if lenderSum != 0 {
-		debtText = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: *%v ₽*", moneySpace(lenderSum))
+		debtText = I18n(u.User, "msg_lend_you", moneySpace(debtorSum))
 	} else {
-		debtText = fmt.Sprintf(string(emoji.WhiteCircle)) + "️Долгов нет"
+		debtText = I18n(u.User, "msg_you_not_debt")
 	}
 
 	data := &api.CallbackData{RoomId: roomId}
@@ -86,14 +86,14 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return
 	}
 
-	text := fmt.Sprintf("📊 Статистика тусы: *%s*\n\n\n", room.Name)
-	text += fmt.Sprintf("👥 Общий расход тусы: *%s* ₽\n\n", moneySpace(totalSpendSum))
-	text += fmt.Sprintf("👤 Ваша доля расходов: *%s* ₽\n\n", moneySpace(totalUserSpendSum))
+	text := fmt.Sprintf(I18n(u.User, "scrn_statistic", room.Name) + "\n\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpace(totalSpendSum)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpace(totalUserSpendSum)) + "\n\n")
 	text += debtText + "\n\n"
-	text += fmt.Sprintf("💸 Общая сумма долгов: *%s* ₽\n\n", moneySpace(totalDebtSum))
+	text += fmt.Sprintf(I18n(u.User, "msg_common_debt", moneySpace(totalDebtSum)) + "\n\n")
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("💸 Выплаченные долги", debtOperationsB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("🔝 В комнату", startB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_paid_debt"), debtOperationsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), startB.ID.Hex())},
 	}
 
 	if _, err := bot.bs.SaveAll(ctx, startB); err != nil {
