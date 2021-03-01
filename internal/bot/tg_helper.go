@@ -219,6 +219,6 @@ func containsInt(s []int, e int) bool {
 }
 
 // I18n define text by user lang
-func I18n(u *api.User, text string) string {
-	return i18n.Tr(api.DefineLang(u), text)
+func I18n(u *api.User, text string, args ...interface{}) string {
+	return i18n.Tr(api.DefineLang(u), text, args...)
 }

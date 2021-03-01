@@ -2,7 +2,6 @@ package bot
 
 import (
 	"context"
-	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -49,13 +48,13 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		if err != nil {
 			return
 		}
-		var descr string
+		var debtText string
 		if debtorSum != 0 {
-			descr = fmt.Sprintf(string(emoji.RedCircle)+" Вы должны: %v", moneySpace(debtorSum)+" ₽")
+			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
 		} else if lenderSum != 0 {
-			descr = fmt.Sprintf(string(emoji.GreenCircle)+" Вам должны: %v", moneySpace(lenderSum)+" ₽")
+			debtText = I18n(u.User, "msg_lend_you", moneySpace(debtorSum))
 		} else {
-			descr = fmt.Sprintf(string(emoji.WhiteCircle)) + "️Долгов нет"
+			debtText = I18n(u.User, "msg_you_not_debt")
 		}
 
 		data := &api.CallbackData{RoomId: room.ID.Hex()}
@@ -69,7 +68,7 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 			continue
 		}
 
-		article := NewInlineResultArticle(room.Name, descr, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
+		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться ", joinB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL("Начать работу", "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
 		})
