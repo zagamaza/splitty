@@ -140,6 +140,19 @@ func (s *OperationService) GetUserDebts(ctx context.Context, userId int, roomId 
 	}
 	return &uDbts, nil
 }
+func (s *OperationService) GetUserDebt(ctx context.Context, debtorId int, lenderId int, roomId string) (*api.Debt, error) {
+	allDbt, err := s.GetAllDebts(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, debt := range *allDbt {
+		if debt.Debtor.ID == debtorId && debt.Lender.ID == lenderId {
+			return &debt, nil
+		}
+	}
+	return nil, nil
+}
 
 func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
