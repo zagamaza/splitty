@@ -124,13 +124,13 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	viewOpsB := api.NewButton(viewAllOperations, data)
 	viewDbtB := api.NewButton(viewAllDebts, data)
 	startB := api.NewButton(viewStart, data)
-	startOpB := api.NewButton(viewStartOperation, data)
+	startOpB := api.NewButton(wantDonorOperation, data)
 	settB := api.NewButton(viewSetting, data)
 	staticsB := api.NewButton(statistics, data)
 
 	text := createRoomInfoText(room)
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить операцию", startOpB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить расход", startOpB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("💰 Операции", viewOpsB.ID.Hex()),
 			tgbotapi.NewInlineKeyboardButtonData("💸 Долги", viewDbtB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("📊 Статистика", staticsB.ID.Hex()),

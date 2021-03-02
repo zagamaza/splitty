@@ -24,77 +24,7 @@ type OperationService interface {
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
 	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
-}
-
-// Operation show screen with donar/recepient buttons
-type Operation struct {
-	css ChatStateService
-	bs  ButtonService
-	rs  RoomService
-	cfg *Config
-}
-
-// NewStackOverflow makes a bot for SO
-func NewOperation(s ChatStateService, bs ButtonService, rs RoomService, cfg *Config) *Operation {
-	return &Operation{
-		css: s,
-		bs:  bs,
-		rs:  rs,
-		cfg: cfg,
-	}
-}
-
-// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
-func (s Operation) HasReact(u *api.Update) bool {
-	if hasAction(u, viewStartOperation) {
-		return true
-	}
-	if u.Message == nil || u.Message.Chat.Type != "private" {
-		return false
-	}
-	return strings.Contains(u.Message.Text, startOperation)
-}
-
-// OnMessage returns one entry
-func (s Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-
-	var roomId string
-	if isButton(u) {
-		roomId = u.Button.CallbackData.RoomId
-	} else {
-		roomId = strings.ReplaceAll(u.Message.Text, "/start operation", "")
-	}
-	room, err := s.rs.FindById(ctx, roomId)
-	if err != nil {
-		log.Error().Err(err).Msg("get room failed")
-		return
-	}
-
-	if !containsUserId(room.Members, getFrom(u).ID) {
-		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой тусе")},
-			Send:      true,
-		}
-	}
-
-	recipientBtn := &api.Button{Action: wantRecipientOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
-	donorBtn := &api.Button{Action: wantDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
-	viewRoomB := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
-	_, err = s.bs.SaveAll(ctx, recipientBtn, donorBtn, viewRoomB)
-	if err != nil {
-		log.Error().Err(err).Msg("create btn failed")
-		return
-	}
-
-	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{createScreen(u, "Выбор операции для тусы *"+room.Name+"*",
-			&[][]tgbotapi.InlineKeyboardButton{
-				{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyBag)+" Расход", donorBtn.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonData(string(emoji.MoneyWithWings)+" Вернуть долг", recipientBtn.ID.Hex())},
-				{tgbotapi.NewInlineKeyboardButtonData("Отмена", viewRoomB.ID.Hex())}}),
-		},
-		Send: true,
-	}
+	GetUserDebt(ctx context.Context, debtorId int, lenderId int, roomId string) (*api.Debt, error)
 }
 
 func containsUserId(users *[]api.User, id int) bool {
@@ -136,9 +66,20 @@ func (s WantDonorOperation) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
+	room, err := s.rs.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	if !containsUserId(room.Members, u.User.ID) {
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "⚠️ К сожалению, вы не находитесь в этой тусе")},
+			Send:      true,
+		}
+	}
 
 	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
-	err := s.css.Save(ctx, cs)
+	err = s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
 		return
@@ -153,7 +94,7 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID,
-			"Отлично. Теперь введите сумму и цель покупки через пробел и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
+			"Введите сумму и цель покупки через ПРОБЕЛ и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
 			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", b.ID.Hex())}})},
 		Send: true,
 	}
@@ -200,7 +141,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		}
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u),
-				string(emoji.Warning)+" Неверный формат данных. Введите сумму и цель покупки через пробел и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
+				"⚠️ Неверный формат данных. Введите сумму и цель покупки через ПРОБЕЛ и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
 				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
 			Send: true,
 		}
@@ -560,7 +501,7 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 	keyboardButtons = append(keyboardButtons, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())})
 
 	text := "Нажмите на кнопку с именем человека, которому вы хотите вернуть долг.\n\n"
-	text += "_P.S. Выбранному человеку придет уведомления от бота_"
+	text += "_P.S. Выбранному человеку придет уведомление от бота_"
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
@@ -583,17 +524,17 @@ func (s WantRecepientOperation) defineRecipients(userId int, room *api.Room) map
 type ChooseRecepientOperation struct {
 	css ChatStateService
 	bs  ButtonService
-	ts  OperationService
+	os  OperationService
 	rs  RoomService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewChooseRecepientOperation(s ChatStateService, bs ButtonService, ts OperationService, rs RoomService, cfg *Config) *ChooseRecepientOperation {
+func NewChooseRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *ChooseRecepientOperation {
 	return &ChooseRecepientOperation{
 		css: s,
 		bs:  bs,
-		ts:  ts,
+		os:  os,
 		rs:  rs,
 		cfg: cfg,
 	}
@@ -610,10 +551,16 @@ func (s ChooseRecepientOperation) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
-	donorUserId := u.Button.CallbackData.UserId
+	lenderUserId := u.Button.CallbackData.UserId
 
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addRecipientOperation, CallbackData: &api.CallbackData{RoomId: roomId, UserId: donorUserId}}
-	err := s.css.Save(ctx, cs)
+	debt, err := s.os.GetUserDebt(ctx, u.User.ID, lenderUserId, roomId)
+	if err != nil || debt == nil {
+		log.Error().Err(err).Msg("get user debts failed")
+		return
+	}
+
+	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addRecipientOperation, CallbackData: &api.CallbackData{RoomId: roomId, UserId: lenderUserId}}
+	err = s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
 		return
@@ -625,7 +572,9 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	msg := createScreen(u, "Отлично. Теперь введите сумму которую вы вернули выбранному человеку и отправьте боту\n\nНапример: _1000_",
+	text := fmt.Sprintf("Вы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
+	text += "_P.S. Выбранному человеку придет уведомления от бота_"
+	msg := createScreen(u, text,
 		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", b.ID.Hex())}})
 	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
 		Send: true,
@@ -669,6 +618,13 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		return
 	}
 
+	lenderUserId := u.ChatState.CallbackData.UserId
+	debt, err := s.os.GetUserDebt(ctx, u.User.ID, lenderUserId, room.ID.Hex())
+	if err != nil || debt == nil {
+		log.Error().Err(err).Msg("get user debts failed")
+		return
+	}
+
 	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
 	if _, err = s.bs.SaveAll(ctx, rb); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
@@ -676,11 +632,13 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	}
 
 	sum, err := defineSum(u.Message.Text)
-	if err != nil {
+	if err != nil || sum > debt.Sum {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
+		text := "⚠️ Неверный формат данных!\n"
+		text += fmt.Sprintf("Вы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
+		text += "_P.S. Выбранному человеку придет уведомление от бота_"
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u),
-				string(emoji.Warning)+" Неверный формат данных.\nВведите сумму которую вы вернули выбранному человеку и отправьте боту\n\nНапример:\n_1000_",
+			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text,
 				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
 			Send: true,
 		}
