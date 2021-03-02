@@ -52,7 +52,7 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		if debtorSum != 0 {
 			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
 		} else if lenderSum != 0 {
-			debtText = I18n(u.User, "msg_lend_you", moneySpace(debtorSum))
+			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum))
 		} else {
 			debtText = I18n(u.User, "msg_you_not_debt")
 		}
