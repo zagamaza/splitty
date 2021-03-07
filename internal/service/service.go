@@ -111,6 +111,21 @@ func (s *OperationService) GetAllSpendOperations(ctx context.Context, roomId str
 	return &spendOperations, nil
 }
 
+func (s *OperationService) GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error) {
+	room, err := s.RoomRepository.FindById(ctx, roomId)
+	if err != nil {
+		log.Err(err).Msgf("cannot find room id:", roomId)
+		return nil, err
+	}
+	var spendUserOperations []api.Operation
+	for _, o := range *room.Operations {
+		if !o.IsDebtRepayment && o.Donor.ID == userId {
+			spendUserOperations = append(spendUserOperations, o)
+		}
+	}
+	return &spendUserOperations, nil
+}
+
 func (s *OperationService) GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error) {
 	allDbt, err := s.GetAllDebts(ctx, roomId)
 	if err != nil {
