@@ -56,14 +56,16 @@ func (s *StartScreen) OnMessage(ctx context.Context, u *api.Update) (response ap
 		cb := api.NewButton(createRoom, new(api.CallbackData))
 		arb := api.NewButton(viewAllRooms, new(api.CallbackData))
 		archRB := api.NewButton(viewArchivedRooms, new(api.CallbackData))
-		if _, err := s.bs.SaveAll(ctx, cb, arb, archRB); err != nil {
+		settingBtn := api.NewButton(userSetting, nil)
+		if _, err := s.bs.SaveAll(ctx, cb, arb, archRB, settingBtn); err != nil {
 			log.Error().Err(err).Msg("save btn failed")
 			return
 		}
 		screen = createScreen(u, I18n(u.User, "scrn_main"), &[][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_create_room"), cb.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_rooms"), arb.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_archive"), archRB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_create_room"), cb.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_settings"), settingBtn.ID.Hex())},
 		})
 	} else {
 		screen = createScreen(u, I18n(u.User, "scrn_main"), &[][]tgbotapi.InlineKeyboardButton{

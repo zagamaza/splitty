@@ -50,26 +50,12 @@ func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response ap
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Отмена", id.Hex())}
-	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+s.cgf.BotName+"?start=help")}
+	screen := createScreen(u, I18n(u.User, "scrn_write_room_name"),
+		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), id.Hex())}})
 
-	if u.CallbackQuery != nil {
-		tbMsg := tgbotapi.NewEditMessageText(getChatID(u), u.CallbackQuery.Message.ID, "Введите название тусы и отправьте сообщение.")
-		var keyboard [][]tgbotapi.InlineKeyboardButton
-		tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: append(keyboard, button1, button2)}
-
-		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tbMsg},
-			Send:      true,
-		}
-	} else {
-		tbMsg := tgbotapi.NewMessage(getChatID(u), "Введите название тусы и отправьте сообщение.")
-		tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2)
-
-		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tbMsg},
-			Send:      true,
-		}
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
 	}
 
 }
@@ -101,13 +87,7 @@ func (rs RoomSetName) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-
-	defer func() {
-		err := rs.css.DeleteById(ctx, u.ChatState.ID)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-		}
-	}()
+	defer rs.css.CleanChatState(ctx, u.ChatState)
 
 	r := &api.Room{
 		Members:    &[]api.User{u.Message.From},
@@ -122,10 +102,10 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return api.TelegramMessage{}
 	}
 
-	tbMsg := tgbotapi.NewMessage(getChatID(u), "Туса *"+room.Name+"* создана, теперь добавьте бота в группу")
+	tbMsg := tgbotapi.NewMessage(getChatID(u), I18n(u.User, "scrn_room_created", room.Name))
 	tbMsg.ParseMode = tgbotapi.ModeMarkdown
 
-	button1 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch("Опубликовать тусу в свой чат", room.Name)}
+	shareRoomBtn := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch(I18n(u.User, "btn_share_room"), room.Name)}
 
 	cb := api.NewButton(viewStart, nil)
 	cancelId, err := rs.bs.Save(ctx, cb)
@@ -133,9 +113,8 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	button2 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Отмена", cancelId.Hex())}
-	button3 := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("❔ Помощь", "http://t.me/"+rs.cgf.BotName+"?start=help")}
-	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(button1, button2, button3)
+	cancelBtn := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelId.Hex())}
+	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(shareRoomBtn, cancelBtn)
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{tbMsg},

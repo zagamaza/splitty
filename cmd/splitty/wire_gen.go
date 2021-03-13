@@ -54,14 +54,16 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, botConfig)
 	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
 	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
-	viewSetting := bot.NewViewSetting(buttonService, roomService, chatStateService, botConfig)
-	archiveRoom := bot.NewArchiveRoom(buttonService, roomService, chatStateService, botConfig, viewSetting)
+	roomSetting := bot.NewRoomSetting(buttonService, roomService, chatStateService, botConfig)
+	archiveRoom := bot.NewArchiveRoom(buttonService, roomService, chatStateService, botConfig, roomSetting)
 	archivedRooms := bot.NewArchivedRooms(chatStateService, buttonService, roomService, botConfig)
 	statistic := bot.NewStatistic(buttonService, roomService, chatStateService, statisticService, botConfig)
 	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, buttonService, operationService, botConfig)
 	viewMyOperations := bot.NewViewMyOperations(chatStateService, buttonService, operationService, botConfig)
 	debt := bot.NewDebt(chatStateService, buttonService, operationService, botConfig)
-	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, viewSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations, viewMyOperations, debt)
+	userSetting := bot.NewUserSetting(buttonService, userService, chatStateService, botConfig)
+	chooseLanguage := bot.NewChooseLanguage(buttonService, roomService, chatStateService, botConfig)
+	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, wantDonorOperation, addDonorOperation, donorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantRecepientOperation, addRecepientOperation, viewUserDebts, viewAllDebts, roomSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations, viewMyOperations, debt, userSetting, chooseLanguage)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, userService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -74,7 +76,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantRecepientOperation, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewViewSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations, bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt)
+var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantRecepientOperation, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewRoomSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations, bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt, bot.NewUserSetting, bot.NewChooseLanguage)
 
 func ProvideBotList(
 	b1 *bot.Operation,
@@ -95,14 +97,16 @@ func ProvideBotList(
 	b17 *bot.AddRecepientOperation,
 	b18 *bot.ViewUserDebts,
 	b19 *bot.ViewAllDebts,
-	b20 *bot.ViewSetting,
+	b20 *bot.RoomSetting,
 	b21 *bot.ArchiveRoom,
 	b22 *bot.ArchivedRooms,
 	b23 *bot.Statistic,
 	b24 *bot.ViewAllDebtOperations,
 	b25 *bot.ViewMyOperations,
 	b26 *bot.Debt,
+	b27 *bot.UserSetting,
+	b28 *bot.ChooseLanguage,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26}
+		b21, b22, b23, b24, b25, b26, b27, b28}
 }

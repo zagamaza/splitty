@@ -68,7 +68,7 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 			continue
 		}
 
-		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
+		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(&room, u), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL(I18n(u.User, "btn_start"), "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
 		})
@@ -150,7 +150,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	backB := api.NewButton(viewStart, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("🔝 В начало", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_to_start"), backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -158,7 +158,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
-	screen := createScreen(u, "*Мои тусы*", &keyboard)
+	screen := createScreen(u, I18n(u.User, "scrn_my_rooms"), &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
@@ -237,7 +237,7 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 	backB := api.NewButton(viewStart, &api.CallbackData{})
 	toSave = append(toSave, backB)
 	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{
-		tgbotapi.NewInlineKeyboardButtonData("🔝 В начало", backB.ID.Hex()),
+		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_to_start"), backB.ID.Hex()),
 	})
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -245,15 +245,15 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 		return
 	}
 
-	screen := createScreen(u, "*Архивированные тусы*", &keyboard)
+	screen := createScreen(u, I18n(u.User, "scrn_archive_rooms"), &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
 }
 
-func createRoomInfoText(r *api.Room) string {
-	text := "Экран тусы *" + r.Name + "*\n\nУчастники:\n"
+func createRoomInfoText(r *api.Room, u *api.Update) string {
+	text := I18n(u.User, "scrn_room", r.Name)
 	for _, v := range *r.Members {
 		text += "- " + userLink(&v) + "\n"
 	}

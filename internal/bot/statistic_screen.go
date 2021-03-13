@@ -140,7 +140,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 	}
 
 	var toSave []*api.Button
-	var text = "*История операций по возврату долгов*\n\n"
+	var text = I18n(u.User, "scrn_debt_history") + "\n\n"
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 
 	for i := skip; i < skip+size && i < len(*ops); i++ {
@@ -156,7 +156,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 	}
 	backB := api.NewButton(statistics, u.Button.CallbackData)
 	toSave = append(toSave, backB)
-	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
 	if skip+size < len(*ops) {
 		nextB := api.NewButton(viewAllDebtOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)

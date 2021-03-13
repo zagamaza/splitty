@@ -61,7 +61,7 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
-	text := createRoomInfoText(room)
+	text := createRoomInfoText(room, u)
 	link := "http://t.me/" + bot.cfg.BotName + "?start=" + string(viewRoom) + room.ID.Hex()
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
@@ -126,18 +126,18 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	viewDbtB := api.NewButton(chooseDebts, data)
 	startB := api.NewButton(viewStart, data)
 	startOpB := api.NewButton(wantDonorOperation, data)
-	settB := api.NewButton(viewSetting, data)
+	settB := api.NewButton(roomSetting, data)
 	staticsB := api.NewButton(statistics, data)
 
-	text := createRoomInfoText(room)
+	text := createRoomInfoText(room, u)
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить расход", startOpB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_add_operation"), startOpB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt"), viewOpsB.ID.Hex()),
-			tgbotapi.NewInlineKeyboardButtonData("💸 Долги", viewDbtB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("📊 Статистика", staticsB.ID.Hex()),
-			tgbotapi.NewInlineKeyboardButtonData("⚙️ Настройки", settB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonSwitch("📢 Отправить в чат", room.Name)},
-		{tgbotapi.NewInlineKeyboardButtonData("🔝 В начало", startB.ID.Hex())},
+			tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debts"), viewDbtB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_statistics"), staticsB.ID.Hex()),
+			tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_room_settings"), settB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonSwitch(I18n(u.User, "btn_send_to_room"), room.Name)},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_to_start"), startB.ID.Hex())},
 	}
 
 	if _, err := bot.bs.SaveAll(ctx, viewOpsB, viewDbtB, startB, startOpB, staticsB, settB); err != nil {

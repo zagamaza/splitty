@@ -49,7 +49,7 @@ var bots = wire.NewSet(
 	bot.NewAddRecepientOperation,
 	bot.NewViewUserDebts,
 	bot.NewViewAllDebts,
-	bot.NewViewSetting,
+	bot.NewRoomSetting,
 	bot.NewArchiveRoom,
 	bot.NewArchivedRooms,
 	bot.NewStatistic,
@@ -57,6 +57,8 @@ var bots = wire.NewSet(
 	bot.NewOperation,
 	bot.NewViewMyOperations,
 	bot.NewDebt,
+	bot.NewUserSetting,
+	bot.NewChooseLanguage,
 )
 
 func ProvideBotList(
@@ -78,14 +80,16 @@ func ProvideBotList(
 	b17 *bot.AddRecepientOperation,
 	b18 *bot.ViewUserDebts,
 	b19 *bot.ViewAllDebts,
-	b20 *bot.ViewSetting,
+	b20 *bot.RoomSetting,
 	b21 *bot.ArchiveRoom,
 	b22 *bot.ArchivedRooms,
 	b23 *bot.Statistic,
 	b24 *bot.ViewAllDebtOperations,
 	b25 *bot.ViewMyOperations,
 	b26 *bot.Debt,
+	b27 *bot.UserSetting,
+	b28 *bot.ChooseLanguage,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26}
+		b21, b22, b23, b24, b25, b26, b27, b28}
 }
