@@ -69,8 +69,8 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		}
 
 		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(&room), [][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData("Присоединиться ", joinB.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonURL("Начать работу", "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
+			{tgbotapi.NewInlineKeyboardButtonURL(I18n(u.User, "btn_start"), "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
 		})
 
 		results = append(results, article)
@@ -115,6 +115,13 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot find rooms")
 		return
+	}
+	if len(*rooms) < 1 {
+		callback := createCallback(u, I18n(u.User, "msg_have_not_rooms"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
 	}
 
 	var toSave []*api.Button
@@ -195,6 +202,13 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot find rooms")
 		return
+	}
+	if len(*rooms) < 1 {
+		callback := createCallback(u, I18n(u.User, "msg_have_not_archive"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
 	}
 
 	var toSave []*api.Button

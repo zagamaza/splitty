@@ -37,13 +37,6 @@ func (bot *ViewSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		return
 	}
 
-	if !containsUserId(room.Members, getFrom(u).ID) {
-		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой тусе")},
-			Send:      true,
-		}
-	}
-
 	text := "Настройки тусы *" + room.Name + "*"
 
 	var buttons []tgbotapi.InlineKeyboardButton
@@ -103,9 +96,13 @@ func (bot *ArchiveRoom) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	var errCallback *tgbotapi.CallbackConfig = nil
 	if hasAction(u, archiveRoom) {
-		bot.rs.ArchiveRoom(ctx, getFrom(u).ID, roomId)
+		if err := bot.rs.ArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+			log.Error().Err(err).Msg("")
+		}
 	} else {
-		bot.rs.UnArchiveRoom(ctx, getFrom(u).ID, roomId)
+		if err := bot.rs.UnArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+			log.Error().Err(err).Msg("")
+		}
 	}
 
 	u.Button = api.NewButton(viewSetting, u.Button.CallbackData)

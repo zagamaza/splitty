@@ -62,9 +62,10 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	}
 
 	text := createRoomInfoText(room)
+	link := "http://t.me/" + bot.cfg.BotName + "?start=" + string(viewRoom) + room.ID.Hex()
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData("Присоединиться", joinB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonURL("Начать работу", "http://t.me/"+bot.cfg.BotName+"?start="+string(viewRoom)+room.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonURL(I18n(u.User, "btn_start"), link)},
 	}
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
@@ -115,14 +116,14 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 
 	if !containsUserId(room.Members, getFrom(u).ID) {
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "К сожалению, вы не находитесь в этой тусе")},
+			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), I18n(u.User, "msg_not_be_in_rooms"))},
 			Send:      true,
 		}
 	}
 
 	data := &api.CallbackData{RoomId: roomId}
-	viewOpsB := api.NewButton(viewAllOperations, data)
-	viewDbtB := api.NewButton(viewAllDebts, data)
+	viewOpsB := api.NewButton(chooseOperations, data)
+	viewDbtB := api.NewButton(chooseDebts, data)
 	startB := api.NewButton(viewStart, data)
 	startOpB := api.NewButton(wantDonorOperation, data)
 	settB := api.NewButton(viewSetting, data)
@@ -131,7 +132,7 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	text := createRoomInfoText(room)
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData("➕ Добавить расход", startOpB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData("💰 Операции", viewOpsB.ID.Hex()),
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt"), viewOpsB.ID.Hex()),
 			tgbotapi.NewInlineKeyboardButtonData("💸 Долги", viewDbtB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData("📊 Статистика", staticsB.ID.Hex()),
 			tgbotapi.NewInlineKeyboardButtonData("⚙️ Настройки", settB.ID.Hex())},

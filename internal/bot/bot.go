@@ -11,7 +11,6 @@ import (
 )
 
 const start string = "/start"
-const startOperation = start + " operation"
 
 //actions
 const (
@@ -27,13 +26,15 @@ const (
 	viewRoom               api.Action = "room"
 	viewStart              api.Action = "start"
 	viewAllOperations      api.Action = "all_operations"
+	viewUserOperations     api.Action = "user_operations"
 	viewAllDebtOperations  api.Action = "all_dept_operations"
 	viewAllRooms           api.Action = "all_rooms"
 	viewArchivedRooms      api.Action = "archived_rooms"
 	viewUserDebts          api.Action = "user_debts"
 	viewAllDebts           api.Action = "all_debts"
-	viewStartOperation     api.Action = "start_operation"
 	statistics             api.Action = "statistics"
+	chooseOperations       api.Action = "choose_operations"
+	chooseDebts            api.Action = "choose_debts"
 	viewSetting            api.Action = "setting"
 	archiveRoom            api.Action = "archive_room"
 	unArchiveRoom          api.Action = "unarchive_room"

@@ -21,10 +21,74 @@ type OperationService interface {
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
+	GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
 	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebt(ctx context.Context, debtorId int, lenderId int, roomId string) (*api.Debt, error)
+}
+
+// Operation show screen with my and all chooseOperations buttons
+type Operation struct {
+	css ChatStateService
+	bs  ButtonService
+	os  OperationService
+	cfg *Config
+}
+
+func NewOperation(s ChatStateService, bs ButtonService, os OperationService, cfg *Config) *Operation {
+	return &Operation{
+		css: s,
+		bs:  bs,
+		os:  os,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
+func (bot Operation) HasReact(u *api.Update) bool {
+	if hasAction(u, chooseOperations) {
+		return true
+	}
+	return false
+}
+
+// OnMessage returns one entry
+func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+
+	operations, err := bot.os.GetAllOperations(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+	if len(*operations) < 1 {
+		callback := createCallback(u, I18n(u.User, "msg_have_not_operations"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+	data := &api.CallbackData{RoomId: roomId}
+
+	viewUserOpsB := api.NewButton(viewUserOperations, data)
+	viewAllOpsB := api.NewButton(viewAllOperations, data)
+	backB := api.NewButton(viewRoom, data)
+
+	if _, err := bot.bs.SaveAll(ctx, viewUserOpsB, viewAllOpsB, backB); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+
+	keyboard := [][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_opt"), viewUserOpsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_opt"), viewAllOpsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex())},
+	}
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{createScreen(u, I18n(u.User, "scrn_operations"), &keyboard)},
+		Send:      true,
+	}
 }
 
 func containsUserId(users *[]api.User, id int) bool {
@@ -471,7 +535,7 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 		return
 	}
 	if len(*debts) < 1 {
-		callback := createCallback(u, string(emoji.Warning)+"У вас отсутствуют долги", true)
+		callback := createCallback(u, I18n(u.User, "msg_have_not_user_debts"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,
@@ -572,7 +636,7 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	text := fmt.Sprintf("Вы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
+	text := fmt.Sprintf("*Экран возарата долга*\nВы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
 	text += "_P.S. Выбранному человеку придет уведомления от бота_"
 	msg := createScreen(u, text,
 		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", b.ID.Hex())}})
@@ -710,13 +774,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 	var toSave []*api.Button
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 	sort.SliceStable(*ops, func(i, j int) bool {
-		if !(*ops)[j].IsDebtRepayment && (*ops)[i].IsDebtRepayment {
-			return false
-		} else if (*ops)[j].IsDebtRepayment && !(*ops)[i].IsDebtRepayment {
-			return true
-		} else {
-			return (*ops)[j].CreateAt.Before((*ops)[i].CreateAt)
-		}
+		return (*ops)[j].CreateAt.Before((*ops)[i].CreateAt)
 	})
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
@@ -735,9 +793,9 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		toSave = append(toSave, prevB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
 	}
-	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	backB := api.NewButton(chooseOperations, u.Button.CallbackData)
 	toSave = append(toSave, backB)
-	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
 	if skip+size < len(*ops) {
 		nextB := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
@@ -750,7 +808,90 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 		return
 	}
 
-	screen := createScreen(u, "*Операции тусы*", &keyboard)
+	screen := createScreen(u, I18n(u.User, "scrn_all_operations"), &keyboard)
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+// ViewMyOperations show screen with user chooseOperations
+type ViewMyOperations struct {
+	css ChatStateService
+	bs  ButtonService
+	os  OperationService
+	cfg *Config
+}
+
+func NewViewMyOperations(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *ViewMyOperations {
+	return &ViewMyOperations{
+		css: s,
+		bs:  bs,
+		os:  rs,
+		cfg: cfg,
+	}
+}
+
+func (bot ViewMyOperations) HasReact(u *api.Update) bool {
+	return hasAction(u, viewUserOperations)
+}
+
+func (bot ViewMyOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+	page := u.Button.CallbackData.Page
+	size := 5
+	skip := page * size
+
+	ops, err := bot.os.GetUserSpendOperations(ctx, u.User.ID, roomId)
+	if err != nil {
+		return
+	}
+	if len(*ops) < 1 {
+		callback := createCallback(u, I18n(u.User, "msg_have_not_user_operations"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
+	var toSave []*api.Button
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	sort.SliceStable(*ops, func(i, j int) bool {
+		return (*ops)[j].CreateAt.Before((*ops)[i].CreateAt)
+	})
+	for i := skip; i < skip+size && i < len(*ops); i++ {
+		op := (*ops)[i]
+		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+		text := fmt.Sprintf("🛒%s %s₽ %s",
+			stringForAlign(op.Description, 11, true),
+			stringForAlign("💰"+moneySpace(op.Sum), 6, false),
+			stringForAlign("👤"+shortName(op.Donor), 10, false))
+		toSave = append(toSave, opB)
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
+	}
+
+	var navRow []tgbotapi.InlineKeyboardButton
+	if page != 0 {
+		prevB := api.NewButton(viewUserOperations, &api.CallbackData{RoomId: roomId, Page: page - 1})
+		toSave = append(toSave, prevB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
+	}
+	backB := api.NewButton(chooseOperations, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
+	if skip+size < len(*ops) {
+		nextB := api.NewButton(viewUserOperations, &api.CallbackData{RoomId: roomId, Page: page + 1})
+		toSave = append(toSave, nextB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
+	}
+	keyboard = append(keyboard, navRow)
+
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
+		log.Error().Err(err).Msg("save buttons failed")
+		return
+	}
+
+	screen := createScreen(u, I18n(u.User, "scrn_my_operations"), &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,

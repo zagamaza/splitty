@@ -54,9 +54,13 @@ var bots = wire.NewSet(
 	bot.NewArchivedRooms,
 	bot.NewStatistic,
 	bot.NewViewAllDebtOperations,
+	bot.NewOperation,
+	bot.NewViewMyOperations,
+	bot.NewDebt,
 )
 
 func ProvideBotList(
+	b1 *bot.Operation,
 	b2 *bot.StartScreen,
 	b3 *bot.RoomCreating,
 	b4 *bot.RoomSetName,
@@ -79,8 +83,9 @@ func ProvideBotList(
 	b22 *bot.ArchivedRooms,
 	b23 *bot.Statistic,
 	b24 *bot.ViewAllDebtOperations,
-
+	b25 *bot.ViewMyOperations,
+	b26 *bot.Debt,
 ) []bot.Interface {
-	return []bot.Interface{b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24}
+	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
+		b21, b22, b23, b24, b25, b26}
 }
