@@ -14,6 +14,7 @@ import (
 
 type UserService interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
+	UpsertLangUser(ctx context.Context, userId int, lang string) error
 }
 
 type RoomService interface {
@@ -220,5 +221,6 @@ func containsInt(s []int, e int) bool {
 
 // I18n define text by user lang
 func I18n(u *api.User, text string, args ...interface{}) string {
-	return i18n.Tr(api.DefineLang(u), text, args...)
+	tr := i18n.Tr(api.DefineLang(u), text, args...)
+	return strings.ReplaceAll(tr, "\\n", "\n")
 }

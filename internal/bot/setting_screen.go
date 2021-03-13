@@ -7,15 +7,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type ViewSetting struct {
+type RoomSetting struct {
 	bs  ButtonService
 	rs  RoomService
 	css ChatStateService
 	cfg *Config
 }
 
-func NewViewSetting(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config) *ViewSetting {
-	return &ViewSetting{
+func NewRoomSetting(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config) *RoomSetting {
+	return &RoomSetting{
 		bs:  bs,
 		rs:  rs,
 		cfg: cfg,
@@ -23,11 +23,11 @@ func NewViewSetting(bs ButtonService, rs RoomService, css ChatStateService, cfg 
 	}
 }
 
-func (bot ViewSetting) HasReact(u *api.Update) bool {
-	return hasAction(u, viewSetting)
+func (bot RoomSetting) HasReact(u *api.Update) bool {
+	return hasAction(u, roomSetting)
 }
 
-func (bot *ViewSetting) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	defer bot.css.CleanChatState(ctx, u.ChatState)
 
 	roomId := u.Button.CallbackData.RoomId
@@ -37,7 +37,7 @@ func (bot *ViewSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		return
 	}
 
-	text := "Настройки тусы *" + room.Name + "*"
+	text := I18n(u.User, "scrn_room_setting", room.Name)
 
 	var buttons []tgbotapi.InlineKeyboardButton
 	var toSave []*api.Button
@@ -45,16 +45,16 @@ func (bot *ViewSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	if isArchived(room, getFrom(u)) {
 		btn := api.NewButton(unArchiveRoom, &api.CallbackData{RoomId: roomId})
 		toSave = append(toSave, btn)
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("Вернуть из архива", btn.ID.Hex()))
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_return_from_archive"), btn.ID.Hex()))
 	} else {
 		btn := api.NewButton(archiveRoom, &api.CallbackData{RoomId: roomId})
 		toSave = append(toSave, btn)
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("Архивировать", btn.ID.Hex()))
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_do_archive"), btn.ID.Hex()))
 	}
 
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
-	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("🔙 Назад", backB.ID.Hex()))
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
@@ -71,11 +71,11 @@ type ArchiveRoom struct {
 	bs    ButtonService
 	rs    RoomService
 	css   ChatStateService
-	vsBot *ViewSetting
+	vsBot *RoomSetting
 	cfg   *Config
 }
 
-func NewArchiveRoom(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config, viewSetting *ViewSetting) *ArchiveRoom {
+func NewArchiveRoom(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config, viewSetting *RoomSetting) *ArchiveRoom {
 	return &ArchiveRoom{
 		bs:    bs,
 		rs:    rs,
@@ -105,10 +105,104 @@ func (bot *ArchiveRoom) OnMessage(ctx context.Context, u *api.Update) (response 
 		}
 	}
 
-	u.Button = api.NewButton(viewSetting, u.Button.CallbackData)
+	u.Button = api.NewButton(roomSetting, u.Button.CallbackData)
 	return api.TelegramMessage{
 		CallbackConfig: errCallback,
 		Redirect:       u,
 		Send:           true,
+	}
+}
+
+type UserSetting struct {
+	bs  ButtonService
+	us  UserService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewUserSetting(bs ButtonService, us UserService, css ChatStateService, cfg *Config) *UserSetting {
+	return &UserSetting{
+		bs:  bs,
+		us:  us,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot UserSetting) HasReact(u *api.Update) bool {
+	return hasAction(u, userSetting) || hasAction(u, selectedLanguage)
+}
+
+func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	lang := api.DefineLang(u.User)
+	if u.Button.Action == selectedLanguage {
+		lang = u.Button.CallbackData.ExternalId
+		u.User.SelectedLang = lang
+		if err := bot.us.UpsertLangUser(ctx, u.User.ID, lang); err != nil {
+			log.Error().Err(err).Msg("upsert lang failed btn failed")
+		}
+	}
+	langBtn := api.NewButton(chooseLanguage, new(api.CallbackData))
+	backBtn := api.NewButton(viewStart, new(api.CallbackData))
+	if _, err := bot.bs.SaveAll(ctx, langBtn, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	screen := createScreen(u, I18n(u.User, "scrn_user_setting"), &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_language", bot.defineFlag(lang)), langBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	})
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+func (bot UserSetting) defineFlag(lang string) string {
+	if lang == "ru" {
+		return "🇷🇺"
+	} else {
+		return "🇬🇧"
+	}
+}
+
+type ChooseLanguage struct {
+	bs  ButtonService
+	rs  RoomService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewChooseLanguage(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config) *ChooseLanguage {
+	return &ChooseLanguage{
+		bs:  bs,
+		rs:  rs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot ChooseLanguage) HasReact(u *api.Update) bool {
+	return hasAction(u, chooseLanguage)
+}
+
+func (bot *ChooseLanguage) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	enBtn := api.NewButton(selectedLanguage, &api.CallbackData{ExternalId: "en"})
+	ruBtn := api.NewButton(selectedLanguage, &api.CallbackData{ExternalId: "ru"})
+	backBtn := api.NewButton(userSetting, new(api.CallbackData))
+
+	if _, err := bot.bs.SaveAll(ctx, enBtn, ruBtn, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	text := I18n(u.User, "scrn_choose_lang")
+	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rus_language"), ruBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_eng_language"), enBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	})
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
 	}
 }

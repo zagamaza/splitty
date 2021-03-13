@@ -239,7 +239,14 @@ func transformUpdate(u tbapi.Update) *api.Update {
 			},
 		}
 	}
-	update.Message = transform(u.Message)
+
+	if u.EditedMessage != nil {
+		update.Message = transform(u.EditedMessage)
+	}
+
+	if u.Message != nil {
+		update.Message = transform(u.Message)
+	}
 	return update
 }
 

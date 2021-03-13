@@ -137,7 +137,7 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 	if !containsUserId(room.Members, u.User.ID) {
 		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), "⚠️ К сожалению, вы не находитесь в этой тусе")},
+			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), I18n(u.User, "msg_not_be_in_rooms"))},
 			Send:      true,
 		}
 	}
@@ -158,8 +158,8 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewEditMessage(getChatID(u), u.CallbackQuery.Message.ID,
-			"Введите сумму и цель покупки через ПРОБЕЛ и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
-			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", b.ID.Hex())}})},
+			I18n(u.User, "scrn_add_operation"),
+			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), b.ID.Hex())}})},
 		Send: true,
 	}
 }
@@ -205,8 +205,8 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		}
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u),
-				"⚠️ Неверный формат данных. Введите сумму и цель покупки через ПРОБЕЛ и отправьте боту\n\nНапример:\n_1000 Расходы на бензин_",
-				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
+				I18n(u.User, "msg_wrong_format")+I18n(u.User, "scrn_add_operation"),
+				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())}})},
 			Send: true,
 		}
 	}
@@ -252,13 +252,13 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 
 	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
 	keyboardButtons = append(keyboardButtons,
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())})
 
-	text := "Отлично. Операция *" + purchaseText + "* на сумму *" + moneySpace(sum) + "* ₽ добавлена.\n"
+	text := I18n(u.User, "scrn_operation_added", purchaseText, moneySpace(sum))
 	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
-	text += "Теперь отметь тех, кто не участвует в расходе, нажми *Готово* если все участники участвуют в расходе\n\n"
-	text += "✅ - Участвует\n❌ - Не участвует"
+	text += I18n(u.User, "scrn_mark_members")
+	text += I18n(u.User, "scrn_take_part")
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
 		Send:      true,
@@ -348,13 +348,13 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 			log.Error().Err(err).Msg("create btn failed")
 			return
 		}
-		text := "💰 Операция _" + operation.Description + "_ на сумму *" + moneySpace(operation.Sum) + "* ₽\n"
+		text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum))
 		text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
-		text += "Заплатил: " + userLink(operation.Donor) + "\nУчастники:\n"
+		text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
 		for _, v := range *operation.Recipients {
 			text += "- " + userLink(&v) + "\n"
 		}
-		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", cb.ID.Hex())}})
+		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), cb.ID.Hex())}})
 
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{msg},
@@ -365,7 +365,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	*operation.Recipients = s.addOrDeleteRecipient(operation.Recipients, room.Members, u.Button.CallbackData.UserId)
 
 	if len(*operation.Recipients) < 1 {
-		callback := createCallback(u, string(emoji.Warning)+"Выберите хотя бы одного человека", true)
+		callback := createCallback(u, I18n(u.User, "msg_choose_one_members"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,
@@ -399,13 +399,13 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
 	keyboardButtons = append(keyboardButtons,
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(string(emoji.Wastebasket)+" Удалить операцию", ob.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())})
 
-	text := "💰 Операция *" + operation.Description + "* на сумму *" + moneySpace(operation.Sum) + "* ₽\n"
+	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum))
 	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
-	text += "Отметь тех, кто не участвует в расходе, по завершении нажми *Готово*\n\n"
-	text += "✅ - Участвует\n❌ - Не участвует"
+	text += I18n(u.User, "scrn_mark_members")
+	text += I18n(u.User, "scrn_take_part")
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
@@ -487,9 +487,9 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u,
-			"Отлично. Операция успешно удалена",
+			I18n(u.User, "scrn_operation_deleted"),
 			&[][]tgbotapi.InlineKeyboardButton{
-				{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}})},
+				{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}})},
 		Send: true,
 	}
 }
@@ -562,10 +562,10 @@ func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (r
 	}
 
 	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
-	keyboardButtons = append(keyboardButtons, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())})
+	keyboardButtons = append(keyboardButtons, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())})
 
-	text := "Нажмите на кнопку с именем человека, которому вы хотите вернуть долг.\n\n"
-	text += "_P.S. Выбранному человеку придет уведомление от бота_"
+	text := I18n(u.User, "scrn_choose_person")
+	text += I18n(u.User, "scrn_send_message_choose_user")
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
 		Send:      true,
@@ -636,10 +636,11 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	text := fmt.Sprintf("*Экран возарата долга*\nВы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
-	text += "_P.S. Выбранному человеку придет уведомления от бота_"
+	text := I18n(u.User, "scrn_debt_repayment")
+	text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
+	text += I18n(u.User, "scrn_send_message_choose_user")
 	msg := createScreen(u, text,
-		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", b.ID.Hex())}})
+		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), b.ID.Hex())}})
 	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
 		Send: true,
 	}
@@ -698,12 +699,12 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	sum, err := defineSum(u.Message.Text)
 	if err != nil || sum > debt.Sum {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
-		text := "⚠️ Неверный формат данных!\n"
-		text += fmt.Sprintf("Вы должны уастнику %v - *%v ₽*\nВведите число равной сумме долга или меньшей суммы и отправьте боту\n\nНапример: _1000_", userLink(debt.Lender), moneySpace(debt.Sum)) + "\n\n"
-		text += "_P.S. Выбранному человеку придет уведомление от бота_"
+		text := I18n(u.User, "msg_wrong_format")
+		text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
+		text += I18n(u.User, "scrn_send_message_choose_user")
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text,
-				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Отмена", rb.ID.Hex())}})},
+				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())}})},
 			Send: true,
 		}
 	}
@@ -728,9 +729,9 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		return
 	}
 
-	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData("Готово", rb.ID.Hex())}}
-	forDonorMsg := createScreen(u, "Отлично. Долг для "+userLink(recipient)+" на сумму *"+moneySpace(sum)+"* ₽ возвращен.\n\n", &keyboard)
-	forRecipientMsg := NewMessage(int64(recipient.ID), recipient.DisplayName+"\nВам был возвращен долг на сумму *"+moneySpace(sum)+"* ₽ от "+userLink(donor)+"", keyboard)
+	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
+	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum)), &keyboard)
+	forRecipientMsg := NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", recipient.DisplayName, moneySpace(sum), userLink(donor)), keyboard)
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{forDonorMsg, forRecipientMsg},

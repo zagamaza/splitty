@@ -35,9 +35,12 @@ const (
 	statistics             api.Action = "statistics"
 	chooseOperations       api.Action = "choose_operations"
 	chooseDebts            api.Action = "choose_debts"
-	viewSetting            api.Action = "setting"
+	roomSetting            api.Action = "room_setting"
+	userSetting            api.Action = "user_setting"
 	archiveRoom            api.Action = "archive_room"
 	unArchiveRoom          api.Action = "unarchive_room"
+	chooseLanguage         api.Action = "choose_language"
+	selectedLanguage       api.Action = "selected_language"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
