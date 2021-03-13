@@ -98,7 +98,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	size := 5
 	skip := page * size
 
-	debts, err := bot.os.GetUserInvolvedDebts(ctx, userId, roomId)
+	debts, err := bot.os.GetUserDebts(ctx, userId, roomId)
 	if err != nil {
 		return
 	}
