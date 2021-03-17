@@ -219,7 +219,10 @@ func calculateDebt(users map[int]api.User, balance map[int]float64) *[]api.Debt 
 		sort.Slice(usrBl, func(i, j int) bool {
 			return usrBl[i].balance > usrBl[j].balance
 		})
-		debts = append(debts, repayment(usrBl[0], usrBl[len(usrBl)-1]))
+		debt := repayment(usrBl[0], usrBl[len(usrBl)-1])
+		if debt.Sum != 0 {
+			debts = append(debts, debt)
+		}
 	}
 	return &debts
 }

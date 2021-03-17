@@ -65,11 +65,12 @@ type Image struct {
 
 // User defines user info of the Message
 type User struct {
-	ID           int    `json:"id" bson:"_id"`
-	Username     string `json:"userName" bson:"user_name"`
-	DisplayName  string `json:"displayName" bson:"display_name"`
-	UserLang     string `json:"userLang" bson:"user_lang"`
-	SelectedLang string `json:"selectedLang" bson:"selected_lang"`
+	ID             int    `json:"id" bson:"_id"`
+	Username       string `json:"userName" bson:"user_name"`
+	DisplayName    string `json:"displayName" bson:"display_name"`
+	UserLang       string `json:"userLang" bson:"user_lang"`
+	SelectedLang   string `json:"selectedLang" bson:"selected_lang"`
+	NotificationOn bool   `json:"notificationOn" bson:"notification_on,omitempty"`
 }
 
 func DefineLang(u *User) string {

@@ -14,7 +14,8 @@ import (
 
 type UserService interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
-	UpsertLangUser(ctx context.Context, userId int, lang string) error
+	SetUserLang(ctx context.Context, userId int, lang string) error
+	SetNotificationUser(ctx context.Context, userId int, notification bool) error
 }
 
 type RoomService interface {
