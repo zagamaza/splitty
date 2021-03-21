@@ -22,6 +22,7 @@ const (
 	addRecipientOperation  api.Action = "add_recipient_operation"
 	deleteDonorOperation   api.Action = "delete_donor_operation"
 	donorOperation         api.Action = "donor_operation"
+	addedOperation         api.Action = "added_operation"
 	chooseRecipient        api.Action = "choose_recipient"
 	viewRoom               api.Action = "room"
 	viewStart              api.Action = "start"
@@ -40,7 +41,9 @@ const (
 	archiveRoom            api.Action = "archive_room"
 	unArchiveRoom          api.Action = "unarchive_room"
 	chooseLanguage         api.Action = "choose_language"
+	chooseNotification     api.Action = "choose_notification"
 	selectedLanguage       api.Action = "selected_language"
+	selectedNotification   api.Action = "selected_notification"
 )
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true

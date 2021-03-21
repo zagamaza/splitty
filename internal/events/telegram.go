@@ -71,6 +71,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 			upd.User, err = l.UserService.UpsertUser(ctx, *getFrom(upd))
 			if err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
+				return err
 			}
 
 			if err := l.populateBtn(ctx, upd); err != nil {
@@ -180,12 +181,7 @@ func transform(msg *tbapi.Message) *api.Message {
 	}
 
 	if msg.From != nil {
-		message.From = api.User{
-			ID:          msg.From.ID,
-			Username:    msg.From.UserName,
-			DisplayName: msg.From.FirstName + " " + msg.From.LastName,
-			UserLang:    msg.From.LanguageCode,
-		}
+		message.From = transformUser(msg.From)
 	}
 
 	switch {
@@ -212,13 +208,8 @@ func transformUpdate(u tbapi.Update) *api.Update {
 
 	if u.CallbackQuery != nil {
 		update.CallbackQuery = &api.CallbackQuery{
-			ID: u.CallbackQuery.ID,
-			From: api.User{
-				ID:          u.CallbackQuery.From.ID,
-				Username:    u.CallbackQuery.From.UserName,
-				DisplayName: u.CallbackQuery.From.FirstName + " " + u.CallbackQuery.From.LastName,
-				UserLang:    u.CallbackQuery.From.LanguageCode,
-			},
+			ID:              u.CallbackQuery.ID,
+			From:            transformUser(u.CallbackQuery.From),
 			Message:         transform(u.CallbackQuery.Message),
 			InlineMessageID: u.CallbackQuery.InlineMessageID,
 			Data:            u.CallbackQuery.Data,
@@ -231,12 +222,7 @@ func transformUpdate(u tbapi.Update) *api.Update {
 			ID:     i.ID,
 			Query:  i.Query,
 			Offset: i.Offset,
-			From: api.User{
-				ID:          i.From.ID,
-				Username:    i.From.UserName,
-				DisplayName: i.From.FirstName + " " + i.From.LastName,
-				UserLang:    i.From.LanguageCode,
-			},
+			From:   transformUser(i.From),
 		}
 	}
 
@@ -248,6 +234,16 @@ func transformUpdate(u tbapi.Update) *api.Update {
 		update.Message = transform(u.Message)
 	}
 	return update
+}
+
+func transformUser(i *tbapi.User) api.User {
+	return api.User{
+		ID:             i.ID,
+		Username:       i.UserName,
+		DisplayName:    i.FirstName + " " + i.LastName,
+		UserLang:       i.LanguageCode,
+		NotificationOn: false,
+	}
 }
 
 func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {

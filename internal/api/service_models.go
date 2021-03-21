@@ -20,13 +20,14 @@ type RoomStatesUsers struct {
 }
 
 type Operation struct {
-	ID              primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Description     string             `json:"description" bson:"description"`
-	Donor           *User              `json:"donor" bson:"donor"`
-	Recipients      *[]User            `json:"recipients" bson:"recipients"`
-	IsDebtRepayment bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
-	Sum             int                `json:"sum" bson:"sum"`
-	CreateAt        time.Time          `json:"createAt" bson:"create_at"`
+	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Description      string             `json:"description" bson:"description"`
+	Donor            *User              `json:"donor" bson:"donor"`
+	Recipients       *[]User            `json:"recipients" bson:"recipients"`
+	IsDebtRepayment  bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
+	Sum              int                `json:"sum" bson:"sum"`
+	NotificationSent []int              `json:"notificationSent" bson:"notification_sent,omitempty"`
+	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
 }
 
 type Debt struct {

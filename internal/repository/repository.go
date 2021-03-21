@@ -13,7 +13,8 @@ import (
 
 type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
-	UpsertLangUser(ctx context.Context, userId int, lang string) error
+	SetUserLang(ctx context.Context, userId int, lang string) error
+	SetNotificationUser(ctx context.Context, userId int, notification bool) error
 	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
@@ -250,10 +251,21 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.U
 	return r.FindById(ctx, u.ID)
 }
 
-func (r MongoUserRepository) UpsertLangUser(ctx context.Context, userId int, lang string) error {
+func (r MongoUserRepository) SetUserLang(ctx context.Context, userId int, lang string) error {
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
 	update := bson.D{{"$set", bson.M{"selected_lang": lang}}}
+	_, err := r.col.UpdateOne(ctx, f, update, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r MongoUserRepository) SetNotificationUser(ctx context.Context, userId int, notification bool) error {
+	opts := options.Update().SetUpsert(true)
+	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
+	update := bson.D{{"$set", bson.M{"notification": notification}}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return err

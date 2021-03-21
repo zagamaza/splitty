@@ -138,18 +138,20 @@ func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	if u.Button.Action == selectedLanguage {
 		lang = u.Button.CallbackData.ExternalId
 		u.User.SelectedLang = lang
-		if err := bot.us.UpsertLangUser(ctx, u.User.ID, lang); err != nil {
+		if err := bot.us.SetUserLang(ctx, u.User.ID, lang); err != nil {
 			log.Error().Err(err).Msg("upsert lang failed btn failed")
 		}
 	}
 	langBtn := api.NewButton(chooseLanguage, new(api.CallbackData))
+	notificationBtn := api.NewButton(chooseNotification, new(api.CallbackData))
 	backBtn := api.NewButton(viewStart, new(api.CallbackData))
-	if _, err := bot.bs.SaveAll(ctx, langBtn, backBtn); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, langBtn, notificationBtn, backBtn); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 	screen := createScreen(u, I18n(u.User, "scrn_user_setting"), &[][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_language", bot.defineFlag(lang)), langBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_notification", bot.defineNotification(u.User)), notificationBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
 	})
 	return api.TelegramMessage{
@@ -163,6 +165,14 @@ func (bot UserSetting) defineFlag(lang string) string {
 		return "🇷🇺"
 	} else {
 		return "🇬🇧"
+	}
+}
+
+func (bot UserSetting) defineNotification(u *api.User) string {
+	if u.NotificationOn {
+		return "🔔"
+	} else {
+		return "🔕"
 	}
 }
 
@@ -204,5 +214,93 @@ func (bot *ChooseLanguage) OnMessage(ctx context.Context, u *api.Update) (respon
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
+	}
+}
+
+type ChooseNotification struct {
+	bs  ButtonService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewChooseNotification(bs ButtonService, css ChatStateService, cfg *Config) *ChooseNotification {
+	return &ChooseNotification{
+		bs:  bs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot ChooseNotification) HasReact(u *api.Update) bool {
+	return hasAction(u, chooseNotification) || hasAction(u, chooseNotification)
+}
+
+func (bot *ChooseNotification) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	turnBtn := api.NewButton(selectedNotification, &api.CallbackData{})
+	backBtn := api.NewButton(userSetting, new(api.CallbackData))
+
+	if _, err := bot.bs.SaveAll(ctx, turnBtn, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+
+	text := I18n(u.User, "scrn_choose_notification", bot.defineSwitcher(u.User))
+	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(bot.defineBtnSwitcher(u.User), turnBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	})
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+func (bot ChooseNotification) defineSwitcher(u *api.User) string {
+	if u.NotificationOn {
+		return I18n(u, "msg_on")
+	} else {
+		return I18n(u, "msg_off")
+	}
+}
+
+func (bot ChooseNotification) defineBtnSwitcher(u *api.User) string {
+	if !u.NotificationOn {
+		return I18n(u, "btn_on")
+	} else {
+		return I18n(u, "btn_off")
+	}
+}
+
+type SelectedNotification struct {
+	bs  ButtonService
+	us  UserService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewSelectedNotification(bs ButtonService, us UserService, css ChatStateService, cfg *Config) *SelectedNotification {
+	return &SelectedNotification{
+		bs:  bs,
+		us:  us,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot SelectedNotification) HasReact(u *api.Update) bool {
+	return hasAction(u, selectedNotification)
+}
+
+func (bot *SelectedNotification) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	u.User.NotificationOn = !u.User.NotificationOn
+	if err := bot.us.SetNotificationUser(ctx, u.User.ID, u.User.NotificationOn); err != nil {
+		log.Error().Err(err).Msg("")
+	}
+
+	u.Button = api.NewButton(userSetting, u.Button.CallbackData)
+	return api.TelegramMessage{
+		Send:     true,
+		Redirect: u,
 	}
 }

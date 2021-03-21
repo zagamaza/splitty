@@ -59,6 +59,9 @@ var bots = wire.NewSet(
 	bot.NewDebt,
 	bot.NewUserSetting,
 	bot.NewChooseLanguage,
+	bot.NewOperationAdded,
+	bot.NewChooseNotification,
+	bot.NewSelectedNotification,
 )
 
 func ProvideBotList(
@@ -89,7 +92,10 @@ func ProvideBotList(
 	b26 *bot.Debt,
 	b27 *bot.UserSetting,
 	b28 *bot.ChooseLanguage,
+	b29 *bot.OperationAdded,
+	b30 *bot.ChooseNotification,
+	b31 *bot.SelectedNotification,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31}
 }
