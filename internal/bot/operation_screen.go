@@ -577,7 +577,8 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 	}
 }
 
-type WantRecepientOperation struct {
+//WantReturnDebt screen for debt returning
+type WantReturnDebt struct {
 	css ChatStateService
 	bs  ButtonService
 	os  OperationService
@@ -585,9 +586,8 @@ type WantRecepientOperation struct {
 	cfg *Config
 }
 
-// NewStackOverflow makes a bot for SO
-func NewWantRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *WantRecepientOperation {
-	return &WantRecepientOperation{
+func NewWantReturnDebt(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *WantReturnDebt {
+	return &WantReturnDebt{
 		css: s,
 		bs:  bs,
 		os:  os,
@@ -596,76 +596,66 @@ func NewWantRecepientOperation(s ChatStateService, bs ButtonService, os Operatio
 	}
 }
 
-// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
-func (s WantRecepientOperation) HasReact(u *api.Update) bool {
-	if u.Button == nil {
-		return false
-	}
-	return u.Button.Action == wantRecipientOperation
+func (s WantReturnDebt) HasReact(u *api.Update) bool {
+	return hasAction(u, wantReturnDebt)
 }
 
 // OnMessage returns one entry
-func (s WantRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
-	if err != nil {
-		log.Error().Err(err).Msg("get room failed")
-		return
-	}
-	userId := getFrom(u).ID
-	debts, err := s.os.GetUserDebts(ctx, userId, room.ID.Hex())
-	if err != nil {
+func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+	lenderUserId := u.Button.CallbackData.UserId
+
+	debt, err := s.os.GetUserDebt(ctx, u.User.ID, lenderUserId, roomId)
+	if err != nil || debt == nil {
 		log.Error().Err(err).Msg("get user debts failed")
 		return
 	}
-	if len(*debts) < 1 {
-		callback := createCallback(u, I18n(u.User, "msg_have_not_user_debts"), true)
-		return api.TelegramMessage{
-			CallbackConfig: callback,
-			Send:           true,
-		}
-	}
-
-	var buttons []*api.Button
-	var tgButtons []tgbotapi.InlineKeyboardButton
-	for _, v := range *debts {
-		b := &api.Button{ID: primitive.NewObjectID(),
-			Action:       chooseRecipient,
-			Text:         emoji.Sprintf("%d ₽➡️%s", v.Sum, v.Lender.DisplayName),
-			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.Lender.ID}}
-		buttons = append(buttons, b)
-		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()))
-	}
-
-	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
-	buttons = append(buttons, rb)
-
-	if _, err = s.bs.SaveAll(ctx, buttons...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+	debtReturnedBtn := api.NewButton(debtReturned, &api.CallbackData{RoomId: roomId, UserId: lenderUserId, ExternalId: strconv.Itoa(debt.Sum)})
+	setSumBtn := api.NewButton(setDebtSum, &api.CallbackData{RoomId: roomId, UserId: lenderUserId})
+	cancelBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
+	_, err = s.bs.SaveAll(ctx, debtReturnedBtn, setSumBtn, cancelBtn)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
-	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
-	keyboardButtons = append(keyboardButtons, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())})
-
-	text := I18n(u.User, "scrn_choose_person")
+	text := I18n(u.User, "scrn_debt_repayment")
+	text += I18n(u.User, "scrn_debt_returning", userLink(debt.Lender), moneySpace(debt.Sum))
 	text += I18n(u.User, "scrn_send_message_choose_user")
-	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboardButtons)},
-		Send:      true,
+
+	msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debt_sum_return", moneySpace(debt.Sum)), debtReturnedBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debt_custom_sum_return"), setSumBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex())}})
+	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
+		Send: true,
 	}
 }
 
-func (s WantRecepientOperation) defineRecipients(userId int, room *api.Room) map[int]api.User {
-	donors := make(map[int]api.User)
-	for _, o := range *room.Operations {
-		for _, u := range *o.Recipients {
-			if u.ID == userId && o.Donor.ID != userId {
-				donors[userId] = *o.Donor
-			}
-		}
-	}
-	return donors
+//DebtReturned for redirect on the AddRecepientOperation bot
+type DebtReturned struct {
+}
 
+// NewStackOverflow makes a bot for SO
+func NewDebtReturned() *DebtReturned {
+	return &DebtReturned{}
+}
+
+func (s DebtReturned) HasReact(u *api.Update) bool {
+	return hasAction(u, debtReturned)
+}
+
+// OnMessage returns one entry
+func (s DebtReturned) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	u.ChatState = &api.ChatState{
+		UserId:       u.User.ID,
+		Action:       addRecipientOperation,
+		CallbackData: &api.CallbackData{UserId: u.Button.CallbackData.UserId, RoomId: u.Button.CallbackData.RoomId}}
+	u.Message = &api.Message{Text: u.Button.CallbackData.ExternalId, Chat: &api.Chat{Type: "private"}}
+	return api.TelegramMessage{
+		Send:     true,
+		Redirect: u,
+	}
 }
 
 type ChooseRecepientOperation struct {
@@ -689,10 +679,7 @@ func NewChooseRecepientOperation(s ChatStateService, bs ButtonService, os Operat
 
 // ReactOn keys
 func (s ChooseRecepientOperation) HasReact(u *api.Update) bool {
-	if u.Button == nil {
-		return false
-	}
-	return u.Button.Action == chooseRecipient
+	return hasAction(u, setDebtSum)
 }
 
 // OnMessage returns one entry
@@ -706,7 +693,9 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		return
 	}
 
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addRecipientOperation, CallbackData: &api.CallbackData{RoomId: roomId, UserId: lenderUserId}}
+	cs := &api.ChatState{UserId: int(getChatID(u)),
+		Action:       addRecipientOperation,
+		CallbackData: &api.CallbackData{RoomId: roomId, UserId: lenderUserId}}
 	err = s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
@@ -729,6 +718,7 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 	}
 }
 
+//AddRecepientOperation screen for debt returned or screen with wrong message
 type AddRecepientOperation struct {
 	css ChatStateService
 	bs  ButtonService
@@ -738,7 +728,6 @@ type AddRecepientOperation struct {
 	cfg *Config
 }
 
-// NewStackOverflow makes a bot for SO
 func NewAddRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, us UserService, rs RoomService, cfg *Config) *AddRecepientOperation {
 	return &AddRecepientOperation{
 		css: s,

@@ -116,7 +116,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 		debt := (*debts)[i]
 		var dbtB *api.Button
 		if debt.Debtor.ID == userId {
-			dbtB = api.NewButton(chooseRecipient, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
+			dbtB = api.NewButton(wantReturnDebt, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
 		} else {
 			dbtB = api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
@@ -193,7 +193,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 		debt := (*debts)[i]
 		var dbtB *api.Button
 		if debt.Debtor.ID == userId {
-			dbtB = api.NewButton(chooseRecipient, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
+			dbtB = api.NewButton(wantReturnDebt, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
 		} else {
 			dbtB = api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
