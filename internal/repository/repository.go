@@ -11,6 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const descParameter = -1
+const ascParameter = 1
+
 type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
@@ -156,7 +159,7 @@ func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, userId int)
 	cur, err := rr.col.Find(ctx, bson.M{
 		"users._id":            bson.M{"$eq": userId},
 		"room_states.archived": bson.M{"$ne": userId},
-	})
+	}, getOrderOptions("create_at", descParameter))
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +175,7 @@ func (rr MongoRoomRepository) FindArchivedRoomsByUserId(ctx context.Context, use
 	cur, err := rr.col.Find(ctx, bson.M{
 		"users._id":            bson.M{"$eq": userId},
 		"room_states.archived": bson.M{"$eq": userId},
-	})
+	}, getOrderOptions("create_at", descParameter))
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +192,7 @@ func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId in
 		"users":                bson.M{"$elemMatch": bson.M{"_id": userId}},
 		"name":                 bson.M{"$regex": ".*" + name + ".*"},
 		"room_states.archived": bson.M{"$ne": userId},
-	})
+	}, getOrderOptions("create_at", descParameter))
 	if err != nil {
 		return nil, err
 	}
@@ -198,6 +201,12 @@ func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId in
 		return nil, err
 	}
 	return &m, nil
+}
+
+func getOrderOptions(field string, orderParameter int) *options.FindOptions {
+	findOptions := options.Find()
+	findOptions.SetSort(bson.D{{field, orderParameter}})
+	return findOptions
 }
 
 func (rr MongoRoomRepository) UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error {
