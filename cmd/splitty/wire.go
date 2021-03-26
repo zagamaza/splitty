@@ -45,7 +45,7 @@ var bots = wire.NewSet(
 	bot.NewViewAllOperations,
 	bot.NewAllRoom,
 	bot.NewChooseRecepientOperation,
-	bot.NewWantRecepientOperation,
+	bot.NewWantReturnDebt,
 	bot.NewAddRecepientOperation,
 	bot.NewViewUserDebts,
 	bot.NewViewAllDebts,
@@ -62,6 +62,7 @@ var bots = wire.NewSet(
 	bot.NewOperationAdded,
 	bot.NewChooseNotification,
 	bot.NewSelectedNotification,
+	bot.NewDebtReturned,
 )
 
 func ProvideBotList(
@@ -79,7 +80,7 @@ func ProvideBotList(
 	b13 *bot.ViewAllOperations,
 	b14 *bot.AllRoom,
 	b15 *bot.ChooseRecepientOperation,
-	b16 *bot.WantRecepientOperation,
+	b16 *bot.WantReturnDebt,
 	b17 *bot.AddRecepientOperation,
 	b18 *bot.ViewUserDebts,
 	b19 *bot.ViewAllDebts,
@@ -95,7 +96,8 @@ func ProvideBotList(
 	b29 *bot.OperationAdded,
 	b30 *bot.ChooseNotification,
 	b31 *bot.SelectedNotification,
+	b32 *bot.DebtReturned,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32}
 }
