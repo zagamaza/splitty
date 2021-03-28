@@ -274,7 +274,7 @@ func (r MongoUserRepository) SetUserLang(ctx context.Context, userId int, lang s
 func (r MongoUserRepository) SetNotificationUser(ctx context.Context, userId int, notification bool) error {
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
-	update := bson.D{{"$set", bson.M{"notification": notification}}}
+	update := bson.D{{"$set", bson.M{"notification_on": notification}}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return err

@@ -26,7 +26,7 @@ type Operation struct {
 	Recipients       *[]User            `json:"recipients" bson:"recipients"`
 	IsDebtRepayment  bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
 	Sum              int                `json:"sum" bson:"sum"`
-	NotificationSent []int              `json:"notificationSent" bson:"notification_sent,omitempty"`
+	NotificationSent []int              `json:"notificationSent" bson:"notification_sent"`
 	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
 }
 
