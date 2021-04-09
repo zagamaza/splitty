@@ -226,6 +226,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		Recipients:       room.Members,
 		CreateAt:         time.Now(),
 		NotificationSent: []int{},
+		Files:            []api.File{},
 	}
 	if err = s.os.UpsertOperation(ctx, operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
@@ -236,7 +237,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	var tgButtons []tgbotapi.InlineKeyboardButton
 	for _, v := range *room.Members {
 		b := &api.Button{ID: primitive.NewObjectID(),
-			Action:       donorOperation,
+			Action:       editDonorOperation,
 			Text:         setSmile(room.Members, v.ID) + v.DisplayName,
 			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.ID, OperationId: operation.ID}}
 		buttons = append(buttons, b)
@@ -252,10 +253,10 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		return
 	}
 
-	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
+	keyboardButtons := optimizeKeyboardButtons(tgButtons)
 	keyboardButtons = append(keyboardButtons,
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), db.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), db.ID.Hex())})
 
 	text := I18n(u.User, "scrn_operation_added", purchaseText, moneySpace(sum))
 	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
@@ -265,21 +266,6 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
 		Send:      true,
 	}
-}
-
-func splitKeyboardButtons(buttons []tgbotapi.InlineKeyboardButton, btnCountInLine int) [][]tgbotapi.InlineKeyboardButton {
-	var keyboard [][]tgbotapi.InlineKeyboardButton
-	var keyboardLine []tgbotapi.InlineKeyboardButton
-	for i, v := range buttons {
-		if len(keyboardLine) < btnCountInLine {
-			keyboardLine = append(keyboardLine, v)
-		}
-		if len(keyboardLine) == btnCountInLine || i == len(buttons)-1 {
-			keyboard = append(keyboard, keyboardLine)
-			keyboardLine = nil
-		}
-	}
-	return keyboard
 }
 
 func (s AddDonorOperation) defineText(text string) string {
@@ -302,7 +288,7 @@ func defineSum(text string) (int, error) {
 }
 
 // Operation show screen with donar/recepient buttons
-type DonorOperation struct {
+type EditDonorOperation struct {
 	os  OperationService
 	bs  ButtonService
 	rs  RoomService
@@ -310,8 +296,8 @@ type DonorOperation struct {
 }
 
 // NewStackOverflow makes a bot for SO
-func NewDonorOperation(bs ButtonService, os OperationService, rs RoomService, cfg *Config) *DonorOperation {
-	return &DonorOperation{
+func NewEditDonorOperation(bs ButtonService, os OperationService, rs RoomService, cfg *Config) *EditDonorOperation {
+	return &EditDonorOperation{
 		os:  os,
 		bs:  bs,
 		rs:  rs,
@@ -320,15 +306,12 @@ func NewDonorOperation(bs ButtonService, os OperationService, rs RoomService, cf
 }
 
 // ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
-func (s DonorOperation) HasReact(u *api.Update) bool {
-	if u.Button == nil {
-		return false
-	}
-	return u.Button.Action == donorOperation
+func (s EditDonorOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, editDonorOperation)
 }
 
 // OnMessage returns one entry
-func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
 	if err != nil {
 		log.Error().Err(err).Msg("get room failed")
@@ -339,28 +322,6 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	for _, o := range *room.Operations {
 		if u.Button.CallbackData.OperationId == o.ID {
 			operation = o
-		}
-	}
-
-	//if user not created operation we not mast show other buttons
-	if operation.Donor.ID != getFrom(u).ID {
-		cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
-		_, err = s.bs.Save(ctx, cb)
-		if err != nil {
-			log.Error().Err(err).Msg("create btn failed")
-			return
-		}
-		text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum))
-		text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
-		text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
-		for _, v := range *operation.Recipients {
-			text += "- " + userLink(&v) + "\n"
-		}
-		msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), cb.ID.Hex())}})
-
-		return api.TelegramMessage{
-			Chattable: []tgbotapi.Chattable{msg},
-			Send:      true,
 		}
 	}
 
@@ -383,29 +344,32 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	var tgButtons []tgbotapi.InlineKeyboardButton
 	for _, v := range *room.Members {
 		b := &api.Button{ID: primitive.NewObjectID(),
-			Action:       donorOperation,
+			Action:       editDonorOperation,
 			Text:         setSmile(operation.Recipients, v.ID) + v.DisplayName,
 			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.ID, OperationId: operation.ID}}
 		buttons = append(buttons, b)
 		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()))
 	}
 
-	rb := api.NewButton(addedOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
-	ob := api.NewButton(deleteDonorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
-	buttons = append(buttons, rb, ob)
+	doneBtn := api.NewButton(addedOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
+	deleteBtn := api.NewButton(deleteDonorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
+	addFileBtn := api.NewButton(wantAddFileToOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
+	buttons = append(buttons, doneBtn, deleteBtn, addFileBtn)
+
+	keyboardButtons := optimizeKeyboardButtons(tgButtons)
+	keyboardButtons = append(keyboardButtons,
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_add_file"), addFileBtn.ID.Hex())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), deleteBtn.ID.Hex())},
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("🏁 "+I18n(u.User, "btn_done"), doneBtn.ID.Hex())})
 
 	if _, err = s.bs.SaveAll(ctx, buttons...); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
 		return
 	}
 
-	keyboardButtons := splitKeyboardButtons(tgButtons, 2)
-	keyboardButtons = append(keyboardButtons,
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())})
-
 	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum))
-	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
+	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n"
+	text += s.defineFileMessage(u.User, operation) + "\n"
 	text += I18n(u.User, "scrn_mark_members")
 	text += I18n(u.User, "scrn_take_part")
 	return api.TelegramMessage{
@@ -414,7 +378,7 @@ func (s DonorOperation) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 }
 
-func (s DonorOperation) addOrDeleteRecipient(recipients *[]api.User, members *[]api.User, userId int) []api.User {
+func (s EditDonorOperation) addOrDeleteRecipient(recipients *[]api.User, members *[]api.User, userId int) []api.User {
 	if containsUserId(recipients, userId) {
 		return deleteUser(*recipients, userId)
 	} else {
@@ -425,6 +389,17 @@ func (s DonorOperation) addOrDeleteRecipient(recipients *[]api.User, members *[]
 		}
 	}
 	return *recipients
+}
+
+func (s EditDonorOperation) defineFileMessage(user *api.User, operation api.Operation) string {
+	if len(operation.Files) > 0 {
+		if operation.Files[0].Type == image {
+			return I18n(user, "scrn_attach_photo")
+		} else if operation.Files[0].Type == document {
+			return I18n(user, "scrn_attach_file")
+		}
+	}
+	return ""
 }
 
 func setSmile(users *[]api.User, id int) string {
@@ -529,6 +504,97 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 }
 
 // Operation show screen with donar/recepient buttons
+type ViewDonorOperation struct {
+	os  OperationService
+	bs  ButtonService
+	rs  RoomService
+	cfg *Config
+}
+
+// NewViewDonorOperation makes a bot for SO
+func NewViewDonorOperation(bs ButtonService, os OperationService, rs RoomService, cfg *Config) *ViewDonorOperation {
+	return &ViewDonorOperation{
+		os:  os,
+		bs:  bs,
+		rs:  rs,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
+func (s ViewDonorOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, donorOperation)
+}
+
+// ViewDonorOperation only view operation information
+func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+
+	var operation api.Operation
+	for _, o := range *room.Operations {
+		if u.Button.CallbackData.OperationId == o.ID {
+			operation = o
+		}
+	}
+	var btns []*api.Button
+	var viewFileBtn *api.Button
+	if len(operation.Files) > 0 {
+		viewFileBtn = api.NewButton(viewFileOperation, u.Button.CallbackData)
+		btns = append(btns, viewFileBtn)
+	}
+	var editBtn *api.Button
+	if operation.Donor.ID == getFrom(u).ID {
+		editBtn = api.NewButton(editDonorOperation, u.Button.CallbackData)
+		btns = append(btns, editBtn)
+	}
+
+	cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
+	btns = append(btns, cb)
+	_, err = s.bs.SaveAll(ctx, btns...)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum))
+	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n"
+	text += s.defineFileMessage(u.User, operation) + "\n"
+	text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
+	for _, v := range *operation.Recipients {
+		text += "- " + userLink(&v) + "\n"
+	}
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	if viewFileBtn != nil {
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_view_file"), viewFileBtn.ID.Hex())})
+	}
+	if editBtn != nil {
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_edit_operation"), editBtn.ID.Hex())})
+	}
+	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("🏁 "+I18n(u.User, "btn_done"), cb.ID.Hex())})
+	msg := createScreen(u, text, &keyboard)
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{msg},
+		Send:      true,
+	}
+
+}
+
+func (s ViewDonorOperation) defineFileMessage(user *api.User, operation api.Operation) string {
+	if len(operation.Files) > 0 {
+		if operation.Files[0].Type == image {
+			return I18n(user, "scrn_attach_photo")
+		} else if operation.Files[0].Type == document {
+			return I18n(user, "scrn_attach_file")
+		}
+	}
+	return ""
+}
+
+// Operation show screen with donar/recepient buttons
 type DeleteDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService
@@ -561,19 +627,186 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 		return
 	}
 
-	rb := &api.Button{ID: primitive.NewObjectID(), Action: viewAllOperations, CallbackData: &api.CallbackData{RoomId: u.Button.CallbackData.RoomId}}
-
+	rb := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
 	if _, err := s.bs.SaveAll(ctx, rb); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
 		return
 	}
 
+	keyboard := &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{createScreen(u,
-			I18n(u.User, "scrn_operation_deleted"),
-			&[][]tgbotapi.InlineKeyboardButton{
-				{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}})},
-		Send: true,
+		Chattable: []tgbotapi.Chattable{createScreen(u, I18n(u.User, "scrn_operation_deleted"), keyboard)},
+		Send:      true,
+	}
+}
+
+// WantAddFileToOperation screen with message please send me file for add to operation
+type WantAddFileToOperation struct {
+	css ChatStateService
+	bs  ButtonService
+	rs  RoomService
+	os  OperationService
+	cfg *Config
+}
+
+func NewWantAddFileToOperation(s ChatStateService, bs ButtonService, rs RoomService, os OperationService, cfg *Config) *WantAddFileToOperation {
+	return &WantAddFileToOperation{
+		css: s,
+		bs:  bs,
+		rs:  rs,
+		os:  os,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
+func (s WantAddFileToOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, wantAddFileToOperation)
+}
+
+// OnMessage returns one entry
+func (s WantAddFileToOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	cancelBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
+	_, err := s.bs.SaveAll(ctx, cancelBtn)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+
+	cs := &api.ChatState{UserId: u.User.ID,
+		Action:       addFileToOperation,
+		CallbackData: &api.CallbackData{RoomId: u.Button.CallbackData.RoomId, OperationId: u.Button.CallbackData.OperationId}}
+	err = s.css.Save(ctx, cs)
+	if err != nil {
+		log.Error().Err(err).Msg("create chat state failed")
+		return
+	}
+
+	keyboard := &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex())}}
+	msg := createScreen(u, I18n(u.User, "scrn_send_file_for_opn"), keyboard)
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{msg},
+		Send:      true,
+	}
+}
+
+// AddFileToOperation screen with save file and redirect to donor operation
+type AddFileToOperation struct {
+	css ChatStateService
+	bs  ButtonService
+	rs  RoomService
+	os  OperationService
+	cfg *Config
+}
+
+// NewStackOverflow makes a bot for SO
+func NewAddFileToOperation(s ChatStateService, bs ButtonService, rs RoomService, os OperationService, cfg *Config) *AddFileToOperation {
+	return &AddFileToOperation{
+		css: s,
+		bs:  bs,
+		rs:  rs,
+		os:  os,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
+func (s AddFileToOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, addFileToOperation) && u.Message != nil && (u.Message.Document != nil || u.Message.Image != nil)
+}
+
+// OnMessage returns one entry
+func (s AddFileToOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := s.rs.FindById(ctx, u.ChatState.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	var operation api.Operation
+	for _, o := range *room.Operations {
+		if u.ChatState.CallbackData.OperationId == o.ID {
+			operation = o
+		}
+	}
+	operation.Files = []api.File{}
+	if u.Message.Image != nil {
+		operation.Files = append(operation.Files, api.File{Type: image, FileId: u.Message.Image.FileID})
+	} else {
+		operation.Files = append(operation.Files, api.File{Type: document, FileId: u.Message.Document.FileID})
+	}
+
+	if err = s.os.UpsertOperation(ctx, &operation, room.ID.Hex()); err != nil {
+		log.Error().Err(err).Msg("upsert operation failed")
+		return
+	}
+	defer s.css.CleanChatState(ctx, u.ChatState)
+	u.Button = api.NewButton(editDonorOperation, u.ChatState.CallbackData)
+	u.ChatState = nil
+	return api.TelegramMessage{
+		Redirect: u,
+		Send:     true,
+	}
+}
+
+// AddFileToOperation screen with save file and redirect to donor operation
+type ViewFileOperation struct {
+	css ChatStateService
+	bs  ButtonService
+	rs  RoomService
+	os  OperationService
+	cfg *Config
+}
+
+// NewStackOverflow makes a bot for SO
+func NewViewFileOperation(s ChatStateService, bs ButtonService, rs RoomService, os OperationService, cfg *Config) *ViewFileOperation {
+	return &ViewFileOperation{
+		css: s,
+		bs:  bs,
+		rs:  rs,
+		os:  os,
+		cfg: cfg,
+	}
+}
+
+// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
+func (s ViewFileOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, viewFileOperation)
+}
+
+// OnMessage returns one entry
+func (s ViewFileOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	var operation api.Operation
+	for _, o := range *room.Operations {
+		if u.Button.CallbackData.OperationId == o.ID {
+			operation = o
+		}
+	}
+
+	var msg tgbotapi.Chattable
+	file := operation.Files[0]
+	chatId := getChatID(u)
+	text := I18n(u.User, "scrn_operation_info", operation.Description, room.Name)
+	if file.Type == document {
+		message := NewDocumentMessage(chatId, text, file.FileId)
+		message.ReplyToMessageID = getMessageId(u)
+		msg = message
+	} else if file.Type == image {
+		message := NewPhotoMessage(chatId, text, file.FileId)
+		message.ReplyToMessageID = getMessageId(u)
+		msg = message
+	}
+
+	u.Message = &api.Message{Chat: &api.Chat{ID: getChatID(u)}, From: *getFrom(u)}
+	u.Button.Action = donorOperation
+	u.CallbackQuery = nil
+	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
+		Send:     true,
+		Redirect: u,
 	}
 }
 

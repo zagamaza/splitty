@@ -41,6 +41,7 @@ type Message struct {
 	Text     string    `json:",omitempty"`
 	Entities *[]Entity `json:",omitempty"`
 	Image    *Image    `json:",omitempty"`
+	Document *Document `json:",omitempty"`
 }
 
 // Entity represents one special entity in a text message.
@@ -61,6 +62,13 @@ type Image struct {
 	Height   int
 	Caption  string    `json:",omitempty"`
 	Entities *[]Entity `json:",omitempty"`
+}
+
+// Documents represents image
+type Document struct {
+	FileID   string
+	FileSize int
+	MimeType string
 }
 
 // User defines user info of the Message

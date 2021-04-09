@@ -28,7 +28,14 @@ type Operation struct {
 	Sum              int                `json:"sum" bson:"sum"`
 	NotificationSent []int              `json:"notificationSent" bson:"notification_sent"`
 	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
+	Files            []File             `json:"documents" bson:"documents,omitempty"`
 }
+
+type File struct {
+	Type   FileType `json:"type" bson:"type"`
+	FileId string   `json:"fileId" bson:"file_id"`
+}
+type FileType string
 
 type Debt struct {
 	Lender *User `json:"lender" bson:"lender"`
