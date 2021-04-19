@@ -397,6 +397,8 @@ func (s EditDonorOperation) defineFileMessage(user *api.User, operation api.Oper
 			return I18n(user, "scrn_attach_photo")
 		} else if operation.Files[0].Type == document {
 			return I18n(user, "scrn_attach_file")
+		} else if operation.Files[0].Type == video {
+			return I18n(user, "scrn_attach_video")
 		}
 	}
 	return ""
@@ -589,6 +591,8 @@ func (s ViewDonorOperation) defineFileMessage(user *api.User, operation api.Oper
 			return I18n(user, "scrn_attach_photo")
 		} else if operation.Files[0].Type == document {
 			return I18n(user, "scrn_attach_file")
+		} else if operation.Files[0].Type == video {
+			return I18n(user, "scrn_attach_video")
 		}
 	}
 	return ""
@@ -712,7 +716,8 @@ func NewAddFileToOperation(s ChatStateService, bs ButtonService, rs RoomService,
 
 // ReactOn keys, example = /start operation600e68d102ddac9888d0193e
 func (s AddFileToOperation) HasReact(u *api.Update) bool {
-	return hasAction(u, addFileToOperation) && u.Message != nil && (u.Message.Document != nil || u.Message.Image != nil)
+	return hasAction(u, addFileToOperation) && u.Message != nil &&
+		(u.Message.Document != nil || u.Message.Image != nil || u.Message.Video != nil)
 }
 
 // OnMessage returns one entry
@@ -731,8 +736,10 @@ func (s AddFileToOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	operation.Files = []api.File{}
 	if u.Message.Image != nil {
 		operation.Files = append(operation.Files, api.File{Type: image, FileId: u.Message.Image.FileID})
-	} else {
+	} else if u.Message.Document != nil {
 		operation.Files = append(operation.Files, api.File{Type: document, FileId: u.Message.Document.FileID})
+	} else {
+		operation.Files = append(operation.Files, api.File{Type: video, FileId: u.Message.Video.FileID})
 	}
 
 	if err = s.os.UpsertOperation(ctx, &operation, room.ID.Hex()); err != nil {
@@ -797,6 +804,10 @@ func (s ViewFileOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		msg = message
 	} else if file.Type == image {
 		message := NewPhotoMessage(chatId, text, file.FileId)
+		message.ReplyToMessageID = getMessageId(u)
+		msg = message
+	} else if file.Type == video {
+		message := NewVideoMessage(chatId, text, file.FileId)
 		message.ReplyToMessageID = getMessageId(u)
 		msg = message
 	}

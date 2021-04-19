@@ -140,6 +140,9 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 
 	if len(resp.Chattable) > 0 {
 		for _, v := range resp.Chattable {
+			if v == nil {
+				continue
+			}
 			response, err := l.TbAPI.Send(v)
 			if err != nil {
 				return errors.Wrapf(err, "can't send message to telegram %v", v)
@@ -193,6 +196,13 @@ func transform(msg *tbapi.Message) *api.Message {
 			FileID:   msg.Document.FileID,
 			FileSize: msg.Document.FileSize,
 			MimeType: msg.Document.MimeType,
+		}
+
+	case msg.Video != nil:
+		message.Video = &api.Video{
+			FileID:   msg.Video.FileID,
+			FileSize: msg.Video.FileSize,
+			MimeType: msg.Video.MimeType,
 		}
 
 	case msg.Photo != nil && len(*msg.Photo) > 0:

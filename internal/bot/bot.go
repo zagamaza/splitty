@@ -53,6 +53,7 @@ const (
 
 const (
 	image    api.FileType = "image"
+	video    api.FileType = "video"
 	document api.FileType = "document"
 )
 

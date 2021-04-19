@@ -28,7 +28,7 @@ type Operation struct {
 	Sum              int                `json:"sum" bson:"sum"`
 	NotificationSent []int              `json:"notificationSent" bson:"notification_sent"`
 	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
-	Files            []File             `json:"documents" bson:"documents,omitempty"`
+	Files            []File             `json:"files" bson:"files,omitempty"`
 }
 
 type File struct {

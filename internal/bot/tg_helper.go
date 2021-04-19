@@ -93,6 +93,13 @@ func NewPhotoMessage(chatId int64, text string, fileId string) tgbotapi.PhotoCon
 	return imageMsg
 }
 
+func NewVideoMessage(chatId int64, text string, fileId string) tgbotapi.VideoConfig {
+	imageMsg := tgbotapi.NewVideoShare(chatId, fileId)
+	imageMsg.ParseMode = tgbotapi.ModeMarkdown
+	imageMsg.Caption = text
+	return imageMsg
+}
+
 func NewButtonSwitchCurrent(text, sw string) tgbotapi.InlineKeyboardButton {
 	return tgbotapi.InlineKeyboardButton{
 		Text:                         text,

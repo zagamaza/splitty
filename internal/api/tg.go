@@ -42,6 +42,7 @@ type Message struct {
 	Entities *[]Entity `json:",omitempty"`
 	Image    *Image    `json:",omitempty"`
 	Document *Document `json:",omitempty"`
+	Video    *Video    `json:",omitempty"`
 }
 
 // Entity represents one special entity in a text message.
@@ -66,6 +67,12 @@ type Image struct {
 
 // Documents represents image
 type Document struct {
+	FileID   string
+	FileSize int
+	MimeType string
+}
+
+type Video struct {
 	FileID   string
 	FileSize int
 	MimeType string
