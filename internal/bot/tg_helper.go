@@ -79,10 +79,25 @@ func NewMessage(chatId int64, text string, keyboard [][]tgbotapi.InlineKeyboardB
 	return tbMsg
 }
 
-func NewMessageWithoutBtn(chatId int64, text string) tgbotapi.MessageConfig {
-	tbMsg := tgbotapi.NewMessage(chatId, text)
-	tbMsg.ParseMode = tgbotapi.ModeMarkdown
-	return tbMsg
+func NewDocumentMessage(chatId int64, text string, fileId string) tgbotapi.DocumentConfig {
+	docMsd := tgbotapi.NewDocumentShare(chatId, fileId)
+	docMsd.ParseMode = tgbotapi.ModeMarkdown
+	docMsd.Caption = text
+	return docMsd
+}
+
+func NewPhotoMessage(chatId int64, text string, fileId string) tgbotapi.PhotoConfig {
+	imageMsg := tgbotapi.NewPhotoShare(chatId, fileId)
+	imageMsg.ParseMode = tgbotapi.ModeMarkdown
+	imageMsg.Caption = text
+	return imageMsg
+}
+
+func NewVideoMessage(chatId int64, text string, fileId string) tgbotapi.VideoConfig {
+	imageMsg := tgbotapi.NewVideoShare(chatId, fileId)
+	imageMsg.ParseMode = tgbotapi.ModeMarkdown
+	imageMsg.Caption = text
+	return imageMsg
 }
 
 func NewButtonSwitchCurrent(text, sw string) tgbotapi.InlineKeyboardButton {
@@ -121,8 +136,8 @@ func isInline(update *api.Update) bool {
 }
 
 func hasAction(update *api.Update, action api.Action) bool {
-	return update.Button != nil &&
-		update.Button.Action == action
+	return (update.Button != nil && update.Button.Action == action) ||
+		(update.ChatState != nil && update.ChatState.Action == action)
 }
 
 func hasMessage(update *api.Update) bool {
@@ -218,6 +233,32 @@ func containsInt(s []int, e int) bool {
 		}
 	}
 	return false
+}
+
+func splitKeyboardButtons(buttons []tgbotapi.InlineKeyboardButton, btnCountInLine int) [][]tgbotapi.InlineKeyboardButton {
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	var keyboardLine []tgbotapi.InlineKeyboardButton
+	for i, v := range buttons {
+		if len(keyboardLine) < btnCountInLine {
+			keyboardLine = append(keyboardLine, v)
+		}
+		if len(keyboardLine) == btnCountInLine || i == len(buttons)-1 {
+			keyboard = append(keyboard, keyboardLine)
+			keyboardLine = nil
+		}
+	}
+	return keyboard
+}
+
+func optimizeKeyboardButtons(buttons []tgbotapi.InlineKeyboardButton) [][]tgbotapi.InlineKeyboardButton {
+	switch {
+	case len(buttons) > 8 && len(buttons) <= 24:
+		return splitKeyboardButtons(buttons, 3)
+	case len(buttons) > 24:
+		return splitKeyboardButtons(buttons, 4)
+	default:
+		return splitKeyboardButtons(buttons, 2)
+	}
 }
 
 // I18n define text by user lang

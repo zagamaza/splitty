@@ -110,7 +110,7 @@ func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) err
 
 func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Update) error {
 	var userId int
-	if upd.Message != nil && upd.Message.Text != "" {
+	if upd.Message != nil {
 		userId = upd.Message.From.ID
 	} else if upd.CallbackQuery != nil && upd.CallbackQuery.Message != nil {
 		userId = upd.CallbackQuery.From.ID
@@ -140,9 +140,12 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 
 	if len(resp.Chattable) > 0 {
 		for _, v := range resp.Chattable {
+			if v == nil {
+				continue
+			}
 			response, err := l.TbAPI.Send(v)
 			if err != nil {
-				return errors.Wrapf(err, "can't send message to telegram %q", v)
+				return errors.Wrapf(err, "can't send message to telegram %v", v)
 			}
 			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
@@ -187,6 +190,20 @@ func transform(msg *tbapi.Message) *api.Message {
 	switch {
 	case msg.Entities != nil && len(*msg.Entities) > 0:
 		message.Entities = transformEntities(msg.Entities)
+
+	case msg.Document != nil:
+		message.Document = &api.Document{
+			FileID:   msg.Document.FileID,
+			FileSize: msg.Document.FileSize,
+			MimeType: msg.Document.MimeType,
+		}
+
+	case msg.Video != nil:
+		message.Video = &api.Video{
+			FileID:   msg.Video.FileID,
+			FileSize: msg.Video.FileSize,
+			MimeType: msg.Video.MimeType,
+		}
 
 	case msg.Photo != nil && len(*msg.Photo) > 0:
 		sizes := *msg.Photo
