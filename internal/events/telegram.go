@@ -2,35 +2,34 @@ package events
 
 import (
 	"context"
-	"encoding/json"
-	"log"
-	"sync"
-	"time"
-
+	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/bot"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
-
-	"splitty/internal/bot"
+	"github.com/rs/zerolog/log"
 )
 
-//go:generate mockery -inpkg -name tbAPI -case snake
-//go:generate mockery -inpkg -name msgLogger -case snake
+type ChatStateService interface {
+	FindByUserId(ctx context.Context, userId int) (*api.ChatState, error)
+}
+
+type ButtonService interface {
+	FindById(ctx context.Context, id string) (*api.Button, error)
+}
+
+type UserService interface {
+	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
+}
 
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
-	TbAPI        tbAPI
-	MsgLogger    msgLogger
-	Bots         bot.Interface
-	Debug        bool
-	IdleDuration time.Duration
-	SuperUsers   SuperUser
-	chatID       int64
-
-	msgs struct {
-		once sync.Once
-		ch   chan bot.Response
-	}
+	TbAPI            tbAPI
+	Bots             bot.Interface
+	ChatStateService ChatStateService
+	ButtonService    ButtonService
+	upds             chan tbapi.Update
+	UserService      UserService
 }
 
 type tbAPI interface {
@@ -40,25 +39,12 @@ type tbAPI interface {
 	UnpinChatMessage(config tbapi.UnpinChatMessageConfig) (tbapi.APIResponse, error)
 	GetChat(config tbapi.ChatConfig) (tbapi.Chat, error)
 	RestrictChatMember(config tbapi.RestrictChatMemberConfig) (tbapi.APIResponse, error)
-}
-
-type msgLogger interface {
-	Save(msg *bot.Message)
+	AnswerInlineQuery(config tbapi.InlineConfig) (tbapi.APIResponse, error)
+	AnswerCallbackQuery(config tbapi.CallbackConfig) (tbapi.APIResponse, error)
 }
 
 // Do process all events, blocked call
 func (l *TelegramListener) Do(ctx context.Context) (err error) {
-
-	//if l.chatID, err = l.getChatID(l.Group); err != nil {
-	//	return errors.Wrapf(err, "failed to get chat ID for group %q", l.Group)
-	//}
-
-	l.msgs.once.Do(func() {
-		l.msgs.ch = make(chan bot.Response, 100)
-		if l.IdleDuration == 0 {
-			l.IdleDuration = 30 * time.Second
-		}
-	})
 
 	u := tbapi.NewUpdate(0)
 	u.Timeout = 60
@@ -76,180 +62,222 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 		case update, ok := <-updates:
 
-			l.chatID = l.getChatID(update)
-
 			if !ok {
 				return errors.Errorf("telegram update chan closed")
 			}
 
-			if update.Message == nil {
-				log.Print("[DEBUG] empty message body")
-				continue
-			}
+			upd := transformUpdate(update)
 
-			msgJSON, err := json.Marshal(update.Message)
+			upd.User, err = l.UserService.UpsertUser(ctx, *getFrom(upd))
 			if err != nil {
-				log.Printf("[ERROR] failed to marshal update.Message to json: %v", err)
-				continue
-			}
-			log.Printf("[DEBUG] %s", string(msgJSON))
-
-			if update.Message.Chat == nil {
-				log.Print("[DEBUG] ignoring message not from chat")
-				continue
+				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
+				return err
 			}
 
-			fromChat := update.Message.Chat.ID
-
-			msg := l.transform(update.Message)
-			if fromChat == l.chatID {
-				l.MsgLogger.Save(msg) // save an incoming update to report
+			if err := l.populateBtn(ctx, upd); err != nil {
+				log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
 			}
 
-			log.Printf("[DEBUG] incoming msg: %+v", msg)
-
-			resp := l.Bots.OnMessage(*msg)
-
-			if err := l.sendBotResponse(resp, fromChat); err != nil {
-				log.Printf("[WARN] failed to respond on update, %v", err)
+			if err := l.populateChatState(ctx, upd); err != nil {
+				log.Error().Err(err).Stack().Msgf("failed to populateChatState")
 			}
 
-		case resp := <-l.msgs.ch: // publish messages from outside clients
-			if err := l.sendBotResponse(resp, l.chatID); err != nil {
-				log.Printf("[WARN] failed to respond on rtjc event, %v", err)
-			}
+			log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
 
-		case <-time.After(l.IdleDuration): // hit bots on idle timeout
-			resp := l.Bots.OnMessage(bot.Message{Text: "idle"})
-			if err := l.sendBotResponse(resp, l.chatID); err != nil {
-				log.Printf("[WARN] failed to respond on idle, %v", err)
-			}
+			l.processUpdate(ctx, upd)
 		}
 	}
 }
 
-// sendBotResponse sends bot's answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(resp bot.Response, chatID int64) error {
+func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
+	resp := l.Bots.OnMessage(ctx, upd)
+
+	if err := l.sendBotResponse(ctx, resp); err != nil {
+		log.Error().Err(err).Stack().Msgf("failed to respond on update")
+	}
+}
+
+func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) error {
+	if upd.CallbackQuery != nil {
+		btn, err := l.ButtonService.FindById(ctx, upd.CallbackQuery.Data)
+		if err != nil {
+			return errors.Wrapf(err, "failed to find Button by id %q", err)
+		}
+		upd.Button = btn
+	}
+	return nil
+}
+
+func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Update) error {
+	var userId int
+	if upd.Message != nil {
+		userId = upd.Message.From.ID
+	} else if upd.CallbackQuery != nil && upd.CallbackQuery.Message != nil {
+		userId = upd.CallbackQuery.From.ID
+	}
+
+	cs, err := l.ChatStateService.FindByUserId(ctx, userId)
+	if err != nil {
+		return errors.Wrapf(err, "failed to find ChatState by id %q", err)
+	}
+	upd.ChatState = cs
+	return nil
+}
+
+// sendBotResponse sends bot'service answer to tg channel and saves it to log
+func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) error {
 	if !resp.Send {
 		return nil
 	}
 
-	log.Printf("[DEBUG] bot response - %+v, pin: %t", resp.Text, resp.Pin)
-	tbMsg := tbapi.NewMessage(chatID, resp.Text)
-	tbMsg.ParseMode = tbapi.ModeMarkdown
-	tbMsg.DisableWebPagePreview = !resp.Preview
-
-	if len(resp.Button) != 0 {
-
-		markup := tbapi.NewInlineKeyboardMarkup(resp.Button)
-		tbMsg.ReplyMarkup = markup
-	}
-
-	res, err := l.TbAPI.Send(tbMsg)
-	if err != nil {
-		return errors.Wrapf(err, "can't send message to telegram %q", resp.Text)
-	}
-
-	l.saveBotMessage(&res, chatID)
-
-	if resp.Pin {
-		_, err = l.TbAPI.PinChatMessage(tbapi.PinChatMessageConfig{ChatID: chatID, MessageID: res.MessageID, DisableNotification: true})
+	if resp.InlineConfig != nil {
+		response, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
 		if err != nil {
-			return errors.Wrap(err, "can't pin message to telegram")
+			return errors.Wrapf(err, "can't send query to telegram %v", response)
+		}
+		log.Debug().Msgf("bot response - %q", resp.InlineConfig)
+	}
+
+	if len(resp.Chattable) > 0 {
+		for _, v := range resp.Chattable {
+			if v == nil {
+				continue
+			}
+			response, err := l.TbAPI.Send(v)
+			if err != nil {
+				return errors.Wrapf(err, "can't send message to telegram %v", v)
+			}
+			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
 	}
-
-	if resp.Unpin {
-		_, err = l.TbAPI.UnpinChatMessage(tbapi.UnpinChatMessageConfig{ChatID: chatID})
+	if resp.CallbackConfig != nil {
+		response, err := l.TbAPI.AnswerCallbackQuery(*resp.CallbackConfig)
 		if err != nil {
-			return errors.Wrap(err, "can't unpin message to telegram")
+			return errors.Wrapf(err, "can't send calback to telegram %v", resp.CallbackConfig)
 		}
+		log.Debug().Msgf("bot response - %+v", response)
 	}
-
-	return nil
-}
-
-// Submit message text to telegram's group
-func (l *TelegramListener) Submit(ctx context.Context, text string, pin bool) error {
-	l.msgs.once.Do(func() { l.msgs.ch = make(chan bot.Response, 100) })
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case l.msgs.ch <- bot.Response{Text: text, Pin: pin, Send: true, Preview: true}:
+	if resp.Redirect != nil {
+		if resp.Redirect.FromRedirect {
+			log.Error().Stack().Msg("recursive multiple redirection")
+		} else {
+			resp.Redirect.FromRedirect = true
+			l.processUpdate(ctx, resp.Redirect)
+		}
 	}
 	return nil
 }
 
-func (l *TelegramListener) getChatID(update tbapi.Update) int64 {
-	var chatId int64
-	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
-		chatId = update.CallbackQuery.Message.Chat.ID
+func transform(msg *tbapi.Message) *api.Message {
+	if msg == nil {
+		return nil
 	}
-	chatId = update.Message.Chat.ID
-	return chatId
-}
-
-func (l *TelegramListener) saveBotMessage(msg *tbapi.Message, fromChat int64) {
-	if fromChat != l.chatID {
-		return
-	}
-	l.MsgLogger.Save(l.transform(msg))
-}
-
-func (l *TelegramListener) transform(msg *tbapi.Message) *bot.Message {
-	message := bot.Message{
+	message := api.Message{
 		ID:   msg.MessageID,
 		Sent: msg.Time(),
 		Text: msg.Text,
 	}
 
-	if msg.Chat != nil {
-		message.ChatID = msg.Chat.ID
+	message.Chat = &api.Chat{
+		ID:   msg.Chat.ID,
+		Type: msg.Chat.Type,
 	}
 
 	if msg.From != nil {
-		message.From = bot.User{
-			ID:          msg.From.ID,
-			Username:    msg.From.UserName,
-			DisplayName: msg.From.FirstName + " " + msg.From.LastName,
-		}
+		message.From = transformUser(msg.From)
 	}
 
 	switch {
 	case msg.Entities != nil && len(*msg.Entities) > 0:
-		message.Entities = l.transformEntities(msg.Entities)
+		message.Entities = transformEntities(msg.Entities)
+
+	case msg.Document != nil:
+		message.Document = &api.Document{
+			FileID:   msg.Document.FileID,
+			FileSize: msg.Document.FileSize,
+			MimeType: msg.Document.MimeType,
+		}
+
+	case msg.Video != nil:
+		message.Video = &api.Video{
+			FileID:   msg.Video.FileID,
+			FileSize: msg.Video.FileSize,
+			MimeType: msg.Video.MimeType,
+		}
 
 	case msg.Photo != nil && len(*msg.Photo) > 0:
 		sizes := *msg.Photo
 		lastSize := sizes[len(sizes)-1]
-		message.Image = &bot.Image{
+		message.Image = &api.Image{
 			FileID:   lastSize.FileID,
 			Width:    lastSize.Width,
 			Height:   lastSize.Height,
 			Caption:  msg.Caption,
-			Entities: l.transformEntities(msg.CaptionEntities),
+			Entities: transformEntities(msg.CaptionEntities),
 		}
 	}
 
 	return &message
 }
 
-func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[]bot.Entity {
+func transformUpdate(u tbapi.Update) *api.Update {
+	update := &api.Update{}
+
+	if u.CallbackQuery != nil {
+		update.CallbackQuery = &api.CallbackQuery{
+			ID:              u.CallbackQuery.ID,
+			From:            transformUser(u.CallbackQuery.From),
+			Message:         transform(u.CallbackQuery.Message),
+			InlineMessageID: u.CallbackQuery.InlineMessageID,
+			Data:            u.CallbackQuery.Data,
+		}
+	}
+
+	if u.InlineQuery != nil {
+		i := u.InlineQuery
+		update.InlineQuery = &api.InlineQuery{
+			ID:     i.ID,
+			Query:  i.Query,
+			Offset: i.Offset,
+			From:   transformUser(i.From),
+		}
+	}
+
+	if u.EditedMessage != nil {
+		update.Message = transform(u.EditedMessage)
+	}
+
+	if u.Message != nil {
+		update.Message = transform(u.Message)
+	}
+	return update
+}
+
+func transformUser(i *tbapi.User) api.User {
+	return api.User{
+		ID:             i.ID,
+		Username:       i.UserName,
+		DisplayName:    i.FirstName + " " + i.LastName,
+		UserLang:       i.LanguageCode,
+		NotificationOn: false,
+	}
+}
+
+func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	if entities == nil || len(*entities) == 0 {
 		return nil
 	}
 
-	var result []bot.Entity
+	var result []api.Entity
 	for _, entity := range *entities {
-		e := bot.Entity{
+		e := api.Entity{
 			Type:   entity.Type,
 			Offset: entity.Offset,
 			Length: entity.Length,
 			URL:    entity.URL,
 		}
 		if entity.User != nil {
-			e.User = &bot.User{
+			e.User = &api.User{
 				ID:          entity.User.ID,
 				Username:    entity.User.UserName,
 				DisplayName: entity.User.FirstName + " " + entity.User.LastName,
@@ -259,4 +287,16 @@ func (l *TelegramListener) transformEntities(entities *[]tbapi.MessageEntity) *[
 	}
 
 	return &result
+}
+
+func getFrom(update *api.Update) *api.User {
+	var user api.User
+	if update.CallbackQuery != nil {
+		user = update.CallbackQuery.From
+	} else if update.Message != nil {
+		user = update.Message.From
+	} else {
+		user = update.InlineQuery.From
+	}
+	return &user
 }

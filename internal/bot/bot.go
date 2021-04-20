@@ -2,49 +2,65 @@ package bot
 
 import (
 	"context"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"log"
-	"net/http"
-	"sort"
-	"strings"
-	"sync"
-	"sync/atomic"
-	"time"
-
+	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-pkgz/syncs"
-	"github.com/pkg/errors"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/rs/zerolog/log"
+	"runtime/debug"
+	"strings"
 )
 
-//go:generate mockery -name HTTPClient -case snake
-//go:generate mockery -inpkg -name Interface -case snake
-//go:generate mockery -name SuperUser -case snake
+const start string = "/start"
 
-// genHelpMsg construct help message from bot's ReactOn
-func genHelpMsg(com []string, msg string) string {
-	return strings.Join(com, ", ") + " _– " + msg + "_\n"
-}
+//actions
+const (
+	joinRoom               api.Action = "join_room"
+	createRoom             api.Action = "create_room"
+	wantReturnDebt         api.Action = "want_return_debt"
+	wantDonorOperation     api.Action = "want_donor_operation"
+	setDebtSum             api.Action = "set_debt_sum"
+	debtReturned           api.Action = "debt_returned"
+	addDonorOperation      api.Action = "add_donor_operation"
+	addRecipientOperation  api.Action = "add_recipient_operation"
+	deleteDonorOperation   api.Action = "delete_donor_operation"
+	editDonorOperation     api.Action = "edit_donor_operation"
+	donorOperation         api.Action = "donor_operation"
+	addedOperation         api.Action = "added_operation"
+	addFileToOperation     api.Action = "add_file_to_operation"
+	wantAddFileToOperation api.Action = "want_add_file_to_operation"
+	viewFileOperation      api.Action = "view_file_operation"
+	viewRoom               api.Action = "room"
+	viewStart              api.Action = "start"
+	viewAllOperations      api.Action = "all_operations"
+	viewUserOperations     api.Action = "user_operations"
+	viewAllDebtOperations  api.Action = "all_dept_operations"
+	viewAllRooms           api.Action = "all_rooms"
+	viewArchivedRooms      api.Action = "archived_rooms"
+	viewUserDebts          api.Action = "user_debts"
+	viewAllDebts           api.Action = "all_debts"
+	statistics             api.Action = "statistics"
+	chooseOperations       api.Action = "choose_operations"
+	chooseDebts            api.Action = "choose_debts"
+	roomSetting            api.Action = "room_setting"
+	userSetting            api.Action = "user_setting"
+	archiveRoom            api.Action = "archive_room"
+	unArchiveRoom          api.Action = "unarchive_room"
+	chooseLanguage         api.Action = "choose_language"
+	chooseNotification     api.Action = "choose_notification"
+	selectedLanguage       api.Action = "selected_language"
+	selectedNotification   api.Action = "selected_notification"
+)
+
+const (
+	image    api.FileType = "image"
+	video    api.FileType = "video"
+	document api.FileType = "document"
+)
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
-	OnMessage(msg Message) (response Response)
-	ReactOn() []string
-	Help() string
-}
-
-// Response describes bot's answer on particular message
-type Response struct {
-	Text        string
-	Button      []tgbotapi.InlineKeyboardButton
-	Send        bool          // status
-	Pin         bool          // enable pin
-	Unpin       bool          // enable unpin
-	Preview     bool          // enable web preview
-	BanInterval time.Duration // bots banning user set the interval
-}
-
-// HTTPClient wrap http.Client to allow mocking
-type HTTPClient interface {
-	Do(req *http.Request) (*http.Response, error)
+	OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage)
+	HasReact(update *api.Update) bool
 }
 
 // SuperUser defines interface checking ig user name in su list
@@ -52,104 +68,24 @@ type SuperUser interface {
 	IsSuper(userName string) bool
 }
 
-// Message is primary record to pass data from/to bots
-type Message struct {
-	ID       int
-	From     User
-	ChatID   int64
-	Sent     time.Time
-	HTML     string    `json:",omitempty"`
-	Text     string    `json:",omitempty"`
-	Entities *[]Entity `json:",omitempty"`
-	Image    *Image    `json:",omitempty"`
-}
-
-// Entity represents one special entity in a text message.
-// For example, hashtags, usernames, URLs, etc.
-type Entity struct {
-	Type   string
-	Offset int
-	Length int
-	URL    string `json:",omitempty"` // For “text_link” only, url that will be opened after user taps on the text
-	User   *User  `json:",omitempty"` // For “text_mention” only, the mentioned user
-}
-
-// Image represents image
-type Image struct {
-	// FileID corresponds to Telegram file_id
-	FileID   string
-	Width    int
-	Height   int
-	Caption  string    `json:",omitempty"`
-	Entities *[]Entity `json:",omitempty"`
-}
-
-// User defines user info of the Message
-type User struct {
-	ID          int
-	Username    string
-	DisplayName string
-}
-
 // MultiBot combines many bots to one virtual
 type MultiBot []Interface
 
-// Help returns help message
-func (b MultiBot) Help() string {
-	sb := strings.Builder{}
-	for _, child := range b {
-		help := child.Help()
-		if help != "" {
-			// WriteString always returns nil err
-			if !strings.HasSuffix(help, "\n") {
-				help += "\n"
-			}
-			_, _ = sb.WriteString(help)
-		}
-	}
-	return sb.String()
-}
-
 // OnMessage pass msg to all bots and collects reposnses (combining all of them)
 //noinspection GoShadowedVar
-func (b MultiBot) OnMessage(msg Message) (response Response) {
-	if contains([]string{"help", "/help", "help!"}, msg.Text) {
-		return Response{
-			Text: b.Help(),
-			Send: true,
-		}
-	}
+func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage) {
 
-	resps := make(chan string)
+	resps := make(chan api.TelegramMessage)
 	btn := make(chan []tgbotapi.InlineKeyboardButton)
-	var pin, unpin int32
-	var banInterval time.Duration
-	var mutex = &sync.Mutex{}
 
-	var buttons []tgbotapi.InlineKeyboardButton
 	wg := syncs.NewSizedGroup(4)
 	for _, bot := range b {
 		bot := bot
 		wg.Go(func(ctx context.Context) {
-			if resp := bot.OnMessage(msg); resp.Send {
-				resps <- resp.Text
-
-				if len(resp.Button) != 0 {
-					buttons = resp.Button
-				}
-
-				if resp.Pin {
-					atomic.AddInt32(&pin, 1)
-				}
-				if resp.Unpin {
-					atomic.AddInt32(&unpin, 1)
-				}
-				if resp.BanInterval > 0 {
-					mutex.Lock()
-					if resp.BanInterval > banInterval {
-						banInterval = resp.BanInterval
-					}
-					mutex.Unlock()
+			defer handlePanic(bot)
+			if bot.HasReact(update) {
+				if resp := bot.OnMessage(ctx, update); resp.Send {
+					resps <- resp
 				}
 			}
 		})
@@ -161,33 +97,35 @@ func (b MultiBot) OnMessage(msg Message) (response Response) {
 		close(btn)
 	}()
 
-	var lines []string
+	message := &api.TelegramMessage{Chattable: []tgbotapi.Chattable{}}
 	for r := range resps {
-		log.Printf("[DEBUG] collect %q", r)
-		lines = append(lines, r)
+		log.Debug().Msgf("collect %v", r)
+		message.Chattable = append(message.Chattable, r.Chattable...)
+		message.InlineConfig = r.InlineConfig
+		message.CallbackConfig = r.CallbackConfig
+		message.Redirect = r.Redirect
+		message.Send = true
 	}
 
-	sort.Slice(lines, func(i, j int) bool {
-		return lines[i] < lines[j]
-	})
-
-	log.Printf("[DEBUG] answers %d, send %v", len(lines), len(lines) > 0)
-	return Response{
-		Text:        strings.Join(lines, "\n"),
-		Button:      buttons,
-		Send:        len(lines) > 0,
-		Pin:         atomic.LoadInt32(&pin) > 0,
-		Unpin:       atomic.LoadInt32(&unpin) > 0,
-		BanInterval: banInterval,
+	return *message
+}
+func handlePanic(bot Interface) {
+	if err := recover(); err != nil {
+		switch e := err.(type) {
+		case error:
+			log.Error().Err(e).Stack().Msgf("panic! bot: %T, stack: %s", bot, string(debug.Stack()))
+		default:
+			log.Error().Stack().Msgf("panic! bot: %t, err: %v, stack: %s", bot, err, string(debug.Stack()))
+		}
 	}
 }
 
-// ReactOn returns combined list of all keywords
-func (b MultiBot) ReactOn() (res []string) {
+func (b MultiBot) HasReact(u *api.Update) bool {
+	var hasReact bool
 	for _, bot := range b {
-		res = append(res, bot.ReactOn()...)
+		hasReact = hasReact && bot.HasReact(u)
 	}
-	return res
+	return hasReact
 }
 
 func contains(s []string, e string) bool {
@@ -200,12 +138,14 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func makeHTTPRequest(url string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to make request %s", url)
+func getFrom(update *api.Update) *api.User {
+	var user api.User
+	if update.CallbackQuery != nil {
+		user = update.CallbackQuery.From
+	} else if update.Message != nil {
+		user = update.Message.From
+	} else {
+		user = update.InlineQuery.From
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	return req, nil
+	return &user
 }
