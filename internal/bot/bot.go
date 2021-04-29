@@ -44,6 +44,7 @@ const (
 	roomSetting            api.Action = "room_setting"
 	userSetting            api.Action = "user_setting"
 	archiveRoom            api.Action = "archive_room"
+	exitRoom               api.Action = "exit_room"
 	unArchiveRoom          api.Action = "unarchive_room"
 	chooseLanguage         api.Action = "choose_language"
 	chooseNotification     api.Action = "choose_notification"

@@ -52,8 +52,10 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_do_archive"), btn.ID.Hex()))
 	}
 
+	exitRoomBtn := api.NewButton(exitRoom, &api.CallbackData{RoomId: roomId})
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
-	toSave = append(toSave, backB)
+	toSave = append(toSave, exitRoomBtn, backB)
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_exit"), exitRoomBtn.ID.Hex()))
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -302,5 +304,58 @@ func (bot *SelectedNotification) OnMessage(ctx context.Context, u *api.Update) (
 	return api.TelegramMessage{
 		Send:     true,
 		Redirect: u,
+	}
+}
+
+type SelectedLeaveRoom struct {
+	bs  ButtonService
+	us  UserService
+	rs  RoomService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewSelectedLeaveRoom(bs ButtonService, us UserService, rs RoomService, css ChatStateService, cfg *Config) *SelectedLeaveRoom {
+	return &SelectedLeaveRoom{
+		bs:  bs,
+		us:  us,
+		rs:  rs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot SelectedLeaveRoom) HasReact(u *api.Update) bool {
+	return hasAction(u, exitRoom)
+}
+
+func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := bot.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	userID := u.User.ID
+	for _, o := range *room.Operations {
+		if o.Donor.ID == userID || containsUserId(o.Recipients, userID) {
+			callback := createCallback(u, I18n(u.User, "msg_you_can_not_leave"), true)
+			return api.TelegramMessage{
+				CallbackConfig: callback,
+				Send:           true,
+			}
+		}
+	}
+
+	err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+	u.Button = api.NewButton(viewStart, u.Button.CallbackData)
+	callback := createCallback(u, I18n(u.User, "msg_you_left"), true)
+	return api.TelegramMessage{
+		Send:           true,
+		Redirect:       u,
+		CallbackConfig: callback,
 	}
 }

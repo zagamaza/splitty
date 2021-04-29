@@ -20,6 +20,7 @@ type UserService interface {
 
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
+	LeaveRoom(ctx context.Context, userId int, roomId string) error
 	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
 	FindById(ctx context.Context, id string) (*api.Room, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)

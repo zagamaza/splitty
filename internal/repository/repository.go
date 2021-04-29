@@ -24,6 +24,7 @@ type UserRepository interface {
 type RoomRepository interface {
 	FindById(ctx context.Context, id string) (*api.Room, error)
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
+	LeaveRoom(ctx context.Context, userId int, roomId string) error
 	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
@@ -108,6 +109,19 @@ func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u api.User, roomId
 	filter := bson.D{{"_id", bson.D{{"$eq", hex}}}}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{"$push", bson.D{{"users", u}}}})
 	return err
+}
+
+func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{"_id", bson.D{{"$eq", hex}}}}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"users": bson.M{"_id": userId}}})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error) {
