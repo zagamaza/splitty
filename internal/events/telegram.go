@@ -259,7 +259,7 @@ func transformUser(i *tbapi.User) api.User {
 		Username:       i.UserName,
 		DisplayName:    i.FirstName + " " + i.LastName,
 		UserLang:       i.LanguageCode,
-		NotificationOn: false,
+		NotificationOn: true,
 	}
 }
 

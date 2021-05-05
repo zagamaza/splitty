@@ -67,6 +67,7 @@ var bots = wire.NewSet(
 	bot.NewAddFileToOperation,
 	bot.NewViewFileOperation,
 	bot.NewViewDonorOperation,
+	bot.NewSelectedLeaveRoom,
 )
 
 func ProvideBotList(
@@ -105,7 +106,8 @@ func ProvideBotList(
 	b34 *bot.AddFileToOperation,
 	b35 *bot.ViewFileOperation,
 	b36 *bot.ViewDonorOperation,
+	b37 *bot.SelectedLeaveRoom,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37}
 }
