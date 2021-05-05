@@ -812,12 +812,16 @@ func (s ViewFileOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		msg = message
 	}
 
-	u.Message = &api.Message{Chat: &api.Chat{ID: getChatID(u)}, From: *getFrom(u)}
-	u.Button.Action = donorOperation
-	u.CallbackQuery = nil
-	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
-		Send:     true,
-		Redirect: u,
+	viewRoomBtn := api.NewButton(donorOperation, u.Button.CallbackData)
+	_, err = s.bs.SaveAll(ctx, viewRoomBtn)
+	if err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	keyboard := &[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), viewRoomBtn.ID.Hex())}}
+	backMsg := NewMessage(getChatID(u), I18n(u.User, "scrn_view_file"), *keyboard)
+	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg, backMsg},
+		Send: true,
 	}
 }
 
