@@ -32,6 +32,7 @@ const (
 	viewRoom               api.Action = "room"
 	viewStart              api.Action = "start"
 	viewAllOperations      api.Action = "all_operations"
+	viewOperationsWithMe   api.Action = "operations_with_me"
 	viewUserOperations     api.Action = "user_operations"
 	viewAllDebtOperations  api.Action = "all_dept_operations"
 	viewAllRooms           api.Action = "all_rooms"
