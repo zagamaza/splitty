@@ -255,11 +255,10 @@ func transformUpdate(u tbapi.Update) *api.Update {
 
 func transformUser(i *tbapi.User) api.User {
 	return api.User{
-		ID:             i.ID,
-		Username:       i.UserName,
-		DisplayName:    i.FirstName + " " + i.LastName,
-		UserLang:       i.LanguageCode,
-		NotificationOn: true,
+		ID:          i.ID,
+		Username:    i.UserName,
+		DisplayName: i.FirstName + " " + i.LastName,
+		UserLang:    i.LanguageCode,
 	}
 }
 

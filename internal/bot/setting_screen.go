@@ -5,6 +5,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"strconv"
 )
 
 type RoomSetting struct {
@@ -146,20 +147,29 @@ func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 	langBtn := api.NewButton(chooseLanguage, new(api.CallbackData))
 	notificationBtn := api.NewButton(chooseNotification, new(api.CallbackData))
+	countInPageBtn := api.NewButton(countInPage, new(api.CallbackData))
 	backBtn := api.NewButton(viewStart, new(api.CallbackData))
-	if _, err := bot.bs.SaveAll(ctx, langBtn, notificationBtn, backBtn); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, langBtn, notificationBtn, backBtn, countInPageBtn); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 	screen := createScreen(u, I18n(u.User, "scrn_user_setting"), &[][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_language", bot.defineFlag(lang)), langBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_notification", bot.defineNotification(u.User)), notificationBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_count_in_page", bot.defineNumberEmoji(u)), countInPageBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
 	})
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
+}
+
+func (bot *UserSetting) defineNumberEmoji(u *api.Update) string {
+	if u.User.CountInPage == 10 {
+		return "\U0001f51f"
+	}
+	return strconv.Itoa(u.User.CountInPage) + "\ufe0f\u20e3"
 }
 
 func (bot UserSetting) defineFlag(lang string) string {
@@ -171,7 +181,7 @@ func (bot UserSetting) defineFlag(lang string) string {
 }
 
 func (bot UserSetting) defineNotification(u *api.User) string {
-	if u.NotificationOn {
+	if *u.NotificationOn {
 		return "🔔"
 	} else {
 		return "🔕"
@@ -259,7 +269,7 @@ func (bot *ChooseNotification) OnMessage(ctx context.Context, u *api.Update) (re
 }
 
 func (bot ChooseNotification) defineSwitcher(u *api.User) string {
-	if u.NotificationOn {
+	if *u.NotificationOn {
 		return I18n(u, "msg_on")
 	} else {
 		return I18n(u, "msg_off")
@@ -267,7 +277,7 @@ func (bot ChooseNotification) defineSwitcher(u *api.User) string {
 }
 
 func (bot ChooseNotification) defineBtnSwitcher(u *api.User) string {
-	if !u.NotificationOn {
+	if !*u.NotificationOn {
 		return I18n(u, "btn_on")
 	} else {
 		return I18n(u, "btn_off")
@@ -295,8 +305,8 @@ func (bot SelectedNotification) HasReact(u *api.Update) bool {
 }
 
 func (bot *SelectedNotification) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	u.User.NotificationOn = !u.User.NotificationOn
-	if err := bot.us.SetNotificationUser(ctx, u.User.ID, u.User.NotificationOn); err != nil {
+	*u.User.NotificationOn = *u.User.NotificationOn == false
+	if err := bot.us.SetNotificationUser(ctx, u.User.ID, *u.User.NotificationOn); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 
@@ -357,5 +367,46 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 		Send:           true,
 		Redirect:       u,
 		CallbackConfig: callback,
+	}
+}
+
+type ChooseCountInPage struct {
+	bs  ButtonService
+	css ChatStateService
+	us  UserService
+	cfg *Config
+}
+
+func NewChooseCountInPage(bs ButtonService, css ChatStateService, us UserService, cfg *Config) *ChooseCountInPage {
+	return &ChooseCountInPage{
+		bs:  bs,
+		us:  us,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot ChooseCountInPage) HasReact(u *api.Update) bool {
+	return hasAction(u, countInPage)
+}
+
+func (bot *ChooseCountInPage) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	if u.User.CountInPage == 10 {
+		u.User.CountInPage = 5
+		if err := bot.us.SetCountInPage(ctx, u.User.ID, u.User.CountInPage); err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
+	} else {
+		u.User.CountInPage = u.User.CountInPage + 1
+		if err := bot.us.SetCountInPage(ctx, u.User.ID, u.User.CountInPage); err != nil {
+			log.Error().Err(err).Msg("")
+			return
+		}
+	}
+	u.Button.Action = userSetting
+	return api.TelegramMessage{
+		Redirect: u,
+		Send:     true,
 	}
 }

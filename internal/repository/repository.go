@@ -18,6 +18,7 @@ type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
+	SetCountInPage(ctx context.Context, userId int, count int) error
 	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
@@ -260,6 +261,12 @@ func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, e
 	if err := res.Decode(cs); err != nil {
 		return nil, err
 	}
+	if cs.CountInPage == 0 {
+		cs.CountInPage = 5
+	}
+	if cs.NotificationOn == nil {
+		cs.NotificationOn = func() *bool { b := true; return &b }()
+	}
 	return cs, nil
 }
 
@@ -278,6 +285,17 @@ func (r MongoUserRepository) SetUserLang(ctx context.Context, userId int, lang s
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
 	update := bson.D{{"$set", bson.M{"selected_lang": lang}}}
+	_, err := r.col.UpdateOne(ctx, f, update, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r MongoUserRepository) SetCountInPage(ctx context.Context, userId int, count int) error {
+	opts := options.Update().SetUpsert(true)
+	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
+	update := bson.D{{"$set", bson.M{"count_in_page": count}}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return err

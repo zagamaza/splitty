@@ -95,7 +95,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	roomId := u.Button.CallbackData.RoomId
 	userId := getFrom(u).ID
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	debts, err := bot.os.GetUserDebts(ctx, userId, roomId)
@@ -179,7 +179,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	roomId := u.Button.CallbackData.RoomId
 	userId := getFrom(u).ID
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	debts, err := bot.os.GetAllDebts(ctx, roomId)
