@@ -85,7 +85,8 @@ type User struct {
 	DisplayName    string `json:"displayName" bson:"display_name"`
 	UserLang       string `json:"userLang" bson:"user_lang"`
 	SelectedLang   string `json:"selectedLang" bson:"selected_lang"`
-	NotificationOn bool   `json:"notificationOn" bson:"notification_on,omitempty"`
+	NotificationOn *bool  `json:"notificationOn" bson:"notification_on,omitempty"`
+	CountInPage    int    `json:"countInPage" bson:"count_in_page,omitempty"`
 }
 
 func DefineLang(u *User) string {

@@ -15,6 +15,7 @@ import (
 type UserService interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
+	SetCountInPage(ctx context.Context, userId int, count int) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
 }
 

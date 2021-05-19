@@ -72,7 +72,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	viewFileOperation := bot.NewViewFileOperation(chatStateService, buttonService, roomService, operationService, botConfig)
 	viewDonorOperation := bot.NewViewDonorOperation(buttonService, operationService, roomService, botConfig)
 	selectedLeaveRoom := bot.NewSelectedLeaveRoom(buttonService, userService, roomService, chatStateService, botConfig)
-	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, wantDonorOperation, addDonorOperation, editDonorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantReturnDebt, addRecepientOperation, viewUserDebts, viewAllDebts, roomSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations, viewMyOperations, debt, userSetting, chooseLanguage, operationAdded, chooseNotification, selectedNotification, debtReturned, wantAddFileToOperation, addFileToOperation, viewFileOperation, viewDonorOperation, selectedLeaveRoom)
+	chooseCountInPage := bot.NewChooseCountInPage(buttonService, chatStateService, userService, botConfig)
+	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, wantDonorOperation, addDonorOperation, editDonorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantReturnDebt, addRecepientOperation, viewUserDebts, viewAllDebts, roomSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations, viewMyOperations, debt, userSetting, chooseLanguage, operationAdded, chooseNotification, selectedNotification, debtReturned, wantAddFileToOperation, addFileToOperation, viewFileOperation, viewDonorOperation, selectedLeaveRoom, chooseCountInPage)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, userService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -85,7 +86,7 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewEditDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantReturnDebt, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewRoomSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations, bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt, bot.NewUserSetting, bot.NewChooseLanguage, bot.NewOperationAdded, bot.NewChooseNotification, bot.NewSelectedNotification, bot.NewDebtReturned, bot.NewWantAddFileToOperation, bot.NewAddFileToOperation, bot.NewViewFileOperation, bot.NewViewDonorOperation, bot.NewSelectedLeaveRoom)
+var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewEditDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantReturnDebt, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewRoomSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations, bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt, bot.NewUserSetting, bot.NewChooseLanguage, bot.NewOperationAdded, bot.NewChooseNotification, bot.NewSelectedNotification, bot.NewDebtReturned, bot.NewWantAddFileToOperation, bot.NewAddFileToOperation, bot.NewViewFileOperation, bot.NewViewDonorOperation, bot.NewSelectedLeaveRoom, bot.NewChooseCountInPage)
 
 func ProvideBotList(
 	b1 *bot.Operation,
@@ -124,7 +125,8 @@ func ProvideBotList(
 	b35 *bot.ViewFileOperation,
 	b36 *bot.ViewDonorOperation,
 	b37 *bot.SelectedLeaveRoom,
+	b38 *bot.ChooseCountInPage,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38}
 }

@@ -131,7 +131,7 @@ func (bot ViewAllDebtOperations) HasReact(u *api.Update) bool {
 func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	ops, err := bot.os.GetAllDebtOperations(ctx, roomId)

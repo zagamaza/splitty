@@ -473,7 +473,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}
-		if !containsInt(opn.NotificationSent, user.ID) && user.NotificationOn && user.ID != u.User.ID {
+		if !containsInt(opn.NotificationSent, user.ID) && *user.NotificationOn && user.ID != u.User.ID {
 			rb := api.NewButton(donorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: opn.ID})
 			backB := api.NewButton(viewStart, &api.CallbackData{})
 			buttons = append(buttons, rb, backB)
@@ -1084,7 +1084,7 @@ func (bot ViewAllOperations) HasReact(u *api.Update) bool {
 func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	ops, err := bot.os.GetAllSpendOperations(ctx, roomId)
@@ -1160,7 +1160,7 @@ func (bot ViewMyOperations) HasReact(u *api.Update) bool {
 func (bot ViewMyOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	ops, err := bot.os.GetUserSpendOperations(ctx, u.User.ID, roomId)
