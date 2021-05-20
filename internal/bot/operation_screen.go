@@ -22,6 +22,7 @@ type OperationService interface {
 	GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
+	GetUserParticipateInOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
 	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
 	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
@@ -63,7 +64,7 @@ func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api
 		return
 	}
 	if len(*operations) < 1 {
-		callback := createCallback(u, I18n(u.User, "msg_have_not_operations"), true)
+		callback := createCallback(u, I18n(u.User, "msg_have_not_operations_with_me"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,
@@ -73,15 +74,17 @@ func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api
 
 	viewUserOpsB := api.NewButton(viewUserOperations, data)
 	viewAllOpsB := api.NewButton(viewAllOperations, data)
+	viewWithMeOpsB := api.NewButton(viewOperationsWithMe, data)
 	backB := api.NewButton(viewRoom, data)
 
-	if _, err := bot.bs.SaveAll(ctx, viewUserOpsB, viewAllOpsB, backB); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, viewUserOpsB, viewAllOpsB, viewWithMeOpsB, backB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_opt"), viewUserOpsB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt_with_me"), viewWithMeOpsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_opt"), viewAllOpsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex())},
 	}
@@ -1213,6 +1216,89 @@ func (bot ViewMyOperations) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 
 	screen := createScreen(u, I18n(u.User, "scrn_my_operations"), &keyboard)
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+// ViewOperationsWithMe show screen with user chooseOperations
+type ViewOperationsWithMe struct {
+	css ChatStateService
+	bs  ButtonService
+	os  OperationService
+	cfg *Config
+}
+
+func NewViewOperationsWithMe(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *ViewOperationsWithMe {
+	return &ViewOperationsWithMe{
+		css: s,
+		bs:  bs,
+		os:  rs,
+		cfg: cfg,
+	}
+}
+
+func (bot ViewOperationsWithMe) HasReact(u *api.Update) bool {
+	return hasAction(u, viewOperationsWithMe)
+}
+
+func (bot ViewOperationsWithMe) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	roomId := u.Button.CallbackData.RoomId
+	page := u.Button.CallbackData.Page
+	size := u.User.CountInPage
+	skip := page * size
+
+	ops, err := bot.os.GetUserParticipateInOperations(ctx, u.User.ID, roomId)
+	if err != nil {
+		return
+	}
+	if len(*ops) < 1 {
+		callback := createCallback(u, I18n(u.User, "msg_have_not_user_operations"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
+	var toSave []*api.Button
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	sort.SliceStable(*ops, func(i, j int) bool {
+		return (*ops)[j].CreateAt.Before((*ops)[i].CreateAt)
+	})
+	for i := skip; i < skip+size && i < len(*ops); i++ {
+		op := (*ops)[i]
+		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
+		text := fmt.Sprintf("🛒%s %s₽ %s",
+			stringForAlign(op.Description, 11, true),
+			stringForAlign("💰"+moneySpace(op.Sum), 6, false),
+			stringForAlign("👤"+shortName(op.Donor), 10, false))
+		toSave = append(toSave, opB)
+		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
+	}
+
+	var navRow []tgbotapi.InlineKeyboardButton
+	if page != 0 {
+		prevB := api.NewButton(viewOperationsWithMe, &api.CallbackData{RoomId: roomId, Page: page - 1})
+		toSave = append(toSave, prevB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.LeftArrow), prevB.ID.Hex()))
+	}
+	backB := api.NewButton(chooseOperations, u.Button.CallbackData)
+	toSave = append(toSave, backB)
+	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
+	if skip+size < len(*ops) {
+		nextB := api.NewButton(viewOperationsWithMe, &api.CallbackData{RoomId: roomId, Page: page + 1})
+		toSave = append(toSave, nextB)
+		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(string(emoji.RightArrow), nextB.ID.Hex()))
+	}
+	keyboard = append(keyboard, navRow)
+
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
+		log.Error().Err(err).Msg("save buttons failed")
+		return
+	}
+
+	screen := createScreen(u, I18n(u.User, "scrn_operations_with_me"), &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
