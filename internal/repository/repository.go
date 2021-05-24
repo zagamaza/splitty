@@ -34,6 +34,9 @@ type RoomRepository interface {
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	ArchiveRoom(ctx context.Context, userId int, roomId string) error
 	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
+	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 }
 
 type ChatStateRepository interface {
@@ -155,7 +158,43 @@ func (rr MongoRoomRepository) UnArchiveRoom(ctx context.Context, userId int, roo
 
 	filter := bson.M{"_id": hex, "users._id": userId}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.archived": userId}})
-	log.Error().Err(err).Msg("dsafdsa")
+	log.Error().Err(err).Msg("")
+	return err
+}
+
+func (rr MongoRoomRepository) FinishedAddOperation(ctx context.Context, userId int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"_id": hex, "users._id": userId}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$addToSet": bson.M{"room_states.finished_add_operation": userId}})
+	return err
+}
+
+func (rr MongoRoomRepository) UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"_id": hex, "users._id": userId}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.finished_add_operation": userId}})
+	log.Error().Err(err).Msg("")
+	return err
+}
+
+func (rr MongoRoomRepository) PaidOfDebts(ctx context.Context, userIds []int, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"_id": hex}
+	update := bson.D{{"$set", bson.M{"room_states.paid_off_debts": userIds}}}
+	_, err = rr.col.UpdateOne(ctx, filter, update)
+	log.Error().Err(err).Msg("")
 	return err
 }
 

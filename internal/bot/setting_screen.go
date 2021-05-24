@@ -54,9 +54,21 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	exitRoomBtn := api.NewButton(exitRoom, &api.CallbackData{RoomId: roomId})
-	backB := api.NewButton(viewRoom, u.Button.CallbackData)
-	toSave = append(toSave, exitRoomBtn, backB)
+	toSave = append(toSave, exitRoomBtn)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_exit"), exitRoomBtn.ID.Hex()))
+
+	if !containsInt(room.RoomStates.FinishedAddOperation, u.User.ID) {
+		finishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalId: "yes"})
+		toSave = append(toSave, finishedAddOperationBtn)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_finished_add_operation"), finishedAddOperationBtn.ID.Hex()))
+	} else {
+		notFinishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalId: "no"})
+		toSave = append(toSave, notFinishedAddOperationBtn)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_not_finished_add_operation"), notFinishedAddOperationBtn.ID.Hex()))
+	}
+
+	backB := api.NewButton(viewRoom, u.Button.CallbackData)
+	toSave = append(toSave, backB)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
@@ -72,16 +84,18 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 
 type ArchiveRoom struct {
 	bs    ButtonService
+	rss   RoomStateService
 	rs    RoomService
 	css   ChatStateService
 	vsBot *RoomSetting
 	cfg   *Config
 }
 
-func NewArchiveRoom(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config, viewSetting *RoomSetting) *ArchiveRoom {
+func NewArchiveRoom(bs ButtonService, rss RoomStateService, rs RoomService, css ChatStateService, cfg *Config, viewSetting *RoomSetting) *ArchiveRoom {
 	return &ArchiveRoom{
 		bs:    bs,
 		rs:    rs,
+		rss:   rss,
 		cfg:   cfg,
 		css:   css,
 		vsBot: viewSetting,
@@ -99,11 +113,11 @@ func (bot *ArchiveRoom) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	var errCallback *tgbotapi.CallbackConfig = nil
 	if hasAction(u, archiveRoom) {
-		if err := bot.rs.ArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+		if err := bot.rss.ArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
 			log.Error().Err(err).Msg("")
 		}
 	} else {
-		if err := bot.rs.UnArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+		if err := bot.rss.UnArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
 			log.Error().Err(err).Msg("")
 		}
 	}
@@ -408,5 +422,89 @@ func (bot *ChooseCountInPage) OnMessage(ctx context.Context, u *api.Update) (res
 	return api.TelegramMessage{
 		Redirect: u,
 		Send:     true,
+	}
+}
+
+type FinishedAddOperation struct {
+	bs  ButtonService
+	css ChatStateService
+	rs  RoomService
+	rss RoomStateService
+	us  UserService
+	cfg *Config
+}
+
+func NewFinishedAddOperation(bs ButtonService, css ChatStateService, rs RoomService, rss RoomStateService, us UserService, cfg *Config) *FinishedAddOperation {
+	return &FinishedAddOperation{
+		bs:  bs,
+		us:  us,
+		rs:  rs,
+		rss: rss,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot FinishedAddOperation) HasReact(u *api.Update) bool {
+	return hasAction(u, finishedAddOperation)
+}
+
+func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := bot.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	countUsersFinishedAddOperation := len(room.RoomStates.FinishedAddOperation)
+	if len(*room.Members) == countUsersFinishedAddOperation && u.Button.CallbackData.ExternalId == "no" {
+		callback := createCallback(u, I18n(u.User, "msg_all_members_add_operation"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
+	if u.Button.CallbackData.ExternalId == "yes" {
+		countUsersFinishedAddOperation++
+		if err = bot.rss.FinishedAddOperation(ctx, u.User.ID, u.Button.CallbackData.RoomId); err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	} else {
+		countUsersFinishedAddOperation--
+		if err = bot.rss.UnFinishedAddOperation(ctx, u.User.ID, u.Button.CallbackData.RoomId); err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	}
+
+	var buttons []*api.Button
+	var messages []tgbotapi.Chattable
+	if len(*room.Members) == countUsersFinishedAddOperation {
+		for _, user := range *room.Members {
+			rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
+			viewUserOpsB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: room.ID.Hex()})
+			backB := api.NewButton(viewStart, &api.CallbackData{})
+			buttons = append(buttons, rb, viewUserOpsB, backB)
+			msg := NewMessage(int64(user.ID), I18n(&user, "scrn_all_operations_added", userLink(&user), room.Name),
+				[][]tgbotapi.InlineKeyboardButton{
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_view_room"), rb.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_debts"), viewUserOpsB.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_to_start"), backB.ID.Hex())},
+				})
+			messages = append(messages, msg)
+		}
+	}
+
+	viewRoomBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
+	buttons = append(buttons, viewRoomBtn)
+	if _, err := bot.bs.SaveAll(ctx, buttons...); err != nil {
+		log.Error().Err(err).Msg("save buttons failed")
+		return
+	}
+
+	u.Button.Action = roomSetting
+	return api.TelegramMessage{
+		Redirect:  u,
+		Chattable: messages,
+		Send:      true,
 	}
 }

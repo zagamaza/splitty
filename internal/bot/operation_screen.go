@@ -64,7 +64,7 @@ func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api
 		return
 	}
 	if len(*operations) < 1 {
-		callback := createCallback(u, I18n(u.User, "msg_have_not_operations_with_me"), true)
+		callback := createCallback(u, I18n(u.User, "msg_have_not_operations"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,
@@ -145,6 +145,15 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		}
 	}
 
+	//validation, if all members finished added operation
+	if len(room.RoomStates.FinishedAddOperation) == len(*room.Members) {
+		callback := createCallback(u, I18n(u.User, "msg_can_not_add_operations"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
 	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
 	err = s.css.Save(ctx, cs)
 	if err != nil {
@@ -167,26 +176,27 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 }
 
+// AddDonorOperation screen with added operation
 type AddDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService
 	os  OperationService
 	rs  RoomService
+	rss RoomStateService
 	cfg *Config
 }
 
-// NewStackOverflow makes a bot for SO
-func NewAddDonorOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *AddDonorOperation {
+func NewAddDonorOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, rss RoomStateService, cfg *Config) *AddDonorOperation {
 	return &AddDonorOperation{
 		css: s,
 		bs:  bs,
 		os:  os,
 		rs:  rs,
+		rss: rss,
 		cfg: cfg,
 	}
 }
 
-// ReactOn keys, example = /start transaction600e68d102ddac9888d0193e
 func (s AddDonorOperation) HasReact(u *api.Update) bool {
 	if u.ChatState == nil || u.Message == nil || strings.TrimSpace(u.Message.Text) == "" {
 		return false
@@ -235,6 +245,14 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		log.Error().Err(err).Msg("upsert operation failed")
 		return
 	}
+
+	//async calculate paidOfDebtsUserIds for room, after added operation
+	go func() {
+		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, u, room)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	}()
 
 	var buttons []*api.Button
 	var tgButtons []tgbotapi.InlineKeyboardButton
@@ -976,16 +994,18 @@ type AddRecepientOperation struct {
 	os  OperationService
 	us  UserService
 	rs  RoomService
+	rss RoomStateService
 	cfg *Config
 }
 
-func NewAddRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, us UserService, rs RoomService, cfg *Config) *AddRecepientOperation {
+func NewAddRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, us UserService, rs RoomService, rss RoomStateService, cfg *Config) *AddRecepientOperation {
 	return &AddRecepientOperation{
 		css: s,
 		bs:  bs,
 		os:  os,
 		us:  us,
 		rs:  rs,
+		rss: rss,
 		cfg: cfg,
 	}
 }
@@ -1051,6 +1071,14 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		log.Error().Err(err).Msg("upsert operation failed")
 		return
 	}
+
+	//async calculate paidOfDebtsUserIds for room, after debt operation
+	go func() {
+		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, u, room)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+		}
+	}()
 
 	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
 	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum)), &keyboard)
@@ -1254,7 +1282,7 @@ func (bot ViewOperationsWithMe) OnMessage(ctx context.Context, u *api.Update) (r
 		return
 	}
 	if len(*ops) < 1 {
-		callback := createCallback(u, I18n(u.User, "msg_have_not_user_operations"), true)
+		callback := createCallback(u, I18n(u.User, "msg_have_not_operations_with_me"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
 			Send:           true,

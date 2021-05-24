@@ -16,7 +16,9 @@ type Room struct {
 }
 
 type RoomStatesUsers struct {
-	Archived []int `json:"archived" bson:"archived,omitempty"`
+	Archived             []int `json:"archived" bson:"archived,omitempty"`
+	PaidOffDebt          []int `json:"paidOffDebts" bson:"paid_off_debts,omitempty"`
+	FinishedAddOperation []int `json:"finishedAddOperation" bson:"finished_add_operation,omitempty"`
 }
 
 type Operation struct {

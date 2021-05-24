@@ -46,6 +46,7 @@ const (
 	userSetting            api.Action = "user_setting"
 	archiveRoom            api.Action = "archive_room"
 	exitRoom               api.Action = "exit_room"
+	finishedAddOperation   api.Action = "finished_add_operation"
 	countInPage            api.Action = "count_in_page"
 	unArchiveRoom          api.Action = "unarchive_room"
 	chooseLanguage         api.Action = "choose_language"

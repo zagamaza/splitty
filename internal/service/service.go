@@ -29,8 +29,12 @@ func NewOperationService(r repository.RoomRepository) *OperationService {
 	return &OperationService{r}
 }
 
-func NewStatisticService(r repository.RoomRepository, s *OperationService) *StatisticService {
-	return &StatisticService{r, *s}
+func NewStatisticService(r *RoomService, s *OperationService) *StatisticService {
+	return &StatisticService{*r, *s}
+}
+
+func NewRoomStateService(s *OperationService, rr repository.RoomRepository) *RoomStateService {
+	return &RoomStateService{rr, *s}
 }
 
 type UserService struct {
@@ -54,6 +58,11 @@ type OperationService struct {
 }
 
 type StatisticService struct {
+	RoomService
+	OperationService
+}
+
+type RoomStateService struct {
 	repository.RoomRepository
 	OperationService
 }
@@ -271,7 +280,7 @@ type UserBalance struct {
 }
 
 func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (int, error) {
-	room, err := s.RoomRepository.FindById(ctx, roomId)
+	room, err := s.RoomService.FindById(ctx, roomId)
 	if err != nil {
 		return 0, err
 	}
@@ -285,7 +294,7 @@ func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (i
 }
 
 func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, roomId string) (int, error) {
-	room, err := s.RoomRepository.FindById(ctx, roomId)
+	room, err := s.RoomService.FindById(ctx, roomId)
 	if err != nil {
 		return 0, err
 	}
@@ -335,4 +344,39 @@ func containsUserId(users *[]api.User, id int) bool {
 		}
 	}
 	return false
+}
+
+func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u *api.Update, room *api.Room) error {
+	if len(*room.Members) == len(room.RoomStates.FinishedAddOperation) {
+		debts, err := s.OperationService.GetAllDebts(ctx, u.ChatState.CallbackData.RoomId)
+		if err != nil {
+			log.Error().Err(err).Msg("")
+			return err
+		}
+		for _, v := range *debts {
+			if v.Sum != 0 {
+				*room.Members = deleteUser(*room.Members, v.Debtor.ID)
+			}
+		}
+		var paidOfDebtsUserIds []int
+		for _, user := range *room.Members {
+			paidOfDebtsUserIds = append(paidOfDebtsUserIds, user.ID)
+		}
+		err = s.RoomRepository.PaidOfDebts(ctx, paidOfDebtsUserIds, u.ChatState.CallbackData.RoomId)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteUser(users []api.User, userId int) []api.User {
+	var index int
+	for i, v := range users {
+		if v.ID == userId {
+			index = i
+		}
+	}
+	copy(users[index:], users[index+1:])
+	return users[:len(users)-1]
 }
