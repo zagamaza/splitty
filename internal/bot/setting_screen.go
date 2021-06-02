@@ -58,11 +58,11 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_exit"), exitRoomBtn.ID.Hex()))
 
 	if !containsInt(room.RoomStates.FinishedAddOperation, u.User.ID) {
-		finishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalId: "yes"})
+		finishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "true"})
 		toSave = append(toSave, finishedAddOperationBtn)
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_finished_add_operation"), finishedAddOperationBtn.ID.Hex()))
 	} else {
-		notFinishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalId: "no"})
+		notFinishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "false"})
 		toSave = append(toSave, notFinishedAddOperationBtn)
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_not_finished_add_operation"), notFinishedAddOperationBtn.ID.Hex()))
 	}
@@ -456,7 +456,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		return
 	}
 	countUsersFinishedAddOperation := len(room.RoomStates.FinishedAddOperation)
-	if len(*room.Members) == countUsersFinishedAddOperation && u.Button.CallbackData.ExternalId == "no" {
+	if len(*room.Members) == countUsersFinishedAddOperation && u.Button.CallbackData.ExternalData == "false" {
 		callback := createCallback(u, I18n(u.User, "msg_all_members_add_operation"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
@@ -464,7 +464,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		}
 	}
 
-	if u.Button.CallbackData.ExternalId == "yes" {
+	if u.Button.CallbackData.ExternalData == "true" {
 		countUsersFinishedAddOperation++
 		if err = bot.rss.FinishedAddOperation(ctx, u.User.ID, u.Button.CallbackData.RoomId); err != nil {
 			log.Error().Err(err).Msg("")
