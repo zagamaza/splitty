@@ -30,10 +30,7 @@ func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, ss S
 
 // ReactOn keys
 func (bot AllRoomInline) HasReact(u *api.Update) bool {
-	if u.InlineQuery == nil {
-		return false
-	}
-	return true
+	return u.InlineQuery != nil
 }
 
 // OnMessage returns one entry
@@ -255,7 +252,16 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 func createRoomInfoText(r *api.Room, u *api.Update) string {
 	text := I18n(u.User, "scrn_room", r.Name)
 	for _, v := range *r.Members {
-		text += "- " + userLink(&v) + "\n"
+		text += "- " + userLink(&v)
+		if containsInt(r.RoomStates.PaidOffDebt, v.ID) {
+			text += " 🤝"
+		} else if containsInt(r.RoomStates.FinishedAddOperation, v.ID) {
+			text += " 🏁"
+		}
+		text += "\n"
+	}
+	if len(r.RoomStates.PaidOffDebt) != 0 || len(r.RoomStates.FinishedAddOperation) != 0 {
+		text += I18n(u.User, "scrn_debt_legend")
 	}
 	return text
 }

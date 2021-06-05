@@ -27,8 +27,15 @@ type RoomService interface {
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
+}
+
+type RoomStateService interface {
 	ArchiveRoom(ctx context.Context, userId int, roomId string) error
 	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
+	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
+	DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u *api.Update, room *api.Room) error
 }
 
 type Config struct {

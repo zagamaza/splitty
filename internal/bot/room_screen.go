@@ -50,6 +50,15 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
+	//validation, if all members finished added operation you cant joining
+	if len(room.RoomStates.FinishedAddOperation) == len(*room.Members) {
+		callback := createCallback(u, I18n(u.User, "msg_can_not_join"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
 	data := &api.CallbackData{RoomId: room.ID.Hex()}
 
 	joinB := api.NewButton(joinRoom, data)

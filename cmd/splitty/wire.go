@@ -20,6 +20,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		service.NewButtonService, wire.Bind(new(bot.ButtonService), new(*service.ButtonService)),
 		service.NewOperationService, wire.Bind(new(bot.OperationService), new(*service.OperationService)),
 		service.NewStatisticService, wire.Bind(new(bot.StatisticService), new(*service.StatisticService)),
+		service.NewRoomStateService, wire.Bind(new(bot.RoomStateService), new(*service.RoomStateService)),
 		wire.Bind(new(events.ChatStateService), new(*service.ChatStateService)),
 		wire.Bind(new(events.ButtonService), new(*service.ButtonService)),
 		ProvideBotList, bots,
@@ -70,6 +71,7 @@ var bots = wire.NewSet(
 	bot.NewSelectedLeaveRoom,
 	bot.NewViewOperationsWithMe,
 	bot.NewChooseCountInPage,
+	bot.NewFinishedAddOperation,
 )
 
 func ProvideBotList(
@@ -111,7 +113,8 @@ func ProvideBotList(
 	b37 *bot.SelectedLeaveRoom,
 	b38 *bot.ViewOperationsWithMe,
 	b39 *bot.ChooseCountInPage,
+	b40 *bot.FinishedAddOperation,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40}
 }
