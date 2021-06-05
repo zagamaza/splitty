@@ -105,7 +105,7 @@ func (bot AllRoom) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	rooms, err := bot.rs.FindRoomsByUserId(ctx, getFrom(u).ID)
