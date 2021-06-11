@@ -35,7 +35,7 @@ type RoomStateService interface {
 	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
-	DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u *api.Update, room *api.Room) error
+	DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, room *api.Room) error
 }
 
 type Config struct {

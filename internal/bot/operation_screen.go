@@ -248,7 +248,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 
 	//async calculate paidOfDebtsUserIds for room, after added operation
 	go func() {
-		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, u, room)
+		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, room)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}
@@ -337,6 +337,16 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	if err != nil {
 		log.Error().Err(err).Msg("get room failed")
 		return
+	}
+
+	//validation, if all users finished adding operations
+	countUsersFinishedAddOperation := len(room.RoomStates.FinishedAddOperation)
+	if len(*room.Members) == countUsersFinishedAddOperation {
+		callback := createCallback(u, I18n(u.User, "msg_not_editable_all_operations_added"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
 	}
 
 	var operation api.Operation
@@ -874,6 +884,20 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 	roomId := u.Button.CallbackData.RoomId
 	lenderUserId := u.Button.CallbackData.UserId
 
+	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	countUsersFinishedAddOperation := len(room.RoomStates.FinishedAddOperation)
+	if len(*room.Members) != countUsersFinishedAddOperation {
+		callback := createCallback(u, I18n(u.User, "msg_not_back_debt_operations_no_added"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
 	debt, err := s.os.GetUserDebt(ctx, u.User.ID, lenderUserId, roomId)
 	if err != nil || debt == nil {
 		log.Error().Err(err).Msg("get user debts failed")
@@ -1074,7 +1098,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 
 	//async calculate paidOfDebtsUserIds for room, after debt operation
 	go func() {
-		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, u, room)
+		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, room)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 		}

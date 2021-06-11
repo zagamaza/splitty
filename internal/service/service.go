@@ -346,9 +346,9 @@ func containsUserId(users *[]api.User, id int) bool {
 	return false
 }
 
-func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u *api.Update, room *api.Room) error {
+func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, room *api.Room) error {
 	if len(*room.Members) == len(room.RoomStates.FinishedAddOperation) {
-		debts, err := s.OperationService.GetAllDebts(ctx, u.ChatState.CallbackData.RoomId)
+		debts, err := s.OperationService.GetAllDebts(ctx, room.ID.Hex())
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			return err
@@ -362,7 +362,7 @@ func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u
 		for _, user := range *room.Members {
 			paidOfDebtsUserIds = append(paidOfDebtsUserIds, user.ID)
 		}
-		err = s.RoomRepository.PaidOfDebts(ctx, paidOfDebtsUserIds, u.ChatState.CallbackData.RoomId)
+		err = s.RoomRepository.PaidOfDebts(ctx, paidOfDebtsUserIds, room.ID.Hex())
 		if err != nil {
 			return err
 		}
@@ -371,11 +371,15 @@ func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, u
 }
 
 func deleteUser(users []api.User, userId int) []api.User {
-	var index int
+	index := -1
 	for i, v := range users {
 		if v.ID == userId {
 			index = i
+			break
 		}
+	}
+	if index == -1 {
+		return users
 	}
 	copy(users[index:], users[index+1:])
 	return users[:len(users)-1]
