@@ -629,25 +629,25 @@ func (s ViewDonorOperation) defineFileMessage(user *api.User, operation api.Oper
 	return ""
 }
 
-// Operation show screen with donar/recepient buttons
+// DeleteDonorOperation show screen with deleted information and deleting donor operation
 type DeleteDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService
 	os  OperationService
+	rs  RoomService
 	cfg *Config
 }
 
-// NewStackOverflow makes a bot for SO
-func NewDeleteDonorOperation(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *DeleteDonorOperation {
+func NewDeleteDonorOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *DeleteDonorOperation {
 	return &DeleteDonorOperation{
 		css: s,
 		bs:  bs,
-		os:  rs,
+		os:  os,
+		rs:  rs,
 		cfg: cfg,
 	}
 }
 
-// ReactOn keys, example = /start operation600e68d102ddac9888d0193e
 func (s DeleteDonorOperation) HasReact(u *api.Update) bool {
 	if u.Button == nil {
 		return false
@@ -655,14 +655,23 @@ func (s DeleteDonorOperation) HasReact(u *api.Update) bool {
 	return u.Button.Action == deleteDonorOperation
 }
 
-// OnMessage returns one entry
 func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, u.Button.CallbackData.OperationId); err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
-
-	rb := api.NewButton(viewAllOperations, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
+	room, err := s.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+	var action api.Action
+	if room.Operations != nil && len(*room.Operations) > 0 {
+		action = viewAllOperations
+	} else {
+		action = viewRoom
+	}
+	rb := api.NewButton(action, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
 	if _, err := s.bs.SaveAll(ctx, rb); err != nil {
 		log.Error().Err(err).Msg("save buttons failed")
 		return
