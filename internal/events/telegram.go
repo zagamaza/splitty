@@ -130,6 +130,15 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 		return nil
 	}
 
+	if resp.Redirect != nil {
+		if resp.Redirect.FromRedirect {
+			log.Error().Stack().Msg("recursive multiple redirection")
+		} else {
+			resp.Redirect.FromRedirect = true
+			l.processUpdate(ctx, resp.Redirect)
+		}
+	}
+
 	if resp.InlineConfig != nil {
 		response, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
 		if err != nil {
@@ -157,14 +166,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 		}
 		log.Debug().Msgf("bot response - %+v", response)
 	}
-	if resp.Redirect != nil {
-		if resp.Redirect.FromRedirect {
-			log.Error().Stack().Msg("recursive multiple redirection")
-		} else {
-			resp.Redirect.FromRedirect = true
-			l.processUpdate(ctx, resp.Redirect)
-		}
-	}
+
 	return nil
 }
 
