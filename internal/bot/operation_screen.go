@@ -398,7 +398,8 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		return
 	}
 
-	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum), moneySpace(operation.Sum/len(*operation.Recipients)))
+	partSum := definePartSum(operation, u.User)
+	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum), moneySpace(partSum))
 	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n"
 	text += s.defineFileMessage(u.User, operation) + "\n"
 	text += I18n(u.User, "scrn_mark_members")
@@ -508,7 +509,8 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 			rb := api.NewButton(donorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: opn.ID})
 			backB := api.NewButton(viewStart, &api.CallbackData{})
 			buttons = append(buttons, rb, backB)
-			msg := NewMessage(int64(user.ID), I18n(user, "scrn_notification_operation_added", userLink(user), opn.Description, moneySpace(opn.Sum), room.Name, moneySpace(opn.Sum/len(*opn.Recipients))),
+			sum := definePartSum(opn, user)
+			msg := NewMessage(int64(user.ID), I18n(user, "scrn_notification_operation_added", userLink(user), opn.Description, moneySpace(opn.Sum), room.Name, moneySpace(sum)),
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_view_operation"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_to_start"), backB.ID.Hex())},
@@ -592,7 +594,8 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum), moneySpace(operation.Sum/len(*operation.Recipients)))
+	partSum := definePartSum(operation, u.User)
+	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum), moneySpace(partSum))
 	text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
 	for _, v := range *operation.Recipients {
 		text += "- " + userLink(&v) + "\n"
@@ -613,7 +616,6 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		Chattable: []tgbotapi.Chattable{msg},
 		Send:      true,
 	}
-
 }
 
 func (s ViewDonorOperation) defineFileMessage(user *api.User, operation api.Operation) string {
@@ -1364,4 +1366,11 @@ func (bot ViewOperationsWithMe) OnMessage(ctx context.Context, u *api.Update) (r
 		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
+}
+
+func definePartSum(operation api.Operation, user *api.User) int {
+	if containsUserId(operation.Recipients, user.ID) {
+		return operation.Sum / len(*operation.Recipients)
+	}
+	return 0
 }
