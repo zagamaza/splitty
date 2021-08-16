@@ -91,10 +91,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
 	resp := l.Bots.OnMessage(ctx, upd)
-
-	if err := l.sendBotResponse(ctx, resp); err != nil {
-		log.Error().Err(err).Stack().Msgf("failed to respond on update")
-	}
+	l.sendBotResponse(ctx, resp)
 }
 
 func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) error {
@@ -125,9 +122,9 @@ func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Updat
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) error {
+func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) {
 	if !resp.Send {
-		return nil
+		return
 	}
 
 	if resp.Redirect != nil {
@@ -142,7 +139,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 	if resp.InlineConfig != nil {
 		response, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
 		if err != nil {
-			return errors.Wrapf(err, "can't send query to telegram %v", response)
+			log.Error().Err(err).Msgf("can't send query to telegram %v", response)
 		}
 		log.Debug().Msgf("bot response - %q", resp.InlineConfig)
 	}
@@ -154,7 +151,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 			}
 			response, err := l.TbAPI.Send(v)
 			if err != nil {
-				return errors.Wrapf(err, "can't send message to telegram %v", v)
+				log.Error().Err(err).Msgf("can't send message to telegram %v", v)
 			}
 			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
@@ -162,12 +159,10 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 	if resp.CallbackConfig != nil {
 		response, err := l.TbAPI.AnswerCallbackQuery(*resp.CallbackConfig)
 		if err != nil {
-			return errors.Wrapf(err, "can't send calback to telegram %v", resp.CallbackConfig)
+			log.Error().Err(err).Msgf("can't send calback to telegram %v", resp.CallbackConfig)
 		}
 		log.Debug().Msgf("bot response - %+v", response)
 	}
-
-	return nil
 }
 
 func transform(msg *tbapi.Message) *api.Message {
