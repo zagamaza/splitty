@@ -249,21 +249,59 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 	}
 }
 
+type PartyType int
+
+const (
+	OperationAdding PartyType = iota
+	DebtDistributing
+	Finished
+)
+
 func createRoomInfoText(r *api.Room, u *api.Update) string {
-	text := I18n(u.User, "scrn_room", r.Name)
+	finishedAddOperationCount := len(r.RoomStates.FinishedAddOperation)
+	paidOffDebtCunt := len(r.RoomStates.PaidOffDebt)
+	memberCount := len(*r.Members)
+
+	partyType := definePartyType(finishedAddOperationCount, memberCount, paidOffDebtCunt)
+
+	var partyStatus string
+	switch partyType {
+	case OperationAdding:
+		partyStatus = I18n(u.User, "scrn_party_type_operation_adding")
+	case DebtDistributing:
+		partyStatus = I18n(u.User, "scrn_party_type_debt_distributing")
+	case Finished:
+		partyStatus = I18n(u.User, "scrn_party_type_finished")
+	}
+	text := I18n(u.User, "scrn_room", r.Name, partyStatus)
+
 	for _, v := range *r.Members {
 		text += "- " + userLink(&v)
-		if containsInt(r.RoomStates.PaidOffDebt, v.ID) {
+		if containsInt(r.RoomStates.PaidOffDebt, v.ID) && DebtDistributing == partyType {
 			text += " 🤝"
-		} else if containsInt(r.RoomStates.FinishedAddOperation, v.ID) {
+		} else if containsInt(r.RoomStates.FinishedAddOperation, v.ID) && OperationAdding == partyType {
 			text += " 🏁"
 		}
 		text += "\n"
 	}
-	if len(r.RoomStates.PaidOffDebt) != 0 || len(r.RoomStates.FinishedAddOperation) != 0 {
+	if paidOffDebtCunt != 0 && partyType == DebtDistributing {
 		text += I18n(u.User, "scrn_debt_legend")
+	} else if finishedAddOperationCount != 0 && partyType == OperationAdding {
+		text += I18n(u.User, "scrn_finished_added_legend")
 	}
 	return text
+}
+
+func definePartyType(finishedAddOperationCount int, memberCount int, paidOffDebtCunt int) PartyType {
+	var partyType PartyType
+	if finishedAddOperationCount != memberCount {
+		partyType = OperationAdding
+	} else if finishedAddOperationCount == memberCount && paidOffDebtCunt != memberCount {
+		partyType = DebtDistributing
+	} else {
+		partyType = Finished
+	}
+	return partyType
 }
 
 func (bot AllRoomInline) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {
