@@ -68,10 +68,16 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			upd := transformUpdate(update)
 
-			upd.User, err = l.UserService.UpsertUser(ctx, *getFrom(upd))
+			user, err := getFrom(upd)
+			if err != nil {
+				log.Error().Err(err).Stack().Msg("failed define user")
+				break
+			}
+
+			upd.User, err = l.UserService.UpsertUser(ctx, *user)
 			if err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
-				return err
+				break
 			}
 
 			if err := l.populateBtn(ctx, upd); err != nil {
@@ -285,14 +291,16 @@ func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	return &result
 }
 
-func getFrom(update *api.Update) *api.User {
+func getFrom(update *api.Update) (*api.User, error) {
 	var user api.User
 	if update.CallbackQuery != nil {
 		user = update.CallbackQuery.From
 	} else if update.Message != nil {
 		user = update.Message.From
-	} else {
+	} else if update.InlineQuery != nil {
 		user = update.InlineQuery.From
+	} else {
+		return nil, errors.Errorf("Not define user, update - %v", update)
 	}
-	return &user
+	return &user, nil
 }
