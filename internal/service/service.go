@@ -239,9 +239,13 @@ func calculateDebt(users map[int]api.User, balance map[int]float64) *[]api.Debt 
 
 	var debts []api.Debt
 	for i := 0; hasDebt(usrBl) && i < 100; i++ {
-		log.Debug().Msg("iter")
 		sort.Slice(usrBl, func(i, j int) bool {
-			return usrBl[i].balance > usrBl[j].balance
+			if usrBl[i].balance > usrBl[j].balance {
+				return true
+			} else if usrBl[i].balance == usrBl[j].balance {
+				return usrBl[i].user.ID > usrBl[j].user.ID
+			}
+			return false
 		})
 		debt := repayment(usrBl[0], usrBl[len(usrBl)-1])
 		if debt.Sum != 0 {

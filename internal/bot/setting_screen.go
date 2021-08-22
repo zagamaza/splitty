@@ -57,23 +57,6 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	toSave = append(toSave, exitRoomBtn)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_exit"), exitRoomBtn.ID.Hex()))
 
-	if !containsInt(room.RoomStates.FinishedAddOperation, u.User.ID) {
-
-		//validation, user can not finished add operaion, if in the party not have a  operations
-		if len(*room.Operations) == 0 {
-			callback := createCallback(u, I18n(u.User, "msg_you_can_not_finished_add_operation"), true)
-			return api.TelegramMessage{CallbackConfig: callback, Send: true}
-		}
-
-		finishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "true"})
-		toSave = append(toSave, finishedAddOperationBtn)
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_finished_add_operation"), finishedAddOperationBtn.ID.Hex()))
-	} else {
-		notFinishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "false"})
-		toSave = append(toSave, notFinishedAddOperationBtn)
-		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_not_finished_add_operation"), notFinishedAddOperationBtn.ID.Hex()))
-	}
-
 	backB := api.NewButton(viewRoom, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
@@ -508,7 +491,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		return
 	}
 
-	u.Button.Action = roomSetting
+	u.Button.Action = chooseOperations
 	return api.TelegramMessage{
 		Redirect:  u,
 		Chattable: messages,
