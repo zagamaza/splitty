@@ -33,15 +33,15 @@ type OperationService interface {
 type Operation struct {
 	css ChatStateService
 	bs  ButtonService
-	os  OperationService
+	rs  RoomService
 	cfg *Config
 }
 
-func NewOperation(s ChatStateService, bs ButtonService, os OperationService, cfg *Config) *Operation {
+func NewOperation(s ChatStateService, bs ButtonService, rs RoomService, cfg *Config) *Operation {
 	return &Operation{
 		css: s,
 		bs:  bs,
-		os:  os,
+		rs:  rs,
 		cfg: cfg,
 	}
 }
@@ -57,12 +57,12 @@ func (bot Operation) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
-
-	operations, err := bot.os.GetAllOperations(ctx, roomId)
+	room, err := bot.rs.FindById(ctx, roomId)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Stack().Msgf("cannot find room, id:%s", roomId)
 		return
 	}
+	operations := room.Operations
 	if len(*operations) < 1 {
 		callback := createCallback(u, I18n(u.User, "msg_have_not_operations"), true)
 		return api.TelegramMessage{
@@ -72,22 +72,36 @@ func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api
 	}
 	data := &api.CallbackData{RoomId: roomId}
 
+	var toSave []*api.Button
 	viewUserOpsB := api.NewButton(viewUserOperations, data)
 	viewAllOpsB := api.NewButton(viewAllOperations, data)
 	viewWithMeOpsB := api.NewButton(viewOperationsWithMe, data)
-	backB := api.NewButton(viewRoom, data)
+	toSave = append(toSave, viewUserOpsB, viewAllOpsB, viewWithMeOpsB)
 
-	if _, err := bot.bs.SaveAll(ctx, viewUserOpsB, viewAllOpsB, viewWithMeOpsB, backB); err != nil {
+	var buttons []tgbotapi.InlineKeyboardButton
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_opt"), viewUserOpsB.ID.Hex()))
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt_with_me"), viewWithMeOpsB.ID.Hex()))
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_opt"), viewAllOpsB.ID.Hex()))
+
+	if !containsInt(room.RoomStates.FinishedAddOperation, u.User.ID) {
+		finishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "true"})
+		toSave = append(toSave, finishedAddOperationBtn)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_finished_add_operation"), finishedAddOperationBtn.ID.Hex()))
+	} else {
+		notFinishedAddOperationBtn := api.NewButton(finishedAddOperation, &api.CallbackData{RoomId: roomId, ExternalData: "false"})
+		toSave = append(toSave, notFinishedAddOperationBtn)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_not_finished_add_operation"), notFinishedAddOperationBtn.ID.Hex()))
+	}
+
+	backB := api.NewButton(viewRoom, data)
+	toSave = append(toSave, backB)
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 
-	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_opt"), viewUserOpsB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt_with_me"), viewWithMeOpsB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_all_opt"), viewAllOpsB.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex())},
-	}
+	keyboard := splitKeyboardButtons(buttons, 1)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, I18n(u.User, "scrn_operations"), &keyboard)},
 		Send:      true,
@@ -587,7 +601,7 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		btns = append(btns, editBtn)
 	}
 
-	cb := api.NewButton(viewAllOperations, u.Button.CallbackData)
+	cb := api.NewButton(chooseOperations, u.Button.CallbackData)
 	btns = append(btns, cb)
 	_, err = s.bs.SaveAll(ctx, btns...)
 	if err != nil {
@@ -609,7 +623,7 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	if editBtn != nil {
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_edit_operation"), editBtn.ID.Hex())})
 	}
-	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData("🏁 "+I18n(u.User, "btn_done"), cb.ID.Hex())})
+	keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), cb.ID.Hex())})
 	msg := createScreen(u, text, &keyboard)
 
 	return api.TelegramMessage{
