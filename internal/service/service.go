@@ -84,7 +84,7 @@ func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.Chat
 func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+		log.Err(err).Msgf("cannot find room id:%s", roomId)
 		return nil, err
 	}
 	return room.Operations, nil
@@ -93,7 +93,7 @@ func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) 
 func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+		log.Err(err).Msgf("cannot find room id: %s", roomId)
 		return nil, err
 	}
 	var debtOperations []api.Operation
@@ -108,7 +108,7 @@ func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId stri
 func (s *OperationService) GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+		log.Err(err).Msgf("cannot find room id: %s", roomId)
 		return nil, err
 	}
 	var spendOperations []api.Operation
@@ -123,7 +123,7 @@ func (s *OperationService) GetAllSpendOperations(ctx context.Context, roomId str
 func (s *OperationService) GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+		log.Err(err).Msgf("cannot find room id: %s", roomId)
 		return nil, err
 	}
 	var spendUserOperations []api.Operation
@@ -138,7 +138,7 @@ func (s *OperationService) GetUserSpendOperations(ctx context.Context, userId in
 func (s *OperationService) GetUserParticipateInOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+		log.Err(err).Msgf("cannot find room id: %s", roomId)
 		return nil, err
 	}
 	var participateInOperations []api.Operation
@@ -195,32 +195,57 @@ func (s *OperationService) GetUserDebt(ctx context.Context, debtorId int, lender
 
 func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
-	if err != nil {
-		log.Err(err).Msgf("cannot find room id:", roomId)
+	if err != nil || room == nil {
+		log.Err(err).Msgf("cannot find room id: %s", roomId)
 		return nil, err
 	}
 
+	return GetRoomDebts(*room)
+}
+
+func GetRoomDebts(room api.Room) (*[]api.Debt, error) {
 	idUser := map[int]api.User{}
 	for _, user := range *room.Members {
 		idUser[user.ID] = user
 	}
 
-	userBalance := map[int]float64{}
+	var notDebt []api.Operation
+	var debtReturn []api.Operation
 	for _, op := range *room.Operations {
-		userBalance[op.Donor.ID] += float64(op.Sum)
-		for _, user := range *op.Recipients {
-			userBalance[user.ID] -= float64(op.Sum) / float64(len(*op.Recipients))
-		}
-		//на время тестов оставил
-		if !isUserBalanceValid(userBalance) {
-			return nil, errors.New("cannot calculate debts")
+		if op.IsDebtRepayment {
+			debtReturn = append(debtReturn, op)
+		} else {
+			notDebt = append(notDebt, op)
 		}
 	}
 
-	log.Debug().Msgf("%v", userBalance)
+	debts, err := calculateDebt(idUser, notDebt)
+	if err != nil {
+		return nil, err
+	}
 
-	return calculateDebt(idUser, userBalance), nil
+	return addDebtReturn(debts, debtReturn)
 
+}
+
+func addDebtReturn(debts []api.Debt, re []api.Operation) (*[]api.Debt, error) {
+
+	var result []api.Debt
+
+	for _, debt := range debts {
+		debtorId := debt.Debtor.ID
+		lenderId := debt.Lender.ID
+		for _, op := range re {
+			if (*op.Recipients)[0].ID == lenderId && op.Donor.ID == debtorId {
+				debt.Sum -= op.Sum
+			}
+		}
+		if debt.Sum >= 1 {
+			result = append(result, debt)
+		}
+	}
+
+	return &result, nil
 }
 
 func isUserBalanceValid(userBalance map[int]float64) bool {
@@ -231,7 +256,20 @@ func isUserBalanceValid(userBalance map[int]float64) bool {
 	return sum < 1
 }
 
-func calculateDebt(users map[int]api.User, balance map[int]float64) *[]api.Debt {
+func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, error) {
+
+	balance := map[int]float64{}
+	for _, op := range ops {
+		balance[op.Donor.ID] += float64(op.Sum)
+		for _, user := range *op.Recipients {
+			balance[user.ID] -= float64(op.Sum) / float64(len(*op.Recipients))
+		}
+		//на время тестов оставил
+		if !isUserBalanceValid(balance) {
+			return nil, errors.New("cannot calculate debts")
+		}
+	}
+
 	var usrBl []*UserBalance
 	for uid, b := range balance {
 		usrBl = append(usrBl, &UserBalance{user: users[uid], balance: b})
@@ -252,7 +290,7 @@ func calculateDebt(users map[int]api.User, balance map[int]float64) *[]api.Debt 
 			debts = append(debts, debt)
 		}
 	}
-	return &debts
+	return debts, nil
 }
 
 func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
