@@ -11,6 +11,7 @@ require (
 	github.com/gookit/i18n v1.1.3
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.20.0
+	github.com/stretchr/testify v1.7.1 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
 	go.mongodb.org/mongo-driver v1.4.4

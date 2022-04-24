@@ -234,9 +234,8 @@ func addDebtReturn(debts []api.Debt, re []api.Operation) (*[]api.Debt, error) {
 
 	for _, debt := range debts {
 		debtorId := debt.Debtor.ID
-		lenderId := debt.Lender.ID
 		for _, op := range re {
-			if (*op.Recipients)[0].ID == lenderId && op.Donor.ID == debtorId {
+			if op.Donor.ID == debtorId {
 				debt.Sum -= op.Sum
 			}
 		}
