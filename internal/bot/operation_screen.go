@@ -885,15 +885,17 @@ func (s ViewFileOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 type WantReturnDebt struct {
 	css ChatStateService
 	bs  ButtonService
+	us  UserService
 	os  OperationService
 	rs  RoomService
 	cfg *Config
 }
 
-func NewWantReturnDebt(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *WantReturnDebt {
+func NewWantReturnDebt(s ChatStateService, us UserService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *WantReturnDebt {
 	return &WantReturnDebt{
 		css: s,
 		bs:  bs,
+		us:  us,
 		os:  os,
 		rs:  rs,
 		cfg: cfg,
@@ -939,6 +941,11 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	text := I18n(u.User, "scrn_debt_repayment")
 	text += I18n(u.User, "scrn_debt_returning", userLink(debt.Lender), moneySpace(debt.Sum))
+
+	debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
+	if err == nil && debtor != nil && debtor.BankDetails != "" {
+		text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+	}
 	text += I18n(u.User, "scrn_send_message_choose_user")
 
 	msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
@@ -979,16 +986,18 @@ func (s DebtReturned) OnMessage(ctx context.Context, u *api.Update) (response ap
 type ChooseRecepientOperation struct {
 	css ChatStateService
 	bs  ButtonService
+	us  UserService
 	os  OperationService
 	rs  RoomService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewChooseRecepientOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *ChooseRecepientOperation {
+func NewChooseRecepientOperation(s ChatStateService, bs ButtonService, us UserService, os OperationService, rs RoomService, cfg *Config) *ChooseRecepientOperation {
 	return &ChooseRecepientOperation{
 		css: s,
 		bs:  bs,
+		us:  us,
 		os:  os,
 		rs:  rs,
 		cfg: cfg,
@@ -1026,8 +1035,15 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
+
 	text := I18n(u.User, "scrn_debt_repayment")
 	text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
+
+	debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
+	if err == nil && debtor != nil && debtor.BankDetails != "" {
+		text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+	}
+
 	text += I18n(u.User, "scrn_send_message_choose_user")
 	msg := createScreen(u, text,
 		&[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), b.ID.Hex())}})
@@ -1093,6 +1109,12 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
 		text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
+
+		debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
+		if err == nil && debtor != nil && debtor.BankDetails != "" {
+			text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+		}
+
 		text += I18n(u.User, "scrn_send_message_choose_user")
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text,

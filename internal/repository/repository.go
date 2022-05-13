@@ -18,6 +18,7 @@ type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
+	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
 	SetCountInPage(ctx context.Context, userId int, count int) error
 	FindById(ctx context.Context, id int) (*api.User, error)
 }
@@ -346,6 +347,17 @@ func (r MongoUserRepository) SetNotificationUser(ctx context.Context, userId int
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
 	update := bson.D{{"$set", bson.M{"notification_on": notification}}}
+	_, err := r.col.UpdateOne(ctx, f, update, opts)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r MongoUserRepository) SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error {
+	opts := options.Update().SetUpsert(true)
+	f := bson.D{{"_id", bson.D{{"$eq", userId}}}}
+	update := bson.D{{"$set", bson.M{"bank_details": bankDerails}}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return err
