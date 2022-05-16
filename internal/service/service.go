@@ -6,6 +6,7 @@ import (
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"math"
 	"sort"
 )
 
@@ -304,7 +305,7 @@ func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
 	lender.balance -= sum
 	debtor.balance += sum
 
-	return api.Debt{Lender: &lender.user, Debtor: &debtor.user, Sum: int(sum)}
+	return api.Debt{Lender: &lender.user, Debtor: &debtor.user, Sum: int(math.Round(sum))}
 }
 
 func hasDebt(balance []*UserBalance) bool {
