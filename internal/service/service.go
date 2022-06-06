@@ -233,7 +233,10 @@ func GetRoomDebts(room api.Room) ([]api.Debt, error) {
 
 func sortDebts(debts []api.Debt) {
 	sort.Slice(debts, func(i, j int) bool {
-		return debts[i].Debtor.ID < debts[j].Debtor.ID && debts[i].Lender.ID < debts[j].Lender.ID
+		if debts[i].Debtor.ID == debts[j].Debtor.ID {
+			return debts[i].Lender.ID < debts[j].Lender.ID
+		}
+		return debts[i].Debtor.ID < debts[j].Debtor.ID
 	})
 }
 
