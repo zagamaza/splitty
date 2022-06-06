@@ -157,7 +157,7 @@ func (s *OperationService) GetUserInvolvedDebts(ctx context.Context, userId int,
 	}
 
 	var uDbts []api.Debt
-	for _, debt := range *allDbt {
+	for _, debt := range allDbt {
 		if debt.Lender.ID == userId || debt.Debtor.ID == userId {
 			uDbts = append(uDbts, debt)
 		}
@@ -172,7 +172,7 @@ func (s *OperationService) GetUserDebts(ctx context.Context, userId int, roomId 
 	}
 
 	var uDbts []api.Debt
-	for _, debt := range *allDbt {
+	for _, debt := range allDbt {
 		if debt.Debtor.ID == userId {
 			uDbts = append(uDbts, debt)
 		}
@@ -185,7 +185,7 @@ func (s *OperationService) GetUserDebt(ctx context.Context, debtorId int, lender
 		return nil, err
 	}
 
-	for _, debt := range *allDbt {
+	for _, debt := range allDbt {
 		if debt.Debtor.ID == debtorId && debt.Lender.ID == lenderId {
 			return &debt, nil
 		}
@@ -193,7 +193,7 @@ func (s *OperationService) GetUserDebt(ctx context.Context, debtorId int, lender
 	return nil, nil
 }
 
-func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error) {
+func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) ([]api.Debt, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil || room == nil {
 		log.Err(err).Msgf("cannot find room id: %s", roomId)
@@ -203,7 +203,7 @@ func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) (*[]a
 	return GetRoomDebts(*room)
 }
 
-func GetRoomDebts(room api.Room) (*[]api.Debt, error) {
+func GetRoomDebts(room api.Room) ([]api.Debt, error) {
 	idUser := map[int]api.User{}
 	for _, user := range *room.Members {
 		idUser[user.ID] = user
@@ -223,28 +223,53 @@ func GetRoomDebts(room api.Room) (*[]api.Debt, error) {
 	if err != nil {
 		return nil, err
 	}
+	sortDebts(debts)
 
-	return addDebtReturn(debts, debtReturn)
+	debts, err = AddReturnToDebts(debts, debtReturn)
+	sortDebts(debts)
+	return debts, err
 
 }
 
-func addDebtReturn(debts []api.Debt, re []api.Operation) (*[]api.Debt, error) {
+func sortDebts(debts []api.Debt) {
+	sort.Slice(debts, func(i, j int) bool {
+		return debts[i].Debtor.ID < debts[j].Debtor.ID && debts[i].Lender.ID < debts[j].Lender.ID
+	})
+}
+
+func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt, error) {
+	returned, err := calculateUserBalance(debtReturn)
+	if err != nil {
+		return nil, err
+	}
 
 	var result []api.Debt
-
 	for _, debt := range debts {
-		debtorId := debt.Debtor.ID
-		for _, op := range re {
-			if op.Donor.ID == debtorId {
-				debt.Sum -= op.Sum
-			}
+		if returned[debt.Debtor.ID] < 1 || returned[debt.Lender.ID] >= 1 {
+			result = append(result, debt)
+			continue
 		}
+		min := getMin(returned[debt.Debtor.ID], -returned[debt.Lender.ID], float64(debt.Sum))
+		returned[debt.Debtor.ID] -= min
+		returned[debt.Lender.ID] += min
+		debt.Sum -= int(min)
 		if debt.Sum >= 1 {
 			result = append(result, debt)
 		}
 	}
+	//todo: check if returned has not 0 value
 
-	return &result, nil
+	return result, nil
+}
+
+func getMin(f ...float64) float64 {
+	min := f[0]
+	for _, v := range f {
+		if v < min {
+			min = v
+		}
+	}
+	return min
 }
 
 func isUserBalanceValid(userBalance map[int]float64) bool {
@@ -257,16 +282,9 @@ func isUserBalanceValid(userBalance map[int]float64) bool {
 
 func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, error) {
 
-	balance := map[int]float64{}
-	for _, op := range ops {
-		balance[op.Donor.ID] += float64(op.Sum)
-		for _, user := range *op.Recipients {
-			balance[user.ID] -= float64(op.Sum) / float64(len(*op.Recipients))
-		}
-		//на время тестов оставил
-		if !isUserBalanceValid(balance) {
-			return nil, errors.New("cannot calculate debts")
-		}
+	balance, err := calculateUserBalance(ops)
+	if err != nil {
+		return nil, err
 	}
 
 	var usrBl []*UserBalance
@@ -290,6 +308,21 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 		}
 	}
 	return debts, nil
+}
+
+func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
+	balance := map[int]float64{}
+	for _, op := range ops {
+		balance[op.Donor.ID] += float64(op.Sum)
+		for _, user := range *op.Recipients {
+			balance[user.ID] -= float64(op.Sum) / float64(len(*op.Recipients))
+		}
+		//на время тестов оставил
+		if !isUserBalanceValid(balance) {
+			return nil, errors.New("cannot calculate debts")
+		}
+	}
+	return balance, nil
 }
 
 func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
@@ -354,7 +387,7 @@ func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (i
 		return 0, err
 	}
 	var allDebtsSum int
-	for _, v := range *debts {
+	for _, v := range debts {
 		allDebtsSum += v.Sum
 	}
 	return allDebtsSum, nil
@@ -394,7 +427,7 @@ func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, r
 			log.Error().Err(err).Msg("")
 			return err
 		}
-		for _, v := range *debts {
+		for _, v := range debts {
 			if v.Sum != 0 {
 				*room.Members = deleteUser(*room.Members, v.Debtor.ID)
 			}

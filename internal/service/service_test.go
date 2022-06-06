@@ -30,7 +30,7 @@ func TestGetRoomDebts(t *testing.T) {
 
 	debt, _ := GetRoomDebts(room)
 	var debtForAssert [][]interface{}
-	for _, d := range *debt {
+	for _, d := range debt {
 		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
 	}
 	assert.ElementsMatch(t, debtForAssert, [][]interface{}{
@@ -43,7 +43,7 @@ func TestGetRoomDebts(t *testing.T) {
 	room.Operations = &o
 	debt, _ = GetRoomDebts(room)
 	debtForAssert = [][]interface{}{}
-	for _, d := range *debt {
+	for _, d := range debt {
 		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
 	}
 
