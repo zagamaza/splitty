@@ -23,7 +23,7 @@ type OperationService interface {
 	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
 	GetUserParticipateInOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
-	GetAllDebts(ctx context.Context, roomId string) (*[]api.Debt, error)
+	GetAllDebts(ctx context.Context, roomId string) ([]api.Debt, error)
 	GetUserInvolvedDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebts(ctx context.Context, userId int, roomId string) (*[]api.Debt, error)
 	GetUserDebt(ctx context.Context, debtorId int, lenderId int, roomId string) (*api.Debt, error)

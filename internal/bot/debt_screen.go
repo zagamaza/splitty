@@ -42,7 +42,7 @@ func (bot Debt) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 		log.Error().Err(err).Msg("")
 		return
 	}
-	if len(*debts) < 1 {
+	if len(debts) < 1 {
 		callback := createCallback(u, I18n(u.User, "msg_have_not_debts"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
@@ -189,8 +189,8 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	var toSave []*api.Button
 	var debtBtns []tgbotapi.InlineKeyboardButton
-	for i := skip; i < skip+size && i < len(*debts); i++ {
-		debt := (*debts)[i]
+	for i := skip; i < skip+size && i < len(debts); i++ {
+		debt := (debts)[i]
 		var dbtB *api.Button
 		if debt.Debtor.ID == userId {
 			dbtB = api.NewButton(wantReturnDebt, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
@@ -211,7 +211,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	backB := api.NewButton(chooseDebts, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
-	if skip+size < len(*debts) {
+	if skip+size < len(debts) {
 		nextB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("➡️", nextB.ID.Hex()))
