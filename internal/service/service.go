@@ -260,8 +260,11 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 			result = append(result, debt)
 		}
 	}
-	//todo: check if returned has not 0 value
-
+	for _, sum := range returned {
+		if sum > 2 {
+			return nil, errors.New("debt is not balanced")
+		}
+	}
 	return result, nil
 }
 
