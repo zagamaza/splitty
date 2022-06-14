@@ -1,8 +1,11 @@
 package service
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"testing"
 )
 
@@ -27,7 +30,7 @@ func TestGetRoomDebts(t *testing.T) {
 
 	debt, _ := GetRoomDebts(room)
 	var debtForAssert [][]interface{}
-	for _, d := range *debt {
+	for _, d := range debt {
 		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
 	}
 	assert.ElementsMatch(t, debtForAssert, [][]interface{}{
@@ -40,7 +43,7 @@ func TestGetRoomDebts(t *testing.T) {
 	room.Operations = &o
 	debt, _ = GetRoomDebts(room)
 	debtForAssert = [][]interface{}{}
-	for _, d := range *debt {
+	for _, d := range debt {
 		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
 	}
 
@@ -48,5 +51,21 @@ func TestGetRoomDebts(t *testing.T) {
 		{"A", "C", 10},
 		{"B", "E", 10},
 	})
+
+}
+
+func TestGetRoomDebtsByTestData(t *testing.T) {
+	dat, err := ioutil.ReadFile("test_room.json")
+	room := &api.Room{}
+	err = json.Unmarshal([]byte(dat), &room)
+	if err != nil {
+		fmt.Println(err)
+		assert.Empty(t, err)
+		return
+	}
+
+	debt, _ := GetRoomDebts(*room)
+
+	assert.Empty(t, debt)
 
 }

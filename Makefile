@@ -12,6 +12,10 @@ build:
 	$(GOBUILD) -o $(BINARY_NAME) ./cmd/splitty
 	echo "binary build"
 
+test:
+	$(GOCMD) test ./internal/service/
+	echo "test build"
+
 run_server:
 	 LOG_LEVEL=debug $(BINARY_NAME)
 
