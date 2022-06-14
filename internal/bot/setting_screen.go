@@ -476,12 +476,14 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		for _, user := range *room.Members {
 			rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
 			viewUserOpsB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: room.ID.Hex()})
+			bankDetailsBtn := api.NewButton(bankDetailsView, new(api.CallbackData))
 			backB := api.NewButton(viewStart, &api.CallbackData{})
-			buttons = append(buttons, rb, viewUserOpsB, backB)
+			buttons = append(buttons, rb, viewUserOpsB, bankDetailsBtn, backB)
 			msg := NewMessage(int64(user.ID), I18n(&user, "scrn_all_operations_added", userLink(&user), room.Name),
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_view_room"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_debts"), viewUserOpsB.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_bank_details_view"), bankDetailsBtn.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_to_start"), backB.ID.Hex())},
 				})
 			messages = append(messages, msg)

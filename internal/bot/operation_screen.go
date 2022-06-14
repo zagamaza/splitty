@@ -942,9 +942,9 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 	text := I18n(u.User, "scrn_debt_repayment")
 	text += I18n(u.User, "scrn_debt_returning", userLink(debt.Lender), moneySpace(debt.Sum))
 
-	debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
-	if err == nil && debtor != nil && debtor.BankDetails != "" {
-		text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+	lender, err := s.us.FindById(ctx, debt.Lender.ID)
+	if err == nil && lender != nil && lender.BankDetails != "" {
+		text += I18n(u.User, "scrn_debt_returning_bank", lender.BankDetails)
 	}
 	text += I18n(u.User, "scrn_send_message_choose_user")
 
@@ -1039,9 +1039,9 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 	text := I18n(u.User, "scrn_debt_repayment")
 	text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
 
-	debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
-	if err == nil && debtor != nil && debtor.BankDetails != "" {
-		text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+	lender, err := s.us.FindById(ctx, debt.Lender.ID)
+	if err == nil && lender != nil && lender.BankDetails != "" {
+		text += I18n(u.User, "scrn_debt_returning_bank", lender.BankDetails)
 	}
 
 	text += I18n(u.User, "scrn_send_message_choose_user")
@@ -1110,9 +1110,9 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		text := I18n(u.User, "msg_wrong_format")
 		text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum))
 
-		debtor, err := s.us.FindById(ctx, debt.Debtor.ID)
-		if err == nil && debtor != nil && debtor.BankDetails != "" {
-			text += I18n(u.User, "scrn_debt_returning_bank", debtor.BankDetails)
+		lender, err := s.us.FindById(ctx, debt.Debtor.ID)
+		if err == nil && lender != nil && lender.BankDetails != "" {
+			text += I18n(u.User, "scrn_debt_returning_bank", lender.BankDetails)
 		}
 
 		text += I18n(u.User, "scrn_send_message_choose_user")
