@@ -141,6 +141,8 @@ func (bot UserSetting) HasReact(u *api.Update) bool {
 }
 
 func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	defer bot.css.CleanChatState(ctx, u.ChatState)
+
 	lang := api.DefineLang(u.User)
 	if u.Button.Action == selectedLanguage {
 		lang = u.Button.CallbackData.ExternalId
@@ -152,8 +154,9 @@ func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	langBtn := api.NewButton(chooseLanguage, new(api.CallbackData))
 	notificationBtn := api.NewButton(chooseNotification, new(api.CallbackData))
 	countInPageBtn := api.NewButton(countInPage, new(api.CallbackData))
+	bankDetailsBtn := api.NewButton(bankDetailsView, new(api.CallbackData))
 	backBtn := api.NewButton(viewStart, new(api.CallbackData))
-	if _, err := bot.bs.SaveAll(ctx, langBtn, notificationBtn, backBtn, countInPageBtn); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, langBtn, notificationBtn, backBtn, bankDetailsBtn, countInPageBtn); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
@@ -161,6 +164,7 @@ func (bot *UserSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_language", bot.defineFlag(lang)), langBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_notification", bot.defineNotification(u.User)), notificationBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_count_in_page", bot.defineNumberEmoji(u)), countInPageBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_bank_details_view"), bankDetailsBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
 	})
 	return api.TelegramMessage{
@@ -496,5 +500,125 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		Redirect:  u,
 		Chattable: messages,
 		Send:      true,
+	}
+}
+
+type ViewBankDetails struct {
+	bs  ButtonService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewViewBankDetails(bs ButtonService, css ChatStateService, cfg *Config) *ViewBankDetails {
+	return &ViewBankDetails{
+		bs:  bs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot ViewBankDetails) HasReact(u *api.Update) bool {
+	return hasAction(u, bankDetailsView)
+}
+
+func (bot *ViewBankDetails) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	setBankBtn := api.NewButton(bankDetailsWantSet, &api.CallbackData{})
+	backBtn := api.NewButton(userSetting, new(api.CallbackData))
+
+	if _, err := bot.bs.SaveAll(ctx, setBankBtn, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	text := I18n(u.User, "scrn_bank_details_view", u.User.BankDetails)
+	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_edit_operation_edit"), setBankBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	})
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+type WantSetBankDetails struct {
+	bs  ButtonService
+	css ChatStateService
+	cfg *Config
+}
+
+func NewWantSetBankDetails(bs ButtonService, css ChatStateService, cfg *Config) *WantSetBankDetails {
+	return &WantSetBankDetails{
+		bs:  bs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot WantSetBankDetails) HasReact(u *api.Update) bool {
+	return hasAction(u, bankDetailsWantSet)
+}
+
+func (bot *WantSetBankDetails) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	cs := &api.ChatState{UserId: int(getChatID(u)), Action: bankDetailsSet}
+	err := bot.css.Save(ctx, cs)
+	if err != nil {
+		log.Error().Err(err).Msg("create chat state failed")
+		return
+	}
+
+	backBtn := api.NewButton(userSetting, new(api.CallbackData))
+	if _, err := bot.bs.SaveAll(ctx, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	text := I18n(u.User, "scrn_bank_details_set")
+	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), backBtn.ID.Hex())},
+	})
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+type SetBankDetails struct {
+	bs  ButtonService
+	css ChatStateService
+	us  UserService
+	cfg *Config
+}
+
+func NewSetBankDetails(bs ButtonService, us UserService, css ChatStateService, cfg *Config) *SetBankDetails {
+	return &SetBankDetails{
+		bs:  bs,
+		us:  us,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot SetBankDetails) HasReact(u *api.Update) bool {
+	return hasAction(u, bankDetailsSet) && hasMessage(u)
+}
+
+func (bot *SetBankDetails) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	defer bot.css.CleanChatState(ctx, u.ChatState)
+
+	if err := bot.us.SetUserBankDetails(ctx, u.User.ID, u.Message.Text); err != nil {
+		log.Error().Err(err).Msg("")
+		return api.TelegramMessage{}
+	}
+	user, err := bot.us.FindById(ctx, u.User.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return api.TelegramMessage{}
+	}
+	u.User = user
+	u.Button = api.NewButton(bankDetailsView, nil)
+	return api.TelegramMessage{
+		Send:     true,
+		Redirect: u,
 	}
 }

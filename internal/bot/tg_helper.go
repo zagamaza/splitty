@@ -17,6 +17,7 @@ type UserService interface {
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetCountInPage(ctx context.Context, userId int, count int) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
+	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
 }
 
 type RoomService interface {

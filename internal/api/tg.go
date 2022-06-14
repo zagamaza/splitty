@@ -87,6 +87,7 @@ type User struct {
 	SelectedLang   string `json:"selectedLang" bson:"selected_lang"`
 	NotificationOn *bool  `json:"notificationOn" bson:"notification_on,omitempty"`
 	CountInPage    int    `json:"countInPage" bson:"count_in_page,omitempty"`
+	BankDetails    string `json:"bankDetails" bson:"bank_details,omitempty"`
 }
 
 func DefineLang(u *User) string {

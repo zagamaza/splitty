@@ -72,6 +72,9 @@ var bots = wire.NewSet(
 	bot.NewViewOperationsWithMe,
 	bot.NewChooseCountInPage,
 	bot.NewFinishedAddOperation,
+	bot.NewWantSetBankDetails,
+	bot.NewSetBankDetails,
+	bot.NewViewBankDetails,
 )
 
 func ProvideBotList(
@@ -114,7 +117,10 @@ func ProvideBotList(
 	b38 *bot.ViewOperationsWithMe,
 	b39 *bot.ChooseCountInPage,
 	b40 *bot.FinishedAddOperation,
+	b41 *bot.ViewBankDetails,
+	b42 *bot.SetBankDetails,
+	b43 *bot.WantSetBankDetails,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43}
 }
