@@ -6,6 +6,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 	"strconv"
+	"strings"
 )
 
 type RoomSetting struct {
@@ -476,15 +477,27 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 		for _, user := range *room.Members {
 			rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
 			viewUserOpsB := api.NewButton(viewUserDebts, &api.CallbackData{RoomId: room.ID.Hex()})
-			bankDetailsBtn := api.NewButton(bankDetailsView, new(api.CallbackData))
+			setBankBtn := api.NewButton(bankDetailsWantSet, &api.CallbackData{RoomId: room.ID.Hex(), ExternalData: string(viewRoom)})
 			backB := api.NewButton(viewStart, &api.CallbackData{})
-			buttons = append(buttons, rb, viewUserOpsB, bankDetailsBtn, backB)
-			msg := NewMessage(int64(user.ID), I18n(&user, "scrn_all_operations_added", userLink(&user), room.Name),
+			buttons = append(buttons, rb, viewUserOpsB, setBankBtn, backB)
+
+			user, err := bot.us.FindById(ctx, user.ID)
+			if err != nil {
+				log.Error().Err(err).Msg("")
+				continue
+			}
+			text := I18n(user, "scrn_all_operations_added", userLink(user), room.Name)
+			if user.BankDetails != "" {
+				text += I18n(user, "scrn_all_bank_details", user.BankDetails)
+			} else {
+				text += I18n(user, "scrn_all_operations_ps")
+			}
+			msg := NewMessage(int64(user.ID), text,
 				[][]tgbotapi.InlineKeyboardButton{
-					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_view_room"), rb.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_view_room"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_debts"), viewUserOpsB.ID.Hex())},
-					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_bank_details_view"), bankDetailsBtn.ID.Hex())},
-					{tgbotapi.NewInlineKeyboardButtonData(I18n(&user, "btn_to_start"), backB.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_edit_operation_add"), setBankBtn.ID.Hex())},
+					{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_to_start"), backB.ID.Hex())},
 				})
 			messages = append(messages, msg)
 		}
@@ -562,7 +575,11 @@ func (bot WantSetBankDetails) HasReact(u *api.Update) bool {
 }
 
 func (bot *WantSetBankDetails) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: bankDetailsSet}
+	cs := &api.ChatState{UserId: int(getChatID(u)), Action: bankDetailsSet, CallbackData: &api.CallbackData{}}
+	if u.Button.CallbackData != nil {
+		cs.CallbackData.RoomId = u.Button.CallbackData.RoomId
+		cs.CallbackData.ExternalData = u.Button.CallbackData.ExternalData
+	}
 	err := bot.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
@@ -619,6 +636,13 @@ func (bot *SetBankDetails) OnMessage(ctx context.Context, u *api.Update) (respon
 	}
 	u.User = user
 	u.Button = api.NewButton(bankDetailsView, nil)
+	callbackData := *u.ChatState.CallbackData
+	//Редирект на экран с комнатой
+	if callbackData.ExternalData != "" && strings.Contains(callbackData.ExternalData, "room") {
+		u.Message.Text = "/start " + string(viewRoom) + callbackData.RoomId
+		u.Button = nil
+	}
+	u.ChatState = nil
 	return api.TelegramMessage{
 		Send:     true,
 		Redirect: u,
