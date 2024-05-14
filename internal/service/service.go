@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/pkg/errors"
@@ -263,7 +262,7 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 	}
 	for _, sum := range returned {
 		if sum > 5 {
-			return nil, fmt.Errorf("cannot calculate debts, sum is %f", sum)
+			log.Printf("cannot calculate debts, sum is %f", sum)
 		}
 	}
 	return result, nil
