@@ -102,9 +102,10 @@ func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
 
 func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) error {
 	if upd.CallbackQuery != nil {
-		btn, err := l.ButtonService.FindById(ctx, upd.CallbackQuery.Data)
+		id := upd.CallbackQuery.Data
+		btn, err := l.ButtonService.FindById(ctx, id)
 		if err != nil {
-			return errors.Wrapf(err, "failed to find Button by id %q", err)
+			return errors.Wrapf(err, "failed to find Button by id %s, %q", id, err)
 		}
 		upd.Button = btn
 	}
