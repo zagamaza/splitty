@@ -269,14 +269,35 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	}()
 
 	var buttons []*api.Button
-	var tgButtons []tgbotapi.InlineKeyboardButton
+	var tgButtons [][]tgbotapi.InlineKeyboardButton
+
 	for _, v := range *room.Members {
-		b := &api.Button{ID: primitive.NewObjectID(),
+		// Кнопка с именем участника
+		if v.DisplayName == "Алмаз " {
+			v.DisplayName = "Almaz Hecnfvjdbx dfdf"
+		}
+		b := &api.Button{
+			ID:           primitive.NewObjectID(),
 			Action:       editDonorOperation,
 			Text:         setSmile(room.Members, v.ID) + v.DisplayName,
-			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.ID, OperationId: operation.ID}}
+			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: v.ID, OperationId: operation.ID},
+		}
+
+		// Кнопка с суммой, которую должен участник
+		amount := sum / len(*room.Members)
+
+		// Преобразуем amount к float64, чтобы корректно отобразить с двумя знаками после запятой
+		amountButtonText := fmt.Sprintf("💵 %.2f ₽", float64(amount))
+		amountCallbackData := fmt.Sprintf("updateAmount:%s:%.2f", v.ID, float64(amount))
+
+		// Создаем кнопку
+		amountButton := tgbotapi.NewInlineKeyboardButtonData(amountButtonText, amountCallbackData)
+		// Сохраняем обе кнопки в одной строке
 		buttons = append(buttons, b)
-		tgButtons = append(tgButtons, tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()))
+		tgButtons = append(tgButtons, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(b.Text, b.ID.Hex()),
+			amountButton,
+		})
 	}
 
 	ob := api.NewButton(deleteDonorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
@@ -288,18 +309,22 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		return
 	}
 
-	keyboardButtons := optimizeKeyboardButtons(tgButtons)
-	keyboardButtons = append(keyboardButtons,
+	// Добавляем кнопки завершения и удаления операции
+	tgButtons = append(tgButtons,
 		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), ob.ID.Hex())},
-		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), db.ID.Hex())})
+		[]tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), db.ID.Hex())},
+	)
 
 	text := I18n(u.User, "scrn_operation_added", purchaseText, moneySpace(sum))
 	text += "🗓 " + operation.CreateAt.Format("02 January 2006") + "\n\n"
 	text += I18n(u.User, "scrn_mark_members")
 	text += I18n(u.User, "scrn_take_part")
+
 	return api.TelegramMessage{
-		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, keyboardButtons)},
-		Send:      true,
+		Chattable: []tgbotapi.Chattable{
+			NewMessage(getChatID(u), text, tgButtons),
+		},
+		Send: true,
 	}
 }
 
