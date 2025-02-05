@@ -324,7 +324,7 @@ func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
 	for _, op := range ops {
 		balance[op.Donor.ID] += float64(op.Sum)
 		for _, recipient := range op.RecipientsWithSum {
-			balance[recipient.User.ID] -= float64(recipient.Sum)
+			balance[recipient.User.ID] -= recipient.Sum
 		}
 		//на время тестов оставил
 		if !isUserBalanceValid(balance) {
@@ -386,7 +386,7 @@ func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, room
 		if v.Status == "active" && !v.IsDebtRepayment && containsUserId(v.RecipientsWithSum, userId) {
 			for _, r := range v.RecipientsWithSum {
 				if r.User.ID == userId {
-					totalUserSpendSum += float64(r.Sum)
+					totalUserSpendSum += r.Sum
 				}
 			}
 		}

@@ -12,14 +12,14 @@
     {
       "id": 304898122,
       "user_name": "mazanur",
-      "display_name": "Алмаз",
+      "display_name": "Алмаз ",
       "user_lang": "ru",
       "selected_lang": ""
     },
     {
       "id": 360624984,
       "user_name": "albinka2491",
-      "display_name": "Альбина",
+      "display_name": "Альбина ",
       "user_lang": "ru",
       "selected_lang": ""
     },
@@ -33,7 +33,7 @@
     {
       "id": 147181773,
       "user_name": "arturrdd",
-      "display_name": "Артур",
+      "display_name": "Артур ",
       "user_lang": "ru",
       "selected_lang": ""
     },
@@ -47,21 +47,21 @@
     {
       "id": 438583473,
       "user_name": "Systemka314",
-      "display_name": "Анастасия",
+      "display_name": "Анастасия ",
       "user_lang": "ru",
       "selected_lang": ""
     },
     {
       "id": 399275983,
       "user_name": "aleksanmaksim",
-      "display_name": "Александр",
+      "display_name": "Александр ",
       "user_lang": "ru",
       "selected_lang": ""
     },
     {
       "id": 286316736,
       "user_name": "ElenaNaOs",
-      "display_name": "Elena Grigoreva",
+      "display_name": "Elena Grigoreva ",
       "user_lang": "ru",
       "selected_lang": ""
     },
@@ -79,7 +79,7 @@
       "donor": {
         "id": 399275983,
         "user_name": "aleksanmaksim",
-        "display_name": "Александр",
+        "display_name": "Александр ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -88,7 +88,7 @@
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": ""
           },
@@ -106,7 +106,7 @@
       "donor": {
         "id": 399275983,
         "user_name": "aleksanmaksim",
-        "display_name": "Александр",
+        "display_name": "Александр ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -119,27 +119,27 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
@@ -149,17 +149,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
@@ -169,27 +169,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 4
+          "sum": 3.5
         },
         {
           "user": {
@@ -199,7 +209,7 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 3
+          "sum": 3.5
         }
       ],
       "IsDebtRepayment": false,
@@ -228,23 +238,33 @@
       "recipientsWithSum": [
         {
           "user": {
-            "id": 304898122,
-            "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 130
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 130
+          "sum": 116.6
         },
         {
           "user": {
@@ -254,17 +274,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 130
+          "sum": 116.6
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 130
+          "sum": 116.6
         },
         {
           "user": {
@@ -274,37 +294,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 130
+          "sum": 116.6
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 129
+          "sum": 116.6
         },
         {
           "user": {
             "id": 399275983,
             "user_name": "aleksanmaksim",
-            "display_name": "Александр",
+            "display_name": "Александр ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 129
+          "sum": 116.6
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 129
+          "sum": 116.6
         },
         {
           "user": {
@@ -314,7 +334,7 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 129
+          "sum": 116.6
         }
       ],
       "IsDebtRepayment": false,
@@ -336,7 +356,7 @@
       "donor": {
         "id": 304898122,
         "user_name": "mazanur",
-        "display_name": "Алмаз",
+        "display_name": "Алмаз ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -349,17 +369,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
@@ -369,17 +389,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
@@ -389,37 +409,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
             "id": 399275983,
             "user_name": "aleksanmaksim",
-            "display_name": "Александр",
+            "display_name": "Александр ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
         },
         {
           "user": {
@@ -429,7 +449,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 138
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
         }
       ],
       "IsDebtRepayment": false,
@@ -457,7 +487,7 @@
       "donor": {
         "id": 399275983,
         "user_name": "aleksanmaksim",
-        "display_name": "Александр",
+        "display_name": "Александр ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -470,27 +500,27 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 37
+          "sum": 32.5
         },
         {
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
@@ -500,17 +530,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
@@ -520,27 +550,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         },
         {
           "user": {
@@ -550,7 +590,7 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 36
+          "sum": 32.5
         }
       ],
       "IsDebtRepayment": false,
@@ -579,23 +619,33 @@
       "recipientsWithSum": [
         {
           "user": {
-            "id": 304898122,
-            "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
         },
         {
           "user": {
@@ -605,17 +655,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
         },
         {
           "user": {
@@ -625,37 +675,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 17
+          "sum": 15
         },
         {
           "user": {
             "id": 399275983,
             "user_name": "aleksanmaksim",
-            "display_name": "Александр",
+            "display_name": "Александр ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 16
+          "sum": 15
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 16
+          "sum": 15
         },
         {
           "user": {
@@ -665,7 +715,7 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 16
+          "sum": 15
         }
       ],
       "IsDebtRepayment": false,
@@ -687,7 +737,7 @@
       "donor": {
         "id": 399275983,
         "user_name": "aleksanmaksim",
-        "display_name": "Александр",
+        "display_name": "Александр ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -696,7 +746,7 @@
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": ""
           },
@@ -714,7 +764,7 @@
       "donor": {
         "id": 399275983,
         "user_name": "aleksanmaksim",
-        "display_name": "Александр",
+        "display_name": "Александр ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -727,27 +777,27 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 360624984,
             "user_name": "albinka2491",
-            "display_name": "Альбина",
+            "display_name": "Альбина ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
@@ -757,17 +807,17 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 147181773,
             "user_name": "arturrdd",
-            "display_name": "Артур",
+            "display_name": "Артур ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
@@ -777,37 +827,37 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 438583473,
             "user_name": "Systemka314",
-            "display_name": "Анастасия",
+            "display_name": "Анастасия ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 399275983,
             "user_name": "aleksanmaksim",
-            "display_name": "Александр",
+            "display_name": "Александр ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
             "id": 286316736,
             "user_name": "ElenaNaOs",
-            "display_name": "Elena Grigoreva",
+            "display_name": "Elena Grigoreva ",
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         },
         {
           "user": {
@@ -817,7 +867,7 @@
             "user_lang": "ru",
             "selected_lang": ""
           },
-          "sum": 11
+          "sum": 9.9
         }
       ],
       "IsDebtRepayment": false,
@@ -839,7 +889,7 @@
       "donor": {
         "id": 286316736,
         "user_name": "ElenaNaOs",
-        "display_name": "Elena Grigoreva",
+        "display_name": "Elena Grigoreva ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -866,7 +916,7 @@
       "donor": {
         "id": 438583473,
         "user_name": "Systemka314",
-        "display_name": "Анастасия",
+        "display_name": "Анастасия ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -893,7 +943,7 @@
       "donor": {
         "id": 360624984,
         "user_name": "albinka2491",
-        "display_name": "Альбина",
+        "display_name": "Альбина ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -902,7 +952,7 @@
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": "ru",
             "notification_on": true,
@@ -920,7 +970,7 @@
       "donor": {
         "id": 360624984,
         "user_name": "albinka2491",
-        "display_name": "Альбина",
+        "display_name": "Альбина ",
         "user_lang": "ru",
         "selected_lang": ""
       },
@@ -956,7 +1006,7 @@
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": "ru",
             "notification_on": true,
@@ -983,7 +1033,7 @@
           "user": {
             "id": 304898122,
             "user_name": "mazanur",
-            "display_name": "Алмаз",
+            "display_name": "Алмаз ",
             "user_lang": "ru",
             "selected_lang": "ru",
             "notification_on": true,
@@ -1010,7 +1060,7 @@
           "user": {
             "id": 399275983,
             "user_name": "aleksanmaksim",
-            "display_name": "Александр",
+            "display_name": "Александр ",
             "user_lang": "ru",
             "selected_lang": "",
             "notification_on": true,
@@ -1055,7 +1105,7 @@
       "donor": {
         "id": 147181773,
         "user_name": "arturrdd",
-        "display_name": "Артур",
+        "display_name": "Артур ",
         "user_lang": "ru",
         "selected_lang": ""
       },

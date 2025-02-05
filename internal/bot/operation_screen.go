@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"math"
 	"slices"
 	"sort"
 	"strconv"
@@ -337,7 +338,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	if u.Button.CallbackData.ExternalData == string(equally) {
 		splitType = equally
 		for _, user := range *room.Members {
-			recipientsWithSum = append(recipientsWithSum, api.RecipientWithSum{User: user, Sum: u.ChatState.CallbackData.Page / len(*room.Members)})
+			recipientsWithSum = append(recipientsWithSum, api.RecipientWithSum{User: user, Sum: float64(u.ChatState.CallbackData.Page) / float64(len(*room.Members))})
 		}
 	} else {
 		splitType = by_exact_amount
@@ -454,7 +455,7 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		sum := u.ChatState.CallbackData.Page
 		for i := range operation.RecipientsWithSum {
 			if operation.RecipientsWithSum[i].User.ID == UserId {
-				operation.RecipientsWithSum[i].Sum = sum
+				operation.RecipientsWithSum[i].Sum = float64(sum)
 			}
 		}
 	}
@@ -543,9 +544,9 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 		return nil, true
 	}
 
-	unallocatedSum := operation.Sum
+	unallocatedSum := float64(operation.Sum)
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= int(recipientWithSum.Sum)
+		unallocatedSum -= recipientWithSum.Sum
 	}
 
 	slivce := []string{
@@ -569,10 +570,10 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 			if operation.SplitType == equally {
 				return ""
 			}
-			if unallocatedSum > 0 {
-				return fmt.Sprintf("⚠️ Осталось распределить %s", moneySpace(unallocatedSum, room.Currency))
+			if RoundToTwoDecimalPlaces(unallocatedSum) > 0 {
+				return fmt.Sprintf("⚠️ Осталось распределить %s", moneySpace(int(unallocatedSum), room.Currency))
 			} else if unallocatedSum < 0 {
-				return fmt.Sprintf("🔴 Избыток: %s", moneySpace(-unallocatedSum, room.Currency))
+				return fmt.Sprintf("🔴 Избыток: %s", moneySpace(int(-unallocatedSum), room.Currency))
 			} else {
 				return "Все средства распределены 💪"
 			}
@@ -629,7 +630,7 @@ func (s EditDonorOperation) addOrDeleteRecipient(
 
 	// Пересчитываем долю для каждого участника:
 	if len(recipients) > 0 && operation.SplitType == equally {
-		share := totalSum / len(recipients)
+		share := float64(totalSum) / float64(len(recipients))
 		for i := range recipients {
 			recipients[i].Sum = share
 		}
@@ -736,9 +737,9 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	tgButtons := [][]tgbotapi.InlineKeyboardButton{{
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
 	}}
-	unallocatedSum := operation.Sum
+	unallocatedSum := float64(operation.Sum)
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= int(recipientWithSum.Sum)
+		unallocatedSum -= recipientWithSum.Sum
 	}
 
 	tb := sdk.NewTableBuilder('-', " | ")
@@ -843,7 +844,7 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}
 	for i := range operation.RecipientsWithSum {
 		if operation.RecipientsWithSum[i].User.ID == u.ChatState.CallbackData.UserId {
-			operation.RecipientsWithSum[i].Sum = sum
+			operation.RecipientsWithSum[i].Sum = float64(sum)
 		}
 	}
 
@@ -882,9 +883,9 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}, {
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
 	}}
-	unallocatedSum := operation.Sum
+	unallocatedSum := float64(operation.Sum)
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= int(recipientWithSum.Sum)
+		unallocatedSum -= recipientWithSum.Sum
 	}
 
 	tb := sdk.NewTableBuilder('-', " | ")
@@ -928,10 +929,10 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 		moneySpace(operation.Sum, room.Currency),
 		moneySpace(sum, room.Currency),
 		func() string {
-			if unallocatedSum > 0 {
-				return fmt.Sprintf("⚠️ Осталось распределить: %s", moneySpace(unallocatedSum, room.Currency))
-			} else if unallocatedSum < 0 {
-				return fmt.Sprintf("🔴Избыток: %s", moneySpace(-unallocatedSum, room.Currency))
+			if RoundToTwoDecimalPlaces(unallocatedSum) > 0 {
+				return fmt.Sprintf("⚠️ Осталось распределить: %s", moneySpace(int(unallocatedSum), room.Currency))
+			} else if RoundToTwoDecimalPlaces(unallocatedSum) < 0 {
+				return fmt.Sprintf("🔴Избыток: %s", moneySpace(int(-unallocatedSum), room.Currency))
 			} else {
 				return "Все средства распределены 💪"
 			}
@@ -984,16 +985,16 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	opn := findOperationByID(room, u.Button.CallbackData.OperationId)
-	unallocatedSum := opn.Sum
+	unallocatedSum := float64(opn.Sum)
 	for _, recipientWithSum := range opn.RecipientsWithSum {
-		unallocatedSum -= int(recipientWithSum.Sum)
+		unallocatedSum -= recipientWithSum.Sum
 	}
-	if unallocatedSum != 0 {
+	if RoundToTwoDecimalPlaces(unallocatedSum) != 0.00 {
 		var text = "⚠️Ошибка при добавление операции:\n\n"
 		if unallocatedSum > 0 {
-			text += fmt.Sprintf("🔴Не распределено: %s", moneySpace(unallocatedSum, room.Currency))
+			text += fmt.Sprintf("🔴Не распределено: %s", moneySpace(int(unallocatedSum), room.Currency))
 		} else if unallocatedSum < 0 {
-			text += fmt.Sprintf("🔴Избыток распределения: %s", moneySpace(-unallocatedSum, room.Currency))
+			text += fmt.Sprintf("🔴Избыток распределения: %s", moneySpace(int(-unallocatedSum), room.Currency))
 		}
 
 		callback := createCallback(u, text, true)
@@ -1013,6 +1014,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 		user, err := s.us.FindById(ctx, recipientsWithSum.User.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("")
+			continue
 		}
 		if !slices.Contains(opn.NotificationSent, user.ID) && *user.NotificationOn && user.ID != u.User.ID {
 			rb := api.NewButton(donorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: opn.ID})
@@ -1637,7 +1639,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		ID:                primitive.NewObjectID(),
 		Sum:               sum,
 		Donor:             donor,
-		RecipientsWithSum: []api.RecipientWithSum{{User: *recipient, Sum: sum}},
+		RecipientsWithSum: []api.RecipientWithSum{{User: *recipient, Sum: float64(sum)}},
 		IsDebtRepayment:   true,
 		CreateAt:          time.Now(),
 	}
@@ -1955,4 +1957,8 @@ func findOperationByID(room *api.Room, id primitive.ObjectID) api.Operation {
 		}
 	}
 	return operation
+}
+
+func RoundToTwoDecimalPlaces(num float64) float64 {
+	return math.Round(num*100) / 100
 }

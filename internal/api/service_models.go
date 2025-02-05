@@ -44,8 +44,8 @@ type Operation struct {
 }
 
 type RecipientWithSum struct {
-	User User `json:"user" bson:"user"`
-	Sum  int  `json:"sum" bson:"sum"`
+	User User    `json:"user" bson:"user"`
+	Sum  float64 `json:"sum" bson:"sum"`
 }
 
 type File struct {
