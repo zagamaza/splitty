@@ -212,7 +212,7 @@ func GetRoomDebts(room api.Room) ([]api.Debt, error) {
 	var notDebt []api.Operation
 	var debtReturn []api.Operation
 	for _, op := range *room.Operations {
-		if op.Status != "active" {
+		if op.Status == "draft" {
 			continue
 		}
 		if op.IsDebtRepayment {

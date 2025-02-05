@@ -2,15 +2,16 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/almaznur91/splitty/internal/api"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"testing"
+
+	"github.com/almaznur91/splitty/internal/api"
+	"github.com/stretchr/testify/assert"
 )
 
+// Тест для ручного формирования операций
 func TestGetRoomDebts(t *testing.T) {
-
+	// Создадим набор пользователей
 	m := []api.User{
 		{ID: 0, DisplayName: "A"},
 		{ID: 1, DisplayName: "B"},
@@ -19,9 +20,21 @@ func TestGetRoomDebts(t *testing.T) {
 		{ID: 4, DisplayName: "E"},
 	}
 	o := []api.Operation{
-		{Donor: &m[2], Recipients: &[]api.User{m[3]}, Sum: 1},
-		{Donor: &m[2], Recipients: &[]api.User{m[0]}, Sum: 10},
-		{Donor: &m[4], Recipients: &[]api.User{m[1]}, Sum: 10},
+		{
+			Donor:             &m[2],
+			RecipientsWithSum: []api.RecipientWithSum{{User: m[3], Sum: 1}},
+			Sum:               1,
+		},
+		{
+			Donor:             &m[2],
+			RecipientsWithSum: []api.RecipientWithSum{{User: m[0], Sum: 10}},
+			Sum:               10,
+		},
+		{
+			Donor:             &m[4],
+			RecipientsWithSum: []api.RecipientWithSum{{User: m[1], Sum: 10}},
+			Sum:               10,
+		},
 	}
 	room := api.Room{
 		Members:    &m,
@@ -39,7 +52,12 @@ func TestGetRoomDebts(t *testing.T) {
 		{"D", "C", 1},
 	})
 
-	o = append(o, api.Operation{Donor: &m[3], Recipients: &[]api.User{m[2]}, Sum: 1, IsDebtRepayment: true})
+	o = append(o, api.Operation{
+		Donor:             &m[3],
+		RecipientsWithSum: []api.RecipientWithSum{{User: m[2], Sum: 1}},
+		Sum:               1,
+		IsDebtRepayment:   true,
+	})
 	room.Operations = &o
 	debt, _ = GetRoomDebts(room)
 	debtForAssert = [][]interface{}{}
@@ -54,18 +72,17 @@ func TestGetRoomDebts(t *testing.T) {
 
 }
 
+// Тест с данными из файла (тестовые данные должны представлять сбалансированную ситуацию, т.е. долгов не должно оставаться)
 func TestGetRoomDebtsByTestData(t *testing.T) {
 	dat, err := ioutil.ReadFile("test_room.json")
+	assert.NoError(t, err)
+
 	room := &api.Room{}
-	err = json.Unmarshal([]byte(dat), &room)
-	if err != nil {
-		fmt.Println(err)
-		assert.Empty(t, err)
-		return
-	}
+	err = json.Unmarshal(dat, room)
+	assert.NoError(t, err)
 
-	debt, _ := GetRoomDebts(*room)
-
-	assert.Empty(t, debt)
-
+	debts, err := GetRoomDebts(*room)
+	assert.NoError(t, err)
+	// По тестовым данным ожидаем, что все долги взаимно погашены
+	assert.Empty(t, debts)
 }
