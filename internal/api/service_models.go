@@ -13,6 +13,13 @@ type Room struct {
 	Operations *[]Operation       `json:"operations" bson:"operations"`
 	RoomStates RoomStatesUsers    `json:"roomStates" bson:"room_states"`
 	CreateAt   time.Time          `json:"createAt" bson:"create_at"`
+	Currency   string             `json:"currency" bson:"currency"`
+}
+
+type CurrencyInfo struct {
+	Code   string // ISO-код, например, "RUB"
+	Symbol string // Символ валюты, например, "₽"
+	Flag   string // Флаг страны, например, "🇷🇺"
 }
 
 type RoomStatesUsers struct {
@@ -22,15 +29,23 @@ type RoomStatesUsers struct {
 }
 
 type Operation struct {
-	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Description      string             `json:"description" bson:"description"`
-	Donor            *User              `json:"donor" bson:"donor"`
-	Recipients       *[]User            `json:"recipients" bson:"recipients"`
-	IsDebtRepayment  bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
-	Sum              int                `json:"sum" bson:"sum"`
-	NotificationSent []int              `json:"notificationSent" bson:"notification_sent"`
-	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
-	Files            []File             `json:"files" bson:"files,omitempty"`
+	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Description       string             `json:"description" bson:"description"`
+	Donor             *User              `json:"donor" bson:"donor"`
+	Recipients        *[]User            `json:"recipients" bson:"recipients"`
+	RecipientsWithSum []RecipientWithSum `json:"recipientsWithSum" bson:"recipients_with_sum"`
+	IsDebtRepayment   bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
+	Sum               int                `json:"sum" bson:"sum"`
+	NotificationSent  []int              `json:"notificationSent" bson:"notification_sent"`
+	CreateAt          time.Time          `json:"createAt" bson:"create_at"`
+	Files             []File             `json:"files" bson:"files,omitempty"`
+	Status            OperationStatus    `json:"status" bson:"status"`
+	SplitType         SplitType          `json:"splitType" bson:"split_type"`
+}
+
+type RecipientWithSum struct {
+	User User `json:"user" bson:"user"`
+	Sum  int  `json:"sum" bson:"sum"`
 }
 
 type File struct {
@@ -38,6 +53,10 @@ type File struct {
 	FileId string   `json:"fileId" bson:"file_id"`
 }
 type FileType string
+
+type OperationStatus string
+
+type SplitType string
 
 type Debt struct {
 	Lender *User `json:"lender" bson:"lender"`

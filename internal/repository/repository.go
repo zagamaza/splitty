@@ -38,6 +38,7 @@ type RoomRepository interface {
 	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
+	UpdateCurrency(ctx context.Context, roomId string, currency string) error
 }
 
 type ChatStateRepository interface {
@@ -290,6 +291,17 @@ func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, roomId string
 		return err
 	}
 	return nil
+}
+
+func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string, currency string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{"_id", bson.D{{"$eq", hex}}}}
+	update := bson.D{{"$set", bson.M{"currency": currency}}}
+	_, err = rr.col.UpdateOne(ctx, filter, update)
+	return err
 }
 
 func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, error) {

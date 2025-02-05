@@ -6,6 +6,7 @@ import (
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"slices"
 )
 
 // send /room, after click on the button 'Присоединиться'
@@ -47,9 +48,9 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		}
 		var debtText string
 		if debtorSum != 0 {
-			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
+			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum, room.Currency))
 		} else if lenderSum != 0 {
-			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum))
+			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum, room.Currency))
 		} else {
 			debtText = I18n(u.User, "msg_you_not_debt")
 		}
@@ -273,17 +274,19 @@ func createRoomInfoText(r *api.Room, u *api.Update) string {
 	case Finished:
 		partyStatus = I18n(u.User, "scrn_party_type_finished")
 	}
-	text := I18n(u.User, "scrn_room", r.Name, partyStatus)
+	text := I18n(u.User, "scrn_room", r.Name, partyStatus, GetCurrencyFlag(r.Currency))
 
 	for _, v := range *r.Members {
 		text += "- " + userLink(&v)
-		if containsInt(r.RoomStates.PaidOffDebt, v.ID) && DebtDistributing == partyType {
+
+		if slices.Contains(r.RoomStates.PaidOffDebt, v.ID) && DebtDistributing == partyType {
 			text += " 🤝"
-		} else if containsInt(r.RoomStates.FinishedAddOperation, v.ID) && OperationAdding == partyType {
+		} else if slices.Contains(r.RoomStates.FinishedAddOperation, v.ID) && OperationAdding == partyType {
 			text += " 🏁"
 		}
 		text += "\n"
 	}
+
 	if paidOffDebtCunt != 0 && partyType == DebtDistributing {
 		text += I18n(u.User, "scrn_debt_legend")
 	} else if finishedAddOperationCount != 0 && partyType == OperationAdding {
