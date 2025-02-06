@@ -26,13 +26,20 @@ func NewRoomSetting(bs ButtonService, rs RoomService, css ChatStateService, cfg 
 }
 
 func (bot RoomSetting) HasReact(u *api.Update) bool {
-	return hasAction(u, roomSetting)
+	return hasAction(u, roomSetting) || hasAction(u, choseCurrency)
 }
 
 func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	defer bot.css.CleanChatState(ctx, u.ChatState)
 
 	roomId := u.Button.CallbackData.RoomId
+
+	if hasAction(u, choseCurrency) {
+		if err := bot.rs.UpdateCurrency(ctx, roomId, u.Button.CallbackData.ExternalId); err != nil {
+			log.Error().Err(err).Msg("update currency failed")
+			return
+		}
+	}
 	room, err := bot.rs.FindById(ctx, roomId)
 	if err != nil {
 		log.Error().Err(err).Stack().Msgf("cannot find room, id:%s", roomId)
@@ -54,6 +61,10 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_do_archive"), btn.ID.Hex()))
 	}
 
+	chooseCurrencyBtn := api.NewButton(chooseCurrency, &api.CallbackData{RoomId: roomId})
+	toSave = append(toSave, chooseCurrencyBtn)
+	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag(room.Currency)+" Валюта", chooseCurrencyBtn.ID.Hex()))
+
 	exitRoomBtn := api.NewButton(exitRoom, &api.CallbackData{RoomId: roomId})
 	toSave = append(toSave, exitRoomBtn)
 	buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_exit"), exitRoomBtn.ID.Hex()))
@@ -69,6 +80,62 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	keyboard := splitKeyboardButtons(buttons, 1)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &keyboard)},
+		Send:      true,
+	}
+}
+
+type ChooseCurrencyRoom struct {
+	bs    ButtonService
+	rss   RoomStateService
+	rs    RoomService
+	css   ChatStateService
+	vsBot *RoomSetting
+	cfg   *Config
+}
+
+func NewChooseCurrencyRoom(bs ButtonService, rss RoomStateService, rs RoomService, css ChatStateService, cfg *Config, viewSetting *RoomSetting) *ChooseCurrencyRoom {
+	return &ChooseCurrencyRoom{
+		bs:    bs,
+		rs:    rs,
+		rss:   rss,
+		cfg:   cfg,
+		css:   css,
+		vsBot: viewSetting,
+	}
+}
+
+func (bot ChooseCurrencyRoom) HasReact(u *api.Update) bool {
+	return hasAction(u, chooseCurrency)
+}
+
+func (bot *ChooseCurrencyRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := bot.rs.FindById(ctx, u.Button.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("get room failed")
+		return
+	}
+
+	rubBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "RUB", RoomId: room.ID.Hex()})
+	idrBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "IDR", RoomId: room.ID.Hex()})
+	usdBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "USD", RoomId: room.ID.Hex()})
+	eurBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "EUR", RoomId: room.ID.Hex()})
+	backBtn := api.NewButton(roomSetting, &api.CallbackData{RoomId: room.ID.Hex()})
+
+	if _, err := bot.bs.SaveAll(ctx, rubBtn, idrBtn, usdBtn, eurBtn, backBtn); err != nil {
+		log.Error().Err(err).Msg("create btn failed")
+		return
+	}
+	text := I18n(u.User, "scrn_choose_currency")
+	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
+		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("RUB")+" "+GetCurrencySymbol("RUB"), rubBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("IDR")+" "+GetCurrencySymbol("IDR"), idrBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("USD")+" "+GetCurrencySymbol("USD"), usdBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("EUR")+" "+GetCurrencySymbol("EUR"), eurBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	})
+	u.Button = api.NewButton(roomSetting, u.Button.CallbackData)
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{screen},
 		Send:      true,
 	}
 }
@@ -356,7 +423,7 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 	}
 	userID := u.User.ID
 	for _, o := range *room.Operations {
-		if o.Donor.ID == userID || containsUserId(o.Recipients, userID) {
+		if o.Donor.ID == userID || containsRecipient(o.RecipientsWithSum, userID) {
 			callback := createCallback(u, I18n(u.User, "msg_you_can_not_leave"), true)
 			return api.TelegramMessage{
 				CallbackConfig: callback,

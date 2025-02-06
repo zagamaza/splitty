@@ -143,7 +143,7 @@ func (s *OperationService) GetUserParticipateInOperations(ctx context.Context, u
 	}
 	var participateInOperations []api.Operation
 	for _, o := range *room.Operations {
-		if !o.IsDebtRepayment && containsUserId(o.Recipients, userId) {
+		if !o.IsDebtRepayment && containsUserId(o.RecipientsWithSum, userId) && o.Status == "active" {
 			participateInOperations = append(participateInOperations, o)
 		}
 	}
@@ -212,6 +212,9 @@ func GetRoomDebts(room api.Room) ([]api.Debt, error) {
 	var notDebt []api.Operation
 	var debtReturn []api.Operation
 	for _, op := range *room.Operations {
+		if op.Status == "draft" {
+			continue
+		}
 		if op.IsDebtRepayment {
 			debtReturn = append(debtReturn, op)
 		} else {
@@ -320,8 +323,8 @@ func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
 	balance := map[int]float64{}
 	for _, op := range ops {
 		balance[op.Donor.ID] += float64(op.Sum)
-		for _, user := range *op.Recipients {
-			balance[user.ID] -= float64(op.Sum) / float64(len(*op.Recipients))
+		for _, recipient := range op.RecipientsWithSum {
+			balance[recipient.User.ID] -= recipient.Sum
 		}
 		//на время тестов оставил
 		if !isUserBalanceValid(balance) {
@@ -366,7 +369,7 @@ func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (i
 	}
 	var totalSpendSum int
 	for _, v := range *room.Operations {
-		if !v.IsDebtRepayment {
+		if v.Status == "active" && !v.IsDebtRepayment {
 			totalSpendSum += v.Sum
 		}
 	}
@@ -380,8 +383,12 @@ func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, room
 	}
 	var totalUserSpendSum float64
 	for _, v := range *room.Operations {
-		if !v.IsDebtRepayment && containsUserId(v.Recipients, userId) {
-			totalUserSpendSum += float64(v.Sum) / float64(len(*v.Recipients))
+		if v.Status == "active" && !v.IsDebtRepayment && containsUserId(v.RecipientsWithSum, userId) {
+			for _, r := range v.RecipientsWithSum {
+				if r.User.ID == userId {
+					totalUserSpendSum += r.Sum
+				}
+			}
 		}
 	}
 	return int(totalUserSpendSum), nil
@@ -417,9 +424,9 @@ func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int
 	return debtorSum, lenderSum, nil
 }
 
-func containsUserId(users *[]api.User, id int) bool {
-	for _, u := range *users {
-		if u.ID == id {
+func containsUserId(users []api.RecipientWithSum, id int) bool {
+	for _, u := range users {
+		if u.User.ID == id {
 			return true
 		}
 	}

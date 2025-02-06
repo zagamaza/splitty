@@ -44,24 +44,26 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	wantDonorOperation := bot.NewWantDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	roomStateService := service.NewRoomStateService(operationService, mongoRoomRepository)
 	addDonorOperation := bot.NewAddDonorOperation(chatStateService, buttonService, operationService, roomService, roomStateService, botConfig)
-	editDonorOperation := bot.NewEditDonorOperation(buttonService, operationService, roomService, botConfig)
+	addSplitTypeDonorOperation := bot.NewSplitTypeDonorOperation(chatStateService, buttonService, operationService, roomService, roomStateService, botConfig)
+	editDonorOperation := bot.NewEditDonorOperation(buttonService, chatStateService, operationService, roomService, botConfig)
 	deleteDonorOperation := bot.NewDeleteDonorOperation(chatStateService, buttonService, operationService, roomService, botConfig)
 	viewRoom := bot.NewViewRoom(buttonService, roomService, chatStateService, botConfig)
-	viewAllOperations := bot.NewViewAllOperations(chatStateService, buttonService, operationService, botConfig)
+	viewAllOperations := bot.NewViewAllOperations(chatStateService, roomService, buttonService, operationService, botConfig)
 	allRoom := bot.NewAllRoom(chatStateService, buttonService, roomService, botConfig)
 	mongoUserRepository := repository.NewUserRepository(database)
 	userService := service.NewUserService(mongoUserRepository)
 	chooseRecepientOperation := bot.NewChooseRecepientOperation(chatStateService, buttonService, userService, operationService, roomService, botConfig)
 	wantReturnDebt := bot.NewWantReturnDebt(chatStateService, userService, buttonService, operationService, roomService, botConfig)
 	addRecepientOperation := bot.NewAddRecepientOperation(chatStateService, buttonService, operationService, userService, roomService, roomStateService, botConfig)
-	viewUserDebts := bot.NewViewUserDebts(chatStateService, buttonService, operationService, botConfig)
-	viewAllDebts := bot.NewViewAllDebts(chatStateService, buttonService, operationService, botConfig)
+	viewUserDebts := bot.NewViewUserDebts(chatStateService, roomService, buttonService, operationService, botConfig)
+	viewAllDebts := bot.NewViewAllDebts(chatStateService, roomService, buttonService, operationService, botConfig)
 	roomSetting := bot.NewRoomSetting(buttonService, roomService, chatStateService, botConfig)
 	archiveRoom := bot.NewArchiveRoom(buttonService, roomStateService, roomService, chatStateService, botConfig, roomSetting)
+	chooseCurrencyRoom := bot.NewChooseCurrencyRoom(buttonService, roomStateService, roomService, chatStateService, botConfig, roomSetting)
 	archivedRooms := bot.NewArchivedRooms(chatStateService, buttonService, roomService, botConfig)
 	statistic := bot.NewStatistic(buttonService, roomService, chatStateService, statisticService, botConfig)
-	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, buttonService, operationService, botConfig)
-	viewMyOperations := bot.NewViewMyOperations(chatStateService, buttonService, operationService, botConfig)
+	viewAllDebtOperations := bot.NewViewAllDebtOperations(chatStateService, roomService, buttonService, operationService, botConfig)
+	viewMyOperations := bot.NewViewMyOperations(chatStateService, roomService, buttonService, operationService, botConfig)
 	debt := bot.NewDebt(chatStateService, buttonService, operationService, botConfig)
 	userSetting := bot.NewUserSetting(buttonService, userService, chatStateService, botConfig)
 	chooseLanguage := bot.NewChooseLanguage(buttonService, roomService, chatStateService, botConfig)
@@ -74,13 +76,22 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	viewFileOperation := bot.NewViewFileOperation(chatStateService, buttonService, roomService, operationService, botConfig)
 	viewDonorOperation := bot.NewViewDonorOperation(buttonService, operationService, roomService, botConfig)
 	selectedLeaveRoom := bot.NewSelectedLeaveRoom(buttonService, userService, roomService, chatStateService, botConfig)
-	viewOperationsWithMe := bot.NewViewOperationsWithMe(chatStateService, buttonService, operationService, botConfig)
+	viewOperationsWithMe := bot.NewViewOperationsWithMe(chatStateService, roomService, buttonService, operationService, botConfig)
 	chooseCountInPage := bot.NewChooseCountInPage(buttonService, chatStateService, userService, botConfig)
 	finishedAddOperation := bot.NewFinishedAddOperation(buttonService, chatStateService, roomService, roomStateService, userService, botConfig)
 	viewBankDetails := bot.NewViewBankDetails(buttonService, chatStateService, botConfig)
 	setBankDetails := bot.NewSetBankDetails(buttonService, userService, chatStateService, botConfig)
 	wantSetBankDetails := bot.NewWantSetBankDetails(buttonService, chatStateService, botConfig)
-	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom, allRoomInline, wantDonorOperation, addDonorOperation, editDonorOperation, deleteDonorOperation, viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantReturnDebt, addRecepientOperation, viewUserDebts, viewAllDebts, roomSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations, viewMyOperations, debt, userSetting, chooseLanguage, operationAdded, chooseNotification, selectedNotification, debtReturned, wantAddFileToOperation, addFileToOperation, viewFileOperation, viewDonorOperation, selectedLeaveRoom, viewOperationsWithMe, chooseCountInPage, finishedAddOperation, viewBankDetails, setBankDetails, wantSetBankDetails)
+	newEditDonorAmountHandler := bot.NewEditDonorAmountHandler(buttonService, operationService, chatStateService, roomService, botConfig)
+	newAddedDonorAmountOperation := bot.NewAddedDonorAmountOperation(chatStateService, buttonService, operationService, roomService, roomStateService, botConfig)
+	v := ProvideBotList(operation, startScreen, roomCreating, roomSetName, joinRoom,
+		allRoomInline, wantDonorOperation, addDonorOperation, editDonorOperation, deleteDonorOperation,
+		viewRoom, viewAllOperations, allRoom, chooseRecepientOperation, wantReturnDebt, addRecepientOperation,
+		viewUserDebts, viewAllDebts, roomSetting, archiveRoom, archivedRooms, statistic, viewAllDebtOperations,
+		viewMyOperations, debt, userSetting, chooseLanguage, operationAdded, chooseNotification, selectedNotification,
+		debtReturned, wantAddFileToOperation, addFileToOperation, viewFileOperation, viewDonorOperation, selectedLeaveRoom, viewOperationsWithMe,
+		chooseCountInPage, finishedAddOperation, viewBankDetails, setBankDetails, wantSetBankDetails, newEditDonorAmountHandler,
+		addSplitTypeDonorOperation, newAddedDonorAmountOperation, chooseCurrencyRoom)
 	telegramListener, err := initTelegramConfig(botAPI, v, buttonService, userService, chatStateService)
 	if err != nil {
 		cleanup()
@@ -93,7 +104,13 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 
 // wire.go:
 
-var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewEditDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantReturnDebt, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewRoomSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations, bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt, bot.NewUserSetting, bot.NewChooseLanguage, bot.NewOperationAdded, bot.NewChooseNotification, bot.NewSelectedNotification, bot.NewDebtReturned, bot.NewWantAddFileToOperation, bot.NewAddFileToOperation, bot.NewViewFileOperation, bot.NewViewDonorOperation, bot.NewSelectedLeaveRoom, bot.NewViewOperationsWithMe, bot.NewChooseCountInPage, bot.NewFinishedAddOperation, bot.NewWantSetBankDetails, bot.NewSetBankDetails, bot.NewViewBankDetails)
+var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetName, bot.NewJoinRoom, bot.NewAllRoomInline, bot.NewWantDonorOperation, bot.NewAddDonorOperation, bot.NewEditDonorOperation, bot.NewDeleteDonorOperation, bot.NewViewRoom, bot.NewViewAllOperations, bot.NewAllRoom, bot.NewChooseRecepientOperation, bot.NewWantReturnDebt, bot.NewAddRecepientOperation, bot.NewViewUserDebts, bot.NewViewAllDebts, bot.NewRoomSetting, bot.NewArchiveRoom, bot.NewArchivedRooms, bot.NewStatistic, bot.NewViewAllDebtOperations,
+	bot.NewOperation, bot.NewViewMyOperations, bot.NewDebt, bot.NewUserSetting, bot.NewChooseLanguage, bot.NewOperationAdded,
+	bot.NewChooseNotification, bot.NewSelectedNotification, bot.NewDebtReturned, bot.NewWantAddFileToOperation, bot.NewAddFileToOperation,
+	bot.NewViewFileOperation, bot.NewViewDonorOperation, bot.NewSelectedLeaveRoom, bot.NewViewOperationsWithMe, bot.NewChooseCountInPage,
+	bot.NewFinishedAddOperation, bot.NewWantSetBankDetails, bot.NewSetBankDetails, bot.NewViewBankDetails, bot.NewEditDonorAmountHandler,
+	bot.NewAddedDonorAmountOperation,
+)
 
 func ProvideBotList(
 	b1 *bot.Operation,
@@ -138,7 +155,11 @@ func ProvideBotList(
 	b41 *bot.ViewBankDetails,
 	b42 *bot.SetBankDetails,
 	b43 *bot.WantSetBankDetails,
+	b44 *bot.EditDonorAmountHandler,
+	b45 *bot.AddSplitTypeDonorOperation,
+	b46 *bot.AddedDonorAmountOperation,
+	b47 *bot.ChooseCurrencyRoom,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46, b47}
 }
