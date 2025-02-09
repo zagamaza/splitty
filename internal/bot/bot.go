@@ -24,6 +24,7 @@ const (
 	addRecipientOperation    api.Action = "add_recipient_operation"
 	deleteDonorOperation     api.Action = "delete_donor_operation"
 	editDonorOperation       api.Action = "edit_donor_operation"
+	chooseDonorOperation     api.Action = "choose_donor_Operation"
 	editSumDonorOperation    api.Action = "edit_sum_donor_operation"
 	setSumDonorOperation     api.Action = "set_sum_donor_operation"
 	saveSumDonorOperation    api.Action = "save_sum_donor_operation"
@@ -71,8 +72,9 @@ const (
 )
 
 const (
-	draft  api.OperationStatus = "draft"
-	active api.OperationStatus = "active"
+	draft   api.OperationStatus = "draft"
+	active  api.OperationStatus = "active"
+	archive api.OperationStatus = "archive"
 )
 
 const (

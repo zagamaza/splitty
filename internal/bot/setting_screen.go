@@ -172,11 +172,11 @@ func (bot *ArchiveRoom) OnMessage(ctx context.Context, u *api.Update) (response 
 	var errCallback *tgbotapi.CallbackConfig = nil
 	if hasAction(u, archiveRoom) {
 		if err := bot.rss.ArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("ArchiveRoom faield")
 		}
 	} else {
 		if err := bot.rss.UnArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("UnArchiveRoom failed")
 		}
 	}
 
@@ -383,7 +383,8 @@ func (bot SelectedNotification) HasReact(u *api.Update) bool {
 func (bot *SelectedNotification) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	*u.User.NotificationOn = *u.User.NotificationOn == false
 	if err := bot.us.SetNotificationUser(ctx, u.User.ID, *u.User.NotificationOn); err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("SetNotificationUser failed")
+		return api.TelegramMessage{}
 	}
 
 	u.Button = api.NewButton(userSetting, u.Button.CallbackData)
@@ -434,7 +435,7 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 
 	err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("leave room failed")
 		return
 	}
 	u.Button = api.NewButton(viewStart, u.Button.CallbackData)
@@ -470,13 +471,13 @@ func (bot *ChooseCountInPage) OnMessage(ctx context.Context, u *api.Update) (res
 	if u.User.CountInPage == 10 {
 		u.User.CountInPage = 5
 		if err := bot.us.SetCountInPage(ctx, u.User.ID, u.User.CountInPage); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("SetCountInPage failed")
 			return
 		}
 	} else {
 		u.User.CountInPage = u.User.CountInPage + 1
 		if err := bot.us.SetCountInPage(ctx, u.User.ID, u.User.CountInPage); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("SetCountInPage failed")
 			return
 		}
 	}
@@ -529,12 +530,14 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 	if u.Button.CallbackData.ExternalData == "true" {
 		countUsersFinishedAddOperation++
 		if err = bot.rss.FinishedAddOperation(ctx, u.User.ID, u.Button.CallbackData.RoomId); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("FinishedAddOperation failed")
+			return api.TelegramMessage{}
 		}
 	} else {
 		countUsersFinishedAddOperation--
 		if err = bot.rss.UnFinishedAddOperation(ctx, u.User.ID, u.Button.CallbackData.RoomId); err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msg("UnFinishedAddOperation faield")
+			return
 		}
 	}
 
@@ -550,7 +553,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 
 			user, err := bot.us.FindById(ctx, user.ID)
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				log.Error().Err(err).Msg("get user failed")
 				continue
 			}
 			text := I18n(user, "scrn_all_operations_added", userLink(user), room.Name)
@@ -573,7 +576,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 	viewRoomBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
 	buttons = append(buttons, viewRoomBtn)
 	if _, err := bot.bs.SaveAll(ctx, buttons...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 
@@ -693,12 +696,12 @@ func (bot *SetBankDetails) OnMessage(ctx context.Context, u *api.Update) (respon
 	defer bot.css.CleanChatState(ctx, u.ChatState)
 
 	if err := bot.us.SetUserBankDetails(ctx, u.User.ID, u.Message.Text); err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("SetUserBankDetails failed")
 		return api.TelegramMessage{}
 	}
 	user, err := bot.us.FindById(ctx, u.User.ID)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("get user failed")
 		return api.TelegramMessage{}
 	}
 	u.User = user

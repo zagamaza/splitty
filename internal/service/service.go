@@ -77,7 +77,7 @@ func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.Chat
 	if state == nil {
 		return
 	} else if err := (*css).DeleteByUserId(ctx, state.UserId); err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("CleanChatState failed")
 	}
 }
 
@@ -113,7 +113,7 @@ func (s *OperationService) GetAllSpendOperations(ctx context.Context, roomId str
 	}
 	var spendOperations []api.Operation
 	for _, o := range *room.Operations {
-		if !o.IsDebtRepayment {
+		if !o.IsDebtRepayment && o.Status != "archive" {
 			spendOperations = append(spendOperations, o)
 		}
 	}
@@ -128,7 +128,7 @@ func (s *OperationService) GetUserSpendOperations(ctx context.Context, userId in
 	}
 	var spendUserOperations []api.Operation
 	for _, o := range *room.Operations {
-		if !o.IsDebtRepayment && o.Donor.ID == userId {
+		if !o.IsDebtRepayment && o.Donor.ID == userId && o.Status != "archive" {
 			spendUserOperations = append(spendUserOperations, o)
 		}
 	}
@@ -212,7 +212,7 @@ func GetRoomDebts(room api.Room) ([]api.Debt, error) {
 	var notDebt []api.Operation
 	var debtReturn []api.Operation
 	for _, op := range *room.Operations {
-		if op.Status == "draft" {
+		if op.Status != "active" {
 			continue
 		}
 		if op.IsDebtRepayment {
@@ -437,7 +437,7 @@ func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, r
 	if len(*room.Members) == len(room.RoomStates.FinishedAddOperation) {
 		debts, err := s.OperationService.GetAllDebts(ctx, room.ID.Hex())
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			log.Error().Err(err).Msgf("cannot get debts")
 			return err
 		}
 		for _, v := range debts {

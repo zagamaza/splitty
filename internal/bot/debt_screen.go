@@ -39,7 +39,7 @@ func (bot Debt) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 	roomId := u.Button.CallbackData.RoomId
 	debts, err := bot.os.GetAllDebts(ctx, roomId)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("get all debts failed")
 		return
 	}
 	if len(debts) < 1 {
@@ -151,7 +151,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 
@@ -232,7 +232,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 

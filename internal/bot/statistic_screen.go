@@ -83,7 +83,7 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	startB := api.NewButton(viewRoom, data)
 	debtOperationsB := api.NewButton(viewAllDebtOperations, data)
 	if _, err = bot.bs.SaveAll(ctx, debtOperationsB); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 
@@ -174,7 +174,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 

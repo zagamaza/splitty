@@ -152,6 +152,15 @@ func hasAction(update *api.Update, action api.Action) bool {
 		(update.ChatState != nil && update.ChatState.Action == action)
 }
 
+func hasChatStateAction(update *api.Update, action api.Action) bool {
+	return (update.ChatState != nil && update.ChatState.Action == action)
+}
+
+func hasButtonAction(update *api.Update, action api.Action) bool {
+	return update.Button != nil && update.Button.Action == action
+
+}
+
 func hasMessage(update *api.Update) bool {
 	return update.Message != nil &&
 		update.Message.Text != ""

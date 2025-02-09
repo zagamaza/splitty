@@ -31,7 +31,8 @@ type RoomRepository interface {
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
-	UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error
+	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	ArchiveRoom(ctx context.Context, userId int, roomId string) error
 	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
@@ -160,8 +161,11 @@ func (rr MongoRoomRepository) UnArchiveRoom(ctx context.Context, userId int, roo
 
 	filter := bson.M{"_id": hex, "users._id": userId}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.archived": userId}})
-	log.Error().Err(err).Msg("")
-	return err
+	if err != nil {
+		log.Error().Err(err).Msg("get all debts failed")
+		return err
+	}
+	return nil
 }
 
 func (rr MongoRoomRepository) FinishedAddOperation(ctx context.Context, userId int, roomId string) error {
@@ -183,8 +187,11 @@ func (rr MongoRoomRepository) UnFinishedAddOperation(ctx context.Context, userId
 
 	filter := bson.M{"_id": hex, "users._id": userId}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.finished_add_operation": userId}})
-	log.Error().Err(err).Msg("")
-	return err
+	if err != nil {
+		log.Error().Err(err).Msg("UpdateOne failed")
+		return err
+	}
+	return nil
 }
 
 func (rr MongoRoomRepository) PaidOfDebts(ctx context.Context, userIds []int, roomId string) error {
@@ -196,8 +203,11 @@ func (rr MongoRoomRepository) PaidOfDebts(ctx context.Context, userIds []int, ro
 	filter := bson.M{"_id": hex}
 	update := bson.D{{"$set", bson.M{"room_states.paid_off_debts": userIds}}}
 	_, err = rr.col.UpdateOne(ctx, filter, update)
-	log.Error().Err(err).Msg("")
-	return err
+	if err != nil {
+		log.Error().Err(err).Msg("PaidOfDebts")
+		return err
+	}
+	return nil
 }
 
 func (rr MongoRoomRepository) hasRoom(ctx context.Context, u *api.User) (bool, error) {
@@ -265,7 +275,37 @@ func getOrderOptions(field string, orderParameter int) *options.FindOptions {
 	return findOptions
 }
 
-func (rr MongoRoomRepository) UpsertOperation(ctx context.Context, o *api.Operation, roomId string) error {
+func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	room, err2 := rr.FindById(ctx, roomId)
+	if err2 != nil {
+		return err2
+	}
+	var has bool
+	for _, opn := range *room.Operations {
+		if opn.ID == o.ID {
+			has = true
+			break
+		}
+	}
+	if !has {
+		return errors.New("operation not found in room")
+	}
+
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{"_id", bson.D{{"$eq", hex}}}}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"operations": bson.M{"_id": o.ID}}})
+	if err != nil {
+		return err
+	}
+
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{"$push", bson.D{{"operations", o}}}})
+	return err
+}
+
+func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operation, roomId string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err

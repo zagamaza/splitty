@@ -29,18 +29,19 @@ type RoomStatesUsers struct {
 }
 
 type Operation struct {
-	ID                primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Description       string             `json:"description" bson:"description"`
-	Donor             *User              `json:"donor" bson:"donor"`
-	Recipients        *[]User            `json:"recipients" bson:"recipients"`
-	RecipientsWithSum []RecipientWithSum `json:"recipientsWithSum" bson:"recipients_with_sum"`
-	IsDebtRepayment   bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
-	Sum               int                `json:"sum" bson:"sum"`
-	NotificationSent  []int              `json:"notificationSent" bson:"notification_sent"`
-	CreateAt          time.Time          `json:"createAt" bson:"create_at"`
-	Files             []File             `json:"files" bson:"files,omitempty"`
-	Status            OperationStatus    `json:"status" bson:"status"`
-	SplitType         SplitType          `json:"splitType" bson:"split_type"`
+	ID                primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	OldOperationId    *primitive.ObjectID `json:"old_operation_id" bson:"old_operation_id,omitempty"`
+	Description       string              `json:"description" bson:"description"`
+	Donor             *User               `json:"donor" bson:"donor"`
+	Recipients        *[]User             `json:"recipients" bson:"recipients"`
+	RecipientsWithSum []RecipientWithSum  `json:"recipientsWithSum" bson:"recipients_with_sum"`
+	IsDebtRepayment   bool                `json:"IsDebtRepayment" bson:"is_debt_repayment"`
+	Sum               int                 `json:"sum" bson:"sum"`
+	NotificationSent  []int               `json:"notificationSent" bson:"notification_sent"`
+	CreateAt          time.Time           `json:"createAt" bson:"create_at"`
+	Files             []File              `json:"files" bson:"files,omitempty"`
+	Status            OperationStatus     `json:"status" bson:"status"`
+	SplitType         SplitType           `json:"splitType" bson:"split_type"`
 }
 
 type RecipientWithSum struct {
@@ -90,6 +91,21 @@ type CallbackData struct {
 	ExternalData string             `json:"externalData" bson:"external_data,omitempty"`
 	OperationId  primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
 	Page         int                `json:"page" bson:"page,omitempty"`
+}
+
+type OperationDiff struct {
+	NameChanged            bool
+	PhotoAdded             bool
+	RecipientsAdded        []RecipientWithSum
+	RecipientsRemoved      []RecipientWithSum
+	RecipientsShareChanged []RecipientShareChange
+}
+
+// Изменение суммы конкретного получателя
+type RecipientShareChange struct {
+	User   User
+	OldSum float64
+	NewSum float64
 }
 
 func NewButton(action Action, data *CallbackData) *Button {
