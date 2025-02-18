@@ -91,6 +91,7 @@ type CallbackData struct {
 	ExternalData string             `json:"externalData" bson:"external_data,omitempty"`
 	OperationId  primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
 	Page         int                `json:"page" bson:"page,omitempty"`
+	Expand       bool               `json:"collapse" bson:"collapse,omitempty"`
 }
 
 type OperationDiff struct {

@@ -24,7 +24,12 @@ const (
 	addRecipientOperation    api.Action = "add_recipient_operation"
 	deleteDonorOperation     api.Action = "delete_donor_operation"
 	editDonorOperation       api.Action = "edit_donor_operation"
+	addingOperation          api.Action = "adding_operation"
+	changePayerOperation     api.Action = "change_payer_operation"
+	choosePayerOperation     api.Action = "choose_payer_operation"
 	chooseDonorOperation     api.Action = "choose_donor_Operation"
+	enableAllDonor           api.Action = "enable_all_donor"
+	disableAllDonor          api.Action = "disable_all_donor"
 	editSumDonorOperation    api.Action = "edit_sum_donor_operation"
 	setSumDonorOperation     api.Action = "set_sum_donor_operation"
 	saveSumDonorOperation    api.Action = "save_sum_donor_operation"
@@ -63,6 +68,7 @@ const (
 	selectedLanguage         api.Action = "selected_language"
 	choseCurrency            api.Action = "chose_language"
 	selectedNotification     api.Action = "selected_notification"
+	unsupported              api.Action = "unsupported"
 )
 
 const (

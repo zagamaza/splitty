@@ -718,3 +718,31 @@ func (bot *SetBankDetails) OnMessage(ctx context.Context, u *api.Update) (respon
 		Redirect: u,
 	}
 }
+
+type UnsupportedScreen struct {
+	bs  ButtonService
+	css ChatStateService
+	us  UserService
+	cfg *Config
+}
+
+func NewUnsupportedScreen(bs ButtonService, us UserService, css ChatStateService, cfg *Config) *UnsupportedScreen {
+	return &UnsupportedScreen{
+		bs:  bs,
+		us:  us,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (bot UnsupportedScreen) HasReact(u *api.Update) bool {
+	return hasAction(u, unsupported)
+}
+
+func (bot *UnsupportedScreen) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	callback := createCallback(u, I18n(u.User, "msg_unsupported"), true)
+	return api.TelegramMessage{
+		CallbackConfig: callback,
+		Send:           true,
+	}
+}
