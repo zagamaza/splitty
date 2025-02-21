@@ -4,57 +4,63 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/service"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"net/http"
 	"time"
 )
 
+func NewIntegrationService(roomService *service.RoomService, userService *service.UserService,
+	operationService *service.OperationService, config *Config,
+) *IntegrationService {
+	return &IntegrationService{
+		RoomService:      *roomService,
+		UserService:      *userService,
+		OperationService: *operationService,
+		config:           *config,
+	}
+}
+
 type IntegrationService struct {
 	service.RoomService
 	service.UserService
 	service.OperationService
+	config Config
 }
 
 // SendPostRequest выполняет отправку POST запроса с указанными данными.
 func sendPostRequest(url string, jsonData []byte) {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Ошибка при отправке запроса:", err)
+		log.Error().Err(err).Msg("Ошибка при отправке запроса")
 		return
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			fmt.Println("Ошибка при закрытии тела ответа:", err)
+			log.Error().Err(err).Msg("Ошибка при закрытии тела запроса")
 		}
 	}(resp.Body)
 
-	fmt.Println("Запрос отправлен, статус:", resp.Status)
+	if resp.StatusCode != http.StatusOK {
+		log.Error().Msgf("Ошибка при отправке запроса: %s", resp.Status)
+	}
 }
 
 // StartPostScheduler запускает горутину, которая каждую минуту отправляет POST запрос.
 func (i *IntegrationService) StartPostScheduler() {
-	url := "http://pet.zagirnur.dev:19090/from-splitty"
 
 	//тут настраиваются пользователи
-	userIds := []int{
-		147181773,
-		369575379,
-		172261383,
-		304898122,
-		360624984,
-		373160631,
-	}
+	userIds := i.config.Users
 
 	var users []api.User
 	for _, uId := range userIds {
 		user, err := i.UserService.FindById(context.Background(), uId)
 		if err != nil {
-			fmt.Println("Ошибка при получении пользователя:", err)
+			log.Error().Err(err).Msg("Ошибка при получении пользователя")
 			return
 		}
 		users = append(users, *user)
@@ -64,7 +70,7 @@ func (i *IntegrationService) StartPostScheduler() {
 	for _, user := range users {
 		rooms, err := i.RoomService.FindRoomsByUserId(context.Background(), user.ID)
 		if err != nil {
-			fmt.Println("Ошибка при получении комнат:", err)
+			log.Error().Err(err).Msg("Ошибка при получении комнат")
 			return
 		}
 		for rIdx := range *rooms {
@@ -80,7 +86,7 @@ func (i *IntegrationService) StartPostScheduler() {
 			for _, rId := range roomIds {
 				ops, err := i.OperationService.GetAllOperations(context.Background(), rId.String())
 				if err != nil {
-					fmt.Println("Ошибка при получении операций:", err)
+					log.Error().Err(err).Msg("Ошибка при получении операций")
 					return
 				}
 				operations = append(operations, *ops...)
@@ -89,10 +95,15 @@ func (i *IntegrationService) StartPostScheduler() {
 			// Сериализация структуры в JSON
 			jsonData, err := json.Marshal(operations)
 			if err != nil {
-				fmt.Println("Ошибка при сериализации данных:", err)
+				log.Error().Err(err).Msg("Ошибка при сериализации данных")
 				return
 			}
-			sendPostRequest(url, jsonData)
+			sendPostRequest(i.config.Url, jsonData)
 		}
 	}()
+}
+
+type Config struct {
+	Url   string
+	Users []int
 }

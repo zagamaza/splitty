@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/gookit/i18n"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -46,7 +47,7 @@ func main() {
 	}
 	closer.Bind(cl)
 
-	app.Syncer.StartPostScheduler()
+	app.DeIntegrationService.StartPostScheduler()
 
 	if err := app.Do(ctx); err != nil {
 		log.Error().Err(err).Msg("telegram listener failed")
@@ -75,7 +76,8 @@ func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	return tbAPI, nil
 }
 
-func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, us events.UserService, cs events.ChatStateService) (*events.TelegramListener, error) {
+func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, us events.UserService,
+	cs events.ChatStateService, de events.DeIntegrationService) (*events.TelegramListener, error) {
 	multiBot := bot.MultiBot(bots)
 
 	tgListener := &events.TelegramListener{
@@ -84,6 +86,8 @@ func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.But
 		ChatStateService: cs,
 		ButtonService:    bs,
 		UserService:      us,
+
+		DeIntegrationService: de,
 	}
 
 	return tgListener, nil
@@ -133,6 +137,14 @@ func initMongoConnection(ctx context.Context, cfg *config) (*mongo.Database, fun
 func initBotConfig(c *config) *bot.Config {
 	cfg := &bot.Config{
 		SuperUsers: c.SuperUsers,
+	}
+	return cfg
+}
+
+func initDeConfig(c *config) *dailyexpenses.Config {
+	cfg := &dailyexpenses.Config{
+		Url:   c.DailyExpensesUrl,
+		Users: c.DailyExpensesUsers,
 	}
 	return cfg
 }

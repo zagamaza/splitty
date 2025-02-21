@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"github.com/almaznur91/splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/almaznur91/splitty/internal/events"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
@@ -13,7 +14,7 @@ import (
 )
 
 func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, closer func(), err error) {
-	wire.Build(initMongoConnection, initTelegramApi, initTelegramConfig, initBotConfig,
+	wire.Build(initMongoConnection, initTelegramApi, initTelegramConfig, initBotConfig, initDeConfig,
 		service.NewUserService, wire.Bind(new(bot.UserService), new(*service.UserService)),
 		wire.Bind(new(events.UserService), new(*service.UserService)),
 		service.NewRoomService, wire.Bind(new(bot.RoomService), new(*service.RoomService)),
@@ -29,6 +30,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		repository.NewRoomRepository, wire.Bind(new(repository.RoomRepository), new(*repository.MongoRoomRepository)),
 		repository.NewChatStateRepository, wire.Bind(new(repository.ChatStateRepository), new(*repository.MongoChatStateRepository)),
 		repository.NewButtonRepository, wire.Bind(new(repository.ButtonRepository), new(*repository.MongoButtonRepository)),
+		dailyexpenses.NewIntegrationService, wire.Bind(new(events.DeIntegrationService), new(*dailyexpenses.IntegrationService)),
 	)
 	return nil, nil, nil
 }
