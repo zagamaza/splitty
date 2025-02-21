@@ -46,6 +46,8 @@ func main() {
 	}
 	closer.Bind(cl)
 
+	app.Syncer.StartPostScheduler()
+
 	if err := app.Do(ctx); err != nil {
 		log.Error().Err(err).Msg("telegram listener failed")
 		return

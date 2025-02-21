@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -30,6 +31,7 @@ type TelegramListener struct {
 	ButtonService    ButtonService
 	upds             chan tbapi.Update
 	UserService      UserService
+	Syncer           *dailyexpenses.IntegrationService
 }
 
 type tbAPI interface {
