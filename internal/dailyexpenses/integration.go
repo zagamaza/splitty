@@ -66,15 +66,15 @@ func (i *IntegrationService) StartPostScheduler() {
 		users = append(users, *user)
 	}
 
-	var roomIds map[primitive.ObjectID]primitive.ObjectID
+	roomIds := make(map[primitive.ObjectID]primitive.ObjectID)
 	for _, user := range users {
 		rooms, err := i.RoomService.FindRoomsByUserId(context.Background(), user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Ошибка при получении комнат")
 			return
 		}
-		for rIdx := range *rooms {
-			id := (*rooms)[rIdx].ID
+		for _, room := range *rooms {
+			id := room.ID
 			roomIds[id] = id
 		}
 	}
