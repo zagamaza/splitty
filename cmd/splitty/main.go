@@ -47,7 +47,7 @@ func main() {
 	}
 	closer.Bind(cl)
 
-	app.DeIntegrationService.StartPostScheduler()
+	go app.DeIntegrationService.StartPostScheduler()
 
 	if err := app.Do(ctx); err != nil {
 		log.Error().Err(err).Msg("telegram listener failed")
