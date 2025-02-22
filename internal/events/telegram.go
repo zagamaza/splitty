@@ -21,6 +21,10 @@ type UserService interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 }
 
+type DeIntegrationService interface {
+	StartPostScheduler()
+}
+
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
@@ -30,6 +34,8 @@ type TelegramListener struct {
 	ButtonService    ButtonService
 	upds             chan tbapi.Update
 	UserService      UserService
+
+	DeIntegrationService DeIntegrationService
 }
 
 type tbAPI interface {

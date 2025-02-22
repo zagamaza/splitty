@@ -13,6 +13,9 @@ type config struct {
 	SuperUsers      []string `env:"SUPER_USER" envSeparator:":" envDefault:"mazanur:zagirnur"`
 	TgDebug         bool     `env:"TG_DEBUG" envDefault:"false"`
 	DefaultLanguage string   `env:"DEFAULT_LANGUAGE" envDefault:"en"`
+
+	DailyExpensesUrl   string `env:"DAILY_EXPENSES_URL" envDefault:"http://pet.zagirnur.dev:19090/from-splitty"`
+	DailyExpensesUsers []int  `env:"DAILY_EXPENSES_USERS" envSeparator:":" envDefault:"147181773:369575379:172261383:304898122:360624984:373160631"`
 }
 
 func initConfig() (*config, error) {
