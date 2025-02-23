@@ -22,7 +22,6 @@ type OperationService interface {
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
-	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetUserSpendOperations(ctx context.Context, userId int, roomId string) (*[]api.Operation, error)
