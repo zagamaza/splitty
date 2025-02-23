@@ -81,15 +81,6 @@ func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.Chat
 	}
 }
 
-func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
-	room, err := s.RoomRepository.FindById(ctx, roomId)
-	if err != nil {
-		log.Err(err).Msgf("cannot find room id:%s", roomId)
-		return nil, err
-	}
-	return room.Operations, nil
-}
-
 func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
