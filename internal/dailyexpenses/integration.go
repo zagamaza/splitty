@@ -84,7 +84,7 @@ func (i *IntegrationService) StartPostScheduler() {
 		for range ticker.C {
 			var operations []api.Operation
 			for _, rId := range roomIds {
-				ops, err := i.OperationService.GetAllOperations(context.Background(), rId.String())
+				ops, err := i.OperationService.GetAllOperations(context.Background(), rId.Hex())
 				if err != nil {
 					log.Error().Err(err).Msg("Ошибка при получении операций")
 					return
