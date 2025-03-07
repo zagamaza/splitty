@@ -9,7 +9,7 @@ type config struct {
 
 	DbAddr          string   `env:"DB_HOST" envDefault:"mongodb://localhost:27017/"`
 	DbName          string   `env:"DB_NAME" envDefault:"splitty"`
-	TgToken         string   `env:"TG_TOKEN" envDefault:"619387871:AAEsNI9nFiMzcB6KUWX5JWQT2TlV7DO5zUw"`
+	TgToken         string   `env:"TG_TOKEN" envDefault:"6282994135:AAG-jkpfGhM3U6_0IJ_6RA28nuaAi0sEsC0"`
 	SuperUsers      []string `env:"SUPER_USER" envSeparator:":" envDefault:"mazanur:zagirnur"`
 	TgDebug         bool     `env:"TG_DEBUG" envDefault:"false"`
 	DefaultLanguage string   `env:"DEFAULT_LANGUAGE" envDefault:"en"`
