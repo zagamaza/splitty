@@ -244,21 +244,66 @@ func sortDebts(debts []api.Debt) {
 }
 
 func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt, error) {
+	// Создаем карту для хранения всех возвратов долгов
+	// Ключ: ID пользователя, значение: общий баланс возвратов
 	returned, err := calculateUserBalance(debtReturn)
 	if err != nil {
 		return nil, err
 	}
 
+	// Создаем карту для хранения возвратов между конкретными пользователями
+	// Ключ внешней карты: ID должника, ключ внутренней карты: ID кредитора, значение: сумма возврата
+	specificReturns := make(map[int]map[int]float64)
+
+	// Заполняем карту прямых возвратов между должниками и кредиторами
+	for _, op := range debtReturn {
+		donorID := op.Donor.ID
+		for _, recipient := range op.RecipientsWithSum {
+			recipientID := recipient.User.ID
+
+			// Проверяем существование внешней карты
+			if _, exists := specificReturns[donorID]; !exists {
+				specificReturns[donorID] = make(map[int]float64)
+			}
+
+			// Донор возвращает деньги получателю
+			specificReturns[donorID][recipientID] += recipient.Sum
+		}
+	}
+
 	var result []api.Debt
 	for _, debt := range debts {
-		if returned[debt.Debtor.ID] < 1 || returned[debt.Lender.ID] >= 1 {
-			result = append(result, debt)
-			continue
+		debtorID := debt.Debtor.ID
+		lenderID := debt.Lender.ID
+
+		// Проверяем, существует ли прямой возврат от должника к кредитору
+		directReturn := float64(0)
+		if returns, exists := specificReturns[debtorID]; exists {
+			if amount, exists := returns[lenderID]; exists {
+				directReturn = amount
+			}
 		}
-		min := getMin(returned[debt.Debtor.ID], -returned[debt.Lender.ID], float64(debt.Sum))
-		returned[debt.Debtor.ID] -= min
-		returned[debt.Lender.ID] += min
-		debt.Sum -= int(min)
+
+		// Если есть прямой возврат, уменьшаем долг
+		if directReturn > 0 {
+			if directReturn >= float64(debt.Sum) {
+				// Долг полностью погашен
+				continue
+			} else {
+				// Уменьшаем долг на сумму возврата
+				debt.Sum -= int(directReturn)
+			}
+		}
+
+		// Также учитываем общий баланс, как в оригинальном алгоритме
+		if returned[debtorID] >= 1 && returned[lenderID] < 1 {
+			min := getMin(returned[debtorID], -returned[lenderID], float64(debt.Sum))
+			returned[debtorID] -= min
+			returned[lenderID] += min
+			debt.Sum -= int(min)
+		}
+
+		// Если после всех расчетов долг все еще существует, добавляем его в результат
 		if debt.Sum >= 1 {
 			result = append(result, debt)
 		}
