@@ -257,17 +257,23 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 
 	// Заполняем карту прямых возвратов между должниками и кредиторами
 	for _, op := range debtReturn {
-		donorID := op.Donor.ID
-		for _, recipient := range op.RecipientsWithSum {
-			recipientID := recipient.User.ID
+		donors := op.DonorsWithSum
+		if len(donors) == 0 && op.Donor != nil {
+			donors = []api.DonorWithSum{{User: *op.Donor, Sum: float64(op.Sum)}}
+		}
+		for _, donor := range donors {
+			donorID := donor.User.ID
+			for _, recipient := range op.RecipientsWithSum {
+				recipientID := recipient.User.ID
 
-			// Проверяем существование внешней карты
-			if _, exists := specificReturns[donorID]; !exists {
-				specificReturns[donorID] = make(map[int]float64)
+				// Проверяем существование внешней карты
+				if _, exists := specificReturns[donorID]; !exists {
+					specificReturns[donorID] = make(map[int]float64)
+				}
+
+				// Донор возвращает деньги получателю
+				specificReturns[donorID][recipientID] += recipient.Sum
 			}
-
-			// Донор возвращает деньги получателю
-			specificReturns[donorID][recipientID] += recipient.Sum
 		}
 	}
 
@@ -367,7 +373,13 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
 	balance := map[int]float64{}
 	for _, op := range ops {
-		balance[op.Donor.ID] += float64(op.Sum)
+		if len(op.DonorsWithSum) > 0 {
+			for _, donor := range op.DonorsWithSum {
+				balance[donor.User.ID] += donor.Sum
+			}
+		} else {
+			balance[op.Donor.ID] += float64(op.Sum)
+		}
 		for _, recipient := range op.RecipientsWithSum {
 			balance[recipient.User.ID] -= recipient.Sum
 		}

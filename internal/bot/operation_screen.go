@@ -130,6 +130,55 @@ func containsRecipient(users []api.RecipientWithSum, id int) bool {
 	return false
 }
 
+func containsDonor(users []api.DonorWithSum, id int) bool {
+	for _, u := range users {
+		if u.User.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func deleteDonor(users []api.DonorWithSum, userId int) []api.DonorWithSum {
+	index := -1
+	for i, v := range users {
+		if v.User.ID == userId {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return users
+	}
+	copy(users[index:], users[index+1:])
+	return users[:len(users)-1]
+}
+
+func addOrDeletePayer(operation api.Operation, room *api.Room, userId int, totalSum int) []api.DonorWithSum {
+	members := room.Members
+	donors := operation.DonorsWithSum
+
+	if containsDonor(donors, userId) {
+		donors = deleteDonor(donors, userId)
+	} else {
+		for _, m := range *members {
+			if m.ID == userId {
+				donors = append(donors, api.DonorWithSum{User: m})
+				break
+			}
+		}
+	}
+
+	if len(donors) > 0 {
+		share := float64(totalSum) / float64(len(donors))
+		for i := range donors {
+			donors[i].Sum = share
+		}
+	}
+
+	return donors
+}
+
 type WantDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService
@@ -350,6 +399,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		Description:       u.ChatState.CallbackData.ExternalData,
 		Sum:               u.ChatState.CallbackData.Page,
 		Donor:             u.User,
+		DonorsWithSum:     []api.DonorWithSum{{User: *u.User, Sum: float64(u.ChatState.CallbackData.Page)}},
 		RecipientsWithSum: recipientsWithSum,
 		CreateAt:          time.Now(),
 		NotificationSent:  []int{},
@@ -597,11 +647,18 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 		unallocatedSum -= recipientWithSum.Sum
 	}
 
+	var payerNames []string
+	for _, d := range operation.DonorsWithSum {
+		payerNames = append(payerNames, d.User.DisplayName)
+	}
+	if len(payerNames) == 0 && operation.Donor != nil {
+		payerNames = append(payerNames, operation.Donor.DisplayName)
+	}
 	slivce := []string{
 		" " + moneySpace(operation.Sum, room.Currency),
 		" " + operation.Description,
 		" ",
-		"  " + I18n(u.User, "scrn_payer", operation.Donor.DisplayName),
+		"  " + I18n(u.User, "scrn_payer", strings.Join(payerNames, ", ")),
 		""}
 	tb := NewTableBuilder('-', " | ")
 	tb.AddColumnSimple(Center, func(i int) string {
@@ -866,7 +923,7 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 	var tgButtons [][]tgbotapi.InlineKeyboardButton
 	for _, member := range *room.Members {
 		text := member.DisplayName
-		if member.ID == operation.Donor.ID {
+		if containsDonor(operation.DonorsWithSum, member.ID) {
 			text = "💳 " + text
 		}
 		userTitleBtn := &api.Button{
@@ -894,7 +951,14 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), deleteBtn.ID.Hex()),
 	})
 
-	text := I18n(u.User, "scrn_choose_payer", operation.Donor.DisplayName)
+	var payerNames []string
+	for _, d := range operation.DonorsWithSum {
+		payerNames = append(payerNames, d.User.DisplayName)
+	}
+	if len(payerNames) == 0 && operation.Donor != nil {
+		payerNames = append(payerNames, operation.Donor.DisplayName)
+	}
+	text := I18n(u.User, "scrn_choose_payer", strings.Join(payerNames, ", "))
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &tgButtons)},
@@ -931,20 +995,18 @@ func (h ChangedPayerHandler) OnMessage(ctx context.Context, u *api.Update) (resp
 		log.Error().Err(err).Msg("get room failed")
 		return
 	}
-	var payer api.User
-	for i, m := range *room.Members {
-		if m.ID == u.Button.CallbackData.UserId {
-			payer = (*room.Members)[i]
-			break
-		}
-	}
 	operation := findOperationByID(room, u.Button.CallbackData.OperationId)
-	operation.Donor = &payer
+	operation.DonorsWithSum = addOrDeletePayer(operation, room, u.Button.CallbackData.UserId, operation.Sum)
+	if len(operation.DonorsWithSum) > 0 {
+		operation.Donor = &operation.DonorsWithSum[0].User
+	} else {
+		operation.Donor = nil
+	}
 	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
 		return
 	}
-	u.Button.Action = addingOperation
+	u.Button.Action = changePayerOperation
 	return api.TelegramMessage{
 		Send:     true,
 		Redirect: u,

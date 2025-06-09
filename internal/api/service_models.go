@@ -33,6 +33,7 @@ type Operation struct {
 	OldOperationId    *primitive.ObjectID `json:"old_operation_id" bson:"old_operation_id,omitempty"`
 	Description       string              `json:"description" bson:"description"`
 	Donor             *User               `json:"donor" bson:"donor"`
+	DonorsWithSum     []DonorWithSum      `json:"donorsWithSum" bson:"donors_with_sum,omitempty"`
 	Recipients        *[]User             `json:"recipients" bson:"recipients"`
 	RecipientsWithSum []RecipientWithSum  `json:"recipientsWithSum" bson:"recipients_with_sum"`
 	IsDebtRepayment   bool                `json:"IsDebtRepayment" bson:"is_debt_repayment"`
@@ -45,6 +46,11 @@ type Operation struct {
 }
 
 type RecipientWithSum struct {
+	User User    `json:"user" bson:"user"`
+	Sum  float64 `json:"sum" bson:"sum"`
+}
+
+type DonorWithSum struct {
 	User User    `json:"user" bson:"user"`
 	Sum  float64 `json:"sum" bson:"sum"`
 }
