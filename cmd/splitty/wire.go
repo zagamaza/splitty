@@ -45,6 +45,7 @@ var bots = wire.NewSet(
 	bot.NewAddDonorOperation,
 	bot.NewEditDonorOperation,
 	bot.NewEditDonorAmountHandler,
+	bot.NewEditPayerAmountHandler,
 	bot.NewDeleteDonorOperation,
 	bot.NewViewRoom,
 	bot.NewViewAllOperations,
@@ -79,6 +80,8 @@ var bots = wire.NewSet(
 	bot.NewWantSetBankDetails,
 	bot.NewSetBankDetails,
 	bot.NewViewBankDetails,
+	bot.NewEditPayerAmountHandler,
+	bot.NewAddedPayerAmountOperation,
 )
 
 func ProvideBotList(
@@ -125,8 +128,10 @@ func ProvideBotList(
 	b42 *bot.SetBankDetails,
 	b43 *bot.WantSetBankDetails,
 	b44 *bot.EditDonorAmountHandler,
+	b45 *bot.EditPayerAmountHandler,
+	b46 *bot.AddedPayerAmountOperation,
 
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46}
 }
