@@ -86,6 +86,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 	wantSetBankDetails := bot.NewWantSetBankDetails(buttonService, chatStateService, botConfig)
 	newEditDonorAmountHandler := bot.NewEditDonorAmountHandler(buttonService, operationService, chatStateService, roomService, botConfig)
 	newAddedDonorAmountOperation := bot.NewAddedDonorAmountOperation(chatStateService, buttonService, operationService, roomService, roomStateService, botConfig)
+	newEditPayerAmountHandler := bot.NewEditPayerAmountHandler(buttonService, operationService, chatStateService, roomService, botConfig)
+	newAddedPayerAmountOperation := bot.NewAddedPayerAmountOperation(chatStateService, buttonService, operationService, roomService, roomStateService, botConfig)
 	changePayerHandler := bot.NewChangePayerHandler(buttonService, operationService, chatStateService, roomService, botConfig)
 	changedPayerHandler := bot.NewChangedPayerHandler(buttonService, operationService, chatStateService, roomService, botConfig)
 	disableEnableAllDonorHandler := bot.NewDisableEnableAllDonorHandler(buttonService, operationService, chatStateService, roomService, botConfig)
@@ -97,7 +99,8 @@ func initApp(ctx context.Context, cfg *config) (*events.TelegramListener, func()
 		viewMyOperations, debt, userSetting, chooseLanguage, operationAdded, chooseNotification, selectedNotification,
 		debtReturned, wantAddFileToOperation, addFileToOperation, viewFileOperation, viewDonorOperation, selectedLeaveRoom, viewOperationsWithMe,
 		chooseCountInPage, finishedAddOperation, viewBankDetails, setBankDetails, wantSetBankDetails, newEditDonorAmountHandler,
-		addSplitTypeDonorOperation, newAddedDonorAmountOperation, chooseCurrencyRoom, changePayerHandler, changedPayerHandler, unsupportedScreen,
+		addSplitTypeDonorOperation, newAddedDonorAmountOperation, newEditPayerAmountHandler, newAddedPayerAmountOperation,
+		chooseCurrencyRoom, changePayerHandler, changedPayerHandler, unsupportedScreen,
 		disableEnableAllDonorHandler)
 	dailyexpensesConfig := initDeConfig(cfg)
 	integrationService := dailyexpenses.NewIntegrationService(roomService, userService, operationService, dailyexpensesConfig)
@@ -118,7 +121,7 @@ var bots = wire.NewSet(bot.NewStartScreen, bot.NewRoomCreating, bot.NewRoomSetNa
 	bot.NewChooseNotification, bot.NewSelectedNotification, bot.NewDebtReturned, bot.NewWantAddFileToOperation, bot.NewAddFileToOperation,
 	bot.NewViewFileOperation, bot.NewViewDonorOperation, bot.NewSelectedLeaveRoom, bot.NewViewOperationsWithMe, bot.NewChooseCountInPage,
 	bot.NewFinishedAddOperation, bot.NewWantSetBankDetails, bot.NewSetBankDetails, bot.NewViewBankDetails, bot.NewEditDonorAmountHandler,
-	bot.NewAddedDonorAmountOperation, bot.NewDisableEnableAllDonorHandler,
+	bot.NewAddedDonorAmountOperation, bot.NewEditPayerAmountHandler, bot.NewAddedPayerAmountOperation, bot.NewDisableEnableAllDonorHandler,
 )
 
 func ProvideBotList(
@@ -167,13 +170,15 @@ func ProvideBotList(
 	b44 *bot.EditDonorAmountHandler,
 	b45 *bot.AddSplitTypeDonorOperation,
 	b46 *bot.AddedDonorAmountOperation,
-	b47 *bot.ChooseCurrencyRoom,
-	b48 *bot.ChangePayerHandler,
-	b49 *bot.ChangedPayerHandler,
-	b50 *bot.UnsupportedScreen,
-	b51 *bot.DisableEnableAllDonorHandler,
+	b47 *bot.EditPayerAmountHandler,
+	b48 *bot.AddedPayerAmountOperation,
+	b49 *bot.ChooseCurrencyRoom,
+	b50 *bot.ChangePayerHandler,
+	b51 *bot.ChangedPayerHandler,
+	b52 *bot.UnsupportedScreen,
+	b53 *bot.DisableEnableAllDonorHandler,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
 		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46,
-		b47, b48, b49, b50, b51}
+		b47, b48, b49, b50, b51, b52, b53}
 }

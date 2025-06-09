@@ -130,6 +130,62 @@ func containsRecipient(users []api.RecipientWithSum, id int) bool {
 	return false
 }
 
+func containsDonor(users []api.DonorWithSum, id int) bool {
+	for _, u := range users {
+		if u.User.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+func deleteDonor(users []api.DonorWithSum, userId int) []api.DonorWithSum {
+	index := -1
+	for i, v := range users {
+		if v.User.ID == userId {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		return users
+	}
+	copy(users[index:], users[index+1:])
+	return users[:len(users)-1]
+}
+
+func addOrDeletePayer(operation api.Operation, room *api.Room, userId int, totalSum int) []api.DonorWithSum {
+	members := room.Members
+	donors := operation.DonorsWithSum
+
+	if containsDonor(donors, userId) {
+		donors = deleteDonor(donors, userId)
+	} else {
+		for _, m := range *members {
+			if m.ID == userId {
+				donors = append(donors, api.DonorWithSum{User: m})
+				break
+			}
+		}
+	}
+
+	allZero := true
+	for _, d := range donors {
+		if d.Sum != 0 {
+			allZero = false
+			break
+		}
+	}
+	if len(donors) > 0 && allZero {
+		share := float64(totalSum) / float64(len(donors))
+		for i := range donors {
+			donors[i].Sum = share
+		}
+	}
+
+	return donors
+}
+
 type WantDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService
@@ -350,6 +406,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		Description:       u.ChatState.CallbackData.ExternalData,
 		Sum:               u.ChatState.CallbackData.Page,
 		Donor:             u.User,
+		DonorsWithSum:     []api.DonorWithSum{{User: *u.User, Sum: float64(u.ChatState.CallbackData.Page)}},
 		RecipientsWithSum: recipientsWithSum,
 		CreateAt:          time.Now(),
 		NotificationSent:  []int{},
@@ -597,11 +654,18 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 		unallocatedSum -= recipientWithSum.Sum
 	}
 
+	var payerNames []string
+	for _, d := range operation.DonorsWithSum {
+		payerNames = append(payerNames, d.User.DisplayName)
+	}
+	if len(payerNames) == 0 && operation.Donor != nil {
+		payerNames = append(payerNames, operation.Donor.DisplayName)
+	}
 	slivce := []string{
 		" " + moneySpace(operation.Sum, room.Currency),
 		" " + operation.Description,
 		" ",
-		"  " + I18n(u.User, "scrn_payer", operation.Donor.DisplayName),
+		"  " + I18n(u.User, "scrn_payer", strings.Join(payerNames, ", ")),
 		""}
 	tb := NewTableBuilder('-', " | ")
 	tb.AddColumnSimple(Center, func(i int) string {
@@ -831,6 +895,127 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	}
 }
 
+type EditPayerAmountHandler struct {
+	os  OperationService
+	css ChatStateService
+	bs  ButtonService
+	rs  RoomService
+	cfg *Config
+}
+
+func NewEditPayerAmountHandler(bs ButtonService, os OperationService, css ChatStateService, rs RoomService, cfg *Config) *EditPayerAmountHandler {
+	return &EditPayerAmountHandler{
+		os:  os,
+		bs:  bs,
+		rs:  rs,
+		cfg: cfg,
+		css: css,
+	}
+}
+
+func (h EditPayerAmountHandler) HasReact(u *api.Update) bool {
+	return hasAction(u, editSumPayerOperation)
+}
+
+func (h EditPayerAmountHandler) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	_, operationId, room, err, done := getStateIdentifires(ctx, h.rs, u)
+	if done {
+		return
+	}
+
+	operation := findOperationByID(room, operationId)
+
+	var payer api.User
+	for _, d := range operation.DonorsWithSum {
+		if d.User.ID == u.Button.CallbackData.UserId {
+			payer = d.User
+			break
+		}
+	}
+	if payer.ID == 0 {
+		for _, member := range *room.Members {
+			if member.ID == u.Button.CallbackData.UserId {
+				operation.DonorsWithSum = append(operation.DonorsWithSum, api.DonorWithSum{User: member})
+				payer = member
+				break
+			}
+		}
+	}
+	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
+		log.Error().Err(err).Msg("upsert operation failed")
+		return
+	}
+
+	h.css.CleanChatState(ctx, u.ChatState)
+	cs := &api.ChatState{UserId: int(getChatID(u)),
+		CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: payer.ID, OperationId: operation.ID},
+		Action:       setSumPayerOperation}
+
+	err = h.css.Save(ctx, cs)
+	if err != nil {
+		log.Error().Err(err).Msg("create chat state failed")
+		return
+	}
+
+	cancelBtn := api.NewButton(changePayerOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
+	if _, err = h.bs.Save(ctx, cancelBtn); err != nil {
+		log.Error().Err(err).Msg("save button failed")
+		return
+	}
+	tgButtons := [][]tgbotapi.InlineKeyboardButton{{
+		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
+	}}
+	unallocatedSum := float64(operation.Sum)
+	for _, donor := range operation.DonorsWithSum {
+		unallocatedSum -= donor.Sum
+	}
+
+	tb := sdk.NewTableBuilder('-', " | ")
+	tb.AddColumn(sdk.Left, sdk.Monospaced, func(i int) string {
+		if i < len(operation.DonorsWithSum) {
+			if operation.DonorsWithSum[i].User.ID == payer.ID {
+				return "-> " + operation.DonorsWithSum[i].User.DisplayName
+			}
+			return operation.DonorsWithSum[i].User.DisplayName
+		} else if i == len(operation.DonorsWithSum) {
+			return "Итого"
+		}
+		return ""
+	})
+	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
+		if i < len(operation.DonorsWithSum) {
+			return moneySpace(int(operation.DonorsWithSum[i].Sum), room.Currency)
+		} else if i == len(operation.DonorsWithSum) {
+			total := 0
+			for _, donor := range operation.DonorsWithSum {
+				total += int(donor.Sum)
+			}
+			return moneySpace(total, room.Currency)
+		}
+		return ""
+	})
+	tb.AddSeparatorRow(0)
+	tb.AddSeparatorRow(len(operation.DonorsWithSum))
+	text := fmt.Sprintf(`
+🔷 Введите сколько заплатил: [%s]
+
+💼 Операция: %s
+💵 Общая сумма: %s
+
+📊 Распределение:
+%s`,
+		payer.DisplayName,
+		operation.Description,
+		moneySpace(operation.Sum, room.Currency),
+		tb.Build(),
+	)
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{createScreen(u, text, &tgButtons)},
+		Send:      true,
+	}
+}
+
 type ChangePayerHandler struct {
 	os  OperationService
 	css ChatStateService
@@ -866,7 +1051,16 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 	var tgButtons [][]tgbotapi.InlineKeyboardButton
 	for _, member := range *room.Members {
 		text := member.DisplayName
-		if member.ID == operation.Donor.ID {
+		var donorWithSum api.DonorWithSum
+		selected := false
+		for _, d := range operation.DonorsWithSum {
+			if d.User.ID == member.ID {
+				donorWithSum = d
+				selected = true
+				break
+			}
+		}
+		if selected {
 			text = "💳 " + text
 		}
 		userTitleBtn := &api.Button{
@@ -875,9 +1069,25 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 			CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: member.ID, OperationId: operation.ID},
 		}
 		buttons = append(buttons, userTitleBtn)
-		tgButtons = append(tgButtons, []tgbotapi.InlineKeyboardButton{
-			tgbotapi.NewInlineKeyboardButtonData(text, userTitleBtn.ID.Hex()),
-		})
+
+		if selected {
+			priceBtn := fmt.Sprintf("💵 %s", moneySpace(int(donorWithSum.Sum), room.Currency))
+			setSumBtn := &api.Button{
+				ID:           primitive.NewObjectID(),
+				Action:       editSumPayerOperation,
+				Text:         priceBtn,
+				CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: member.ID, OperationId: operation.ID},
+			}
+			buttons = append(buttons, setSumBtn)
+			tgButtons = append(tgButtons, []tgbotapi.InlineKeyboardButton{
+				tgbotapi.NewInlineKeyboardButtonData(text, userTitleBtn.ID.Hex()),
+				tgbotapi.NewInlineKeyboardButtonData(setSumBtn.Text, setSumBtn.ID.Hex()),
+			})
+		} else {
+			tgButtons = append(tgButtons, []tgbotapi.InlineKeyboardButton{
+				tgbotapi.NewInlineKeyboardButtonData(text, userTitleBtn.ID.Hex()),
+			})
+		}
 	}
 
 	deleteBtn := api.NewButton(deleteDonorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: operation.ID})
@@ -894,7 +1104,14 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), deleteBtn.ID.Hex()),
 	})
 
-	text := I18n(u.User, "scrn_choose_payer", operation.Donor.DisplayName)
+	var payerNames []string
+	for _, d := range operation.DonorsWithSum {
+		payerNames = append(payerNames, d.User.DisplayName)
+	}
+	if len(payerNames) == 0 && operation.Donor != nil {
+		payerNames = append(payerNames, operation.Donor.DisplayName)
+	}
+	text := I18n(u.User, "scrn_choose_payer", strings.Join(payerNames, ", "))
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &tgButtons)},
@@ -921,7 +1138,7 @@ func NewChangedPayerHandler(bs ButtonService, os OperationService, css ChatState
 }
 
 func (h ChangedPayerHandler) HasReact(u *api.Update) bool {
-	return hasAction(u, choosePayerOperation)
+	return hasAction(u, choosePayerOperation) || (u.Button != nil && u.Button.Action == saveSumPayerOperation)
 }
 
 // OnMessage processes the update and prepares the response message
@@ -931,20 +1148,27 @@ func (h ChangedPayerHandler) OnMessage(ctx context.Context, u *api.Update) (resp
 		log.Error().Err(err).Msg("get room failed")
 		return
 	}
-	var payer api.User
-	for i, m := range *room.Members {
-		if m.ID == u.Button.CallbackData.UserId {
-			payer = (*room.Members)[i]
-			break
+	operation := findOperationByID(room, u.Button.CallbackData.OperationId)
+	if hasAction(u, choosePayerOperation) {
+		operation.DonorsWithSum = addOrDeletePayer(operation, room, u.Button.CallbackData.UserId, operation.Sum)
+	} else if u.Button.Action == saveSumPayerOperation {
+		for i := range operation.DonorsWithSum {
+			if operation.DonorsWithSum[i].User.ID == u.Button.CallbackData.UserId {
+				operation.DonorsWithSum[i].Sum = float64(u.ChatState.CallbackData.Page)
+				break
+			}
 		}
 	}
-	operation := findOperationByID(room, u.Button.CallbackData.OperationId)
-	operation.Donor = &payer
+	if len(operation.DonorsWithSum) > 0 {
+		operation.Donor = &operation.DonorsWithSum[0].User
+	} else {
+		operation.Donor = nil
+	}
 	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
 		return
 	}
-	u.Button.Action = addingOperation
+	u.Button.Action = changePayerOperation
 	return api.TelegramMessage{
 		Send:     true,
 		Redirect: u,
@@ -1156,6 +1380,150 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 			NewMessage(getChatID(u), text, tgButtons),
 		},
 		Send: true,
+	}
+}
+
+type AddedPayerAmountOperation struct {
+	css ChatStateService
+	bs  ButtonService
+	os  OperationService
+	rs  RoomService
+	rss RoomStateService
+	cfg *Config
+}
+
+func NewAddedPayerAmountOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, rss RoomStateService, cfg *Config) *AddedPayerAmountOperation {
+	return &AddedPayerAmountOperation{css: s, bs: bs, os: os, rs: rs, rss: rss, cfg: cfg}
+}
+
+func (s AddedPayerAmountOperation) HasReact(u *api.Update) bool {
+	if u.ChatState == nil || u.Message == nil || strings.TrimSpace(u.Message.Text) == "" {
+		return false
+	}
+	return u.ChatState.Action == setSumPayerOperation
+}
+
+func (s AddedPayerAmountOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
+	room, err := s.rs.FindById(ctx, u.ChatState.CallbackData.RoomId)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to retrieve room details")
+		return
+	}
+	operation := findOperationByID(room, u.ChatState.CallbackData.OperationId)
+
+	sum, err := defineSum(u.Message.Text)
+	if err != nil {
+		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
+		text := I18n(u.User, "msg_wrong_format")
+
+		rb := api.NewButton(changePayerOperation, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId, OperationId: operation.ID})
+		if _, err := s.bs.SaveAll(ctx, rb); err != nil {
+			log.Error().Err(err).Stack().Msg("save buttons failed")
+			return
+		}
+		return api.TelegramMessage{
+			Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text,
+				[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())}})},
+			Send: true,
+		}
+	}
+	for i := range operation.DonorsWithSum {
+		if operation.DonorsWithSum[i].User.ID == u.ChatState.CallbackData.UserId {
+			operation.DonorsWithSum[i].Sum = float64(sum)
+		}
+	}
+
+	s.css.CleanChatState(ctx, u.ChatState)
+	u.ChatState.CallbackData.Page = sum
+	cs := &api.ChatState{UserId: int(getChatID(u)), CallbackData: u.ChatState.CallbackData, Action: saveSumPayerOperation}
+	if err = s.css.Save(ctx, cs); err != nil {
+		log.Error().Err(err).Msg("create chat state failed")
+		return
+	}
+
+	var payer api.User
+	for _, d := range operation.DonorsWithSum {
+		if d.User.ID == u.ChatState.CallbackData.UserId {
+			payer = d.User
+			break
+		}
+	}
+
+	cancelBtn := api.NewButton(changePayerOperation, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId, OperationId: operation.ID})
+	saveBtn := api.NewButton(saveSumPayerOperation, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId, UserId: payer.ID, OperationId: operation.ID})
+	editBtn := api.NewButton(editSumPayerOperation, &api.CallbackData{RoomId: room.ID.Hex(), UserId: payer.ID, OperationId: operation.ID})
+	buttons := []*api.Button{cancelBtn, saveBtn, editBtn}
+	if _, err = s.bs.SaveAll(ctx, buttons...); err != nil {
+		log.Error().Err(err).Stack().Msg("save buttons failed")
+		return
+	}
+	tgButtons := [][]tgbotapi.InlineKeyboardButton{{
+		tgbotapi.NewInlineKeyboardButtonData("❌Изменить", editBtn.ID.Hex()),
+	}, {
+		tgbotapi.NewInlineKeyboardButtonData("✅ Подтвердить", saveBtn.ID.Hex()),
+	}, {
+		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
+	}}
+	unallocatedSum := float64(operation.Sum)
+	for _, donor := range operation.DonorsWithSum {
+		unallocatedSum -= donor.Sum
+	}
+
+	tb := sdk.NewTableBuilder('-', " | ")
+	tb.AddColumn(sdk.Left, sdk.Monospaced, func(i int) string {
+		if i < len(operation.DonorsWithSum) {
+			if operation.DonorsWithSum[i].User.ID == payer.ID {
+				return "-> " + operation.DonorsWithSum[i].User.DisplayName
+			}
+			return operation.DonorsWithSum[i].User.DisplayName
+		} else if i == len(operation.DonorsWithSum) {
+			return "Итого"
+		}
+		return ""
+	})
+	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
+		if i < len(operation.DonorsWithSum) {
+			return moneySpace(int(operation.DonorsWithSum[i].Sum), room.Currency)
+		} else if i == len(operation.DonorsWithSum) {
+			total := 0
+			for _, donor := range operation.DonorsWithSum {
+				total += int(donor.Sum)
+			}
+			return moneySpace(total, room.Currency)
+		}
+		return ""
+	})
+	tb.AddSeparatorRow(0)
+	tb.AddSeparatorRow(len(operation.DonorsWithSum))
+
+	text := fmt.Sprintf(`
+🔷 Проверьте введённые данные для [%s]:
+💵 Сумма операции: %s
+🔢 Введено: %s
+
+%s
+
+📊Распределение:
+%s
+    `,
+		payer.DisplayName,
+		moneySpace(operation.Sum, room.Currency),
+		moneySpace(sum, room.Currency),
+		func() string {
+			if RoundToTwoDecimalPlaces(unallocatedSum) > 0 {
+				return fmt.Sprintf("⚠️ Осталось распределить: %s", moneySpace(int(unallocatedSum), room.Currency))
+			} else if RoundToTwoDecimalPlaces(unallocatedSum) < 0 {
+				return fmt.Sprintf("🔴Избыток: %s", moneySpace(int(-unallocatedSum), room.Currency))
+			} else {
+				return "Все средства распределены 💪"
+			}
+		}(),
+		tb.Build(),
+	)
+
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), text, tgButtons)},
+		Send:      true,
 	}
 }
 

@@ -22,18 +22,21 @@ func TestGetRoomDebts(t *testing.T) {
 	o := []api.Operation{
 		{
 			Donor:             &m[2],
+			DonorsWithSum:     []api.DonorWithSum{{User: m[2], Sum: 1}},
 			RecipientsWithSum: []api.RecipientWithSum{{User: m[3], Sum: 1}},
 			Status:            "active",
 			Sum:               1,
 		},
 		{
 			Donor:             &m[2],
+			DonorsWithSum:     []api.DonorWithSum{{User: m[2], Sum: 10}},
 			RecipientsWithSum: []api.RecipientWithSum{{User: m[0], Sum: 10}},
 			Status:            "active",
 			Sum:               10,
 		},
 		{
 			Donor:             &m[4],
+			DonorsWithSum:     []api.DonorWithSum{{User: m[4], Sum: 10}},
 			RecipientsWithSum: []api.RecipientWithSum{{User: m[1], Sum: 10}},
 			Status:            "active",
 			Sum:               10,
@@ -57,6 +60,7 @@ func TestGetRoomDebts(t *testing.T) {
 
 	o = append(o, api.Operation{
 		Donor:             &m[3],
+		DonorsWithSum:     []api.DonorWithSum{{User: m[3], Sum: 1}},
 		RecipientsWithSum: []api.RecipientWithSum{{User: m[2], Sum: 1}},
 		Status:            "active",
 		Sum:               1,
