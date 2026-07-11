@@ -1,0 +1,2911 @@
+{
+ "name": "Казахская хата",
+ "users": [
+  {
+   "id": 304898122,
+   "displayName": "Алмаз"
+  },
+  {
+   "id": 373160631,
+   "displayName": "Zagir Nurgaliev"
+  },
+  {
+   "id": 147181773,
+   "displayName": "Артур"
+  },
+  {
+   "id": 399275983,
+   "displayName": "Александр"
+  },
+  {
+   "id": 432827045,
+   "displayName": "No Mercy"
+  }
+ ],
+ "operations": [
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 4500
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4500,
+   "status": "active",
+   "description": "шакшука"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 5900
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5900,
+   "status": "active",
+   "description": "вафли"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 600
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 600,
+   "status": "active",
+   "description": "микси"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 9030
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 9030,
+   "status": "active",
+   "description": "очки"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 5490
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5490,
+   "status": "active",
+   "description": "актив"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1096.6666666666667
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1096.6666666666667
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1096.6666666666667
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3290,
+   "status": "active",
+   "description": "Лимонад"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3990
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 3990
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 7980,
+   "status": "active",
+   "description": "похлебка"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 3190
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3190,
+   "status": "active",
+   "description": "борщ"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3090
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3090,
+   "status": "active",
+   "description": "драники"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3995
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 3995
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 7990,
+   "status": "active",
+   "description": "стейк"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3390
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 3390
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 6780,
+   "status": "active",
+   "description": "жареха"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 6080
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 6080,
+   "status": "active",
+   "description": "салат вино пакет"
+  },
+  {
+   "donor": {
+    "id": 304898122,
+    "displayName": "Алмаз"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 17486.666666666668
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 17486.666666666668
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 17486.666666666668
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 52460,
+   "status": "active",
+   "description": "багаж"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1290
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1290
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1290
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3870,
+   "status": "active",
+   "description": "обслуживание"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 4027
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4027,
+   "status": "active",
+   "description": "смол"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 750
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 750,
+   "status": "active",
+   "description": "обменник"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2807
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2807,
+   "status": "active",
+   "description": "продукты"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2370
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2370,
+   "status": "active",
+   "description": "завтрак"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2900
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2900,
+   "status": "active",
+   "description": "завтрак"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1890
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1890,
+   "status": "active",
+   "description": "ложкп"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1200
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1200
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1200
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1200
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1200
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 6000,
+   "status": "active",
+   "description": "продукты"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 120
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 120
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 120
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 120
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 120
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 600,
+   "status": "active",
+   "description": "автобус"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5000,
+   "status": "active",
+   "description": "авто аренда предоплата"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2060
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 2060
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2060
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 2060
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 2060
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 10300,
+   "status": "active",
+   "description": "чай специи"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 10431.2
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 10431.2
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 10431.2
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 10431.2
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 10431.2
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 52156,
+   "status": "active",
+   "description": "хата"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 720
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 720
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 720
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 720
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 720
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3600,
+   "status": "active",
+   "description": "грибочки"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 700
+    },
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 900
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 700
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 750
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3050,
+   "status": "active",
+   "description": "микси"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 12800
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 12800
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 12800
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 12800
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 12800
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 64000,
+   "status": "active",
+   "description": "основные продукты поход"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 6000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 6000,
+   "status": "active",
+   "description": "пенка"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 12000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 12000,
+   "status": "active",
+   "description": "рюкзак аренда"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 800
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4000,
+   "status": "active",
+   "description": "газ"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 910
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 910
+    },
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1820
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3640,
+   "status": "active",
+   "description": "тарелки"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3608.75
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 3608.75
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 3608.75
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 3608.75
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 14435,
+   "status": "active",
+   "description": "ягер"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1480
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1480,
+   "status": "active",
+   "description": "пиво"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 795
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 795,
+   "status": "active",
+   "description": "пиво карл"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1000,
+   "status": "active",
+   "description": "Носки"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 2000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 10000,
+   "status": "active",
+   "description": "Фрукты"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 420
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 420
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 420
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 420
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 420
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2100,
+   "status": "active",
+   "description": "такси до проката"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 2000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 2000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 10000,
+   "status": "active",
+   "description": "доплата к Загру прокат"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2600
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 2600
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2600
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 2600
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 2600
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 13000,
+   "status": "active",
+   "description": "бенз"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 300
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 300,
+   "status": "active",
+   "description": "вода0.5"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1560
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1560,
+   "status": "active",
+   "description": "Кофе и киткат"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 29000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 29000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 29000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 29000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 29000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 145000,
+   "status": "active",
+   "description": "Тачка"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 620
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 620
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 620
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 620
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 620
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3100,
+   "status": "active",
+   "description": "Въезд в горы"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1500
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1500,
+   "status": "active",
+   "description": "магазин"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 4000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4000,
+   "status": "active",
+   "description": "Магазин в деревне"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 600
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 600
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 600
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 600
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 600
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3000,
+   "status": "active",
+   "description": "Чарынский каньон"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5000,
+   "status": "active",
+   "description": "Транспорт Шарынский"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2065
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 5847
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 6077
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 5158
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 19147,
+   "status": "active",
+   "description": "Кафе жареные семечки"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1610
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1610
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1610
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1610
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1610
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 8050,
+   "status": "active",
+   "description": "бенз"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 800
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 800
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4000,
+   "status": "active",
+   "description": "Транспорт до турцентра"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 20000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 20000,
+   "status": "active",
+   "description": "Возврат"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 5500
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 3000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 5000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 5000
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 3500
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 22000,
+   "status": "active",
+   "description": "Рестик у озера"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 460
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 460
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 460
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 460
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 460
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2300,
+   "status": "active",
+   "description": "Рестик у озера общее"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 5000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5000,
+   "status": "active",
+   "description": "Дал денег"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 2459
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 2790
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 2751
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 210
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 3194
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 11404,
+   "status": "active",
+   "description": "Кафе внутри Магнума"
+  },
+  {
+   "donor": {
+    "id": 304898122,
+    "displayName": "Алмаз"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 153250
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 153250,
+   "status": "active",
+   "description": "Алмаз перевёл"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 153250
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 153250,
+   "status": "active",
+   "description": "Артур перевёл"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 3290
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 3290
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 6580,
+   "status": "active",
+   "description": "Уха"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 4290
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 4290
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 8580,
+   "status": "active",
+   "description": "Жаркое в горшочке"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 5290
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 5290,
+   "status": "active",
+   "description": "Филе миньон"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1690
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1690,
+   "status": "active",
+   "description": "Вино белое"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1790
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1790
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1790
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1790
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 7160,
+   "status": "active",
+   "description": "Наливка вишневаЯ"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3990
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 3990
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 7980,
+   "status": "active",
+   "description": "Похлебка"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 478
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 478
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 478
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 478
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 478
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2390,
+   "status": "active",
+   "description": "Морс домашний"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 3090
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3090,
+   "status": "active",
+   "description": "Драники"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 856
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 855
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 855
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 855
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 855
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 4276,
+   "status": "active",
+   "description": "Обслуживание"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 260
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 260
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 260
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 260
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 260
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1300,
+   "status": "active",
+   "description": "Водопад"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 14783
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 14783
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 14782
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 14782
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 14782
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 73912,
+   "status": "active",
+   "description": "Дом"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 468
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 467
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 467
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 467
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 467
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 2336,
+   "status": "active",
+   "description": "Капсулы"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 4679
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 4679
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 4678
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 4678
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 4678
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 23392,
+   "status": "active",
+   "description": "Общие продукты"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1400
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1400
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1400
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1400
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 1400
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 7000,
+   "status": "active",
+   "description": "Мойка"
+  },
+  {
+   "donor": {
+    "id": 432827045,
+    "displayName": "No Mercy"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 614
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 614
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 614
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 614
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 614
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3070,
+   "status": "active",
+   "description": "такси в дом"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1129
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1129,
+   "status": "active",
+   "description": "Сидр"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 579
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 579,
+   "status": "active",
+   "description": "Крышовица пиво"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 3258
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 3257
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 3257
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 3257
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 13029,
+   "status": "active",
+   "description": "Вино и рыбка"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 809
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 809,
+   "status": "active",
+   "description": "Пиво"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 716
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 716,
+   "status": "active",
+   "description": "Хольстен"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 160000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 160000,
+   "status": "active",
+   "description": "Возврат"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 708
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 708
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 708
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 708
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 708
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3540,
+   "status": "active",
+   "description": "Такси в город"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 792
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 792
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 792
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 792
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 792
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3960,
+   "status": "active",
+   "description": "Такси от коттеджа"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 12845
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 12845
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 12844
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 12844
+    },
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 12844
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 64222,
+   "status": "active",
+   "description": "Отель"
+  },
+  {
+   "donor": {
+    "id": 373160631,
+    "displayName": "Zagir Nurgaliev"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 820
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 820
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 820
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 820
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3280,
+   "status": "active",
+   "description": "Такси за чемоданом"
+  },
+  {
+   "donor": {
+    "id": 304898122,
+    "displayName": "Алмаз"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 15679
+    }
+   ],
+   "IsDebtRepayment": true,
+   "sum": 15679,
+   "status": "active",
+   "description": ""
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 8000
+    },
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 8000
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 8000
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 8000
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 32000,
+   "status": "active",
+   "description": "Суши трейн"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 373160631,
+      "displayName": "Zagir Nurgaliev"
+     },
+     "sum": 1800
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1800,
+   "status": "active",
+   "description": "milkshake"
+  },
+  {
+   "donor": {
+    "id": 147181773,
+    "displayName": "Артур"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1100
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 1100,
+   "status": "active",
+   "description": "cock"
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 3237
+    }
+   ],
+   "IsDebtRepayment": true,
+   "sum": 3237,
+   "status": "active",
+   "description": ""
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 13148
+    }
+   ],
+   "IsDebtRepayment": true,
+   "sum": 13148,
+   "status": "active",
+   "description": ""
+  },
+  {
+   "donor": {
+    "id": 304898122,
+    "displayName": "Алмаз"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 432827045,
+      "displayName": "No Mercy"
+     },
+     "sum": 8000
+    }
+   ],
+   "IsDebtRepayment": true,
+   "sum": 8000,
+   "status": "active",
+   "description": ""
+  },
+  {
+   "donor": {
+    "id": 399275983,
+    "displayName": "Александр"
+   },
+   "recipientsWithSum": [
+    {
+     "user": {
+      "id": 304898122,
+      "displayName": "Алмаз"
+     },
+     "sum": 1313.3333333333333
+    },
+    {
+     "user": {
+      "id": 147181773,
+      "displayName": "Артур"
+     },
+     "sum": 1313.3333333333333
+    },
+    {
+     "user": {
+      "id": 399275983,
+      "displayName": "Александр"
+     },
+     "sum": 1313.3333333333333
+    }
+   ],
+   "IsDebtRepayment": false,
+   "sum": 3940,
+   "status": "active",
+   "description": "такси"
+  }
+ ]
+}

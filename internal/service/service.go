@@ -324,9 +324,33 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 			result = append(result, debt)
 		}
 	}
-	for _, sum := range returned {
-		if sum > 5 {
-			log.Printf("cannot calculate debts, sum is %f", sum)
+
+	// Возвраты могут превышать расчётные долги пары: должник по тратам вернул
+	// больше, чем жадная развёртка ему насчитала (например, потом снова платил
+	// за всех). Раньше такой излишек просто выбрасывался с записью в лог, и
+	// переплатившему «никто ничего не должен». Теперь остатки балансов
+	// превращаются в долги в обратную сторону: положительный остаток — этому
+	// пользователю должны, отрицательный — он должен вернуть.
+	users := map[int]api.User{}
+	for _, op := range debtReturn {
+		users[op.Donor.ID] = *op.Donor
+		for _, r := range op.RecipientsWithSum {
+			users[r.User.ID] = r.User
+		}
+	}
+	// Остатки в пределах рубля — артефакт округления долей (moneyToInt
+	// усекает копейки), а не переплата; их не превращаем в долги
+	var leftover []*UserBalance
+	for uid, b := range returned {
+		if b > 1 || b < -1 {
+			leftover = append(leftover, &UserBalance{user: users[uid], balance: b})
+		}
+	}
+	result = append(result, settleBalances(leftover)...)
+
+	for _, ub := range leftover {
+		if ub.balance > 5 {
+			log.Printf("cannot calculate debts, sum is %f", ub.balance)
 		}
 	}
 	return result, nil
@@ -362,6 +386,13 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 		usrBl = append(usrBl, &UserBalance{user: users[uid], balance: b})
 	}
 
+	return settleBalances(usrBl), nil
+}
+
+// settleBalances жадно сводит балансы к нулю: самый крупный кредитор получает
+// от самого крупного должника, пока есть кому платить. Балансы в usrBl
+// обнуляются по ходу работы.
+func settleBalances(usrBl []*UserBalance) []api.Debt {
 	var debts []api.Debt
 	// лимит итераций — от числа участников, а не константа 100: каждая итерация
 	// обнуляет баланс хотя бы одного из двух участников, поэтому шагов не больше
@@ -375,12 +406,18 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 			}
 			return false
 		})
+		// платить некому: не осталось отрицательного баланса хотя бы на рубль
+		// (с учётом float-шума долей) — без этой проверки repayment спарил бы
+		// кредитора с самим собой
+		if moneyToInt(-usrBl[len(usrBl)-1].balance) < 1 {
+			break
+		}
 		debt := repayment(usrBl[0], usrBl[len(usrBl)-1])
 		if debt.Sum != 0 {
 			debts = append(debts, debt)
 		}
 	}
-	return debts, nil
+	return debts
 }
 
 func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
