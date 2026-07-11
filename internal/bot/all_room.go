@@ -6,6 +6,7 @@ import (
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"slices"
 )
 
 // send /room, after click on the button 'Присоединиться'
@@ -30,10 +31,7 @@ func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, ss S
 
 // ReactOn keys
 func (bot AllRoomInline) HasReact(u *api.Update) bool {
-	if u.InlineQuery == nil {
-		return false
-	}
-	return true
+	return u.InlineQuery != nil
 }
 
 // OnMessage returns one entry
@@ -50,9 +48,9 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 		}
 		var debtText string
 		if debtorSum != 0 {
-			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
+			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum, room.Currency))
 		} else if lenderSum != 0 {
-			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum))
+			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum, room.Currency))
 		} else {
 			debtText = I18n(u.User, "msg_you_not_debt")
 		}
@@ -108,7 +106,7 @@ func (bot AllRoom) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	rooms, err := bot.rs.FindRoomsByUserId(ctx, getFrom(u).ID)
@@ -252,12 +250,61 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 	}
 }
 
+type PartyType int
+
+const (
+	OperationAdding PartyType = iota
+	DebtDistributing
+	Finished
+)
+
 func createRoomInfoText(r *api.Room, u *api.Update) string {
-	text := I18n(u.User, "scrn_room", r.Name)
+	finishedAddOperationCount := len(r.RoomStates.FinishedAddOperation)
+	paidOffDebtCunt := len(r.RoomStates.PaidOffDebt)
+	memberCount := len(*r.Members)
+
+	partyType := definePartyType(finishedAddOperationCount, memberCount, paidOffDebtCunt)
+
+	var partyStatus string
+	switch partyType {
+	case OperationAdding:
+		partyStatus = I18n(u.User, "scrn_party_type_operation_adding")
+	case DebtDistributing:
+		partyStatus = I18n(u.User, "scrn_party_type_debt_distributing")
+	case Finished:
+		partyStatus = I18n(u.User, "scrn_party_type_finished")
+	}
+	text := I18n(u.User, "scrn_room", r.Name, partyStatus, GetCurrencyFlag(r.Currency))
+
 	for _, v := range *r.Members {
-		text += "- " + userLink(&v) + "\n"
+		text += "- " + userLink(&v)
+
+		if slices.Contains(r.RoomStates.PaidOffDebt, v.ID) && DebtDistributing == partyType {
+			text += " 🤝"
+		} else if slices.Contains(r.RoomStates.FinishedAddOperation, v.ID) && OperationAdding == partyType {
+			text += " 🏁"
+		}
+		text += "\n"
+	}
+
+	if paidOffDebtCunt != 0 && partyType == DebtDistributing {
+		text += I18n(u.User, "scrn_debt_legend")
+	} else if finishedAddOperationCount != 0 && partyType == OperationAdding {
+		text += I18n(u.User, "scrn_finished_added_legend")
 	}
 	return text
+}
+
+func definePartyType(finishedAddOperationCount int, memberCount int, paidOffDebtCunt int) PartyType {
+	var partyType PartyType
+	if finishedAddOperationCount != memberCount {
+		partyType = OperationAdding
+	} else if finishedAddOperationCount == memberCount && paidOffDebtCunt != memberCount {
+		partyType = DebtDistributing
+	} else {
+		partyType = Finished
+	}
+	return partyType
 }
 
 func (bot AllRoomInline) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {

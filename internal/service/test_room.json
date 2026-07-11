@@ -1,0 +1,1174 @@
+{
+  "name": "На улице плюс 35🍗🥩🍄🫑🥒🍉🍺",
+  "chat": {},
+  "users": [
+    {
+      "id": 447395360,
+      "user_name": "Guzel1412",
+      "display_name": "Guzel Latypova",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 304898122,
+      "user_name": "mazanur",
+      "display_name": "Алмаз ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 360624984,
+      "user_name": "albinka2491",
+      "display_name": "Альбина ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 172261383,
+      "user_name": "pelirrojajorge",
+      "display_name": "Aleksandra Popova",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 147181773,
+      "user_name": "arturrdd",
+      "display_name": "Артур ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 395642940,
+      "user_name": "AlexChernoguzov",
+      "display_name": "Alex Chernoguzov",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 438583473,
+      "user_name": "Systemka314",
+      "display_name": "Анастасия ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 399275983,
+      "user_name": "aleksanmaksim",
+      "display_name": "Александр ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 286316736,
+      "user_name": "ElenaNaOs",
+      "display_name": "Elena Grigoreva ",
+      "user_lang": "ru",
+      "selected_lang": ""
+    },
+    {
+      "id": 781078907,
+      "user_name": "grigdmitriy",
+      "display_name": "Dmitriy Grigoriev",
+      "user_lang": "ru",
+      "selected_lang": ""
+    }
+  ],
+  "operations": [
+    {
+      "description": "пиво табак",
+      "donor": {
+        "id": 399275983,
+        "user_name": "aleksanmaksim",
+        "display_name": "Александр ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 100
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 100,
+      "notification_sent": [
+        304898122
+      ]
+    },
+    {
+      "description": "вода 5л",
+      "donor": {
+        "id": 399275983,
+        "user_name": "aleksanmaksim",
+        "display_name": "Александр ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 3.5
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 35,
+      "notification_sent": [
+        447395360,
+        304898122,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        286316736,
+        781078907
+      ]
+    },
+    {
+      "description": "грибы и мясо",
+      "donor": {
+        "id": 447395360,
+        "user_name": "Guzel1412",
+        "display_name": "Guzel Latypova",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 116.6
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 1166,
+      "notification_sent": [
+        304898122,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        399275983,
+        286316736,
+        781078907
+      ]
+    },
+    {
+      "description": "мясо угли",
+      "donor": {
+        "id": 304898122,
+        "user_name": "mazanur",
+        "display_name": "Алмаз ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 124.2
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 1242,
+      "notification_sent": [
+        447395360,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        399275983,
+        286316736,
+        781078907
+      ],
+      "files": [
+        {
+          "type": "image",
+          "fileid": "AgACAgIAAxkBAAISKWEgryZ9LvtYxjZozNdh9oVa34WjAAL-tTEbsuoAAUl-3tEcZeBMzgEAAwIAA3kAAyAE"
+        }
+      ]
+    },
+    {
+      "description": "арбуз",
+      "donor": {
+        "id": 399275983,
+        "user_name": "aleksanmaksim",
+        "display_name": "Александр ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 32.5
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 325,
+      "notification_sent": [
+        447395360,
+        304898122,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        286316736,
+        781078907
+      ]
+    },
+    {
+      "description": "горячие лепешки🤤",
+      "donor": {
+        "id": 447395360,
+        "user_name": "Guzel1412",
+        "display_name": "Guzel Latypova",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 15
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 150,
+      "notification_sent": [
+        304898122,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        399275983,
+        286316736,
+        781078907
+      ]
+    },
+    {
+      "description": "пиво",
+      "donor": {
+        "id": 399275983,
+        "user_name": "aleksanmaksim",
+        "display_name": "Александр ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 37
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 37,
+      "notification_sent": [
+        304898122
+      ]
+    },
+    {
+      "description": "сок",
+      "donor": {
+        "id": 399275983,
+        "user_name": "aleksanmaksim",
+        "display_name": "Александр ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 360624984,
+            "user_name": "albinka2491",
+            "display_name": "Альбина ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 172261383,
+            "user_name": "pelirrojajorge",
+            "display_name": "Aleksandra Popova",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 147181773,
+            "user_name": "arturrdd",
+            "display_name": "Артур ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 395642940,
+            "user_name": "AlexChernoguzov",
+            "display_name": "Alex Chernoguzov",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 438583473,
+            "user_name": "Systemka314",
+            "display_name": "Анастасия ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 286316736,
+            "user_name": "ElenaNaOs",
+            "display_name": "Elena Grigoreva ",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        },
+        {
+          "user": {
+            "id": 781078907,
+            "user_name": "grigdmitriy",
+            "display_name": "Dmitriy Grigoriev",
+            "user_lang": "ru",
+            "selected_lang": ""
+          },
+          "sum": 9.9
+        }
+      ],
+      "IsDebtRepayment": false,
+      "status": "active",
+      "sum": 99,
+      "notification_sent": [
+        447395360,
+        304898122,
+        360624984,
+        172261383,
+        147181773,
+        395642940,
+        438583473,
+        286316736,
+        781078907
+      ]
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 286316736,
+        "user_name": "ElenaNaOs",
+        "display_name": "Elena Grigoreva ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 301
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 301,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 438583473,
+        "user_name": "Systemka314",
+        "display_name": "Анастасия ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 301
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 301,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 360624984,
+        "user_name": "albinka2491",
+        "display_name": "Альбина ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": "ru",
+            "notification_on": true,
+            "count_in_page": 9
+          },
+          "sum": 199
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 199,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 360624984,
+        "user_name": "albinka2491",
+        "display_name": "Альбина ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 102
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 102,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 395642940,
+        "user_name": "AlexChernoguzov",
+        "display_name": "Alex Chernoguzov",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": "ru",
+            "notification_on": true,
+            "count_in_page": 9
+          },
+          "sum": 301
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 301,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 172261383,
+        "user_name": "pelirrojajorge",
+        "display_name": "Aleksandra Popova",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 304898122,
+            "user_name": "mazanur",
+            "display_name": "Алмаз ",
+            "user_lang": "ru",
+            "selected_lang": "ru",
+            "notification_on": true,
+            "count_in_page": 9
+          },
+          "sum": 301
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 301,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 781078907,
+        "user_name": "grigdmitriy",
+        "display_name": "Dmitriy Grigoriev",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 399275983,
+            "user_name": "aleksanmaksim",
+            "display_name": "Александр ",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 294
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 294,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 781078907,
+        "user_name": "grigdmitriy",
+        "display_name": "Dmitriy Grigoriev",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 7
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 7,
+      "notification_sent": null
+    },
+    {
+      "description": "",
+      "donor": {
+        "id": 147181773,
+        "user_name": "arturrdd",
+        "display_name": "Артур ",
+        "user_lang": "ru",
+        "selected_lang": ""
+      },
+      "recipientsWithSum": [
+        {
+          "user": {
+            "id": 447395360,
+            "user_name": "Guzel1412",
+            "display_name": "Guzel Latypova",
+            "user_lang": "ru",
+            "selected_lang": "",
+            "notification_on": true,
+            "count_in_page": 5
+          },
+          "sum": 301
+        }
+      ],
+      "IsDebtRepayment": true,
+      "status": "active",
+      "sum": 301,
+      "notification_sent": null
+    }
+  ],
+  "room_states": {
+    "finished_add_operation": [
+      399275983,
+      304898122,
+      447395360,
+      438583473,
+      395642940,
+      172261383,
+      147181773,
+      360624984,
+      286316736,
+      781078907
+    ],
+    "paid_off_debts": [
+      447395360,
+      304898122,
+      360624984,
+      172261383,
+      147181773,
+      395642940,
+      438583473,
+      399275983,
+      286316736,
+      781078907
+    ]
+  }
+}

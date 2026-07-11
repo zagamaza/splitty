@@ -50,6 +50,15 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
+	//validation, if all members finished added operation you cant joining
+	if len(room.RoomStates.FinishedAddOperation) == len(*room.Members) {
+		callback := createCallback(u, I18n(u.User, "msg_can_not_join"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
 	data := &api.CallbackData{RoomId: room.ID.Hex()}
 
 	joinB := api.NewButton(joinRoom, data)
@@ -124,7 +133,7 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	data := &api.CallbackData{RoomId: roomId}
 	viewOpsB := api.NewButton(chooseOperations, data)
 	viewDbtB := api.NewButton(chooseDebts, data)
-	startB := api.NewButton(viewStart, data)
+	viewRoomsB := api.NewButton(viewAllRooms, data)
 	startOpB := api.NewButton(wantDonorOperation, data)
 	settB := api.NewButton(roomSetting, data)
 	staticsB := api.NewButton(statistics, data)
@@ -137,10 +146,10 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_statistics"), staticsB.ID.Hex()),
 			tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_room_settings"), settB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonSwitch(I18n(u.User, "btn_send_to_room"), room.Name)},
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_to_start"), startB.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), viewRoomsB.ID.Hex())},
 	}
 
-	if _, err := bot.bs.SaveAll(ctx, viewOpsB, viewDbtB, startB, startOpB, staticsB, settB); err != nil {
+	if _, err = bot.bs.SaveAll(ctx, viewOpsB, viewDbtB, viewRoomsB, startOpB, staticsB, settB); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}

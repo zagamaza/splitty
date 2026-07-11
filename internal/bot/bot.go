@@ -12,43 +12,63 @@ import (
 
 const start string = "/start"
 
-//actions
+// actions
 const (
-	joinRoom               api.Action = "join_room"
-	createRoom             api.Action = "create_room"
-	wantReturnDebt         api.Action = "want_return_debt"
-	wantDonorOperation     api.Action = "want_donor_operation"
-	setDebtSum             api.Action = "set_debt_sum"
-	debtReturned           api.Action = "debt_returned"
-	addDonorOperation      api.Action = "add_donor_operation"
-	addRecipientOperation  api.Action = "add_recipient_operation"
-	deleteDonorOperation   api.Action = "delete_donor_operation"
-	editDonorOperation     api.Action = "edit_donor_operation"
-	donorOperation         api.Action = "donor_operation"
-	addedOperation         api.Action = "added_operation"
-	addFileToOperation     api.Action = "add_file_to_operation"
-	wantAddFileToOperation api.Action = "want_add_file_to_operation"
-	viewFileOperation      api.Action = "view_file_operation"
-	viewRoom               api.Action = "room"
-	viewStart              api.Action = "start"
-	viewAllOperations      api.Action = "all_operations"
-	viewUserOperations     api.Action = "user_operations"
-	viewAllDebtOperations  api.Action = "all_dept_operations"
-	viewAllRooms           api.Action = "all_rooms"
-	viewArchivedRooms      api.Action = "archived_rooms"
-	viewUserDebts          api.Action = "user_debts"
-	viewAllDebts           api.Action = "all_debts"
-	statistics             api.Action = "statistics"
-	chooseOperations       api.Action = "choose_operations"
-	chooseDebts            api.Action = "choose_debts"
-	roomSetting            api.Action = "room_setting"
-	userSetting            api.Action = "user_setting"
-	archiveRoom            api.Action = "archive_room"
-	unArchiveRoom          api.Action = "unarchive_room"
-	chooseLanguage         api.Action = "choose_language"
-	chooseNotification     api.Action = "choose_notification"
-	selectedLanguage       api.Action = "selected_language"
-	selectedNotification   api.Action = "selected_notification"
+	joinRoom                 api.Action = "join_room"
+	createRoom               api.Action = "create_room"
+	wantReturnDebt           api.Action = "want_return_debt"
+	wantDonorOperation       api.Action = "want_donor_operation"
+	setDebtSum               api.Action = "set_debt_sum"
+	debtReturned             api.Action = "debt_returned"
+	addDonorOperation        api.Action = "add_donor_operation"
+	addRecipientOperation    api.Action = "add_recipient_operation"
+	deleteDonorOperation     api.Action = "delete_donor_operation"
+	editDonorOperation       api.Action = "edit_donor_operation"
+	addingOperation          api.Action = "adding_operation"
+	changePayerOperation     api.Action = "change_payer_operation"
+	choosePayerOperation     api.Action = "choose_payer_operation"
+	chooseDonorOperation     api.Action = "choose_donor_Operation"
+	enableAllDonor           api.Action = "enable_all_donor"
+	disableAllDonor          api.Action = "disable_all_donor"
+	editSumDonorOperation    api.Action = "edit_sum_donor_operation"
+	setSumDonorOperation     api.Action = "set_sum_donor_operation"
+	saveSumDonorOperation    api.Action = "save_sum_donor_operation"
+	donorOperation           api.Action = "donor_operation"
+	addedOperation           api.Action = "added_operation"
+	chooseSplitTypeOperation api.Action = "choose_split_type_operation"
+	addFileToOperation       api.Action = "add_file_to_operation"
+	wantAddFileToOperation   api.Action = "want_add_file_to_operation"
+	viewFileOperation        api.Action = "view_file_operation"
+	viewRoom                 api.Action = "room"
+	viewStart                api.Action = "start"
+	viewAllOperations        api.Action = "all_operations"
+	viewOperationsWithMe     api.Action = "operations_with_me"
+	viewUserOperations       api.Action = "user_operations"
+	viewAllDebtOperations    api.Action = "all_dept_operations"
+	viewAllRooms             api.Action = "all_rooms"
+	viewArchivedRooms        api.Action = "archived_rooms"
+	viewUserDebts            api.Action = "user_debts"
+	viewAllDebts             api.Action = "all_debts"
+	statistics               api.Action = "statistics"
+	chooseOperations         api.Action = "choose_operations"
+	chooseDebts              api.Action = "choose_debts"
+	roomSetting              api.Action = "room_setting"
+	userSetting              api.Action = "user_setting"
+	archiveRoom              api.Action = "archive_room"
+	exitRoom                 api.Action = "exit_room"
+	chooseCurrency           api.Action = "choose_currency"
+	finishedAddOperation     api.Action = "finished_add_operation"
+	countInPage              api.Action = "count_in_page"
+	bankDetailsView          api.Action = "bank_details_view"
+	bankDetailsWantSet       api.Action = "bank_details_want_set"
+	bankDetailsSet           api.Action = "bank_details_set"
+	unArchiveRoom            api.Action = "unarchive_room"
+	chooseLanguage           api.Action = "choose_language"
+	chooseNotification       api.Action = "choose_notification"
+	selectedLanguage         api.Action = "selected_language"
+	choseCurrency            api.Action = "chose_language"
+	selectedNotification     api.Action = "selected_notification"
+	unsupported              api.Action = "unsupported"
 )
 
 const (
@@ -56,6 +76,21 @@ const (
 	video    api.FileType = "video"
 	document api.FileType = "document"
 )
+
+const (
+	draft   api.OperationStatus = "draft"
+	active  api.OperationStatus = "active"
+	archive api.OperationStatus = "archive"
+)
+
+const (
+	equally         api.SplitType = "equally"
+	by_exact_amount api.SplitType = "by_exact_amount"
+)
+
+// currencyMap общий справочник валют — вынесен в api.Currencies,
+// чтобы REST и бот использовали один словарь
+var currencyMap = api.Currencies
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {
@@ -72,7 +107,7 @@ type SuperUser interface {
 type MultiBot []Interface
 
 // OnMessage pass msg to all bots and collects reposnses (combining all of them)
-//noinspection GoShadowedVar
+// noinspection GoShadowedVar
 func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response api.TelegramMessage) {
 
 	resps := make(chan api.TelegramMessage)
@@ -148,4 +183,25 @@ func getFrom(update *api.Update) *api.User {
 		user = update.InlineQuery.From
 	}
 	return &user
+}
+
+func GetCurrency(code string) api.CurrencyInfo {
+	info, _ := currencyMap[code]
+	return info
+}
+
+func GetCurrencyFlag(code string) string {
+	info, ok := currencyMap[code]
+	if !ok {
+		return currencyMap["RUB"].Flag
+	}
+	return info.Flag
+}
+
+func GetCurrencySymbol(code string) string {
+	info, ok := currencyMap[code]
+	if !ok {
+		return currencyMap["RUB"].Symbol
+	}
+	return info.Symbol
 }

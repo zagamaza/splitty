@@ -62,6 +62,7 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	}
 	totalDebtSum, err := bot.ss.GetAllDebtsSum(ctx, roomId)
 	if err != nil {
+		log.Error().Err(err).Stack().Msgf("GetAllDebtsSum, userId:%s", roomId)
 		return
 	}
 
@@ -71,9 +72,9 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	}
 	var debtText string
 	if debtorSum != 0 {
-		debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum))
+		debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum, room.Currency))
 	} else if lenderSum != 0 {
-		debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum))
+		debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum, room.Currency))
 	} else {
 		debtText = I18n(u.User, "msg_you_not_debt")
 	}
@@ -82,15 +83,15 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	startB := api.NewButton(viewRoom, data)
 	debtOperationsB := api.NewButton(viewAllDebtOperations, data)
 	if _, err = bot.bs.SaveAll(ctx, debtOperationsB); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 
 	text := fmt.Sprintf(I18n(u.User, "scrn_statistic", room.Name) + "\n\n\n")
-	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpace(totalSpendSum)) + "\n\n")
-	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpace(totalUserSpendSum)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpace(totalSpendSum, room.Currency)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpace(totalUserSpendSum, room.Currency)) + "\n\n")
 	text += debtText + "\n\n"
-	text += fmt.Sprintf(I18n(u.User, "msg_common_debt", moneySpace(totalDebtSum)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_common_debt", moneySpace(totalDebtSum, room.Currency)) + "\n\n")
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_paid_debt"), debtOperationsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), startB.ID.Hex())},
@@ -109,15 +110,17 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 // ViewAllDebtOperations show screen with donar/recepient buttons
 type ViewAllDebtOperations struct {
 	css ChatStateService
+	rs  RoomService
 	bs  ButtonService
 	os  OperationService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewViewAllDebtOperations(css ChatStateService, bs ButtonService, os OperationService, cfg *Config) *ViewAllDebtOperations {
+func NewViewAllDebtOperations(css ChatStateService, rs RoomService, bs ButtonService, os OperationService, cfg *Config) *ViewAllDebtOperations {
 	return &ViewAllDebtOperations{
 		css: css,
+		rs:  rs,
 		bs:  bs,
 		os:  os,
 		cfg: cfg,
@@ -131,8 +134,14 @@ func (bot ViewAllDebtOperations) HasReact(u *api.Update) bool {
 func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
+
+	room, err := bot.rs.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Stack().Msgf("cannot find room, userId:%s", roomId)
+		return
+	}
 
 	ops, err := bot.os.GetAllDebtOperations(ctx, roomId)
 	if err != nil {
@@ -145,7 +154,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
-		text += fmt.Sprintf("%s *%s ₽* ➡ ️%s", userLink(op.Donor), moneySpace(op.Sum), userLink(&(*op.Recipients)[0])+"\n\n")
+		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", userLink(op.Donor), moneySpace(op.Sum, room.Currency), userLink(&(op.RecipientsWithSum)[0].User)+"\n\n")
 	}
 
 	var navRow []tgbotapi.InlineKeyboardButton
@@ -165,7 +174,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 

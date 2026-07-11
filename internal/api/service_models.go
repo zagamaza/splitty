@@ -13,22 +13,43 @@ type Room struct {
 	Operations *[]Operation       `json:"operations" bson:"operations"`
 	RoomStates RoomStatesUsers    `json:"roomStates" bson:"room_states"`
 	CreateAt   time.Time          `json:"createAt" bson:"create_at"`
+	Currency   string             `json:"currency" bson:"currency"`
+}
+
+type CurrencyInfo struct {
+	Code   string // ISO-код, например, "RUB"
+	Symbol string // Символ валюты, например, "₽"
+	Flag   string // Флаг страны, например, "🇷🇺"
 }
 
 type RoomStatesUsers struct {
-	Archived []int `json:"archived" bson:"archived,omitempty"`
+	Archived             []int `json:"archived" bson:"archived,omitempty"`
+	PaidOffDebt          []int `json:"paidOffDebts" bson:"paid_off_debts,omitempty"`
+	FinishedAddOperation []int `json:"finishedAddOperation" bson:"finished_add_operation,omitempty"`
 }
 
 type Operation struct {
-	ID               primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Description      string             `json:"description" bson:"description"`
-	Donor            *User              `json:"donor" bson:"donor"`
-	Recipients       *[]User            `json:"recipients" bson:"recipients"`
-	IsDebtRepayment  bool               `json:"IsDebtRepayment" bson:"is_debt_repayment"`
-	Sum              int                `json:"sum" bson:"sum"`
-	NotificationSent []int              `json:"notificationSent" bson:"notification_sent"`
-	CreateAt         time.Time          `json:"createAt" bson:"create_at"`
-	Files            []File             `json:"files" bson:"files,omitempty"`
+	ID                primitive.ObjectID  `json:"id" bson:"_id,omitempty"`
+	OldOperationId    *primitive.ObjectID `json:"old_operation_id" bson:"old_operation_id,omitempty"`
+	Description       string              `json:"description" bson:"description"`
+	Donor             *User               `json:"donor" bson:"donor"`
+	Recipients        *[]User             `json:"recipients" bson:"recipients"`
+	RecipientsWithSum []RecipientWithSum  `json:"recipientsWithSum" bson:"recipients_with_sum"`
+	IsDebtRepayment   bool                `json:"IsDebtRepayment" bson:"is_debt_repayment"`
+	Sum               int                 `json:"sum" bson:"sum"`
+	NotificationSent  []int               `json:"notificationSent" bson:"notification_sent"`
+	CreateAt          time.Time           `json:"createAt" bson:"create_at"`
+	Files             []File              `json:"files" bson:"files,omitempty"`
+	Status            OperationStatus     `json:"status" bson:"status"`
+	SplitType         SplitType           `json:"splitType" bson:"split_type"`
+	// ClientOpId клиентский идемпотентный ключ операции (uuid из outbox
+	// офлайн-клиента): заполняется только REST, бот его не пишет
+	ClientOpId string `bson:"client_op_id,omitempty" json:"clientOpId,omitempty"`
+}
+
+type RecipientWithSum struct {
+	User User    `json:"user" bson:"user"`
+	Sum  float64 `json:"sum" bson:"sum"`
 }
 
 type File struct {
@@ -36,6 +57,10 @@ type File struct {
 	FileId string   `json:"fileId" bson:"file_id"`
 }
 type FileType string
+
+type OperationStatus string
+
+type SplitType string
 
 type Debt struct {
 	Lender *User `json:"lender" bson:"lender"`
@@ -63,11 +88,37 @@ type Button struct {
 type Action string
 
 type CallbackData struct {
-	RoomId      string             `json:"roomId" bson:"room_id,omitempty"`
-	UserId      int                `json:"userId" bson:"user_id,omitempty"`
-	ExternalId  string             `json:"externalId" bson:"external_id,omitempty"`
-	OperationId primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
-	Page        int                `json:"page" bson:"page,omitempty"`
+	RoomId       string             `json:"roomId" bson:"room_id,omitempty"`
+	UserId       int                `json:"userId" bson:"user_id,omitempty"`
+	ExternalId   string             `json:"externalId" bson:"external_id,omitempty"`
+	ExternalData string             `json:"externalData" bson:"external_data,omitempty"`
+	OperationId  primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
+	Page         int                `json:"page" bson:"page,omitempty"`
+	Expand       bool               `json:"collapse" bson:"collapse,omitempty"`
+}
+
+type OperationDiff struct {
+	NameChanged            bool
+	PhotoAdded             bool
+	RecipientsAdded        []RecipientWithSum
+	RecipientsRemoved      []RecipientWithSum
+	RecipientsShareChanged []RecipientShareChange
+}
+
+// Изменение суммы конкретного получателя
+type RecipientShareChange struct {
+	User   User
+	OldSum float64
+	NewSum float64
+}
+
+// LoginCode одноразовый код входа в приложение, выдаётся командой /login в боте
+type LoginCode struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Code      string             `json:"code" bson:"code"`
+	UserId    int                `json:"userId" bson:"user_id"`
+	ExpiresAt time.Time          `json:"expiresAt" bson:"expires_at"`
+	Used      bool               `json:"used" bson:"used"`
 }
 
 func NewButton(action Action, data *CallbackData) *Button {

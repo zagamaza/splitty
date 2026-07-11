@@ -103,7 +103,7 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 	}
 
 	tbMsg := tgbotapi.NewMessage(getChatID(u), I18n(u.User, "scrn_room_created", room.Name))
-	tbMsg.ParseMode = tgbotapi.ModeMarkdown
+	tbMsg.ParseMode = tgbotapi.ModeHTML
 
 	shareRoomBtn := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch(I18n(u.User, "btn_share_room"), room.Name)}
 

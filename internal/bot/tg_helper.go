@@ -8,6 +8,7 @@ import (
 	"github.com/gookit/i18n"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -15,18 +16,29 @@ import (
 type UserService interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
+	SetCountInPage(ctx context.Context, userId int, count int) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
+	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
 }
 
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
+	LeaveRoom(ctx context.Context, userId int, roomId string) error
 	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
 	FindById(ctx context.Context, id string) (*api.Room, error)
+	UpdateCurrency(ctx context.Context, roomId string, currency string) error
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
+}
+
+type RoomStateService interface {
 	ArchiveRoom(ctx context.Context, userId int, roomId string) error
 	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
+	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
+	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
+	DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, room *api.Room) error
 }
 
 type Config struct {
@@ -35,7 +47,7 @@ type Config struct {
 }
 
 func NewInlineResultArticle(title, descr, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.InlineQueryResultArticle {
-	article := tgbotapi.NewInlineQueryResultArticleMarkdown(primitive.NewObjectID().Hex(), title, text)
+	article := tgbotapi.NewInlineQueryResultArticleHTML(primitive.NewObjectID().Hex(), title, text)
 	article.Description = descr
 	article.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: keyboard}
 	return article
@@ -53,7 +65,7 @@ func NewInlineConfig(inlid string, results []interface{}) *tgbotapi.InlineConfig
 func NewEditInlineMessage(inlId string, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.EditMessageTextConfig {
 	tbMsg := tgbotapi.EditMessageTextConfig{
 		Text:      text,
-		ParseMode: tgbotapi.ModeMarkdown,
+		ParseMode: tgbotapi.ModeHTML,
 	}
 	tbMsg.InlineMessageID = inlId
 	tbMsg.ReplyMarkup = &tgbotapi.InlineKeyboardMarkup{InlineKeyboard: keyboard}
@@ -63,7 +75,7 @@ func NewEditInlineMessage(inlId string, text string, keyboard [][]tgbotapi.Inlin
 func NewEditMessage(chatId int64, msgId int, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.EditMessageTextConfig {
 	tbMsg := tgbotapi.EditMessageTextConfig{
 		Text:      text,
-		ParseMode: tgbotapi.ModeMarkdown,
+		ParseMode: tgbotapi.ModeHTML,
 	}
 	tbMsg.ChatID = chatId
 	tbMsg.MessageID = msgId
@@ -74,7 +86,7 @@ func NewEditMessage(chatId int64, msgId int, text string, keyboard [][]tgbotapi.
 
 func NewMessage(chatId int64, text string, keyboard [][]tgbotapi.InlineKeyboardButton) tgbotapi.MessageConfig {
 	tbMsg := tgbotapi.NewMessage(chatId, text)
-	tbMsg.ParseMode = tgbotapi.ModeMarkdown
+	tbMsg.ParseMode = tgbotapi.ModeHTML
 	tbMsg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboard...)
 	return tbMsg
 }
@@ -140,6 +152,15 @@ func hasAction(update *api.Update, action api.Action) bool {
 		(update.ChatState != nil && update.ChatState.Action == action)
 }
 
+func hasChatStateAction(update *api.Update, action api.Action) bool {
+	return (update.ChatState != nil && update.ChatState.Action == action)
+}
+
+func hasButtonAction(update *api.Update, action api.Action) bool {
+	return update.Button != nil && update.Button.Action == action
+
+}
+
 func hasMessage(update *api.Update) bool {
 	return update.Message != nil &&
 		update.Message.Text != ""
@@ -194,17 +215,17 @@ func shortName(user *api.User) string {
 }
 
 func userLink(user *api.User) string {
-	return fmt.Sprintf("[%s](tg://user?id=%d)", user.DisplayName, user.ID)
+	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", user.ID, user.DisplayName)
 }
 
-func moneySpace(sum int) string {
+func moneySpace(sum int, currency string) string {
 	s := strconv.Itoa(sum)
 	re := regexp.MustCompile("(\\d+)(\\d{3})")
 	for n := ""; n != s; {
 		n = s
 		s = re.ReplaceAllString(s, "$1 $2")
 	}
-	return s
+	return s + " " + GetCurrencySymbol(currency)
 }
 
 func stringForAlign(s string, width int, spacesToEnd bool) string {
@@ -223,16 +244,7 @@ func stringForAlign(s string, width int, spacesToEnd bool) string {
 }
 
 func isArchived(room *api.Room, user *api.User) bool {
-	return containsInt(room.RoomStates.Archived, user.ID)
-}
-
-func containsInt(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(room.RoomStates.Archived, user.ID)
 }
 
 func splitKeyboardButtons(buttons []tgbotapi.InlineKeyboardButton, btnCountInLine int) [][]tgbotapi.InlineKeyboardButton {

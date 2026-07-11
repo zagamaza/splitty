@@ -21,6 +21,10 @@ type UserService interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
 }
 
+type DeIntegrationService interface {
+	StartPostScheduler()
+}
+
 // TelegramListener listens to tg update, forward to bots and send back responses
 // Not thread safe
 type TelegramListener struct {
@@ -30,6 +34,8 @@ type TelegramListener struct {
 	ButtonService    ButtonService
 	upds             chan tbapi.Update
 	UserService      UserService
+
+	DeIntegrationService DeIntegrationService
 }
 
 type tbAPI interface {
@@ -68,10 +74,16 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 			upd := transformUpdate(update)
 
-			upd.User, err = l.UserService.UpsertUser(ctx, *getFrom(upd))
+			user, err := getFrom(upd)
+			if err != nil {
+				log.Error().Err(err).Stack().Msg("failed define user")
+				break
+			}
+
+			upd.User, err = l.UserService.UpsertUser(ctx, *user)
 			if err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
-				return err
+				break
 			}
 
 			if err := l.populateBtn(ctx, upd); err != nil {
@@ -91,17 +103,15 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 
 func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
 	resp := l.Bots.OnMessage(ctx, upd)
-
-	if err := l.sendBotResponse(ctx, resp); err != nil {
-		log.Error().Err(err).Stack().Msgf("failed to respond on update")
-	}
+	l.sendBotResponse(ctx, resp)
 }
 
 func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) error {
 	if upd.CallbackQuery != nil {
-		btn, err := l.ButtonService.FindById(ctx, upd.CallbackQuery.Data)
+		id := upd.CallbackQuery.Data
+		btn, err := l.ButtonService.FindById(ctx, id)
 		if err != nil {
-			return errors.Wrapf(err, "failed to find Button by id %q", err)
+			return errors.Wrapf(err, "failed to find Button by id %s, %q", id, err)
 		}
 		upd.Button = btn
 	}
@@ -125,17 +135,26 @@ func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Updat
 }
 
 // sendBotResponse sends bot'service answer to tg channel and saves it to log
-func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) error {
+func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.TelegramMessage) {
 	if !resp.Send {
-		return nil
+		return
+	}
+
+	if resp.Redirect != nil {
+		if resp.Redirect.FromRedirect {
+			log.Error().Stack().Msg("recursive multiple redirection")
+		} else {
+			resp.Redirect.FromRedirect = true
+			l.processUpdate(ctx, resp.Redirect)
+		}
 	}
 
 	if resp.InlineConfig != nil {
 		response, err := l.TbAPI.AnswerInlineQuery(*resp.InlineConfig)
 		if err != nil {
-			return errors.Wrapf(err, "can't send query to telegram %v", response)
+			log.Error().Err(err).Msgf("can't send query to telegram %v", response)
 		}
-		log.Debug().Msgf("bot response - %q", resp.InlineConfig)
+		log.Debug().Msgf("bot response - %v", resp.InlineConfig)
 	}
 
 	if len(resp.Chattable) > 0 {
@@ -145,7 +164,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 			}
 			response, err := l.TbAPI.Send(v)
 			if err != nil {
-				return errors.Wrapf(err, "can't send message to telegram %v", v)
+				log.Error().Err(err).Msgf("can't send message to telegram %v", v)
 			}
 			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
@@ -153,19 +172,10 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 	if resp.CallbackConfig != nil {
 		response, err := l.TbAPI.AnswerCallbackQuery(*resp.CallbackConfig)
 		if err != nil {
-			return errors.Wrapf(err, "can't send calback to telegram %v", resp.CallbackConfig)
+			log.Error().Err(err).Msgf("can't send calback to telegram %v", resp.CallbackConfig)
 		}
 		log.Debug().Msgf("bot response - %+v", response)
 	}
-	if resp.Redirect != nil {
-		if resp.Redirect.FromRedirect {
-			log.Error().Stack().Msg("recursive multiple redirection")
-		} else {
-			resp.Redirect.FromRedirect = true
-			l.processUpdate(ctx, resp.Redirect)
-		}
-	}
-	return nil
 }
 
 func transform(msg *tbapi.Message) *api.Message {
@@ -255,11 +265,10 @@ func transformUpdate(u tbapi.Update) *api.Update {
 
 func transformUser(i *tbapi.User) api.User {
 	return api.User{
-		ID:             i.ID,
-		Username:       i.UserName,
-		DisplayName:    i.FirstName + " " + i.LastName,
-		UserLang:       i.LanguageCode,
-		NotificationOn: false,
+		ID:          i.ID,
+		Username:    i.UserName,
+		DisplayName: i.FirstName + " " + i.LastName,
+		UserLang:    i.LanguageCode,
 	}
 }
 
@@ -289,14 +298,16 @@ func transformEntities(entities *[]tbapi.MessageEntity) *[]api.Entity {
 	return &result
 }
 
-func getFrom(update *api.Update) *api.User {
+func getFrom(update *api.Update) (*api.User, error) {
 	var user api.User
 	if update.CallbackQuery != nil {
 		user = update.CallbackQuery.From
 	} else if update.Message != nil {
 		user = update.Message.From
-	} else {
+	} else if update.InlineQuery != nil {
 		user = update.InlineQuery.From
+	} else {
+		return nil, errors.Errorf("Not define user, update - %v", update)
 	}
-	return &user
+	return &user, nil
 }

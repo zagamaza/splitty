@@ -39,10 +39,10 @@ func (bot Debt) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 	roomId := u.Button.CallbackData.RoomId
 	debts, err := bot.os.GetAllDebts(ctx, roomId)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		log.Error().Err(err).Msg("get all debts failed")
 		return
 	}
-	if len(*debts) < 1 {
+	if len(debts) < 1 {
 		callback := createCallback(u, I18n(u.User, "msg_have_not_debts"), true)
 		return api.TelegramMessage{
 			CallbackConfig: callback,
@@ -73,16 +73,18 @@ func (bot Debt) OnMessage(ctx context.Context, u *api.Update) (response api.Tele
 
 type ViewUserDebts struct {
 	css ChatStateService
+	rs  RoomService
 	bs  ButtonService
 	os  OperationService
 	cfg *Config
 }
 
-func NewViewUserDebts(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *ViewUserDebts {
+func NewViewUserDebts(s ChatStateService, rs RoomService, bs ButtonService, os OperationService, cfg *Config) *ViewUserDebts {
 	return &ViewUserDebts{
 		css: s,
+		rs:  rs,
 		bs:  bs,
-		os:  rs,
+		os:  os,
 		cfg: cfg,
 	}
 }
@@ -95,7 +97,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	roomId := u.Button.CallbackData.RoomId
 	userId := getFrom(u).ID
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	debts, err := bot.os.GetUserDebts(ctx, userId, roomId)
@@ -109,6 +111,11 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 			Send:           true,
 		}
 	}
+	room, err := bot.rs.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Msgf("cannot find room, roomId:%s", roomId)
+		return
+	}
 
 	var toSave []*api.Button
 	var debtBtns []tgbotapi.InlineKeyboardButton
@@ -121,7 +128,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 			dbtB = api.NewButton(viewUserDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum), shortName(debt.Lender))
+		text := fmt.Sprintf("%s➡️%s➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum, room.Currency), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 
@@ -144,7 +151,7 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 	keyboard = append(keyboard, navRow)
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 
@@ -158,15 +165,17 @@ func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response
 type ViewAllDebts struct {
 	css ChatStateService
 	bs  ButtonService
+	rs  RoomService
 	os  OperationService
 	cfg *Config
 }
 
-func NewViewAllDebts(s ChatStateService, bs ButtonService, rs OperationService, cfg *Config) *ViewAllDebts {
+func NewViewAllDebts(s ChatStateService, rs RoomService, bs ButtonService, os OperationService, cfg *Config) *ViewAllDebts {
 	return &ViewAllDebts{
 		css: s,
 		bs:  bs,
-		os:  rs,
+		os:  os,
+		rs:  rs,
 		cfg: cfg,
 	}
 }
@@ -179,18 +188,23 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	roomId := u.Button.CallbackData.RoomId
 	userId := getFrom(u).ID
 	page := u.Button.CallbackData.Page
-	size := 5
+	size := u.User.CountInPage
 	skip := page * size
 
 	debts, err := bot.os.GetAllDebts(ctx, roomId)
 	if err != nil {
 		return
 	}
+	room, err := bot.rs.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Msgf("cannot find room, roomId:%s", roomId)
+		return
+	}
 
 	var toSave []*api.Button
 	var debtBtns []tgbotapi.InlineKeyboardButton
-	for i := skip; i < skip+size && i < len(*debts); i++ {
-		debt := (*debts)[i]
+	for i := skip; i < skip+size && i < len(debts); i++ {
+		debt := (debts)[i]
 		var dbtB *api.Button
 		if debt.Debtor.ID == userId {
 			dbtB = api.NewButton(wantReturnDebt, &api.CallbackData{RoomId: roomId, UserId: debt.Lender.ID})
@@ -198,7 +212,7 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 			dbtB = api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page})
 		}
 		toSave = append(toSave, dbtB)
-		text := fmt.Sprintf("%s➡️%s ₽➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum), shortName(debt.Lender))
+		text := fmt.Sprintf("%s➡️%s ➡️%s", shortName(debt.Debtor), moneySpace(debt.Sum, room.Currency), shortName(debt.Lender))
 		debtBtns = append(debtBtns, tgbotapi.NewInlineKeyboardButtonData(text, dbtB.ID.Hex()))
 	}
 
@@ -211,14 +225,14 @@ func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response 
 	backB := api.NewButton(chooseDebts, u.Button.CallbackData)
 	toSave = append(toSave, backB)
 	navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backB.ID.Hex()))
-	if skip+size < len(*debts) {
+	if skip+size < len(debts) {
 		nextB := api.NewButton(viewAllDebts, &api.CallbackData{RoomId: roomId, Page: page + 1})
 		toSave = append(toSave, nextB)
 		navRow = append(navRow, tgbotapi.NewInlineKeyboardButtonData("➡️", nextB.ID.Hex()))
 	}
 
 	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
-		log.Error().Err(err).Msg("save buttons failed")
+		log.Error().Err(err).Stack().Msg("save buttons failed")
 		return
 	}
 

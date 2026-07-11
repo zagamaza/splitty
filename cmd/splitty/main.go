@@ -2,17 +2,25 @@ package main
 
 import (
 	"context"
+	cryptorand "crypto/rand"
+	"encoding/hex"
 	"fmt"
+	"math/rand"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/almaznur91/splitty/internal/dailyexpenses"
+	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/almaznur91/splitty/internal/rest"
+	"github.com/almaznur91/splitty/internal/service"
 	"github.com/gookit/i18n"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/text/language"
-	"math/rand"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/almaznur91/splitty/internal/bot"
 	"github.com/almaznur91/splitty/internal/events"
@@ -24,7 +32,8 @@ var revision = "local"
 
 func main() {
 	defer closer.Close()
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	closer.Bind(cancel)
 
 	cfg, err := initConfig()
 	if err != nil {
@@ -39,17 +48,94 @@ func main() {
 
 	rand.Seed(int64(time.Now().Nanosecond()))
 
-	app, cl, err := initApp(ctx, cfg)
+	// REST API работает всегда, зависимости собираются вручную поверх отдельного mongo-подключения
+	restServer, restDeps, restCleanup, err := initRestServer(ctx, cfg)
 	if err != nil {
-		log.Error().Err(err).Msg("Can not init application")
-		return
+		log.Fatal().Err(err).Msg("Can not init rest api")
 	}
-	closer.Bind(cl)
+	closer.Bind(restCleanup)
+	closer.Bind(restServer.Shutdown)
 
-	if err := app.Do(ctx); err != nil {
-		log.Error().Err(err).Msg("telegram listener failed")
-		return
+	// бот опционален: без TG_TOKEN или при ошибке инициализации продолжаем только с REST API
+	if cfg.TgToken == "" {
+		log.Warn().Msg("TG_TOKEN is empty, telegram bot disabled, serving rest api only")
+	} else if app, cl, err := initApp(ctx, cfg); err != nil {
+		log.Warn().Err(err).Msg("Can not init telegram bot, serving rest api only")
+	} else {
+		closer.Bind(cl)
+		// бот включён — REST-мутации шлют участникам те же telegram-уведомления,
+		// что и экраны бота (без бота notifier остаётся nil, уведомления no-op)
+		restServer.SetNotifier(bot.NewNotifier(app.TbAPI, restDeps.operationSrv, restDeps.buttonSrv))
+		go app.DeIntegrationService.StartPostScheduler()
+		go func() {
+			if err := app.Do(ctx); err != nil {
+				log.Error().Err(err).Msg("telegram listener failed")
+			}
+		}()
 	}
+
+	if err := restServer.Run(ctx); err != nil {
+		log.Error().Err(err).Msg("rest api failed")
+	}
+}
+
+// restNotifierDeps сервисы поверх mongo-подключения REST, из которых main
+// собирает bot.Notifier, когда telegram-бот включён
+type restNotifierDeps struct {
+	operationSrv *service.OperationService
+	buttonSrv    *service.ButtonService
+}
+
+// initRestServer собирает REST-сервер: mongo-подключение + репозитории + сервисы
+// (вручную, вне wire — wire-граф бота не трогаем)
+func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifierDeps, func(), error) {
+	jwtSecret, err := resolveJwtSecret(cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if cfg.ApiDevAuth {
+		log.Warn().Msg("!!! API_DEV_AUTH=true: POST /api/v1/auth/dev выдаёт токен под ЛЮБЫМ userId без проверки — только для разработки, НИКОГДА не включайте в проде !!!")
+	}
+
+	db, cleanup, err := initMongoConnection(ctx, cfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	userRepository := repository.NewUserRepository(db)
+	roomRepository := repository.NewRoomRepository(db)
+	loginCodeRepository := repository.NewLoginCodeRepository(db)
+	roomService := service.NewRoomService(roomRepository)
+	operationService := service.NewOperationService(roomRepository)
+	buttonService := service.NewButtonService(repository.NewButtonRepository(db))
+
+	restCfg := rest.Config{
+		Listen:    cfg.Listen,
+		JwtSecret: jwtSecret,
+		DevAuth:   cfg.ApiDevAuth,
+		TgToken:   cfg.TgToken,
+	}
+	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService)
+	return server, &restNotifierDeps{operationSrv: operationService, buttonSrv: buttonService}, cleanup, nil
+}
+
+// resolveJwtSecret применяет политику JWT-секрета: пустой API_JWT_SECRET допустим
+// только при API_DEV_AUTH=true — тогда генерируется случайный эфемерный секрет
+// (все выданные токены протухают при рестарте); иначе — фатальная ошибка старта.
+// Дефолтного секрета в коде нет намеренно: он позволял бы подделывать токены.
+func resolveJwtSecret(cfg *config) (string, error) {
+	if cfg.ApiJwtSecret != "" {
+		return cfg.ApiJwtSecret, nil
+	}
+	if !cfg.ApiDevAuth {
+		return "", errors.New("API_JWT_SECRET не задан: задайте непустой секрет подписи JWT " +
+			"(например `openssl rand -hex 32`); пустой секрет допустим только при API_DEV_AUTH=true (режим разработки)")
+	}
+	buf := make([]byte, 32)
+	if _, err := cryptorand.Read(buf); err != nil {
+		return "", errors.Wrap(err, "cannot generate ephemeral jwt secret")
+	}
+	log.Warn().Msg("!!! API_JWT_SECRET не задан: сгенерирован СЛУЧАЙНЫЙ ЭФЕМЕРНЫЙ секрет — все выданные токены перестанут работать после рестарта; НИКОГДА не используйте это в проде !!!")
+	return hex.EncodeToString(buf), nil
 }
 
 type tgLogger struct {
@@ -73,7 +159,8 @@ func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	return tbAPI, nil
 }
 
-func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, us events.UserService, cs events.ChatStateService) (*events.TelegramListener, error) {
+func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.ButtonService, us events.UserService,
+	cs events.ChatStateService, de events.DeIntegrationService) (*events.TelegramListener, error) {
 	multiBot := bot.MultiBot(bots)
 
 	tgListener := &events.TelegramListener{
@@ -82,6 +169,8 @@ func initTelegramConfig(tbAPI *tbapi.BotAPI, bots []bot.Interface, bs events.But
 		ChatStateService: cs,
 		ButtonService:    bs,
 		UserService:      us,
+
+		DeIntegrationService: de,
 	}
 
 	return tgListener, nil
@@ -131,6 +220,14 @@ func initMongoConnection(ctx context.Context, cfg *config) (*mongo.Database, fun
 func initBotConfig(c *config) *bot.Config {
 	cfg := &bot.Config{
 		SuperUsers: c.SuperUsers,
+	}
+	return cfg
+}
+
+func initDeConfig(c *config) *dailyexpenses.Config {
+	cfg := &dailyexpenses.Config{
+		Url:   c.DailyExpensesUrl,
+		Users: c.DailyExpensesUsers,
 	}
 	return cfg
 }
