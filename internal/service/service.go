@@ -338,8 +338,11 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 			users[r.User.ID] = r.User
 		}
 	}
-	// Остатки в пределах рубля — артефакт округления долей (moneyToInt
-	// усекает копейки), а не переплата; их не превращаем в долги
+	// Остатки в пределах рубля не превращаем в долги: усечение копеек при
+	// делении долей (100/3 и т.п.) накапливает у участника до рубля пыли,
+	// неотличимой по значению от честной переплаты в 1 ₽. Осознанно жертвуем
+	// максимум рублём на участника, чтобы не показывать людям долги «верни 1 ₽»
+	// из округлений — develop в этой ситуации выбрасывал переплату целиком
 	var leftover []*UserBalance
 	for uid, b := range returned {
 		if b > 1 || b < -1 {
@@ -353,7 +356,26 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 			log.Printf("cannot calculate debts, sum is %f", ub.balance)
 		}
 	}
-	return result, nil
+	return mergeDebtPairs(result), nil
+}
+
+// mergeDebtPairs суммирует долги с одинаковой парой должник-кредитор: развёртка
+// остатков возвратов может выдать пару, которая уже есть в списке из трат
+// (например, кредитор перевёл деньги своему же должнику операцией возврата)
+func mergeDebtPairs(debts []api.Debt) []api.Debt {
+	type pair struct{ debtorID, lenderID int }
+	seen := map[pair]int{}
+	var merged []api.Debt
+	for _, d := range debts {
+		p := pair{d.Debtor.ID, d.Lender.ID}
+		if i, ok := seen[p]; ok {
+			merged[i].Sum += d.Sum
+			continue
+		}
+		seen[p] = len(merged)
+		merged = append(merged, d)
+	}
+	return merged
 }
 
 func getMin(f ...float64) float64 {

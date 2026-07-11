@@ -84,6 +84,41 @@ func TestNewDebtSurvivesAfterEarlierReturn(t *testing.T) {
 	assert.Equal(t, 1000, debts[0].Sum)
 }
 
+// Возврат «в обратную сторону» (кредитор перевёл своему же должнику): долг из
+// трат и обратный долг из возврата — одна пара, в ответе должна быть одна
+// запись с общей суммой, а не две
+func TestReverseReturnMergesWithExistingDebt(t *testing.T) {
+	a := api.User{ID: 1, DisplayName: "A"}
+	b := api.User{ID: 2, DisplayName: "B"}
+	m := []api.User{a, b}
+
+	o := []api.Operation{
+		// B заплатил 100 за A — A должен B
+		{
+			Donor:             &m[1],
+			RecipientsWithSum: []api.RecipientWithSum{{User: m[0], Sum: 100}},
+			Status:            "active",
+			Sum:               100,
+		},
+		// B (кредитор) перевёл A ещё 10 операцией возврата — долг A растёт до 110
+		{
+			Donor:             &m[1],
+			RecipientsWithSum: []api.RecipientWithSum{{User: m[0], Sum: 10}},
+			Status:            "active",
+			Sum:               10,
+			IsDebtRepayment:   true,
+		},
+	}
+	room := api.Room{Members: &m, Operations: &o}
+
+	debts, err := GetRoomDebts(room)
+	assert.NoError(t, err)
+	assert.Len(t, debts, 1, "долги одной пары должны быть слиты в одну запись")
+	assert.Equal(t, a.ID, debts[0].Debtor.ID)
+	assert.Equal(t, b.ID, debts[0].Lender.ID)
+	assert.Equal(t, 110, debts[0].Sum)
+}
+
 // Реальная комната, на которой долги перед переплатившим участником пропадали:
 // Александр вернул Артуру и No Mercy больше своего расчётного долга по тратам,
 // излишек 2626 терялся, и экран долгов показывал, что ему никто не должен.
