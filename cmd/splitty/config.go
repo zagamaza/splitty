@@ -9,13 +9,20 @@ type config struct {
 
 	DbAddr          string   `env:"DB_HOST" envDefault:"mongodb://localhost:27017/"`
 	DbName          string   `env:"DB_NAME" envDefault:"splitty"`
-	TgToken         string   `env:"TG_TOKEN" envDefault:"6282994135:AAG-jkpfGhM3U6_0IJ_6RA28nuaAi0sEsC0"`
+	TgToken         string   `env:"TG_TOKEN" envDefault:""`
 	SuperUsers      []string `env:"SUPER_USER" envSeparator:":" envDefault:"mazanur:zagirnur"`
 	TgDebug         bool     `env:"TG_DEBUG" envDefault:"false"`
 	DefaultLanguage string   `env:"DEFAULT_LANGUAGE" envDefault:"en"`
 
 	DailyExpensesUrl   string `env:"DAILY_EXPENSES_URL" envDefault:"http://pet.zagirnur.dev:19090/from-splitty"`
 	DailyExpensesUsers []int  `env:"DAILY_EXPENSES_USERS" envSeparator:":" envDefault:"147181773:369575379:172261383:304898122:360624984:373160631"`
+
+	// ApiJwtSecret намеренно без envDefault: вшитый в исходники секрет позволял бы
+	// подделывать JWT любому, кто читал репозиторий. Политика: пустой секрет —
+	// фатальная ошибка старта; исключение — API_DEV_AUTH=true, тогда генерируется
+	// случайный эфемерный секрет (см. resolveJwtSecret в main.go)
+	ApiJwtSecret string `env:"API_JWT_SECRET" envDefault:""`
+	ApiDevAuth   bool   `env:"API_DEV_AUTH" envDefault:"false"`
 }
 
 func initConfig() (*config, error) {

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Фон окна до первого кадра Compose: токен bg (light). -->
+    <color name="window_background">#F6F7F9</color>
+    <!-- Фон адаптивной иконки: токен accent (light). -->
+    <color name="ic_launcher_background">#0E9F6E</color>
+</resources>

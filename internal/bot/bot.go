@@ -88,12 +88,9 @@ const (
 	by_exact_amount api.SplitType = "by_exact_amount"
 )
 
-var currencyMap = map[string]api.CurrencyInfo{
-	"RUB": {Code: "RUB", Symbol: "₽", Flag: "🇷🇺"},
-	"USD": {Code: "USD", Symbol: "$", Flag: "🇺🇸"},
-	"EUR": {Code: "EUR", Symbol: "€", Flag: "🇪🇺"},
-	"IDR": {Code: "IDR", Symbol: "Rp", Flag: "🇮🇩"},
-}
+// currencyMap общий справочник валют — вынесен в api.Currencies,
+// чтобы REST и бот использовали один словарь
+var currencyMap = api.Currencies
 
 // Interface is a bot reactive spec. response will be sent if "send" result is true
 type Interface interface {

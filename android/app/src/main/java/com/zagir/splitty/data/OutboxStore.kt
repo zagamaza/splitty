@@ -1,0 +1,228 @@
+@file:UseSerializers(InstantSerializer::class)
+
+package com.zagir.splitty.data
+
+import com.zagir.splitty.core.model.ExpenseSplit
+import com.zagir.splitty.core.model.InstantSerializer
+import com.zagir.splitty.core.model.RecipientSum
+import com.zagir.splitty.core.model.SplitType
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.time.Instant
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
+
+// Outbox офлайн-операций (фиксированный дизайн v1, паритет с iOS):
+// созданные без сети расходы копятся в файле outbox.json и досылаются
+// OutboxSyncer'ом по FIFO, когда сеть появляется.
+
+/** Вид офлайн-действия. В v1 UI ставит в очередь только [CREATE]. */
+@Serializable
+enum class OutboxKind {
+    @SerialName("create")
+    CREATE,
+
+    @SerialName("update")
+    UPDATE,
+
+    @SerialName("delete")
+    DELETE,
+}
+
+/** Статус записи outbox. */
+@Serializable
+enum class OutboxStatus {
+    /** Ждёт отправки (сеть/5xx при досылке оставляют pending). */
+    @SerialName("pending")
+    PENDING,
+
+    /** Сервер отверг (HTTP 4xx): текст — в [OutboxEntry.errorMessage]. */
+    @SerialName("failed")
+    FAILED,
+}
+
+/**
+ * Параметры расхода в записи outbox — то же правило, что у OperationBody:
+ * ровно одно из полей [recipientIds]/[recipientSums] задаёт способ деления.
+ */
+@Serializable
+data class OutboxPayload(
+    val description: String,
+    val sum: Int,
+    val donorId: Long,
+    val recipientIds: List<Long>? = null,
+    val recipientSums: List<RecipientSum>? = null,
+) {
+    /** Способ деления по наличию полей (recipientSums → «По суммам»). */
+    val splitType: SplitType
+        get() = if (recipientSums != null) SplitType.BY_EXACT_AMOUNT else SplitType.EQUALLY
+
+    /** Получатели в исходном порядке (важен для equally-деления сервера). */
+    val recipientOrder: List<Long>
+        get() = recipientSums?.map { it.userId } ?: recipientIds.orEmpty()
+
+    fun toSplit(): ExpenseSplit = when {
+        recipientSums != null -> ExpenseSplit.ByExactAmount(recipientSums)
+        else -> ExpenseSplit.Equally(recipientIds.orEmpty())
+    }
+
+    companion object {
+        fun of(description: String, sum: Int, donorId: Long, split: ExpenseSplit): OutboxPayload =
+            when (split) {
+                is ExpenseSplit.Equally -> OutboxPayload(
+                    description = description,
+                    sum = sum,
+                    donorId = donorId,
+                    recipientIds = split.recipientIds,
+                )
+
+                is ExpenseSplit.ByExactAmount -> OutboxPayload(
+                    description = description,
+                    sum = sum,
+                    donorId = donorId,
+                    recipientSums = split.recipientSums,
+                )
+            }
+    }
+}
+
+/** Запись outbox: локальная (ещё не отправленная) операция комнаты. */
+@Serializable
+data class OutboxEntry(
+    /**
+     * UUID записи; он же — идемпотентный `clientOpId` при досылке POST
+     * (повтор после потерянного ответа не создаёт дубль, см. docs/API.md).
+     */
+    val localId: String,
+    val roomId: String,
+    val kind: OutboxKind = OutboxKind.CREATE,
+    val payload: OutboxPayload,
+    val createdAt: Instant,
+    val status: OutboxStatus = OutboxStatus.PENDING,
+    /** Текст ошибки сервера при [status] == FAILED. */
+    val errorMessage: String? = null,
+) {
+    val isFailed: Boolean get() = status == OutboxStatus.FAILED
+}
+
+/**
+ * Хранилище outbox: список записей в JSON-файле (запись атомарная — tmp +
+ * ATOMIC_MOVE), наружу — [entries]-StateFlow (экран группы показывает
+ * локальные операции живьём). Все операции последовательны через Mutex.
+ * Порядок списка — порядок постановки (FIFO для синка).
+ *
+ * Не Android-зависим — покрыт юнит-тестами (файл создаётся во временной папке).
+ */
+class OutboxStore(
+    private val file: File,
+    private val json: Json,
+) {
+    private val mutex = Mutex()
+    private var isLoaded = false
+
+    private val _entries = MutableStateFlow<List<OutboxEntry>>(emptyList())
+
+    /** Все записи outbox в порядке постановки (FIFO). */
+    val entries: StateFlow<List<OutboxEntry>> = _entries.asStateFlow()
+
+    /** Гарантирует, что файл прочитан (первый вызов любого метода делает это сам). */
+    suspend fun awaitLoaded(): Unit = mutex.withLock { ensureLoadedLocked() }
+
+    /** Запись по localId; null — уже отправлена/удалена. */
+    suspend fun entry(localId: String): OutboxEntry? = mutex.withLock {
+        ensureLoadedLocked()
+        _entries.value.firstOrNull { it.localId == localId }
+    }
+
+    /** Ставит запись в конец очереди. */
+    suspend fun add(entry: OutboxEntry): Unit = mutex.withLock {
+        ensureLoadedLocked()
+        persistLocked(_entries.value + entry)
+    }
+
+    /**
+     * Правка неотправленной записи: новый payload, статус сбрасывается в
+     * pending (после failed пользовательская правка — повод повторить отправку).
+     */
+    suspend fun update(localId: String, payload: OutboxPayload): Unit = mutex.withLock {
+        ensureLoadedLocked()
+        persistLocked(
+            _entries.value.map { entry ->
+                if (entry.localId == localId) {
+                    entry.copy(payload = payload, status = OutboxStatus.PENDING, errorMessage = null)
+                } else {
+                    entry
+                }
+            }
+        )
+    }
+
+    /** Удаляет запись (отправлена успешно либо удалена пользователем). */
+    suspend fun remove(localId: String): Unit = mutex.withLock {
+        ensureLoadedLocked()
+        persistLocked(_entries.value.filterNot { it.localId == localId })
+    }
+
+    /** HTTP 4xx при досылке: запись остаётся, но помечается failed с текстом. */
+    suspend fun markFailed(localId: String, message: String): Unit = mutex.withLock {
+        ensureLoadedLocked()
+        persistLocked(
+            _entries.value.map { entry ->
+                if (entry.localId == localId) {
+                    entry.copy(status = OutboxStatus.FAILED, errorMessage = message)
+                } else {
+                    entry
+                }
+            }
+        )
+    }
+
+    /** Полная очистка (logout). */
+    suspend fun clear(): Unit = mutex.withLock {
+        ensureLoadedLocked()
+        persistLocked(emptyList())
+    }
+
+    // --- Файл ---
+
+    private suspend fun ensureLoadedLocked() {
+        if (isLoaded) return
+        _entries.value = withContext(Dispatchers.IO) {
+            if (!file.isFile) return@withContext emptyList()
+            runCatching {
+                json.decodeFromString(ListSerializer(OutboxEntry.serializer()), file.readText())
+            }.getOrDefault(emptyList())
+        }
+        isLoaded = true
+    }
+
+    private suspend fun persistLocked(entries: List<OutboxEntry>) {
+        withContext(Dispatchers.IO) {
+            file.parentFile?.mkdirs()
+            val tmp = File(file.parentFile, "${file.name}.tmp")
+            tmp.writeText(json.encodeToString(ListSerializer(OutboxEntry.serializer()), entries))
+            try {
+                Files.move(
+                    tmp.toPath(),
+                    file.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (_: Exception) {
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+        _entries.value = entries
+    }
+}

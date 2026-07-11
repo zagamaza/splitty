@@ -23,6 +23,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		service.NewOperationService, wire.Bind(new(bot.OperationService), new(*service.OperationService)),
 		service.NewStatisticService, wire.Bind(new(bot.StatisticService), new(*service.StatisticService)),
 		service.NewRoomStateService, wire.Bind(new(bot.RoomStateService), new(*service.RoomStateService)),
+		service.NewLoginCodeService, wire.Bind(new(bot.LoginCodeService), new(*service.LoginCodeService)),
 		wire.Bind(new(events.ChatStateService), new(*service.ChatStateService)),
 		wire.Bind(new(events.ButtonService), new(*service.ButtonService)),
 		ProvideBotList, bots,
@@ -30,6 +31,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		repository.NewRoomRepository, wire.Bind(new(repository.RoomRepository), new(*repository.MongoRoomRepository)),
 		repository.NewChatStateRepository, wire.Bind(new(repository.ChatStateRepository), new(*repository.MongoChatStateRepository)),
 		repository.NewButtonRepository, wire.Bind(new(repository.ButtonRepository), new(*repository.MongoButtonRepository)),
+		repository.NewLoginCodeRepository, wire.Bind(new(repository.LoginCodeRepository), new(*repository.MongoLoginCodeRepository)),
 		dailyexpenses.NewIntegrationService, wire.Bind(new(events.DeIntegrationService), new(*dailyexpenses.IntegrationService)),
 	)
 	return nil, nil, nil
@@ -79,6 +81,14 @@ var bots = wire.NewSet(
 	bot.NewWantSetBankDetails,
 	bot.NewSetBankDetails,
 	bot.NewViewBankDetails,
+	bot.NewSplitTypeDonorOperation,
+	bot.NewAddedDonorAmountOperation,
+	bot.NewChooseCurrencyRoom,
+	bot.NewChangePayerHandler,
+	bot.NewChangedPayerHandler,
+	bot.NewUnsupportedScreen,
+	bot.NewDisableEnableAllDonorHandler,
+	bot.NewLoginScreen,
 )
 
 func ProvideBotList(
@@ -125,8 +135,16 @@ func ProvideBotList(
 	b42 *bot.SetBankDetails,
 	b43 *bot.WantSetBankDetails,
 	b44 *bot.EditDonorAmountHandler,
-
+	b45 *bot.AddSplitTypeDonorOperation,
+	b46 *bot.AddedDonorAmountOperation,
+	b47 *bot.ChooseCurrencyRoom,
+	b48 *bot.ChangePayerHandler,
+	b49 *bot.ChangedPayerHandler,
+	b50 *bot.UnsupportedScreen,
+	b51 *bot.DisableEnableAllDonorHandler,
+	b52 *bot.LoginScreen,
 ) []bot.Interface {
 	return []bot.Interface{b1, b2, b3, b4, b5, b6, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20,
-		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44}
+		b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46,
+		b47, b48, b49, b50, b51, b52}
 }

@@ -1,3 +1,14 @@
 logs/*
 app/app
 .env
+
+# Локальные артефакты, данные Mongo и iOS-проект — не тащим в образ
+.git
+bin/
+mongo/
+ios/
+android/
+docs/
+html/
+*.xcresult
+.idea/

@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"math"
+	"sort"
+
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"sort"
 )
 
 func NewUserService(r repository.UserRepository) *UserService {
@@ -37,6 +39,10 @@ func NewRoomStateService(s *OperationService, rr repository.RoomRepository) *Roo
 	return &RoomStateService{rr, *s}
 }
 
+func NewLoginCodeService(r repository.LoginCodeRepository) *LoginCodeService {
+	return &LoginCodeService{r}
+}
+
 type UserService struct {
 	repository.UserRepository
 }
@@ -65,6 +71,10 @@ type StatisticService struct {
 type RoomStateService struct {
 	repository.RoomRepository
 	OperationService
+}
+
+type LoginCodeService struct {
+	repository.LoginCodeRepository
 }
 
 func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, error) {
@@ -284,8 +294,14 @@ func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt,
 			}
 		}
 
-		// Если есть прямой возврат, уменьшаем долг
+		// Если есть прямой возврат, уменьшаем долг.
+		// Применённую сумму списываем из общих балансов returned — иначе шаг
+		// по балансам ниже вычтет тот же возврат второй раз (долг 50, возврат 20
+		// давал 10 вместо 30).
 		if directReturn > 0 {
+			applied := getMin(directReturn, float64(debt.Sum))
+			returned[debtorID] -= applied
+			returned[lenderID] += applied
 			if directReturn >= float64(debt.Sum) {
 				// Долг полностью погашен
 				continue
@@ -347,7 +363,10 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 	}
 
 	var debts []api.Debt
-	for i := 0; hasDebt(usrBl) && i < 100; i++ {
+	// лимит итераций — от числа участников, а не константа 100: каждая итерация
+	// обнуляет баланс хотя бы одного из двух участников, поэтому шагов не больше
+	// len(usrBl); жёсткие 100 молча обрывали список долгов в больших комнатах
+	for i := 0; hasDebt(usrBl) && i < len(usrBl); i++ {
 		sort.Slice(usrBl, func(i, j int) bool {
 			if usrBl[i].balance > usrBl[j].balance {
 				return true
@@ -390,7 +409,7 @@ func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
 	lender.balance -= sum
 	debtor.balance += sum
 
-	return api.Debt{Lender: &lender.user, Debtor: &debtor.user, Sum: int(sum)}
+	return api.Debt{Lender: &lender.user, Debtor: &debtor.user, Sum: moneyToInt(sum)}
 }
 
 func hasDebt(balance []*UserBalance) bool {
@@ -436,7 +455,20 @@ func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, room
 			}
 		}
 	}
-	return int(totalUserSpendSum), nil
+	return moneyToInt(totalUserSpendSum), nil
+}
+
+// moneyToInt переводит float-сумму в целые рубли, поглощая накопленную
+// float-погрешность: у операций бота в recipients_with_sum лежат дробные доли
+// (100/3 = 33.33…), и шесть операций по 13 ₽ на троих давали баланс 25.999999…,
+// который int() усекал до 25 при точном долге 26. Честные дробные остатки
+// (0.6 ₽) по-прежнему усекаются вниз — семантика develop сохранена
+func moneyToInt(f float64) int {
+	r := math.Round(f)
+	if math.Abs(f-r) < 1e-6 {
+		return int(r)
+	}
+	return int(f)
 }
 
 func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (int, error) {

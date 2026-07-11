@@ -9,3 +9,7 @@ cover.out
 # internal binary
 /app/app
 .env
+
+# local artifacts
+/bin/
+/mongo/

@@ -13,7 +13,7 @@ build:
 	echo "binary build"
 
 test:
-	$(GOCMD) test ./internal/service/
+	$(GOCMD) test ./...
 	echo "test build"
 
 run_server:

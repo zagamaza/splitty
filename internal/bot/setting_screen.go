@@ -115,24 +115,33 @@ func (bot *ChooseCurrencyRoom) OnMessage(ctx context.Context, u *api.Update) (re
 		return
 	}
 
-	rubBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "RUB", RoomId: room.ID.Hex()})
-	idrBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "IDR", RoomId: room.ID.Hex()})
-	usdBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "USD", RoomId: room.ID.Hex()})
-	eurBtn := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: "EUR", RoomId: room.ID.Hex()})
+	// Кнопки строятся по общему справочнику api.CurrencyCodes —
+	// новые валюты появляются в боте автоматически.
+	currencyButtons := make([]*api.Button, 0, len(api.CurrencyCodes))
+	toSave := make([]*api.Button, 0, len(api.CurrencyCodes)+1)
+	for _, code := range api.CurrencyCodes {
+		b := api.NewButton(choseCurrency, &api.CallbackData{ExternalId: code, RoomId: room.ID.Hex()})
+		currencyButtons = append(currencyButtons, b)
+		toSave = append(toSave, b)
+	}
 	backBtn := api.NewButton(roomSetting, &api.CallbackData{RoomId: room.ID.Hex()})
+	toSave = append(toSave, backBtn)
 
-	if _, err := bot.bs.SaveAll(ctx, rubBtn, idrBtn, usdBtn, eurBtn, backBtn); err != nil {
+	if _, err := bot.bs.SaveAll(ctx, toSave...); err != nil {
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
 	text := I18n(u.User, "scrn_choose_currency")
-	screen := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("RUB")+" "+GetCurrencySymbol("RUB"), rubBtn.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("IDR")+" "+GetCurrencySymbol("IDR"), idrBtn.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("USD")+" "+GetCurrencySymbol("USD"), usdBtn.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag("EUR")+" "+GetCurrencySymbol("EUR"), eurBtn.ID.Hex())},
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex())},
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0, len(currencyButtons)+1)
+	for i, code := range api.CurrencyCodes {
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonData(GetCurrencyFlag(code)+" "+GetCurrencySymbol(code), currencyButtons[i].ID.Hex()),
+		})
+	}
+	rows = append(rows, []tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), backBtn.ID.Hex()),
 	})
+	screen := createScreen(u, text, &rows)
 	u.Button = api.NewButton(roomSetting, u.Button.CallbackData)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},

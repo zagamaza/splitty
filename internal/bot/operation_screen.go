@@ -392,7 +392,7 @@ func defineSum(text string) (int, error) {
 		return 0, err
 	}
 	if sum < 0 {
-		log.Error().Err(err).Msgf("sum can not be les zero $v", sum)
+		log.Error().Err(err).Msgf("sum can not be les zero %v", sum)
 		return 0, errors.New("sum can not be les zero")
 	}
 	return sum, nil
@@ -1310,7 +1310,6 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 	if diff == nil {
 		return buttons, messages
 	}
-	editorUserId := getFrom(u).ID
 	donOpBut := api.NewButton(donorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: newOp.ID})
 	viewRoomBut := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
 	buttons = append(buttons, donOpBut, viewRoomBut)
@@ -1322,6 +1321,18 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		},
 	}
 
+	messages = append(messages, buildUpdateOperationMessages(getFrom(u), u.User, diff, oldOp, newOp, room, keyboard)...)
+	return buttons, messages
+}
+
+// buildUpdateOperationMessages собирает уведомления об изменении операции — общая
+// часть экранного сценария (notificationWhenUpdateOperation) и REST-уведомлений
+// (Notifier). editor — кто внёс изменение (его пропускаем и упоминаем в текстах),
+// langUser — чей язык используется в блоке «Было/Стало» (в боте это u.User)
+func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *api.OperationDiff, oldOp api.Operation, newOp api.Operation, room *api.Room, keyboard [][]tgbotapi.InlineKeyboardButton) []tgbotapi.Chattable {
+	var messages []tgbotapi.Chattable
+	editorUserId := editor.ID
+
 	if oldOp.Donor.ID != newOp.Donor.ID {
 		var targetUser *api.User
 		if editorUserId != newOp.Donor.ID {
@@ -1331,12 +1342,12 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		}
 
 		text := I18n(newOp.Donor, "scrn_notification_operation_updated_all",
-			userLink(targetUser), newOp.Description, userLink(getFrom(u)), "")
+			userLink(targetUser), newOp.Description, userLink(editor), "")
 		text += "\nБыло:\n" +
-			I18n(u.User, "scrn_user_paid", userLink(oldOp.Donor)) +
+			I18n(langUser, "scrn_user_paid", userLink(oldOp.Donor)) +
 			tableWithPayments(oldOp, room)
 		text += "\n\nСтало:\n" +
-			I18n(u.User, "scrn_user_paid", userLink(newOp.Donor)) +
+			I18n(langUser, "scrn_user_paid", userLink(newOp.Donor)) +
 			tableWithPayments(newOp, room)
 
 		for _, donor := range []*api.User{newOp.Donor, oldOp.Donor} {
@@ -1360,7 +1371,7 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		// Уведомляем донора, если он существует и у него включены уведомления
 		notifiedUsers := make(map[int]bool)
 		if newOp.Donor.NotificationOn == nil || (newOp.Donor.NotificationOn != nil && *newOp.Donor.NotificationOn) {
-			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newOp.Description, userLink(getFrom(u)), changeDetails)
+			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newOp.Description, userLink(editor), changeDetails)
 			msg := NewMessage(int64(newOp.Donor.ID), text, keyboard)
 			messages = append(messages, msg)
 			notifiedUsers[newOp.Donor.ID] = true
@@ -1370,7 +1381,7 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		for _, r := range newOp.RecipientsWithSum {
 			if (r.User.NotificationOn == nil || (r.User.NotificationOn != nil && *r.User.NotificationOn)) && !notifiedUsers[r.User.ID] {
 				msg := NewMessage(int64(r.User.ID),
-					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newOp.Description, userLink(getFrom(u)), changeDetails), keyboard)
+					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newOp.Description, userLink(editor), changeDetails), keyboard)
 				messages = append(messages, msg)
 				notifiedUsers[r.User.ID] = true
 			}
@@ -1385,7 +1396,7 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 			rAdded.User.ID != newOp.Donor.ID &&
 			rAdded.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(rAdded.User.ID),
-				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", userLink(&rAdded.User), userLink(getFrom(u)), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
+				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", userLink(&rAdded.User), userLink(editor), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1398,7 +1409,7 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 			change.User.ID != newOp.Donor.ID &&
 			change.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(change.User.ID),
-				I18n(&change.User, "scrn_notification_operation_share_changed", userLink(&change.User), newOp.Description, userLink(getFrom(u)), moneySpace(newOp.Sum, room.Currency), room.Name, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
+				I18n(&change.User, "scrn_notification_operation_share_changed", userLink(&change.User), newOp.Description, userLink(editor), moneySpace(newOp.Sum, room.Currency), room.Name, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1411,11 +1422,11 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 			rRemoved.User.ID != newOp.Donor.ID &&
 			rRemoved.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(rRemoved.User.ID),
-				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", userLink(&rRemoved.User), userLink(getFrom(u)), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name), keyboard)
+				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", userLink(&rRemoved.User), userLink(editor), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name), keyboard)
 			messages = append(messages, msg)
 		}
 	}
-	return buttons, messages
+	return messages
 }
 
 // Функция для вычисления разницы между операциями

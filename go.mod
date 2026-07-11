@@ -1,12 +1,13 @@
 module github.com/almaznur91/splitty
 
-go 1.21.1
+go 1.22
 
 require (
 	github.com/caarlos0/env/v6 v6.4.0
 	github.com/enescakir/emoji v1.0.0
 	github.com/go-pkgz/syncs v1.1.1
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.5-0.20200113063019-aa124ef1e84e+incompatible
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/wire v0.4.0
 	github.com/gookit/i18n v1.1.3
 	github.com/pkg/errors v0.9.1

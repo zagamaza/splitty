@@ -154,7 +154,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 		if err != nil {
 			log.Error().Err(err).Msgf("can't send query to telegram %v", response)
 		}
-		log.Debug().Msgf("bot response - %q", resp.InlineConfig)
+		log.Debug().Msgf("bot response - %v", resp.InlineConfig)
 	}
 
 	if len(resp.Chattable) > 0 {

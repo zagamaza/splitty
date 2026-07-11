@@ -42,6 +42,9 @@ type Operation struct {
 	Files             []File              `json:"files" bson:"files,omitempty"`
 	Status            OperationStatus     `json:"status" bson:"status"`
 	SplitType         SplitType           `json:"splitType" bson:"split_type"`
+	// ClientOpId клиентский идемпотентный ключ операции (uuid из outbox
+	// офлайн-клиента): заполняется только REST, бот его не пишет
+	ClientOpId string `bson:"client_op_id,omitempty" json:"clientOpId,omitempty"`
 }
 
 type RecipientWithSum struct {
@@ -107,6 +110,15 @@ type RecipientShareChange struct {
 	User   User
 	OldSum float64
 	NewSum float64
+}
+
+// LoginCode одноразовый код входа в приложение, выдаётся командой /login в боте
+type LoginCode struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Code      string             `json:"code" bson:"code"`
+	UserId    int                `json:"userId" bson:"user_id"`
+	ExpiresAt time.Time          `json:"expiresAt" bson:"expires_at"`
+	Used      bool               `json:"used" bson:"used"`
 }
 
 func NewButton(action Action, data *CallbackData) *Button {

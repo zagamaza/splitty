@@ -1,0 +1,76 @@
+package com.zagir.splitty.data
+
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.json.Json
+
+/**
+ * Офлайн-кеш последних успешных ответов ключевых GET: JSON-файлы
+ * `<dir>/<key>.json` (dir = context.filesDir/cache-api). Запись атомарная —
+ * во временный файл с последующим ATOMIC_MOVE, чтобы обрыв процесса не
+ * оставил битый кеш. Битый/отсутствующий файл при чтении — просто null
+ * (кеш не критичен, свежие данные придут из сети).
+ *
+ * Не Android-зависим (java.io + kotlinx.serialization) — покрыт юнит-тестами.
+ */
+class ApiCache(
+    private val dir: File,
+    private val json: Json,
+) {
+
+    /** Ключи кешируемых GET-ответов (v1 офлайн-дизайна). */
+    object Keys {
+        const val FRIENDS = "friends"
+        const val ACTIVITY_FIRST_PAGE = "activity-page0"
+        const val CURRENCIES = "currencies"
+        const val ME = "me"
+
+        fun rooms(archived: Boolean): String = if (archived) "rooms-archived" else "rooms"
+        fun room(roomId: String): String = "room-$roomId"
+        fun statistics(roomId: String): String = "statistics-$roomId"
+    }
+
+    /** Сохраняет свежий ответ сети (атомарно; ошибки записи не критичны). */
+    suspend fun <T> write(key: String, serializer: KSerializer<T>, value: T) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                dir.mkdirs()
+                val target = fileFor(key)
+                val tmp = File(dir, "${target.name}.tmp")
+                tmp.writeText(json.encodeToString(serializer, value))
+                try {
+                    Files.move(
+                        tmp.toPath(),
+                        target.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                } catch (_: Exception) {
+                    // ФС без атомарного move — обычная замена (тоже одним файлом).
+                    Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+        }
+    }
+
+    /** Последний закешированный ответ; null — кеша нет или он не читается. */
+    suspend fun <T> read(key: String, serializer: KSerializer<T>): T? =
+        withContext(Dispatchers.IO) {
+            val file = fileFor(key)
+            if (!file.isFile) return@withContext null
+            runCatching { json.decodeFromString(serializer, file.readText()) }.getOrNull()
+        }
+
+    /** Полная очистка кеша (logout). */
+    suspend fun clear() {
+        withContext(Dispatchers.IO) {
+            runCatching { dir.listFiles()?.forEach { it.delete() } }
+        }
+    }
+
+    private fun fileFor(key: String): File = File(dir, "$key.json")
+}
