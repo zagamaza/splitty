@@ -5,16 +5,16 @@ import SwiftUI
 struct GroupDetailView: View {
     let roomId: String
 
-    /// Вкладки нижнего бара тусы (контекстная навигация вместо глобальных табов).
+    /// Вкладки нижнего бара тусы (контекстная навигация вместо глобальных
+    /// табов). `.add` — заглушка под центральную кнопку «+», как в MainTabView.
     enum TusaTab: Hashable {
-        case operations, balances, totals
+        case operations, balances, add, totals, settings
     }
 
     @Environment(SessionStore.self) private var session
     @State private var model = GroupDetailViewModel()
     @State private var tusaTab: TusaTab = .operations
     @State private var isSettleUpPresented = false
-    @State private var isSettingsPresented = false
     @State private var isAddExpensePresented = false
     /// Фильтр списка операций: только те, где я донор или в получателях
     /// (аналог фильтра «Мои операции» в телеграм-боте).
@@ -41,12 +41,17 @@ struct GroupDetailView: View {
             .background(Color.bg.ignoresSafeArea())
             .navigationTitle(model.room?.name ?? "Группа")
             .navigationBarTitleDisplayMode(.large)
-            // Туса — «центр мира»: глобальный таб-бар скрыт, внизу — бар тусы.
+            // Туса — «центр мира»: глобальный таб-бар скрыт, вместо него —
+            // системный таб-бар вложенного TabView (нативный вид и анимации).
             .toolbar(.hidden, for: .tabBar)
             // Скрыть и глобальную overlay-кнопку «+» (см. HidesGlobalAddButtonKey).
             .preference(key: HidesGlobalAddButtonKey.self, value: true)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                tusaBar
+            .onChange(of: tusaTab) { oldValue, newValue in
+                // Вкладку «+» не открываем — возвращаем прежнюю и показываем форму.
+                if newValue == .add {
+                    tusaTab = oldValue
+                    isAddExpensePresented = true
+                }
             }
             .task {
                 // Профиль мог не загрузиться на старте (сервер был недоступен) —
@@ -78,11 +83,6 @@ struct GroupDetailView: View {
                         currency: model.room?.currency ?? "RUB",
                         preselectedDebt: myDebts.count == 1 ? myDebts.first : nil
                     )
-                }
-            }
-            .sheet(isPresented: $isSettingsPresented) {
-                if let room = model.room {
-                    GroupSettingsView(room: room) {}
                 }
             }
             .alert("Ошибка", isPresented: alertPresented) {
@@ -118,14 +118,7 @@ struct GroupDetailView: View {
         case .loaded:
             if let room = model.room {
                 if let meId {
-                    switch tusaTab {
-                    case .operations:
-                        operationsList(room: room, meId: meId)
-                    case .balances:
-                        GroupBalancesView(room: room, embedded: true) {}
-                    case .totals:
-                        GroupTotalsView(roomId: roomId, embedded: true)
-                    }
+                    tusaTabView(room: room, meId: meId)
                 } else {
                     // Профиль ещё не загружен — нейтральное состояние вместо
                     // неверных подписей «не участвует» с фейковым id.
@@ -325,65 +318,64 @@ struct GroupDetailView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: Нижний бар тусы
+    // MARK: Вкладки тусы
 
-    /// Контекстный таб-бар тусы: [Операции][Балансы] (+) [Итоги][Настройки].
-    /// Заменяет глобальный таб-бар, пока пользователь внутри тусы.
-    private var tusaBar: some View {
-        HStack(alignment: .bottom, spacing: 0) {
-            tusaTabButton("Операции", icon: "list.bullet", tab: .operations)
-            tusaTabButton("Балансы", icon: "arrow.left.arrow.right", tab: .balances)
-            Button {
-                isAddExpensePresented = true
-            } label: {
+    /// Вложенный СИСТЕМНЫЙ TabView — нативный таб-бар тусы:
+    /// [Операции][Балансы] (+) [Итоги][Настройки]; центральная вкладка —
+    /// заглушка под приподнятую кнопку «+» (тот же паттерн, что MainTabView).
+    private func tusaTabView(room: RoomDetail, meId: Int) -> some View {
+        TabView(selection: $tusaTab) {
+            operationsList(room: room, meId: meId)
+                .tabItem { Label("Операции", systemImage: "list.bullet") }
+                .tag(TusaTab.operations)
+
+            GroupBalancesView(room: room, embedded: true) {}
+                .tabItem { Label("Балансы", systemImage: "arrow.left.arrow.right") }
+                .tag(TusaTab.balances)
+
+            // Пустая вкладка-заглушка под центральной кнопкой «+».
+            Color.clear
+                .tabItem { Text("") }
+                .tag(TusaTab.add)
+
+            GroupTotalsView(roomId: roomId, embedded: true)
+                .tabItem { Label("Итоги", systemImage: "chart.pie") }
+                .tag(TusaTab.totals)
+
+            GroupSettingsView(room: room, embedded: true) {}
+                .tabItem { Label("Настройки", systemImage: "gearshape") }
+                .tag(TusaTab.settings)
+        }
+        .tint(Color.accent)
+        .overlay(alignment: .bottom) {
+            addExpenseButton
+        }
+    }
+
+    /// Центральная приподнятая кнопка «+» бара тусы (копия глобальной из
+    /// MainTabView — единый вид у обоих таб-баров).
+    private var addExpenseButton: some View {
+        Button {
+            isAddExpensePresented = true
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accent, Color.accentPressed],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 58, height: 58)
+                    .shadow(color: Color.accent.opacity(0.35), radius: 10, y: 5)
                 Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .medium))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .background(Color.accent, in: Circle())
-                    .shadow(color: Color.accent.opacity(0.25), radius: 5, y: 2)
             }
-            .padding(.bottom, 6)
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel("Добавить расход")
-            .disabled(model.room == nil)
-            tusaTabButton("Итоги", icon: "chart.pie", tab: .totals)
-            tusaBarButton("Настройки", icon: "gearshape") {
-                isSettingsPresented = true
-            }
-            .disabled(model.room == nil)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 2)
-        .background(.bar)
-        .overlay(alignment: .top) {
-            Rectangle().fill(Color.hairline).frame(height: 1)
-        }
-    }
-
-    private func tusaTabButton(_ title: String, icon: String, tab: TusaTab) -> some View {
-        tusaBarButton(title, icon: icon, isActive: tusaTab == tab) {
-            tusaTab = tab
-        }
-    }
-
-    private func tusaBarButton(
-        _ title: String,
-        icon: String,
-        isActive: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(isActive ? Color.accent : Color.inkSecondary)
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.plain)
+        .accessibilityLabel("Добавить расход")
+        .offset(y: -18)
     }
 
     private var emptyOperations: some View {

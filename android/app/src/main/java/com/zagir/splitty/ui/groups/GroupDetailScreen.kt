@@ -21,6 +21,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
@@ -122,9 +129,8 @@ fun GroupDetailScreen(
         if (isOnline) onSettleUp(roomId) else viewModel.showSettleUpUnavailableOffline()
     }
 
-    // Вкладка нижнего бара тусы: операции / балансы / итоги.
+    // Вкладка нижнего бара тусы: операции / балансы / итоги / настройки.
     var tusaTab by rememberSaveable { mutableStateOf(TUSA_TAB_OPS) }
-    var isSettingsPresented by rememberSaveable { mutableStateOf(false) }
 
     val colors = Splitty.colors
     val detail = (state as? UiState.Content)?.value
@@ -164,7 +170,6 @@ fun GroupDetailScreen(
                 enabled = detail != null,
                 onSelect = { tusaTab = it },
                 onAdd = { onAddExpense(roomId) },
-                onSettings = { isSettingsPresented = true },
             )
         },
     ) { innerPadding ->
@@ -209,6 +214,13 @@ fun GroupDetailScreen(
                         )
                     }
 
+                    TUSA_TAB_SETTINGS -> GroupSettingsTab(
+                        room = current.value,
+                        meId = meId,
+                        viewModel = viewModel,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+
                     else -> GroupDetailContent(
                         room = current.value,
                         sections = sections,
@@ -226,14 +238,6 @@ fun GroupDetailScreen(
         }
     }
 
-    if (isSettingsPresented && detail != null) {
-        GroupSettingsSheet(
-            room = detail,
-            meId = meId,
-            viewModel = viewModel,
-            onDismiss = { isSettingsPresented = false },
-        )
-    }
     GroupsAlertDialog(alertMessage, viewModel::dismissAlert)
 }
 
@@ -570,10 +574,12 @@ private fun LocalOperationRow(
 internal const val TUSA_TAB_OPS = "ops"
 internal const val TUSA_TAB_BALANCES = "balances"
 internal const val TUSA_TAB_TOTALS = "totals"
+internal const val TUSA_TAB_SETTINGS = "settings"
 
 /**
  * Контекстный таб-бар тусы: [Операции][Балансы] (+) [Итоги][Настройки].
- * Заменяет глобальную навигацию, пока пользователь внутри тусы (паритет с iOS).
+ * Нативный Material NavigationBar (та же стилистика, что главный бар
+ * MainScaffold), центральная позиция — приподнятая кнопка «+».
  */
 @Composable
 private fun TusaBar(
@@ -581,80 +587,91 @@ private fun TusaBar(
     enabled: Boolean,
     onSelect: (String) -> Unit,
     onAdd: () -> Unit,
-    onSettings: () -> Unit,
 ) {
     val colors = Splitty.colors
-    Column {
-        HairlineDivider()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .padding(top = 8.dp, bottom = 6.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            TusaBarButton(
-                title = stringResource(R.string.group_tab_operations),
-                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                isActive = selected == TUSA_TAB_OPS,
-                modifier = Modifier.weight(1f),
-            ) { onSelect(TUSA_TAB_OPS) }
-            TusaBarButton(
-                title = stringResource(R.string.group_balances_title),
-                icon = Icons.Outlined.SwapHoriz,
-                isActive = selected == TUSA_TAB_BALANCES,
-                modifier = Modifier.weight(1f),
-            ) { onSelect(TUSA_TAB_BALANCES) }
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                FloatingActionButton(
-                    onClick = { if (enabled) onAdd() },
-                    containerColor = colors.accent,
-                    contentColor = Color.White,
-                    shape = CircleShape,
-                    modifier = Modifier.size(52.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.group_add_expense),
-                    )
-                }
-            }
-            TusaBarButton(
-                title = stringResource(R.string.totals_title),
-                icon = Icons.Outlined.PieChart,
-                isActive = selected == TUSA_TAB_TOTALS,
-                modifier = Modifier.weight(1f),
-            ) { onSelect(TUSA_TAB_TOTALS) }
-            TusaBarButton(
-                title = stringResource(R.string.group_settings_short),
-                icon = Icons.Outlined.Settings,
-                isActive = false,
-                modifier = Modifier.weight(1f),
-            ) { if (enabled) onSettings() }
-        }
+    NavigationBar(containerColor = colors.surface) {
+        TusaTabItem(
+            title = stringResource(R.string.group_tab_operations),
+            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+            isSelected = selected == TUSA_TAB_OPS,
+        ) { onSelect(TUSA_TAB_OPS) }
+        TusaTabItem(
+            title = stringResource(R.string.group_balances_title),
+            icon = Icons.Outlined.SwapHoriz,
+            isSelected = selected == TUSA_TAB_BALANCES,
+        ) { onSelect(TUSA_TAB_BALANCES) }
+        // Центральная позиция — приподнятая кнопка «+» (как в MainScaffold).
+        NavigationBarItem(
+            selected = false,
+            onClick = { if (enabled) onAdd() },
+            icon = { TusaAddFab() },
+            colors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent,
+            ),
+        )
+        TusaTabItem(
+            title = stringResource(R.string.totals_title),
+            icon = Icons.Outlined.PieChart,
+            isSelected = selected == TUSA_TAB_TOTALS,
+        ) { onSelect(TUSA_TAB_TOTALS) }
+        TusaTabItem(
+            title = stringResource(R.string.group_settings_short),
+            icon = Icons.Outlined.Settings,
+            isSelected = selected == TUSA_TAB_SETTINGS,
+        ) { onSelect(TUSA_TAB_SETTINGS) }
     }
 }
 
 @Composable
-private fun TusaBarButton(
+private fun RowScope.TusaTabItem(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isActive: Boolean,
-    modifier: Modifier = Modifier,
+    isSelected: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
-    val tint = if (isActive) colors.accent else colors.inkSecondary
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+    NavigationBarItem(
+        selected = isSelected,
+        onClick = onClick,
+        icon = { Icon(icon, contentDescription = null) },
+        label = { Text(text = title, fontSize = 11.sp, maxLines = 1) },
+        colors = NavigationBarItemDefaults.colors(
+            selectedIconColor = colors.accent,
+            selectedTextColor = colors.accent,
+            unselectedIconColor = colors.inkSecondary,
+            unselectedTextColor = colors.inkSecondary,
+            indicatorColor = colors.accent.copy(alpha = 0.14f),
+        ),
+    )
+}
+
+/** Приподнятая кнопка «+» бара тусы (копия AddExpenseFab из MainScaffold). */
+@Composable
+private fun TusaAddFab() {
+    val colors = Splitty.colors
+    Box(
+        modifier = Modifier
+            .offset(y = (-12).dp)
+            .size(58.dp)
+            .shadow(
+                elevation = 10.dp,
+                shape = CircleShape,
+                ambientColor = colors.accent.copy(alpha = 0.35f),
+                spotColor = colors.accent.copy(alpha = 0.35f),
+            )
+            .background(
+                brush = Brush.linearGradient(
+                    colors = listOf(colors.accent, colors.accentPressed),
+                ),
+                shape = CircleShape,
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
-        Text(text = title, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = tint, maxLines = 1)
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(R.string.group_add_expense),
+            tint = Color.White,
+        )
     }
 }
 
@@ -1080,15 +1097,15 @@ private fun DebtRow(
 
 /**
  * Настройки группы: участники, валюта (GET /currencies + PUT currency),
- * приглашение (share + код), архив/разархив. Порт iOS GroupSettingsView.
+ * приглашение (share + код), архив/разархив. Вкладка бара тусы
+ * (полноэкранная, бывший bottom sheet). Порт iOS GroupSettingsView.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GroupSettingsSheet(
+private fun GroupSettingsTab(
     room: RoomDetail,
     meId: Long?,
     viewModel: GroupDetailViewModel,
-    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(Unit) { viewModel.loadCurrencies() }
 
@@ -1104,26 +1121,14 @@ private fun GroupSettingsSheet(
     val inviteMessage = stringResource(R.string.group_invite_message, room.name, inviteLink, room.id)
     val selectedCurrency = selectedOverride ?: room.currency
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = colors.bg,
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp)
+            .padding(top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.group_settings),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.ink,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
 
             // Участники
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1295,7 +1300,9 @@ private fun GroupSettingsSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = !isArchiving) {
-                                viewModel.toggleArchive(onDone = onDismiss)
+                                // Вкладка (не шторка): после архива экран
+                                // обновится сам через dataVersion — закрывать нечего.
+                                viewModel.toggleArchive(onDone = {})
                             }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1335,7 +1342,6 @@ private fun GroupSettingsSheet(
                 )
             }
         }
-    }
 }
 
 /** Строка пикера валют: флаг, код, символ; чекмарк у текущей, спиннер у PUT. */
