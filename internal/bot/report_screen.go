@@ -71,11 +71,9 @@ func (s *ReportScreen) OnMessage(ctx context.Context, u *api.Update) (response a
 	}
 
 	chattable := []tgbotapi.Chattable{}
-	// Уведомление суперюзерам в личку; кто не писал боту — молча пропускается.
+	// Уведомление суперюзерам в личку (включая автора-суперюзера — так видно,
+	// что механика работает); кто не писал боту — молча пропускается.
 	for _, username := range s.cfg.SuperUsers {
-		if username == u.User.Username {
-			continue
-		}
 		su, err := s.us.FindByUsername(ctx, username)
 		if err != nil || su == nil {
 			log.Warn().Err(err).Msgf("superuser %s not found, report notification skipped", username)
