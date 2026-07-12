@@ -26,6 +26,9 @@ final class SessionStore {
     /// Outbox локальных операций (офлайн-создание расходов, outbox.json).
     let outbox = OutboxStore()
 
+    /// Кеш аватаров из Telegram (in-memory, чистится при logout).
+    @MainActor let avatars = AvatarStore()
+
     /// true — есть сеть (см. `NetworkMonitor`).
     var isOnline: Bool { network.isOnline }
 
@@ -140,6 +143,7 @@ final class SessionStore {
         // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
         Task { [cache] in await cache.removeAll() }
         outbox.clear()
+        avatars.removeAll()
     }
 
     /// Обновляет профиль (через кеш: офлайн-старт получает последний

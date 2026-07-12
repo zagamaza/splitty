@@ -18,6 +18,7 @@ class OfflineDataCleaner @Inject constructor(
     sessionStore: SessionStore,
     private val cache: ApiCache,
     private val outbox: OutboxStore,
+    private val avatars: AvatarStore,
     @ApplicationScope scope: CoroutineScope,
 ) {
     init {
@@ -29,6 +30,7 @@ class OfflineDataCleaner @Inject constructor(
                 if (hadToken && !hasToken) {
                     cache.clear()
                     outbox.clear()
+                    avatars.clear()
                 }
                 hadToken = hasToken
             }

@@ -7,6 +7,10 @@ struct UserAvatarView: View {
     let user: User
     var size: CGFloat = 40
 
+    /// Фото профиля Telegram (кеш в SessionStore.avatars); пока грузится
+    /// или фото нет — градиент с инициалами как раньше.
+    @Environment(SessionStore.self) private var session
+
     /// Пастельные пары градиентов (светлый → чуть глубже), подобраны так,
     /// чтобы белые инициалы читались; индекс выбирается по id пользователя.
     private static let gradients: [(top: UInt32, bottom: UInt32)] = [
@@ -56,10 +60,21 @@ struct UserAvatarView: View {
             .fill(gradient)
             .frame(width: size, height: size)
             .overlay {
-                Text(initials)
-                    .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .minimumScaleFactor(0.5)
+                if let image = session.avatars.images[user.id] {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: size, height: size)
+                        .clipShape(Circle())
+                } else {
+                    Text(initials)
+                        .font(.system(size: size * 0.4, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .minimumScaleFactor(0.5)
+                }
+            }
+            .task(id: user.id) {
+                await session.avatars.load(user.id, api: session.api)
             }
             .accessibilityLabel(user.displayName)
     }
@@ -73,4 +88,5 @@ struct UserAvatarView: View {
     }
     .padding()
     .background(Color.bg)
+    .environment(SessionStore())
 }

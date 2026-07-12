@@ -349,6 +349,12 @@ final class APIClient {
     // MARK: Файлы
 
     /// Скачивает вложение операции (чек/фото/видео):
+    /// GET /api/v1/users/{id}/avatar — фото профиля Telegram (байты);
+    /// 404 — фото нет или скрыто приватностью.
+    func userAvatar(id: Int) async throws -> Data {
+        try await send("GET", "/api/v1/users/\(id)/avatar")
+    }
+
     /// GET /api/v1/files/{fileId}, возвращает сырые байты файла.
     func fileData(id: String) async throws -> Data {
         try await send("GET", "/api/v1/files/\(id)")
