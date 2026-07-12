@@ -3,6 +3,7 @@ import SwiftUI
 /// Вкладка «Профиль»: профиль-шапка с большим аватаром, секции настроек
 /// карточками, сервер и выход из аккаунта.
 struct AccountView: View {
+    @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @Environment(SessionStore.self) private var session
 
     @State private var nameDraft = ""
@@ -121,6 +122,8 @@ struct AccountView: View {
                 rowDivider
                 langRow
                 rowDivider
+                themeRow
+                rowDivider
                 notificationRow
             }
             .surfaceCard(padding: 0)
@@ -171,6 +174,26 @@ struct AccountView: View {
                 guard newValue != session.me?.lang else { return }
                 Task { await save(lang: newValue) }
             }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 7)
+    }
+
+    /// Строка «Тема»: menu-picker (системная/светлая/тёмная), UserDefaults.
+    private var themeRow: some View {
+        HStack(spacing: 12) {
+            Text("Тема")
+                .font(.system(size: 16, design: .rounded))
+                .foregroundStyle(Color.ink)
+            Spacer(minLength: 8)
+            Picker("Тема", selection: $themeRaw) {
+                ForEach(AppTheme.allCases, id: \.rawValue) { theme in
+                    Text(theme.title).tag(theme.rawValue)
+                }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .tint(Color.inkSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)

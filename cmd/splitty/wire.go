@@ -89,6 +89,7 @@ var bots = wire.NewSet(
 	bot.NewUnsupportedScreen,
 	bot.NewDisableEnableAllDonorHandler,
 	bot.NewLoginScreen,
+	bot.NewReportScreen,
 )
 
 func ProvideBotList(

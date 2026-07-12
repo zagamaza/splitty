@@ -181,6 +181,10 @@ class SplittyRepository @Inject constructor(
     suspend fun fileData(fileId: String): ByteArray =
         call { api.file(fileId).use { it.bytes() } }
 
+    /** Фото профиля Telegram; ApiException(404) — фото нет. */
+    suspend fun userAvatar(userId: Long): ByteArray =
+        call { api.userAvatar(userId).use { it.bytes() } }
+
     // --- Кеш и маппинг ошибок ---
 
     /**

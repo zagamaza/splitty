@@ -53,6 +53,7 @@ type Server struct {
 	httpClient *http.Client
 	tgApiURL   string           // базовый url telegram api, переопределяется в тестах
 	now        func() time.Time // источник времени для статистики, переопределяется в тестах
+	avatars    avatarCache      // суточный кеш аватаров из telegram (см. avatar.go)
 }
 
 // NewServer собирает сервер со всеми зависимостями
@@ -150,6 +151,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/activity", s.auth(s.handleActivity))
 
 	mux.Handle("GET /api/v1/files/{fileId}", s.auth(s.handleGetFile))
+	mux.Handle("GET /api/v1/users/{userId}/avatar", s.auth(s.handleGetUserAvatar))
 
 	// все незарегистрированные пути — 404 в едином json-формате
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

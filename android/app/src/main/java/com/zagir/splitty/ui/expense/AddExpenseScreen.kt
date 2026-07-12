@@ -325,7 +325,12 @@ private fun GroupPickerCard(
 private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
     val colors = Splitty.colors
     val sumFocusRequester = remember { FocusRequester() }
+    val descriptionFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+
+    // Автофокус: без него форма открывается без курсора и клавиатуры —
+    // неочевидно, что можно печатать сразу.
+    LaunchedEffect(Unit) { descriptionFocusRequester.requestFocus() }
 
     SurfaceCard(modifier = Modifier.fillMaxWidth()) {
         // Описание.
@@ -349,7 +354,9 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
             BasicTextField(
                 value = form.description,
                 onValueChange = viewModel::onDescriptionChange,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(descriptionFocusRequester),
                 textStyle = TextStyle(
                     color = colors.ink,
                     fontSize = 19.sp,
@@ -392,16 +399,24 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                 color = colors.inkSecondary,
             )
             Spacer(Modifier.width(8.dp))
+            // Шрифт ступенчато уменьшается с длиной числа, чтобы сумма
+            // целиком помещалась на экране (BasicTextField сам не сжимает).
+            val sumFontSize = when {
+                form.sumText.length <= 6 -> 40.sp
+                form.sumText.length <= 8 -> 32.sp
+                else -> 26.sp
+            }
             BasicTextField(
                 value = form.sumText,
                 onValueChange = viewModel::onSumChange,
                 modifier = Modifier
                     .widthIn(min = 48.dp)
+                    .weight(1f, fill = false)
                     .width(IntrinsicSize.Min)
                     .focusRequester(sumFocusRequester),
                 textStyle = TextStyle(
                     color = colors.ink,
-                    fontSize = 40.sp,
+                    fontSize = sumFontSize,
                     fontWeight = FontWeight.SemiBold,
                     fontFeatureSettings = "tnum",
                     textAlign = TextAlign.Center,

@@ -143,4 +143,8 @@ interface SplittyApi {
     @Streaming
     @GET("api/v1/files/{fileId}")
     suspend fun file(@Path("fileId") fileId: String): ResponseBody
+
+    /** Фото профиля Telegram; 404 — фото нет или скрыто приватностью. */
+    @GET("api/v1/users/{userId}/avatar")
+    suspend fun userAvatar(@Path("userId") userId: Long): ResponseBody
 }

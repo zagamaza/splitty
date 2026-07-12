@@ -15,6 +15,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -61,7 +64,8 @@ fun ActivityScreen(
     onOpenRoom: (String) -> Unit,
     viewModel: ActivityViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state by viewModel.displayItems.collectAsStateWithLifecycle()
+    val isMineOnly by viewModel.isMineOnly.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -72,18 +76,34 @@ fun ActivityScreen(
             .fillMaxSize()
             .background(Splitty.colors.bg),
     ) {
-        Text(
-            text = stringResource(R.string.tab_activity),
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Splitty.colors.ink,
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.tab_activity),
+                modifier = Modifier.weight(1f),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Splitty.colors.ink,
+            )
+            // Фильтр «Только мои»: операции, где я донор или в получателях.
+            IconButton(onClick = viewModel::toggleMineOnly) {
+                Icon(
+                    imageVector = if (isMineOnly) Icons.Filled.Person else Icons.Outlined.Person,
+                    contentDescription = stringResource(R.string.activity_mine_only),
+                    tint = if (isMineOnly) Splitty.colors.accent else Splitty.colors.inkSecondary,
+                )
+            }
+        }
         when (val current = state) {
             is UiState.Loading -> ActivityLoadingView()
             is UiState.Error -> ActivityErrorView(current.message, onRetry = viewModel::retry)
             is UiState.Content -> ActivityFeed(
                 items = current.value,
+                isMineOnly = isMineOnly,
                 myUserId = myUserId,
                 isRefreshing = isRefreshing,
                 isLoadingMore = isLoadingMore,
@@ -114,6 +134,7 @@ fun ActivityScreen(
 @Composable
 private fun ActivityFeed(
     items: List<ActivityItem>,
+    isMineOnly: Boolean,
     myUserId: Long?,
     isRefreshing: Boolean,
     isLoadingMore: Boolean,
@@ -144,6 +165,7 @@ private fun ActivityFeed(
             if (items.isEmpty()) {
                 item {
                     ActivityEmptyView(
+                        isMineOnly = isMineOnly,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 120.dp),
@@ -335,7 +357,7 @@ private fun ActivityErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ActivityEmptyView(modifier: Modifier = Modifier) {
+private fun ActivityEmptyView(isMineOnly: Boolean = false, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -348,13 +370,19 @@ private fun ActivityEmptyView(modifier: Modifier = Modifier) {
             tint = Splitty.colors.inkSecondary,
         )
         Text(
-            text = stringResource(R.string.activity_empty_title),
+            text = stringResource(
+                if (isMineOnly) R.string.activity_mine_only_empty_title
+                else R.string.activity_empty_title
+            ),
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = Splitty.colors.ink,
         )
         Text(
-            text = stringResource(R.string.activity_empty_description),
+            text = stringResource(
+                if (isMineOnly) R.string.activity_mine_only_empty_description
+                else R.string.activity_empty_description
+            ),
             modifier = Modifier.padding(horizontal = 24.dp),
             fontSize = 15.sp,
             color = Splitty.colors.inkSecondary,

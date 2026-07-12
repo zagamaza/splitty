@@ -63,6 +63,9 @@
     <string name="friend_room_owed_you">вам должны</string>
 
     <!-- Активность -->
+    <string name="activity_mine_only">Только мои</string>
+    <string name="activity_mine_only_empty_title">Нет операций с вами</string>
+    <string name="activity_mine_only_empty_description">Операции, где вы платили или участвовали, появятся здесь</string>
     <string name="activity_empty_title">Пока нет активности</string>
     <string name="activity_empty_description">Здесь появятся расходы и платежи ваших групп</string>
     <string name="activity_added">добавил(а) «%1$s»</string>
@@ -95,6 +98,10 @@
     <string name="profile_id">ID: %1$d</string>
     <string name="profile_settings_section">Настройки</string>
     <string name="profile_name">Имя</string>
+    <string name="profile_theme">Тема</string>
+    <string name="profile_theme_system">Системная</string>
+    <string name="profile_theme_light">Светлая</string>
+    <string name="profile_theme_dark">Тёмная</string>
     <string name="profile_language">Язык</string>
     <string name="profile_language_ru">Русский</string>
     <string name="profile_language_en">English</string>
@@ -208,21 +215,23 @@
     <string name="op_delete_message">Операция исчезнет из группы, балансы пересчитаются.</string>
 
     <!-- Группы: итоги (дашборд) -->
+    <string name="group_chip_mine_only">Со мной</string>
+    <string name="group_mine_only_empty">Операций с вами нет</string>
     <string name="totals_title">Итоги</string>
     <string name="totals_total_spent">Всего потрачено</string>
     <string name="totals_for_month">За %1$s</string>
     <string name="totals_operation_count">Операций</string>
     <string name="totals_avg_check">Средний чек</string>
-    <string name="totals_by_month">Динамика по месяцам</string>
-    <string name="totals_no_month_spending">Нет трат за последние 6 месяцев</string>
+    <string name="totals_i_paid">Я заплатил</string>
+    <string name="totals_my_share">Потрачено на меня</string>
     <string name="totals_by_day">Траты по дням</string>
     <string name="totals_no_recent_spending">Нет трат за последние 30 дней</string>
     <string name="totals_who_paid">Кто платил</string>
-    <string name="totals_whose_share">Чья доля</string>
-    <string name="totals_member_balance">Баланс участников</string>
-    <string name="totals_by_weekday">По дням недели</string>
+    <string name="totals_whose_share">На кого потрачено</string>
+    <string name="totals_member_balance">Кто в плюсе, кто в минусе</string>
+    <string name="totals_by_weekday">Траты по дням недели</string>
     <string name="totals_others">Прочие</string>
-    <string name="totals_top_operations">Топ расходов</string>
+    <string name="totals_top_operations">Самые крупные расходы</string>
     <string name="totals_empty_title">Пока нет расходов</string>
     <string name="totals_empty_subtitle">Добавьте первый расход — здесь появится статистика группы</string>
 

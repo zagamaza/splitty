@@ -29,6 +29,8 @@ data class Session(
     val baseUrl: String = SessionStore.DEFAULT_BASE_URL,
     /** Профиль (кэш последнего /me или ответа авторизации). */
     val me: Me? = null,
+    /** Тема приложения: system / light / dark. */
+    val theme: String = SessionStore.THEME_SYSTEM,
 ) {
     val isAuthenticated: Boolean get() = token != null
 }
@@ -48,9 +50,14 @@ class SessionStore @Inject constructor(
         /** Прод-сервер по умолчанию; на эмуляторе для локального бэкенда — http://10.0.2.2:7171. */
         const val DEFAULT_BASE_URL = "http://138.124.18.189:18002"
 
+        const val THEME_SYSTEM = "system"
+        const val THEME_LIGHT = "light"
+        const val THEME_DARK = "dark"
+
         private val KEY_TOKEN = stringPreferencesKey("token")
         private val KEY_BASE_URL = stringPreferencesKey("base_url")
         private val KEY_ME = stringPreferencesKey("me_json")
+        private val KEY_THEME = stringPreferencesKey("theme")
     }
 
     /** Текущая сессия; null — DataStore ещё не прочитан (первый кадр приложения). */
@@ -62,6 +69,7 @@ class SessionStore @Inject constructor(
                 me = prefs[KEY_ME]?.let { raw ->
                     runCatching { SplittyJson.decodeFromString(Me.serializer(), raw) }.getOrNull()
                 },
+                theme = prefs[KEY_THEME] ?: THEME_SYSTEM,
             )
         }
         .stateIn(scope, SharingStarted.Eagerly, null)
@@ -98,6 +106,11 @@ class SessionStore @Inject constructor(
         dataStore.edit { prefs ->
             prefs[KEY_ME] = SplittyJson.encodeToString(Me.serializer(), me)
         }
+    }
+
+    /** Сменить тему приложения (system / light / dark, персистится). */
+    suspend fun setTheme(theme: String) {
+        dataStore.edit { prefs -> prefs[KEY_THEME] = theme }
     }
 
     /** Сменить адрес сервера (персистится; действует на все последующие запросы). */

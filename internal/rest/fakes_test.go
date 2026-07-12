@@ -71,6 +71,16 @@ func (f *fakeUserRepo) UpsertUser(_ context.Context, u api.User) (*api.User, err
 	return &user, nil
 }
 
+func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {
+	for _, u := range f.users {
+		if u.Username == username {
+			copied := *u
+			return &copied, nil
+		}
+	}
+	return nil, mongo.ErrNoDocuments
+}
+
 func (f *fakeUserRepo) SetUserLang(_ context.Context, userId int, lang string) error {
 	if u, ok := f.users[userId]; ok {
 		u.SelectedLang = lang

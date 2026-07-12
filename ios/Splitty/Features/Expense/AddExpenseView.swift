@@ -60,6 +60,11 @@ struct AddExpenseView: View {
                         editEntry: editEntry,
                         me: session.me
                     )
+                    // Автофокус: без него форма открывается без курсора
+                    // и клавиатуры — неочевидно, что можно печатать сразу.
+                    if focusedField == nil {
+                        focusedField = .description
+                    }
                 }
                 .sheet(isPresented: $isPayerPickerPresented) {
                     PayerPickerView(model: model, meId: session.me?.id)

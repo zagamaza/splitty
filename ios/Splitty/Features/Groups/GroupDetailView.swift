@@ -12,6 +12,9 @@ struct GroupDetailView: View {
     @State private var isTotalsPresented = false
     @State private var isSettingsPresented = false
     @State private var isAddExpensePresented = false
+    /// Фильтр списка операций: только те, где я донор или в получателях
+    /// (аналог фильтра «Мои операции» в телеграм-боте).
+    @State private var isMineOnly = false
     /// Локальная запись outbox, открытая на редактирование (sheet).
     @State private var editingEntry: OutboxEntry?
 
@@ -63,11 +66,13 @@ struct GroupDetailView: View {
             .onChange(of: session.dataVersion) {
                 Task { await model.load(repo: session.repo, roomId: roomId) }
             }
-            .sheet(isPresented: $isAddExpensePresented) {
+            // Полноэкранно, а не sheet: форму со введёнными данными нельзя
+            // случайно смахнуть — выход только «Отмена»/«Сохранить».
+            .fullScreenCover(isPresented: $isAddExpensePresented) {
                 AddExpenseView(roomId: roomId)
             }
             // Правка локальной (неотправленной) записи outbox.
-            .sheet(item: $editingEntry) { entry in
+            .fullScreenCover(item: $editingEntry) { entry in
                 AddExpenseView(roomId: roomId, editEntry: entry)
             }
             .sheet(isPresented: $isSettleUpPresented) {
@@ -168,8 +173,16 @@ struct GroupDetailView: View {
                 if room.operations.isEmpty && localEntries.isEmpty {
                     emptyOperations
                 } else {
-                    ForEach(model.sections) { section in
+                    let sections = displaySections(meId: meId)
+                    ForEach(sections) { section in
                         monthSection(section, meId: meId, currency: room.currency)
+                    }
+                    if sections.isEmpty && isMineOnly {
+                        Text("Операций с вами нет")
+                            .font(.system(size: 15, design: .rounded))
+                            .foregroundStyle(Color.inkSecondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
                     }
                 }
             }
@@ -182,6 +195,17 @@ struct GroupDetailView: View {
             // Pull-to-refresh — триггер синка outbox перед перечиткой.
             await session.syncOutbox()
             await model.load(repo: session.repo, roomId: roomId)
+        }
+    }
+
+    /// Секции операций с учётом фильтра «Со мной»: пустые месяцы скрываются.
+    private func displaySections(meId: Int) -> [GroupDetailViewModel.MonthSection] {
+        guard isMineOnly else { return model.sections }
+        return model.sections.compactMap { section in
+            let ops = section.operations.filter { $0.involves(meId) }
+            return ops.isEmpty
+                ? nil
+                : GroupDetailViewModel.MonthSection(id: section.id, title: section.title, operations: ops)
         }
     }
 
@@ -289,6 +313,11 @@ struct GroupDetailView: View {
                 isTotalsPresented = true
             }
             .buttonStyle(.softChip)
+
+            Button("Со мной") {
+                isMineOnly.toggle()
+            }
+            .buttonStyle(.softChip(isSelected: isMineOnly))
         }
         .padding(.horizontal, 2)
         .padding(.vertical, 2)

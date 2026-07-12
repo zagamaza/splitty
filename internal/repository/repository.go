@@ -23,6 +23,7 @@ type UserRepository interface {
 	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
 	SetCountInPage(ctx context.Context, userId int, count int) error
 	FindById(ctx context.Context, id int) (*api.User, error)
+	FindByUsername(ctx context.Context, username string) (*api.User, error)
 }
 
 type RoomRepository interface {
@@ -87,6 +88,30 @@ type MongoButtonRepository struct {
 
 type MongoLoginCodeRepository struct {
 	col *mongo.Collection
+}
+
+type BugReportRepository interface {
+	SaveBugReport(ctx context.Context, r *api.BugReport) error
+}
+
+type MongoBugReportRepository struct {
+	col *mongo.Collection
+}
+
+func NewBugReportRepository(col *mongo.Database) *MongoBugReportRepository {
+	return &MongoBugReportRepository{col: col.Collection("bug_report")}
+}
+
+func (br MongoBugReportRepository) SaveBugReport(ctx context.Context, r *api.BugReport) error {
+	res, err := br.col.InsertOne(ctx, r)
+	if err != nil {
+		log.Error().Err(err).Msg("insert bug report failed")
+		return err
+	}
+	if res != nil && res.InsertedID == nil {
+		return errors.New("insert bug report failed")
+	}
+	return nil
 }
 
 func NewUserRepository(col *mongo.Database) *MongoUserRepository {
@@ -436,6 +461,20 @@ func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, e
 	}
 	if cs.NotificationOn == nil {
 		cs.NotificationOn = func() *bool { b := true; return &b }()
+	}
+	return cs, nil
+}
+
+// FindByUsername ищет пользователя по telegram-username (для нотификаций
+// суперюзерам из /report); mongo.ErrNoDocuments — пользователь не писал боту
+func (r MongoUserRepository) FindByUsername(ctx context.Context, username string) (*api.User, error) {
+	res := r.col.FindOne(ctx, bson.D{{Key: "user_name", Value: bson.D{{Key: "$eq", Value: username}}}})
+	if res.Err() != nil {
+		return nil, res.Err()
+	}
+	cs := &api.User{}
+	if err := res.Decode(cs); err != nil {
+		return nil, err
 	}
 	return cs, nil
 }

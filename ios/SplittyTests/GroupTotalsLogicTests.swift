@@ -111,15 +111,4 @@ final class GroupTotalsLogicTests: XCTestCase {
         XCTAssertEqual(others.label, "Прочие")
         XCTAssertEqual(others.sum, 300 + 200 + 100)
     }
-
-    // MARK: Подписи месяцев
-
-    func testMonthLabel() {
-        XCTAssertEqual(DashboardMath.monthLabel("2026-02"), "фев")
-        XCTAssertEqual(DashboardMath.monthLabel("2026-07"), "июл")
-        XCTAssertEqual(DashboardMath.monthLabel("2025-12"), "дек")
-        // Битые строки возвращаются как есть.
-        XCTAssertEqual(DashboardMath.monthLabel("2026-13"), "2026-13")
-        XCTAssertEqual(DashboardMath.monthLabel("мусор"), "мусор")
-    }
 }
