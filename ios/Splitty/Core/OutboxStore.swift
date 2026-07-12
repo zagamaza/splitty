@@ -77,6 +77,10 @@ final class OutboxStore {
     private let fileURL: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    /// Серийная фоновая очередь записи файла: encode + запись при каждой
+    /// мутации шли на главном потоке и дёргали анимации. Серийность
+    /// гарантирует порядок перезаписей (последний снимок побеждает).
+    private let io = DispatchQueue(label: "splitty.outbox.io", qos: .utility)
 
     /// Файл по умолчанию: Application Support/outbox.json
     /// (отдельно от каталога read-кеша SplittyCache).
@@ -239,11 +243,20 @@ final class OutboxStore {
     }
 
     private func persist() {
-        guard let data = try? encoder.encode(entries) else { return }
-        try? FileManager.default.createDirectory(
-            at: fileURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
-        )
-        try? data.write(to: fileURL, options: [.atomic])
+        // Снимок на вызывающем потоке, encode и запись — в фоне.
+        let snapshot = entries
+        io.async { [encoder, fileURL] in
+            guard let data = try? encoder.encode(snapshot) else { return }
+            try? FileManager.default.createDirectory(
+                at: fileURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try? data.write(to: fileURL, options: [.atomic])
+        }
+    }
+
+    /// Барьер для тестов: дожидается завершения всех фоновых записей.
+    func waitForPendingWrites() {
+        io.sync {}
     }
 }

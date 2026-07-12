@@ -262,10 +262,13 @@ struct GroupDetailView: View {
     }
 
     /// Ряд кнопок-чипов: «Погасить долг» (главный, акцентный), «Балансы», «Итоги».
+    /// Постоянный набор — «Балансы» и «Итоги»; «Погасить долг» появляется
+    /// только когда у пользователя есть долги (неактуальные кнопки не
+    /// показываются вовсе, а не дизейблятся).
     private func actionChips(meId: Int) -> some View {
         let canSettle = !model.debtsInvolving(meId).isEmpty
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+        return HStack(spacing: 10) {
+            if canSettle {
                 Button("Погасить долг") {
                     // Погашения офлайн не работают (зафиксированный дизайн v1).
                     if session.isOnline {
@@ -275,22 +278,21 @@ struct GroupDetailView: View {
                     }
                 }
                 .buttonStyle(.softChip(isSelected: true))
-                .disabled(!canSettle)
-                .opacity(canSettle ? 1 : 0.45)
-
-                Button("Балансы") {
-                    isBalancesPresented = true
-                }
-                .buttonStyle(.softChip)
-
-                Button("Итоги") {
-                    isTotalsPresented = true
-                }
-                .buttonStyle(.softChip)
             }
-            .padding(.horizontal, 2)
-            .padding(.vertical, 2)
+
+            Button("Балансы") {
+                isBalancesPresented = true
+            }
+            .buttonStyle(.softChip)
+
+            Button("Итоги") {
+                isTotalsPresented = true
+            }
+            .buttonStyle(.softChip)
         }
+        .padding(.horizontal, 2)
+        .padding(.vertical, 2)
+        .animation(.spring(duration: 0.25), value: canSettle)
     }
 
     private var emptyOperations: some View {

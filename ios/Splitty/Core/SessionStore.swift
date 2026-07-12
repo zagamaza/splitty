@@ -135,7 +135,8 @@ final class SessionStore {
     func logout() {
         token = nil
         me = nil
-        cache.removeAll()
+        // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
+        Task { [cache] in await cache.removeAll() }
         outbox.clear()
     }
 
