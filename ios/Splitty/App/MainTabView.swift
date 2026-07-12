@@ -1,6 +1,16 @@
 import Combine
 import SwiftUI
 
+/// Экран с собственным нижним баром (туса) просит скрыть глобальную кнопку «+»:
+/// .toolbar(.hidden, for: .tabBar) прячет только таб-бар, а overlay-кнопка
+/// TabView иначе остаётся висеть поверх бара тусы.
+struct HidesGlobalAddButtonKey: PreferenceKey {
+    static var defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) {
+        value = value || nextValue()
+    }
+}
+
 /// Главный таб-бар: 5 вкладок, центральная — приподнятая зелёная кнопка «+»,
 /// открывающая AddExpenseView как sheet (с выбором группы внутри).
 /// Здесь же — глобальный офлайн-баннер (тонкая полоса сверху) и триггеры
@@ -17,6 +27,8 @@ struct MainTabView: View {
     /// Кнопка «+» скрывается при видимой клавиатуре: overlay поднимается
     /// вместе с safe area и иначе висит поверх контента над клавиатурой.
     @State private var isKeyboardVisible = false
+    /// true — открыт экран с собственным нижним баром (туса): глобальный «+» скрыт.
+    @State private var isGlobalAddHidden = false
 
     var body: some View {
         TabView(selection: $selection) {
@@ -43,10 +55,11 @@ struct MainTabView: View {
         }
         .tint(Color.accent)
         .overlay(alignment: .bottom) {
-            if !isKeyboardVisible {
+            if !isKeyboardVisible && !isGlobalAddHidden {
                 addExpenseButton
             }
         }
+        .onPreferenceChange(HidesGlobalAddButtonKey.self) { isGlobalAddHidden = $0 }
         // Глобальный тонкий баннер офлайна/отправки outbox: полоса под
         // статус-баром над навбарами всех вкладок; онлайн без синка — скрыт.
         .safeAreaInset(edge: .top, spacing: 0) {

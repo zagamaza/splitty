@@ -5,12 +5,16 @@ import SwiftUI
 struct GroupDetailView: View {
     let roomId: String
 
+    /// Вкладки нижнего бара тусы (контекстная навигация вместо глобальных
+    /// табов). `.add` — заглушка под центральную кнопку «+», как в MainTabView.
+    enum TusaTab: Hashable {
+        case operations, balances, add, totals, settings
+    }
+
     @Environment(SessionStore.self) private var session
     @State private var model = GroupDetailViewModel()
+    @State private var tusaTab: TusaTab = .operations
     @State private var isSettleUpPresented = false
-    @State private var isBalancesPresented = false
-    @State private var isTotalsPresented = false
-    @State private var isSettingsPresented = false
     @State private var isAddExpensePresented = false
     /// Фильтр списка операций: только те, где я донор или в получателях
     /// (аналог фильтра «Мои операции» в телеграм-боте).
@@ -37,20 +41,16 @@ struct GroupDetailView: View {
             .background(Color.bg.ignoresSafeArea())
             .navigationTitle(model.room?.name ?? "Группа")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        isSettingsPresented = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .disabled(model.room == nil)
-                    .accessibilityLabel("Настройки группы")
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if model.room != nil {
-                    addExpenseFab
+            // Туса — «центр мира»: глобальный таб-бар скрыт, вместо него —
+            // системный таб-бар вложенного TabView (нативный вид и анимации).
+            .toolbar(.hidden, for: .tabBar)
+            // Скрыть и глобальную overlay-кнопку «+» (см. HidesGlobalAddButtonKey).
+            .preference(key: HidesGlobalAddButtonKey.self, value: true)
+            .onChange(of: tusaTab) { oldValue, newValue in
+                // Вкладку «+» не открываем — возвращаем прежнюю и показываем форму.
+                if newValue == .add {
+                    tusaTab = oldValue
+                    isAddExpensePresented = true
                 }
             }
             .task {
@@ -83,19 +83,6 @@ struct GroupDetailView: View {
                         currency: model.room?.currency ?? "RUB",
                         preselectedDebt: myDebts.count == 1 ? myDebts.first : nil
                     )
-                }
-            }
-            .sheet(isPresented: $isBalancesPresented) {
-                if let room = model.room {
-                    GroupBalancesView(room: room) {}
-                }
-            }
-            .sheet(isPresented: $isTotalsPresented) {
-                GroupTotalsView(roomId: roomId)
-            }
-            .sheet(isPresented: $isSettingsPresented) {
-                if let room = model.room {
-                    GroupSettingsView(room: room) {}
                 }
             }
             .alert("Ошибка", isPresented: alertPresented) {
@@ -131,7 +118,7 @@ struct GroupDetailView: View {
         case .loaded:
             if let room = model.room {
                 if let meId {
-                    operationsList(room: room, meId: meId)
+                    tusaTabView(room: room, meId: meId)
                 } else {
                     // Профиль ещё не загружен — нейтральное состояние вместо
                     // неверных подписей «не участвует» с фейковым id.
@@ -165,7 +152,7 @@ struct GroupDetailView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 headerCard(room: room, meId: meId)
-                actionChips(meId: meId)
+                mineSegment
                 // Локальные (неотправленные) операции — СВЕРХУ списка.
                 if !localEntries.isEmpty {
                     localOperationsSection(currency: room.currency)
@@ -190,7 +177,6 @@ struct GroupDetailView: View {
             .padding(.top, 4)
             .padding(.bottom, 16)
         }
-        .contentMargins(.bottom, 88, for: .scrollContent)
         .refreshable {
             // Pull-to-refresh — триггер синка outbox перед перечиткой.
             await session.syncOutbox()
@@ -212,13 +198,36 @@ struct GroupDetailView: View {
     /// Hero-карточка статуса долга (+ бейдж архива, + подпись про
     /// неотправленные операции: их суммы в балансах сервера не учтены).
     private func headerCard(room: RoomDetail, meId: Int) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let canSettle = !model.debtsInvolving(meId).isEmpty
+        return VStack(alignment: .leading, spacing: 10) {
             if room.isArchived {
                 Label("Группа в архиве", systemImage: "archivebox")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.inkSecondary)
             }
-            debtHero(room: room, meId: meId)
+            HStack(alignment: .center, spacing: 12) {
+                debtHero(room: room, meId: meId)
+                Spacer(minLength: 0)
+                // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок.
+                if canSettle {
+                    Button {
+                        // Погашения офлайн не работают (зафиксированный дизайн v1).
+                        if session.isOnline {
+                            isSettleUpPresented = true
+                        } else {
+                            model.alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
+                        }
+                    } label: {
+                        Text("Погасить")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.accent, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             if !localEntries.isEmpty {
                 Text("без учёта \(localEntries.count) неотправленных")
                     .font(.system(size: 13, design: .rounded))
@@ -285,43 +294,88 @@ struct GroupDetailView: View {
         }
     }
 
-    /// Ряд кнопок-чипов: «Погасить долг» (главный, акцентный), «Балансы», «Итоги».
-    /// Постоянный набор — «Балансы» и «Итоги»; «Погасить долг» появляется
-    /// только когда у пользователя есть долги (неактуальные кнопки не
-    /// показываются вовсе, а не дизейблятся).
-    private func actionChips(meId: Int) -> some View {
-        let canSettle = !model.debtsInvolving(meId).isEmpty
-        return HStack(spacing: 10) {
-            if canSettle {
-                Button("Погасить долг") {
-                    // Погашения офлайн не работают (зафиксированный дизайн v1).
-                    if session.isOnline {
-                        isSettleUpPresented = true
-                    } else {
-                        model.alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
-                    }
-                }
-                .buttonStyle(.softChip(isSelected: true))
-            }
-
-            Button("Балансы") {
-                isBalancesPresented = true
-            }
-            .buttonStyle(.softChip)
-
-            Button("Итоги") {
-                isTotalsPresented = true
-            }
-            .buttonStyle(.softChip)
-
-            Button("Со мной") {
-                isMineOnly.toggle()
-            }
-            .buttonStyle(.softChip(isSelected: isMineOnly))
+    /// Сегмент фильтра операций: «Все | Со мной».
+    private var mineSegment: some View {
+        HStack(spacing: 0) {
+            segmentButton("Все", isOn: !isMineOnly) { isMineOnly = false }
+            segmentButton("Со мной", isOn: isMineOnly) { isMineOnly = true }
         }
-        .padding(.horizontal, 2)
-        .padding(.vertical, 2)
-        .animation(.spring(duration: 0.25), value: canSettle)
+        .padding(3)
+        .background(Color.surface, in: Capsule())
+        .overlay(Capsule().stroke(Color.hairline, lineWidth: 1))
+        .animation(.spring(duration: 0.25), value: isMineOnly)
+    }
+
+    private func segmentButton(_ title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(isOn ? .white : Color.inkSecondary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(isOn ? Color.accent : .clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Вкладки тусы
+
+    /// Вложенный СИСТЕМНЫЙ TabView — нативный таб-бар тусы:
+    /// [Операции][Балансы] (+) [Итоги][Настройки]; центральная вкладка —
+    /// заглушка под приподнятую кнопку «+» (тот же паттерн, что MainTabView).
+    private func tusaTabView(room: RoomDetail, meId: Int) -> some View {
+        TabView(selection: $tusaTab) {
+            operationsList(room: room, meId: meId)
+                .tabItem { Label("Операции", systemImage: "list.bullet") }
+                .tag(TusaTab.operations)
+
+            GroupBalancesView(room: room, embedded: true) {}
+                .tabItem { Label("Балансы", systemImage: "arrow.left.arrow.right") }
+                .tag(TusaTab.balances)
+
+            // Пустая вкладка-заглушка под центральной кнопкой «+».
+            Color.clear
+                .tabItem { Text("") }
+                .tag(TusaTab.add)
+
+            GroupTotalsView(roomId: roomId, embedded: true)
+                .tabItem { Label("Итоги", systemImage: "chart.pie") }
+                .tag(TusaTab.totals)
+
+            GroupSettingsView(room: room, embedded: true) {}
+                .tabItem { Label("Настройки", systemImage: "gearshape") }
+                .tag(TusaTab.settings)
+        }
+        .tint(Color.accent)
+        .overlay(alignment: .bottom) {
+            addExpenseButton
+        }
+    }
+
+    /// Центральная приподнятая кнопка «+» бара тусы (копия глобальной из
+    /// MainTabView — единый вид у обоих таб-баров).
+    private var addExpenseButton: some View {
+        Button {
+            isAddExpensePresented = true
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accent, Color.accentPressed],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 58, height: 58)
+                    .shadow(color: Color.accent.opacity(0.35), radius: 10, y: 5)
+                Image(systemName: "plus")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+        }
+        .accessibilityLabel("Добавить расход")
+        .offset(y: -18)
     }
 
     private var emptyOperations: some View {
@@ -370,18 +424,6 @@ struct GroupDetailView: View {
         }
     }
 
-    /// Плавающая акцентная кнопка «+ Расход».
-    private var addExpenseFab: some View {
-        Button {
-            isAddExpensePresented = true
-        } label: {
-            Label("Расход", systemImage: "plus")
-        }
-        .buttonStyle(FabPillButtonStyle())
-        .padding(.trailing, 20)
-        .padding(.bottom, 20)
-        .accessibilityLabel("Добавить расход")
-    }
 }
 
 // MARK: - Стиль FAB

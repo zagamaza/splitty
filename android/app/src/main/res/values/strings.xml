@@ -215,6 +215,10 @@
     <string name="op_delete_message">Операция исчезнет из группы, балансы пересчитаются.</string>
 
     <!-- Группы: итоги (дашборд) -->
+    <string name="group_tab_operations">Операции</string>
+    <string name="group_settings_short">Настройки</string>
+    <string name="group_filter_all">Все</string>
+    <string name="group_chip_settle_short">Погасить</string>
     <string name="group_chip_mine_only">Со мной</string>
     <string name="group_mine_only_empty">Операций с вами нет</string>
     <string name="totals_title">Итоги</string>

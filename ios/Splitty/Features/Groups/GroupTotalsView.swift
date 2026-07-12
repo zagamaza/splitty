@@ -11,31 +11,42 @@ import SwiftUI
 /// текст — только ink/inkSecondary (правила дата-виза).
 struct GroupTotalsView: View {
     let roomId: String
+    private let embedded: Bool
 
     @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var stats: Statistics?
     @State private var errorMessage: String?
 
-    init(roomId: String) {
+    /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
+    /// и кнопки «Готово»); false — прежний самостоятельный sheet.
+    init(roomId: String, embedded: Bool = false) {
         self.roomId = roomId
+        self.embedded = embedded
     }
 
     var body: some View {
-        NavigationStack {
+        if embedded {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
-                .navigationTitle("Итоги")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Готово") { dismiss() }
-                    }
-                }
                 .task { await load() }
+        } else {
+            NavigationStack {
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.bg)
+                    .navigationTitle("Итоги")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Готово") { dismiss() }
+                        }
+                    }
+                    .task { await load() }
+            }
+            .presentationDetents([.large])
         }
-        .presentationDetents([.large])
     }
 
     @ViewBuilder

@@ -4,6 +4,7 @@ import SwiftUI
 /// архивирование/разархивирование — карточными секциями.
 struct GroupSettingsView: View {
     private let room: RoomDetail
+    private let embedded: Bool
     private let onChange: () -> Void
 
     @Environment(SessionStore.self) private var session
@@ -17,8 +18,11 @@ struct GroupSettingsView: View {
     /// Код валюты, PUT которой сейчас в полёте (спиннер у строки).
     @State private var savingCurrency: String?
 
-    init(room: RoomDetail, onChange: @escaping () -> Void) {
+    /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
+    /// и кнопки «Готово»); false — прежний самостоятельный sheet.
+    init(room: RoomDetail, embedded: Bool = false, onChange: @escaping () -> Void) {
         self.room = room
+        self.embedded = embedded
         self.onChange = onChange
         _selectedCurrency = State(initialValue: room.currency)
     }
@@ -33,30 +37,38 @@ struct GroupSettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    membersSection
-                    currencySection
-                    inviteSection
-                    archiveSection
-                }
-                .padding(16)
+        if embedded {
+            content
+        } else {
+            NavigationStack {
+                content
+                    .navigationTitle("Настройки группы")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Готово") { dismiss() }
+                        }
+                    }
             }
-            .background(Color.bg)
-            .navigationTitle("Настройки группы")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Готово") { dismiss() }
-                }
+        }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                membersSection
+                currencySection
+                inviteSection
+                archiveSection
             }
-            .task { await loadCurrencies() }
-            .alert("Ошибка", isPresented: alertPresented) {
-                Button("Ок", role: .cancel) {}
-            } message: {
-                Text(alertMessage ?? "")
-            }
+            .padding(16)
+        }
+        .background(Color.bg)
+        .task { await loadCurrencies() }
+        .alert("Ошибка", isPresented: alertPresented) {
+            Button("Ок", role: .cancel) {}
+        } message: {
+            Text(alertMessage ?? "")
         }
     }
 
