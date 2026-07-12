@@ -1,7 +1,6 @@
 package com.zagir.splitty.ui.groups
 
 import android.content.Intent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +21,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.PieChart
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
@@ -119,8 +122,8 @@ fun GroupDetailScreen(
         if (isOnline) onSettleUp(roomId) else viewModel.showSettleUpUnavailableOffline()
     }
 
-    var isBalancesPresented by rememberSaveable { mutableStateOf(false) }
-    var isTotalsPresented by rememberSaveable { mutableStateOf(false) }
+    // Вкладка нижнего бара тусы: операции / балансы / итоги.
+    var tusaTab by rememberSaveable { mutableStateOf(TUSA_TAB_OPS) }
     var isSettingsPresented by rememberSaveable { mutableStateOf(false) }
 
     val colors = Splitty.colors
@@ -147,14 +150,6 @@ fun GroupDetailScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = { isSettingsPresented = true }, enabled = detail != null) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.group_settings),
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = colors.bg,
                     titleContentColor = colors.ink,
@@ -163,28 +158,14 @@ fun GroupDetailScreen(
                 ),
             )
         },
-        floatingActionButton = {
-            if (detail != null) {
-                ExtendedFloatingActionButton(
-                    onClick = { onAddExpense(roomId) },
-                    containerColor = colors.accent,
-                    contentColor = Color.White,
-                    shape = CircleShape,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = stringResource(R.string.group_add_expense),
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = stringResource(R.string.group_fab_expense),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    },
-                )
-            }
+        bottomBar = {
+            TusaBar(
+                selected = tusaTab,
+                enabled = detail != null,
+                onSelect = { tusaTab = it },
+                onAdd = { onAddExpense(roomId) },
+                onSettings = { isSettingsPresented = true },
+            )
         },
     ) { innerPadding ->
         when (val current = state) {
@@ -205,38 +186,46 @@ fun GroupDetailScreen(
                     modifier = Modifier.padding(innerPadding),
                 )
             } else {
-                GroupDetailContent(
-                    room = current.value,
-                    sections = sections,
-                    localOperations = localOperations,
-                    meId = meId,
-                    isRefreshing = isRefreshing,
-                    onRefresh = viewModel::refresh,
-                    onSettleUp = settleUp,
-                    onShowBalances = { isBalancesPresented = true },
-                    onShowTotals = { isTotalsPresented = true },
-                    onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
-                    onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
-                    modifier = Modifier.padding(innerPadding),
-                )
+                when (tusaTab) {
+                    TUSA_TAB_BALANCES -> GroupBalancesTab(
+                        room = current.value,
+                        meId = meId,
+                        onSettle = settleUp,
+                        modifier = Modifier.padding(innerPadding),
+                    )
+
+                    TUSA_TAB_TOTALS -> {
+                        val dashboardViewModel: GroupDashboardViewModel = hiltViewModel()
+                        LaunchedEffect(roomId) { dashboardViewModel.start(roomId) }
+                        val dashboardState by dashboardViewModel.statistics.collectAsStateWithLifecycle()
+                        val dashboardMeId by dashboardViewModel.meId.collectAsStateWithLifecycle()
+                        GroupDashboardContent(
+                            state = dashboardState,
+                            meId = dashboardMeId,
+                            onRetry = dashboardViewModel::retry,
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .fillMaxSize(),
+                        )
+                    }
+
+                    else -> GroupDetailContent(
+                        room = current.value,
+                        sections = sections,
+                        localOperations = localOperations,
+                        meId = meId,
+                        isRefreshing = isRefreshing,
+                        onRefresh = viewModel::refresh,
+                        onSettleUp = settleUp,
+                        onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
+                        onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
+                        modifier = Modifier.padding(innerPadding),
+                    )
+                }
             }
         }
     }
 
-    if (isBalancesPresented && detail != null && meId != null) {
-        GroupBalancesSheet(
-            room = detail,
-            meId = meId,
-            onDismiss = { isBalancesPresented = false },
-            onSettle = {
-                isBalancesPresented = false
-                settleUp()
-            },
-        )
-    }
-    if (isTotalsPresented) {
-        GroupDashboardSheet(roomId = roomId, onDismiss = { isTotalsPresented = false })
-    }
     if (isSettingsPresented && detail != null) {
         GroupSettingsSheet(
             room = detail,
@@ -260,8 +249,6 @@ private fun GroupDetailContent(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onSettleUp: () -> Unit,
-    onShowBalances: () -> Unit,
-    onShowTotals: () -> Unit,
     onOpenOperation: (String) -> Unit,
     onEditLocalOperation: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -285,22 +272,19 @@ private fun GroupDetailContent(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             // Запас снизу — под FAB «+ Расход».
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "hero") {
-                DebtHeroCard(room = room, meId = meId, pendingCount = localOperations.size)
-            }
-            item(key = "chips") {
-                ActionChips(
+                DebtHeroCard(
                     room = room,
                     meId = meId,
-                    isMineOnly = isMineOnly,
+                    pendingCount = localOperations.size,
                     onSettleUp = onSettleUp,
-                    onShowBalances = onShowBalances,
-                    onShowTotals = onShowTotals,
-                    onToggleMineOnly = { isMineOnly = !isMineOnly },
                 )
+            }
+            item(key = "mine-segment") {
+                MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
             }
             // Неотправленные (локальные) операции — всегда сверху списка.
             if (localOperations.isNotEmpty()) {
@@ -351,8 +335,14 @@ private fun GroupDetailContent(
 
 /** Hero-карточка статуса долга (+ бейдж архива, + подпись про outbox). */
 @Composable
-private fun DebtHeroCard(room: RoomDetail, meId: Long, pendingCount: Int = 0) {
+private fun DebtHeroCard(
+    room: RoomDetail,
+    meId: Long,
+    pendingCount: Int = 0,
+    onSettleUp: (() -> Unit)? = null,
+) {
     val colors = Splitty.colors
+    val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
         if (room.isArchived) {
             Row(
@@ -416,6 +406,21 @@ private fun DebtHeroCard(room: RoomDetail, meId: Long, pendingCount: Int = 0) {
                     color = colors.inkSecondary,
                 )
             }
+        }
+        // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок.
+        if (canSettle && onSettleUp != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.group_chip_settle_short),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(colors.accent)
+                    .clickable(onClick = onSettleUp)
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+            )
         }
         // Балансы сервера не учитывают неотправленные офлайн-операции.
         if (pendingCount > 0) {
@@ -560,40 +565,186 @@ private fun LocalOperationRow(
     }
 }
 
+// MARK: - Нижний бар тусы
+
+internal const val TUSA_TAB_OPS = "ops"
+internal const val TUSA_TAB_BALANCES = "balances"
+internal const val TUSA_TAB_TOTALS = "totals"
+
 /**
- * Ряд чипов действий (паритет с iOS): «Балансы» и «Итоги» — постоянный набор,
- * «Погасить долг» (акцентный) показывается только когда у пользователя есть
- * долги — неактуальные кнопки не показываются вовсе, а не дизейблятся.
+ * Контекстный таб-бар тусы: [Операции][Балансы] (+) [Итоги][Настройки].
+ * Заменяет глобальную навигацию, пока пользователь внутри тусы (паритет с iOS).
  */
 @Composable
-private fun ActionChips(
+private fun TusaBar(
+    selected: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+    onAdd: () -> Unit,
+    onSettings: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Column {
+        HairlineDivider()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.surface)
+                .padding(top = 8.dp, bottom = 6.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            TusaBarButton(
+                title = stringResource(R.string.group_tab_operations),
+                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                isActive = selected == TUSA_TAB_OPS,
+                modifier = Modifier.weight(1f),
+            ) { onSelect(TUSA_TAB_OPS) }
+            TusaBarButton(
+                title = stringResource(R.string.group_balances_title),
+                icon = Icons.Outlined.SwapHoriz,
+                isActive = selected == TUSA_TAB_BALANCES,
+                modifier = Modifier.weight(1f),
+            ) { onSelect(TUSA_TAB_BALANCES) }
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                FloatingActionButton(
+                    onClick = { if (enabled) onAdd() },
+                    containerColor = colors.accent,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(52.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.group_add_expense),
+                    )
+                }
+            }
+            TusaBarButton(
+                title = stringResource(R.string.totals_title),
+                icon = Icons.Outlined.PieChart,
+                isActive = selected == TUSA_TAB_TOTALS,
+                modifier = Modifier.weight(1f),
+            ) { onSelect(TUSA_TAB_TOTALS) }
+            TusaBarButton(
+                title = stringResource(R.string.group_settings_short),
+                icon = Icons.Outlined.Settings,
+                isActive = false,
+                modifier = Modifier.weight(1f),
+            ) { if (enabled) onSettings() }
+        }
+    }
+}
+
+@Composable
+private fun TusaBarButton(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isActive: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    val tint = if (isActive) colors.accent else colors.inkSecondary
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(imageVector = icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Text(text = title, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = tint, maxLines = 1)
+    }
+}
+
+/** Сегмент фильтра операций: «Все | Со мной». */
+@Composable
+private fun MineSegment(isMineOnly: Boolean, onChange: (Boolean) -> Unit) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(colors.surface)
+            .padding(3.dp),
+    ) {
+        SegmentButton(stringResource(R.string.group_filter_all), !isMineOnly) { onChange(false) }
+        SegmentButton(stringResource(R.string.group_chip_mine_only), isMineOnly) { onChange(true) }
+    }
+}
+
+@Composable
+private fun SegmentButton(title: String, isOn: Boolean, onClick: () -> Unit) {
+    val colors = Splitty.colors
+    Text(
+        text = title,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = if (isOn) Color.White else colors.inkSecondary,
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (isOn) colors.accent else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+    )
+}
+
+/** Вкладка «Балансы»: карточный список долгов (бывший bottom sheet). */
+@Composable
+private fun GroupBalancesTab(
     room: RoomDetail,
     meId: Long,
-    isMineOnly: Boolean,
-    onSettleUp: () -> Unit,
-    onShowBalances: () -> Unit,
-    onShowTotals: () -> Unit,
-    onToggleMineOnly: () -> Unit,
+    onSettle: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        AnimatedVisibility(visible = canSettle) {
-            SoftChip(
-                text = stringResource(R.string.group_chip_settle),
-                onClick = onSettleUp,
-                isSelected = true,
+    val colors = Splitty.colors
+    if (room.debts.isEmpty()) {
+        Column(
+            modifier = modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.CheckCircle,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(36.dp),
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.group_no_debts),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.group_members_settled),
+                fontSize = 14.sp,
+                color = colors.inkSecondary,
             )
         }
-        SoftChip(text = stringResource(R.string.group_chip_balances), onClick = onShowBalances)
-        SoftChip(text = stringResource(R.string.group_chip_totals), onClick = onShowTotals)
-        SoftChip(
-            text = stringResource(R.string.group_chip_mine_only),
-            onClick = onToggleMineOnly,
-            isSelected = isMineOnly,
-        )
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+        ) {
+            SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                room.debts.forEachIndexed { index, debt ->
+                    DebtRow(
+                        debt = debt,
+                        meId = meId,
+                        currency = room.currency,
+                        onSettle = onSettle,
+                    )
+                    if (index < room.debts.lastIndex) {
+                        HairlineDivider()
+                    }
+                }
+            }
+        }
     }
 }
 

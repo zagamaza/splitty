@@ -16,7 +16,7 @@ final class DashboardShotsUITests: XCTestCase {
         let totals = app.buttons["Итоги"]
         XCTAssertTrue(totals.waitForExistence(timeout: 10))
         totals.tap()
-        XCTAssertTrue(app.staticTexts["Динамика по месяцам"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Траты по дням"].waitForExistence(timeout: 10))
 
         for step in 1...4 {
             app.swipeUp()

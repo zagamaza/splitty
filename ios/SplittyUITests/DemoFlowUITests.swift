@@ -62,25 +62,29 @@ final class DemoFlowUITests: XCTestCase {
             dismissModalOrBack()
         }
 
-        // --- Балансы ---
+        // --- Балансы (вкладка бара тусы) ---
         if app.buttons["Балансы"].waitForExistence(timeout: 5) {
             app.buttons["Балансы"].tap()
             sleepShort()
             shot("06-балансы")
-            dismissModalOrBack()
         }
 
-        // --- Итоги ---
+        // --- Итоги (вкладка бара тусы) ---
         if app.buttons["Итоги"].waitForExistence(timeout: 5) {
             app.buttons["Итоги"].tap()
             sleepShort()
             shot("07-итоги")
-            dismissModalOrBack()
         }
 
-        // --- Погашение долга ---
-        if app.buttons["Погасить долг"].waitForExistence(timeout: 5), app.buttons["Погасить долг"].isEnabled {
-            app.buttons["Погасить долг"].tap()
+        // назад на операции — там hero-карточка с «Погасить»
+        if app.buttons["Операции"].waitForExistence(timeout: 5) {
+            app.buttons["Операции"].tap()
+            sleepShort()
+        }
+
+        // --- Погашение долга (CTA в hero-карточке) ---
+        if app.buttons["Погасить"].waitForExistence(timeout: 5), app.buttons["Погасить"].isEnabled {
+            app.buttons["Погасить"].tap()
             sleepShort()
             shot("08-выбор-долга")
             // Если открылся список «Ваши долги» — выбираем долг Алмаза
