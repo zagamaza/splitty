@@ -98,6 +98,14 @@
     <string name="profile_id">ID: %1$d</string>
     <string name="profile_settings_section">Настройки</string>
     <string name="profile_name">Имя</string>
+    <string name="notifications_title">Уведомления</string>
+    <string name="notifications_operations">Операции</string>
+    <string name="notifications_operations_footer">Кто-то добавил или изменил расход в вашей тусе</string>
+    <string name="notifications_debts">Долги</string>
+    <string name="notifications_debts_footer">Вам вернули долг</string>
+    <string name="notifications_channel_telegram">Telegram</string>
+    <string name="notifications_channel_push">Приложение</string>
+    <string name="notifications_soon">скоро</string>
     <string name="profile_theme">Тема</string>
     <string name="profile_theme_system">Системная</string>
     <string name="profile_theme_light">Светлая</string>

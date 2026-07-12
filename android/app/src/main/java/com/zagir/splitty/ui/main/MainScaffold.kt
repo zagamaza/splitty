@@ -60,6 +60,7 @@ import com.zagir.splitty.ui.groups.GroupDetailScreen
 import com.zagir.splitty.ui.groups.GroupsListScreen
 import com.zagir.splitty.ui.groups.OperationDetailScreen
 import com.zagir.splitty.ui.profile.ProfileScreen
+import com.zagir.splitty.ui.profile.NotificationSettingsScreen
 import com.zagir.splitty.ui.settleup.SettleUpScreen
 import com.zagir.splitty.ui.theme.Splitty
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -81,6 +82,7 @@ private object MainRoutes {
     const val OPERATION = "room/{roomId}/operation/{operationId}"
     const val ADD_EXPENSE = "expense?roomId={roomId}&operationId={operationId}&localId={localId}"
     const val SETTLE_UP = "settleup/{roomId}"
+    const val NOTIFICATIONS = "notifications"
 
     /** Вкладки: на них виден нижний бар и работает switchTab. */
     val tabs = setOf(FRIENDS, GROUPS, ACTIVITY, ACCOUNT)
@@ -257,7 +259,13 @@ private fun MainNavHost(navController: NavHostController, modifier: Modifier = M
         }
 
         composable(MainRoutes.ACCOUNT) {
-            ProfileScreen()
+            ProfileScreen(
+                onOpenNotifications = { navController.navigate(MainRoutes.NOTIFICATIONS) },
+            )
+        }
+
+        composable(MainRoutes.NOTIFICATIONS) {
+            NotificationSettingsScreen(onBack = { navController.popBackStack() })
         }
 
         // --- Детальные экраны ---

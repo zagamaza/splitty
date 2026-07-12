@@ -81,6 +81,14 @@ func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.
 	return nil, mongo.ErrNoDocuments
 }
 
+func (f *fakeUserRepo) SetNotifySettings(_ context.Context, userId int, s api.NotifySettings) error {
+	if u, ok := f.users[userId]; ok {
+		settings := s
+		u.Notify = &settings
+	}
+	return nil
+}
+
 func (f *fakeUserRepo) SetUserLang(_ context.Context, userId int, lang string) error {
 	if u, ok := f.users[userId]; ok {
 		u.SelectedLang = lang

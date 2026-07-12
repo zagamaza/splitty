@@ -197,6 +197,16 @@ final class APIClient {
         try await request("GET", "/api/v1/me")
     }
 
+    /// GET /api/v1/me/notifications — эффективные настройки уведомлений.
+    func notifications() async throws -> NotifySettings {
+        try await request("GET", "/api/v1/me/notifications")
+    }
+
+    /// PATCH /api/v1/me/notifications — частичное обновление, ответ — новые значения.
+    func updateNotifications(_ settings: NotifySettings) async throws -> NotifySettings {
+        try await request("PATCH", "/api/v1/me/notifications", body: settings)
+    }
+
     func updateMe(displayName: String?, lang: String?, notificationOn: Bool?) async throws -> Me {
         struct Body: Encodable {
             let displayName: String?

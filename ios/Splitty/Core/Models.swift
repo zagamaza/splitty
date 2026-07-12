@@ -11,6 +11,19 @@ struct User: Codable, Identifiable, Hashable {
     let displayName: String
 }
 
+/// Каналы уведомлений одной категории.
+struct ChannelPrefs: Codable, Hashable {
+    var telegram: Bool
+    var push: Bool
+}
+
+/// Настройки уведомлений: категория событий × канал доставки
+/// (GET/PATCH /me/notifications, сервер отдаёт эффективные значения).
+struct NotifySettings: Codable, Hashable {
+    var operations: ChannelPrefs
+    var debts: ChannelPrefs
+}
+
 /// Профиль текущего пользователя.
 struct Me: Codable, Identifiable, Hashable {
     let id: Int

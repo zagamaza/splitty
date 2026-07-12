@@ -67,7 +67,7 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 	for _, r := range op.RecipientsWithSum {
 		recipient := r.User
 		if slices.Contains(op.NotificationSent, recipient.ID) ||
-			(recipient.NotificationOn != nil && !*recipient.NotificationOn) ||
+			!recipient.AllowsTelegram(api.NotifyOperations) ||
 			recipient.ID == author.ID ||
 			r.Sum == 0 {
 			continue
@@ -139,7 +139,7 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 		return
 	}
 	lender := op.RecipientsWithSum[0].User
-	if lender.ID == author.ID {
+	if lender.ID == author.ID || !lender.AllowsTelegram(api.NotifyDebts) {
 		return
 	}
 

@@ -124,6 +124,8 @@ struct AccountView: View {
                 rowDivider
                 themeRow
                 rowDivider
+                notificationsLink
+                rowDivider
                 notificationRow
             }
             .surfaceCard(padding: 0)
@@ -197,6 +199,27 @@ struct AccountView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
+    }
+
+    /// Строка «Уведомления»: переход к настройкам категорий и каналов.
+    private var notificationsLink: some View {
+        NavigationLink {
+            NotificationSettingsView()
+        } label: {
+            HStack(spacing: 12) {
+                Text("Уведомления")
+                    .font(.system(size: 16, design: .rounded))
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.inkSecondary.opacity(0.6))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// Строка «Уведомления»: toggle с акцентным tint.

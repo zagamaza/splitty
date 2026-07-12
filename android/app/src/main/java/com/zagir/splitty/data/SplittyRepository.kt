@@ -1,6 +1,7 @@
 package com.zagir.splitty.data
 
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.CreateRoomBody
@@ -176,6 +177,13 @@ class SplittyRepository @Inject constructor(
         }
 
     // --- Файлы ---
+
+    /** Эффективные настройки уведомлений. */
+    suspend fun notifications(): NotifySettings = call { api.notifications() }
+
+    /** Обновляет настройки уведомлений; ответ — новые значения. */
+    suspend fun updateNotifications(settings: NotifySettings): NotifySettings =
+        call { api.updateNotifications(settings) }
 
     /** Скачивает вложение операции (чек/фото/видео) целиком в память. */
     suspend fun fileData(fileId: String): ByteArray =
