@@ -6,7 +6,11 @@ import Foundation
 /// атомарная. Кеш — best effort: любые ошибки файловой системы/декодирования
 /// молча дают промах (nil), приложение работает как без кеша.
 /// Чистится при logout (вместе с outbox).
-final class OfflineStore {
+///
+/// Актор: файловый I/O и JSON-кодек выполняются вне главного потока —
+/// чтение кеша совпадает с push-анимацией экрана, а запись с перерисовкой
+/// списка, и синхронный I/O на main заметно дёргал анимации.
+actor OfflineStore {
     private let directory: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder

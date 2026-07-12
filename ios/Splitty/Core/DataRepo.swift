@@ -95,13 +95,14 @@ final class DataRepo {
         onCached: ((T) -> Void)?,
         fetch: () async throws -> T
     ) async throws -> CachedResult<T> {
-        let cached: T? = cache.read(key: key)
+        // await — хоп на актор кеша: дисковый I/O и JSON-кодек вне main.
+        let cached: T? = await cache.read(key: key)
         if let cached {
             onCached?(cached)
         }
         do {
             let fresh = try await fetch()
-            cache.write(fresh, key: key)
+            await cache.write(fresh, key: key)
             return CachedResult(value: fresh, isFromCache: false)
         } catch {
             // Отмена .task (ушли с экрана) — не «нет сети», пробрасываем:

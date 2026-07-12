@@ -1,9 +1,9 @@
 package com.zagir.splitty.ui.groups
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,7 +55,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -534,7 +533,11 @@ private fun LocalOperationRow(
     }
 }
 
-/** Ряд чипов: «Погасить долг» (акцентный), «Балансы», «Итоги». */
+/**
+ * Ряд чипов действий (паритет с iOS): «Балансы» и «Итоги» — постоянный набор,
+ * «Погасить долг» (акцентный) показывается только когда у пользователя есть
+ * долги — неактуальные кнопки не показываются вовсе, а не дизейблятся.
+ */
 @Composable
 private fun ActionChips(
     room: RoomDetail,
@@ -545,15 +548,13 @@ private fun ActionChips(
 ) {
     val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Box(modifier = Modifier.alpha(if (canSettle) 1f else 0.45f)) {
+        AnimatedVisibility(visible = canSettle) {
             SoftChip(
                 text = stringResource(R.string.group_chip_settle),
-                onClick = { if (canSettle) onSettleUp() },
+                onClick = onSettleUp,
                 isSelected = true,
             )
         }

@@ -50,6 +50,8 @@ final class OutboxStoreTests: XCTestCase {
     func testAddPersistsToDisk() {
         let store = makeStore()
         let entry = store.add(roomId: "room1", payload: payload())
+        // Запись файла — фоновая: дожидаемся её перед перечиткой.
+        store.waitForPendingWrites()
 
         // Новый store с тем же файлом видит запись (даты — с точностью до секунды).
         let reloaded = makeStore()
@@ -100,6 +102,7 @@ final class OutboxStoreTests: XCTestCase {
         store.remove(localId: first.localId)
 
         XCTAssertEqual(store.entries.map(\.localId), [second.localId])
+        store.waitForPendingWrites()
         XCTAssertEqual(makeStore().entries.map(\.localId), [second.localId])
     }
 
@@ -113,6 +116,7 @@ final class OutboxStoreTests: XCTestCase {
 
         XCTAssertEqual(store.entries.map(\.localId), [a.localId, b.localId, c.localId])
         // Порядок сохраняется после перезагрузки с диска.
+        store.waitForPendingWrites()
         XCTAssertEqual(makeStore().entries.map(\.localId), [a.localId, b.localId, c.localId])
         // Правка НЕ двигает запись в очереди (FIFO по createdAt-порядку).
         store.update(localId: a.localId, payload: payload("А2"))
@@ -147,6 +151,7 @@ final class OutboxStoreTests: XCTestCase {
             "сумма должна быть не меньше 1"
         )
         // Статус переживает перезапуск.
+        store.waitForPendingWrites()
         XCTAssertEqual(
             makeStore().entries.first?.status,
             .failed(message: "сумма должна быть не меньше 1")
@@ -163,6 +168,7 @@ final class OutboxStoreTests: XCTestCase {
         store.clear()
 
         XCTAssertTrue(store.entries.isEmpty)
+        store.waitForPendingWrites()
         XCTAssertTrue(makeStore().entries.isEmpty)
     }
 
