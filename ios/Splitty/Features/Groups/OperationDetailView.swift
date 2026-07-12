@@ -59,7 +59,9 @@ struct OperationDetailView: View {
         .background(Color.bg)
         .navigationTitle(operation.isDebtRepayment ? "Погашение" : "Расход")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isEditPresented) {
+        // Полноэкранно, а не sheet: форму со введёнными данными нельзя
+        // случайно смахнуть — выход только «Отмена»/«Сохранить».
+        .fullScreenCover(isPresented: $isEditPresented) {
             AddExpenseView(roomId: roomId, editOperation: operation) {
                 onChange()
                 Task { await reloadOperation() }

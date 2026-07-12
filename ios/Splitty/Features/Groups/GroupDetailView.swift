@@ -63,11 +63,13 @@ struct GroupDetailView: View {
             .onChange(of: session.dataVersion) {
                 Task { await model.load(repo: session.repo, roomId: roomId) }
             }
-            .sheet(isPresented: $isAddExpensePresented) {
+            // Полноэкранно, а не sheet: форму со введёнными данными нельзя
+            // случайно смахнуть — выход только «Отмена»/«Сохранить».
+            .fullScreenCover(isPresented: $isAddExpensePresented) {
                 AddExpenseView(roomId: roomId)
             }
             // Правка локальной (неотправленной) записи outbox.
-            .sheet(item: $editingEntry) { entry in
+            .fullScreenCover(item: $editingEntry) { entry in
                 AddExpenseView(roomId: roomId, editEntry: entry)
             }
             .sheet(isPresented: $isSettleUpPresented) {

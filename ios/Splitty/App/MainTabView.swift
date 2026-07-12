@@ -59,8 +59,10 @@ struct MainTabView: View {
                 isAddExpensePresented = true
             }
         }
-        .sheet(isPresented: $isAddExpensePresented) {
-            // Списки под sheet обновятся через session.dataVersion
+        // Полноэкранно, а не sheet: форму со введёнными данными нельзя
+        // случайно смахнуть — выход только «Отмена»/«Сохранить».
+        .fullScreenCover(isPresented: $isAddExpensePresented) {
+            // Списки под формой обновятся через session.dataVersion
             // (AddExpenseView делает noteDataChanged() после сохранения).
             AddExpenseView()
         }
