@@ -9,6 +9,8 @@ final class DemoFlowUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = true
         app = XCUIApplication()
+        // Прогон против локального бэкенда независимо от прод-дефолта приложения.
+        app.launchEnvironment["SPLITTY_BASE_URL"] = "http://127.0.0.1:7171"
         app.launch()
     }
 

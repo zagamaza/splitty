@@ -5,13 +5,11 @@ import Observation
 /// базовый URL сервера (UserDefaults).
 @Observable
 final class SessionStore {
-    /// Дефолтный сервер: симулятор — локальный бэкенд (нужен UI-тестам),
-    /// устройство — прод (меняется в поле «Сервер» на экране входа).
-    #if targetEnvironment(simulator)
-    static let defaultBaseURL = "http://127.0.0.1:7171"
-    #else
+    /// Дефолтный сервер — прод, в том числе на симуляторе (меняется в поле
+    /// «Сервер» на экране входа). UI-тестам нужен локальный бэкенд — они
+    /// передают его через launch environment `SPLITTY_BASE_URL`; переменная
+    /// имеет приоритет над UserDefaults, чтобы прогоны были детерминированы.
     static let defaultBaseURL = "http://138.124.18.189:18002"
-    #endif
 
     private static let baseURLKey = "splitty.baseURL"
     private static let tokenKey = "splitty.apiToken"
@@ -109,7 +107,11 @@ final class SessionStore {
     }
 
     init() {
-        baseURLString = UserDefaults.standard.string(forKey: Self.baseURLKey) ?? Self.defaultBaseURL
+        // Прямое присваивание в init не дергает didSet — override из окружения
+        // не затирает сохранённый пользователем адрес в UserDefaults.
+        baseURLString = ProcessInfo.processInfo.environment["SPLITTY_BASE_URL"]
+            ?? UserDefaults.standard.string(forKey: Self.baseURLKey)
+            ?? Self.defaultBaseURL
         token = KeychainStore.read(key: Self.tokenKey)
     }
 
