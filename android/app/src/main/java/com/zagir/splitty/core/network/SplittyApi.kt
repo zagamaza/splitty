@@ -9,6 +9,7 @@ import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.Me
+import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
 import com.zagir.splitty.core.model.RepaymentBody
@@ -48,6 +49,14 @@ interface SplittyApi {
 
     @GET("api/v1/me")
     suspend fun me(): Me
+
+    /** Эффективные настройки уведомлений (категория × канал). */
+    @GET("api/v1/me/notifications")
+    suspend fun notifications(): NotifySettings
+
+    /** Частичное обновление настроек уведомлений; ответ — новые значения. */
+    @PATCH("api/v1/me/notifications")
+    suspend fun updateNotifications(@Body settings: NotifySettings): NotifySettings
 
     @PATCH("api/v1/me")
     suspend fun updateMe(@Body body: UpdateMeBody): Me

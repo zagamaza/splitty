@@ -24,6 +24,7 @@ type UserRepository interface {
 	SetCountInPage(ctx context.Context, userId int, count int) error
 	FindById(ctx context.Context, id int) (*api.User, error)
 	FindByUsername(ctx context.Context, username string) (*api.User, error)
+	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 }
 
 type RoomRepository interface {
@@ -510,6 +511,16 @@ func (r MongoUserRepository) SetCountInPage(ctx context.Context, userId int, cou
 		return err
 	}
 	return nil
+}
+
+func (r MongoUserRepository) SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error {
+	filter := bson.D{{Key: "_id", Value: userId}}
+	update := bson.D{{Key: "$set", Value: bson.M{"notify": s}}}
+	_, err := r.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		log.Error().Err(err).Msg("set notify settings failed")
+	}
+	return err
 }
 
 func (r MongoUserRepository) SetNotificationUser(ctx context.Context, userId int, notification bool) error {

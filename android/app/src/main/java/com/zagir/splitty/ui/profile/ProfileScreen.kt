@@ -59,7 +59,10 @@ import com.zagir.splitty.ui.theme.Splitty
  * Порт ios/Splitty/Features/Account/AccountView.swift.
  */
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
+fun ProfileScreen(
+    onOpenNotifications: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel(),
+) {
     val me by viewModel.me.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
@@ -109,6 +112,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
                 me = me,
                 lang = langDraft,
                 theme = theme,
+                onOpenNotifications = onOpenNotifications,
                 notificationOn = notificationDraft,
                 enabled = !isSaving,
                 onEditName = {
@@ -271,6 +275,7 @@ private fun SettingsSection(
     onEditName: () -> Unit,
     onLangSelected: (String) -> Unit,
     onThemeSelected: (String) -> Unit,
+    onOpenNotifications: () -> Unit,
     onNotificationChange: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -287,6 +292,8 @@ private fun SettingsSection(
             LangRow(lang = lang, enabled = enabled, onLangSelected = onLangSelected)
             HairlineDivider()
             ThemeRow(theme = theme, onThemeSelected = onThemeSelected)
+            HairlineDivider()
+            NotificationsLinkRow(onClick = onOpenNotifications)
             HairlineDivider()
             NotificationRow(
                 notificationOn = notificationOn,
@@ -354,6 +361,31 @@ private fun ThemeRow(theme: String, onThemeSelected: (String) -> Unit) {
                 )
             }
         }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Splitty.colors.inkSecondary.copy(alpha = 0.6f),
+        )
+    }
+}
+
+/** Строка «Уведомления»: переход к настройкам категорий и каналов. */
+@Composable
+private fun NotificationsLinkRow(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.notifications_title),
+            fontSize = 16.sp,
+            color = Splitty.colors.ink,
+        )
+        Spacer(Modifier.weight(1f))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,

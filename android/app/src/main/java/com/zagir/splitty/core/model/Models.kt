@@ -64,6 +64,23 @@ data class Me(
     val notificationOn: Boolean = true,
 )
 
+/** Каналы уведомлений одной категории. */
+@Serializable
+data class ChannelPrefs(
+    val telegram: Boolean = true,
+    val push: Boolean = false,
+)
+
+/**
+ * Настройки уведомлений: категория событий × канал доставки
+ * (GET/PATCH /me/notifications, сервер отдаёт эффективные значения).
+ */
+@Serializable
+data class NotifySettings(
+    val operations: ChannelPrefs = ChannelPrefs(),
+    val debts: ChannelPrefs = ChannelPrefs(),
+)
+
 /** Долг: [debtor] должен [lender]'у [sum]. */
 @Serializable
 data class Debt(

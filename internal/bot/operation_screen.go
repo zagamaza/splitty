@@ -1280,7 +1280,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 
 	for _, recipientsWithSum := range opn.RecipientsWithSum {
 		if !slices.Contains(opn.NotificationSent, recipientsWithSum.User.ID) &&
-			(recipientsWithSum.User.NotificationOn == nil || *recipientsWithSum.User.NotificationOn) &&
+			recipientsWithSum.User.AllowsTelegram(api.NotifyOperations) &&
 			recipientsWithSum.User.ID != getFrom(u).ID &&
 			recipientsWithSum.Sum != 0 {
 			var recipientWithSum api.RecipientWithSum
@@ -1370,7 +1370,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 		// Уведомляем донора, если он существует и у него включены уведомления
 		notifiedUsers := make(map[int]bool)
-		if newOp.Donor.NotificationOn == nil || (newOp.Donor.NotificationOn != nil && *newOp.Donor.NotificationOn) {
+		if newOp.Donor.AllowsTelegram(api.NotifyOperations) {
 			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newOp.Description, userLink(editor), changeDetails)
 			msg := NewMessage(int64(newOp.Donor.ID), text, keyboard)
 			messages = append(messages, msg)
@@ -1379,7 +1379,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 		// Уведомляем всех получателей
 		for _, r := range newOp.RecipientsWithSum {
-			if (r.User.NotificationOn == nil || (r.User.NotificationOn != nil && *r.User.NotificationOn)) && !notifiedUsers[r.User.ID] {
+			if r.User.AllowsTelegram(api.NotifyOperations) && !notifiedUsers[r.User.ID] {
 				msg := NewMessage(int64(r.User.ID),
 					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newOp.Description, userLink(editor), changeDetails), keyboard)
 				messages = append(messages, msg)
@@ -1390,8 +1390,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 	// 6.2 Для добавленных получателей – уведомляем их, что их добавили в операцию
 	for _, rAdded := range diff.RecipientsAdded {
-		if ((rAdded.User.NotificationOn != nil && *rAdded.User.NotificationOn) ||
-			rAdded.User.NotificationOn == nil) &&
+		if rAdded.User.AllowsTelegram(api.NotifyOperations) &&
 			rAdded.User.ID != editorUserId &&
 			rAdded.User.ID != newOp.Donor.ID &&
 			rAdded.User.ID != oldOp.Donor.ID {
@@ -2114,7 +2113,10 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 
 	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
 	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum, room.Currency)), &keyboard)
-	forRecipientMsg := NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", recipient.DisplayName, moneySpace(sum, room.Currency), userLink(donor)), keyboard)
+	var forRecipientMsg tgbotapi.Chattable
+	if recipient.AllowsTelegram(api.NotifyDebts) {
+		forRecipientMsg = NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", recipient.DisplayName, moneySpace(sum, room.Currency), userLink(donor)), keyboard)
+	}
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{forDonorMsg, forRecipientMsg},

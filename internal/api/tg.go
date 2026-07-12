@@ -88,6 +88,66 @@ type User struct {
 	NotificationOn *bool  `json:"notificationOn" bson:"notification_on,omitempty"`
 	CountInPage    int    `json:"countInPage" bson:"count_in_page,omitempty"`
 	BankDetails    string `json:"bankDetails" bson:"bank_details,omitempty"`
+	// Notify — тонкие настройки уведомлений (категория × канал) из приложения;
+	// nil — пользователь их не менял, действуют легаси-правила (см. AllowsTelegram)
+	Notify *NotifySettings `json:"notify" bson:"notify,omitempty"`
+}
+
+// ChannelPrefs каналы доставки уведомлений одной категории;
+// nil-поле — «не задано», действует значение по умолчанию
+type ChannelPrefs struct {
+	Telegram *bool `json:"telegram" bson:"telegram,omitempty"`
+	Push     *bool `json:"push" bson:"push,omitempty"`
+}
+
+// NotifySettings настройки уведомлений по категориям событий
+type NotifySettings struct {
+	// Operations — добавление/изменение расходов в тусах пользователя
+	Operations ChannelPrefs `json:"operations" bson:"operations,omitempty"`
+	// Debts — возвраты долгов (и будущие напоминания)
+	Debts ChannelPrefs `json:"debts" bson:"debts,omitempty"`
+}
+
+// NotifyCategory категория уведомления для проверки настроек
+type NotifyCategory string
+
+const (
+	NotifyOperations NotifyCategory = "operations"
+	NotifyDebts      NotifyCategory = "debts"
+)
+
+// AllowsTelegram слать ли пользователю telegram-уведомление категории.
+// Приоритет: явная настройка категории → легаси-правила (operations —
+// глобальный NotificationOn бота, debts — исторически слались всегда)
+func (u *User) AllowsTelegram(category NotifyCategory) bool {
+	if u == nil {
+		return false
+	}
+	if u.Notify != nil {
+		prefs := u.Notify.Operations
+		if category == NotifyDebts {
+			prefs = u.Notify.Debts
+		}
+		if prefs.Telegram != nil {
+			return *prefs.Telegram
+		}
+	}
+	if category == NotifyDebts {
+		return true
+	}
+	return u.NotificationOn == nil || *u.NotificationOn
+}
+
+// WantsPush хочет ли пользователь push категории (доставка появится с APNs/FCM)
+func (u *User) WantsPush(category NotifyCategory) bool {
+	if u == nil || u.Notify == nil {
+		return false
+	}
+	prefs := u.Notify.Operations
+	if category == NotifyDebts {
+		prefs = u.Notify.Debts
+	}
+	return prefs.Push != nil && *prefs.Push
 }
 
 func DefineLang(u *User) string {
