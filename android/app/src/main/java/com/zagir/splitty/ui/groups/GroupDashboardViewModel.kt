@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -34,6 +37,11 @@ class GroupDashboardViewModel @Inject constructor(
 
     /** Статистика группы; все суммы — в statistics.currency. */
     val statistics: StateFlow<UiState<Statistics>> = _statistics.asStateFlow()
+
+    /** id текущего пользователя для плиток «Я заплатил»/«Моя доля». */
+    val meId: StateFlow<Long?> = sessionStore.state
+        .map { it?.me?.id }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.state.value?.me?.id)
 
     init {
         viewModelScope.launch {

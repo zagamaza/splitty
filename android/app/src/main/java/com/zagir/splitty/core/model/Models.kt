@@ -141,6 +141,13 @@ data class Operation(
     val hasFiles: Boolean get() = !files.isNullOrEmpty()
 
     /**
+     * Операция «касается» пользователя: он платил или есть в получателях
+     * (фильтры «Со мной» на экране группы и «Только мои» в активности).
+     */
+    fun involves(userId: Long): Boolean =
+        donor.id == userId || recipients.any { it.user.id == userId }
+
+    /**
      * Доля пользователя по ХРАНИМЫМ суммам получателей (не пересчёт!);
      * null — не участвует в делении.
      */

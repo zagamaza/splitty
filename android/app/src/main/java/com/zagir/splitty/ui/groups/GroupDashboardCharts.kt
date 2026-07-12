@@ -2,9 +2,7 @@ package com.zagir.splitty.ui.groups
 
 import com.zagir.splitty.core.model.DailySum
 import com.zagir.splitty.core.model.MemberSum
-import com.zagir.splitty.core.model.MonthlySum
 import java.time.LocalDate
-import java.time.YearMonth
 
 // Чистая подготовка данных дашборда «Итоги» v2 (без Compose) — юнит-тесты
 // в ui/groups/GroupDashboardChartsTest. Правила дата-виза дашборда:
@@ -74,28 +72,6 @@ internal fun weekdayTotals(byDay: List<DailySum>): List<Int> {
 }
 
 /** Точка «Динамики по месяцам». */
-internal data class MonthPoint(val month: YearMonth, val sum: Int)
-
-/**
- * Ровно 6 календарных месяцев по текущий (ascending) — контрактный ряд
- * byMonth, нормализованный клиентом: недостающие месяцы = 0 (старый сервер
- * без byMonth), лишние/нераспознанные элементы игнорируются, дубли месяцев
- * складываются.
- */
-internal fun lastSixMonths(
-    byMonth: List<MonthlySum>,
-    currentMonth: YearMonth = YearMonth.now(),
-): List<MonthPoint> {
-    val sums = HashMap<YearMonth, Int>()
-    for (monthly in byMonth) {
-        val month = runCatching { YearMonth.parse(monthly.month) }.getOrNull() ?: continue
-        sums[month] = (sums[month] ?: 0) + monthly.sum
-    }
-    return (5 downTo 0).map { offset ->
-        val month = currentMonth.minusMonths(offset.toLong())
-        MonthPoint(month = month, sum = sums[month] ?: 0)
-    }
-}
 
 /**
  * Донат «Кто платил»: больше [maxVisible] сегментов не рисуем — топ-5 против

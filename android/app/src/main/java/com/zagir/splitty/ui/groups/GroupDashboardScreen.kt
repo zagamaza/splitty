@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -107,6 +109,7 @@ fun GroupDashboardScreen(
 ) {
     LaunchedEffect(roomId) { viewModel.start(roomId) }
     val state by viewModel.statistics.collectAsStateWithLifecycle()
+    val meId by viewModel.meId.collectAsStateWithLifecycle()
     val colors = Splitty.colors
 
     Scaffold(
@@ -137,6 +140,7 @@ fun GroupDashboardScreen(
     ) { innerPadding ->
         GroupDashboardContent(
             state = state,
+            meId = meId,
             onRetry = viewModel::retry,
             modifier = Modifier
                 .padding(innerPadding)
@@ -155,6 +159,7 @@ internal fun GroupDashboardSheet(roomId: String, onDismiss: () -> Unit) {
     val viewModel: GroupDashboardViewModel = hiltViewModel()
     LaunchedEffect(roomId) { viewModel.start(roomId) }
     val state by viewModel.statistics.collectAsStateWithLifecycle()
+    val meId by viewModel.meId.collectAsStateWithLifecycle()
     val colors = Splitty.colors
 
     ModalBottomSheet(
@@ -172,6 +177,7 @@ internal fun GroupDashboardSheet(roomId: String, onDismiss: () -> Unit) {
             )
             GroupDashboardContent(
                 state = state,
+                meId = meId,
                 onRetry = viewModel::retry,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -185,6 +191,7 @@ internal fun GroupDashboardContent(
     state: UiState<Statistics>,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
+    meId: Long? = null,
 ) {
     when (state) {
         UiState.Loading -> Box(
@@ -213,7 +220,7 @@ internal fun GroupDashboardContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     StatTiles(stats)
-                    MonthlyDynamicsCard(byMonth = stats.byMonth, currency = stats.currency)
+                    MyTiles(stats, meId)
                     DailySpendingCard(byDay = stats.byDay, currency = stats.currency)
                     // Личные цвета участников — единые для доната и «Чьей доли».
                     val colorIndices = remember(stats) {
@@ -291,6 +298,38 @@ private fun DashboardEmptyState() {
 }
 
 // MARK: - Стат-плитки 2×2
+
+/**
+ * Личные плитки: «Я заплатил» (донор операций) и «Моя доля» (по хранимым
+ * долям получателей) — ответ на «сколько я потратил именно в этой тусе».
+ * Не показываются, пока профиль не загружен или обе суммы нулевые.
+ */
+@Composable
+private fun MyTiles(stats: Statistics, meId: Long?) {
+    meId ?: return
+    val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.sum ?: 0
+    val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.sum ?: 0
+    if (paid == 0 && share == 0) return
+    val colors = Splitty.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        StatTile(
+            title = stringResource(R.string.totals_i_paid),
+            icon = Icons.Outlined.Person,
+            iconTint = colors.chartCategorical[4],
+            modifier = Modifier.weight(1f),
+        ) {
+            MoneyText(paid, role = MoneyRole.NEUTRAL, size = 28.sp, currency = stats.currency)
+        }
+        StatTile(
+            title = stringResource(R.string.totals_my_share),
+            icon = Icons.Outlined.PieChart,
+            iconTint = colors.chartCategorical[5],
+            modifier = Modifier.weight(1f),
+        ) {
+            MoneyText(share, role = MoneyRole.NEUTRAL, size = 28.sp, currency = stats.currency)
+        }
+    }
+}
 
 /**
  * Плитки 2×2: «Всего потрачено», «За <месяц>», «Операций», «Средний чек»
@@ -416,124 +455,6 @@ private fun ChartAnnotationBadge(label: String, value: String) {
             color = colors.ink,
             style = TextStyle(fontFeatureSettings = "tnum"),
         )
-    }
-}
-
-// MARK: - «Динамика по месяцам» (Canvas, 6 месяцев)
-
-/**
- * Колонки трат по 6 календарным месяцам (контрактный byMonth, клиент
- * нормализует ряд): единый chartAccent, скругление 4dp, hairline-сетка,
- * русские подписи «фев»; тап по колонке — аннотация «февраль — 12 000 ₽»
- * (повторный тап снимает выбор).
- */
-@Composable
-private fun MonthlyDynamicsCard(byMonth: List<MonthlySum>, currency: String) {
-    val colors = Splitty.colors
-    val points = remember(byMonth) { lastSixMonths(byMonth) }
-    var selectedIndex by remember(byMonth) { mutableStateOf<Int?>(null) }
-    val textMeasurer = rememberTextMeasurer()
-    val labelStyle = TextStyle(fontSize = 11.sp, color = colors.inkSecondary)
-    val allZero = points.all { it.sum == 0 }
-
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_by_month))
-        Spacer(Modifier.height(8.dp))
-
-        // Аннотация выбранной колонки; высота зарезервирована — layout не прыгает.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(30.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            selectedIndex?.let { index ->
-                val point = points[index]
-                ChartAnnotationBadge(
-                    label = "${GroupsDateFmt.monthName(point.month)} —",
-                    value = money(point.sum, currency),
-                )
-            }
-        }
-        Spacer(Modifier.height(4.dp))
-
-        Box {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
-                    .pointerInput(points) {
-                        detectTapGestures { offset ->
-                            val slot = size.width / points.size.toFloat()
-                            val index = (offset.x / slot).toInt().coerceIn(0, points.size - 1)
-                            selectedIndex = if (selectedIndex == index) null else index
-                        }
-                    },
-            ) {
-                val labelArea = 18.dp.toPx()
-                val chartHeight = size.height - labelArea
-                val maxSum = max(points.maxOf { it.sum }, 1)
-
-                // Сетка тише данных: hairline-линии на 0, ⅓, ⅔ и полной высоте.
-                for (step in 0..3) {
-                    val y = chartHeight * (1f - step / 3f)
-                    drawLine(
-                        color = colors.hairline,
-                        start = Offset(0f, y),
-                        end = Offset(size.width, y),
-                        strokeWidth = 1f,
-                    )
-                }
-
-                val slotWidth = size.width / points.size
-                val barWidth = slotWidth * 0.45f
-                points.forEachIndexed { index, point ->
-                    if (point.sum <= 0) return@forEachIndexed
-                    val barHeight = chartHeight * point.sum / maxSum
-                    drawRoundRect(
-                        color = colors.chartAccent,
-                        topLeft = Offset(
-                            x = slotWidth * index + (slotWidth - barWidth) / 2f,
-                            y = chartHeight - barHeight,
-                        ),
-                        size = Size(barWidth, barHeight),
-                        cornerRadius = CornerRadius(4.dp.toPx()),
-                    )
-                }
-
-                // Тонкая линия выбора над колонкой аннотации.
-                selectedIndex?.let { index ->
-                    val x = slotWidth * index + slotWidth / 2f
-                    drawLine(
-                        color = colors.inkSecondary.copy(alpha = 0.3f),
-                        start = Offset(x, 0f),
-                        end = Offset(x, chartHeight),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                }
-
-                // Подпись каждого месяца («фев») — ось тише данных.
-                points.forEachIndexed { index, point ->
-                    val layout = textMeasurer.measure(
-                        AnnotatedString(GroupsDateFmt.monthShort3(point.month)),
-                        labelStyle,
-                    )
-                    val centerX = slotWidth * index + slotWidth / 2f
-                    drawText(
-                        layout,
-                        topLeft = Offset(centerX - layout.size.width / 2f, chartHeight + 4.dp.toPx()),
-                    )
-                }
-            }
-            if (allZero) {
-                Text(
-                    text = stringResource(R.string.totals_no_month_spending),
-                    fontSize = 13.sp,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.align(Alignment.Center),
-                )
-            }
-        }
     }
 }
 

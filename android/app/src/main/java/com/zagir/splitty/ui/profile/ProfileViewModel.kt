@@ -35,6 +35,15 @@ class ProfileViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.state.value?.me)
 
     /** Текущий адрес сервера — для карточки «Сервер». */
+    /** Тема приложения (system/light/dark) — строка «Тема» в настройках. */
+    val theme: StateFlow<String> = sessionStore.state
+        .map { it?.theme ?: SessionStore.THEME_SYSTEM }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, SessionStore.THEME_SYSTEM)
+
+    fun onThemeSelected(theme: String) {
+        viewModelScope.launch { sessionStore.setTheme(theme) }
+    }
+
     val baseUrl: StateFlow<String> = sessionStore.state
         .map { it?.baseUrl ?: SessionStore.DEFAULT_BASE_URL }
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.currentBaseUrl())

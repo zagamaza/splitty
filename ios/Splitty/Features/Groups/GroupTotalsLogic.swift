@@ -129,13 +129,4 @@ enum DashboardMath {
         "янв", "фев", "мар", "апр", "май", "июн",
         "июл", "авг", "сен", "окт", "ноя", "дек",
     ]
-
-    /// «2026-02» → «фев»; битая строка возвращается как есть.
-    static func monthLabel(_ month: String) -> String {
-        guard let raw = month.split(separator: "-").last,
-              let number = Int(raw), (1...12).contains(number) else {
-            return month
-        }
-        return monthNames[number - 1]
-    }
 }

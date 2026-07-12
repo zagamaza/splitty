@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -265,6 +266,17 @@ private fun GroupDetailContent(
     onEditLocalOperation: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Фильтр «Со мной»: только операции, где я донор или в получателях
+    // (аналог фильтра «Мои операции» в телеграм-боте).
+    var isMineOnly by rememberSaveable { mutableStateOf(false) }
+    val displaySections = if (isMineOnly) {
+        sections.mapNotNull { section ->
+            val ops = section.operations.filter { it.involves(meId) }
+            if (ops.isEmpty()) null else section.copy(operations = ops)
+        }
+    } else {
+        sections
+    }
     PullToRefreshBox(
         isRefreshing = isRefreshing,
         onRefresh = onRefresh,
@@ -283,9 +295,11 @@ private fun GroupDetailContent(
                 ActionChips(
                     room = room,
                     meId = meId,
+                    isMineOnly = isMineOnly,
                     onSettleUp = onSettleUp,
                     onShowBalances = onShowBalances,
                     onShowTotals = onShowTotals,
+                    onToggleMineOnly = { isMineOnly = !isMineOnly },
                 )
             }
             // Неотправленные (локальные) операции — всегда сверху списка.
@@ -307,13 +321,26 @@ private fun GroupDetailContent(
                     )
                 }
             } else {
-                sections.forEach { section ->
+                displaySections.forEach { section ->
                     item(key = "month-${section.month}") {
                         MonthSectionCard(
                             section = section,
                             meId = meId,
                             currency = room.currency,
                             onOpenOperation = onOpenOperation,
+                        )
+                    }
+                }
+                if (displaySections.isEmpty() && isMineOnly) {
+                    item(key = "mine-empty") {
+                        Text(
+                            text = stringResource(R.string.group_mine_only_empty),
+                            fontSize = 15.sp,
+                            color = Splitty.colors.inkSecondary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -542,9 +569,11 @@ private fun LocalOperationRow(
 private fun ActionChips(
     room: RoomDetail,
     meId: Long,
+    isMineOnly: Boolean,
     onSettleUp: () -> Unit,
     onShowBalances: () -> Unit,
     onShowTotals: () -> Unit,
+    onToggleMineOnly: () -> Unit,
 ) {
     val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
     Row(
@@ -560,6 +589,11 @@ private fun ActionChips(
         }
         SoftChip(text = stringResource(R.string.group_chip_balances), onClick = onShowBalances)
         SoftChip(text = stringResource(R.string.group_chip_totals), onClick = onShowTotals)
+        SoftChip(
+            text = stringResource(R.string.group_chip_mine_only),
+            onClick = onToggleMineOnly,
+            isSelected = isMineOnly,
+        )
     }
 }
 

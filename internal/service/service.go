@@ -43,6 +43,10 @@ func NewLoginCodeService(r repository.LoginCodeRepository) *LoginCodeService {
 	return &LoginCodeService{r}
 }
 
+func NewBugReportService(r repository.BugReportRepository) *BugReportService {
+	return &BugReportService{r}
+}
+
 type UserService struct {
 	repository.UserRepository
 }
@@ -75,6 +79,10 @@ type RoomStateService struct {
 
 type LoginCodeService struct {
 	repository.LoginCodeRepository
+}
+
+type BugReportService struct {
+	repository.BugReportRepository
 }
 
 func (rs *RoomService) CreateRoom(ctx context.Context, r *api.Room) (*api.Room, error) {

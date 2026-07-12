@@ -112,6 +112,16 @@ type RecipientShareChange struct {
 	NewSum float64
 }
 
+// BugReport репорт о баге, отправленный командой /report в боте
+type BugReport struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserId      int                `json:"userId" bson:"user_id"`
+	Username    string             `json:"username" bson:"username"`
+	DisplayName string             `json:"displayName" bson:"display_name"`
+	Text        string             `json:"text" bson:"text"`
+	CreateAt    time.Time          `json:"createAt" bson:"create_at"`
+}
+
 // LoginCode одноразовый код входа в приложение, выдаётся командой /login в боте
 type LoginCode struct {
 	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`

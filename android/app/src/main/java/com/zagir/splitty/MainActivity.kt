@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OfflineDataCleaner
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.ui.AppRoot
@@ -21,11 +25,20 @@ class MainActivity : ComponentActivity() {
     /** Eager-создание: чистит офлайн-кеш и outbox при выходе из аккаунта. */
     @Inject lateinit var offlineDataCleaner: OfflineDataCleaner
 
+    /** Настройка темы (system/light/dark) читается из сессии. */
+    @Inject lateinit var sessionStore: SessionStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
-            SplittyTheme {
+            val session by sessionStore.state.collectAsStateWithLifecycle()
+            val darkTheme = when (session?.theme) {
+                SessionStore.THEME_LIGHT -> false
+                SessionStore.THEME_DARK -> true
+                else -> isSystemInDarkTheme()
+            }
+            SplittyTheme(darkTheme = darkTheme) {
                 AppRoot()
             }
         }

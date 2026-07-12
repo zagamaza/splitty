@@ -2,9 +2,9 @@ import Charts
 import SwiftUI
 
 /// «Итоги» — дашборд группы v2 (sheet по чипу «Итоги», лейбл не менять):
-/// плитки 2×2 (всего/за месяц/операций/средний чек), «Динамика по месяцам»,
-/// «Траты по дням» (30 дней), донат «Кто платил», бары «Чья доля»,
-/// diverging «Баланс участников», «По дням недели», топ-5 расходов.
+/// плитки 2×2 (всего/за месяц/операций/средний чек), личные плитки,
+/// «Траты по дням» (30 дней), донат «Кто платил», бары «На кого потрачено»,
+/// diverging «Кто в плюсе, кто в минусе», дни недели, топ-5 расходов.
 /// Все суммы — в валюте комнаты (`statistics.currency`); участники окрашены
 /// фиксированной палитрой `Color.chartCategorical` (по user.id ASC, см.
 /// `MemberPalette`); magnitude-графики — единым `Color.chartAccent`;
@@ -83,9 +83,7 @@ struct GroupTotalsView: View {
         return ScrollView {
             VStack(spacing: 16) {
                 statTiles(stats)
-                if !stats.byMonth.isEmpty {
-                    MonthlySpendingCard(byMonth: stats.byMonth, currency: stats.currency)
-                }
+                myTiles(stats)
                 DailySpendingCard(byDay: stats.byDay, currency: stats.currency)
                 if !slices.isEmpty {
                     PaidDonutCard(
@@ -97,7 +95,7 @@ struct GroupTotalsView: View {
                 }
                 if let shares = MemberBarsCard.prepared(stats.shareByMember) {
                     MemberBarsCard(
-                        title: "Чья доля",
+                        title: "На кого потрачено",
                         bars: shares,
                         currency: stats.currency,
                         palette: palette
@@ -146,6 +144,26 @@ struct GroupTotalsView: View {
         }
     }
 
+    /// Личные плитки: «Я заплатил» (донор операций) и «Моя доля» (по хранимым
+    /// долям получателей) — ответ на «сколько я потратил именно в этой тусе».
+    @ViewBuilder
+    private func myTiles(_ stats: Statistics) -> some View {
+        if let meId = session.me?.id {
+            let paid = stats.paidByMember.first { $0.user.id == meId }?.sum ?? 0
+            let share = stats.shareByMember.first { $0.user.id == meId }?.sum ?? 0
+            if paid > 0 || share > 0 {
+                HStack(spacing: 16) {
+                    statTile(title: "Я заплатил", icon: "person.crop.circle", tint: 4) {
+                        MoneyText(paid, role: .neutral, size: 22, currency: stats.currency)
+                    }
+                    statTile(title: "Потрачено на меня", icon: "chart.pie", tint: 5) {
+                        MoneyText(share, role: .neutral, size: 22, currency: stats.currency)
+                    }
+                }
+            }
+        }
+    }
+
     private func statTile(
         title: String,
         icon: String,
@@ -183,7 +201,7 @@ struct GroupTotalsView: View {
 
     private func topOperationsCard(_ stats: Statistics) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Топ расходов")
+            Text("Самые крупные расходы")
                 .sectionHeaderStyle()
             VStack(spacing: 0) {
                 let top = Array(stats.topOperations.prefix(5))
@@ -274,99 +292,6 @@ private struct SelectionBadge: View {
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .strokeBorder(Color.hairline, lineWidth: 1)
-        }
-    }
-}
-
-// MARK: - «Динамика по месяцам» (BarMark, 6 месяцев)
-
-/// Столбики трат по календарным месяцам (`byMonth` сервера: 6 месяцев включая
-/// текущий, ascending, с нулями). Один оттенок `chartAccent` — это magnitude
-/// одной меры, категориальная раскраска тут неуместна. Скругление 4pt,
-/// hairline-сетка, выбор столбца — аннотация «фев — 1 200 ₽».
-private struct MonthlySpendingCard: View {
-    /// Точка графика: русская подпись месяца («фев») и сумма.
-    struct MonthPoint: Identifiable {
-        let label: String
-        let sum: Int
-        var id: String { label }
-    }
-
-    let points: [MonthPoint]
-    let currency: String
-
-    /// Сырой выбор chartXSelection (категория-месяц под пальцем).
-    @State private var rawSelection: String?
-
-    init(byMonth: [MonthlySum], currency: String) {
-        self.currency = currency
-        points = byMonth.map {
-            MonthPoint(label: DashboardMath.monthLabel($0.month), sum: $0.sum)
-        }
-    }
-
-    private var selectedPoint: MonthPoint? {
-        guard let rawSelection else { return nil }
-        return points.first { $0.label == rawSelection }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Динамика по месяцам")
-                .sectionHeaderStyle()
-            chart
-                .frame(height: 160)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
-    }
-
-    private var chart: some View {
-        Chart {
-            ForEach(points) { point in
-                BarMark(
-                    x: .value("Месяц", point.label),
-                    y: .value("Сумма", point.sum),
-                    width: .ratio(0.55)
-                )
-                .foregroundStyle(Color.chartAccent)
-                .cornerRadius(4)
-            }
-            if let selected = selectedPoint {
-                RuleMark(x: .value("Месяц", selected.label))
-                    .foregroundStyle(Color.inkSecondary.opacity(0.3))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .annotation(
-                        position: .top,
-                        spacing: 6,
-                        overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
-                    ) {
-                        SelectionBadge(label: selected.label, sum: selected.sum, currency: currency)
-                    }
-            }
-        }
-        .chartXSelection(value: $rawSelection)
-        // Порядок категорий — календарный (как в данных), не алфавитный.
-        .chartXScale(domain: points.map(\.label))
-        .chartXAxis {
-            AxisMarks { value in
-                AxisValueLabel(centered: true) {
-                    if let label = value.as(String.self) {
-                        Text(label)
-                            .font(.system(size: 11, design: .rounded))
-                            .foregroundStyle(Color.inkSecondary)
-                    }
-                }
-            }
-        }
-        .chartYAxis {
-            AxisMarks(values: .automatic(desiredCount: 4)) { _ in
-                AxisGridLine()
-                    .foregroundStyle(Color.hairline)
-                AxisValueLabel()
-                    .font(.system(size: 11, design: .rounded))
-                    .foregroundStyle(Color.inkSecondary)
-            }
         }
     }
 }
@@ -691,7 +616,7 @@ private struct MemberNetCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Баланс участников")
+            Text("Кто в плюсе, кто в минусе")
                 .sectionHeaderStyle()
             VStack(spacing: 0) {
                 ForEach(nets) { net in
@@ -767,7 +692,7 @@ private struct WeekdayCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("По дням недели")
+            Text("Траты по дням недели")
                 .sectionHeaderStyle()
             chart
                 .frame(height: 160)

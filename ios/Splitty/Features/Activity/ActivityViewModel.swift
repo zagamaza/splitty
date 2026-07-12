@@ -22,6 +22,8 @@ final class ActivityViewModel {
 
     var state: LoadState = .idle
     var items: [ActivityItem] = []
+    /// Фильтр «Только мои»: операции, где я донор или в получателях.
+    var isMineOnly = false
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
     private(set) var isFromCache = false
     /// Ошибка обновления/подгрузки, когда лента уже показана (для alert).
@@ -47,11 +49,37 @@ final class ActivityViewModel {
         await reload(repo: repo)
     }
 
-    /// Подгружает следующую страницу, когда пользователь долистал до `item`.
-    func loadMoreIfNeeded(repo: DataRepo, current item: ActivityItem) async {
+    /// Строки ленты с учётом фильтра «Только мои».
+    func displayItems(meId: Int?) -> [ActivityItem] {
+        guard isMineOnly, let meId else { return items }
+        return items.filter { $0.operation.involves(meId) }
+    }
+
+    /// После включения фильтра (или подгрузки) отфильтрованных строк может
+    /// оказаться меньше страницы — добираем следующие страницы, максимум
+    /// несколько за раз, чтобы не выкачать всю историю разом.
+    func fillFilteredIfNeeded(repo: DataRepo, meId: Int?) async {
+        guard isMineOnly, let meId else { return }
+        var attempts = 0
+        while hasMore, !isLoadingMore, attempts < 5,
+              displayItems(meId: meId).count < Self.pageSize {
+            attempts += 1
+            await loadNextPage(repo: repo)
+        }
+    }
+
+    /// Подгружает следующую страницу, когда пользователь долистал до `item`
+    /// (позиция считается по ВИДИМОМУ списку — с фильтром «Только мои»
+    /// хвост исходного списка иначе никогда не наступает).
+    func loadMoreIfNeeded(repo: DataRepo, current item: ActivityItem, meId: Int?) async {
         guard case .loaded = state, hasMore, !isLoadingMore else { return }
-        guard let index = items.firstIndex(where: { $0.id == item.id }),
-              index >= items.count - Self.prefetchThreshold else { return }
+        let visible = displayItems(meId: meId)
+        guard let index = visible.firstIndex(where: { $0.id == item.id }),
+              index >= visible.count - Self.prefetchThreshold else { return }
+        await loadNextPage(repo: repo)
+    }
+
+    private func loadNextPage(repo: DataRepo) async {
 
         isLoadingMore = true
         defer { isLoadingMore = false }

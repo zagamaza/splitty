@@ -44,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
+import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.ui.components.GradientAvatar
@@ -61,6 +62,7 @@ import com.zagir.splitty.ui.theme.Splitty
 fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
     val me by viewModel.me.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
+    val theme by viewModel.theme.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
     val pendingOutboxCount by viewModel.pendingOutboxCount.collectAsStateWithLifecycle()
@@ -106,6 +108,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
             SettingsSection(
                 me = me,
                 lang = langDraft,
+                theme = theme,
                 notificationOn = notificationDraft,
                 enabled = !isSaving,
                 onEditName = {
@@ -118,6 +121,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = hiltViewModel()) {
                         viewModel.updateProfile(lang = newLang)
                     }
                 },
+                onThemeSelected = viewModel::onThemeSelected,
                 onNotificationChange = { on ->
                     notificationDraft = on
                     viewModel.updateProfile(notificationOn = on)
@@ -261,10 +265,12 @@ private fun HeaderSection(me: Me) {
 private fun SettingsSection(
     me: Me?,
     lang: String,
+    theme: String,
     notificationOn: Boolean,
     enabled: Boolean,
     onEditName: () -> Unit,
     onLangSelected: (String) -> Unit,
+    onThemeSelected: (String) -> Unit,
     onNotificationChange: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -280,12 +286,79 @@ private fun SettingsSection(
             HairlineDivider()
             LangRow(lang = lang, enabled = enabled, onLangSelected = onLangSelected)
             HairlineDivider()
+            ThemeRow(theme = theme, onThemeSelected = onThemeSelected)
+            HairlineDivider()
             NotificationRow(
                 notificationOn = notificationOn,
                 enabled = enabled,
                 onChange = onNotificationChange,
             )
         }
+    }
+}
+
+/** Строка «Тема»: выпадающее меню системная/светлая/тёмная (DataStore). */
+@Composable
+private fun ThemeRow(theme: String, onThemeSelected: (String) -> Unit) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isMenuExpanded = true }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.profile_theme),
+            fontSize = 16.sp,
+            color = Splitty.colors.ink,
+        )
+        Spacer(Modifier.weight(1f))
+        Box {
+            Text(
+                text = stringResource(
+                    when (theme) {
+                        SessionStore.THEME_LIGHT -> R.string.profile_theme_light
+                        SessionStore.THEME_DARK -> R.string.profile_theme_dark
+                        else -> R.string.profile_theme_system
+                    }
+                ),
+                fontSize = 16.sp,
+                color = Splitty.colors.inkSecondary,
+            )
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.profile_theme_system)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onThemeSelected(SessionStore.THEME_SYSTEM)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.profile_theme_light)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onThemeSelected(SessionStore.THEME_LIGHT)
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.profile_theme_dark)) },
+                    onClick = {
+                        isMenuExpanded = false
+                        onThemeSelected(SessionStore.THEME_DARK)
+                    },
+                )
+            }
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Splitty.colors.inkSecondary.copy(alpha = 0.6f),
+        )
     }
 }
 

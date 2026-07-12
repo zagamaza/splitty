@@ -13,6 +13,19 @@ struct ActivityView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
                 .navigationTitle("Активность")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            model.isMineOnly.toggle()
+                            Task { await model.fillFilteredIfNeeded(repo: session.repo, meId: session.me?.id) }
+                        } label: {
+                            Image(systemName: model.isMineOnly
+                                ? "person.crop.circle.fill"
+                                : "person.crop.circle")
+                        }
+                        .accessibilityLabel("Только мои")
+                    }
+                }
                 // .task на контенте (не на NavigationStack): срабатывает и при
                 // возврате (pop) с экрана группы — лента обновляется.
                 .task {
@@ -66,9 +79,10 @@ struct ActivityView: View {
     /// Лента карточных строк на Color.bg; ленивая подгрузка страниц сохранена
     /// (.task на строке — LazyVStack создаёт строки по мере прокрутки).
     private var feed: some View {
-        ScrollView {
+        let displayItems = model.displayItems(meId: session.me?.id)
+        return ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(model.items) { item in
+                ForEach(displayItems) { item in
                     NavigationLink {
                         GroupDetailView(roomId: item.roomId)
                     } label: {
@@ -76,7 +90,7 @@ struct ActivityView: View {
                     }
                     .buttonStyle(.plain)
                     .task {
-                        await model.loadMoreIfNeeded(repo: session.repo, current: item)
+                        await model.loadMoreIfNeeded(repo: session.repo, current: item, meId: session.me?.id)
                     }
                 }
                 if model.isLoadingMore {
@@ -95,11 +109,15 @@ struct ActivityView: View {
         // она выступает над таб-баром и перекрывала бы последнюю строку.
         .contentMargins(.bottom, 40, for: .scrollContent)
         .overlay {
-            if model.items.isEmpty {
+            if displayItems.isEmpty {
                 ContentUnavailableView(
-                    "Пока нет активности",
+                    model.isMineOnly ? "Нет операций с вами" : "Пока нет активности",
                     systemImage: "clock",
-                    description: Text("Здесь появятся расходы и платежи ваших групп")
+                    description: Text(
+                        model.isMineOnly
+                            ? "Операции, где вы платили или участвовали, появятся здесь"
+                            : "Здесь появятся расходы и платежи ваших групп"
+                    )
                 )
             }
         }

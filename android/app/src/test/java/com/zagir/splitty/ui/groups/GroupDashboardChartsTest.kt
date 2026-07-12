@@ -112,38 +112,8 @@ class GroupDashboardChartsTest {
 
     // MARK: Динамика по месяцам
 
-    @Test
-    fun `lastSixMonths returns exactly six ascending months ending current`() {
-        val current = YearMonth.of(2026, 7)
-        val points = lastSixMonths(
-            listOf(
-                MonthlySum("2026-02", 0),
-                MonthlySum("2026-05", 500),
-                MonthlySum("2026-07", 9400),
-            ),
-            currentMonth = current,
-        )
-        assertEquals(6, points.size)
-        assertEquals((5 downTo 0).map { current.minusMonths(it.toLong()) }, points.map { it.month })
-        assertEquals(listOf(0, 0, 0, 500, 0, 9400), points.map { it.sum })
-    }
-
-    @Test
-    fun `lastSixMonths tolerates empty invalid and out-of-window entries`() {
-        val current = YearMonth.of(2026, 7)
-        assertEquals(List(6) { 0 }, lastSixMonths(emptyList(), current).map { it.sum })
-        val points = lastSixMonths(
-            listOf(
-                MonthlySum("мусор", 100), // нераспознанное — пропускается
-                MonthlySum("2025-01", 100), // вне окна 6 месяцев — игнорируется
-                MonthlySum("2026-06", 10),
-                MonthlySum("2026-06", 5), // дубль месяца — складывается
-            ),
-            currentMonth = current,
-        )
-        assertEquals(listOf(0, 0, 0, 0, 15, 0), points.map { it.sum })
-    }
-
+    
+    
     // MARK: Донат «Кто платил»
 
     @Test
