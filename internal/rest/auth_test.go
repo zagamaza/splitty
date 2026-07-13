@@ -231,3 +231,25 @@ func TestAuthDevEnabled(t *testing.T) {
 		t.Errorf("unexpected auth response: %+v", resp)
 	}
 }
+
+
+// Многоразовый код ревьюеров App Store: логинит в демо-аккаунт, не гаснет
+// после использования; при пустом конфиге — выключен.
+func TestAuthCodeReviewLogin(t *testing.T) {
+	userRepo := newFakeUserRepo(testUser1)
+	s := newTestServer(Config{ReviewLoginCode: "APPLEREVIEW", ReviewUserId: testUser1.ID}, userRepo, newFakeRoomRepo())
+
+	for i := 0; i < 2; i++ { // многоразовость
+		rec := doRequest(t, s, "POST", "/api/v1/auth/code", "", `{"code":"applereview"}`)
+		if rec.Code != 200 {
+			t.Fatalf("попытка %d: status = %d, body %s", i, rec.Code, rec.Body.String())
+		}
+	}
+
+	// без конфига тот же код невалиден
+	s2 := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	rec := doRequest(t, s2, "POST", "/api/v1/auth/code", "", `{"code":"applereview"}`)
+	if rec.Code != 401 {
+		t.Fatalf("выключенный механизм должен давать 401, got %d", rec.Code)
+	}
+}

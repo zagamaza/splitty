@@ -161,6 +161,18 @@ type codeAuthRequest struct {
 	Code string `json:"code"`
 }
 
+// respondWithToken выпускает JWT для пользователя и пишет стандартный
+// auth-ответ (общий хвост всех способов входа).
+func (s *Server) respondWithToken(w http.ResponseWriter, user *api.User) {
+	token, err := s.issueToken(user.ID)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot issue token")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось выпустить токен")
+		return
+	}
+	writeJSON(w, http.StatusOK, authResponseDto{Token: token, User: toMeDto(user)})
+}
+
 // handleAuthCode POST /api/v1/auth/code — вход по одноразовому коду,
 // выданному командой /login в личном чате телеграм-бота.
 // Код регистронезависим; проверка и пометка used атомарны (FindOneAndUpdate),
@@ -174,6 +186,19 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.TrimSpace(req.Code))
 	if code == "" {
 		writeError(w, http.StatusBadRequest, "validation", "поле code обязательно")
+		return
+	}
+
+	// Многоразовый код ревьюеров App Store: логинит в выделенный демо-аккаунт
+	// без Telegram и без пометки used (ревью может входить многократно)
+	if s.cfg.ReviewLoginCode != "" && code == strings.ToUpper(s.cfg.ReviewLoginCode) && s.cfg.ReviewUserId != 0 {
+		reviewer, err := s.userRepo.FindById(r.Context(), s.cfg.ReviewUserId)
+		if err != nil {
+			log.Error().Err(err).Msg("review user not found")
+			writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
+			return
+		}
+		s.respondWithToken(w, reviewer)
 		return
 	}
 

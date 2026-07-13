@@ -33,6 +33,12 @@ type Config struct {
 	JwtSecret string // секрет подписи JWT (HS256)
 	DevAuth   bool   // включает POST /auth/dev
 	TgToken   string // токен бота: нужен для проверки Telegram Login и проксирования файлов
+	// ReviewLoginCode/ReviewUserId — многоразовый код входа для ревьюеров
+	// App Store (Beta App Review): обычный вход требует Telegram, ревьюерам
+	// он недоступен. Код секретный, логинит только в выделенный демо-аккаунт;
+	// пустой код — механизм выключен
+	ReviewLoginCode string
+	ReviewUserId    int
 }
 
 // Server REST API сервер со всеми зависимостями.

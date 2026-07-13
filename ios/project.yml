@@ -29,7 +29,7 @@ targets:
         CFBundleLocalizations: [ru]
         CFBundleDisplayName: Splitty
         CFBundleShortVersionString: "1.2"
-        CFBundleVersion: "5"
+        CFBundleVersion: "6"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         NSAppTransportSecurity:
