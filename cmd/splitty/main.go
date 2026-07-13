@@ -113,6 +113,8 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		JwtSecret: jwtSecret,
 		DevAuth:   cfg.ApiDevAuth,
 		TgToken:   cfg.TgToken,
+		ReviewLoginCode: cfg.ReviewLoginCode,
+		ReviewUserId:    cfg.ReviewUserId,
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService)
 	return server, &restNotifierDeps{operationSrv: operationService, buttonSrv: buttonService}, cleanup, nil

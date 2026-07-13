@@ -23,6 +23,9 @@ type config struct {
 	// случайный эфемерный секрет (см. resolveJwtSecret в main.go)
 	ApiJwtSecret string `env:"API_JWT_SECRET" envDefault:""`
 	ApiDevAuth   bool   `env:"API_DEV_AUTH" envDefault:"false"`
+	// Многоразовый код входа для ревьюеров App Store + id демо-аккаунта
+	ReviewLoginCode string `env:"REVIEW_LOGIN_CODE" envDefault:""`
+	ReviewUserId    int    `env:"REVIEW_USER_ID" envDefault:"0"`
 }
 
 func initConfig() (*config, error) {
