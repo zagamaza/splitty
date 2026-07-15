@@ -17,6 +17,7 @@ const (
 	maxAudioBytes = 3 << 20  // 3 МБ
 	maxImageBytes = 8 << 20  // 8 МБ
 	maxDraftBytes = 64 << 10 // 64 КБ
+	maxTextBytes  = 8 << 10  // 8 КБ: реальная надиктовка короткая, лишнее — не гнать в Gemini
 )
 
 var (
@@ -135,9 +136,14 @@ func parseMultipartInput(r *http.Request) (ai.ParseInput, *httpError) {
 		return in, nil
 	}
 
-	if text := strings.TrimSpace(r.FormValue("text")); text != "" {
-		in.Media, in.Text = ai.MediaText, text
-		return in, nil
+	if raw := r.FormValue("text"); raw != "" {
+		if len(raw) > maxTextBytes {
+			return ai.ParseInput{}, &httpError{http.StatusRequestEntityTooLarge, "too_large", "текст слишком длинный"}
+		}
+		if text := strings.TrimSpace(raw); text != "" {
+			in.Media, in.Text = ai.MediaText, text
+			return in, nil
+		}
 	}
 
 	return ai.ParseInput{}, &httpError{http.StatusBadRequest, "validation", "нужно передать audio, image или text"}

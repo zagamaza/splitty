@@ -44,6 +44,10 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 		if w.weight < 0 {
 			return nil, ErrOverflow
 		}
+		// аддитивное переполнение суммы весов
+		if totalW > math.MaxInt-w.weight {
+			return nil, ErrOverflow
+		}
 		totalW += w.weight
 	}
 	if totalW <= 0 {
@@ -86,6 +90,9 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 // фиксированные Amount, остаток делится по Weight (splitByWeight). Возвращает
 // карту userId→сумма; сумма всегда равна price.
 func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
+	if price < 0 {
+		return nil, ErrOverflow
+	}
 	out := make(map[int]int, len(shares))
 	fixed := 0
 	var weighted []weightShare
@@ -93,6 +100,10 @@ func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
 		if s.Amount != nil {
 			if *s.Amount < 0 {
 				return nil, ErrNegativeAmount
+			}
+			// аддитивное переполнение суммы фиксов
+			if fixed > math.MaxInt-*s.Amount {
+				return nil, ErrOverflow
 			}
 			out[s.UserId] += *s.Amount
 			fixed += *s.Amount
@@ -118,6 +129,15 @@ func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
 	}
 	for id, v := range d {
 		out[id] += v
+	}
+	// страховка контракта: сумма долей обязана равняться цене (ловит любой
+	// незамеченный дефект деления до того, как суммы уйдут в операцию)
+	got := 0
+	for _, v := range out {
+		got += v
+	}
+	if got != price {
+		return nil, ErrInvariant
 	}
 	return out, nil
 }

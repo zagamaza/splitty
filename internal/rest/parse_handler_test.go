@@ -190,6 +190,24 @@ func TestParse_AudioAacInlined(t *testing.T) {
 	}
 }
 
+func TestParse_HugeTextRejected(t *testing.T) {
+	room := newTestRoom()
+	fp := &fakeParser{result: okDraft()}
+	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), fp, nil)
+	huge := make([]byte, maxTextBytes+1)
+	for i := range huge {
+		huge[i] = 'a'
+	}
+	ct, body := multipartBody(t, map[string]string{"text": string(huge)}, nil)
+	rec := doParse(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), ct, body)
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Fatalf("status = %d, want 413 (текст слишком длинный)", rec.Code)
+	}
+	if fp.called {
+		t.Fatal("parser не должен вызываться на слишком длинном тексте")
+	}
+}
+
 func TestParse_NoInput400(t *testing.T) {
 	room := newTestRoom()
 	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), &fakeParser{result: okDraft()}, nil)

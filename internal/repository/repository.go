@@ -507,8 +507,15 @@ func (r MongoUserRepository) FindByIds(ctx context.Context, ids []int) ([]api.Us
 func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias string) error {
 	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
 	update := bson.D{{Key: "$addToSet", Value: bson.M{"aliases": alias}}}
-	_, err := r.col.UpdateOne(ctx, f, update)
-	return err
+	res, err := r.col.UpdateOne(ctx, f, update)
+	if err != nil {
+		return err
+	}
+	// целевого пользователя нет — не молчаливый no-op, а явная ошибка (404 в хендлере)
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.User, error) {

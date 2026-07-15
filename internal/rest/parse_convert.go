@@ -9,6 +9,7 @@ import (
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type aliasRequest struct {
@@ -60,6 +61,10 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.userRepo.AddAlias(ctx, targetId, alias); err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeError(w, http.StatusNotFound, "not_found", "пользователь не найден")
+			return
+		}
 		log.Error().Err(err).Msg("cannot add alias")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить прозвище")
 		return
@@ -160,6 +165,12 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 	shares, total, err := api.DeriveShares(apiItems)
 	if err != nil {
 		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "не удалось разложить позиции: " + err.Error()}
+	}
+	// операция должна иметь положительный итог и хотя бы одного получателя:
+	// иначе (например, единственная позиция с price:0 и пустыми shares) сохранился
+	// бы активный расход с sum=0 без долей, который normalizedOperation прячет как драфт
+	if total < 1 || len(shares) == 0 {
+		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "расход должен иметь положительную сумму и хотя бы одного участника"}
 	}
 
 	// userId → embedded User через участников комнаты (стабильный порядок по позициям)

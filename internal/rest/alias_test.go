@@ -62,6 +62,23 @@ func TestAddAlias_Idempotent(t *testing.T) {
 	}
 }
 
+func TestAddAlias_TargetNotFound404(t *testing.T) {
+	// целевой участник есть в комнате (embedded), но документа user нет → 404, не 204
+	room := &api.Room{
+		ID:         primitive.NewObjectID(),
+		Name:       "room",
+		Members:    &[]api.User{testUser1, {ID: 999, DisplayName: "Призрак"}},
+		Operations: &[]api.Operation{},
+	}
+	ur := newFakeUserRepo(testUser1) // 999 отсутствует в коллекции user
+	s := newTestServer(Config{}, ur, newFakeRoomRepo(room))
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/users/999/aliases",
+		mustToken(t, s, testUser1.ID), `{"alias":"фантом"}`)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 (целевого пользователя нет)", rec.Code)
+	}
+}
+
 func TestAddAlias_EmptyRejected(t *testing.T) {
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(sharedRoom()))
 	rec := doRequest(t, s, http.MethodPost, "/api/v1/users/2/aliases",

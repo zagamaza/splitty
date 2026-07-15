@@ -131,6 +131,18 @@ func TestCreateItemized_HugeWeightRejectedFast(t *testing.T) {
 	}
 }
 
+func TestCreateItemized_ZeroSumRejected(t *testing.T) {
+	// позиция price:0 с пустыми shares → total 0, нет получателей: не сохраняем как активную
+	room := newItemizedRoom()
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	body := `{"description":"пусто","donorId":1,"items":[{"name":"free","price":0,"kind":"item","shares":[]}]}`
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (нулевой расход без получателей)", rec.Code)
+	}
+}
+
 func TestCreatePlainStillWorks(t *testing.T) {
 	// обычная операция без items — прежнее поведение, Items не появляется
 	room := newItemizedRoom()

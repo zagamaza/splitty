@@ -1,10 +1,13 @@
 package api
 
 import (
+	"math"
 	"reflect"
 	"testing"
 	"time"
 )
+
+const maxInt = math.MaxInt
 
 func amt(v int) *int { return &v }
 
@@ -116,6 +119,22 @@ func TestSplitItem(t *testing.T) {
 				t.Fatalf("сумма долей = %d, want %d (инвариант)", s, tc.price)
 			}
 		})
+	}
+}
+
+func TestSplitItem_WeightSumOverflow(t *testing.T) {
+	// аддитивное переполнение суммы весов не должно давать пустой сплит с nil-ошибкой
+	_, err := SplitItem(100, []ItemShare{{UserId: 1, Weight: maxInt}, {UserId: 2, Weight: 1}})
+	if err == nil {
+		t.Fatal("ожидалась ошибка на переполнении суммы весов")
+	}
+}
+
+func TestSplitItem_FixedSumOverflow(t *testing.T) {
+	big := maxInt
+	_, err := SplitItem(maxInt, []ItemShare{{UserId: 1, Amount: &big}, {UserId: 2, Amount: &big}})
+	if err == nil {
+		t.Fatal("ожидалась ошибка на переполнении суммы фиксов")
 	}
 }
 
