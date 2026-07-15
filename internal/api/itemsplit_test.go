@@ -3,6 +3,7 @@ package api
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func amt(v int) *int { return &v }
@@ -115,6 +116,47 @@ func TestSplitItem(t *testing.T) {
 				t.Fatalf("сумма долей = %d, want %d (инвариант)", s, tc.price)
 			}
 		})
+	}
+}
+
+func TestSplitItem_OverflowReturnsErrorFast(t *testing.T) {
+	// Огромные price/weight переполняют amount*weight в int64: наивная раздача
+	// остатка ушла бы в почти бесконечный цикл (DoS). Ждём быструю ошибку.
+	done := make(chan error, 1)
+	go func() {
+		_, err := SplitItem(6917529027641081856, []ItemShare{
+			{UserId: 1, Weight: 1_000_000},
+			{UserId: 2, Weight: 1_000_000},
+		})
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("ожидалась ошибка на overflow-входе, получен успех")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("SplitItem завис на overflow-входе (нет защиты от переполнения)")
+	}
+}
+
+func TestDeriveShares_OverflowReturnsErrorFast(t *testing.T) {
+	items := []OperationItem{{
+		Name: "overflow", Price: 6917529027641081856, Qty: 1, Kind: ItemKindItem,
+		Shares: []ItemShare{{UserId: 1, Weight: 1_000_000}, {UserId: 2, Weight: 1_000_000}},
+	}}
+	done := make(chan error, 1)
+	go func() {
+		_, _, err := DeriveShares(items)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("ожидалась ошибка на overflow-входе DeriveShares")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("DeriveShares завис на overflow-входе")
 	}
 }
 

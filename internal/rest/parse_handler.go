@@ -99,6 +99,13 @@ func parseMultipartInput(r *http.Request) (ai.ParseInput, *httpError) {
 	if err := r.ParseMultipartForm(maxAudioBytes + maxImageBytes); err != nil {
 		return ai.ParseInput{}, &httpError{http.StatusRequestEntityTooLarge, "too_large", "тело запроса слишком большое"}
 	}
+	// крупные части спиллятся во временные файлы — чистим их за собой.
+	// Данные читаются в память (io.ReadAll) до возврата, поэтому удалять безопасно.
+	defer func() {
+		if r.MultipartForm != nil {
+			_ = r.MultipartForm.RemoveAll()
+		}
+	}()
 
 	var in ai.ParseInput
 

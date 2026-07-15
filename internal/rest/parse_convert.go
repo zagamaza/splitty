@@ -15,6 +15,17 @@ type aliasRequest struct {
 	Alias string `json:"alias"`
 }
 
+// Пределы величин itemized-операции. Щедрые для реальных денег, но на порядки
+// ниже границы переполнения int64 при взвешенном делении (amount*weight),
+// поэтому DeriveShares не может уйти в зацикливание на раздаче остатка.
+const (
+	maxItemPrice   = 100_000_000   // цена одной позиции
+	maxShareWeight = 100_000       // вес доли участника
+	maxShareAmount = 100_000_000   // фиксированная сумма доли
+	maxItemsTotal  = 1_000_000_000 // суммарная цена всех позиций
+	maxAliasRunes  = 64            // максимальная длина прозвища
+)
+
 // handleAddAlias POST /api/v1/users/{userId}/aliases
 // Добавляет прозвище участнику, чтобы AI сматчил его в следующий раз. Писать
 // алиас в чужой профиль можно только тому, с кем есть общая комната.
@@ -36,6 +47,10 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 	alias := strings.ToLower(strings.TrimSpace(req.Alias))
 	if alias == "" {
 		writeError(w, http.StatusBadRequest, "validation", "прозвище не может быть пустым")
+		return
+	}
+	if len([]rune(alias)) > maxAliasRunes {
+		writeError(w, http.StatusBadRequest, "validation", "прозвище слишком длинное")
 		return
 	}
 
@@ -118,6 +133,26 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 		for _, s := range it.Shares {
 			if findMember(room, s.UserId) == nil {
 				return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "все участники позиций должны быть в комнате"}
+			}
+		}
+	}
+
+	// границы величин — защита от переполнения при взвешенном делении (DoS)
+	priceSum := 0
+	for _, it := range apiItems {
+		if it.Price < 0 || it.Price > maxItemPrice {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "цена позиции вне допустимого диапазона"}
+		}
+		priceSum += it.Price
+		if priceSum > maxItemsTotal {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "суммарная стоимость позиций слишком велика"}
+		}
+		for _, sh := range it.Shares {
+			if sh.Weight < 0 || sh.Weight > maxShareWeight {
+				return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "вес доли вне допустимого диапазона"}
+			}
+			if sh.Amount != nil && (*sh.Amount < 0 || *sh.Amount > maxShareAmount) {
+				return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "фиксированная сумма доли вне допустимого диапазона"}
 			}
 		}
 	}

@@ -11,9 +11,11 @@ import (
 
 // fakeDoer подставной транспорт: отдаёт заранее заданные ответы по очереди.
 type fakeDoer struct {
-	responses []fakeResp
-	calls     int
-	lastBody  string
+	responses  []fakeResp
+	calls      int
+	lastBody   string
+	lastURL    string
+	lastAPIKey string
 }
 
 type fakeResp struct {
@@ -27,6 +29,8 @@ func (f *fakeDoer) Do(req *http.Request) (*http.Response, error) {
 		raw, _ := io.ReadAll(req.Body)
 		f.lastBody = string(raw)
 	}
+	f.lastURL = req.URL.String()
+	f.lastAPIKey = req.Header.Get("x-goog-api-key")
 	i := f.calls
 	f.calls++
 	if i >= len(f.responses) {
@@ -68,6 +72,22 @@ func TestGemini_Success(t *testing.T) {
 	}
 	if f.calls != 1 {
 		t.Fatalf("ожидался 1 вызов, было %d", f.calls)
+	}
+}
+
+func TestGemini_APIKeyInHeaderNotURL(t *testing.T) {
+	draft := `{"draft":{"description":"x","sum":0,"items":[]}}`
+	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
+	c := newTestClient(f)
+
+	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err != nil {
+		t.Fatalf("ошибка: %v", err)
+	}
+	if f.lastAPIKey != "test-key" {
+		t.Fatalf("ключ не передан заголовком x-goog-api-key: %q", f.lastAPIKey)
+	}
+	if strings.Contains(f.lastURL, "test-key") || strings.Contains(f.lastURL, "key=") {
+		t.Fatalf("ключ утёк в URL: %s", f.lastURL)
 	}
 }
 

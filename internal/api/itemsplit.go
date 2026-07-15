@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"math"
 	"sort"
 )
 
@@ -17,6 +18,9 @@ var (
 	ErrSurchargePrice = errors.New("надбавка требует положительной цены")
 	// ErrInvariant сумма выведенных долей не сошлась с общей суммой (баг расчёта)
 	ErrInvariant = errors.New("сумма долей не равна итогу")
+	// ErrOverflow входные величины приводят к переполнению при взвешенном
+	// делении (amount*weight выходит за пределы int64) — защита от зацикливания
+	ErrOverflow = errors.New("слишком большие величины позиции")
 )
 
 // weightShare участник и его вес для целочисленного взвешенного деления.
@@ -29,24 +33,40 @@ type weightShare struct {
 // весам. Базовая доля — floor(amount*weight/totalWeight); остаток от округления
 // раздаётся по одному тем, у кого базовая доля больше (при равенстве —
 // меньший userId). Сумма долей всегда равна amount. Требует totalWeight > 0.
-func splitByWeight(amount int, ws []weightShare) map[int]int {
+func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 	out := make(map[int]int, len(ws))
+	// защита от переполнения/зацикливания: отрицательные величины недопустимы
+	if amount < 0 {
+		return nil, ErrOverflow
+	}
 	totalW := 0
 	for _, w := range ws {
+		if w.weight < 0 {
+			return nil, ErrOverflow
+		}
 		totalW += w.weight
 	}
 	if totalW <= 0 {
-		return out
+		return out, nil
 	}
 	given := 0
 	for _, w := range ws {
+		// amount*w.weight не должно переполнить int64
+		if w.weight != 0 && amount > math.MaxInt/w.weight {
+			return nil, ErrOverflow
+		}
 		v := amount * w.weight / totalW
 		out[w.id] = v
 		given += v
 	}
 	rem := amount - given
-	if rem <= 0 {
-		return out
+	// при корректных входах остаток дробей строго меньше числа участников;
+	// иначе это признак переполнения/бага — не раздаём его в цикле, а сигналим
+	if rem < 0 || rem > len(ws) {
+		return nil, ErrOverflow
+	}
+	if rem == 0 {
+		return out, nil
 	}
 	order := make([]weightShare, len(ws))
 	copy(order, ws)
@@ -59,7 +79,7 @@ func splitByWeight(amount int, ws []weightShare) map[int]int {
 	for i := 0; i < rem; i++ {
 		out[order[i%len(order)].id]++
 	}
-	return out
+	return out, nil
 }
 
 // SplitItem делит цену позиции между её участниками: сначала снимаются
@@ -92,7 +112,11 @@ func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
 		}
 		return out, nil
 	}
-	for id, v := range splitByWeight(rem, weighted) {
+	d, err := splitByWeight(rem, weighted)
+	if err != nil {
+		return nil, err
+	}
+	for id, v := range d {
 		out[id] += v
 	}
 	return out, nil
@@ -122,7 +146,10 @@ func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int {
 		}
 		ws = append(ws, weightShare{id: id, weight: w})
 	}
-	return splitByWeight(price, ws)
+	// величины надбавки/базы уже ограничены валидацией; при переполнении
+	// вернётся nil, и инвариант в DeriveShares поймает несходящуюся сумму
+	res, _ := splitByWeight(price, ws)
+	return res
 }
 
 // DeriveShares сворачивает позиции чека в плоскую карту userId→сумма и общий

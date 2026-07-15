@@ -126,12 +126,15 @@ func (c *GeminiClient) buildRequest(in ParseInput) ([]byte, error) {
 }
 
 func (c *GeminiClient) call(ctx context.Context, body []byte) (geminiResponse, error) {
-	url := fmt.Sprintf("%s/models/%s:generateContent?key=%s", c.baseURL, c.model, c.apiKey)
+	// ключ передаём заголовком x-goog-api-key, а не query-параметром, чтобы он
+	// не утёк в логи вместе с URL при сетевых/HTTP-ошибках
+	url := fmt.Sprintf("%s/models/%s:generateContent", c.baseURL, c.model)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return geminiResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", c.apiKey)
 
 	resp, err := c.http.Do(httpReq)
 	if err != nil {

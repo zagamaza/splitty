@@ -2,7 +2,10 @@ package rest
 
 import (
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -79,6 +82,52 @@ func TestCreateItemized_ForeignUserInShareRejected(t *testing.T) {
 		mustToken(t, s, testUser1.ID), body)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400 (чужой userId)", rec.Code)
+	}
+}
+
+func TestCreateItemized_HugePriceRejectedFast(t *testing.T) {
+	// price близок к границе int64: без ограничений величин DeriveShares ушёл бы
+	// в почти бесконечную раздачу остатка. Ждём быстрый 400, а не зависание.
+	room := newItemizedRoom()
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	token := mustToken(t, s, testUser1.ID)
+	body := `{
+	  "description":"Ужин","donorId":1,"sum":0,
+	  "items":[{"name":"Атака","price":6917529027641081856,"kind":"item",
+	    "shares":[{"userId":1,"weight":1},{"userId":2,"weight":1}]}]
+	}`
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations", strings.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		s.Handler().ServeHTTP(rec, req)
+		close(done)
+	}()
+	select {
+	case <-done:
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status = %d, want 400 (величина вне диапазона), body %s", rec.Code, rec.Body.String())
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("создание itemized-операции зависло на огромной цене")
+	}
+}
+
+func TestCreateItemized_HugeWeightRejectedFast(t *testing.T) {
+	room := newItemizedRoom()
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	body := `{
+	  "description":"Ужин","donorId":1,"sum":0,
+	  "items":[{"name":"Атака","price":300,"kind":"item",
+	    "shares":[{"userId":1,"weight":1000000000},{"userId":2,"weight":1}]}]
+	}`
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (вес вне диапазона), body %s", rec.Code, rec.Body.String())
 	}
 }
 
