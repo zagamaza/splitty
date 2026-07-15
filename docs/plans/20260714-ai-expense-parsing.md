@@ -204,16 +204,15 @@ type parseResponse struct {
 ### Task 5: Parse-DTO и санитайз ответа модели (TDD)
 
 **Files:**
-- Modify: `internal/rest/dto.go` (`parseDraft`, `draftItem` c полем `Unknown []string`, `parseResponse`)
 - Create: `internal/rest/parse_sanitize.go`
 - Create: `internal/rest/parse_sanitize_test.go`
 
-> DTO черновика создаётся ЗДЕСЬ (не в Task 6), иначе `sanitizeDraft` не скомпилируется — он использует эти типы.
+> Транспортный черновик — переиспользованный `ai.Draft`/`ai.DraftItem`/`ai.ItemShare` (у `DraftItem` уже есть `Unknown []string`); отдельный `parseDraft` в `dto.go` НЕ заводился, чтобы не троить структуру. `sanitizeDraft` работает над `ai.Draft`.
 
-- [ ] завести `parseDraft`, `draftItem` (с `Unknown []string`), `parseResponse` в `dto.go`
-- [ ] **тесты вперёд:** userId не из комнаты → выкинуть/в Unknown; отрицательная/нулевая цена; >N позиций (лимит); >M shares; Sum≠Σ позиций → пересчитать Sum из позиций; сборы без Split → default; surcharge с Percent но без Price → отклонить
-- [ ] реализовать `sanitizeDraft(draft, members) parseDraft`: userId только из участников, цены ≥0, лимиты числа позиций/долей, нормализация Kind/Split
-- [ ] run tests — должны пройти
+- [x] транспортный черновик — `ai.Draft` (создан в Task 3); отдельный `parseDraft` не нужен
+- [x] **тесты вперёд:** userId не из комнаты → доля убрана; отрицательная/нулевая цена → дроп; >N позиций (лимит); Sum≠Σ → пересчёт из позиций; сборы без Split → default; surcharge с нулевой Price → дроп; чужой donorId → nil; позиция с Unknown сохраняется
+- [x] реализовать `sanitizeDraft(d ai.Draft, members []api.User) ai.Draft` + хелпер `hasUnknown` (для блокировки сохранения в Task 7/13)
+- [x] run tests — должны пройти
 
 ### Task 6: Parse-эндпоинт с защитами
 
