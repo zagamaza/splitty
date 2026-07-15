@@ -358,10 +358,10 @@ type parseResponse struct {
 
 ### Task 15: [Final] Update documentation
 
-- [ ] обновить `docs/API.md`: эндпоинт `/parse`, поле `items` в create/update, `/users/{id}/aliases`
-- [ ] обновить `ios/docs/UX_SPEC.md`: AI-композер, чек-карточка, шит позиции
-- [ ] обновить `CLAUDE.md`/`AGENTS.md` если появились новые паттерны (пакет `internal/ai`, rate-limit)
-- [ ] переместить план в `docs/plans/completed/`
+- [x] обновить `docs/API.md`: эндпоинт `/parse`, поле `items` в create/update, `/users/{id}/aliases`
+- [x] обновить `ios/docs/UX_SPEC.md`: AI-композер, чек-карточка, шит позиции
+- [x] обновить `CLAUDE.md`/`AGENTS.md` если появились новые паттерны (пакет `internal/ai`, rate-limit) — в корне нет `CLAUDE.md`/`AGENTS.md`, заметки о паттернах (`internal/ai`, `service.RateLimiter`+`ai_usage` TTL, `Operation.Items` как источник правды) добавлены в `README.md` (ближайший подходящий существующий документ)
+- [x] переместить план в `docs/plans/completed/` (перенос выполняет оркестратор на финальном шаге exec)
 
 ## Post-Completion
 
