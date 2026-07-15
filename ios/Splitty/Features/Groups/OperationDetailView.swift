@@ -47,6 +47,9 @@ struct OperationDetailView: View {
             VStack(alignment: .leading, spacing: 16) {
                 headerCard
                 participantsSection
+                if !operation.itemList.isEmpty {
+                    itemsSection(operation.itemList)
+                }
                 if let files = operation.files, !files.isEmpty {
                     filesSection(files)
                 }
@@ -220,6 +223,98 @@ struct OperationDetailView: View {
             return .negative
         }
         return .neutral
+    }
+
+    /// Позиции чека (itemized-операция, AI-распознавание) — только чтение:
+    /// название, количество, участники и цена; подвал Подытог→Сборы→Итого.
+    private func itemsSection(_ items: [OperationItem]) -> some View {
+        let subtotal = items.filter { !$0.isSurcharge }.reduce(0) { $0 + $1.price }
+        let surcharges = items.filter { $0.isSurcharge }.reduce(0) { $0 + $1.price }
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Позиции")
+                .sectionHeaderStyle()
+                .padding(.leading, 4)
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    if index > 0 {
+                        Rectangle()
+                            .fill(Color.hairline)
+                            .frame(height: 1)
+                            .padding(.leading, 16)
+                    }
+                    itemRow(item)
+                }
+                Rectangle()
+                    .fill(Color.hairline)
+                    .frame(height: 1)
+                itemFooterLine("Подытог", subtotal, bold: false)
+                if surcharges > 0 {
+                    itemFooterLine("Сборы", surcharges, bold: false)
+                }
+                itemFooterLine("Итого", subtotal + surcharges, bold: true)
+            }
+            .surfaceCard(padding: 0)
+        }
+    }
+
+    private func itemRow(_ item: OperationItem) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(item.name.isEmpty ? "Позиция" : item.name)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.ink)
+                    if item.qty > 1 {
+                        Text("×\(item.qty)")
+                            .font(.caption.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.inkSecondary)
+                    }
+                }
+                Text(itemParticipants(item))
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            MoneyText(item.price, role: .neutral, size: 15, currency: currency)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private func itemFooterLine(_ title: String, _ amount: Int, bold: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: bold ? 15 : 13, weight: bold ? .semibold : .medium, design: .rounded))
+                .foregroundStyle(bold ? Color.ink : Color.inkSecondary)
+            Spacer()
+            MoneyText(amount, role: .neutral, size: bold ? 17 : 13, currency: currency)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+    }
+
+    /// Подпись участников позиции: «Сбор 10% · пропорционально» у надбавки,
+    /// иначе имена участников через запятую.
+    private func itemParticipants(_ item: OperationItem) -> String {
+        if item.isSurcharge {
+            let rule = item.split == OperationItem.splitEqually ? "поровну" : "пропорционально"
+            if let pct = item.percent {
+                return "Сбор \(pct)% · \(rule)"
+            }
+            return "Сбор · \(rule)"
+        }
+        let names = item.shareList.map { share -> String in
+            if let user = operation.recipients.first(where: { $0.user.id == share.userId })?.user {
+                return user.id == currentUserId ? "Вы" : user.displayName
+            }
+            if operation.donor.id == share.userId {
+                return operation.donor.id == currentUserId ? "Вы" : operation.donor.displayName
+            }
+            return "#\(share.userId)"
+        }
+        return names.isEmpty ? "—" : names.joined(separator: ", ")
     }
 
     private func filesSection(_ files: [OperationFile]) -> some View {

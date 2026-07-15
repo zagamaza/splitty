@@ -331,16 +331,16 @@ type parseResponse struct {
 - Modify: `ios/Splitty/Features/Groups/OperationDetailView.swift` (показ позиций в детали)
 - Create: `ios/SplittyTests/AddExpenseAIFlowTests.swift`
 
-- [ ] композер (крупный микрофон + «Сфотографировать чек») — только на пустой форме; после заполнения микрофон переезжает в нижнюю панель рядом с «Сохранить»
-- [ ] **правка существующей itemized-операции:** `OperationDetailView` → «Изменить» открывает `AddExpenseView(editOperation:)` с уже загруженными `items` (Task 11); чек показывается в редакторе, сохранение уходит PUT **с** items (не плоским путём). Проверить, что редактирование чека не сбрасывает позиции
-- [ ] карточка-чек: перфорация, пунктирные разделители, моноширинные цифры, подвал Подытог→Сборы→Итого; бейдж ×N (неравные доли), замочек (фикс-сумма)
-- [ ] шит позиции: переключатель «Долями / Суммами» (один контрол на строку), галочка участия по тапу на имя, пустое поле суммы = «авто»
-- [ ] чипы «Поровну на всех / По позициям» под позициями (переопределение; сбрасывает Items); ручная правка суммы сбрасывает Items
-- [ ] голосовая правка: повторный `/parse` с текущим draft; вызов parse из ViewModel, спиннер, ошибка не теряет draft
-- [ ] нераспознанное имя (Unknown) — красный чип, тап → выбор участника → `POST aliases` + локальное применение
-- [ ] **`canSave` = false, пока в любой позиции есть непустой `Unknown`** (нельзя сохранить черновик с нераспознанными именами; сервер тоже вернёт 400 — Task 7); подсказка «выберите, кто такой …»
-- [ ] тесты ViewModel: заполнение из parseResponse, сброс Items при ручной правке, применение выбора для Unknown, `canSave=false` при непустом Unknown, `canSave` при несходящихся суммах
-- [ ] сборка iOS проходит; только семантические токены Theme.swift, тёмная тема, только стандартный SDK
+- [x] композер (крупный микрофон + «Сфотографировать чек») — только на пустой форме; после заполнения микрофон переезжает в нижнюю панель рядом с «Сохранить». `composerCard` показывается при `model.isEmptyForm`, компактный `micButton` — в `bottomBar` при `!isEmptyForm`. AI-кнопки `.disabled(aiDisabled)` = `!session.isOnline || model.isParsing` (прецедент — офлайн-алерт погашения в SettleUpView). Микрофон — hold-to-talk (`DragGesture(minimumDistance:0)`), фото — `confirmationDialog` Камера/Галерея → `CameraPicker`/`.photosPicker`
+- [x] **правка существующей itemized-операции:** `OperationDetailView` → «Изменить» уже открывает `AddExpenseView(editOperation:)`; `items` грузятся в `model.draftItems` (Task 11), чек рисуется `ReceiptCardView`. Сохранение: `save()` теперь строит `itemsToSend = draftItems` и производные `recipientSums` из `itemizedRecipientSums`, шлёт `updateOperation(..., items:)` (PUT с items) и `OutboxPayload(items:)`. Плоский PUT позиции больше не стирает
+- [x] карточка-чек: `ReceiptCardView` — перфорация (`PerforationStrip` — полукруги цвета фона), пунктирные разделители (`DashedDivider`/`DashedLine` со `StrokeStyle(dash:)`), моноширинные цифры (`MoneyText`/`.monospacedDigit()`), подвал Подытог→Сборы→Итого; бейдж ×N у неравных весов, замочек (`lock.fill`) при фикс-сумме. Только токены Theme
+- [x] шит позиции: `ItemSheetView` — segmented `Picker` «Долями / Суммами` (ОДИН контрол на строку: степпер веса ИЛИ поле суммы), участие по тапу на имя (`toggle`), пустое поле суммы = «авто» (доля по весу). Надбавка — только название/цена
+- [x] чипы «Поровну на всех / По позициям» под позициями (`itemsOverrideChips`): «Поровну на всех» → `model.resetItems()` (чистит `draftItems`, ставит `.equally`); ручная правка суммы (`sumField.onChange` при `focusedField == .sum`) тоже вызывает `resetItems()`
+- [x] голосовая правка: `model.parse(api:audio/image/text:)` шлёт текущий `ParseDraft` (описание/сумма/донор/позиции), спиннер `parsingOverlay` по `model.isParsing`; ошибка (сеть/сервер) НЕ трогает `draftItems` — черновик сохраняется, показывается алерт
+- [x] нераспознанное имя (Unknown) — красный чип в `ReceiptCardView` (тап → `UnknownPickerView`) → `model.resolveUnknown` применяет доли локально + best-effort `api.addAlias(userId:alias:)` (`POST /users/{id}/aliases`, добавлен в APIClient)
+- [x] **`canSave` = false при непустом `Unknown`** (`hasUnknownItems`); также блок при невыводимых долях (перебор фиксов). Подсказка «Выберите, кто такой «…»» под чеком + в `save()`-guard
+- [x] тесты ViewModel (`AddExpenseAIFlowTests.swift`): заполнение из parseResponse (`testApplyParseResponseFillsForm`), сброс Items (`testResetItemsClearsDraftAndSwitchesToEqually`), применение Unknown (`testResolveUnknownAppliesLocallyAndClearsUnknown`), `canSave=false` при Unknown (`testCanSaveFalseWhileUnknownPresent`), `canSave` при несходящейся плоской сумме itemized (`testCanSaveIgnoresFlatSumMismatchForItemized`) + перебор фиксов/подытог. Тесты написаны, НЕ прогнаны (Xcode-toolchain недоступен в этой среде)
+- [x] только семантические токены Theme.swift, тёмная тема (перфорация/карточки на `Color.bg`/`.surface`), только стандартный SDK (AVFoundation/PhotosUI/UIKit). Сборка iOS: написано; сборка требует Xcode — не проверялось в этой среде
 
 ### Task 14: Verify acceptance criteria
 

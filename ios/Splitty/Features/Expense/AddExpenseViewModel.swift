@@ -40,6 +40,13 @@ final class AddExpenseViewModel {
     /// items в write-path подключаются в Task 13.
     var draftItems: [OperationItem]? = nil
 
+    /// true — идёт AI-распознавание (`POST /parse`): спиннер в композере/нижней
+    /// панели, кнопки записи заблокированы. Ошибка распознавания НЕ теряет черновик.
+    private(set) var isParsing = false
+    /// Уточняющие вопросы модели из последнего ответа («кто платил?») — показываем
+    /// подсказкой под чеком; пусто — вопросов нет.
+    var parseQuestions: [String] = []
+
     private(set) var isSaving = false
     var alertMessage: String?
 
@@ -119,9 +126,18 @@ final class AddExpenseViewModel {
         return distributedTotal == sum
     }
 
-    /// Доступность «Сохранить»: в режиме «По суммам» — только при Σ == sum;
-    /// в режиме «Поровну» кнопка активна всегда (валидация — алертами в save).
+    /// Доступность «Сохранить»:
+    /// - itemized-черновик (есть позиции): нельзя сохранить с нераспознанными
+    ///   именами (`hasUnknownItems` → сервер тоже вернёт 400) и при невыводимых
+    ///   долях (перебор фиксов и т.п.); сумму выводит сервер, поэтому расхождение
+    ///   плоского `sum` с Σ позиций сохранению НЕ мешает;
+    /// - «По суммам» — только при Σ == sum;
+    /// - «Поровну» — активна всегда (валидация — алертами в save).
     var canSave: Bool {
+        if hasDraftItems {
+            if hasUnknownItems { return false }
+            return draftItemList.derivedShares() != nil
+        }
         guard splitType == .byExactAmount else { return true }
         return !recipientIds.isEmpty && isDistributionBalanced
     }
@@ -166,6 +182,192 @@ final class AddExpenseViewModel {
         }
         let range = moneyRange(minShare, maxShare, currency: currency)
         return "\(money(sum, currency: currency)) / \(count) = \(range) с человека"
+    }
+
+    // MARK: AI-черновик (позиции чека)
+
+    /// Позиции без опциональности; пусто — обычная (плоская) операция.
+    var draftItemList: [OperationItem] { draftItems ?? [] }
+
+    /// true — есть распознанный чек: показываем карточку-чек вместо плоского
+    /// деления, микрофон переезжает в нижнюю панель.
+    var hasDraftItems: Bool { !draftItemList.isEmpty }
+
+    /// true — хотя бы в одной позиции есть нераспознанное имя (блокирует «Сохранить»).
+    var hasUnknownItems: Bool { draftItemList.contains(where: \.hasUnknown) }
+
+    /// Первое нераспознанное имя — для подсказки «выберите, кто такой …».
+    var firstUnknownName: String? {
+        for item in draftItemList {
+            if let name = item.unknown?.first { return name }
+        }
+        return nil
+    }
+
+    /// true — форма пуста (нет позиций/описания/суммы и это не правка): показываем
+    /// крупный композер (микрофон + «Сфотографировать чек») на весь блок.
+    var isEmptyForm: Bool {
+        !hasDraftItems
+            && !isEditing
+            && descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (sum ?? 0) == 0
+    }
+
+    /// userId'ы участников из позиций (обычные позиции, стабильный порядок появления).
+    /// Надбавки делятся по базе, поэтому их доли сюда не входят.
+    var itemizedUserIds: [Int] {
+        var seen: Set<Int> = []
+        var ordered: [Int] = []
+        for item in draftItemList where !item.isSurcharge {
+            for share in item.shareList where !seen.contains(share.userId) {
+                seen.insert(share.userId)
+                ordered.append(share.userId)
+            }
+        }
+        return ordered
+    }
+
+    /// Клиентское превью долей по позициям (зеркало серверного `DeriveShares`):
+    /// userId→сумма или nil, если позиции невалидны (перебор фиксов и т.п.).
+    var itemizedShares: [Int: Int]? {
+        draftItemList.derivedShares()?.shares
+    }
+
+    /// Итог чека: подытог позиций + сборы (то, что сохранит сервер); nil при невалидных позициях.
+    var itemizedTotal: Int? {
+        draftItemList.derivedShares()?.total
+    }
+
+    /// Подытог обычных позиций (без надбавок).
+    var itemizedSubtotal: Int {
+        draftItemList.filter { !$0.isSurcharge }.reduce(0) { $0 + $1.price }
+    }
+
+    /// Сумма всех надбавок (сборов/чаевых/доставки).
+    var itemizedSurcharges: Int {
+        draftItemList.filter { $0.isSurcharge }.reduce(0) { $0 + $1.price }
+    }
+
+    /// Применяет ответ AI-распознавания к форме: описание, сумма, донор, позиции.
+    /// Позиции становятся источником правды (itemized-операция); участники
+    /// синхронизируются с позициями для последующего сохранения.
+    func apply(parse response: ParseResponse) {
+        let draft = response.draft
+        if !draft.description.isEmpty {
+            descriptionText = draft.description
+        }
+        if draft.sum >= 1 {
+            sumText = String(draft.sum)
+        }
+        if let donorId = draft.donorId, members.contains(where: { $0.id == donorId }) {
+            payerId = donorId
+        }
+        draftItems = draft.items
+        parseQuestions = response.questionList
+        syncRecipientsFromItems()
+    }
+
+    /// AI-распознавание/голосовая правка: шлёт медиа + текущий черновик на `/parse`,
+    /// применяет ответ. Ошибка (сеть/сервер) НЕ теряет черновик — форма остаётся
+    /// как была, показывается алерт.
+    func parse(api: APIClient, audio: Data? = nil, image: Data? = nil, text: String? = nil) async {
+        guard !isParsing else { return }
+        guard let roomId = selectedRoomId else {
+            alertMessage = "Выберите группу"
+            return
+        }
+        isParsing = true
+        defer { isParsing = false }
+
+        // Текущий черновик передаётся для голосовой правки: сервер применяет
+        // только дельту, не пересобирая уже проставленные доли/имена. Пустую
+        // форму отправляем без черновика (распознавание с нуля).
+        let currentDraft: ParseDraft? = (hasDraftItems || !descriptionText.isEmpty || (sum ?? 0) > 0)
+            ? ParseDraft(description: descriptionText, sum: sum ?? 0, donorId: payerId, items: draftItems)
+            : nil
+        do {
+            let response = try await api.parseOperation(
+                roomId: roomId,
+                audio: audio,
+                image: image,
+                text: text,
+                draft: currentDraft
+            )
+            apply(parse: response)
+        } catch {
+            if error.isTaskCancellation { return }
+            alertMessage = error.localizedDescription
+        }
+    }
+
+    /// Сброс распознанного чека (чип «Поровну на всех» или ручная правка суммы/долей):
+    /// позиции больше не источник правды, операция сохранится плоской (равное деление).
+    func resetItems() {
+        guard hasDraftItems else { return }
+        draftItems = nil
+        parseQuestions = []
+        splitType = .equally
+        if recipientIds.isEmpty {
+            recipientIds = Set(members.map(\.id))
+        }
+    }
+
+    /// Заменяет позицию по индексу (правка из шита позиции).
+    func replaceItem(at index: Int, with item: OperationItem) {
+        guard var items = draftItems, items.indices.contains(index) else { return }
+        items[index] = item
+        draftItems = items
+        syncRecipientsFromItems()
+    }
+
+    /// Сопоставляет нераспознанное имя `name` в позиции участнику `userId`: имя
+    /// убирается из `unknown`, участник добавляется в доли позиции (вес 1), а `alias`
+    /// дозаписывается на сервере (best-effort), чтобы следующее распознавание сматчило само.
+    func resolveUnknown(itemIndex: Int, name: String, to userId: Int, api: APIClient) {
+        guard var items = draftItems, items.indices.contains(itemIndex) else { return }
+        let item = items[itemIndex]
+        var unknown = item.unknown ?? []
+        unknown.removeAll { $0.caseInsensitiveCompare(name) == .orderedSame }
+        var shares = item.shareList
+        if !item.isSurcharge, !shares.contains(where: { $0.userId == userId }) {
+            shares.append(ItemShare(userId: userId, weight: 1))
+        }
+        items[itemIndex] = OperationItem(
+            name: item.name,
+            price: item.price,
+            qty: item.qty,
+            shares: item.isSurcharge ? nil : shares,
+            kind: item.kind,
+            split: item.split,
+            percent: item.percent,
+            unknown: unknown.isEmpty ? nil : unknown
+        )
+        draftItems = items
+        syncRecipientsFromItems()
+        // Дозапись алиаса — best-effort: ошибка (сеть/доступ) не критична для формы.
+        Task { try? await api.addAlias(userId: userId, alias: name) }
+    }
+
+    /// Синхронизирует множество получателей с участниками позиций — чтобы
+    /// плоские валидации/сохранение видели тех же людей, что и чек.
+    private func syncRecipientsFromItems() {
+        guard hasDraftItems else { return }
+        let ids = itemizedUserIds
+        guard !ids.isEmpty else { return }
+        recipientIds = Set(ids)
+    }
+
+    /// Производные по позициям `recipientSums` в стабильном порядке `ids`
+    /// (недостающие из позиций добавляются следом); nil — позиций нет или они
+    /// невалидны. Сервер плоские поля игнорирует, но `OperationBody` их несёт.
+    private func itemizedRecipientSums(orderedFrom ids: [Int]) -> [RecipientSum]? {
+        guard hasDraftItems, let shares = itemizedShares else { return nil }
+        let itemIds = itemizedUserIds
+        let ordered = ids.filter { itemIds.contains($0) } + itemIds.filter { !ids.contains($0) }
+        return ordered.compactMap { id in
+            guard let sum = shares[id], sum >= 1 else { return nil }
+            return RecipientSum(userId: id, sum: sum)
+        }
     }
 
     /// Первичная настройка и загрузка данных (вызывается один раз из .task).
@@ -338,7 +540,19 @@ final class AddExpenseViewModel {
 
         let split: ExpenseSplit
         let exactSums: [RecipientSum]?
-        if splitType == .byExactAmount {
+        // itemized-черновик: позиции — источник правды, сервер сам выводит суммы
+        // и игнорирует плоские поля, но `OperationBody` обязано нести валидный
+        // способ деления — отправляем производные `by_exact_amount` из позиций.
+        let itemsToSend: [OperationItem]?
+        if let itemSums = itemizedRecipientSums(orderedFrom: ids) {
+            guard !hasUnknownItems else {
+                alertMessage = "Сначала выберите, кто такой \(firstUnknownName ?? "…")"
+                return false
+            }
+            itemsToSend = draftItems
+            split = .byExactAmount(recipientSums: itemSums)
+            exactSums = itemSums
+        } else if splitType == .byExactAmount {
             guard isDistributionBalanced else {
                 alertMessage = "Суммы участников должны сходиться с суммой расхода"
                 return false
@@ -346,9 +560,11 @@ final class AddExpenseViewModel {
             let sums = exactRecipientSums(orderedIds: ids)
             split = .byExactAmount(recipientSums: sums)
             exactSums = sums
+            itemsToSend = nil
         } else {
             split = .equally(recipientIds: ids)
             exactSums = nil
+            itemsToSend = nil
         }
 
         // Локальная запись outbox: правим её саму (failed сбрасывается
@@ -361,7 +577,8 @@ final class AddExpenseViewModel {
                     sum: sum,
                     donorId: payerId,
                     recipientIds: exactSums == nil ? ids : nil,
-                    recipientSums: exactSums
+                    recipientSums: exactSums,
+                    items: itemsToSend
                 )
             )
             return true
@@ -372,7 +589,8 @@ final class AddExpenseViewModel {
             sum: sum,
             donorId: payerId,
             recipientIds: exactSums == nil ? ids : nil,
-            recipientSums: exactSums
+            recipientSums: exactSums,
+            items: itemsToSend
         )
         // localId создаётся заранее и служит clientOpId прямого POST:
         // если ответ потеряется, досылка из outbox не создаст дубль.
@@ -394,7 +612,8 @@ final class AddExpenseViewModel {
                     description: description,
                     sum: sum,
                     donorId: payerId,
-                    split: split
+                    split: split,
+                    items: itemsToSend
                 )
             } else {
                 _ = try await api.addOperation(
@@ -403,6 +622,7 @@ final class AddExpenseViewModel {
                     sum: sum,
                     donorId: payerId,
                     split: split,
+                    items: itemsToSend,
                     clientOpId: localId.uuidString
                 )
             }

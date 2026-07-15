@@ -447,6 +447,17 @@ final class APIClient: OperationAPI {
         }
     }
 
+    /// Дозапись прозвища участнику: POST /users/{id}/aliases, тело `{"alias": …}`,
+    /// ответ 204 без тела. После сопоставления нераспознанного имени участнику —
+    /// чтобы следующее AI-распознавание сматчило его само. Сервер нормализует
+    /// (trim/lower) и разрешает запись только при общей комнате (403 иначе).
+    func addAlias(userId: Int, alias: String) async throws {
+        struct Body: Encodable {
+            let alias: String
+        }
+        try await send("POST", "/api/v1/users/\(userId)/aliases", body: Body(alias: alias))
+    }
+
     // MARK: Долги и погашение
 
     func debts(roomId: String, involving: String) async throws -> [Debt] {
