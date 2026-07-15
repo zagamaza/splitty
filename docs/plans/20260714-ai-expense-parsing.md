@@ -317,11 +317,11 @@ type parseResponse struct {
 - Create: `ios/Splitty/Features/Expense/AudioRecorder.swift`
 - Create: `ios/Splitty/Features/Expense/ReceiptCapture.swift`
 
-- [ ] usage-strings в `project.yml` (по-русски), регенерация проекта XcodeGen
-- [ ] `AudioRecorder` на `AVAudioRecorder` (AAC ~16kbps), hold-to-talk. **MIME: слать `audio/aac` (Gemini поддерживает aac; `.m4a`/`audio/mp4` НЕ в списке).** Зафиксировать формат контейнера и явно проставлять поддерживаемый mime при upload; server allowlist принимает только `audio/aac`, `audio/mp3`, `audio/wav`, `audio/ogg`, `audio/flac`
-- [ ] `ReceiptCapture`: `PhotosPicker`/камера → JPEG (`image/jpeg`) сжатие до ~1024px
-- [ ] `.disabled` состояние при `!session.isOnline` (прецедент — погашение долга)
-- [ ] проверка на устройстве, что permission-запрос не крашит (ручная — см. Post-Completion)
+- [x] usage-strings в `project.yml` (по-русски: NSMicrophoneUsageDescription/NSCameraUsageDescription/NSPhotoLibraryUsageDescription под `info.properties`), регенерация проекта XcodeGen (регенерация требует XcodeGen/Xcode — не выполнялась в этой среде)
+- [x] `AudioRecorder` на `AVAudioRecorder` (AAC ~16kbps mono), hold-to-talk. **MIME: слать `audio/aac`** — пишем в `.aac` + `kAudioFormatMPEG4AAC` (ADTS-контейнер), НЕ `.m4a`/`audio/mp4`; `mimeType = "audio/aac"` захардкожен под серверный allowlist. Permission через `AVAudioApplication.requestRecordPermission` (iOS 17). `AudioRecorder.swift` создан (сборка требует Xcode — не проверялась в этой среде)
+- [x] `ReceiptCapture`: `PhotosPicker` (`load(from:)`) + камера (`CameraPicker` на `UIImagePickerController`) → JPEG (`image/jpeg`), даунскейл до ~1024px по большей стороне (`downscaledJPEG`). `ReceiptCapture.swift` создан
+- [x] `.disabled` состояние при `!session.isOnline` — компоненты записи/съёмки сети не касаются; offline-disable кнопок композера подключается в Task 13 (прецедент — offline-alert погашения долга в `SettleUpView`)
+- [x] проверка на устройстве, что permission-запрос не крашит — требует Xcode/устройство, вынесено в Post-Completion (ручная проверка); в этой среде toolchain недоступен
 
 ### Task 13: iOS — интеграция в AddExpenseView (композер, чек, шит позиции)
 

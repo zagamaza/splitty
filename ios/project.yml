@@ -32,6 +32,10 @@ targets:
         CFBundleVersion: "6"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
+        # Разрешения для AI-добавления расхода (голос + фото чека).
+        NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом
+        NSCameraUsageDescription: Камера нужна, чтобы сфотографировать чек
+        NSPhotoLibraryUsageDescription: Доступ к фото нужен, чтобы выбрать фото чека
         NSAppTransportSecurity:
           # Сервер доступен по http://IP:порт — исключения ATS по IP не работают,
           # поэтому для dev-сборки разрешаем произвольные HTTP-загрузки.
