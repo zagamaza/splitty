@@ -30,7 +30,7 @@ type config struct {
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
 	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`
-	GeminiModel       string `env:"GEMINI_MODEL" envDefault:"gemini-2.0-flash"`
+	GeminiModel       string `env:"GEMINI_MODEL" envDefault:"gemini-2.5-flash-lite"`
 	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
 	AiParseDailyQuota int    `env:"AI_PARSE_DAILY_QUOTA" envDefault:"50"`
 	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ

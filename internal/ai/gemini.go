@@ -33,7 +33,7 @@ type GeminiClient struct {
 // вернёт ошибку — вызывающий код обязан отключать фичу при пустом ключе.
 func NewGemini(apiKey, model string) *GeminiClient {
 	if model == "" {
-		model = "gemini-2.0-flash"
+		model = "gemini-2.5-flash-lite"
 	}
 	return &GeminiClient{
 		apiKey:  apiKey,
