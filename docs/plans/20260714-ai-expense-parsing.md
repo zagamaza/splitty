@@ -270,11 +270,11 @@ type parseResponse struct {
 - Modify: `conf/lang/ru.ini`, `conf/lang/en.ini`
 - Create: `internal/bot/operation_items_test.go`
 
-- [ ] при показе операции с `Items != nil` — рендер позиций текстом через `tablebuilder`/`tablebox` (позиция, цена, кто, сбор, итого)
-- [ ] на «изменить» itemized-операцию — вместо редактора показать сообщение «эта операция с позициями, правьте в приложении», правку не запускать
-- [ ] строки i18n (ru/en) для guard-сообщения
-- [ ] тест: рендер itemized-операции в текст; guard блокирует вход в редактирование (юнит на функцию-детектор `Items != nil`)
-- [ ] run tests — должны пройти
+- [x] при показе операции с `Items != nil` — рендер позиций текстом через `tablebuilder`/`tablebox` (позиция, цена, кто, сбор, итого) — `renderOperationItems` в `internal/bot/operation_items.go`, встроен в `ViewDonorOperation.OnMessage`
+- [x] на «изменить» itemized-операцию — вместо редактора показать сообщение «эта операция с позициями, правьте в приложении», правку не запускать — ранний guard `isItemized(operation)` в `EditDonorOperation.OnMessage`
+- [x] строки i18n (ru/en) для guard-сообщения — ключ `msg_operation_itemized_edit_in_app`
+- [x] тест: рендер itemized-операции в текст; guard блокирует вход в редактирование (юнит на функцию-детектор `Items != nil`) — `operation_items_test.go` (`isItemized`, `itemLabel`, `itemParticipants`, `renderOperationItems`). Примечание: guard тестируется через чистый детектор `isItemized`; вход в `EditDonorOperation.OnMessage` целиком не юнит-тестируется (тяжёлые зависимости Mongo/сервисов, в `internal/bot` нет инфраструктуры фейков)
+- [x] run tests — должны пройти
 
 ### Task 10: User.Aliases — модель и дозапись
 

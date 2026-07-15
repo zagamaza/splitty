@@ -446,6 +446,18 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 
 	operation := findOperationByID(room, OperationId)
+
+	// itemized-операции (создаются с позициями чека через AI в приложении) —
+	// источник правды в поле Items; плоское редактирование в боте затёрло бы
+	// позиции, поэтому вход в редактор блокируем и отправляем править в приложение
+	if isItemized(operation) {
+		callback := createCallback(u, I18n(u.User, "msg_operation_itemized_edit_in_app"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
 	if hasAction(u, editDonorOperation) && operation.OldOperationId == nil {
 		oldId := operation.ID
 		newOp := operation // копирование по значению (shallow copy)
@@ -1538,6 +1550,8 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
 
 	text += tableWithPayments(operation, room)
+
+	text += renderOperationItems(operation, room)
 
 	text += "\n🗓 " + operation.CreateAt.Format("02 January 2006") + "\n"
 	text += s.defineFileMessage(u.User, operation)
