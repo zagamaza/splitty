@@ -53,6 +53,25 @@ type operationRecipientDto struct {
 	Sum  int     `json:"sum"`
 }
 
+// itemShareDto доля участника в позиции (read-path)
+type itemShareDto struct {
+	UserId int  `json:"userId"`
+	Weight int  `json:"weight"`
+	Amount *int `json:"amount,omitempty"`
+}
+
+// operationItemDto позиция чека в ответе API (read-path). Отдаётся только для
+// itemized-операций (AI-распознанных); nil для обычных
+type operationItemDto struct {
+	Name    string         `json:"name"`
+	Price   int            `json:"price"`
+	Qty     int            `json:"qty"`
+	Shares  []itemShareDto `json:"shares,omitempty"`
+	Kind    string         `json:"kind"`
+	Split   string         `json:"split,omitempty"`
+	Percent *int           `json:"percent,omitempty"`
+}
+
 type operationDto struct {
 	ID              string                  `json:"id"`
 	Description     string                  `json:"description"`
@@ -63,6 +82,9 @@ type operationDto struct {
 	Recipients      []operationRecipientDto `json:"recipients"`
 	CreatedAt       time.Time               `json:"createdAt"`
 	Files           []fileDto               `json:"files,omitempty"`
+	// Items детализация по позициям чека (только itemized-операции); nil у обычных.
+	// Плоские Recipients выше — источник для долгов; Items — «зачем так вышло»
+	Items []operationItemDto `json:"items,omitempty"`
 	// ClientOpId клиентский идемпотентный ключ (см. docs/API.md «Идемпотентность»):
 	// по нему офлайн-клиент сопоставляет локальные операции outbox с серверными
 	ClientOpId string `json:"clientOpId,omitempty"`
@@ -237,6 +259,21 @@ func toOperationDto(o *api.Operation) operationDto {
 	}
 	for _, f := range o.Files {
 		dto.Files = append(dto.Files, fileDto{Type: string(f.Type), FileId: f.FileId})
+	}
+	for _, it := range o.Items {
+		shares := make([]itemShareDto, 0, len(it.Shares))
+		for _, s := range it.Shares {
+			shares = append(shares, itemShareDto{UserId: s.UserId, Weight: s.Weight, Amount: s.Amount})
+		}
+		dto.Items = append(dto.Items, operationItemDto{
+			Name:    it.Name,
+			Price:   it.Price,
+			Qty:     it.Qty,
+			Shares:  shares,
+			Kind:    string(it.Kind),
+			Split:   string(it.Split),
+			Percent: it.Percent,
+		})
 	}
 	return dto
 }

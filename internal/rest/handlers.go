@@ -16,6 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
@@ -488,6 +489,10 @@ type operationRequest struct {
 	// повтор с тем же ключом не создаёт дубль (см. docs/API.md «Идемпотентность»).
 	// В PUT игнорируется — хранимый ключ операции не меняется
 	ClientOpId string `json:"clientOpId"`
+	// Items опциональная детализация по позициям чека (AI-распознавание). При
+	// наличии сервер САМ выводит RecipientsWithSum/Sum из позиций и игнорирует
+	// плоские RecipientIds/RecipientSums (см. validateItemizedRequest)
+	Items []ai.DraftItem `json:"items,omitempty"`
 }
 
 // parseOperationRequest декодирует и валидирует тело операции (контракт v2).
@@ -715,9 +720,24 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	donor, recipientsWithSum, splitType, hErr := validateOperationRequest(&req, room)
-	if hErr != nil {
-		hErr.write(w)
+	// две ветки: itemized (сервер выводит суммы из позиций) и обычная (плоские доли)
+	var (
+		donor             *api.User
+		recipientsWithSum []api.RecipientWithSum
+		splitType         api.SplitType
+		sum               int
+		items             []api.OperationItem
+		hErr2             *httpError
+	)
+	if len(req.Items) > 0 {
+		donor, recipientsWithSum, items, sum, hErr2 = validateItemizedRequest(&req, room)
+		splitType = splitByExactAmount
+	} else {
+		donor, recipientsWithSum, splitType, hErr2 = validateOperationRequest(&req, room)
+		sum = req.Sum
+	}
+	if hErr2 != nil {
+		hErr2.write(w)
 		return
 	}
 
@@ -726,7 +746,7 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
 		Description:       req.Description,
-		Sum:               req.Sum,
+		Sum:               sum,
 		Donor:             donor,
 		RecipientsWithSum: recipientsWithSum,
 		SplitType:         splitType,
@@ -736,6 +756,7 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		NotificationSent:  []int{},
 		Files:             []api.File{},
 		ClientOpId:        req.ClientOpId,
+		Items:             items,
 	}
 	if req.ClientOpId != "" {
 		result, created, hErr := s.createOperationIdempotent(ctx, operation, roomId)

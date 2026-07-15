@@ -242,14 +242,14 @@ type parseResponse struct {
 - Modify: `internal/rest/dto.go` (`operationDto`:56 + `toOperationDto`:218 — **read-path**)
 - Modify: `internal/rest/handlers_test.go`
 
-- [ ] добавить `items []draftItem` в `operationRequest` (структура в `handlers.go:481`, опционально, аддитивно)
-- [ ] **конвертация `draftItem` (REST DTO) → `api.OperationItem` (доменная модель)** — две разные структуры; выделить маппер (в обе стороны: DTO→model для записи, model→DTO для read-path)
-- [ ] при наличии `items`: сервер вызывает `api.DeriveShares` → маппит `userId→User` через `room.Members` → **сам** формирует `RecipientsWithSum` и `Sum`, игнорируя клиентские плоские суммы; `SplitType = by_exact_amount`; сохраняет `Items` в операцию. userId из ядра не найден в `room.Members` → 400
-- [ ] валидация items: непусто, все userId из комнаты, `DeriveShares` без ошибки, **`Unknown` пуст** (нельзя сохранить нераспознанные имена — иначе 400)
-- [ ] при отсутствии `items`: поведение как раньше (плоские суммы), `Items = nil`
-- [ ] **read-path (находка Codex — иначе iOS detail не увидит позиций):** добавить `items` в `operationDto` (`dto.go:56`) и заполнять в `toOperationDto` (`dto.go:218`), чтобы `GET /rooms`, `/operations`, activity отдавали позиции
-- [ ] тесты: создание itemized-операции (суммы выведены на сервере, клиентские проигнорированы); создание обычной операции без items; невалидные items → 400; **непустой Unknown → 400**; **GET room/operations itemized-операции возвращает items**
-- [ ] run tests — должны пройти
+- [x] добавить `items []ai.DraftItem` в `operationRequest` (опционально, аддитивно)
+- [x] **конвертация `ai.DraftItem` → `api.OperationItem`** (`toApiItems` в `parse_convert.go`); обратный `api.OperationItem → operationItemDto` для read-path
+- [x] при наличии `items`: `validateItemizedRequest` вызывает `api.DeriveShares` → маппит `userId→User` через `findMember` → сервер формирует `RecipientsWithSum`/`Sum`, игнорируя клиентские плоские поля; `SplitType = by_exact_amount`; `Items` сохранены
+- [x] валидация items: непусто, все userId из комнаты, `DeriveShares` без ошибки, **`Unknown` пуст** (иначе 400 «сначала выберите, кто такие …»)
+- [x] при отсутствии `items`: прежнее поведение (`validateOperationRequest`), `Items = nil`
+- [x] **read-path:** `items` в `operationDto` + заполнение в `toOperationDto` → `GET /rooms`, `/operations`, activity отдают позиции
+- [x] тесты: сервер выводит суммы (клиентский sum=999 проигнорён → 300); полный чек с инвариантом; обычная операция без items; непустой Unknown → 400; чужой userId → 400; read-path возвращает items
+- [x] run tests — должны пройти
 
 ### Task 8: Затирание Items на плоских путях правки (сервер)
 
