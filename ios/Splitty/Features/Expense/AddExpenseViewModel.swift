@@ -33,6 +33,12 @@ final class AddExpenseViewModel {
     var splitType: SplitType = .equally
     /// Тексты полей сумм по участникам (режим «По суммам»), ключ — user id.
     var amountTexts: [Int: String] = [:]
+    /// Позиции чека itemized-операции, загруженные при правке (AI-распознавание).
+    /// nil у обычных (плоских) операций. Несёт позиции через ViewModel, чтобы
+    /// правка itemized-операции не превращала чек в плоскую (иначе PUT уйдёт без
+    /// items → сервер затрёт `Operation.Items`). Композер/шит позиций и запись
+    /// items в write-path подключаются в Task 13.
+    var draftItems: [OperationItem]? = nil
 
     private(set) var isSaving = false
     var alertMessage: String?
@@ -186,6 +192,10 @@ final class AddExpenseViewModel {
             // первым в массиве, поэтому при сохранении правки порядок сохраняем.
             editRecipientOrder = editOperation.recipients.map(\.user.id)
             splitType = editOperation.splitType ?? .equally
+            // Позиции чека itemized-операции переносим в ViewModel, чтобы правка
+            // не потеряла их: при плоском PUT сервер затрёт `Operation.Items`
+            // (Task 8). Отображение/правка чека — в композере Task 13.
+            draftItems = editOperation.items
             // Prefill долей из ХРАНИМЫХ сумм: для «По суммам» — точные, для
             // «Поровну» — канонические (стартовые значения при смене режима).
             amountTexts = Dictionary(

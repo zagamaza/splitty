@@ -256,6 +256,82 @@ final class ItemDraftTests: XCTestCase {
         XCTAssertEqual(call.clientOpId, entry.localId.uuidString)
     }
 
+    // MARK: - Загрузка items операции в ViewModel при правке (Task 11)
+
+    /// Правка itemized-операции: `load(editOperation:)` переносит `Operation.items`
+    /// в `AddExpenseViewModel.draftItems` (round-trip — позиции не теряются).
+    /// Без этого плоский PUT затёр бы `Operation.Items` на сервере (Task 8).
+    /// Сетевой шаг `load` (список групп) падает на nil-baseURL — но prefill
+    /// выполняется ДО await, поэтому `draftItems` заполнены независимо от сети.
+    func testLoadEditOperationCarriesItemsIntoViewModel() async throws {
+        let items = [
+            OperationItem(name: "Пицца", price: 1200, qty: 1, shares: [
+                ItemShare(userId: 1, weight: 1),
+                ItemShare(userId: 2, weight: 1),
+            ]),
+            OperationItem(
+                name: "Сервисный сбор", price: 120, qty: 1, shares: nil,
+                kind: OperationItem.kindSurcharge,
+                split: OperationItem.splitProportional, percent: 10
+            ),
+        ]
+        let operation = Operation(
+            id: "op-1",
+            description: "Ужин",
+            sum: 1320,
+            isDebtRepayment: false,
+            donor: User(id: 1, username: nil, displayName: "Я"),
+            recipients: [
+                OperationRecipient(user: User(id: 1, username: nil, displayName: "Я"), sum: 720),
+                OperationRecipient(user: User(id: 2, username: "leha", displayName: "Лёха"), sum: 600),
+            ],
+            splitType: .byExactAmount,
+            createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+            files: nil,
+            items: items
+        )
+
+        let model = AddExpenseViewModel()
+        await model.load(repo: makeRepo(), fixedRoomId: nil, editOperation: operation, me: nil)
+
+        XCTAssertEqual(model.draftItems, items)
+        XCTAssertEqual(model.editOperationId, "op-1")
+    }
+
+    /// Обычная (плоская) операция: `items == nil` → `draftItems` остаётся nil
+    /// (правка не выдумывает позиции там, где их нет).
+    func testLoadFlatOperationLeavesDraftItemsNil() async throws {
+        let operation = Operation(
+            id: "op-2",
+            description: "Такси",
+            sum: 300,
+            isDebtRepayment: false,
+            donor: User(id: 1, username: nil, displayName: "Я"),
+            recipients: [
+                OperationRecipient(user: User(id: 1, username: nil, displayName: "Я"), sum: 300),
+            ],
+            splitType: .equally,
+            createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+            files: nil
+        )
+
+        let model = AddExpenseViewModel()
+        await model.load(repo: makeRepo(), fixedRoomId: nil, editOperation: operation, me: nil)
+
+        XCTAssertNil(model.draftItems)
+    }
+
+    /// `DataRepo` без сети: nil-baseURL `APIClient` + пустой временный кеш.
+    /// Сетевой шаг `load` падает, но prefill из `editOperation` идёт до await.
+    private func makeRepo() -> DataRepo {
+        let cacheDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("repo-cache-\(UUID().uuidString)", isDirectory: true)
+        return DataRepo(
+            api: APIClient(baseURL: nil, token: nil),
+            cache: OfflineStore(directory: cacheDir)
+        )
+    }
+
     /// Позиции переживают перезапись файла outbox (enqueue → flush → перечитка).
     func testOutboxItemsSurvivePersistence() throws {
         let fileURL = FileManager.default.temporaryDirectory
