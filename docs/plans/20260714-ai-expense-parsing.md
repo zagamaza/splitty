@@ -192,12 +192,12 @@ type parseResponse struct {
 - Modify: `internal/service/service.go`
 - Modify: `cmd/splitty/main.go` (вызов создания TTL-индекса при старте)
 
-- [ ] коллекция/счётчик `ai_usage`: атомарный `$inc` окна «запросов/мин» и «в сутки» на userId, поле `expires_at`
-- [ ] метод `AllowParse(userId) (bool, reason)` + сброс окна по времени
-- [ ] **`EnsureAIUsageIndexes(ctx)` — TTL-индекс `expireAfterSeconds` на `expires_at`** (в репозитории сейчас нет bootstrap-инфраструктуры индексов; без явного создания коллекция растёт вечно); вызвать из `initRestServer`/старта
-- [ ] сервис-обёртка над репозиторием
-- [ ] тесты: в пределах лимита, превышение per-min, превышение daily, сброс окна
-- [ ] run tests — должны пройти
+- [x] коллекция/счётчик `ai_usage`: атомарный `$inc` окна (userId+минута / userId+сутки) через `Incr(key, ttl)`, `expires_at` через `$setOnInsert`
+- [x] метод `AllowParse(ctx, userId) (bool, reason, err)` в `service.RateLimiter` (минутное окно проверяется первым); окна сбрасываются сменой ключа по времени (`now` подменяется в тестах)
+- [x] **`EnsureIndexes(ctx)` — TTL-индекс `expireAfterSeconds=0` на `expires_at`** (создан метод репо; вызов из старта подключается в Task 6 при правке `initRestServer`)
+- [x] сервис-обёртка `RateLimiter` над узким интерфейсом `UsageCounter` (тестируется фейком, без реального Mongo)
+- [x] тесты: в пределах лимита, превышение per-min, превышение daily, сброс минутного окна, ошибка счётчика
+- [x] run tests — должны пройти
 
 > Примечание: конструирование rate-limit сервиса и его прокидывание в REST делается в Task 6 через `initRestServer`/`NewServer` (не wire) — здесь только репозиторий+сервис+индекс.
 
