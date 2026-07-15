@@ -12,6 +12,10 @@ struct OutboxPayload: Codable, Equatable {
     var donorId: Int
     var recipientIds: [Int]?
     var recipientSums: [RecipientSum]?
+    /// Позиции чека itemized-операции: переживают enqueue → flush, чтобы офлайн-
+    /// сохранение не теряло разбивку. `default = nil` — старый memberwise-
+    /// инициализатор (тесты/вызовы без items) остаётся валиден.
+    var items: [OperationItem]? = nil
 
     /// Способ деления для методов APIClient.
     var split: ExpenseSplit {
@@ -172,7 +176,7 @@ final class OutboxStore {
     /// следующего триггера (возврат сети, активация приложения, pull-to-refresh).
     /// Возвращает true, если отправлена хотя бы одна запись (нужен noteDataChanged).
     @MainActor
-    func sync(api: APIClient) async -> Bool {
+    func sync(api: OperationAPI) async -> Bool {
         guard !isSyncing else { return false }
         let pending = entries.filter { $0.status == .pending }
         guard !pending.isEmpty else { return false }
@@ -210,7 +214,7 @@ final class OutboxStore {
     /// Битая запись outbox (нет payload/targetOperationId для своего kind).
     private struct OutboxError: Error {}
 
-    private func send(_ entry: OutboxEntry, api: APIClient) async throws {
+    private func send(_ entry: OutboxEntry, api: OperationAPI) async throws {
         switch entry.kind {
         case .create:
             guard let payload = entry.payload else { throw OutboxError() }
@@ -222,6 +226,7 @@ final class OutboxStore {
                 sum: payload.sum,
                 donorId: payload.donorId,
                 split: payload.split,
+                items: payload.items,
                 clientOpId: entry.localId.uuidString
             )
         case .update:
@@ -234,7 +239,8 @@ final class OutboxStore {
                 description: payload.description,
                 sum: payload.sum,
                 donorId: payload.donorId,
-                split: payload.split
+                split: payload.split,
+                items: payload.items
             )
         case .delete:
             guard let operationId = entry.targetOperationId else { throw OutboxError() }

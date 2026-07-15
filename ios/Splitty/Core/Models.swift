@@ -75,6 +75,86 @@ struct OperationRecipient: Codable, Hashable, Identifiable {
     var id: Int { user.id }
 }
 
+/// Доля участника в позиции чека (itemized-операция, AI-распознавание).
+/// Сервер выводит плоские `recipients` операции из позиций и их долей.
+struct ItemShare: Codable, Hashable, Identifiable {
+    /// Telegram user id участника.
+    let userId: Int
+    /// Относительный вес доли (1 = поровну). Сервер игнорирует, если задан `amount`.
+    let weight: Int
+    /// Фиксированная сумма участника в целых рублях; nil — доля считается по весу.
+    let amount: Int?
+
+    var id: Int { userId }
+
+    init(userId: Int, weight: Int = 1, amount: Int? = nil) {
+        self.userId = userId
+        self.weight = weight
+        self.amount = amount
+    }
+}
+
+/// Позиция чека itemized-операции: что заказали, почём и как делится.
+/// Единый транспортный вид: read-модель операции, черновик `ParseDraft` и
+/// write-path (`OperationBody.items`) — совпадает с серверным `ai.DraftItem`.
+struct OperationItem: Codable, Hashable {
+    /// Название позиции («Пицца», «Сервисный сбор»).
+    let name: String
+    /// ВСЕГДА суммарная стоимость строки в целых рублях (уже с учётом количества).
+    let price: Int
+    /// Количество — только для отображения («×10»); в делении НЕ участвует.
+    let qty: Int
+    /// Доли участников; nil/пусто у надбавок (делятся по базе, а не по своим долям).
+    let shares: [ItemShare]?
+    /// «item» — обычная позиция, «surcharge» — надбавка (сбор/чаевые/доставка).
+    let kind: String
+    /// Правило деления надбавки «proportional» | «equally»; nil у обычных позиций.
+    let split: String?
+    /// Процент надбавки — только для показа («Сбор 10%»); в расчёте НЕ участвует.
+    let percent: Int?
+    /// Только в черновике (`ParseDraft`): нераспознанные имена для сопоставления
+    /// участнику. В read-модели операции всегда nil.
+    let unknown: [String]?
+
+    /// Доли без опциональности (надбавки приходят без `shares`).
+    var shareList: [ItemShare] { shares ?? [] }
+
+    /// true — надбавка (сбор/чаевые/доставка), а не обычная позиция.
+    var isSurcharge: Bool { kind == OperationItem.kindSurcharge }
+
+    /// true — есть нераспознанные имена: черновик нельзя сохранять
+    /// (сервер вернёт 400), пользователь должен сопоставить имена участникам.
+    var hasUnknown: Bool { !(unknown ?? []).isEmpty }
+
+    init(
+        name: String,
+        price: Int,
+        qty: Int = 1,
+        shares: [ItemShare]? = nil,
+        kind: String = OperationItem.kindItem,
+        split: String? = nil,
+        percent: Int? = nil,
+        unknown: [String]? = nil
+    ) {
+        self.name = name
+        self.price = price
+        self.qty = qty
+        self.shares = shares
+        self.kind = kind
+        self.split = split
+        self.percent = percent
+        self.unknown = unknown
+    }
+}
+
+extension OperationItem {
+    /// Значения `kind`/`split` в контракте (см. серверный `internal/api`).
+    static let kindItem = "item"
+    static let kindSurcharge = "surcharge"
+    static let splitProportional = "proportional"
+    static let splitEqually = "equally"
+}
+
 /// Операция: расход или погашение долга.
 struct Operation: Codable, Identifiable, Hashable {
     let id: String
@@ -90,8 +170,15 @@ struct Operation: Codable, Identifiable, Hashable {
     let createdAt: Date
     /// Может быть пустым или отсутствовать.
     let files: [OperationFile]?
+    /// Позиции чека itemized-операции (AI-распознавание); nil у обычных операций.
+    /// `default = nil` — старый memberwise-инициализатор (тесты) остаётся валиден,
+    /// а декодер читает поле опционально (сервер шлёт его только для itemized).
+    var items: [OperationItem]? = nil
 
     var hasFiles: Bool { !(files ?? []).isEmpty }
+
+    /// Позиции без опциональности; пусто — обычная (плоская) операция.
+    var itemList: [OperationItem] { items ?? [] }
 }
 
 extension Operation {
@@ -120,6 +207,144 @@ extension Operation {
         }
         return nil
     }
+}
+
+/// Черновик расхода из AI-распознавания (`POST /rooms/{id}/operations/parse`).
+/// Клиент шлёт текущий черновик на голосовую правку, сервер возвращает новый.
+struct ParseDraft: Codable, Hashable {
+    let description: String
+    let sum: Int
+    /// Кто платил; nil — модель не определила донора.
+    let donorId: Int?
+    /// Позиции чека; item с непустым `unknown` требует сопоставления перед сохранением.
+    let items: [OperationItem]?
+
+    /// Позиции без опциональности.
+    var itemList: [OperationItem] { items ?? [] }
+
+    /// Есть ли нераспознанные имена хотя бы в одной позиции (блокирует сохранение).
+    var hasUnknown: Bool { itemList.contains(where: \.hasUnknown) }
+
+    init(description: String, sum: Int, donorId: Int? = nil, items: [OperationItem]? = nil) {
+        self.description = description
+        self.sum = sum
+        self.donorId = donorId
+        self.items = items
+    }
+}
+
+/// Ответ распознавания: обновлённый черновик и опциональные уточняющие вопросы.
+struct ParseResponse: Codable, Hashable {
+    let draft: ParseDraft
+    /// Уточняющие вопросы модели («кто платил?»); nil/пусто — вопросов нет.
+    let questions: [String]?
+
+    /// Вопросы без опциональности.
+    var questionList: [String] { questions ?? [] }
+}
+
+// MARK: - Клиентское превью долей по позициям
+
+extension Array where Element == OperationItem {
+    /// Клиентское превью «кто сколько должен» по позициям — точное зеркало
+    /// серверного `DeriveShares` (`internal/api/itemsplit.go`): снять фиксы →
+    /// остаток по весам с детерминированным tie-break по userId → надбавки на базу.
+    /// Возвращает (userId→сумма, итог) или nil, если позиции невалидны
+    /// (перебор фиксов, неразделённый остаток, надбавка без цены).
+    /// Нужно для превью в UI, чтобы клиент показывал ровно те суммы, что сохранит сервер.
+    func derivedShares() -> (shares: [Int: Int], total: Int)? {
+        var base: [Int: Int] = [:]
+        var total = 0
+        for item in self where !item.isSurcharge {
+            guard let split = splitItem(item.price, item.shareList) else { return nil }
+            for (id, value) in split { base[id, default: 0] += value }
+            total += item.price
+        }
+
+        var out = base
+        for item in self where item.isSurcharge {
+            if item.price <= 0 { return nil }
+            for (id, value) in splitSurcharge(item.price, item.split, base) {
+                out[id, default: 0] += value
+            }
+            total += item.price
+        }
+
+        guard out.values.reduce(0, +) == total else { return nil }
+        return (out, total)
+    }
+}
+
+/// Делит `amount` между участниками пропорционально весам; остаток от округления —
+/// по одному тем, у кого доля больше (tie-break по меньшему userId). Зеркало `splitByWeight`.
+private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -> [Int: Int] {
+    var out: [Int: Int] = [:]
+    let totalWeight = weights.reduce(0) { $0 + $1.weight }
+    guard totalWeight > 0 else { return out }
+
+    var given = 0
+    for w in weights {
+        let value = amount * w.weight / totalWeight
+        out[w.id] = value
+        given += value
+    }
+    let remainder = amount - given
+    guard remainder > 0 else { return out }
+
+    let order = weights.sorted { lhs, rhs in
+        let lv = out[lhs.id] ?? 0
+        let rv = out[rhs.id] ?? 0
+        if lv != rv { return lv > rv }
+        return lhs.id < rhs.id
+    }
+    for i in 0..<remainder {
+        out[order[i % order.count].id, default: 0] += 1
+    }
+    return out
+}
+
+/// Делит цену позиции: снимает фиксированные `amount`, остаток — по весам.
+/// nil — фиксы превышают цену, отрицательный фикс или неразделённый остаток. Зеркало `SplitItem`.
+private func splitItem(_ price: Int, _ shares: [ItemShare]) -> [Int: Int]? {
+    var out: [Int: Int] = [:]
+    var fixed = 0
+    var weighted: [(id: Int, weight: Int)] = []
+    for share in shares {
+        if let amount = share.amount {
+            if amount < 0 { return nil }
+            out[share.userId, default: 0] += amount
+            fixed += amount
+            continue
+        }
+        if share.weight > 0 {
+            weighted.append((id: share.userId, weight: share.weight))
+        }
+    }
+    if fixed > price { return nil }
+    let remainder = price - fixed
+    if weighted.isEmpty {
+        return remainder == 0 ? out : nil
+    }
+    for (id, value) in splitByWeight(remainder, weighted) {
+        out[id, default: 0] += value
+    }
+    return out
+}
+
+/// Делит надбавку по базовым долям людей: proportional → вес = базовая доля,
+/// иначе (или база нулевая) — поровну. Зеркало `SplitSurcharge`.
+private func splitSurcharge(_ price: Int, _ rule: String?, _ base: [Int: Int]) -> [Int: Int] {
+    let ids = base.keys.sorted()
+    let totalBase = base.values.reduce(0, +)
+    var weights: [(id: Int, weight: Int)] = []
+    for id in ids {
+        var weight = 1
+        if rule == OperationItem.splitProportional && totalBase > 0 {
+            weight = base[id] ?? 0
+        }
+        weights.append((id: id, weight: weight))
+    }
+    return splitByWeight(price, weights)
 }
 
 /// Сумма в конкретной валюте. Суммы в разных валютах НЕ складываются между

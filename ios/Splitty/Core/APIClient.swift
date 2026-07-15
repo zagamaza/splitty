@@ -99,12 +99,23 @@ struct OperationBody: Encodable {
     let donorId: Int
     let recipientIds: [Int]?
     let recipientSums: [RecipientSum]?
+    /// Позиции чека itemized-операции: сервер выводит суммы из них и игнорирует
+    /// плоские `recipientSums`. nil — обычная (плоская) операция (не сериализуется).
+    let items: [OperationItem]?
     let clientOpId: String?
 
-    init(description: String, sum: Int, donorId: Int, split: ExpenseSplit, clientOpId: String? = nil) {
+    init(
+        description: String,
+        sum: Int,
+        donorId: Int,
+        split: ExpenseSplit,
+        items: [OperationItem]? = nil,
+        clientOpId: String? = nil
+    ) {
         self.description = description
         self.sum = sum
         self.donorId = donorId
+        self.items = items
         self.clientOpId = clientOpId
         switch split {
         case .equally(let ids):
@@ -117,11 +128,41 @@ struct OperationBody: Encodable {
     }
 }
 
+// MARK: - Протокол write-path операций (шов для тестов)
+
+/// Узкий контракт создания/правки/удаления операций, от которого зависит
+/// `OutboxStore` при синхронизации. Позволяет подставить фейк в тестах офлайн-
+/// раундтрипа (сам `APIClient` — `final` с приватной `URLSession`). В проде
+/// реализуется `APIClient`, поведение идентично.
+protocol OperationAPI {
+    func addOperation(
+        roomId: String,
+        description: String,
+        sum: Int,
+        donorId: Int,
+        split: ExpenseSplit,
+        items: [OperationItem]?,
+        clientOpId: String?
+    ) async throws -> Operation
+
+    func updateOperation(
+        roomId: String,
+        operationId: String,
+        description: String,
+        sum: Int,
+        donorId: Int,
+        split: ExpenseSplit,
+        items: [OperationItem]?
+    ) async throws -> Operation
+
+    func deleteOperation(roomId: String, operationId: String) async throws
+}
+
 // MARK: - Клиент
 
 /// Клиент REST API Splitty (контракт — docs/API.md).
 /// Все методы бросают `APIError`.
-final class APIClient {
+final class APIClient: OperationAPI {
     /// nil — адрес сервера невалиден: каждый запрос бросит `APIError.invalidURL`
     /// (никакой тихой подмены дефолтным адресом).
     private let baseURL: URL?
@@ -283,6 +324,7 @@ final class APIClient {
         sum: Int,
         donorId: Int,
         split: ExpenseSplit,
+        items: [OperationItem]? = nil,
         clientOpId: String? = nil
     ) async throws -> Operation {
         try await request(
@@ -292,6 +334,7 @@ final class APIClient {
                 sum: sum,
                 donorId: donorId,
                 split: split,
+                items: items,
                 clientOpId: clientOpId
             )
         )
@@ -303,16 +346,105 @@ final class APIClient {
         description: String,
         sum: Int,
         donorId: Int,
-        split: ExpenseSplit
+        split: ExpenseSplit,
+        items: [OperationItem]? = nil
     ) async throws -> Operation {
         try await request(
             "PUT", "/api/v1/rooms/\(roomId)/operations/\(operationId)",
-            body: OperationBody(description: description, sum: sum, donorId: donorId, split: split)
+            body: OperationBody(
+                description: description,
+                sum: sum,
+                donorId: donorId,
+                split: split,
+                items: items
+            )
         )
     }
 
     func deleteOperation(roomId: String, operationId: String) async throws {
         try await send("DELETE", "/api/v1/rooms/\(roomId)/operations/\(operationId)")
+    }
+
+    // MARK: AI-распознавание расхода
+
+    /// AI-распознавание расхода: POST /rooms/{id}/operations/parse (multipart).
+    /// Первый upload в проекте — тело собирается вручную (URLSession, без сторонних
+    /// зависимостей). Опциональные части: `audio` (audio/aac), `image` (image/jpeg),
+    /// `text` (поле), `draft` (JSON-поле текущего черновика для голосовой правки).
+    /// Сервер сам выбирает медиа по приоритету audio → image → text; черновик
+    /// НЕ создаёт операцию, а заполняет форму. 400 — не передано ни одного ввода.
+    func parseOperation(
+        roomId: String,
+        audio: Data? = nil,
+        image: Data? = nil,
+        text: String? = nil,
+        draft: ParseDraft? = nil
+    ) async throws -> ParseResponse {
+        guard let baseURL,
+              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw APIError.invalidURL
+        }
+        let basePath = components.path.hasSuffix("/")
+            ? String(components.path.dropLast())
+            : components.path
+        components.path = basePath + "/api/v1/rooms/\(roomId)/operations/parse"
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
+
+        let boundary = "SplittyBoundary-\(UUID().uuidString)"
+        var body = Data()
+        func appendLine(_ string: String) {
+            body.append(Data(string.utf8))
+        }
+        // Поле формы (draft/text).
+        func appendField(name: String, value: String) {
+            appendLine("--\(boundary)\r\n")
+            appendLine("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
+            appendLine(value)
+            appendLine("\r\n")
+        }
+        // Файловая часть (audio/image) — сервер проверяет Content-Type по allowlist.
+        func appendFile(name: String, filename: String, contentType: String, data: Data) {
+            appendLine("--\(boundary)\r\n")
+            appendLine("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"\r\n")
+            appendLine("Content-Type: \(contentType)\r\n\r\n")
+            body.append(data)
+            appendLine("\r\n")
+        }
+
+        if let draft {
+            let draftData = try encoder.encode(draft)
+            appendField(name: "draft", value: String(decoding: draftData, as: UTF8.self))
+        }
+        if let audio {
+            appendFile(name: "audio", filename: "audio.aac", contentType: "audio/aac", data: audio)
+        }
+        if let image {
+            appendFile(name: "image", filename: "image.jpg", contentType: "image/jpeg", data: image)
+        }
+        if let text, !text.isEmpty {
+            appendField(name: "text", value: text)
+        }
+        appendLine("--\(boundary)--\r\n")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type"
+        )
+        request.httpBody = body
+
+        let data = try await perform(request)
+        do {
+            return try decoder.decode(ParseResponse.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
     }
 
     // MARK: Долги и погашение
@@ -430,6 +562,12 @@ final class APIClient {
             request.httpBody = try encoder.encode(body)
         }
 
+        return try await perform(request)
+    }
+
+    /// Выполняет готовый запрос (в т.ч. multipart), проверяет статус, возвращает
+    /// сырое тело. Общая обработка ответа для JSON-`send` и `parseOperation`.
+    private func perform(_ request: URLRequest) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
