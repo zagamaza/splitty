@@ -148,11 +148,11 @@ type parseResponse struct {
 **Files:**
 - Modify: `internal/api/service_models.go`
 
-- [ ] добавить типы `ItemKind`, `SplitRule`, `ItemShare`, `OperationItem` с bson/json-тегами
-- [ ] добавить поле `Items []OperationItem` в `Operation` (omitempty, nil для обычных операций)
-- [ ] добавить константы `ItemKindItem/ItemKindSurcharge`, `SplitProportional/SplitEqually`
-- [ ] убедиться, что существующая (де)сериализация Operation не ломается (Items опускается) — прогнать существующие тесты `internal/service`, `internal/rest`
-- [ ] run `make build` + `make test` — должно пройти
+- [x] добавить типы `ItemKind`, `SplitRule`, `ItemShare`, `OperationItem` с bson/json-тегами
+- [x] добавить поле `Items []OperationItem` в `Operation` (omitempty, nil для обычных операций)
+- [x] добавить константы `ItemKindItem/ItemKindSurcharge`, `SplitProportional/SplitEqually`
+- [x] убедиться, что существующая (де)сериализация Operation не ломается (Items опускается) — прогнать существующие тесты `internal/service`, `internal/rest`
+- [x] run `make build` + `make test` — должно пройти (go1.23.5 локально; go1.22 toolchain недоступен без сети)
 
 ### Task 2: Расчётное ядро деления позиции (TDD)
 
@@ -160,12 +160,12 @@ type parseResponse struct {
 - Create: `internal/api/itemsplit.go`
 - Create: `internal/api/itemsplit_test.go`
 
-- [ ] **тесты вперёд:** table-driven кейсы — поровну; веса 5/3/2; микс (Маша 500 + остальное поровну); все ручные; неровный остаток (тому, у кого доля больше); перебор фиксов; одиночный участник; нулевые/пустые shares; **`Qty>1` (Price=total, деление НЕ зависит от Qty)**; **surcharge с Percent (сумма берётся из Price, процент игнорируется в расчёте)**
-- [ ] реализовать `SplitItem(price int, shares []ItemShare) (map[int]int, error)`: снять фиксы → остаток по весам → целочисленно с детерминированным tie-break по UserId
-- [ ] реализовать `SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int`
-- [ ] реализовать `DeriveShares(items []OperationItem) (map[int]int, int, error)` — свернуть позиции+сборы в `userId→сумма` + total; **ядро возвращает int-карту, про `User` НЕ знает** (маппинг в `RecipientWithSum` — в Task 7, в REST); инвариант `Σ == total` на int
-- [ ] тесты на `DeriveShares`: полный чек из Overview (пицца 1200 + баурсаки 500 веса 5/3/2 + вино 3000 микс + сбор 10% proportional), проверка каждой доли и суммы до рубля
-- [ ] run tests — должны пройти перед задачей 3
+- [x] **тесты вперёд:** table-driven кейсы — поровну; веса 5/3/2; микс (Маша 500 + остальное поровну); все ручные; неровный остаток (тому, у кого доля больше); перебор фиксов; одиночный участник; нулевые/пустые shares; **`Qty>1` (Price=total, деление НЕ зависит от Qty)**; **surcharge с Percent (сумма берётся из Price, процент игнорируется в расчёте)**
+- [x] реализовать `SplitItem(price int, shares []ItemShare) (map[int]int, error)`: снять фиксы → остаток по весам → целочисленно с детерминированным tie-break по UserId
+- [x] реализовать `SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int`
+- [x] реализовать `DeriveShares(items []OperationItem) (map[int]int, int, error)` — свернуть позиции+сборы в `userId→сумма` + total; **ядро возвращает int-карту, про `User` НЕ знает** (маппинг в `RecipientWithSum` — в Task 7, в REST); инвариант `Σ == total` на int
+- [x] тесты на `DeriveShares`: полный чек из Overview (пицца 1200 + баурсаки 500 веса 5/3/2 + вино 3000 микс + сбор 10% proportional), проверка каждой доли и суммы до рубля
+- [x] run tests — должны пройти перед задачей 3
 
 ### Task 3: Клиент Gemini за интерфейсом
 

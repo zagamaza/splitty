@@ -45,11 +45,53 @@ type Operation struct {
 	// ClientOpId клиентский идемпотентный ключ операции (uuid из outbox
 	// офлайн-клиента): заполняется только REST, бот его не пишет
 	ClientOpId string `bson:"client_op_id,omitempty" json:"clientOpId,omitempty"`
+	// Items детализация расхода по позициям чека (AI-распознавание): источник
+	// правды, из которого сервер выводит RecipientsWithSum. nil для обычных
+	// операций — старые клиенты (бот, Android) про Items не знают и работают
+	// на плоских RecipientsWithSum
+	Items []OperationItem `json:"items,omitempty" bson:"items,omitempty"`
 }
 
 type RecipientWithSum struct {
 	User User    `json:"user" bson:"user"`
 	Sum  float64 `json:"sum" bson:"sum"`
+}
+
+// ItemKind различает обычную позицию и надбавку (сервисный сбор, чаевые, доставка)
+type ItemKind string
+
+// SplitRule правило деления надбавки: пропорционально съеденному или поровну
+type SplitRule string
+
+const (
+	ItemKindItem      ItemKind = "item"
+	ItemKindSurcharge ItemKind = "surcharge"
+
+	SplitProportional SplitRule = "proportional"
+	SplitEqually      SplitRule = "equally"
+)
+
+// ItemShare доля одного участника в позиции. Amount задан → фиксированная сумма
+// (Weight игнорируется); иначе доля определяется относительным Weight
+// (1 у всех = поровну).
+type ItemShare struct {
+	UserId int  `json:"userId" bson:"user_id"`
+	Weight int  `json:"weight" bson:"weight"`
+	Amount *int `json:"amount,omitempty" bson:"amount,omitempty"`
+}
+
+// OperationItem одна строка чека. Price — всегда суммарная стоимость строки
+// (не цена единицы); Qty и Percent — только для отображения, в расчёте не
+// участвуют. У Kind==surcharge поле Shares не используется (сбор делится по
+// долям людей от обычных позиций согласно Split).
+type OperationItem struct {
+	Name    string      `json:"name" bson:"name"`
+	Price   int         `json:"price" bson:"price"`
+	Qty     int         `json:"qty" bson:"qty"`
+	Shares  []ItemShare `json:"shares" bson:"shares"`
+	Kind    ItemKind    `json:"kind" bson:"kind"`
+	Split   SplitRule   `json:"split,omitempty" bson:"split,omitempty"`
+	Percent *int        `json:"percent,omitempty" bson:"percent,omitempty"`
 }
 
 type File struct {
