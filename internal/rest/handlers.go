@@ -495,21 +495,6 @@ type operationRequest struct {
 	Items []ai.DraftItem `json:"items,omitempty"`
 }
 
-// parseOperationRequest декодирует и валидирует тело операции (контракт v2).
-// Используется PUT-хендлером; POST декодирует тело сам (ему нужен clientOpId
-// до валидации) и вызывает validateOperationRequest напрямую
-func parseOperationRequest(r *http.Request, room *api.Room) (*operationRequest, *api.User, []api.RecipientWithSum, api.SplitType, *httpError) {
-	var req operationRequest
-	if hErr := decodeJSON(r, &req); hErr != nil {
-		return nil, nil, nil, "", hErr
-	}
-	donor, withSum, splitType, hErr := validateOperationRequest(&req, room)
-	if hErr != nil {
-		return nil, nil, nil, "", hErr
-	}
-	return &req, donor, withSum, splitType, nil
-}
-
 // validateOperationRequest валидирует тело операции, резолвит участников комнаты.
 // Ровно один режим деления:
 //   - recipientIds — equally: сервер раскладывает доли канонически
@@ -819,20 +804,45 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, donor, recipientsWithSum, splitType, hErr := parseOperationRequest(r, room)
-	if hErr != nil {
+	var req operationRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
 		hErr.write(w)
+		return
+	}
+
+	// две ветки, как в create: itemized (сервер выводит суммы, Items сохраняются)
+	// и обычная (плоские доли; Items ПРИНУДИТЕЛЬНО затираются — иначе на операции
+	// осталась бы протухшая разбивка, не соответствующая новым суммам)
+	var (
+		donor             *api.User
+		recipientsWithSum []api.RecipientWithSum
+		splitType         api.SplitType
+		newSum            int
+		items             []api.OperationItem
+		hErr2             *httpError
+	)
+	if len(req.Items) > 0 {
+		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
+		splitType = splitByExactAmount
+	} else {
+		donor, recipientsWithSum, splitType, hErr2 = validateOperationRequest(&req, room)
+		newSum = req.Sum
+	}
+	if hErr2 != nil {
+		hErr2.write(w)
 		return
 	}
 
 	// копия до мутации — по диффу old/new собираются уведомления участникам
 	oldOp := *operation
 	operation.Description = req.Description
-	operation.Sum = req.Sum
+	operation.Sum = newSum
 	operation.Donor = donor
 	operation.RecipientsWithSum = recipientsWithSum
 	operation.SplitType = splitType
 	operation.Status = statusActive
+	// плоское обновление затирает позиции; itemized — сохраняет новые
+	operation.Items = items
 	// легаси-поле обнуляется: доли теперь только в recipients_with_sum
 	operation.Recipients = nil
 	if err := s.operationSrv.UpdateOperation(ctx, operation, roomId); err != nil {

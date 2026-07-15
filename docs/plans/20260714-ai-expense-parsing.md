@@ -257,10 +257,10 @@ type parseResponse struct {
 - Modify: `internal/rest/handlers.go` (`handleUpdateOperation`:778)
 - Modify: `internal/rest/handlers_test.go`
 
-- [ ] `handleUpdateOperation` (:778): если запрос **без** `items` — принудительно `Items = nil` (плоское обновление затирает позиции)
-- [ ] если запрос **с** `items` — пересчитать `RecipientsWithSum`/`Sum` из Items (как в Task 7)
-- [ ] тест: itemized-операция → PUT без items → Items очищены, плоские суммы сохранены; PUT с items → Items обновлены и суммы выведены
-- [ ] run tests — должны пройти
+- [x] `handleUpdateOperation`: ветвление как в create — запрос **без** `items` принудительно ставит `Items = nil`; удалён мёртвый `parseOperationRequest`
+- [x] запрос **с** `items` — `validateItemizedRequest` пересчитывает `RecipientsWithSum`/`Sum` из Items
+- [x] тест: itemized-операция → PUT без items → Items очищены (в ответе и хранилище), плоские суммы сохранены; PUT с items (веса 2:1) → Items обновлены, суммы 200/100
+- [x] run tests — должны пройти
 
 ### Task 9: Бот — показ позиций и guard на правку
 
