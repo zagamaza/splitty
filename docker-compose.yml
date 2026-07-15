@@ -10,6 +10,10 @@ services:
       - LOG_LEVEL=debug
       - DB_HOST=mongodb://mongo:27017/
       - LOG_FMT=json
+      # AI-распознавание расхода. Секрет берётся из окружения хоста (как TG_TOKEN),
+      # в файл не коммитится. Пустой ключ → фича выключена (/parse отдаёт 503).
+      - GEMINI_API_KEY
+      - GEMINI_MODEL
     ports:
       - "18001:18001"
 
