@@ -26,6 +26,14 @@ type config struct {
 	// Многоразовый код входа для ревьюеров App Store + id демо-аккаунта
 	ReviewLoginCode string `env:"REVIEW_LOGIN_CODE" envDefault:""`
 	ReviewUserId    int    `env:"REVIEW_USER_ID" envDefault:"0"`
+
+	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
+	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
+	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`
+	GeminiModel       string `env:"GEMINI_MODEL" envDefault:"gemini-2.0-flash"`
+	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
+	AiParseDailyQuota int    `env:"AI_PARSE_DAILY_QUOTA" envDefault:"50"`
+	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
 }
 
 func initConfig() (*config, error) {

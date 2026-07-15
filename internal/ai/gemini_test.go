@@ -1,0 +1,142 @@
+package ai
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+// fakeDoer подставной транспорт: отдаёт заранее заданные ответы по очереди.
+type fakeDoer struct {
+	responses []fakeResp
+	calls     int
+	lastBody  string
+}
+
+type fakeResp struct {
+	status int
+	body   string
+	err    error
+}
+
+func (f *fakeDoer) Do(req *http.Request) (*http.Response, error) {
+	if req.Body != nil {
+		raw, _ := io.ReadAll(req.Body)
+		f.lastBody = string(raw)
+	}
+	i := f.calls
+	f.calls++
+	if i >= len(f.responses) {
+		return nil, fmt.Errorf("неожиданный вызов #%d", i)
+	}
+	r := f.responses[i]
+	if r.err != nil {
+		return nil, r.err
+	}
+	return &http.Response{
+		StatusCode: r.status,
+		Body:       io.NopCloser(strings.NewReader(r.body)),
+		Header:     make(http.Header),
+	}, nil
+}
+
+func candidate(jsonDraft string) string {
+	// экранируем как строку внутри JSON-ответа Gemini
+	escaped := strings.ReplaceAll(jsonDraft, `"`, `\"`)
+	escaped = strings.ReplaceAll(escaped, "\n", "")
+	return fmt.Sprintf(`{"candidates":[{"content":{"parts":[{"text":"%s"}]}}]}`, escaped)
+}
+
+func newTestClient(f *fakeDoer) *GeminiClient {
+	return &GeminiClient{apiKey: "test-key", model: "gemini-2.0-flash", baseURL: "https://example.test/v1beta", http: f}
+}
+
+func TestGemini_Success(t *testing.T) {
+	draft := `{"draft":{"description":"Ужин","sum":300,"items":[{"name":"Пицца","price":300,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}]},"questions":[]}`
+	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
+	c := newTestClient(f)
+
+	res, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "пицца 300", Currency: "RUB"})
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+	if res.Draft.Sum != 300 || len(res.Draft.Items) != 1 || res.Draft.Items[0].Name != "Пицца" {
+		t.Fatalf("неожиданный черновик: %+v", res.Draft)
+	}
+	if f.calls != 1 {
+		t.Fatalf("ожидался 1 вызов, было %d", f.calls)
+	}
+}
+
+func TestGemini_RetryOnInvalidJSON(t *testing.T) {
+	good := `{"draft":{"description":"x","sum":100,"items":[]}}`
+	f := &fakeDoer{responses: []fakeResp{
+		{status: 200, body: candidate("не json вовсе")},
+		{status: 200, body: candidate(good)},
+	}}
+	c := newTestClient(f)
+
+	res, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"})
+	if err != nil {
+		t.Fatalf("ожидался успех после ретрая, ошибка: %v", err)
+	}
+	if res.Draft.Sum != 100 {
+		t.Fatalf("неожиданный результат: %+v", res.Draft)
+	}
+	if f.calls != 2 {
+		t.Fatalf("ожидалось 2 вызова (ретрай), было %d", f.calls)
+	}
+}
+
+func TestGemini_InvalidJSONTwiceFails(t *testing.T) {
+	f := &fakeDoer{responses: []fakeResp{
+		{status: 200, body: candidate("мусор 1")},
+		{status: 200, body: candidate("мусор 2")},
+	}}
+	c := newTestClient(f)
+	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err == nil {
+		t.Fatal("ожидалась ошибка после двух невалидных ответов")
+	}
+	if f.calls != 2 {
+		t.Fatalf("ожидалось 2 вызова, было %d", f.calls)
+	}
+}
+
+func TestGemini_HTTPErrorNotRetried(t *testing.T) {
+	f := &fakeDoer{responses: []fakeResp{{status: 500, body: `{"error":"boom"}`}}}
+	c := newTestClient(f)
+	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err == nil {
+		t.Fatal("ожидалась ошибка на HTTP 500")
+	}
+	if f.calls != 1 {
+		t.Fatalf("HTTP-ошибка не должна ретраиться; вызовов %d", f.calls)
+	}
+}
+
+func TestGemini_EmptyKey(t *testing.T) {
+	c := &GeminiClient{apiKey: "", model: "m", baseURL: "x", http: &fakeDoer{}}
+	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "т"}); err == nil {
+		t.Fatal("ожидалась ошибка при пустом ключе")
+	}
+}
+
+func TestGemini_AudioInlineBase64(t *testing.T) {
+	draft := `{"draft":{"description":"x","sum":0,"items":[]}}`
+	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
+	c := newTestClient(f)
+
+	_, err := c.Parse(context.Background(), ParseInput{Media: MediaAudio, Data: []byte("аудиобайты"), Mime: "audio/aac"})
+	if err != nil {
+		t.Fatalf("ошибка: %v", err)
+	}
+	// в теле должен быть inline_data с base64 (не multipart)
+	if !strings.Contains(f.lastBody, "inline_data") || !strings.Contains(f.lastBody, "audio/aac") {
+		t.Fatalf("тело не содержит inline_data/mime: %s", truncate(f.lastBody, 200))
+	}
+	if !strings.Contains(f.lastBody, "responseSchema") {
+		t.Fatalf("тело не содержит responseSchema")
+	}
+}

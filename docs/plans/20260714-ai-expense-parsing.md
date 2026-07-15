@@ -175,14 +175,14 @@ type parseResponse struct {
 - Create: `internal/ai/gemini_test.go`
 - Modify: `cmd/splitty/config.go`
 
-- [ ] определить интерфейс `Parser.Parse(ctx, input ParseInput) (ParseResult, error)` — input: audio/image/text bytes + mime + участники (id, displayName, username, aliases) + валюта + текущий draft
-- [ ] реализовать Gemini-клиент: **`generateContent` REST, `Content-Type: application/json`**; медиа передаётся как `inline_data{ mime_type, data(base64) }` внутри JSON-body (это НЕ HTTP-multipart!); `generationConfig.responseMimeType=application/json` + `responseSchema` (JSON Schema черновика); stdlib `net/http`, таймаут по контексту. Учесть, что base64 раздувает тело ~на 33% — держаться под лимитом запроса Gemini
-- [ ] один ретрай при невалидном/непарсящемся JSON ответа
-- [ ] промпт: правила матчинга имён (displayName/username/aliases; неоднозначность → в Unknown), правила surcharge (процент→proportional, фикс→equally; сумму сбора модель обязана дать в `Price`), правило `Price`=total строки, формат долей
-- [ ] **контракт голосовой правки (иначе одна коррекция сотрёт ручную работу):** при непустом входном `draft` модель обязана трактовать его как ИСТИНУ и применять **только дельту** из нового ввода — не пересобирать чек с нуля, не перетасовывать уже проставленные доли и разрешённые имена. Явно прописать в промпте + тест «дан draft с ручными долями + правка одной позиции → остальные доли неизменны»
-- [ ] добавить ENV в config: `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_PARSE_RATE_PER_MIN`, `AI_PARSE_DAILY_QUOTA`, `AI_MAX_BODY_BYTES`
-- [ ] тесты с фейковым HTTP-транспортом: успех, невалидный JSON+ретрай, таймаут, пустой ответ
-- [ ] run tests — должны пройти
+- [x] определить интерфейс `Parser.Parse(ctx, input ParseInput) (ParseResult, error)` — input: audio/image/text bytes + mime + участники (id, displayName, username, aliases) + валюта + текущий draft. **Единый транспортный черновик `ai.Draft`/`ai.DraftItem`/`ai.ItemShare` (с json+bson тегами) — переиспользуется REST-слоем вместо отдельного `parseDraft`, чтобы не троить структуру api/ai/rest**
+- [x] реализовать Gemini-клиент: **`generateContent` REST, `Content-Type: application/json`**; медиа передаётся как `inline_data{ mime_type, data(base64) }` внутри JSON-body (НЕ HTTP-multipart); `responseMimeType=application/json` + `responseSchema`; stdlib `net/http`, `temperature=0`, таймаут по контексту; `httpDoer`-seam для тестов
+- [x] один ретрай при невалидном/непарсящемся JSON ответа (HTTP-ошибки НЕ ретраятся)
+- [x] промпт: правила матчинга имён (displayName/username/aliases; неоднозначность → в Unknown), правила surcharge (процент→proportional, фикс→equally; сумму сбора модель обязана дать в `Price`), правило `Price`=total строки, формат долей
+- [x] **контракт голосовой правки:** при непустом входном `draft` в промпте явно: «черновик — ИСТИНА, применяй только дельту, не пересобирай, не трогай уже проставленные доли и разрешённые имена». (Юнит на «доли не меняются» не пишу — это поведение модели, не кода; проверяется в acceptance Task 14)
+- [x] добавить ENV в config: `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_PARSE_RATE_PER_MIN`, `AI_PARSE_DAILY_QUOTA`, `AI_MAX_BODY_BYTES`
+- [x] тесты с фейковым HTTP-транспортом: успех, невалидный JSON+ретрай, две невалидных→ошибка, HTTP 500 без ретрая, пустой ключ, audio inline_data base64
+- [x] run tests — должны пройти
 
 ### Task 4: Rate limit и суточная квота (Mongo)
 
