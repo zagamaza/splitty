@@ -82,24 +82,36 @@ type ItemShare struct {
 }
 type OperationItem struct {
     Name    string      `bson:"name" json:"name"`
-    Price   int         `bson:"price" json:"price"`
-    Qty     int         `bson:"qty" json:"qty"`
+    Price   int         `bson:"price" json:"price"`   // ВСЕГДА total строки (не цена единицы)
+    Qty     int         `bson:"qty" json:"qty"`       // только для отображения («×2»); в математике НЕ участвует
     Shares  []ItemShare `bson:"shares" json:"shares"`
     Kind    ItemKind    `bson:"kind" json:"kind"`
     Split   SplitRule   `bson:"split,omitempty" json:"split,omitempty"` // только surcharge
-    Percent *int        `bson:"percent,omitempty" json:"percent,omitempty"`
+    Percent *int        `bson:"percent,omitempty" json:"percent,omitempty"` // только display («Сбор 10%»); НЕ пересчитывается
 }
 // Operation получает: Items []OperationItem `bson:"items,omitempty" json:"items,omitempty"`
 ```
 
-**Формула деления позиции (`internal/api/` — новый файл, чистая функция, TDD):**
+**Семантика полей (зафиксировано до Task 2 — иначе формула неоднозначна):**
+- `Price` — **всегда суммарная стоимость строки**, уже с учётом количества. `Qty` — чисто display («Баурсаки ×10»), в делёж НЕ входит. Никакого `UnitPrice*Qty` на сервере.
+- `Percent` у surcharge — **только для показа** («Сервисный сбор 10%»). Сервер НЕ пересчитывает сбор из процента: сумма сбора всегда берётся из `Price`. Если AI дал только процент — он сам обязан посчитать `Price` (валидатор требует `Price>0` у surcharge). Так исключается расхождение «процент × база ≠ Price».
+
+**Формула деления позиции (`internal/api/itemsplit.go` — чистые функции, TDD):**
 1. Сумма фиксов `F = Σ Amount`. Если `F > Price` → перебор (ошибка валидации).
 2. Остаток `R = Price - F` делится по весам между участниками без `Amount`.
 3. Целочисленно: `base = R * weight / totalWeight`, остаток от деления раздаётся по одному тем, у кого доля больше (детерминированный tie-break по UserId).
 4. Сборы: после расчёта обычных позиций считаем базовые доли людей; `proportional` → веса = базовые доли, `equally` → веса равные; тот же целочисленный сплит.
-5. Итог сворачивается в `map[userId]sum` → `RecipientsWithSum`. Инвариант: `Σ RecipientsWithSum == Operation.Sum`.
+5. Итог сворачивается в `map[int]int` (userId→сумма) + total.
 
-**Граница int/float:** `RecipientWithSum.Sum` в реальной модели — `float64` (`service_models.go:51`). `DeriveRecipients` считает и возвращает **int**-карты; конверсия в `float64` — только на финальном присваивании в `RecipientsWithSum`. Инвариант `Σ == Sum` проверять на **int-значениях до конверсии**, чтобы не ловить float-дрейф в тестах.
+**Сигнатуры ядра (важно — ядро НЕ знает про `User`):**
+```go
+func SplitItem(price int, shares []ItemShare) (map[int]int, error)
+func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int
+func DeriveShares(items []OperationItem) (shares map[int]int, total int, err error) // userId→сумма
+```
+Ядро работает только с `userId` (int). Инвариант `Σ shares == total` проверяется на **int** внутри ядра.
+
+**Маппинг в модель (в REST write-path, НЕ в ядре):** `RecipientWithSum` хранит embedded `User` целиком (`service_models.go:50`), а долги читают `recipient.User.ID`. Поэтому хендлер, получив `map[int]int` от `DeriveShares`, маппит каждый `userId` в `User` из `room.Members` и собирает `[]RecipientWithSum` (`Sum` — `float64`, конверсия из int только здесь). Если `userId` из ядра не найден в `room.Members` → 400 (защита от рассинхрона).
 
 **Черновик (DTO parse-эндпоинта, `internal/rest/dto.go`):**
 ```go
@@ -146,11 +158,11 @@ type parseResponse struct {
 - Create: `internal/api/itemsplit.go`
 - Create: `internal/api/itemsplit_test.go`
 
-- [ ] **тесты вперёд:** table-driven кейсы — поровну; веса 5/3/2; микс (Маша 500 + остальное поровну); все ручные; неровный остаток (тому, у кого доля больше); перебор фиксов; одиночный участник; нулевые/пустые shares
+- [ ] **тесты вперёд:** table-driven кейсы — поровну; веса 5/3/2; микс (Маша 500 + остальное поровну); все ручные; неровный остаток (тому, у кого доля больше); перебор фиксов; одиночный участник; нулевые/пустые shares; **`Qty>1` (Price=total, деление НЕ зависит от Qty)**; **surcharge с Percent (сумма берётся из Price, процент игнорируется в расчёте)**
 - [ ] реализовать `SplitItem(price int, shares []ItemShare) (map[int]int, error)`: снять фиксы → остаток по весам → целочисленно с детерминированным tie-break по UserId
 - [ ] реализовать `SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int`
-- [ ] реализовать `DeriveRecipients(items []OperationItem) ([]RecipientWithSum, int, error)` — свернуть позиции+сборы в плоские суммы + total; инвариант `Σ == total`
-- [ ] тесты на `DeriveRecipients`: полный чек из Overview (пицца+баурсаки+вино+сбор), проверка каждой доли и суммы
+- [ ] реализовать `DeriveShares(items []OperationItem) (map[int]int, int, error)` — свернуть позиции+сборы в `userId→сумма` + total; **ядро возвращает int-карту, про `User` НЕ знает** (маппинг в `RecipientWithSum` — в Task 7, в REST); инвариант `Σ == total` на int
+- [ ] тесты на `DeriveShares`: полный чек из Overview (пицца 1200 + баурсаки 500 веса 5/3/2 + вино 3000 микс + сбор 10% proportional), проверка каждой доли и суммы до рубля
 - [ ] run tests — должны пройти перед задачей 3
 
 ### Task 3: Клиент Gemini за интерфейсом
@@ -162,9 +174,9 @@ type parseResponse struct {
 - Modify: `cmd/splitty/config.go`
 
 - [ ] определить интерфейс `Parser.Parse(ctx, input ParseInput) (ParseResult, error)` — input: audio/image/text bytes + mime + участники (id, displayName, username, aliases) + валюта + текущий draft
-- [ ] реализовать Gemini-клиент: multipart-inline-data, `responseSchema` (JSON Schema черновика), stdlib `net/http`, таймаут по контексту
+- [ ] реализовать Gemini-клиент: **`generateContent` REST, `Content-Type: application/json`**; медиа передаётся как `inline_data{ mime_type, data(base64) }` внутри JSON-body (это НЕ HTTP-multipart!); `generationConfig.responseMimeType=application/json` + `responseSchema` (JSON Schema черновика); stdlib `net/http`, таймаут по контексту. Учесть, что base64 раздувает тело ~на 33% — держаться под лимитом запроса Gemini
 - [ ] один ретрай при невалидном/непарсящемся JSON ответа
-- [ ] промпт: правила матчинга имён (displayName/username/aliases; неоднозначность → в Unknown), правила surcharge (процент→proportional, фикс→equally), формат долей
+- [ ] промпт: правила матчинга имён (displayName/username/aliases; неоднозначность → в Unknown), правила surcharge (процент→proportional, фикс→equally; сумму сбора модель обязана дать в `Price`), правило `Price`=total строки, формат долей
 - [ ] добавить ENV в config: `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_PARSE_RATE_PER_MIN`, `AI_PARSE_DAILY_QUOTA`, `AI_MAX_BODY_BYTES`
 - [ ] тесты с фейковым HTTP-транспортом: успех, невалидный JSON+ретрай, таймаут, пустой ответ
 - [ ] run tests — должны пройти
@@ -175,22 +187,28 @@ type parseResponse struct {
 - Create: `internal/repository/ai_usage.go` (или расширить `repository.go`)
 - Create: `internal/repository/ai_usage_test.go`
 - Modify: `internal/service/service.go`
+- Modify: `cmd/splitty/main.go` (вызов создания TTL-индекса при старте)
 
-- [ ] коллекция/счётчик `ai_usage`: атомарный `$inc` окна «запросов/мин» и «в сутки» на userId
+- [ ] коллекция/счётчик `ai_usage`: атомарный `$inc` окна «запросов/мин» и «в сутки» на userId, поле `expires_at`
 - [ ] метод `AllowParse(userId) (bool, reason)` + сброс окна по времени
+- [ ] **`EnsureAIUsageIndexes(ctx)` — TTL-индекс `expireAfterSeconds` на `expires_at`** (в репозитории сейчас нет bootstrap-инфраструктуры индексов; без явного создания коллекция растёт вечно); вызвать из `initRestServer`/старта
 - [ ] сервис-обёртка над репозиторием
 - [ ] тесты: в пределах лимита, превышение per-min, превышение daily, сброс окна
 - [ ] run tests — должны пройти
 
-> Примечание: конструирование rate-limit сервиса и его прокидывание в REST делается в Task 6 через `initRestServer`/`NewServer` (не wire) — здесь только репозиторий+сервис.
+> Примечание: конструирование rate-limit сервиса и его прокидывание в REST делается в Task 6 через `initRestServer`/`NewServer` (не wire) — здесь только репозиторий+сервис+индекс.
 
-### Task 5: Санитайз ответа модели (TDD)
+### Task 5: Parse-DTO и санитайз ответа модели (TDD)
 
 **Files:**
+- Modify: `internal/rest/dto.go` (`parseDraft`, `draftItem` c полем `Unknown []string`, `parseResponse`)
 - Create: `internal/rest/parse_sanitize.go`
 - Create: `internal/rest/parse_sanitize_test.go`
 
-- [ ] **тесты вперёд:** userId не из комнаты → выкинуть/в Unknown; отрицательная/нулевая цена; >N позиций (лимит); >M shares; Sum≠Σ позиций → пересчитать Sum из позиций; сборы без Split → default
+> DTO черновика создаётся ЗДЕСЬ (не в Task 6), иначе `sanitizeDraft` не скомпилируется — он использует эти типы.
+
+- [ ] завести `parseDraft`, `draftItem` (с `Unknown []string`), `parseResponse` в `dto.go`
+- [ ] **тесты вперёд:** userId не из комнаты → выкинуть/в Unknown; отрицательная/нулевая цена; >N позиций (лимит); >M shares; Sum≠Σ позиций → пересчитать Sum из позиций; сборы без Split → default; surcharge с Percent но без Price → отклонить
 - [ ] реализовать `sanitizeDraft(draft, members) parseDraft`: userId только из участников, цены ≥0, лимиты числа позиций/долей, нормализация Kind/Split
 - [ ] run tests — должны пройти
 
@@ -199,10 +217,11 @@ type parseResponse struct {
 **Files:**
 - Modify: `internal/rest/server.go` (`Server` struct + `maxBodyMiddleware` + маршрут)
 - Modify: `internal/rest/handlers.go` (`handleParseOperation`)
-- Modify: `internal/rest/dto.go` (`parseDraft`, `draftItem`, `parseResponse`)
 - Modify: `cmd/splitty/main.go` (`initRestServer` — конструирование `ai.Parser` + rate-limit сервиса)
 - Modify: `internal/repository/repository.go` (`FindByIds` — батч, его нет)
 - Create: `internal/rest/parse_handler_test.go`
+
+> parse-DTO (`parseDraft`/`draftItem`/`parseResponse`) уже созданы в Task 5.
 
 - [ ] **DI (не wire!):** добавить `ai.Parser` и rate-limit сервис полями в `Server` struct (`server.go:48`), расширить сигнатуру `rest.NewServer(...)`, сконструировать обе зависимости в `cmd/splitty/main.go:initRestServer` (:91) и передать в `NewServer` (:119)
 - [ ] **снятие лимита 1 МБ в middleware, не в хендлере:** в `maxBodyMiddleware` (`server.go:174`) пропускать `MaxBytesReader`, если `r.URL.Path` оканчивается на `/operations/parse` (re-wrap внутри хендлера НЕ снимет внешний 1 МБ-ридер)
@@ -214,17 +233,19 @@ type parseResponse struct {
 - [ ] тесты: 401 без токена; 403 не участник; 429 при превышении квоты; 413 при превышении размера; happy path с фейковым Parser; ошибка AI сохраняет draft
 - [ ] run tests — должны пройти
 
-### Task 7: Write-path — сохранение Items (сервер выводит суммы)
+### Task 7: Write-path — сохранение Items (сервер выводит суммы) + read-path
 
 **Files:**
 - Modify: `internal/rest/handlers.go` (`operationRequest`:481, `handleCreateOperation`:691, `validateOperationRequest`:515 — всё в handlers.go, НЕ в dto.go)
+- Modify: `internal/rest/dto.go` (`operationDto`:56 + `toOperationDto`:218 — **read-path**)
 - Modify: `internal/rest/handlers_test.go`
 
 - [ ] добавить `items []draftItem` в `operationRequest` (структура в `handlers.go:481`, опционально, аддитивно)
-- [ ] при наличии `items`: сервер вызывает `api.DeriveRecipients` → **сам** формирует `RecipientsWithSum` и `Sum`, игнорируя клиентские плоские суммы; `SplitType = by_exact_amount`; сохраняет `Items` в операцию
-- [ ] валидация items: непусто, все userId из комнаты, `DeriveRecipients` без ошибки
+- [ ] при наличии `items`: сервер вызывает `api.DeriveShares` → маппит `userId→User` через `room.Members` → **сам** формирует `RecipientsWithSum` и `Sum`, игнорируя клиентские плоские суммы; `SplitType = by_exact_amount`; сохраняет `Items` в операцию. userId из ядра не найден в `room.Members` → 400
+- [ ] валидация items: непусто, все userId из комнаты, `DeriveShares` без ошибки, **`Unknown` пуст** (нельзя сохранить нераспознанные имена — иначе 400)
 - [ ] при отсутствии `items`: поведение как раньше (плоские суммы), `Items = nil`
-- [ ] тесты: создание itemized-операции (суммы выведены на сервере, клиентские проигнорированы); создание обычной операции без items; невалидные items → 400
+- [ ] **read-path (находка Codex — иначе iOS detail не увидит позиций):** добавить `items` в `operationDto` (`dto.go:56`) и заполнять в `toOperationDto` (`dto.go:218`), чтобы `GET /rooms`, `/operations`, activity отдавали позиции
+- [ ] тесты: создание itemized-операции (суммы выведены на сервере, клиентские проигнорированы); создание обычной операции без items; невалидные items → 400; **непустой Unknown → 400**; **GET room/operations itemized-операции возвращает items**
 - [ ] run tests — должны пройти
 
 ### Task 8: Затирание Items на плоских путях правки (сервер)
@@ -258,28 +279,30 @@ type parseResponse struct {
 - Modify: `internal/api/tg.go` (User.Aliases)
 - Modify: `internal/repository/repository.go` (метод `AddUserAlias`)
 - Modify: `internal/rest/handlers.go` (эндпоинт дозаписи алиаса)
+- Modify: `internal/rest/server.go` (**регистрация маршрута** — routes прописаны вручную в `Handler`, :125; без этого хендлер недостижим)
 - Modify: `internal/rest/dto.go`
 - Modify: `internal/repository/repository_test.go` или `internal/rest/handlers_test.go`
 
 - [ ] добавить `Aliases []string` в `User` (bson/json, omitempty)
 - [ ] `AddUserAlias(userId, alias)` — `$addToSet`, нормализация (trim/lower), дедуп
-- [ ] `POST /api/v1/users/{id}/aliases` (или расширить существующий профиль-эндпоинт) под auth; **область записи:** разрешить дозапись только если целевой user состоит с вызывающим в общей комнате (алиас пишется в чужой документ участника)
+- [ ] `POST /api/v1/users/{id}/aliases` под auth; **зарегистрировать маршрут в `server.go` Handler** (`mux.Handle("POST /api/v1/users/{id}/aliases", s.auth(...))`); **область записи:** разрешить дозапись только если целевой user состоит с вызывающим в общей комнате (алиас пишется в чужой документ участника)
 - [ ] parse-хендлер (Task 6) уже читает aliases из коллекции user — проверить связку
-- [ ] тесты: добавление алиаса, идемпотентность ($addToSet), нормализация
+- [ ] тесты: добавление алиаса, идемпотентность ($addToSet), нормализация; **401 без токена, 403 если нет общей комнаты, 200 happy path**
 - [ ] run tests — должны пройти
 
 ### Task 11: iOS — модель черновика и API-клиент
 
 **Files:**
-- Modify: `ios/Splitty/Core/Models.swift` (OperationItem, ItemShare, Draft)
-- Modify: `ios/Splitty/Core/APIClient.swift` (parse multipart; `items` в `OperationBody`:96 + сигнатуры `createOperation`:290 / `updateOperation`:310)
+- Modify: `ios/Splitty/Core/Models.swift` (`OperationItem`, `ItemShare`, `Draft` + **`items` в read-модели `Operation`** — иначе detail не покажет позиции)
+- Modify: `ios/Splitty/Core/APIClient.swift` (parse-запрос; `items` в `OperationBody`:96 + сигнатуры `createOperation`:290 / `updateOperation`:310; **seam для тестируемости**)
 - Modify: `ios/Splitty/Core/OutboxStore.swift` (`items` в `OutboxPayload`:9 + маппинг в `send`:213)
 - Create: `ios/SplittyTests/ItemDraftTests.swift`
 
-- [ ] модели `OperationItem`, `ItemShare`, `ParseDraft`, `ParseResponse` (Codable)
-- [ ] `APIClient.parseOperation(roomId, audio?/image?/text?, draft)` — первый multipart/upload в проекте (`URLSession` uploadTask)
+- [ ] модели `OperationItem`, `ItemShare`, `ParseDraft`, `ParseResponse` (Codable); **добавить `items` в read-модель `Operation`** (для OperationDetailView в Task 13)
+- [ ] `APIClient.parseOperation(roomId, audio?/image?/text?, draft)` — первый upload в проекте: **JSON-body или multipart к НАШЕМУ серверу** (не к Gemini напрямую); сервер уже принимает multipart (Task 6)
 - [ ] **вся цепочка write-path (иначе Items молча потеряются при офлайн-сохранении — критично по Codex):** добавить `items` в `OperationBody` struct (:96); протащить `items` параметром в `APIClient.createOperation` (:290) и `updateOperation` (:310) и вложить в конструктор `OperationBody`; добавить `items` в `OutboxPayload` (:9); замапить `payload.items` в `OutboxStore.send` (:213) при вызове `api.createOperation`/`updateOperation`
-- [ ] **тест офлайн-раундтрипа outbox:** `items` переживают enqueue → flush → вызов API (не теряются, когда операция уходит через outbox)
+- [ ] **seam для теста (находка Codex — сейчас `APIClient` final с private `URLSession.shared`, fake не подставить):** ввести узкий протокол create/update/delete (или инъекцию `URLSession`/transport в `APIClient`), чтобы `OutboxStore.sync` можно было прогнать с фейком и проверить отправленный payload
+- [ ] **тест офлайн-раундтрипа outbox:** `items` переживают enqueue → flush → вызов API (через seam из предыдущего пункта)
 - [ ] тесты ViewModel-логики черновика: сериализация items, вывод per-person сумм (клиентское превью), сброс items при ручной правке
 - [ ] сборка iOS-таргета проходит
 
@@ -291,8 +314,8 @@ type parseResponse struct {
 - Create: `ios/Splitty/Features/Expense/ReceiptCapture.swift`
 
 - [ ] usage-strings в `project.yml` (по-русски), регенерация проекта XcodeGen
-- [ ] `AudioRecorder` на `AVAudioRecorder` (m4a, AAC ~16kbps), hold-to-talk
-- [ ] `ReceiptCapture`: `PhotosPicker`/камера → JPEG сжатие до ~1024px
+- [ ] `AudioRecorder` на `AVAudioRecorder` (AAC ~16kbps), hold-to-talk. **MIME: слать `audio/aac` (Gemini поддерживает aac; `.m4a`/`audio/mp4` НЕ в списке).** Зафиксировать формат контейнера и явно проставлять поддерживаемый mime при upload; server allowlist принимает только `audio/aac`, `audio/mp3`, `audio/wav`, `audio/ogg`, `audio/flac`
+- [ ] `ReceiptCapture`: `PhotosPicker`/камера → JPEG (`image/jpeg`) сжатие до ~1024px
 - [ ] `.disabled` состояние при `!session.isOnline` (прецедент — погашение долга)
 - [ ] проверка на устройстве, что permission-запрос не крашит (ручная — см. Post-Completion)
 
@@ -310,7 +333,8 @@ type parseResponse struct {
 - [ ] чипы «Поровну на всех / По позициям» под позициями (переопределение; сбрасывает Items); ручная правка суммы сбрасывает Items
 - [ ] голосовая правка: повторный `/parse` с текущим draft; вызов parse из ViewModel, спиннер, ошибка не теряет draft
 - [ ] нераспознанное имя (Unknown) — красный чип, тап → выбор участника → `POST aliases` + локальное применение
-- [ ] тесты ViewModel: заполнение из parseResponse, сброс Items при ручной правке, применение выбора для Unknown, `canSave` при несходящихся суммах
+- [ ] **`canSave` = false, пока в любой позиции есть непустой `Unknown`** (нельзя сохранить черновик с нераспознанными именами; сервер тоже вернёт 400 — Task 7); подсказка «выберите, кто такой …»
+- [ ] тесты ViewModel: заполнение из parseResponse, сброс Items при ручной правке, применение выбора для Unknown, `canSave=false` при непустом Unknown, `canSave` при несходящихся суммах
 - [ ] сборка iOS проходит; только семантические токены Theme.swift, тёмная тема, только стандартный SDK
 
 ### Task 14: Verify acceptance criteria
