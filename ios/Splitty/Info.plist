@@ -33,6 +33,12 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Камера нужна, чтобы сфотографировать чек</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Микрофон нужен, чтобы надиктовать расход голосом</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Доступ к фото нужен, чтобы выбрать фото чека</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

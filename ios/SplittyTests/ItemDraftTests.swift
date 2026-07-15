@@ -384,7 +384,7 @@ private final class FakeOperationAPI: OperationAPI {
         split: ExpenseSplit,
         items: [OperationItem]?,
         clientOpId: String?
-    ) async throws -> Operation {
+    ) async throws -> Splitty.Operation {
         addCalls.append(AddCall(roomId: roomId, items: items, clientOpId: clientOpId))
         return Self.stubOperation(id: clientOpId ?? "op", description: description, sum: sum, donorId: donorId)
     }
@@ -397,7 +397,7 @@ private final class FakeOperationAPI: OperationAPI {
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]?
-    ) async throws -> Operation {
+    ) async throws -> Splitty.Operation {
         updateCalls.append(UpdateCall(roomId: roomId, operationId: operationId, items: items))
         return Self.stubOperation(id: operationId, description: description, sum: sum, donorId: donorId)
     }
@@ -406,8 +406,8 @@ private final class FakeOperationAPI: OperationAPI {
         deletedOperationIds.append(operationId)
     }
 
-    private static func stubOperation(id: String, description: String, sum: Int, donorId: Int) -> Operation {
-        Operation(
+    private static func stubOperation(id: String, description: String, sum: Int, donorId: Int) -> Splitty.Operation {
+        Splitty.Operation(
             id: id,
             description: description,
             sum: sum,
