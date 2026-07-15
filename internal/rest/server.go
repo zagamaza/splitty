@@ -7,8 +7,10 @@ import (
 	"errors"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
+	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
@@ -54,6 +56,12 @@ type Server struct {
 	operationSrv  *service.OperationService
 	// notifier опционален (см. SetNotifier): nil — уведомления выключены (no-op)
 	notifier Notifier
+
+	// AI-парсинг расхода опционален (см. SetAI): nil aiParser — фича выключена
+	// (эндпоинт /parse отдаёт 503), остальной сервер работает как раньше
+	aiParser    ai.Parser
+	rateLimiter *service.RateLimiter
+	aiMaxBody   int64
 
 	httpServer *http.Server
 	httpClient *http.Client
@@ -104,6 +112,15 @@ func (s *Server) SetNotifier(n Notifier) {
 	s.notifier = n
 }
 
+// SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
+// nil parser оставляет фичу выключенной (503). Отдельный setter, а не параметр
+// NewServer — не ломает существующие вызовы конструктора в тестах.
+func (s *Server) SetAI(parser ai.Parser, limiter *service.RateLimiter, maxBody int64) {
+	s.aiParser = parser
+	s.rateLimiter = limiter
+	s.aiMaxBody = maxBody
+}
+
 // notifyTimeout ограничивает фоновую отправку уведомлений одной мутации
 const notifyTimeout = 30 * time.Second
 
@@ -147,6 +164,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/currencies", s.auth(s.handleCurrencies))
 
 	mux.Handle("GET /api/v1/rooms/{roomId}/operations", s.auth(s.handleListOperations))
+	mux.Handle("POST /api/v1/rooms/{roomId}/operations/parse", s.auth(s.handleParseOperation))
 	mux.Handle("POST /api/v1/rooms/{roomId}/operations", s.auth(s.handleCreateOperation))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/operations/{operationId}", s.auth(s.handleUpdateOperation))
 	mux.Handle("DELETE /api/v1/rooms/{roomId}/operations/{operationId}", s.auth(s.handleDeleteOperation))
@@ -173,10 +191,14 @@ func (s *Server) Handler() http.Handler {
 // (в т.ч. на неаутентифицированном /auth/telegram). Превышение decodeJSON отдаёт как 413
 const maxRequestBodyBytes = 1 << 20
 
-// maxBodyMiddleware ограничивает размер тела всех запросов через http.MaxBytesReader
+// maxBodyMiddleware ограничивает размер тела всех запросов через http.MaxBytesReader.
+// Исключение — /operations/parse (загрузка аудио/фото чека): там свой, больший
+// лимит выставляется в самом хендлере (re-wrap здесь не снял бы внешний 1 МБ-ридер).
 func maxBodyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		if !strings.HasSuffix(r.URL.Path, "/operations/parse") {
+			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+		}
 		next.ServeHTTP(w, r)
 	})
 }

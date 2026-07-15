@@ -91,6 +91,10 @@ type User struct {
 	// Notify — тонкие настройки уведомлений (категория × канал) из приложения;
 	// nil — пользователь их не менял, действуют легаси-правила (см. AllowsTelegram)
 	Notify *NotifySettings `json:"notify" bson:"notify,omitempty"`
+	// Aliases прозвища пользователя для AI-матчинга имён из речи («Саня» →
+	// Александр Петров). Глобальные (не по комнате), пополняются, когда
+	// пользователь разрешает нераспознанное имя в UI
+	Aliases []string `json:"aliases,omitempty" bson:"aliases,omitempty"`
 }
 
 // ChannelPrefs каналы доставки уведомлений одной категории;

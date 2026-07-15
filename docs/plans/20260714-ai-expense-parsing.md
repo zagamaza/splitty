@@ -225,15 +225,15 @@ type parseResponse struct {
 
 > parse-DTO (`parseDraft`/`draftItem`/`parseResponse`) уже созданы в Task 5.
 
-- [ ] **DI (не wire!):** добавить `ai.Parser` и rate-limit сервис полями в `Server` struct (`server.go:48`), расширить сигнатуру `rest.NewServer(...)`, сконструировать обе зависимости в `cmd/splitty/main.go:initRestServer` (:91) и передать в `NewServer` (:119)
-- [ ] **снятие лимита 1 МБ в middleware, не в хендлере:** в `maxBodyMiddleware` (`server.go:174`) пропускать `MaxBytesReader`, если `r.URL.Path` оканчивается на `/operations/parse` (re-wrap внутри хендлера НЕ снимет внешний 1 МБ-ридер)
-- [ ] маршрут `POST /api/v1/rooms/{roomId}/operations/parse` под `s.auth`
-- [ ] порядок в хендлере: auth → членство в комнате (roomForMember) → rate limit/квота → `MaxBytesReader` (~15 МБ) → streaming multipart с покусочными лимитами (audio/image/draft) + Content-Type allowlist
-- [ ] `FindByIds(ctx, ids []int)` в `UserRepository` (сейчас есть только `FindById`:451) — загрузка **каноничных** участников из коллекции `user` по member ids (не embedded-снимки) для алиасов; либо явный цикл `FindById`
-- [ ] вызов `ai.Parser.Parse` → `sanitizeDraft` → `parseResponse`
-- [ ] при ошибке AI: понятная ошибка, входной draft не теряется (эхо обратно), логирование
-- [ ] тесты: 401 без токена; 403 не участник; 429 при превышении квоты; 413 при превышении размера; happy path с фейковым Parser; ошибка AI сохраняет draft
-- [ ] run tests — должны пройти
+- [x] **DI (не wire!):** `ai.Parser` + `*service.RateLimiter` + `aiMaxBody` полями в `Server`; setter `SetAI(...)` (как `SetNotifier` — не ломает существующие вызовы `NewServer` в тестах); конструирование в `cmd/splitty/main.go:initRestServer` под условием `GEMINI_API_KEY != ""` + вызов `EnsureIndexes`
+- [x] **снятие лимита 1 МБ в middleware:** `maxBodyMiddleware` пропускает `MaxBytesReader` для путей на `/operations/parse`; больший лимит ставится в хендлере
+- [x] маршрут `POST /api/v1/rooms/{roomId}/operations/parse` под `s.auth` (зарегистрирован ДО `/operations`, чтобы не перехватывался)
+- [x] порядок в хендлере: 503 если AI выключен → членство → rate-limit → `MaxBytesReader(aiMaxBody)` → multipart с покусочными лимитами (audio 3МБ/image 8МБ/draft 64КБ) + Content-Type allowlist
+- [x] `FindByIds(ctx, ids []int)` в `UserRepository` — каноничные участники из коллекции `user` (с алиасами); `buildParticipants` с откатом к members при сбое
+- [x] вызов `ai.Parser.Parse` → `sanitizeDraft` → `ai.ParseResult` (хендлер в отдельном `parse_handler.go`, не в handlers.go)
+- [x] при ошибке AI: 502 + эхо входного draft (не теряется) + логирование
+- [x] тесты: 401; 403 не участник; 503 AI выключен; 429 при лимите (parser не вызван); 415 неподдерживаемый mime; happy path (текст+аудио); ошибка AI сохраняет draft; 400 без ввода
+- [x] run tests — должны пройти
 
 ### Task 7: Write-path — сохранение Items (сервер выводит суммы) + read-path
 

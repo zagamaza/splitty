@@ -126,6 +126,30 @@ func (f *fakeUserRepo) FindById(_ context.Context, id int) (*api.User, error) {
 	return &user, nil
 }
 
+func (f *fakeUserRepo) FindByIds(_ context.Context, ids []int) ([]api.User, error) {
+	var out []api.User
+	for _, id := range ids {
+		if u, ok := f.users[id]; ok {
+			out = append(out, *u)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeUserRepo) AddAlias(_ context.Context, userId int, alias string) error {
+	u, ok := f.users[userId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	for _, a := range u.Aliases {
+		if a == alias {
+			return nil
+		}
+	}
+	u.Aliases = append(u.Aliases, alias)
+	return nil
+}
+
 // fakeRoomRepo in-memory реализация repository.RoomRepository для тестов
 type fakeRoomRepo struct {
 	rooms map[string]*api.Room

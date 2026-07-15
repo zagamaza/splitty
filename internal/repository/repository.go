@@ -23,8 +23,10 @@ type UserRepository interface {
 	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
 	SetCountInPage(ctx context.Context, userId int, count int) error
 	FindById(ctx context.Context, id int) (*api.User, error)
+	FindByIds(ctx context.Context, ids []int) ([]api.User, error)
 	FindByUsername(ctx context.Context, username string) (*api.User, error)
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
+	AddAlias(ctx context.Context, userId int, alias string) error
 }
 
 type RoomRepository interface {
@@ -478,6 +480,35 @@ func (r MongoUserRepository) FindByUsername(ctx context.Context, username string
 		return nil, err
 	}
 	return cs, nil
+}
+
+// FindByIds возвращает пользователей по списку id одним запросом ($in). Порядок
+// результата не гарантируется; отсутствующие id просто не попадают в выборку.
+// Нужен для AI-парсинга: канонические профили участников (с алиасами) берутся
+// из коллекции user, а не из embedded-снимков в комнате.
+func (r MongoUserRepository) FindByIds(ctx context.Context, ids []int) ([]api.User, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	cur, err := r.col.Find(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$in", Value: ids}}}})
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var users []api.User
+	if err := cur.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// AddAlias добавляет прозвище пользователю ($addToSet — без дублей). Алиас
+// нормализуется вызывающим кодом (trim/lower).
+func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias string) error {
+	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
+	update := bson.D{{Key: "$addToSet", Value: bson.M{"aliases": alias}}}
+	_, err := r.col.UpdateOne(ctx, f, update)
+	return err
 }
 
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.User, error) {

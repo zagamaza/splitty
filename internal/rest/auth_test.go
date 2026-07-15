@@ -232,7 +232,6 @@ func TestAuthDevEnabled(t *testing.T) {
 	}
 }
 
-
 // Многоразовый код ревьюеров App Store: логинит в демо-аккаунт, не гаснет
 // после использования; при пустом конфиге — выключен.
 func TestAuthCodeReviewLogin(t *testing.T) {

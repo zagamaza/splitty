@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/rest"
@@ -109,14 +110,29 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	buttonService := service.NewButtonService(repository.NewButtonRepository(db))
 
 	restCfg := rest.Config{
-		Listen:    cfg.Listen,
-		JwtSecret: jwtSecret,
-		DevAuth:   cfg.ApiDevAuth,
-		TgToken:   cfg.TgToken,
+		Listen:          cfg.Listen,
+		JwtSecret:       jwtSecret,
+		DevAuth:         cfg.ApiDevAuth,
+		TgToken:         cfg.TgToken,
 		ReviewLoginCode: cfg.ReviewLoginCode,
 		ReviewUserId:    cfg.ReviewUserId,
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService)
+
+	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
+	if cfg.GeminiApiKey != "" {
+		aiUsageRepo := repository.NewAiUsageRepository(db)
+		if err := aiUsageRepo.EnsureIndexes(ctx); err != nil {
+			log.Warn().Err(err).Msg("cannot create ai_usage TTL index")
+		}
+		parser := ai.NewGemini(cfg.GeminiApiKey, cfg.GeminiModel)
+		limiter := service.NewRateLimiter(aiUsageRepo, cfg.AiParseRatePerMin, cfg.AiParseDailyQuota)
+		server.SetAI(parser, limiter, cfg.AiMaxBodyBytes)
+		log.Info().Msg("AI expense parsing enabled (Gemini)")
+	} else {
+		log.Info().Msg("AI expense parsing disabled (GEMINI_API_KEY empty)")
+	}
+
 	return server, &restNotifierDeps{operationSrv: operationService, buttonSrv: buttonService}, cleanup, nil
 }
 

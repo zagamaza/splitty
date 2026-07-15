@@ -886,9 +886,9 @@ func TestStatisticsByMonth(t *testing.T) {
 			Status:            statusActive, SplitType: splitByExactAmount, CreateAt: at,
 		}
 	}
-	opNov := spend("Ноябрь", 700, time.Date(2025, 11, 20, 12, 0, 0, 0, time.UTC))    // старше окна
-	opJan := spend("Январь", 999, time.Date(2026, 1, 31, 23, 0, 0, 0, time.UTC))     // последний день перед окном
-	opFeb := spend("Февраль", 200, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC))      // первый день окна
+	opNov := spend("Ноябрь", 700, time.Date(2025, 11, 20, 12, 0, 0, 0, time.UTC)) // старше окна
+	opJan := spend("Январь", 999, time.Date(2026, 1, 31, 23, 0, 0, 0, time.UTC))  // последний день перед окном
+	opFeb := spend("Февраль", 200, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC))   // первый день окна
 	opApr := spend("Апрель", 300, time.Date(2026, 4, 10, 12, 0, 0, 0, time.UTC))
 	opLegacy := api.Operation{ // легаси master-2021 внутри окна — нормализуется как active-расход
 		ID: primitive.NewObjectID(), Description: "Легаси", Sum: 400, Donor: &testUser1,
