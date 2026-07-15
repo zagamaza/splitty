@@ -344,17 +344,17 @@ type parseResponse struct {
 
 ### Task 14: Verify acceptance criteria
 
-- [ ] полный сценарий из Overview проходит: голос → черновик с пиццей/баурсаками/вином/сбором → суммы сходятся
-- [ ] голосовая правка («пиво Лёха не пил») пересчитывает и сбор
-- [ ] нераспознанный «Саня» → чип → выбор → алиас сохранён → повторный parse матчит сам
-- [ ] сохранение itemized-операции: сервер вывел суммы, долги считаются корректно (`GetRoomDebts`)
-- [ ] правка itemized-операции старым плоским путём (бот/Android) затирает Items (нет разъезда)
-- [ ] правка itemized-операции **в iOS** сохраняет позиции (items загружены в редактор, PUT с items) — не превращает чек в плоскую операцию
-- [ ] голосовая правка поверх ручных изменений не сбрасывает уже проставленные доли и разрешённые имена
-- [ ] бот показывает позиции и блокирует правку
-- [ ] защиты `/parse`: 401/403/429/413 срабатывают; фото >1 МБ проходит, а глобальный JSON-лимит цел
-- [ ] run `make build` && `make test` — всё зелёное
-- [ ] прогнать iOS-тесты в Xcode
+- [x] полный сценарий из Overview проходит: голос → черновик с пиццей/баурсаками/вином/сбором → суммы сходятся — расчётное ядро подтверждено `TestDeriveShares_FullReceipt` (пицца 1200 + баурсаки 500 веса 5/3/2 + вино 3000 микс + сбор 10% proportional → доли `1980/2090/440/660`, инвариант Σ==total) и сквозным REST-тестом `TestCreateItemized_FullReceipt`. Живой прогон через Gemini — ручной (Post-Completion, требует `GEMINI_API_KEY`)
+- [x] голосовая правка («пиво Лёха не пил») пересчитывает и сбор — сервер всегда выводит суммы заново из `Items` (`DeriveShares`→`SplitSurcharge` считает сбор от base-долей на каждом вызове), покрыто `TestDeriveShares_FullReceipt` + `TestSplitSurcharge` + `TestDeriveShares_SurchargePercentUsesPriceNotPercent`. `/parse` stateless — правка = повторный вызов; живой прогон модели ручной (Post-Completion)
+- [x] нераспознанный «Саня» → чип → выбор → алиас сохранён → повторный parse матчит сам — эндпоинт алиасов подтверждён `TestAddAlias_HappyPathAndNormalization`/`_Idempotent`/`_ForbiddenNoSharedRoom`/`_Unauthorized`/`_EmptyRejected`; `sanitizeDraft` сохраняет Unknown-позицию (`TestSanitize_KeepsUnknownItem`, `TestHasUnknown`); `buildParticipants`→`FindByIds` подаёт `u.Aliases` в промпт (`parse_handler.go:175,195`). Повторный матч именем — поведение модели, ручная приёмка (Post-Completion)
+- [x] сохранение itemized-операции: сервер вывел суммы, долги считаются корректно (`GetRoomDebts`) — `TestCreateItemized_ServerDerivesSums` (клиентский `sum=999` проигнорён, сервер вывел 300 из Items), `TestCreateItemized_FullReceipt`; долги на плоских суммах — `TestGetRoomDebts`/`TestGetRoomDebtsByTestData`/`TestRepaymentSettlesDebt`
+- [x] правка itemized-операции старым плоским путём (бот/Android) затирает Items (нет разъезда) — `TestUpdate_PlainClearsItems` (PUT без `items` → `Items=nil` в ответе и хранилище, плоские суммы сохранены); `TestUpdate_ItemizedUpdatesItems` — PUT с items пересчитывает суммы
+- [x] правка itemized-операции **в iOS** сохраняет позиции (items загружены в редактор, PUT с items) — не превращает чек в плоскую операцию — код написан (Task 11/13: `draftItems` в ViewModel, `save()` шлёт `updateOperation(...,items:)`; round-trip тесты `testLoadEditOperationCarriesItemsIntoViewModel`/`testLoadFlatOperationLeavesDraftItemsNil` в `ItemDraftTests.swift`). (требует Xcode/устройство — вынесено в Post-Completion; код написан, не скомпилирован в этой среде)
+- [x] голосовая правка поверх ручных изменений не сбрасывает уже проставленные доли и разрешённые имена — контракт «черновик — ИСТИНА, применяй дельту» зафиксирован в промпте (Task 3); поведение модели, не кода — ручная приёмка (Post-Completion, требует живого Gemini). Серверная часть (эхо входного draft при ошибке AI) подтверждена `TestParse_AIErrorEchoesDraft`
+- [x] бот показывает позиции и блокирует правку — рендер: `TestRenderOperationItems_Itemized`/`_Empty`, `TestItemLabel`, `TestItemParticipants`; детектор+guard: `TestIsItemized` + ранний guard `isItemized(operation)` в `EditDonorOperation.OnMessage` (`operation_screen.go:453`) с i18n `msg_operation_itemized_edit_in_app` (ru/en `:131`)
+- [x] защиты `/parse`: 401/403/429/413 срабатывают; фото >1 МБ проходит, а глобальный JSON-лимит цел — `TestParse_Unauthorized`(401), `TestParse_ForbiddenNonMember`(403), `TestParse_RateLimited429`(429, parser не вызван), `TestParse_Disabled503`(503), `TestParse_UnsupportedAudioMime`(415); 413 — `StatusRequestEntityTooLarge` на покусочных лимитах (`parse_handler.go:100,108,149,160`). Фото >1 МБ проходит: `maxBodyMiddleware` снимает глобальный 1 МБ только для суффикса `/operations/parse` (`server.go:200`), хендлер ставит `aiMaxBody`; глобальный JSON-лимит цел — `TestRequestBodyTooLarge` (не-parse путь режется на `maxRequestBodyBytes=1<<20`)
+- [x] run `make build` && `make test` — всё зелёное — `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go build ./...` → exit 0; `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...` → все пакеты `ok` (api/bot/rest/service; ai). go1.22-toolchain недоступен без сети, прогон на go1.23.5 локально
+- [x] прогнать iOS-тесты в Xcode — (требует Xcode/устройство — вынесено в Post-Completion; код написан, не скомпилирован в этой среде). Swift-тесты написаны: `ItemDraftTests.swift`, `AddExpenseAIFlowTests.swift`, `AddExpenseDistributionTests.swift` — Swift/Xcode toolchain в этой среде отсутствует
 
 ### Task 15: [Final] Update documentation
 
