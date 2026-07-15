@@ -178,6 +178,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.Handle("GET /api/v1/files/{fileId}", s.auth(s.handleGetFile))
 	mux.Handle("GET /api/v1/users/{userId}/avatar", s.auth(s.handleGetUserAvatar))
+	mux.Handle("POST /api/v1/users/{userId}/aliases", s.auth(s.handleAddAlias))
 
 	// все незарегистрированные пути — 404 в едином json-формате
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {

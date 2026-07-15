@@ -286,12 +286,12 @@ type parseResponse struct {
 - Modify: `internal/rest/dto.go`
 - Modify: `internal/repository/repository_test.go` или `internal/rest/handlers_test.go`
 
-- [ ] добавить `Aliases []string` в `User` (bson/json, omitempty)
-- [ ] `AddUserAlias(userId, alias)` — `$addToSet`, нормализация (trim/lower), дедуп
-- [ ] `POST /api/v1/users/{id}/aliases` под auth; **зарегистрировать маршрут в `server.go` Handler** (`mux.Handle("POST /api/v1/users/{id}/aliases", s.auth(...))`); **область записи:** разрешить дозапись только если целевой user состоит с вызывающим в общей комнате (алиас пишется в чужой документ участника)
-- [ ] parse-хендлер (Task 6) уже читает aliases из коллекции user — проверить связку
-- [ ] тесты: добавление алиаса, идемпотентность ($addToSet), нормализация; **401 без токена, 403 если нет общей комнаты, 200 happy path**
-- [ ] run tests — должны пройти
+- [x] добавить `Aliases []string` в `User` (сделано в Task 6)
+- [x] `AddAlias(userId, alias)` — `$addToSet`, дедуп; нормализация (trim/lower) в хендлере
+- [x] `POST /api/v1/users/{userId}/aliases` под auth; **маршрут зарегистрирован в `server.go`**; **область записи:** только при общей комнате (`shareRoom`), в свой профиль всегда; 204 No Content
+- [x] parse-хендлер (Task 6) читает aliases из каноничных user (`buildParticipants` через `FindByIds`) — связка есть
+- [x] тесты: 401 без токена, 403 без общей комнаты, 204 happy path + нормализация («  Саня  » → «саня»), идемпотентность, пустой → 400
+- [x] run tests — должны пройти
 
 ### Task 11: iOS — модель черновика и API-клиент
 

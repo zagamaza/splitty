@@ -1,12 +1,70 @@
 package rest
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/rs/zerolog/log"
 )
+
+type aliasRequest struct {
+	Alias string `json:"alias"`
+}
+
+// handleAddAlias POST /api/v1/users/{userId}/aliases
+// Добавляет прозвище участнику, чтобы AI сматчил его в следующий раз. Писать
+// алиас в чужой профиль можно только тому, с кем есть общая комната.
+func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	callerId := userIdFromCtx(ctx)
+
+	targetId, err := strconv.Atoi(r.PathValue("userId"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "validation", "невалидный userId")
+		return
+	}
+
+	var req aliasRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
+		hErr.write(w)
+		return
+	}
+	alias := strings.ToLower(strings.TrimSpace(req.Alias))
+	if alias == "" {
+		writeError(w, http.StatusBadRequest, "validation", "прозвище не может быть пустым")
+		return
+	}
+
+	if callerId != targetId && !s.shareRoom(ctx, callerId, targetId) {
+		writeError(w, http.StatusForbidden, "forbidden", "нельзя добавить прозвище пользователю без общей комнаты")
+		return
+	}
+
+	if err := s.userRepo.AddAlias(ctx, targetId, alias); err != nil {
+		log.Error().Err(err).Msg("cannot add alias")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить прозвище")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// shareRoom сообщает, состоят ли двое в общей комнате.
+func (s *Server) shareRoom(ctx context.Context, a, b int) bool {
+	rooms, err := s.roomRepo.FindRoomsByUserId(ctx, a)
+	if err != nil || rooms == nil {
+		return false
+	}
+	for i := range *rooms {
+		if isRoomMember(&(*rooms)[i], b) {
+			return true
+		}
+	}
+	return false
+}
 
 // toApiItems конвертирует транспортные позиции (ai.DraftItem) в доменные
 // (api.OperationItem).
