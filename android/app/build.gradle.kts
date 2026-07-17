@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -60,6 +61,13 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            // Roborazzi/Robolectric рендерят Compose с реальными ресурсами темы.
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 kotlin {
@@ -101,4 +109,25 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // Скриншот-тесты дизайн-системы (Roborazzi поверх Robolectric).
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(composeBom)
+    testImplementation(libs.compose.ui.test.junit4)
+    // Манифест с ComponentActivity нужен в debug-варианте (под ним крутится
+    // Robolectric) — иначе ActivityScenario не резолвит активити для Compose.
+    debugImplementation(libs.compose.ui.test.manifest)
+}
+
+// Robolectric 4.13 не поддерживает JDK 24 (major 68) — юнит-тесты гоняем на
+// установленном JDK 21. Основную сборку/компиляцию это не трогает.
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        }
+    )
 }

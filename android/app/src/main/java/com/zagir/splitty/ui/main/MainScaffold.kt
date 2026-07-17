@@ -62,6 +62,7 @@ import com.zagir.splitty.ui.groups.OperationDetailScreen
 import com.zagir.splitty.ui.profile.ProfileScreen
 import com.zagir.splitty.ui.profile.NotificationSettingsScreen
 import com.zagir.splitty.ui.settleup.SettleUpScreen
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -370,9 +371,14 @@ private fun RowScope.TabItem(
     onClick: (String) -> Unit,
 ) {
     val colors = Splitty.colors
+    val haptics = rememberHaptics()
     NavigationBarItem(
         selected = currentRoute == tab.route,
-        onClick = { onClick(tab.route) },
+        onClick = {
+            // Лёгкий отклик на смену таба (порт iOS MainTabView Haptics.tap()).
+            if (currentRoute != tab.route) haptics.tap()
+            onClick(tab.route)
+        },
         icon = { Icon(tab.icon, contentDescription = null) },
         label = {
             Text(text = stringResource(tab.labelRes), fontSize = 11.sp, maxLines = 1)

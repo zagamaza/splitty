@@ -3,6 +3,7 @@ package com.zagir.splitty.ui.components
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -92,10 +93,12 @@ fun PrimaryPillButton(
     enabled: Boolean = true,
 ) {
     val colors = Splitty.colors
+    val reduceMotion = rememberReduceMotion()
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.98f else 1f,
+        // reduce motion: без «прожатия» — как iOS `!reduceMotion && isPressed`.
+        targetValue = if (pressed && !reduceMotion) 0.98f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "pillScale",
     )
@@ -131,10 +134,11 @@ fun SoftChip(
     isSelected: Boolean = false,
 ) {
     val colors = Splitty.colors
+    val reduceMotion = rememberReduceMotion()
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.98f else 1f,
+        targetValue = if (pressed && !reduceMotion) 0.98f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "chipScale",
     )
@@ -221,6 +225,43 @@ fun MoneyText(
             fontFeatureSettings = "tnum", // моноширинные цифры
         ),
     )
+}
+
+/**
+ * MoneyText с анимацией смены значения — аналог iOS `.contentTransition(
+ * .numericText())`: при изменении [amount] старое число уезжает, новое
+ * въезжает (кроссфейд+сдвиг). Гейтится reduce motion — тогда меняется мгновенно.
+ * Для «живых» сумм (итог позиций чека, баланс после платежа).
+ */
+@Composable
+fun AnimatedMoneyText(
+    amount: Int,
+    modifier: Modifier = Modifier,
+    role: MoneyRole = MoneyRole.AUTO,
+    size: TextUnit = 17.sp,
+    weight: FontWeight = FontWeight.SemiBold,
+    currency: String = "RUB",
+) {
+    val reduceMotion = rememberReduceMotion()
+    if (reduceMotion) {
+        MoneyText(amount, modifier, role, size, weight, currency)
+        return
+    }
+    androidx.compose.animation.AnimatedContent(
+        targetState = amount,
+        modifier = modifier,
+        transitionSpec = {
+            val up = targetState > initialState
+            val enter = androidx.compose.animation.fadeIn() +
+                androidx.compose.animation.slideInVertically { if (up) it else -it }
+            val exit = androidx.compose.animation.fadeOut() +
+                androidx.compose.animation.slideOutVertically { if (up) -it else it }
+            enter togetherWith exit
+        },
+        label = "numericMoney",
+    ) { value ->
+        MoneyText(value, role = role, size = size, weight = weight, currency = currency)
+    }
 }
 
 /**

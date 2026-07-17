@@ -411,19 +411,15 @@ private fun DebtHeroCard(
                 )
             }
         }
-        // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок.
+        // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок. Тот же
+        // вид, что у «Погасить» в балансах — единый SoftChip; isSelected=true
+        // делает чип акцентным (порт iOS `.softChip(isSelected: true)`).
         if (canSettle && onSettleUp != null) {
             Spacer(Modifier.height(12.dp))
-            Text(
+            SoftChip(
                 text = stringResource(R.string.group_chip_settle_short),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(colors.accent)
-                    .clickable(onClick = onSettleUp)
-                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                onClick = onSettleUp,
+                isSelected = true,
             )
         }
         // Балансы сервера не учитывают неотправленные офлайн-операции.

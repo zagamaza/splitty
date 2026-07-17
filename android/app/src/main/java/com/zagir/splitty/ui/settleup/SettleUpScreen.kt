@@ -59,6 +59,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.money.currencySymbol
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
@@ -483,36 +484,5 @@ private fun LoadErrorPane(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = Splitty.colors
-    Column(
-        modifier = modifier.padding(horizontal = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.WifiOff,
-            contentDescription = null,
-            tint = colors.inkSecondary,
-            modifier = Modifier.size(40.dp),
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.common_load_failed),
-            fontSize = 17.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = colors.ink,
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = message,
-            fontSize = 15.sp,
-            color = colors.inkSecondary,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(16.dp))
-        SoftChip(
-            text = stringResource(R.string.common_retry),
-            onClick = onRetry,
-        )
-    }
+    FailedState(message = message, onRetry = onRetry, modifier = modifier)
 }

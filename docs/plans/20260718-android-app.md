@@ -153,13 +153,13 @@
 - Create: `ui/components/{Glossary,FailedState,Haptics,AppToast,NudgeHighlight}.kt`
 - Modify: экраны с копиями ErrorView, обе кнопки «Погасить», MoneyText
 
-- [ ] Порт `Core/Components.swift`: Glossary (settled/settledHero/balanceCaption с нулевой веткой и «взаимные долги»), FailedState единый (заменить 5 копий двух стилей), humanErrorText-доводка (таймаут отдельно)
-- [ ] Haptics (tap/success/warning через HapticFeedback/Vibrator) + применить по контракту: выбор чипов/фильтров, успех сохранения/платежа, warning на нуджах
-- [ ] AppToast (галочка, автогашение 2.8с, гасится выполнением подсказки), NudgeHighlight (встряска+рамка; гейт по animator duration scale = 0 — как reduce motion)
-- [ ] Reduce-motion гейт на spring/scale в DS; numericText-аналог MoneyText (AnimatedContent)
-- [ ] «Погасить» → единый SoftChip(isSelected) в hero и балансах
-- [ ] unit: balanceCaption (+/0/−/мульти), Glossary; Roborazzi-инфраструктура + снапшоты FailedState/Toast
-- [ ] run tests — must pass before next task
+- [x] Порт `Core/Components.swift`: Glossary (settled/settledHero/balanceCaption с нулевой веткой и «взаимные долги»), FailedState единый (заменить 5 копий двух стилей), humanErrorText-доводка (таймаут отдельно)
+- [x] Haptics (tap/success/warning через HapticFeedback/Vibrator) + применить по контракту: выбор чипов/фильтров, успех сохранения/платежа, warning на нуджах
+- [x] AppToast (галочка, автогашение 2.8с, гасится выполнением подсказки), NudgeHighlight (встряска+рамка; гейт по animator duration scale = 0 — как reduce motion)
+- [x] Reduce-motion гейт на spring/scale в DS; numericText-аналог MoneyText (AnimatedContent)
+- [x] «Погасить» → единый SoftChip(isSelected) в hero и балансах
+- [x] unit: balanceCaption (+/0/−/мульти), Glossary; Roborazzi-инфраструктура + снапшоты FailedState/Toast
+- [x] run tests — must pass before next task
 
 ### Task 4: Фиксы дизайн-ревью — логин, профиль, уведомления
 

@@ -48,6 +48,7 @@ import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
@@ -326,33 +327,7 @@ private fun ActivityLoadingView() {
 @Composable
 private fun ActivityErrorView(message: String, onRetry: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier.padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.WifiOff,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = Splitty.colors.inkSecondary,
-            )
-            Text(
-                text = stringResource(R.string.common_load_failed),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Splitty.colors.ink,
-            )
-            Text(
-                text = message,
-                fontSize = 15.sp,
-                color = Splitty.colors.inkSecondary,
-                textAlign = TextAlign.Center,
-            )
-            Button(onClick = onRetry) {
-                Text(stringResource(R.string.common_retry))
-            }
-        }
+        FailedState(message = message, onRetry = onRetry)
     }
 }
 
