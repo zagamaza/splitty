@@ -242,6 +242,41 @@ data class Operation(
 }
 
 /**
+ * Черновик расхода из AI-распознавания (`POST /rooms/{id}/operations/parse`).
+ * Клиент шлёт текущий черновик на голосовую правку — сервер возвращает новый.
+ * Порт iOS [ParseDraft]. Только транспорт: логика долей — в [OperationItems].
+ */
+@Serializable
+data class ParseDraft(
+    val description: String,
+    val sum: Int,
+    /** Кто платил; null — модель не определила донора. */
+    val donorId: Long? = null,
+    /** Позиции чека; item с непустым `unknown` требует сопоставления перед сохранением. */
+    val items: List<OperationItem>? = null,
+) {
+    /** Позиции без опциональности. */
+    val itemList: List<OperationItem> get() = items ?: emptyList()
+
+    /** Есть ли нераспознанные имена хотя бы в одной позиции (блокирует сохранение). */
+    val hasUnknown: Boolean get() = itemList.any { !it.unknown.isNullOrEmpty() }
+}
+
+/**
+ * Ответ распознавания: обновлённый черновик и опциональные уточняющие вопросы
+ * модели («кто платил?»). Порт iOS [ParseResponse].
+ */
+@Serializable
+data class ParseResponse(
+    val draft: ParseDraft,
+    /** Уточняющие вопросы модели; null/пусто — вопросов нет. */
+    val questions: List<String>? = null,
+) {
+    /** Вопросы без опциональности. */
+    val questionList: List<String> get() = questions ?: emptyList()
+}
+
+/**
  * Сумма в конкретной валюте. Суммы в разных валютах НЕ складываются между
  * собой — агрегируются только повалютно (см. aggregateByCurrency).
  */

@@ -109,6 +109,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
+    // MockWebServer — multipart parse-запроса и коды ошибок (413/415/429/503).
+    testImplementation(libs.okhttp.mockwebserver)
 
     // Скриншот-тесты дизайн-системы (Roborazzi поверх Robolectric).
     testImplementation(libs.robolectric)

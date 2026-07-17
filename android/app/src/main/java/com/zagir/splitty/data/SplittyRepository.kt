@@ -2,6 +2,7 @@ package com.zagir.splitty.data
 
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.NotifySettings
+import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.CreateRoomBody
@@ -14,6 +15,8 @@ import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
 import com.zagir.splitty.core.model.OperationItem
+import com.zagir.splitty.core.model.ParseDraft
+import com.zagir.splitty.core.model.ParseResponse
 import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
@@ -22,6 +25,7 @@ import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.InvalidBaseUrlException
+import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
 import com.zagir.splitty.core.network.parseApiError
 import java.io.IOException
@@ -32,6 +36,9 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 
 /**
@@ -60,6 +67,7 @@ data class Fetched<T>(
 @Singleton
 class SplittyRepository @Inject constructor(
     private val api: SplittyApi,
+    private val parseApi: ParseApi,
     private val json: Json,
     private val cache: ApiCache,
 ) {
@@ -153,6 +161,57 @@ class SplittyRepository @Inject constructor(
 
     suspend fun deleteOperation(roomId: String, operationId: String) =
         call { api.deleteOperation(roomId, operationId) }
+
+    // --- AI-распознавание расхода ---
+
+    /**
+     * POST /rooms/{id}/operations/parse (multipart) — распознаёт расход из
+     * фото/аудио/текста в черновик. Ничего не создаёт: чистая функция «ввод →
+     * черновик». Части (draft/text/audio/image), имена и MIME собираются вручную
+     * как в iOS APIClient. Идёт через [parseApi] с таймаутом 90с. Коды сервера
+     * (413/415/429/503) прилетают как [ApiException] с русским message —
+     * humanErrorText показывает его как есть.
+     *
+     * [draft] — текущий черновик формы (для голосовой правки Task 12); при первом
+     * распознавании фото обычно null. Хотя бы одно из audio/image/text обязано
+     * быть непустым (иначе сервер вернёт 400 «нужно передать audio, image или text»).
+     */
+    suspend fun parseOperation(
+        roomId: String,
+        audio: ByteArray? = null,
+        image: ByteArray? = null,
+        text: String? = null,
+        draft: ParseDraft? = null,
+    ): ParseResponse = call {
+        val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        draft?.let {
+            // Поле формы (не файл): сервер читает его через r.FormValue("draft").
+            builder.addFormDataPart("draft", json.encodeToString(ParseDraft.serializer(), it))
+        }
+        audio?.let {
+            builder.addFormDataPart("audio", "audio.wav", it.toRequestBody("audio/wav".toMediaType()))
+        }
+        image?.let {
+            builder.addFormDataPart("image", "image.jpg", it.toRequestBody("image/jpeg".toMediaType()))
+        }
+        text?.takeIf { it.isNotBlank() }?.let {
+            builder.addFormDataPart("text", it)
+        }
+        parseApi.parse(roomId, builder.build())
+    }
+
+    /**
+     * POST /users/{id}/aliases — дозапись прозвища участнику после сопоставления
+     * нераспознанного имени. Best-effort: провал (403 «нет общей комнаты», сеть)
+     * не рушит поток сохранения расхода — возвращаем false, наверх не бросаем.
+     * Отмена корутины ([CancellationException]) — не ошибка, пробрасывается.
+     */
+    suspend fun addAlias(userId: Long, alias: String): Boolean = try {
+        call { api.addAlias(userId, AliasBody(alias)) }
+        true
+    } catch (e: ApiException) {
+        false
+    }
 
     // --- Долги и погашение ---
 

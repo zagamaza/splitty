@@ -290,6 +290,16 @@
     <string name="outbox_badge_pending">не отправлено</string>
     <string name="expense_offline_edit_blocked">Нет соединения. Можно редактировать только неотправленные операции</string>
     <string name="expense_itemized_edit_blocked">Операция по позициям чека — правится там, где создана</string>
+
+    <!-- AI-распознавание расхода (фото чека) -->
+    <string name="expense_receipt_scan_title">Распознать по чеку</string>
+    <string name="expense_receipt_scan_hint">Сфотографируйте чек — заполню описание, сумму и позиции</string>
+    <string name="expense_receipt_take_photo">Сфотографировать</string>
+    <string name="expense_receipt_pick_photo">Выбрать фото</string>
+    <string name="expense_parsing">Распознаю чек…</string>
+    <string name="expense_parsing_cancel">Отмена</string>
+    <string name="expense_parse_retry">Повторить</string>
+    <string name="expense_parse_failed_generic">Не удалось распознать. Данные сохранены — попробуйте ещё раз</string>
     <plurals name="group_hero_pending_ops">
         <item quantity="one">без учёта %d неотправленной операции</item>
         <item quantity="few">без учёта %d неотправленных операций</item>

@@ -1,15 +1,19 @@
 package com.zagir.splitty.ui.expense
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationItem
+import com.zagir.splitty.core.model.ParseDraft
+import com.zagir.splitty.core.model.ParseResponse
 import com.zagir.splitty.core.model.RecipientSum
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SplitType
+import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
@@ -19,16 +23,21 @@ import com.zagir.splitty.data.OutboxPayload
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.ui.components.humanErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
 /** Максимум цифр в денежных полях формы (999 999 999 умещается в Int). */
 private const val MAX_SUM_DIGITS = 9
@@ -46,6 +55,108 @@ private fun digitsOnly(raw: String): String =
  */
 internal fun canSaveExpenseOffline(isEditingSyncedOperation: Boolean, isOnline: Boolean): Boolean =
     isOnline || !isEditingSyncedOperation
+
+/**
+ * Накатывает ответ AI-распознавания на форму (порт iOS `apply(parse:)`): описание
+ * и сумму берём из черновика (если модель их дала), донора — если распознан и он
+ * среди участников. Позиции чека сохраняем в [AddExpenseForm.draftItems]; при их
+ * наличии сохранение блокируется ([isItemizedLocked]) до itemized-режима формы
+ * (Task 10). Черновик НИКОГДА не теряется — пустые поля ответа не затирают ввод.
+ * Чистая функция — покрыта юнит-тестами без VM.
+ */
+internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseForm {
+    val draft = response.draft
+    val items = draft.itemList
+    val memberIds = members.map { it.id }.toSet()
+    val recognizedPayer = draft.donorId?.takeIf { it in memberIds }
+    // Плоский расход (без позиций): по умолчанию делим на всех участников.
+    val recipients = if (items.isEmpty() && recipientIds.isEmpty()) memberIds else recipientIds
+    return copy(
+        description = draft.description.ifBlank { description },
+        sumText = if (draft.sum > 0) draft.sum.toString() else sumText,
+        payerId = recognizedPayer ?: payerId,
+        recipientIds = recipients,
+        draftItems = items,
+        isItemizedLocked = items.isNotEmpty(),
+        parseQuestions = response.questionList,
+        parseRetryMessage = null,
+    )
+}
+
+/**
+ * Текущий черновик формы для отправки на /parse (голосовая правка Task 12):
+ * null, если форма пустая (распознавание с нуля) — иначе описание/сумма/донор
+ * и позиции чека. Пустой список позиций не сериализуем (null вместо []).
+ */
+internal fun AddExpenseForm.currentParseDraft(): ParseDraft? {
+    val hasContent = draftItems.isNotEmpty() || description.isNotBlank() || (sum ?: 0) > 0
+    return if (hasContent) {
+        ParseDraft(
+            description = description,
+            sum = sum ?: 0,
+            donorId = payerId,
+            items = draftItems.ifEmpty { null },
+        )
+    } else {
+        null
+    }
+}
+
+/**
+ * Снимок черновика формы для SavedStateHandle (переживает process death). Только
+ * пользовательский ввод + результат распознавания; участники/валюта берутся из
+ * заново загруженной комнаты. amountTexts как Map<Long,String> — JSON-ключи станут
+ * строками (kotlinx это умеет).
+ */
+@Serializable
+internal data class ExpenseDraftSnapshot(
+    val selectedRoomId: String? = null,
+    val description: String = "",
+    val sumText: String = "",
+    val payerId: Long? = null,
+    val recipientIds: List<Long> = emptyList(),
+    val splitType: SplitType = SplitType.EQUALLY,
+    val amountTexts: Map<Long, String> = emptyMap(),
+    val draftItems: List<OperationItem> = emptyList(),
+    val parseQuestions: List<String> = emptyList(),
+    val isItemizedLocked: Boolean = false,
+) {
+    companion object {
+        /** Снимок из формы (только поля, которые нужно восстановить). */
+        fun from(form: AddExpenseForm): ExpenseDraftSnapshot = ExpenseDraftSnapshot(
+            selectedRoomId = form.selectedRoomId,
+            description = form.description,
+            sumText = form.sumText,
+            payerId = form.payerId,
+            recipientIds = form.recipientIds.toList(),
+            splitType = form.splitType,
+            amountTexts = form.amountTexts,
+            draftItems = form.draftItems,
+            parseQuestions = form.parseQuestions,
+            isItemizedLocked = form.isItemizedLocked,
+        )
+
+        /** true — в снимке есть что восстанавливать (не пустой стартовый черновик). */
+        fun hasContent(s: ExpenseDraftSnapshot): Boolean =
+            s.description.isNotBlank() || s.sumText.isNotEmpty() || s.draftItems.isNotEmpty()
+    }
+
+    /** Накатывает снимок на форму, уже привязанную к комнате (участники/валюта готовы). */
+    fun applyTo(form: AddExpenseForm): AddExpenseForm {
+        val memberIds = form.members.map { it.id }.toSet()
+        return form.copy(
+            description = description,
+            sumText = sumText,
+            payerId = payerId?.takeIf { it in memberIds } ?: form.payerId,
+            recipientIds = recipientIds.filter { it in memberIds }.toSet().ifEmpty { form.recipientIds },
+            splitType = splitType,
+            amountTexts = amountTexts.filterKeys { it in memberIds },
+            draftItems = draftItems,
+            parseQuestions = parseQuestions,
+            isItemizedLocked = isItemizedLocked,
+        )
+    }
+}
 
 /**
  * Состояние формы добавления/редактирования расхода. Все производные
@@ -85,6 +196,20 @@ data class AddExpenseForm(
     /** Тексты полей точных сумм по участникам (режим «По суммам»). */
     val amountTexts: Map<Long, String> = emptyMap(),
     val isSaving: Boolean = false,
+    /** true — идёт AI-распознавание (parsing-оверлей со спиннером). */
+    val isParsing: Boolean = false,
+    /**
+     * Позиции чека из AI-распознавания (Task 7 их держит и блокирует сохранение;
+     * интерактивный чек и itemized-сохранение — Task 8/10). Пусто — плоский расход.
+     */
+    val draftItems: List<OperationItem> = emptyList(),
+    /** Уточняющие вопросы модели («кто платил?») — показываются под формой. */
+    val parseQuestions: List<String> = emptyList(),
+    /**
+     * null — ошибки распознавания нет; иначе текст с кнопкой «Повторить» (данные
+     * НЕ теряются: фото сохранено в cacheDir, форма осталась как была).
+     */
+    val parseRetryMessage: String? = null,
     /** null — алерта нет; иначе диалог «Ошибка» с этим текстом. */
     val alertMessage: String? = null,
     /** true — расход сохранён, экран пора закрывать (onDone). */
@@ -141,6 +266,7 @@ class AddExpenseViewModel @Inject constructor(
     private val sessionStore: SessionStore,
     private val outboxStore: OutboxStore,
     private val outboxSyncer: OutboxSyncer,
+    private val savedStateHandle: SavedStateHandle,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
@@ -172,6 +298,13 @@ class AddExpenseViewModel @Inject constructor(
      * поле — страховка от затирания чека, если правка когда-то пройдёт.
      */
     private var editOriginalItems: List<OperationItem>? = null
+
+    /**
+     * Поколение parse-запроса: новый запрос ОБГОНЯЕТ старый (пользователь во время
+     * распознавания добавил фото/сменил ввод) — ответ устаревшего игнорируется.
+     * Порт iOS `parseGeneration`.
+     */
+    private var parseGeneration = 0
 
     /** Первичная настройка (идемпотентна — зовётся из LaunchedEffect экрана). */
     fun start(roomId: String?, operationId: String?, localId: String? = null) {
@@ -215,17 +348,20 @@ class AddExpenseViewModel @Inject constructor(
                         _state.value = UiState.Error("Операция не найдена")
                         return@launch
                     }
-                    _state.value = UiState.Content(fixedRoomForm(room, operation, meId))
+                    val form = fixedRoomForm(room, operation, meId)
+                    // Создание (не правка) — восстанавливаем черновик после process death.
+                    _state.value = UiState.Content(
+                        if (operation == null) restoreDraftInto(form) else form
+                    )
                 } else {
                     val rooms = repository.rooms(archived = false).value
-                    _state.value = UiState.Content(
-                        AddExpenseForm(
-                            isEditing = false,
-                            showsRoomPicker = true,
-                            rooms = rooms,
-                            meId = meId,
-                        )
+                    val base = AddExpenseForm(
+                        isEditing = false,
+                        showsRoomPicker = true,
+                        rooms = rooms,
+                        meId = meId,
                     )
+                    _state.value = UiState.Content(restoreDraftInto(base))
                 }
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
@@ -351,6 +487,77 @@ class AddExpenseViewModel @Inject constructor(
     }
 
     fun dismissAlert() = updateForm { it.copy(alertMessage = null) }
+
+    // --- AI-распознавание расхода (фото чека, Task 7) ---
+
+    /**
+     * Распознать расход по фото чека: путь к JPEG (в cacheDir) сохраняется в
+     * SavedStateHandle — переживает process death и нужен «Повторить». Запуск —
+     * [launchParse]; обгон предыдущего запроса — через [parseGeneration].
+     */
+    fun parseReceiptImage(path: String) {
+        savedStateHandle[KEY_RECEIPT_PATH] = path
+        launchParse { readImageBytes(path) }
+    }
+
+    /**
+     * Повторить распознавание последнего фото (кнопка «Повторить» на баннере
+     * ошибки): диктовка/фото НЕ потеряны — читаем из сохранённого пути.
+     */
+    fun retryParse() {
+        val path = savedStateHandle.get<String>(KEY_RECEIPT_PATH) ?: return
+        launchParse { readImageBytes(path) }
+    }
+
+    /**
+     * Отмена активного распознавания (кнопка на parsing-оверлее): текущий запрос
+     * обесценивается поколением, форма остаётся как была. Порт iOS `cancelParse()`.
+     */
+    fun cancelParse() {
+        parseGeneration++
+        updateForm { it.copy(isParsing = false) }
+    }
+
+    /** Сбросить баннер ошибки распознавания (пользователь его закрыл). */
+    fun dismissParseRetry() = updateForm { it.copy(parseRetryMessage = null) }
+
+    /**
+     * Общий запуск распознавания: помечает форму isParsing, шлёт медиа + текущий
+     * черновик на /parse, применяет ответ. Ошибка НЕ теряет черновик — форма как
+     * была, показывается баннер «Повторить». Новый запрос обгоняет активный
+     * (см. [parseGeneration]); ответ устаревшего запроса выбрасывается.
+     */
+    private fun launchParse(loadImage: suspend () -> ByteArray?) {
+        val form = currentForm() ?: return
+        val roomId = form.selectedRoomId
+        if (roomId == null) {
+            updateForm { it.copy(alertMessage = "Выберите группу") }
+            return
+        }
+        parseGeneration++
+        val generation = parseGeneration
+        updateForm { it.copy(isParsing = true, parseRetryMessage = null) }
+        // Текущий черновик — для голосовой правки (Task 12); при первом фото — null.
+        val draft = form.currentParseDraft()
+        viewModelScope.launch {
+            try {
+                val image = loadImage()
+                val response = repository.parseOperation(roomId, image = image, draft = draft)
+                if (generation != parseGeneration) return@launch // обогнан — игнор
+                updateForm { it.applyingParse(response).copy(isParsing = false) }
+                persistDraft()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                if (generation != parseGeneration) return@launch
+                updateForm { it.copy(isParsing = false, parseRetryMessage = humanErrorText(e)) }
+            }
+        }
+    }
+
+    private suspend fun readImageBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        File(path).takeIf { it.exists() }?.readBytes()
+    }
 
     /**
      * Сохранение: POST /operations, PUT (правка серверной) либо правка записи
@@ -488,5 +695,50 @@ class AddExpenseViewModel @Inject constructor(
         _state.update { state ->
             if (state is UiState.Content) UiState.Content(transform(state.value)) else state
         }
+        persistDraft()
+    }
+
+    // --- Черновик в SavedStateHandle (восстановление после process death) ---
+
+    /**
+     * Сохраняет текущий черновик создания расхода в SavedStateHandle. Правку
+     * существующей операции НЕ персистим — она перезагружается с сервера/из outbox.
+     */
+    private fun persistDraft() {
+        val form = currentForm() ?: return
+        if (form.isEditing) return
+        val snapshot = ExpenseDraftSnapshot.from(form)
+        if (ExpenseDraftSnapshot.hasContent(snapshot)) {
+            savedStateHandle[KEY_DRAFT] =
+                SplittyJson.encodeToString(ExpenseDraftSnapshot.serializer(), snapshot)
+        }
+    }
+
+    private fun savedDraft(): ExpenseDraftSnapshot? =
+        savedStateHandle.get<String>(KEY_DRAFT)?.let { raw ->
+            runCatching { SplittyJson.decodeFromString(ExpenseDraftSnapshot.serializer(), raw) }.getOrNull()
+        }
+
+    /**
+     * Накатывает сохранённый черновик (если есть) на форму создания расхода:
+     * фиксированная комната — просто поверх, пикер — сперва выбираем комнату.
+     */
+    private fun restoreDraftInto(base: AddExpenseForm): AddExpenseForm {
+        val snapshot = savedDraft()?.takeIf { ExpenseDraftSnapshot.hasContent(it) } ?: return base
+        if (!base.showsRoomPicker) {
+            val sameRoom = snapshot.selectedRoomId == null || snapshot.selectedRoomId == base.selectedRoomId
+            return if (sameRoom) snapshot.applyTo(base) else base
+        }
+        val summary = base.rooms.firstOrNull { it.id == snapshot.selectedRoomId } ?: return base
+        val withRoom = appliedRoom(base, summary.id, summary.members, summary.currency)
+        return snapshot.applyTo(withRoom)
+    }
+
+    private companion object {
+        /** JSON-снимок черновика формы (см. [ExpenseDraftSnapshot]). */
+        const val KEY_DRAFT = "expense_draft"
+
+        /** Путь к JPEG чека в cacheDir — для «Повторить» после process death. */
+        const val KEY_RECEIPT_PATH = "expense_receipt_path"
     }
 }

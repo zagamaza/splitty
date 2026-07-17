@@ -204,14 +204,14 @@
 - Create: `ui/expense/ReceiptCaptureController.kt`
 - Modify: `core/network/SplittyApi.kt`, `data/SplittyRepository.kt`, `ui/expense/AddExpenseViewModel.kt`, `AndroidManifest.xml`, тесты
 
-- [ ] `@Multipart POST api/v1/rooms/{roomId}/operations/parse`: части draft/text/audio/image (имена и MIME как iOS APIClient 368–448); маппинг 413/415/429/503
-- [ ] Таймаут 90с: ОТДЕЛЬНЫЙ OkHttp-клиент/Retrofit для parse (singleton имеет readTimeout 30с в NetworkModule.kt:35) или per-call `withTimeout`-обёртка над call.timeout()
-- [ ] `POST users/{userId}/aliases` (best-effort)
-- [ ] Фото: Photo Picker + CameraX/TakePicture (CAMERA + rationale), EXIF, даунскейл 1024px JPEG q0.7, файл в cacheDir (process death), путь в SavedStateHandle
-- [ ] VM: isParsing/parseGeneration/cancelParse (обгон запросов), apply(parse) → заполнение формы, parseRetryMessage («Повторить» — данные сохранены), parsing-оверлей (спиннер + «Отмена» через 2.5с)
-- [ ] Черновик формы в SavedStateHandle (json) — восстановление после process death
-- [ ] unit (MockWebServer): multipart-части, коды ошибок, supersede, retry; recreate-тест VM
-- [ ] run tests — must pass before next task
+- [x] `@Multipart POST api/v1/rooms/{roomId}/operations/parse`: части draft/text/audio/image (имена и MIME как iOS APIClient 368–448); маппинг 413/415/429/503
+- [x] Таймаут 90с: ОТДЕЛЬНЫЙ OkHttp-клиент/Retrofit для parse (singleton имеет readTimeout 30с в NetworkModule.kt:35) или per-call `withTimeout`-обёртка над call.timeout()
+- [x] `POST users/{userId}/aliases` (best-effort)
+- [x] Фото: Photo Picker + CameraX/TakePicture (CAMERA + rationale), EXIF, даунскейл 1024px JPEG q0.7, файл в cacheDir (process death), путь в SavedStateHandle
+- [x] VM: isParsing/parseGeneration/cancelParse (обгон запросов), apply(parse) → заполнение формы, parseRetryMessage («Повторить» — данные сохранены), parsing-оверлей (спиннер + «Отмена» через 2.5с)
+- [x] Черновик формы в SavedStateHandle (json) — восстановление после process death
+- [x] unit (MockWebServer): multipart-части, коды ошибок, supersede, retry; recreate-тест VM
+- [x] run tests — must pass before next task
 
 ### Task 8: Чек — ReceiptCard/PersonBreakdown (read-only + интерактив)
 

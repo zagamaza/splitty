@@ -115,3 +115,11 @@ data class RepaymentBody(
     val lenderId: Long,
     val sum: Int,
 )
+
+/**
+ * POST /users/{id}/aliases — дозапись прозвища участнику после сопоставления
+ * нераспознанного имени. Best-effort: сервер нормализует (trim/lower) и пишет
+ * только при общей комнате (403 иначе); ответ 204 без тела.
+ */
+@Serializable
+data class AliasBody(val alias: String)

@@ -1,6 +1,7 @@
 package com.zagir.splitty.core.network
 
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.CreateRoomBody
@@ -118,6 +119,13 @@ interface SplittyApi {
         @Path("roomId") roomId: String,
         @Path("operationId") operationId: String,
     )
+
+    /**
+     * Дозапись прозвища участнику после сопоставления нераспознанного имени
+     * AI-распознавания. Best-effort: ответ 204 без тела, ошибки не критичны.
+     */
+    @POST("api/v1/users/{userId}/aliases")
+    suspend fun addAlias(@Path("userId") userId: Long, @Body body: AliasBody)
 
     // --- Долги и погашение (settle up) ---
 

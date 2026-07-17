@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Пути FileProvider: только временный файл камеры в cacheDir/receipts. -->
+<paths>
+    <cache-path name="receipts" path="receipts/" />
+</paths>

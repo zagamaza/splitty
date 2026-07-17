@@ -27,7 +27,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.AlertDialog
@@ -48,8 +51,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
@@ -113,6 +118,9 @@ fun AddExpenseScreen(
     val snapshot = state
     val form = if (snapshot is UiState.Content) snapshot.value else null
 
+    // Фото чека → путь к готовому JPEG в cacheDir → распознавание (Task 7).
+    val receiptCapture = rememberReceiptCapture { path -> viewModel.parseReceiptImage(path) }
+
     LaunchedEffect(form?.isSaved) {
         if (form?.isSaved == true) onDone()
     }
@@ -170,32 +178,46 @@ fun AddExpenseScreen(
             }
         },
     ) { innerPadding ->
-        when (val current = state) {
-            is UiState.Loading -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(color = colors.accent)
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (val current = state) {
+                is UiState.Loading -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = colors.accent)
+                }
+
+                is UiState.Error -> LoadErrorPane(
+                    message = current.message,
+                    onRetry = viewModel::retry,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
+
+                is UiState.Content -> ExpenseFormContent(
+                    form = current.value,
+                    isOnline = isOnline,
+                    viewModel = viewModel,
+                    onTakePhoto = receiptCapture::captureFromCamera,
+                    onPickPhoto = receiptCapture::pickFromGallery,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
             }
 
-            is UiState.Error -> LoadErrorPane(
-                message = current.message,
-                onRetry = viewModel::retry,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            )
-
-            is UiState.Content -> ExpenseFormContent(
-                form = current.value,
-                isOnline = isOnline,
-                viewModel = viewModel,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            )
+            // Оверлей распознавания: спиннер, «Отмена» — через 2.5с (см. iOS).
+            if (form?.isParsing == true) {
+                ParsingOverlay(
+                    onCancel = viewModel::cancelParse,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
+            }
         }
     }
 
@@ -220,6 +242,8 @@ private fun ExpenseFormContent(
     form: AddExpenseForm,
     isOnline: Boolean,
     viewModel: AddExpenseViewModel,
+    onTakePhoto: () -> Unit,
+    onPickPhoto: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -239,8 +263,20 @@ private fun ExpenseFormContent(
         if (form.isItemizedLocked) {
             ItemizedEditBlockedPlate()
         }
+        // Ошибка распознавания: черновик не потерян, предлагаем «Повторить».
+        form.parseRetryMessage?.let { message ->
+            ParseRetryBanner(
+                message = message,
+                onRetry = viewModel::retryParse,
+                onDismiss = viewModel::dismissParseRetry,
+            )
+        }
         if (form.showsRoomPicker) {
             GroupPickerCard(form = form, onSelect = viewModel::selectRoom)
+        }
+        // Распознавание по фото чека — только при создании расхода в выбранной группе.
+        if (!form.isEditing && form.selectedRoomId != null) {
+            ReceiptScanCard(onTakePhoto = onTakePhoto, onPickPhoto = onPickPhoto)
         }
         ExpenseCard(form = form, viewModel = viewModel)
         SplitCard(form = form, viewModel = viewModel)
@@ -785,6 +821,130 @@ private fun memberName(member: User, meId: Long?): String =
     } else {
         member.displayName
     }
+
+/** Карточка «Распознать по чеку»: сфотографировать или выбрать фото из галереи. */
+@Composable
+private fun ReceiptScanCard(onTakePhoto: () -> Unit, onPickPhoto: () -> Unit) {
+    val colors = Splitty.colors
+    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+        SectionHeader(stringResource(R.string.expense_receipt_scan_title))
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.expense_receipt_scan_hint),
+            fontSize = 13.sp,
+            color = colors.inkSecondary,
+        )
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ScanActionChip(
+                icon = Icons.Filled.PhotoCamera,
+                text = stringResource(R.string.expense_receipt_take_photo),
+                onClick = onTakePhoto,
+            )
+            ScanActionChip(
+                icon = Icons.Filled.PhotoLibrary,
+                text = stringResource(R.string.expense_receipt_pick_photo),
+                onClick = onPickPhoto,
+            )
+        }
+    }
+}
+
+/** Чип-действие с иконкой (сфотографировать / выбрать фото). */
+@Composable
+private fun ScanActionChip(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    text: String,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(colors.ink.copy(alpha = 0.06f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.ink)
+    }
+}
+
+/** Баннер ошибки распознавания: текст + «Повторить»; черновик не потерян. */
+@Composable
+private fun ParseRetryBanner(message: String, onRetry: () -> Unit, onDismiss: () -> Unit) {
+    val colors = Splitty.colors
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = message,
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                color = colors.inkSecondary,
+            )
+            TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.expense_parse_retry), color = colors.accent)
+            }
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = null,
+                tint = colors.inkSecondary,
+                modifier = Modifier
+                    .size(20.dp)
+                    .clickable(onClick = onDismiss),
+            )
+        }
+    }
+}
+
+/**
+ * Оверлей распознавания: затемнение + спиннер + подпись; кнопка «Отмена»
+ * появляется через 2.5с (иначе для быстрого ответа она лишь мигает). Порт iOS.
+ */
+@Composable
+private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = Splitty.colors
+    var showCancel by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(2500)
+        showCancel = true
+    }
+    Box(
+        modifier = modifier
+            .background(colors.bg.copy(alpha = 0.88f))
+            // Гасим тапы под оверлеем (форму нельзя трогать во время распознавания).
+            .clickable(enabled = false, onClick = {}),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            CircularProgressIndicator(color = colors.accent)
+            Text(
+                text = stringResource(R.string.expense_parsing),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.ink,
+            )
+            if (showCancel) {
+                TextButton(onClick = onCancel) {
+                    Text(stringResource(R.string.expense_parsing_cancel), color = colors.accent)
+                }
+            }
+        }
+    }
+}
 
 /** Ошибка первичной загрузки с кнопкой «Повторить». */
 @Composable
