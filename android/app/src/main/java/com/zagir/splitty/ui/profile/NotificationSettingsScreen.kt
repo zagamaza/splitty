@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -21,21 +23,23 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.background
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
-import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SurfaceCard
@@ -43,10 +47,11 @@ import com.zagir.splitty.ui.groups.GroupsErrorState
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
- * Настройки уведомлений: категория событий × канал доставки.
- * Telegram работает сразу (шлёт бот), «Приложение» — задел под пуши
- * (APNs/FCM), пока выключен и подписан «скоро». Порт iOS
- * NotificationSettingsView.
+ * Настройки уведомлений: мастер-тумблер (верх экрана, PATCH /me) и категории
+ * событий × канал доставки (PATCH /me/notifications). Мастер выключен —
+ * категории задизейблены и притушены. Telegram работает сразу (шлёт бот),
+ * «Приложение» — задел под пуши (APNs/FCM), пока выключен и подписан «скоро».
+ * Порт iOS NotificationSettingsView.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,8 +88,26 @@ fun NotificationSettingsScreen(
             )
         },
     ) { innerPadding ->
-        when (val current = state) {
-            UiState.Loading -> Box(
+        val settings = state.settings
+        when {
+            settings != null -> SettingsContent(
+                state = state,
+                settings = settings,
+                onMasterChange = viewModel::setMaster,
+                onChange = viewModel::saveCategories,
+                modifier = Modifier.padding(innerPadding),
+            )
+
+            state.loadError != null -> Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentAlignment = Alignment.Center,
+            ) {
+                GroupsErrorState(message = state.loadError!!, onRetry = viewModel::retry)
+            }
+
+            else -> Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -92,28 +115,30 @@ fun NotificationSettingsScreen(
             ) {
                 CircularProgressIndicator(color = colors.accent)
             }
-
-            is UiState.Error -> Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) {
-                GroupsErrorState(message = current.message, onRetry = viewModel::retry)
-            }
-
-            is UiState.Content -> SettingsContent(
-                settings = current.value,
-                onChange = viewModel::save,
-                modifier = Modifier.padding(innerPadding),
-            )
         }
+    }
+
+    // Ошибка сохранения — алерт поверх формы (не молчаливый откат).
+    val alert = state.alertMessage
+    if (alert != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissAlert,
+            title = { Text(stringResource(R.string.common_error_title)) },
+            text = { Text(alert) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissAlert) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+        )
     }
 }
 
 @Composable
 private fun SettingsContent(
+    state: NotifyScreenState,
     settings: NotifySettings,
+    onMasterChange: (Boolean) -> Unit,
     onChange: (NotifySettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -124,22 +149,66 @@ private fun SettingsContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        NotifySection(
-            title = stringResource(R.string.notifications_operations),
-            footer = stringResource(R.string.notifications_operations_footer),
-            telegramOn = settings.operations.telegram,
-            onTelegramChange = { on ->
-                onChange(settings.copy(operations = settings.operations.copy(telegram = on)))
-            },
+        MasterSection(
+            masterOn = state.masterOn,
+            enabled = !state.isSaving,
+            onChange = onMasterChange,
         )
-        NotifySection(
-            title = stringResource(R.string.notifications_debts),
-            footer = stringResource(R.string.notifications_debts_footer),
-            telegramOn = settings.debts.telegram,
-            onTelegramChange = { on ->
-                onChange(settings.copy(debts = settings.debts.copy(telegram = on)))
-            },
-        )
+        // Мастер выключен — категории не действуют: блокируем и притушаем.
+        Column(
+            modifier = Modifier.alpha(if (state.masterOn) 1f else 0.5f),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            NotifySection(
+                title = stringResource(R.string.notifications_operations),
+                footer = stringResource(R.string.notifications_operations_footer),
+                telegramOn = settings.operations.telegram,
+                enabled = state.categoriesEnabled,
+                onTelegramChange = { on ->
+                    onChange(settings.copy(operations = settings.operations.copy(telegram = on)))
+                },
+            )
+            NotifySection(
+                title = stringResource(R.string.notifications_debts),
+                footer = stringResource(R.string.notifications_debts_footer),
+                telegramOn = settings.debts.telegram,
+                enabled = state.categoriesEnabled,
+                onTelegramChange = { on ->
+                    onChange(settings.copy(debts = settings.debts.copy(telegram = on)))
+                },
+            )
+        }
+    }
+}
+
+/** Первая секция — мастер-тумблер всех уведомлений (PATCH /me). */
+@Composable
+private fun MasterSection(
+    masterOn: Boolean,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    val colors = Splitty.colors
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.notifications_title),
+                fontSize = 16.sp,
+                color = colors.ink,
+            )
+            Spacer(Modifier.weight(1f))
+            Switch(
+                checked = masterOn,
+                onCheckedChange = onChange,
+                enabled = enabled,
+                colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
+            )
+        }
     }
 }
 
@@ -148,6 +217,7 @@ private fun NotifySection(
     title: String,
     footer: String,
     telegramOn: Boolean,
+    enabled: Boolean,
     onTelegramChange: (Boolean) -> Unit,
 ) {
     val colors = Splitty.colors
@@ -157,13 +227,14 @@ private fun NotifySection(
             ChannelRow(
                 title = stringResource(R.string.notifications_channel_telegram),
                 checked = telegramOn,
-                enabled = true,
+                enabled = enabled,
                 onChange = onTelegramChange,
             )
             // Пуши появятся вместе с APNs/FCM — тумблер-задел, пока недоступен.
             ChannelRow(
                 title = stringResource(R.string.notifications_channel_push),
                 badge = stringResource(R.string.notifications_soon),
+                a11yHint = stringResource(R.string.notifications_soon_hint),
                 checked = false,
                 enabled = false,
                 onChange = {},
@@ -185,12 +256,22 @@ private fun ChannelRow(
     enabled: Boolean,
     onChange: (Boolean) -> Unit,
     badge: String? = null,
+    a11yHint: String? = null,
 ) {
     val colors = Splitty.colors
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .then(
+            // TalkBack: объясняем, почему «Приложение» недоступно («скоро»).
+            if (a11yHint != null) {
+                Modifier.semantics { stateDescription = a11yHint }
+            } else {
+                Modifier
+            }
+        )
+        .padding(horizontal = 16.dp, vertical = 6.dp)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

@@ -18,8 +18,9 @@ import kotlinx.coroutines.launch
  * Чистая логика — покрыта юнит-тестами (порт iOS LoginCode).
  */
 object LoginCode {
-    /** Кнопка «Войти по коду» активна от 6 символов. */
-    const val MIN_LENGTH = 6
+    /** Кнопка «Войти по коду» активна от 8 символов — бот генерирует ровно
+     *  8 (internal/bot loginCodeLen); раньше валидатор пропускал уже с 6. */
+    const val MIN_LENGTH = 8
 
     /** Убирает пробельные символы (вставка из чата) и приводит к верхнему регистру. */
     fun normalize(raw: String): String =

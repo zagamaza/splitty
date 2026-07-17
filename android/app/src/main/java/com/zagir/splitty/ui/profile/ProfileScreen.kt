@@ -11,7 +11,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -20,8 +24,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -32,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -74,17 +77,13 @@ fun ProfileScreen(
     var nameDraft by remember { mutableStateOf("") }
     var isLogoutConfirmPresented by remember { mutableStateOf(false) }
 
-    // Локальные копии настроек: применяются оптимистично, PATCH /me — фоном;
-    // ключ по значению профиля возвращает драфт к серверному значению.
+    // Локальная копия настройки языка: применяется оптимистично, PATCH /me —
+    // фоном; ключ по значению профиля возвращает драфт к серверному значению.
     var langDraft by remember(me?.lang) { mutableStateOf(me?.lang ?: "ru") }
-    var notificationDraft by remember(me?.notificationOn) {
-        mutableStateOf(me?.notificationOn ?: true)
-    }
-    // Ошибка PATCH — профиль не изменился, откатываем драфты к нему.
+    // Ошибка PATCH — профиль не изменился, откатываем драфт к нему.
     LaunchedEffect(errorMessage) {
         if (errorMessage != null) {
             langDraft = me?.lang ?: "ru"
-            notificationDraft = me?.notificationOn ?: true
         }
     }
 
@@ -107,13 +106,12 @@ fun ProfileScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            me?.let { HeaderSection(it) }
+            HeaderSection(me)
             SettingsSection(
                 me = me,
                 lang = langDraft,
                 theme = theme,
                 onOpenNotifications = onOpenNotifications,
-                notificationOn = notificationDraft,
                 enabled = !isSaving,
                 onEditName = {
                     nameDraft = me?.displayName.orEmpty()
@@ -126,12 +124,12 @@ fun ProfileScreen(
                     }
                 },
                 onThemeSelected = viewModel::onThemeSelected,
-                onNotificationChange = { on ->
-                    notificationDraft = on
-                    viewModel.updateProfile(notificationOn = on)
-                },
             )
-            ServerSection(baseUrl)
+            // Адрес сервера — отладочная информация, в релизе пользователю не
+            // нужна (менять его всё равно можно только в DEBUG на экране входа).
+            if (BuildConfig.DEBUG) {
+                ServerSection(baseUrl)
+            }
             LogoutSection(onClick = { isLogoutConfirmPresented = true })
             // Запас снизу — под центральную кнопку «+» таб-бара.
             Spacer(Modifier.height(32.dp))
@@ -225,9 +223,13 @@ fun ProfileScreen(
     }
 }
 
-/** Профиль-шапка: аватар 88dp, имя, @username и ID. */
+/**
+ * Профиль-шапка: аватар 88dp, имя, @username и ID. Пока профиль не загружен —
+ * placeholder той же геометрии (круг + скелет имени), чтобы шапка не исчезала
+ * и контент не прыгал (паритет iOS redacted-placeholder).
+ */
 @Composable
-private fun HeaderSection(me: Me) {
+private fun HeaderSection(me: Me?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -235,48 +237,66 @@ private fun HeaderSection(me: Me) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        GradientAvatar(
-            user = User(id = me.id, username = me.username, displayName = me.displayName),
-            size = 88.dp,
-        )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = me.displayName,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Splitty.colors.ink,
+        if (me != null) {
+            GradientAvatar(
+                user = User(id = me.id, username = me.username, displayName = me.displayName),
+                size = 88.dp,
             )
-            val username = me.username
-            if (!username.isNullOrEmpty()) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "@$username",
-                    fontSize = 15.sp,
+                    text = me.displayName,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Splitty.colors.ink,
+                )
+                val username = me.username
+                if (!username.isNullOrEmpty()) {
+                    Text(
+                        text = "@$username",
+                        fontSize = 15.sp,
+                        color = Splitty.colors.inkSecondary,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.profile_id, me.id),
+                    fontSize = 12.sp,
                     color = Splitty.colors.inkSecondary,
+                    style = TextStyle(fontFeatureSettings = "tnum"),
                 )
             }
-            Text(
-                text = stringResource(R.string.profile_id, me.id),
-                fontSize = 12.sp,
-                color = Splitty.colors.inkSecondary,
-                style = TextStyle(fontFeatureSettings = "tnum"),
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(Splitty.colors.hairline),
+            )
+            Box(
+                modifier = Modifier
+                    .width(160.dp)
+                    .height(24.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Splitty.colors.hairline),
             )
         }
     }
 }
 
-/** Карточка «Настройки»: имя, язык, уведомления — с hairline-разделителями. */
+/**
+ * Карточка «Настройки»: имя, язык, тема, ссылка на уведомления — с hairline-
+ * разделителями. Мастер-тумблер уведомлений живёт на самом экране уведомлений
+ * (здесь он дублировал строку-ссылку и путал — убран в паритете с iOS).
+ */
 @Composable
 private fun SettingsSection(
     me: Me?,
     lang: String,
     theme: String,
-    notificationOn: Boolean,
     enabled: Boolean,
     onEditName: () -> Unit,
     onLangSelected: (String) -> Unit,
     onThemeSelected: (String) -> Unit,
     onOpenNotifications: () -> Unit,
-    onNotificationChange: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(
@@ -294,12 +314,6 @@ private fun SettingsSection(
             ThemeRow(theme = theme, onThemeSelected = onThemeSelected)
             HairlineDivider()
             NotificationsLinkRow(onClick = onOpenNotifications)
-            HairlineDivider()
-            NotificationRow(
-                notificationOn = notificationOn,
-                enabled = enabled,
-                onChange = onNotificationChange,
-            )
         }
     }
 }
@@ -427,87 +441,73 @@ private fun NameRow(name: String, onClick: () -> Unit) {
     }
 }
 
-/** Строка «Язык»: значение справа, тап — меню ru/en. */
+/**
+ * Строка «Язык»: значение справа, тап — меню ru/en. Под строкой caption —
+ * настройка меняет язык сообщений бота в Telegram (объясняем, зачем она здесь).
+ */
 @Composable
 private fun LangRow(lang: String, enabled: Boolean, onLangSelected: (String) -> Unit) {
     var isMenuExpanded by remember { mutableStateOf(false) }
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { isMenuExpanded = true }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = 16.dp),
     ) {
-        Text(
-            text = stringResource(R.string.profile_language),
-            fontSize = 16.sp,
-            color = Splitty.colors.ink,
-        )
-        Spacer(Modifier.weight(1f))
-        Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
-                text = if (lang == "en") {
-                    stringResource(R.string.profile_language_en)
-                } else {
-                    stringResource(R.string.profile_language_ru)
-                },
+                text = stringResource(R.string.profile_language),
                 fontSize = 16.sp,
-                color = Splitty.colors.inkSecondary,
+                color = Splitty.colors.ink,
             )
-            DropdownMenu(
-                expanded = isMenuExpanded,
-                onDismissRequest = { isMenuExpanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.profile_language_ru)) },
-                    onClick = {
-                        isMenuExpanded = false
-                        onLangSelected("ru")
+            Spacer(Modifier.weight(1f))
+            Box {
+                Text(
+                    text = if (lang == "en") {
+                        stringResource(R.string.profile_language_en)
+                    } else {
+                        stringResource(R.string.profile_language_ru)
                     },
+                    fontSize = 16.sp,
+                    color = Splitty.colors.inkSecondary,
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.profile_language_en)) },
-                    onClick = {
-                        isMenuExpanded = false
-                        onLangSelected("en")
-                    },
-                )
+                DropdownMenu(
+                    expanded = isMenuExpanded,
+                    onDismissRequest = { isMenuExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.profile_language_ru)) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onLangSelected("ru")
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.profile_language_en)) },
+                        onClick = {
+                            isMenuExpanded = false
+                            onLangSelected("en")
+                        },
+                    )
+                }
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Splitty.colors.inkSecondary.copy(alpha = 0.6f),
+            )
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Splitty.colors.inkSecondary.copy(alpha = 0.6f),
-        )
-    }
-}
-
-/** Строка «Уведомления»: Switch с акцентным цветом. */
-@Composable
-private fun NotificationRow(
-    notificationOn: Boolean,
-    enabled: Boolean,
-    onChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
         Text(
-            text = stringResource(R.string.profile_notifications),
-            fontSize = 16.sp,
-            color = Splitty.colors.ink,
-        )
-        Spacer(Modifier.weight(1f))
-        Switch(
-            checked = notificationOn,
-            onCheckedChange = onChange,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(checkedTrackColor = Splitty.colors.accent),
+            text = stringResource(R.string.profile_language_caption),
+            modifier = Modifier.padding(top = 2.dp, bottom = 10.dp),
+            fontSize = 12.sp,
+            color = Splitty.colors.inkSecondary,
         )
     }
 }

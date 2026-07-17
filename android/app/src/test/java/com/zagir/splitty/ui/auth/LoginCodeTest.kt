@@ -17,8 +17,11 @@ class LoginCodeTest {
 
     @Test
     fun `isValid requires min length after normalization`() {
-        assertTrue(LoginCode.isValid("abcd23"))
+        assertEquals(8, LoginCode.MIN_LENGTH)
+        // Код бота — 8 символов; 6 значимых — ещё не код.
+        assertTrue(LoginCode.isValid("abcd2345"))
         assertTrue(LoginCode.isValid(" ab cd 23 45 "))
+        assertFalse(LoginCode.isValid("abcd23"))
         assertFalse(LoginCode.isValid("abc12"))
         assertFalse(LoginCode.isValid(""))
     }

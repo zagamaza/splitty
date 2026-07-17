@@ -11,8 +11,10 @@
     <!-- Логин -->
     <string name="login_tagline">Делите расходы с друзьями</string>
     <string name="login_telegram_section">Вход через Telegram</string>
-    <string name="login_telegram_hint">Откройте @split_money_bot и отправьте команду /login — бот пришлёт код</string>
+    <string name="login_telegram_hint">Нажмите «Открыть бота» — он сразу пришлёт код для входа</string>
+    <string name="login_open_bot">Открыть бота</string>
     <string name="login_code_placeholder">Код из Telegram</string>
+    <string name="login_code_length_hint">Код из бота — 8 символов</string>
     <string name="login_code_button">Войти по коду</string>
     <string name="login_code_invalid">Неверный или просроченный код</string>
     <string name="login_dev_section">Вход для разработки</string>
@@ -100,20 +102,21 @@
     <string name="profile_name">Имя</string>
     <string name="notifications_title">Уведомления</string>
     <string name="notifications_operations">Операции</string>
-    <string name="notifications_operations_footer">Кто-то добавил или изменил расход в вашей тусе</string>
+    <string name="notifications_operations_footer">Кто-то добавил или изменил расход в вашей группе</string>
     <string name="notifications_debts">Долги</string>
     <string name="notifications_debts_footer">Вам вернули долг</string>
     <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">Приложение</string>
     <string name="notifications_soon">скоро</string>
+    <string name="notifications_soon_hint">Появится в следующих версиях</string>
     <string name="profile_theme">Тема</string>
     <string name="profile_theme_system">Системная</string>
     <string name="profile_theme_light">Светлая</string>
     <string name="profile_theme_dark">Тёмная</string>
     <string name="profile_language">Язык</string>
+    <string name="profile_language_caption">Язык сообщений бота в Telegram</string>
     <string name="profile_language_ru">Русский</string>
     <string name="profile_language_en">English</string>
-    <string name="profile_notifications">Уведомления</string>
     <string name="profile_server_section">Сервер</string>
     <string name="profile_logout_confirm">Выйти из аккаунта?</string>
     <string name="profile_edit_name_title">Изменить имя</string>

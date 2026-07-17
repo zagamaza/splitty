@@ -166,10 +166,10 @@
 **Files:**
 - Modify: `ui/auth/LoginScreen.kt`, `ui/profile/{ProfileScreen,NotificationSettingsScreen}.kt` (+VM), `res/values/strings.xml`
 
-- [ ] Логин: кнопка «Открыть бота» (`tg://resolve?domain=split_money_bot&start=login`, fallback ACTION_VIEW https при ActivityNotFoundException); подсказка «Код из бота — 8 символов» (бот генерирует 8, docs/API.md; заодно исправить валидацию LoginViewModel ≥6 → ≥8 и её тест; в iOS та же ошибка уже исправлена); dev-вход и поле «Сервер» — только `BuildConfig.DEBUG`
-- [ ] Профиль: убрать дубль «Уведомления» (Switch), master-toggle → верх экрана уведомлений (категории disabled при выключенном); секция «Сервер» за debug; caption у языка; placeholder шапки при незагруженном me
-- [ ] Уведомления: «в вашей тусе»→«в вашей группе»; ошибка PATCH — алерт (не молчаливый откат); isSaving против гонки; a11y-hint на «скоро»
-- [ ] unit VM: master-toggle каскад, откат с алертом; run tests — must pass
+- [x] Логин: кнопка «Открыть бота» (`tg://resolve?domain=split_money_bot&start=login`, fallback ACTION_VIEW https при ActivityNotFoundException); подсказка «Код из бота — 8 символов» (бот генерирует 8, docs/API.md; заодно исправить валидацию LoginViewModel ≥6 → ≥8 и её тест; в iOS та же ошибка уже исправлена); dev-вход и поле «Сервер» — только `BuildConfig.DEBUG`
+- [x] Профиль: убрать дубль «Уведомления» (Switch), master-toggle → верх экрана уведомлений (категории disabled при выключенном); секция «Сервер» за debug; caption у языка; placeholder шапки при незагруженном me
+- [x] Уведомления: «в вашей тусе»→«в вашей группе»; ошибка PATCH — алерт (не молчаливый откат); isSaving против гонки; a11y-hint на «скоро»
+- [x] unit VM: master-toggle каскад, откат с алертом; run tests — must pass
 
 ### Task 5: Фиксы дизайн-ревью — группы, друзья, активность, погашение
 

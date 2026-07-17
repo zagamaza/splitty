@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.auth
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -49,9 +54,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
+import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
@@ -88,18 +95,22 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 onCodeChange = viewModel::onCodeChange,
                 onSubmit = viewModel::loginWithCode,
             )
-            DevLoginCard(
-                state = state,
-                isExpanded = isDevExpanded,
-                onToggle = { isDevExpanded = !isDevExpanded },
-                viewModel = viewModel,
-            )
-            ServerDisclosure(
-                baseUrl = state.baseUrl,
-                isExpanded = isServerExpanded,
-                onToggle = { isServerExpanded = !isServerExpanded },
-                onBaseUrlChange = viewModel::onBaseUrlChange,
-            )
+            // Dev-вход и настройка сервера — только в DEBUG-сборках: в релизе
+            // это бэкдор мимо авторизации через Telegram (паритет iOS #if DEBUG).
+            if (BuildConfig.DEBUG) {
+                DevLoginCard(
+                    state = state,
+                    isExpanded = isDevExpanded,
+                    onToggle = { isDevExpanded = !isDevExpanded },
+                    viewModel = viewModel,
+                )
+                ServerDisclosure(
+                    baseUrl = state.baseUrl,
+                    isExpanded = isServerExpanded,
+                    onToggle = { isServerExpanded = !isServerExpanded },
+                    onBaseUrlChange = viewModel::onBaseUrlChange,
+                )
+            }
         }
 
         if (state.isLoggingIn) {
@@ -155,6 +166,7 @@ private fun TelegramLoginCard(
     onCodeChange: (String) -> Unit,
     onSubmit: () -> Unit,
 ) {
+    val context = LocalContext.current
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
         SectionHeader(stringResource(R.string.login_telegram_section))
         Spacer(Modifier.height(12.dp))
@@ -174,6 +186,13 @@ private fun TelegramLoginCard(
             )
         }
         Spacer(Modifier.height(12.dp))
+        // Прямой переход в бота: инструкция без кнопки заставляла руками
+        // искать бота в Telegram (паритет iOS «Открыть бота»).
+        SoftChip(
+            text = stringResource(R.string.login_open_bot),
+            onClick = { openLoginBot(context) },
+        )
+        Spacer(Modifier.height(12.dp))
         LoginField(
             value = code,
             onValueChange = onCodeChange,
@@ -186,12 +205,42 @@ private fun TelegramLoginCard(
             ),
             keyboardActions = KeyboardActions(onGo = { onSubmit() }),
         )
+        // Пока код короче минимума, объясняем, почему кнопка неактивна.
+        if (!isValid) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.login_code_length_hint),
+                fontSize = 13.sp,
+                color = Splitty.colors.inkSecondary,
+            )
+        }
         Spacer(Modifier.height(16.dp))
         PrimaryPillButton(
             text = stringResource(R.string.login_code_button),
             onClick = onSubmit,
             enabled = isValid && !isLoggingIn,
         )
+    }
+}
+
+/**
+ * Открывает Telegram-бота сразу с командой входа: `start=login` — бот понимает
+ * «/start login» как /login и присылает код одним тапом. Пробуем deeplink в
+ * приложение Telegram, при ActivityNotFoundException — https-фолбэк на t.me.
+ */
+private fun openLoginBot(context: Context) {
+    val appIntent = Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse("tg://resolve?domain=split_money_bot&start=login"),
+    )
+    try {
+        context.startActivity(appIntent)
+    } catch (_: ActivityNotFoundException) {
+        val webIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://t.me/split_money_bot?start=login"),
+        )
+        context.startActivity(webIntent)
     }
 }
 
