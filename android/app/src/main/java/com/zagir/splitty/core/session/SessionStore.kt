@@ -44,6 +44,7 @@ data class Session(
 @Singleton
 class SessionStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
+    private val tokenCipher: TokenCipher,
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     companion object {
@@ -54,17 +55,31 @@ class SessionStore @Inject constructor(
         const val THEME_LIGHT = "light"
         const val THEME_DARK = "dark"
 
+        /** Старый ключ с plaintext-токеном — остаётся только для dual-read миграции. */
         private val KEY_TOKEN = stringPreferencesKey("token")
+
+        /** Новый ключ: шифротекст токена (AES-GCM поверх Keystore). */
+        private val KEY_TOKEN_ENC = stringPreferencesKey("token_enc")
         private val KEY_BASE_URL = stringPreferencesKey("base_url")
         private val KEY_ME = stringPreferencesKey("me_json")
         private val KEY_THEME = stringPreferencesKey("theme")
+    }
+
+    init {
+        // Миграция без разлогина: на первом старте после апдейта переносим
+        // старый plaintext-токен в шифротекст. Чтение (map ниже) уже понимает
+        // оба формата — гонка миграции и первого чтения токен не теряет.
+        scope.launch { migrateTokenIfNeeded() }
     }
 
     /** Текущая сессия; null — DataStore ещё не прочитан (первый кадр приложения). */
     val state: StateFlow<Session?> = dataStore.data
         .map { prefs ->
             Session(
-                token = prefs[KEY_TOKEN],
+                // Dual-read: сначала новый зашифрованный ключ, иначе старый plain
+                // (ещё не мигрировано либо чистая старая установка). Если шифротекст
+                // не расшифровался (ключ Keystore пропал) — токена нет → разлогин.
+                token = prefs[KEY_TOKEN_ENC]?.let { tokenCipher.decrypt(it) } ?: prefs[KEY_TOKEN],
                 baseUrl = prefs[KEY_BASE_URL]?.takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL,
                 me = prefs[KEY_ME]?.let { raw ->
                     runCatching { SplittyJson.decodeFromString(Me.serializer(), raw) }.getOrNull()
@@ -73,6 +88,21 @@ class SessionStore @Inject constructor(
             )
         }
         .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Переносит plaintext-токен старого формата в шифротекст ровно один раз.
+     * Транзакция [DataStore.edit] атомарна: одновременного шифрованного и
+     * plain-ключа наружу не видно.
+     */
+    private suspend fun migrateTokenIfNeeded() {
+        dataStore.edit { prefs ->
+            val plain = prefs[KEY_TOKEN]
+            if (prefs[KEY_TOKEN_ENC] == null && plain != null) {
+                prefs[KEY_TOKEN_ENC] = tokenCipher.encrypt(plain)
+                prefs.remove(KEY_TOKEN)
+            }
+        }
+    }
 
     private val _dataVersion = MutableStateFlow(0)
 
@@ -93,10 +123,11 @@ class SessionStore @Inject constructor(
     /** Текущий токен — для OkHttp-интерцептора (синхронно). */
     fun currentToken(): String? = state.value?.token
 
-    /** Успешный вход: сохранить токен и профиль. */
+    /** Успешный вход: сохранить токен (зашифрованным) и профиль. */
     suspend fun signIn(token: String, me: Me) {
         dataStore.edit { prefs ->
-            prefs[KEY_TOKEN] = token
+            prefs[KEY_TOKEN_ENC] = tokenCipher.encrypt(token)
+            prefs.remove(KEY_TOKEN) // страховка: чистый вход не должен оставлять plain-ключ
             prefs[KEY_ME] = SplittyJson.encodeToString(Me.serializer(), me)
         }
     }
@@ -118,12 +149,18 @@ class SessionStore @Inject constructor(
         dataStore.edit { prefs -> prefs[KEY_BASE_URL] = url.trim() }
     }
 
-    /** Выход: чистит токен и профиль, адрес сервера сохраняется. */
+    /**
+     * Выход: чистит токен (оба формата), профиль и ключ Keystore; адрес сервера
+     * сохраняется. Офлайн-кеш/outbox чистит [com.zagir.splitty.data.OfflineDataCleaner]
+     * по переходу «токен был → токена нет».
+     */
     suspend fun logout() {
         dataStore.edit { prefs ->
+            prefs.remove(KEY_TOKEN_ENC)
             prefs.remove(KEY_TOKEN)
             prefs.remove(KEY_ME)
         }
+        tokenCipher.clearKey()
     }
 
     /**

@@ -131,10 +131,10 @@
 **Files:**
 - Create: `core/session/TokenCipher.kt`; Modify: `core/session/SessionStore.kt`
 
-- [ ] TokenCipher: Keystore AES-GCM; **dual-read миграция**: читаем старый plain `KEY_TOKEN` из DataStore → шифруем → пишем новый ключ → удаляем старый (тестеры НЕ разлогиниваются)
-- [ ] Очистка на logout (ключ + шифротекст + Coil/файловые кеши)
-- [ ] Тесты: Robolectric (или fake-cipher интерфейс) — JVM-unit с реальным Keystore невозможен; сценарии: чистая установка, миграция plain→encrypted, logout
-- [ ] run tests — must pass before next task
+- [x] TokenCipher: Keystore AES-GCM; **dual-read миграция**: читаем старый plain `KEY_TOKEN` из DataStore → шифруем → пишем новый ключ → удаляем старый (тестеры НЕ разлогиниваются)
+- [x] Очистка на logout (ключ + шифротекст + Coil/файловые кеши)
+- [x] Тесты: Robolectric (или fake-cipher интерфейс) — JVM-unit с реальным Keystore невозможен; сценарии: чистая установка, миграция plain→encrypted, logout
+- [x] run tests — must pass before next task
 
 ### Task 2c: Backup, cleartext, дефолтный сервер
 

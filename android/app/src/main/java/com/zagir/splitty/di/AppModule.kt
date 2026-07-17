@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.zagir.splitty.core.model.SplittyJson
+import com.zagir.splitty.core.session.KeystoreTokenCipher
+import com.zagir.splitty.core.session.TokenCipher
 import com.zagir.splitty.data.ApiCache
 import com.zagir.splitty.data.OutboxStore
 import dagger.Module
@@ -45,6 +47,11 @@ object AppModule {
     @Provides
     @Singleton
     fun provideJson(): Json = SplittyJson
+
+    /** Шифрование токена сессии поверх Android Keystore (AES-256-GCM). */
+    @Provides
+    @Singleton
+    fun provideTokenCipher(): TokenCipher = KeystoreTokenCipher()
 
     /** Офлайн-кеш GET-ответов: JSON-файлы в filesDir/cache-api. */
     @Provides
