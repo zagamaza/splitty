@@ -33,6 +33,18 @@ val OperationItem.hasUnknown: Boolean get() = !unknown.isNullOrEmpty()
 data class DerivedShares(val shares: Map<Long, Int>, val total: Int)
 
 /**
+ * Строка разбивки «С кого сколько» itemized-черновика: итог участника и сколько
+ * из него добавили сборы (для подписи «+N ₽ сбор»). Порт iOS `PersonShare`.
+ */
+data class PersonShare(
+    val userId: Long,
+    /** Полная доля: позиции + сборы (ровно то, что сохранит сервер). */
+    val total: Int,
+    /** Часть итога, пришедшая от сборов/чаевых; 0 — сборов нет. */
+    val surchargePart: Int,
+)
+
+/**
  * Клиентское превью «кто сколько должен» по позициям — зеркало серверного
  * `DeriveShares`. Обычные позиции считаются первыми (образуют базу), затем на неё
  * накладываются надбавки. Возвращает null, если позиции невалидны (перебор фиксов,

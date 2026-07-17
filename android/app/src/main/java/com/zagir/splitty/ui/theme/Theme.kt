@@ -36,6 +36,12 @@ data class SplittyColors(
     /** Тонкие разделители внутри карточек и hairline-бордеры в тёмной теме. */
     val hairline: Color,
     /**
+     * Бумага чек-карточки (ReceiptCard): чуть тёплый off-white в light и
+     * приподнятый над surface оттенок в dark — «настоящая» квитанция, а не
+     * обычная карточка. Порт iOS `Color.receiptPaper`.
+     */
+    val receiptPaper: Color,
+    /**
      * Заливка баров графиков (дашборд «Итоги»). Отдельный от UI-акцента цвет
      * данных: в dark — валидированный для заливок на тёмной поверхности
      * #0EA97A (UI-accent #34D399 для баров НЕ использовать).
@@ -60,6 +66,7 @@ private val LightColors = SplittyColors(
     accentPressed = Color(0xFF0B7C56),
     negative = Color(0xFFDC5A2E),
     hairline = Color(0xFFEAECF0),
+    receiptPaper = Color(0xFFFDFCF9),
     chartAccent = Color(0xFF0E9F6E),
     chartCategorical = listOf(
         Color(0xFF0E9F6E), // 1 изумруд
@@ -81,6 +88,7 @@ private val DarkColors = SplittyColors(
     accentPressed = Color(0xFF2BB985),
     negative = Color(0xFFFB923C),
     hairline = Color(0xFF232A33),
+    receiptPaper = Color(0xFF1B2129),
     chartAccent = Color(0xFF0EA97A),
     chartCategorical = listOf(
         Color(0xFF0EA97A), // 1 изумруд

@@ -219,10 +219,10 @@
 - Create: `ui/expense/{ReceiptCard,PersonBreakdownCard}.kt`
 - Modify: `ui/theme/Theme.kt` (receiptPaper), тесты + Roborazzi
 
-- [ ] ReceiptCard: перфорация (Canvas), пунктир, «ПОЗИЦИИ · N», моно-суммы, «цена?»/unknown-чипы (пульс с гейтом), бейджи ×N/замок, правило сбора, «Итого/Итого ≥», подсветка изменённых строк; режимы read-only и интерактивный (колбэки)
-- [ ] PersonBreakdownCard («С кого сколько», «+N ₽ сбор», галка по факту сходимости)
-- [ ] Roborazzi: interactive/priceless/unknown/read-only — сверка с iOS-снапшотами и docs/prototype
-- [ ] run tests — must pass before next task
+- [x] ReceiptCard: перфорация (Canvas), пунктир, «ПОЗИЦИИ · N», моно-суммы, «цена?»/unknown-чипы (пульс с гейтом), бейджи ×N/замок, правило сбора, «Итого/Итого ≥», подсветка изменённых строк; режимы read-only и интерактивный (колбэки)
+- [x] PersonBreakdownCard («С кого сколько», «+N ₽ сбор», галка по факту сходимости)
+- [x] Roborazzi: interactive/priceless/unknown/read-only — сверка с iOS-снапшотами и docs/prototype
+- [x] run tests — must pass before next task
 
 ### Task 9: Деталь операции — позиции и вложения
 
