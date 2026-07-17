@@ -252,10 +252,10 @@
 **Files:**
 - Create: `ui/expense/AudioRecorderController.kt`, тесты
 
-- [ ] AudioRecord по решениям выше (16k/PCM16/WAV, кап 2.8 МБ, RMS→level по формуле iOS, source-выбор тестом, fallback-rate+ресемпл, privacySensitive, lifecycle-cancel)
-- [ ] RECORD_AUDIO: rationale, «навсегда отказано» → алерт с переходом в настройки
-- [ ] unit: WAV-заголовок, кап, нормализация уровня, ресемпл на синтетике
-- [ ] run tests — must pass before next task
+- [x] AudioRecord по решениям выше (16k/PCM16/WAV, кап 2.8 МБ, RMS→level по формуле iOS, source-выбор тестом, fallback-rate+ресемпл, privacySensitive, lifecycle-cancel)
+- [x] RECORD_AUDIO: rationale, «навсегда отказано» → алерт с переходом в настройки
+- [x] unit: WAV-заголовок, кап, нормализация уровня, ресемпл на синтетике
+- [x] run tests — must pass before next task
 
 ### Task 12: Hold-to-talk + RecordingOverlay
 

@@ -6,6 +6,9 @@
     <!-- Фото чека камерой (AI-распознавание); камера не обязательна для установки. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <!-- Голосовой ввод расхода (hold-to-talk); микрофон не обязателен для установки. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
         android:name=".SplittyApp"
