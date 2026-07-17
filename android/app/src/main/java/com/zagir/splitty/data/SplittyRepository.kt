@@ -13,6 +13,7 @@ import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
+import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
@@ -127,11 +128,17 @@ class SplittyRepository @Inject constructor(
         sum: Int,
         donorId: Long,
         split: ExpenseSplit,
+        items: List<OperationItem>? = null,
         clientOpId: String? = null,
     ): Operation = call {
-        api.addOperation(roomId, OperationBody.of(description, sum, donorId, split, clientOpId))
+        api.addOperation(roomId, OperationBody.of(description, sum, donorId, split, items, clientOpId))
     }
 
+    /**
+     * PUT операции. [items] — позиции чека itemized-операции: проносятся в тело
+     * НЕТРОНУТЫМИ (passthrough), иначе плоский PUT затрёт чек на сервере.
+     * У обычных расходов null.
+     */
     suspend fun updateOperation(
         roomId: String,
         operationId: String,
@@ -139,8 +146,9 @@ class SplittyRepository @Inject constructor(
         sum: Int,
         donorId: Long,
         split: ExpenseSplit,
+        items: List<OperationItem>? = null,
     ): Operation = call {
-        api.updateOperation(roomId, operationId, OperationBody.of(description, sum, donorId, split))
+        api.updateOperation(roomId, operationId, OperationBody.of(description, sum, donorId, split, items))
     }
 
     suspend fun deleteOperation(roomId: String, operationId: String) =

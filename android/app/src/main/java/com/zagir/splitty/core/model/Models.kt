@@ -133,6 +133,55 @@ data class OperationRecipient(
     val sum: Int,
 )
 
+/**
+ * Доля участника в позиции чека (itemized-операция, AI-распознавание).
+ * ЧИСТЫЙ транспорт (декод/энкод) — логика раскладки (веса/фиксы) появится
+ * отдельным файлом в Task 6; здесь без вычислений. userId — Telegram id (Long).
+ */
+@Serializable
+data class ItemShare(
+    val userId: Long,
+    /** Относительный вес доли (1 = поровну); сервер игнорирует при заданном [amount]. */
+    val weight: Int = 1,
+    /** Фиксированная сумма участника (целые единицы валюты); null — доля по весу. */
+    val amount: Int? = null,
+)
+
+/**
+ * Позиция чека itemized-операции: что заказали, почём и как делится. Единый
+ * транспортный вид (read-модель операции и write-path [OperationBody.items]) —
+ * совпадает с серверным `ai.DraftItem`. Только декод/энкод, без логики долей.
+ */
+@Serializable
+data class OperationItem(
+    /** Название позиции («Пицца», «Сервисный сбор»). */
+    val name: String,
+    /** ВСЕГДА суммарная стоимость строки (целые единицы, уже с учётом [qty]). */
+    val price: Int,
+    /** Количество — только для показа («×10»); в делении НЕ участвует. */
+    val qty: Int = 1,
+    /** Доли участников; null/пусто у надбавок (делятся по базе). */
+    val shares: List<ItemShare>? = null,
+    /** «item» — обычная позиция, «surcharge» — надбавка (сбор/чаевые/доставка). */
+    val kind: String = KIND_ITEM,
+    /** Правило деления надбавки «proportional»|«equally»; null у обычных позиций. */
+    val split: String? = null,
+    /** Процент надбавки — только для показа («Сбор 10%»); в расчёте НЕ участвует. */
+    val percent: Int? = null,
+    /**
+     * Только в черновике parse: нераспознанные имена для сопоставления
+     * участнику. В read-модели операции всегда null.
+     */
+    val unknown: List<String>? = null,
+) {
+    companion object {
+        const val KIND_ITEM = "item"
+        const val KIND_SURCHARGE = "surcharge"
+        const val SPLIT_PROPORTIONAL = "proportional"
+        const val SPLIT_EQUALLY = "equally"
+    }
+}
+
 /** Операция: расход или погашение долга. */
 @Serializable
 data class Operation(
@@ -149,6 +198,12 @@ data class Operation(
     val createdAt: Instant,
     /** Может быть пустым или отсутствовать. */
     val files: List<OperationFile>? = null,
+    /**
+     * Позиции чека itemized-операции (AI-распознавание); null у обычных операций.
+     * Плоские [recipients] — источник для долгов; [items] — «зачем так вышло».
+     * Правка такой операции плоским PUT затирает чек — до Task 10 она запрещена.
+     */
+    val items: List<OperationItem>? = null,
     /**
      * Клиентский идемпотентный ключ (localId записи outbox, см. docs/API.md
      * «Идемпотентность создания»); есть только у операций, созданных клиентами.

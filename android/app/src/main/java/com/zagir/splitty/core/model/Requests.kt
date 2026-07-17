@@ -65,6 +65,12 @@ data class OperationBody(
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
     /**
+     * Позиции чека itemized-операции (write-path). Passthrough: при правке
+     * серверной операции проносятся НЕТРОНУТЫМИ, иначе плоский PUT затрёт чек.
+     * null у обычных расходов (не сериализуется — explicitNulls = false).
+     */
+    val items: List<OperationItem>? = null,
+    /**
      * Идемпотентный ключ создания (localId записи outbox): повторный POST
      * с тем же ключом вернёт существующую операцию (200 вместо 201) —
      * защита от дублей при досылке офлайн-операций. В PUT игнорируется.
@@ -77,6 +83,7 @@ data class OperationBody(
             sum: Int,
             donorId: Long,
             split: ExpenseSplit,
+            items: List<OperationItem>? = null,
             clientOpId: String? = null,
         ): OperationBody =
             when (split) {
@@ -85,6 +92,7 @@ data class OperationBody(
                     sum = sum,
                     donorId = donorId,
                     recipientIds = split.recipientIds,
+                    items = items,
                     clientOpId = clientOpId,
                 )
 
@@ -93,6 +101,7 @@ data class OperationBody(
                     sum = sum,
                     donorId = donorId,
                     recipientSums = split.recipientSums,
+                    items = items,
                     clientOpId = clientOpId,
                 )
             }

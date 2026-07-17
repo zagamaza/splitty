@@ -4,6 +4,7 @@ package com.zagir.splitty.data
 
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.InstantSerializer
+import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.RecipientSum
 import com.zagir.splitty.core.model.SplitType
 import java.io.File
@@ -63,6 +64,12 @@ data class OutboxPayload(
     val donorId: Long,
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
+    /**
+     * Позиции чека itemized-операции. Nullable c default — СТАРЫЕ outbox.json
+     * на устройствах тестеров (без этого поля) обязаны читаться без потери
+     * очереди. Скоуп passthrough — только offline create/local edit.
+     */
+    val items: List<OperationItem>? = null,
 ) {
     /** Способ деления по наличию полей (recipientSums → «По суммам»). */
     val splitType: SplitType
@@ -78,13 +85,20 @@ data class OutboxPayload(
     }
 
     companion object {
-        fun of(description: String, sum: Int, donorId: Long, split: ExpenseSplit): OutboxPayload =
+        fun of(
+            description: String,
+            sum: Int,
+            donorId: Long,
+            split: ExpenseSplit,
+            items: List<OperationItem>? = null,
+        ): OutboxPayload =
             when (split) {
                 is ExpenseSplit.Equally -> OutboxPayload(
                     description = description,
                     sum = sum,
                     donorId = donorId,
                     recipientIds = split.recipientIds,
+                    items = items,
                 )
 
                 is ExpenseSplit.ByExactAmount -> OutboxPayload(
@@ -92,6 +106,7 @@ data class OutboxPayload(
                     sum = sum,
                     donorId = donorId,
                     recipientSums = split.recipientSums,
+                    items = items,
                 )
             }
     }

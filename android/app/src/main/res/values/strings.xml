@@ -273,6 +273,7 @@
     <string name="outbox_section_title">Не отправлено</string>
     <string name="outbox_badge_pending">не отправлено</string>
     <string name="expense_offline_edit_blocked">Нет соединения. Можно редактировать только неотправленные операции</string>
+    <string name="expense_itemized_edit_blocked">Операция по позициям чека — правится там, где создана</string>
     <plurals name="group_hero_pending_ops">
         <item quantity="one">без учёта %d неотправленной</item>
         <item quantity="few">без учёта %d неотправленных</item>

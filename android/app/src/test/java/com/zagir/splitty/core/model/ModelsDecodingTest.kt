@@ -87,6 +87,72 @@ class ModelsDecodingTest {
     }
 
     @Test
+    fun `decodes itemized operation with items and shares`() {
+        // Фикстура зеркалит серверный read-path (operationItemDto): позиция с
+        // долями по весам + надбавка «surcharge»/«proportional» с percent.
+        val operation = SplittyJson.decodeFromString<Operation>(
+            """
+            {
+              "id": "65ai",
+              "description": "Ужин по чеку",
+              "sum": 1320,
+              "splitType": "by_exact_amount",
+              "donor": {"id": 1, "displayName": "Загир"},
+              "recipients": [
+                {"user": {"id": 1, "displayName": "Загир"}, "sum": 660},
+                {"user": {"id": 2, "displayName": "Алмаз"}, "sum": 660}
+              ],
+              "createdAt": "2026-07-05T12:00:00Z",
+              "items": [
+                {
+                  "name": "Пицца", "price": 1200, "qty": 1, "kind": "item",
+                  "shares": [
+                    {"userId": 1, "weight": 1},
+                    {"userId": 2, "weight": 1, "amount": 400}
+                  ]
+                },
+                {
+                  "name": "Сервисный сбор", "price": 120, "qty": 1,
+                  "kind": "surcharge", "split": "proportional", "percent": 10
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+        val items = operation.items
+        assertEquals(2, items?.size)
+        val pizza = items!!.first()
+        assertEquals("Пицца", pizza.name)
+        assertEquals(1200, pizza.price)
+        assertEquals(1, pizza.qty)
+        assertEquals(OperationItem.KIND_ITEM, pizza.kind)
+        assertEquals(2, pizza.shares?.size)
+        assertEquals(1L, pizza.shares!![0].userId)
+        assertNull(pizza.shares!![0].amount)
+        assertEquals(400, pizza.shares!![1].amount)
+        val surcharge = items[1]
+        assertEquals(OperationItem.KIND_SURCHARGE, surcharge.kind)
+        assertEquals(OperationItem.SPLIT_PROPORTIONAL, surcharge.split)
+        assertEquals(10, surcharge.percent)
+        assertNull(surcharge.shares)
+    }
+
+    @Test
+    fun `decodes ordinary operation without items - items stays null`() {
+        val operation = SplittyJson.decodeFromString<Operation>(
+            """
+            {
+              "id": "65a3", "description": "Такси", "sum": 300,
+              "donor": {"id": 1, "displayName": "A"},
+              "recipients": [{"user": {"id": 1, "displayName": "A"}, "sum": 300}],
+              "createdAt": "2026-07-05T12:00:00Z"
+            }
+            """.trimIndent()
+        )
+        assertNull(operation.items)
+    }
+
+    @Test
     fun `decodes repayment operation without splitType and files`() {
         val operation = SplittyJson.decodeFromString<Operation>(
             """

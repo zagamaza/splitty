@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.Operation
+import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.RecipientSum
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
@@ -57,6 +58,12 @@ data class AddExpenseForm(
     val isEditingSynced: Boolean = false,
     /** true — редактирование неотправленной записи outbox (доступно офлайн). */
     val isEditingLocal: Boolean = false,
+    /**
+     * true — операция с позициями чека (itemized): правка плоской формой затёрла
+     * бы чек, поэтому сохранение запрещено (временно, до itemized-режима формы
+     * в Task 10). Просмотр полей — как раньше.
+     */
+    val isItemizedLocked: Boolean = false,
     /** true — экран открыт без фиксированной группы (сверху выбор чипами). */
     val showsRoomPicker: Boolean,
     /** Группы для выбора (только при [showsRoomPicker]). */
@@ -112,7 +119,8 @@ data class AddExpenseForm(
      * донор выбран, есть получатели; в режиме «По суммам» — только при Σ == sum.
      */
     val canSave: Boolean
-        get() = selectedRoomId != null &&
+        get() = !isItemizedLocked &&
+            selectedRoomId != null &&
             description.isNotBlank() &&
             (sum ?: 0) >= 1 &&
             payerId != null &&
@@ -156,6 +164,14 @@ class AddExpenseViewModel @Inject constructor(
      * правки порядок сохраняется, новые участники добавляются в конец.
      */
     private var editRecipientOrder: List<Long> = emptyList()
+
+    /**
+     * Позиции чека редактируемой операции — проносятся в PUT НЕТРОНУТЫМИ
+     * (см. [SplittyRepository.updateOperation]). Для itemized-операций правка
+     * сейчас всё равно заблокирована ([AddExpenseForm.isItemizedLocked]);
+     * поле — страховка от затирания чека, если правка когда-то пройдёт.
+     */
+    private var editOriginalItems: List<OperationItem>? = null
 
     /** Первичная настройка (идемпотентна — зовётся из LaunchedEffect экрана). */
     fun start(roomId: String?, operationId: String?, localId: String? = null) {
@@ -223,9 +239,11 @@ class AddExpenseViewModel @Inject constructor(
     private fun localEntryForm(room: RoomDetail, entry: OutboxEntry, meId: Long?): AddExpenseForm {
         val payload = entry.payload
         editRecipientOrder = payload.recipientOrder
+        editOriginalItems = payload.items
         val form = AddExpenseForm(
             isEditing = true,
             isEditingLocal = true,
+            isItemizedLocked = !payload.items.isNullOrEmpty(),
             showsRoomPicker = false,
             meId = meId,
             description = payload.description,
@@ -245,11 +263,13 @@ class AddExpenseViewModel @Inject constructor(
         var form = AddExpenseForm(
             isEditing = operation != null,
             isEditingSynced = operation != null,
+            isItemizedLocked = !operation?.items.isNullOrEmpty(),
             showsRoomPicker = false,
             meId = meId,
         )
         if (operation != null) {
             editRecipientOrder = operation.recipients.map { it.user.id }
+            editOriginalItems = operation.items
             form = form.copy(
                 description = operation.description,
                 sumText = operation.sum.toString(),
@@ -380,7 +400,12 @@ class AddExpenseViewModel @Inject constructor(
                     }
 
                     operationId != null -> {
-                        repository.updateOperation(roomId, operationId, description, sum, payerId, split)
+                        // items оригинала проносятся НЕТРОНУТЫМИ — плоский PUT
+                        // без них затёр бы чек itemized-операции на сервере.
+                        repository.updateOperation(
+                            roomId, operationId, description, sum, payerId, split,
+                            items = editOriginalItems,
+                        )
                         sessionStore.noteDataChanged()
                     }
 

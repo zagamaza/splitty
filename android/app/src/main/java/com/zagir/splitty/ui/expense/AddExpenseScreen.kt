@@ -233,6 +233,11 @@ private fun ExpenseFormContent(
         if (form.isEditingSynced && !isOnline) {
             OfflineEditBlockedPlate()
         }
+        // Операцию по позициям чека нельзя править плоской формой (затрёт чек)
+        // — до itemized-режима формы (Task 10) сохранение заблокировано.
+        if (form.isItemizedLocked) {
+            ItemizedEditBlockedPlate()
+        }
         if (form.showsRoomPicker) {
             GroupPickerCard(form = form, onSelect = viewModel::selectRoom)
         }
@@ -262,6 +267,30 @@ private fun OfflineEditBlockedPlate() {
             )
             Text(
                 text = stringResource(R.string.expense_offline_edit_blocked),
+                fontSize = 13.sp,
+                color = colors.inkSecondary,
+            )
+        }
+    }
+}
+
+/** Плашка «правится там, где создана» — операция по позициям чека (itemized). */
+@Composable
+private fun ItemizedEditBlockedPlate() {
+    val colors = Splitty.colors
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Description,
+                contentDescription = null,
+                tint = colors.inkSecondary,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.expense_itemized_edit_blocked),
                 fontSize = 13.sp,
                 color = colors.inkSecondary,
             )

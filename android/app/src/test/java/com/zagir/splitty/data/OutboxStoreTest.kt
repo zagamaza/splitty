@@ -154,6 +154,78 @@ class OutboxStoreTest {
     }
 
     @Test
+    fun `old outbox json without items field loads without losing queue`() = runTest {
+        // Формат ДО Task 1 (нет поля items) — на устройствах тестеров такие
+        // файлы уже лежат; они обязаны прочитаться, а не молча стереть очередь.
+        dir.mkdirs()
+        file.writeText(
+            """
+            [
+              {
+                "localId": "old1",
+                "roomId": "room1",
+                "kind": "create",
+                "payload": {
+                  "description": "Такси",
+                  "sum": 100,
+                  "donorId": 1,
+                  "recipientIds": [1, 2]
+                },
+                "createdAt": "2026-07-05T12:00:00Z",
+                "status": "pending"
+              }
+            ]
+            """.trimIndent()
+        )
+
+        val store = store()
+        store.awaitLoaded()
+
+        assertEquals(listOf("old1"), store.entries.value.map { it.localId })
+        val restored = store.entry("old1")!!
+        assertEquals("Такси", restored.payload.description)
+        assertNull(restored.payload.items)
+    }
+
+    @Test
+    fun `entry with items round-trips through file`() = runTest {
+        val items = listOf(
+            com.zagir.splitty.core.model.OperationItem(
+                name = "Пицца",
+                price = 1200,
+                shares = listOf(
+                    com.zagir.splitty.core.model.ItemShare(userId = 1L, weight = 1),
+                    com.zagir.splitty.core.model.ItemShare(userId = 2L, amount = 400),
+                ),
+            ),
+        )
+        val first = store()
+        first.add(
+            OutboxEntry(
+                localId = "it1",
+                roomId = "room1",
+                payload = OutboxPayload(
+                    description = "Ужин по чеку",
+                    sum = 1200,
+                    donorId = 1L,
+                    recipientSums = listOf(
+                        com.zagir.splitty.core.model.RecipientSum(userId = 1L, sum = 800),
+                        com.zagir.splitty.core.model.RecipientSum(userId = 2L, sum = 400),
+                    ),
+                    items = items,
+                ),
+                createdAt = Instant.parse("2026-07-05T12:00:00Z"),
+            )
+        )
+
+        val second = store()
+        second.awaitLoaded()
+
+        val restored = second.entry("it1")!!
+        assertEquals(items, restored.payload.items)
+    }
+
+    @Test
     fun `payload split type follows recipientSums presence`() {
         val equally = OutboxPayload(description = "x", sum = 10, donorId = 1L, recipientIds = listOf(1L))
         val exact = OutboxPayload(
