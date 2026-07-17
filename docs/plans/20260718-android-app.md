@@ -141,11 +141,11 @@
 **Files:**
 - Modify: `AndroidManifest.xml`, res/xml (network config ×2), `core/session/SessionStore.kt`
 
-- [ ] `dataExtractionRules` + `fullBackupContent`: исключить ТОЧНЫЕ пути — `files/datastore/session.preferences_pb`, `files/outbox.json`, `files/cache-api/` (шифротекст без Keystore-ключа не восстановим — бэкапить бессмысленно и вредно)
-- [ ] cleartext: РАЗНЫЕ network_security_config на variant (src/debug/res/xml и src/release/res/xml) — `debug-overrides` это про debug-CA, cleartext он НЕ гейтит
-- [ ] `SessionStore.DEFAULT_BASE_URL`: в release — https-плейсхолдер прод-домена, HTTP-IP только в debug (BuildConfig); боевой IP из placeholder логина убрать
-- [ ] Тест: release-конфиг не допускает cleartext (unit на парс конфига или ручная проверка в чек-лист Task 15)
-- [ ] run tests — must pass before next task
+- [x] `dataExtractionRules` + `fullBackupContent`: исключить ТОЧНЫЕ пути — `files/datastore/session.preferences_pb`, `files/outbox.json`, `files/cache-api/` (шифротекст без Keystore-ключа не восстановим — бэкапить бессмысленно и вредно)
+- [x] cleartext: РАЗНЫЕ network_security_config на variant (src/debug/res/xml и src/release/res/xml) — `debug-overrides` это про debug-CA, cleartext он НЕ гейтит
+- [x] `SessionStore.DEFAULT_BASE_URL`: в release — https-плейсхолдер прод-домена, HTTP-IP только в debug (BuildConfig); боевой IP из placeholder логина убрать
+- [x] Тест: release-конфиг не допускает cleartext (unit на парс конфига или ручная проверка в чек-лист Task 15)
+- [x] run tests — must pass before next task
 
 ### Task 3: Порт Components + хептики + унификация
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RELEASE-вариант: cleartext ЗАПРЕЩЁН — прод-сервер обязан быть на HTTPS.
+     Явно указываем false (дефолт для targetSdk 28+ и так false, но фиксируем
+     инвариант, чтобы никакой merge не включил cleartext обратно). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

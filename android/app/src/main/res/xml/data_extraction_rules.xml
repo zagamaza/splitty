@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Автобэкап (API 31+). Исключаем секреты и офлайн-очередь ТОЧНЫМИ путями:
+     шифротекст токена без Keystore-ключа (ключ не покидает устройство) не
+     восстановим — бэкапить его бессмысленно и вредно; outbox и кеш API —
+     локальное производное состояние, восстановление на другом устройстве
+     под другим пользователем недопустимо. Пути относительны filesDir. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/session.preferences_pb" />
+        <exclude domain="file" path="outbox.json" />
+        <exclude domain="file" path="cache-api/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/session.preferences_pb" />
+        <exclude domain="file" path="outbox.json" />
+        <exclude domain="file" path="cache-api/" />
+    </device-transfer>
+</data-extraction-rules>

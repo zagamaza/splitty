@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.di.ApplicationScope
@@ -48,8 +49,15 @@ class SessionStore @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     companion object {
-        /** Прод-сервер по умолчанию; на эмуляторе для локального бэкенда — http://10.0.2.2:7171. */
-        const val DEFAULT_BASE_URL = "http://138.124.18.189:18002"
+        /**
+         * Сервер по умолчанию. В release — HTTPS-плейсхолдер прод-домена
+         * (боевой сервер к релизу обязан быть на HTTPS; cleartext из релиза
+         * убран, см. network_security_config release-варианта). В debug —
+         * дев-сервер по голому HTTP-IP (cleartext разрешён только в debug).
+         * Пользователь может переопределить адрес на экране входа.
+         */
+        val DEFAULT_BASE_URL: String
+            get() = if (BuildConfig.DEBUG) "http://138.124.18.189:18002" else "https://api.splitty.app"
 
         const val THEME_SYSTEM = "system"
         const val THEME_LIGHT = "light"

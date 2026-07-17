@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- fullBackupContent (API ≤30). Те же исключения, что и в
+     data_extraction_rules.xml: секреты/очередь/кеш не бэкапим. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore/session.preferences_pb" />
+    <exclude domain="file" path="outbox.json" />
+    <exclude domain="file" path="cache-api/" />
+</full-backup-content>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- DEBUG-вариант: дев-сервер живёт на голом IP по HTTP — cleartext разрешён
+     ТОЛЬКО в debug. base-config@cleartextTrafficPermitted (а не debug-overrides:
+     последний гейтит доверие к debug-CA, но НЕ разрешает cleartext). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
