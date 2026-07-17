@@ -7,6 +7,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.network.ApiException
+import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,8 +26,12 @@ import kotlinx.coroutines.launch
 class FriendDetailViewModel @Inject constructor(
     private val repository: SplittyRepository,
     sessionStore: SessionStore,
+    networkMonitor: NetworkMonitor,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    /** Онлайн-статус — гейт CTA «Погасить» (офлайн — алерт, как iOS). */
+    val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
 
     private val userId: Long = checkNotNull(savedStateHandle["userId"]) {
         "FriendDetail требует nav-аргумент userId"
@@ -67,6 +72,11 @@ class FriendDetailViewModel @Inject constructor(
 
     fun dismissError() {
         _errorMessage.value = null
+    }
+
+    /** Тап «Погасить» без сети: погашение доступно только онлайн (алерт, как iOS). */
+    fun showOfflineSettleError() {
+        _errorMessage.value = "Нет соединения. Погашение долга доступно только онлайн"
     }
 
     private suspend fun reload() {

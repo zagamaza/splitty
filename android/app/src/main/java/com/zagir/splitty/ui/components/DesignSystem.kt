@@ -24,7 +24,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -202,6 +204,12 @@ fun MoneyText(
     size: TextUnit = 17.sp,
     weight: FontWeight = FontWeight.SemiBold,
     currency: String = "RUB",
+    /**
+     * Минимальный масштаб шрифта при нехватке ширины (аналог iOS
+     * `.minimumScaleFactor`): 1f — не ужимать (по умолчанию); <1f — крупная
+     * сумма в узкой плитке уменьшается вместо обрезки. Значение = нижняя граница.
+     */
+    minScale: Float = 1f,
 ) {
     val colors = Splitty.colors
     val color = when (role) {
@@ -214,13 +222,23 @@ fun MoneyText(
             else -> colors.inkSecondary
         }
     }
+    // Ужимаем размер только когда об этом попросили (minScale<1f): при
+    // переполнении строки уменьшаем шрифт до нижней границы size*minScale.
+    var scaledSize by remember(amount, currency, size) { mutableStateOf(size) }
     Text(
         text = money(abs(amount), currency),
         modifier = modifier,
         color = color,
-        fontSize = size,
+        fontSize = scaledSize,
         fontWeight = weight,
         maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        onTextLayout = { result ->
+            if (minScale < 1f && result.hasVisualOverflow && scaledSize > size * minScale) {
+                scaledSize = scaledSize * 0.92f
+            }
+        },
         style = androidx.compose.ui.text.TextStyle(
             fontFeatureSettings = "tnum", // моноширинные цифры
         ),

@@ -7,14 +7,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.IconButton
@@ -35,6 +38,8 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +57,7 @@ import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
+import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
@@ -91,7 +97,14 @@ fun ActivityScreen(
                 color = Splitty.colors.ink,
             )
             // Фильтр «Только мои»: операции, где я донор или в получателях.
-            IconButton(onClick = viewModel::toggleMineOnly) {
+            val filterState = stringResource(
+                if (isMineOnly) R.string.activity_filter_on else R.string.activity_filter_off
+            )
+            IconButton(
+                onClick = viewModel::toggleMineOnly,
+                // stateDescription: TalkBack читает «включено/выключено» у фильтра.
+                modifier = Modifier.semantics { stateDescription = filterState },
+            ) {
                 Icon(
                     imageVector = if (isMineOnly) Icons.Filled.Person else Icons.Outlined.Person,
                     contentDescription = stringResource(R.string.activity_mine_only),
@@ -111,6 +124,7 @@ fun ActivityScreen(
                 onRefresh = viewModel::refresh,
                 onItemShown = viewModel::onItemShown,
                 onOpenRoom = onOpenRoom,
+                onShowAll = viewModel::toggleMineOnly,
             )
         }
     }
@@ -142,6 +156,7 @@ private fun ActivityFeed(
     onRefresh: () -> Unit,
     onItemShown: (Int) -> Unit,
     onOpenRoom: (String) -> Unit,
+    onShowAll: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -167,6 +182,7 @@ private fun ActivityFeed(
                 item {
                     ActivityEmptyView(
                         isMineOnly = isMineOnly,
+                        onShowAll = onShowAll,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 120.dp),
@@ -214,11 +230,17 @@ private fun ActivityRow(item: ActivityItem, myUserId: Long?, onClick: () -> Unit
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
+                // Карточка — один элемент для TalkBack (заголовок+позиция+время).
+                .semantics(mergeDescendants = true) {}
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             GradientAvatar(user = item.operation.donor, size = 44.dp)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 ActivityTitle(item = item, myUserId = myUserId)
                 ActivityPosition(item = item, myUserId = myUserId)
                 Text(
@@ -227,6 +249,13 @@ private fun ActivityRow(item: ActivityItem, myUserId: Long?, onClick: () -> Unit
                     color = Splitty.colors.inkSecondary,
                 )
             }
+            // Chevron — аффорданс перехода в группу операции.
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Splitty.colors.inkSecondary.copy(alpha = 0.6f),
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }
@@ -332,7 +361,11 @@ private fun ActivityErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ActivityEmptyView(isMineOnly: Boolean = false, modifier: Modifier = Modifier) {
+private fun ActivityEmptyView(
+    isMineOnly: Boolean = false,
+    onShowAll: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -363,5 +396,14 @@ private fun ActivityEmptyView(isMineOnly: Boolean = false, modifier: Modifier = 
             color = Splitty.colors.inkSecondary,
             textAlign = TextAlign.Center,
         )
+        // При включённом фильтре — быстрый сброс к полной ленте.
+        if (isMineOnly) {
+            Spacer(Modifier.height(8.dp))
+            PrimaryPillButton(
+                text = stringResource(R.string.activity_show_all),
+                onClick = onShowAll,
+                modifier = Modifier.padding(horizontal = 48.dp),
+            )
+        }
     }
 }

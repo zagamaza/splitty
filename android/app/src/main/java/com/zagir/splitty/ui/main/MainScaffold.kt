@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.WifiOff
@@ -82,7 +82,7 @@ private object MainRoutes {
     const val ROOM = "room/{roomId}"
     const val OPERATION = "room/{roomId}/operation/{operationId}"
     const val ADD_EXPENSE = "expense?roomId={roomId}&operationId={operationId}&localId={localId}"
-    const val SETTLE_UP = "settleup/{roomId}"
+    const val SETTLE_UP = "settleup/{roomId}?debtorId={debtorId}&lenderId={lenderId}"
     const val NOTIFICATIONS = "notifications"
 
     /** Вкладки: на них виден нижний бар и работает switchTab. */
@@ -101,6 +101,10 @@ private object MainRoutes {
         "expense?roomId=$roomId&localId=$localId"
 
     fun settleUp(roomId: String) = "settleup/$roomId"
+
+    /** Погашение с предвыбором конкретного долга (переход из строки балансов). */
+    fun settleUpDebt(roomId: String, debtorId: Long, lenderId: Long) =
+        "settleup/$roomId?debtorId=$debtorId&lenderId=$lenderId"
 }
 
 private data class TabSpec(
@@ -115,7 +119,8 @@ private val LeftTabs = listOf(
 )
 
 private val RightTabs = listOf(
-    TabSpec(MainRoutes.ACTIVITY, Icons.Filled.BarChart, R.string.tab_activity),
+    // clock — согласованно с empty state ленты (BarChart обещал графики).
+    TabSpec(MainRoutes.ACTIVITY, Icons.Filled.Schedule, R.string.tab_activity),
     TabSpec(MainRoutes.ACCOUNT, Icons.Outlined.AccountCircle, R.string.tab_account),
 )
 
@@ -182,6 +187,7 @@ fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
             ConnectivityBanner(isOnline = isOnline, isSyncing = isSyncing)
             MainNavHost(
                 navController = navController,
+                onSwitchTab = ::switchTab,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
@@ -229,7 +235,11 @@ private fun ConnectivityBanner(isOnline: Boolean, isSyncing: Boolean) {
 
 /** Все destinations приложения; детальные экраны — поверх вкладок. */
 @Composable
-private fun MainNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+private fun MainNavHost(
+    navController: NavHostController,
+    onSwitchTab: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     NavHost(
         navController = navController,
         startDestination = MainRoutes.FRIENDS,
@@ -244,6 +254,8 @@ private fun MainNavHost(navController: NavHostController, modifier: Modifier = M
                         MainRoutes.friendDetail(friend.user.id, friend.user.displayName),
                     )
                 },
+                // Друзья появляются из общих групп — «Создать группу» ведёт на вкладку.
+                onCreateGroup = { onSwitchTab(MainRoutes.GROUPS) },
             )
         }
 
@@ -285,6 +297,7 @@ private fun MainNavHost(navController: NavHostController, modifier: Modifier = M
             FriendDetailScreen(
                 onBack = { navController.popBackStack() },
                 onOpenRoom = { roomId -> navController.navigate(MainRoutes.room(roomId)) },
+                onSettleUp = { roomId -> navController.navigate(MainRoutes.settleUp(roomId)) },
             )
         }
 
@@ -297,6 +310,9 @@ private fun MainNavHost(navController: NavHostController, modifier: Modifier = M
                 roomId = roomId,
                 onBack = { navController.popBackStack() },
                 onSettleUp = { id -> navController.navigate(MainRoutes.settleUp(id)) },
+                onSettleUpDebt = { id, debtorId, lenderId ->
+                    navController.navigate(MainRoutes.settleUpDebt(id, debtorId, lenderId))
+                },
                 onAddExpense = { id -> navController.navigate(MainRoutes.addExpense(id)) },
                 onOpenOperation = { rid, operationId ->
                     navController.navigate(MainRoutes.operation(rid, operationId))
@@ -354,8 +370,20 @@ private fun MainNavHost(navController: NavHostController, modifier: Modifier = M
 
         composable(
             route = MainRoutes.SETTLE_UP,
-            arguments = listOf(navArgument("roomId") { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument("roomId") { type = NavType.StringType },
+                // Предвыбор долга: -1 = аргумент не передан (обычный вход).
+                navArgument("debtorId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+                navArgument("lenderId") {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
         ) { entry ->
+            // debtorId/lenderId читает SettleUpViewModel из SavedStateHandle.
             SettleUpScreen(
                 roomId = entry.arguments?.getString("roomId").orEmpty(),
                 onDone = { navController.popBackStack() },

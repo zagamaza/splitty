@@ -29,6 +29,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -47,6 +50,7 @@ import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.MoneyTotalsText
+import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
@@ -61,11 +65,27 @@ import com.zagir.splitty.ui.theme.Splitty
 fun FriendDetailScreen(
     onBack: () -> Unit,
     onOpenRoom: (String) -> Unit,
+    onSettleUp: (String) -> Unit,
     viewModel: FriendDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+
+    val friend = (state as? UiState.Content)?.value
+    // Пикер группы для погашения (несколько общих групп → выбор, как iOS).
+    var showRoomPicker by remember { mutableStateOf(false) }
+
+    // Тап «Погасить»: офлайн — алерт; одна группа — сразу; несколько — пикер.
+    val onSettleTap: () -> Unit = {
+        val rooms = friend?.rooms.orEmpty()
+        when {
+            !isOnline -> viewModel.showOfflineSettleError()
+            rooms.size == 1 -> onSettleUp(rooms.first().roomId)
+            rooms.isNotEmpty() -> showRoomPicker = true
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -73,7 +93,7 @@ fun FriendDetailScreen(
             .background(Splitty.colors.bg),
     ) {
         TopBar(
-            title = (state as? UiState.Content)?.value?.user?.displayName.orEmpty(),
+            title = friend?.user?.displayName.orEmpty(),
             onBack = onBack,
         )
         when (val current = state) {
@@ -84,8 +104,20 @@ fun FriendDetailScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
                 onOpenRoom = onOpenRoom,
+                onSettleUp = onSettleTap,
             )
         }
+    }
+
+    if (showRoomPicker && friend != null) {
+        SettleRoomPicker(
+            rooms = friend.rooms,
+            onDismiss = { showRoomPicker = false },
+            onPick = { roomId ->
+                showRoomPicker = false
+                onSettleUp(roomId)
+            },
+        )
     }
 
     val message = errorMessage
@@ -101,6 +133,41 @@ fun FriendDetailScreen(
             },
         )
     }
+}
+
+/** Выбор группы для погашения при нескольких общих группах (порт iOS action sheet). */
+@Composable
+private fun SettleRoomPicker(
+    rooms: List<FriendRoomBalance>,
+    onDismiss: () -> Unit,
+    onPick: (String) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.friend_settle_room_picker_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                rooms.forEach { room ->
+                    TextButton(
+                        onClick = { onPick(room.roomId) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = room.roomName,
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Splitty.colors.ink,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
 }
 
 /** Инлайн-шапка: кнопка «Назад» и имя друга по центру. */
@@ -139,6 +206,7 @@ private fun FriendDetailContent(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenRoom: (String) -> Unit,
+    onSettleUp: () -> Unit,
 ) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -153,6 +221,13 @@ private fun FriendDetailContent(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Header(friend)
+            // CTA «Погасить» — только когда есть непогашенные долги по группам.
+            if (friend.totals.isNotEmpty() && friend.rooms.isNotEmpty()) {
+                PrimaryPillButton(
+                    text = stringResource(R.string.friend_settle_up),
+                    onClick = onSettleUp,
+                )
+            }
             GroupsSection(rooms = friend.rooms, onOpenRoom = onOpenRoom)
             Spacer(Modifier.height(32.dp))
         }
@@ -193,10 +268,11 @@ private fun Header(friend: FriendBalance) {
             val totals = friend.totals
             val primary = totals.firstOrNull()?.sum ?: 0
             SectionHeader(
+                // Единый settled-текст на всех экранах: «Все долги погашены».
                 text = when {
                     primary > 0 -> stringResource(R.string.friend_owed_caption)
                     primary < 0 -> stringResource(R.string.friends_you_owe)
-                    else -> stringResource(R.string.friend_settled_caption)
+                    else -> stringResource(R.string.friends_all_settled)
                 },
             )
             // Нетто по валютам: основная крупно, остальные — вторичной строкой.

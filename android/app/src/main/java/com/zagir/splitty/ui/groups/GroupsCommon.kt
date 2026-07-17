@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -181,13 +182,19 @@ internal fun GroupsFullScreenError(
     }
 }
 
-/** Дружелюбное пустое состояние карточкой (вместо системного списка). */
+/**
+ * Дружелюбное пустое состояние карточкой (вместо системного списка).
+ * [action] — необязательный блок кнопок под текстом (порт iOS
+ * `ContentUnavailableView` с actions): в пустом состоянии показываем первый
+ * шаг («Создать группу»/«Добавить расход»), а не только объяснение.
+ */
 @Composable
 internal fun GroupsEmptyCard(
     icon: ImageVector,
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
+    action: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val colors = Splitty.colors
     SurfaceCard(modifier = modifier.fillMaxWidth(), padding = 24.dp) {
@@ -215,6 +222,10 @@ internal fun GroupsEmptyCard(
                 color = colors.inkSecondary,
                 textAlign = TextAlign.Center,
             )
+            if (action != null) {
+                Spacer(Modifier.height(16.dp))
+                action()
+            }
         }
     }
 }

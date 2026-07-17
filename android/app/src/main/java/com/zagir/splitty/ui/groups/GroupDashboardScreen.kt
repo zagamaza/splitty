@@ -315,18 +315,30 @@ private fun MyTiles(stats: Statistics, meId: Long?) {
         StatTile(
             title = stringResource(R.string.totals_i_paid),
             icon = Icons.Outlined.Person,
-            iconTint = colors.chartCategorical[4],
+            iconTint = colors.accent,
             modifier = Modifier.weight(1f),
         ) {
-            MoneyText(paid, role = MoneyRole.NEUTRAL, size = 28.sp, currency = stats.currency)
+            MoneyText(
+                paid,
+                role = MoneyRole.NEUTRAL,
+                size = 28.sp,
+                currency = stats.currency,
+                minScale = 0.55f,
+            )
         }
         StatTile(
             title = stringResource(R.string.totals_my_share),
             icon = Icons.Outlined.PieChart,
-            iconTint = colors.chartCategorical[5],
+            iconTint = colors.accent,
             modifier = Modifier.weight(1f),
         ) {
-            MoneyText(share, role = MoneyRole.NEUTRAL, size = 28.sp, currency = stats.currency)
+            MoneyText(
+                share,
+                role = MoneyRole.NEUTRAL,
+                size = 28.sp,
+                currency = stats.currency,
+                minScale = 0.55f,
+            )
         }
     }
 }
@@ -344,7 +356,7 @@ private fun StatTiles(stats: Statistics) {
             StatTile(
                 title = stringResource(R.string.totals_total_spent),
                 icon = Icons.Outlined.AccountBalanceWallet,
-                iconTint = colors.chartCategorical[0],
+                iconTint = colors.accent,
                 modifier = Modifier.weight(1f),
             ) {
                 MoneyText(
@@ -352,12 +364,13 @@ private fun StatTiles(stats: Statistics) {
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,
+                    minScale = 0.55f,
                 )
             }
             StatTile(
                 title = stringResource(R.string.totals_for_month, GroupsDateFmt.monthName()),
                 icon = Icons.Outlined.CalendarMonth,
-                iconTint = colors.chartCategorical[1],
+                iconTint = colors.accent,
                 modifier = Modifier.weight(1f),
             ) {
                 MoneyText(
@@ -365,6 +378,7 @@ private fun StatTiles(stats: Statistics) {
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,
+                    minScale = 0.55f,
                 )
             }
         }
@@ -372,7 +386,7 @@ private fun StatTiles(stats: Statistics) {
             StatTile(
                 title = stringResource(R.string.totals_operation_count),
                 icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                iconTint = colors.chartCategorical[2],
+                iconTint = colors.accent,
                 modifier = Modifier.weight(1f),
             ) {
                 // Счётчик — не деньги: обычное число теми же tabular-цифрами.
@@ -388,7 +402,7 @@ private fun StatTiles(stats: Statistics) {
             StatTile(
                 title = stringResource(R.string.totals_avg_check),
                 icon = Icons.Outlined.Calculate,
-                iconTint = colors.chartCategorical[3],
+                iconTint = colors.accent,
                 modifier = Modifier.weight(1f),
             ) {
                 MoneyText(
@@ -396,6 +410,7 @@ private fun StatTiles(stats: Statistics) {
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,
+                    minScale = 0.55f,
                 )
             }
         }

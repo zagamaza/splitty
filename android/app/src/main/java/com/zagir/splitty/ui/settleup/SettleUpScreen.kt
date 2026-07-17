@@ -67,6 +67,7 @@ import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
@@ -87,11 +88,16 @@ fun SettleUpScreen(
 ) {
     LaunchedEffect(roomId) { viewModel.start(roomId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val snapshot = state
     val form = if (snapshot is UiState.Content) snapshot.value else null
+    val haptics = rememberHaptics()
 
     LaunchedEffect(form?.isSaved) {
-        if (form?.isSaved == true) onDone()
+        if (form?.isSaved == true) {
+            haptics.success() // успех платежа — тактильный отклик (порт iOS Haptics.success)
+            onDone()
+        }
     }
 
     val colors = Splitty.colors
@@ -156,6 +162,7 @@ fun SettleUpScreen(
                     PaymentStep(
                         form = current.value,
                         debt = debt,
+                        isOnline = isOnline,
                         viewModel = viewModel,
                         modifier = contentModifier,
                     )
@@ -329,6 +336,7 @@ private fun NoDebtsPane(modifier: Modifier = Modifier) {
 private fun PaymentStep(
     form: SettleUpForm,
     debt: Debt,
+    isOnline: Boolean,
     viewModel: SettleUpViewModel,
     modifier: Modifier = Modifier,
 ) {
@@ -341,11 +349,24 @@ private fun PaymentStep(
     ) {
         PaymentHeaderCard(debt = debt, meId = form.meId)
         PaymentSumCard(form = form, debt = debt, onSumChange = viewModel::onSumChange)
-        PrimaryPillButton(
-            text = stringResource(R.string.settleup_submit),
-            onClick = viewModel::repay,
-            enabled = form.isSumValid && !form.isSaving,
-        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Офлайн — CTA заблокирован с подписью-причиной (а не алерт по тапу).
+            PrimaryPillButton(
+                text = stringResource(R.string.settleup_submit),
+                onClick = viewModel::repay,
+                enabled = form.isSumValid && !form.isSaving && isOnline,
+            )
+            if (!isOnline) {
+                Text(
+                    text = stringResource(R.string.settleup_offline_caption),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Splitty.colors.negative,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 

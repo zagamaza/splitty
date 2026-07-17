@@ -159,7 +159,14 @@ class GroupDetailViewModel @Inject constructor(
 
     /** Тап по «Погасить долг» без сети: погашения офлайн недоступны. */
     fun showSettleUpUnavailableOffline() {
-        _alertMessage.value = "Недоступно офлайн"
+        // Единый с iOS текст: «Нет соединения. Погашение долга доступно только онлайн».
+        _alertMessage.value = OFFLINE_SETTLE_MESSAGE
+    }
+
+    companion object {
+        /** Ключ строки group_settle_offline (VM без ресурсов — константа-дубль). */
+        const val OFFLINE_SETTLE_MESSAGE =
+            "Нет соединения. Погашение долга доступно только онлайн"
     }
 
     /** Загружает справочник валют для пикера (после ошибки можно повторить). */

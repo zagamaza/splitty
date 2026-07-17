@@ -24,10 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Groups
-import androidx.compose.material.icons.outlined.MoreHoriz
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -108,7 +106,7 @@ private fun GroupsListContent(
     val state by viewModel.rooms.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
-    var isMenuExpanded by remember { mutableStateOf(false) }
+    val pendingRoomIds by viewModel.pendingRoomIds.collectAsStateWithLifecycle()
     var isCreatePresented by rememberSaveable { mutableStateOf(false) }
     var isJoinPresented by rememberSaveable { mutableStateOf(false) }
     val colors = Splitty.colors
@@ -123,9 +121,20 @@ private fun GroupsListContent(
                         fontWeight = FontWeight.Bold,
                     )
                 },
+                // Пункт один — прямая кнопка «Присоединиться» вместо меню-матрёшки
+                // из одного пункта (порт iOS toolbar `.topBarLeading`).
+                navigationIcon = {
+                    IconButton(onClick = { isJoinPresented = true }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Login,
+                            contentDescription = stringResource(R.string.groups_join_by_code),
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = colors.bg,
                     titleContentColor = colors.ink,
+                    navigationIconContentColor = colors.ink,
                     actionIconContentColor = colors.ink,
                 ),
                 actions = {
@@ -134,29 +143,6 @@ private fun GroupsListContent(
                             imageVector = Icons.Filled.Add,
                             contentDescription = stringResource(R.string.groups_create_group),
                         )
-                    }
-                    Box {
-                        IconButton(onClick = { isMenuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Outlined.MoreHoriz,
-                                contentDescription = stringResource(R.string.groups_more),
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = isMenuExpanded,
-                            onDismissRequest = { isMenuExpanded = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.groups_join_by_code)) },
-                                leadingIcon = {
-                                    Icon(Icons.AutoMirrored.Filled.Login, contentDescription = null)
-                                },
-                                onClick = {
-                                    isMenuExpanded = false
-                                    isJoinPresented = true
-                                },
-                            )
-                        }
                     }
                 },
             )
@@ -173,10 +159,13 @@ private fun GroupsListContent(
 
             is UiState.Content -> RoomsList(
                 rooms = current.value,
+                pendingRoomIds = pendingRoomIds,
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
                 onOpenRoom = onOpenRoom,
                 onOpenArchive = onOpenArchive,
+                onCreate = { isCreatePresented = true },
+                onJoin = { isJoinPresented = true },
                 modifier = Modifier.padding(innerPadding),
             )
         }
@@ -195,10 +184,13 @@ private fun GroupsListContent(
 @Composable
 private fun RoomsList(
     rooms: List<RoomSummary>,
+    pendingRoomIds: Set<String>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenRoom: (String) -> Unit,
     onOpenArchive: () -> Unit,
+    onCreate: () -> Unit,
+    onJoin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PullToRefreshBox(
@@ -217,15 +209,30 @@ private fun RoomsList(
                         icon = Icons.Outlined.Groups,
                         title = stringResource(R.string.groups_empty_title),
                         subtitle = stringResource(R.string.groups_empty_subtitle),
-                    )
+                    ) {
+                        PrimaryPillButton(
+                            text = stringResource(R.string.groups_create_group),
+                            onClick = onCreate,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        SoftChip(
+                            text = stringResource(R.string.groups_join_by_code),
+                            onClick = onJoin,
+                        )
+                    }
                 }
+                // Без строки «Архив»: в пустом состоянии она отвлекает от первого шага.
             } else {
                 item(key = "summary") { SummaryCard(rooms) }
                 items(rooms, key = { it.id }) { room ->
-                    GroupCard(room = room, onClick = { onOpenRoom(room.id) })
+                    GroupCard(
+                        room = room,
+                        hasPending = room.id in pendingRoomIds,
+                        onClick = { onOpenRoom(room.id) },
+                    )
                 }
+                item(key = "archive") { ArchiveRow(onOpenArchive) }
             }
-            item(key = "archive") { ArchiveRow(onOpenArchive) }
         }
     }
 }
@@ -260,7 +267,7 @@ private fun SummaryCard(rooms: List<RoomSummary>) {
 
 /** Карточка группы: аватар-градиент, название, участники, баланс, chevron. */
 @Composable
-private fun GroupCard(room: RoomSummary, onClick: () -> Unit) {
+private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Unit) {
     val colors = Splitty.colors
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
         Row(
@@ -277,14 +284,29 @@ private fun GroupCard(room: RoomSummary, onClick: () -> Unit) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                Text(
-                    text = room.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = room.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // Есть неотправленные офлайн-операции в этой группе.
+                    if (hasPending) {
+                        Icon(
+                            imageVector = Icons.Outlined.CloudOff,
+                            contentDescription = stringResource(R.string.group_card_pending_badge),
+                            tint = colors.inkSecondary,
+                            modifier = Modifier.size(15.dp),
+                        )
+                    }
+                }
                 Text(
                     text = memberCountText(room.memberCount),
                     fontSize = 13.sp,
@@ -454,30 +476,41 @@ private fun ArchivedGroupCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .clickable(onClick = onOpen)
-                .padding(16.dp),
+                .padding(end = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GroupAvatar(roomId = room.id, name = room.name, size = 46.dp)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
+            // Открытие группы — только по блоку аватар+имя: «Разархивировать» —
+            // СОСЕД, а не часть clickable-зоны (иначе хит-зона чипа конфликтует
+            // с переходом в группу; порт iOS ArchivedGroupsView).
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable(onClick = onOpen)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = room.name,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = memberCountText(room.memberCount),
-                    fontSize = 13.sp,
-                    color = colors.inkSecondary,
-                )
+                GroupAvatar(roomId = room.id, name = room.name, size = 46.dp)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = room.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = memberCountText(room.memberCount),
+                        fontSize = 13.sp,
+                        color = colors.inkSecondary,
+                    )
+                }
             }
             SoftChip(
                 text = stringResource(R.string.groups_unarchive),

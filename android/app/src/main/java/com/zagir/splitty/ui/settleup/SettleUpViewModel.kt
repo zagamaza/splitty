@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.settleup
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -22,6 +23,16 @@ private const val MAX_SUM_DIGITS = 9
 
 private fun digitsOnly(raw: String): String =
     raw.filter { it.isDigit() }.take(MAX_SUM_DIGITS)
+
+/**
+ * Долг для предвыбора по nav-аргументам (переход из строки балансов/друга):
+ * ищем ровно тот долг «должник→кредитор». Отрицательные id (нет аргумента) и
+ * несовпадение — null (тогда работает обычная логика: единственный/список).
+ */
+internal fun matchPreselect(debts: List<Debt>, debtorId: Long, lenderId: Long): Debt? {
+    if (debtorId <= 0L || lenderId <= 0L) return null
+    return debts.firstOrNull { it.debtor.id == debtorId && it.lender.id == lenderId }
+}
 
 /** Алерт экрана погашения. */
 sealed interface SettleUpAlert {
@@ -73,10 +84,18 @@ class SettleUpViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val networkMonitor: NetworkMonitor,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<UiState<SettleUpForm>>(UiState.Loading)
     val state: StateFlow<UiState<SettleUpForm>> = _state.asStateFlow()
+
+    /** Онлайн-статус — CTA гасится офлайн с подписью-причиной (не алерт по тапу). */
+    val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
+
+    // Предвыбор долга из nav-аргументов (переход «Погасить» строки балансов).
+    private val preselectDebtorId: Long = savedStateHandle.get<Long>("debtorId") ?: -1L
+    private val preselectLenderId: Long = savedStateHandle.get<Long>("lenderId") ?: -1L
 
     private var isStarted = false
     private var roomId: String? = null
@@ -102,15 +121,16 @@ class SettleUpViewModel @Inject constructor(
                 // Валюта — из детали комнаты, долги — только с моим участием.
                 val room = repository.room(roomId).value
                 val debts = repository.debts(roomId, involving = "me")
-                val single = debts.singleOrNull()
+                // Единственный долг — сразу шаг 2; иначе предвыбор по nav-аргументам.
+                val selected = debts.singleOrNull()
+                    ?: matchPreselect(debts, preselectDebtorId, preselectLenderId)
                 _state.value = UiState.Content(
                     SettleUpForm(
                         currency = room.currency,
                         meId = sessionStore.state.value?.me?.id,
                         debts = debts,
-                        // Единственный долг с участием меня — сразу шаг 2.
-                        selectedDebt = single,
-                        sumText = single?.sum?.toString().orEmpty(),
+                        selectedDebt = selected,
+                        sumText = selected?.sum?.toString().orEmpty(),
                     )
                 )
             } catch (e: CancellationException) {
@@ -145,11 +165,9 @@ class SettleUpViewModel @Inject constructor(
         val sum = form.sum ?: return
         if (form.isSaving || !form.isSumValid) return
         // Погашения офлайн недоступны (фиксированный дизайн v1): долг мог
-        // измениться на сервере, а конфликт 409 офлайн не разрешить.
-        if (!networkMonitor.isOnline.value) {
-            updateForm { it.copy(alert = SettleUpAlert.Message("Недоступно офлайн")) }
-            return
-        }
+        // измениться на сервере, а конфликт 409 офлайн не разрешить. CTA уже
+        // заблокирован с подписью-причиной — здесь молчаливый guard, без алерта.
+        if (!networkMonitor.isOnline.value) return
 
         updateForm { it.copy(isSaving = true) }
         viewModelScope.launch {

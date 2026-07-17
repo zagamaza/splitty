@@ -45,8 +45,10 @@ import com.zagir.splitty.core.model.CurrencySum
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.money.aggregateByCurrency
 import com.zagir.splitty.ui.components.FailedState
+import com.zagir.splitty.ui.components.Glossary
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyTotalsText
+import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
@@ -58,6 +60,7 @@ import com.zagir.splitty.ui.theme.Splitty
 @Composable
 fun FriendsListScreen(
     onOpenFriend: (FriendBalance) -> Unit,
+    onCreateGroup: () -> Unit,
     viewModel: FriendsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -84,6 +87,7 @@ fun FriendsListScreen(
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
                 onOpenFriend = onOpenFriend,
+                onCreateGroup = onCreateGroup,
             )
         }
     }
@@ -111,6 +115,7 @@ private fun FriendsList(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenFriend: (FriendBalance) -> Unit,
+    onCreateGroup: () -> Unit,
 ) {
     // Нетто по всем друзьям ПОВАЛЮТНО (разные валюты не складываются).
     val totals = remember(friends) {
@@ -131,6 +136,7 @@ private fun FriendsList(
             if (friends.isEmpty()) {
                 item {
                     FriendsEmptyView(
+                        onCreateGroup = onCreateGroup,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 120.dp),
@@ -214,12 +220,10 @@ private fun FriendRowTrailing(totals: List<CurrencySum>) {
     val primary = totals.firstOrNull()
     if (primary != null) {
         Column(horizontalAlignment = Alignment.End) {
+            // Через Glossary: нулевая ветка + «взаимные долги» при разных знаках
+            // по валютам (единая «должен вам»/«вы должны» тут врала бы).
             Text(
-                text = if (primary.sum > 0) {
-                    stringResource(R.string.friends_owes_you_short)
-                } else {
-                    stringResource(R.string.friends_you_owe_short)
-                },
+                text = Glossary.balanceCaption(totals, primary),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Splitty.colors.inkSecondary,
@@ -234,7 +238,7 @@ private fun FriendRowTrailing(totals: List<CurrencySum>) {
         }
     } else {
         Text(
-            text = stringResource(R.string.friends_settlement),
+            text = Glossary.SETTLED,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.inkSecondary,
@@ -258,7 +262,7 @@ private fun FriendsErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun FriendsEmptyView(modifier: Modifier = Modifier) {
+private fun FriendsEmptyView(onCreateGroup: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -282,6 +286,14 @@ private fun FriendsEmptyView(modifier: Modifier = Modifier) {
             fontSize = 15.sp,
             color = Splitty.colors.inkSecondary,
             textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        // Друзья появляются из общих групп — первый шаг «Создать группу»
+        // (порт iOS ContentUnavailableView action).
+        PrimaryPillButton(
+            text = stringResource(R.string.friends_create_group),
+            onClick = onCreateGroup,
+            modifier = Modifier.padding(horizontal = 48.dp),
         )
     }
 }

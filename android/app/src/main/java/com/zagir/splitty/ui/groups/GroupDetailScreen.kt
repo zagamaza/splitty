@@ -45,22 +45,23 @@ import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Unarchive
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +70,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -89,9 +92,11 @@ import com.zagir.splitty.data.OutboxEntry
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
+import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
@@ -109,6 +114,7 @@ fun GroupDetailScreen(
     roomId: String,
     onBack: () -> Unit,
     onSettleUp: (String) -> Unit,
+    onSettleUpDebt: (String, Long, Long) -> Unit,
     onAddExpense: (String) -> Unit,
     onOpenOperation: (String, String) -> Unit,
     onEditLocalOperation: (String, String) -> Unit,
@@ -127,6 +133,14 @@ fun GroupDetailScreen(
     // Погашения офлайн недоступны — алерт вместо перехода (дизайн v1).
     val settleUp: () -> Unit = {
         if (isOnline) onSettleUp(roomId) else viewModel.showSettleUpUnavailableOffline()
+    }
+    // Погашение конкретного долга из строки балансов (с предвыбором).
+    val settleUpDebt: (Debt) -> Unit = { debt ->
+        if (isOnline) {
+            onSettleUpDebt(roomId, debt.debtor.id, debt.lender.id)
+        } else {
+            viewModel.showSettleUpUnavailableOffline()
+        }
     }
 
     // Вкладка нижнего бара тусы: операции / балансы / итоги / настройки.
@@ -195,7 +209,7 @@ fun GroupDetailScreen(
                     TUSA_TAB_BALANCES -> GroupBalancesTab(
                         room = current.value,
                         meId = meId,
-                        onSettle = settleUp,
+                        onSettle = settleUpDebt,
                         modifier = Modifier.padding(innerPadding),
                     )
 
@@ -229,6 +243,7 @@ fun GroupDetailScreen(
                         isRefreshing = isRefreshing,
                         onRefresh = viewModel::refresh,
                         onSettleUp = settleUp,
+                        onAddExpense = { onAddExpense(roomId) },
                         onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
                         onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
                         modifier = Modifier.padding(innerPadding),
@@ -253,6 +268,7 @@ private fun GroupDetailContent(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onSettleUp: () -> Unit,
+    onAddExpense: () -> Unit,
     onOpenOperation: (String) -> Unit,
     onEditLocalOperation: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -306,7 +322,12 @@ private fun GroupDetailContent(
                         icon = Icons.Outlined.Description,
                         title = stringResource(R.string.group_empty_ops_title),
                         subtitle = stringResource(R.string.group_empty_ops_subtitle),
-                    )
+                    ) {
+                        PrimaryPillButton(
+                            text = stringResource(R.string.group_add_expense),
+                            onClick = onAddExpense,
+                        )
+                    }
                 }
             } else {
                 displaySections.forEach { section ->
@@ -369,6 +390,23 @@ private fun DebtHeroCard(
             Spacer(Modifier.height(10.dp))
         }
         when {
+            // Долги неисчислимы (старые данные бота): честный бейдж вместо
+            // ложного «все в расчёте» — сервер прислал debtsUnavailable.
+            room.debtsUnavailable -> {
+                Text(
+                    text = stringResource(R.string.group_debts_unavailable_title),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.ink,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.group_debts_unavailable_subtitle),
+                    fontSize = 14.sp,
+                    color = colors.inkSecondary,
+                )
+            }
+
             room.myBalance > 0 -> {
                 SectionHeader(stringResource(R.string.group_you_are_owed))
                 Spacer(Modifier.height(4.dp))
@@ -689,6 +727,7 @@ private fun MineSegment(isMineOnly: Boolean, onChange: (Boolean) -> Unit) {
 @Composable
 private fun SegmentButton(title: String, isOn: Boolean, onClick: () -> Unit) {
     val colors = Splitty.colors
+    val haptics = rememberHaptics()
     Text(
         text = title,
         fontSize = 13.sp,
@@ -697,7 +736,14 @@ private fun SegmentButton(title: String, isOn: Boolean, onClick: () -> Unit) {
         modifier = Modifier
             .clip(RoundedCornerShape(999.dp))
             .background(if (isOn) colors.accent else Color.Transparent)
-            .clickable(onClick = onClick)
+            .clickable {
+                // Отклик только на реальное переключение, не на повторный тап
+                // по уже выбранному сегменту (порт iOS mineSegment).
+                if (!isOn) haptics.tap()
+                onClick()
+            }
+            // isSelected для TalkBack: сегмент читается как выбранный/невыбранный.
+            .semantics { selected = isOn }
             .padding(horizontal = 16.dp, vertical = 6.dp),
     )
 }
@@ -707,11 +753,34 @@ private fun SegmentButton(title: String, isOn: Boolean, onClick: () -> Unit) {
 private fun GroupBalancesTab(
     room: RoomDetail,
     meId: Long,
-    onSettle: () -> Unit,
+    onSettle: (Debt) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Splitty.colors
-    if (room.debts.isEmpty()) {
+    if (room.debtsUnavailable) {
+        // Долги неисчислимы — не рисуем ложное «все в расчёте».
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.group_debts_unavailable_title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.group_debts_unavailable_subtitle),
+                fontSize = 14.sp,
+                color = colors.inkSecondary,
+                textAlign = TextAlign.Center,
+            )
+        }
+    } else if (room.debts.isEmpty()) {
         Column(
             modifier = modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -750,7 +819,8 @@ private fun GroupBalancesTab(
                         debt = debt,
                         meId = meId,
                         currency = room.currency,
-                        onSettle = onSettle,
+                        // Погашение с предвыбором именно этого долга.
+                        onSettle = { onSettle(debt) },
                     )
                     if (index < room.debts.lastIndex) {
                         HairlineDivider()
@@ -953,85 +1023,7 @@ private fun OperationIconBox(isRepayment: Boolean, size: androidx.compose.ui.uni
     }
 }
 
-// MARK: - Балансы (bottom sheet)
-
-/**
- * Балансы группы: карточный список долгов «кто → кому»; у долгов с участием
- * текущего пользователя — чип «Погасить». Порт iOS GroupBalancesView.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GroupBalancesSheet(
-    room: RoomDetail,
-    meId: Long,
-    onDismiss: () -> Unit,
-    onSettle: () -> Unit,
-) {
-    val colors = Splitty.colors
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = colors.surface,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.group_balances_title),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.ink,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
-            Spacer(Modifier.height(16.dp))
-            if (room.debts.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        tint = colors.accent,
-                        modifier = Modifier.size(36.dp),
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = stringResource(R.string.group_no_debts),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.ink,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.group_members_settled),
-                        fontSize = 14.sp,
-                        color = colors.inkSecondary,
-                    )
-                }
-            } else {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    room.debts.forEachIndexed { index, debt ->
-                        DebtRow(
-                            debt = debt,
-                            meId = meId,
-                            currency = room.currency,
-                            onSettle = onSettle,
-                        )
-                        if (index < room.debts.lastIndex) {
-                            HairlineDivider()
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+// MARK: - Строка долга
 
 @Composable
 private fun DebtRow(
@@ -1061,27 +1053,37 @@ private fun DebtRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        GradientAvatar(user = debt.debtor, size = 36.dp)
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-            contentDescription = null,
-            tint = colors.inkSecondary,
-            modifier = Modifier.size(14.dp),
-        )
-        GradientAvatar(user = debt.lender, size = 36.dp)
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+        // Аватары+стрелка+подпись+сумма — один элемент для TalkBack (читается
+        // «Петя должен(на) Вася, 500 ₽»); «Погасить» остаётся отдельной кнопкой.
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .semantics(mergeDescendants = true) {},
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.ink,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+            GradientAvatar(user = debt.debtor, size = 36.dp)
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null, // декоративная стрелка
+                tint = colors.inkSecondary,
+                modifier = Modifier.size(14.dp),
             )
-            MoneyText(debt.sum, role = role, size = 15.sp, currency = currency)
+            GradientAvatar(user = debt.lender, size = 36.dp)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                MoneyText(debt.sum, role = role, size = 15.sp, currency = currency)
+            }
         }
         if (involvesMe) {
             SoftChip(text = stringResource(R.string.group_debt_settle), onClick = onSettle)
@@ -1112,10 +1114,36 @@ private fun GroupSettingsTab(
 
     val colors = Splitty.colors
     val context = LocalContext.current
+    val haptics = rememberHaptics()
     // Ссылка-приглашение, совместимая с deep-link бота.
     val inviteLink = "https://t.me/split_money_bot?start=room${room.id}"
     val inviteMessage = stringResource(R.string.group_invite_message, room.name, inviteLink, room.id)
     val selectedCurrency = selectedOverride ?: room.currency
+    // Смена валюты — с подтверждением: суммы НЕ пересчитываются, меняется
+    // только обозначение у всех участников (порт iOS confirmationDialog).
+    var pendingCurrency by remember { mutableStateOf<CurrencyInfo?>(null) }
+
+    pendingCurrency?.let { currency ->
+        AlertDialog(
+            onDismissRequest = { pendingCurrency = null },
+            title = { Text(stringResource(R.string.group_currency_change_title, currency.code)) },
+            text = { Text(stringResource(R.string.group_currency_change_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptics.tap()
+                    viewModel.setCurrency(currency.code)
+                    pendingCurrency = null
+                }) {
+                    Text(stringResource(R.string.group_currency_change_confirm, currency.code))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCurrency = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 
     Column(
         modifier = modifier
@@ -1214,7 +1242,10 @@ private fun GroupSettingsTab(
                                 isSelected = selectedCurrency == currency.code,
                                 isSaving = savingCurrency == currency.code,
                                 enabled = savingCurrency == null,
-                                onClick = { viewModel.setCurrency(currency.code) },
+                                // Подтверждаем только реальную смену (не текущую валюту).
+                                onClick = {
+                                    if (currency.code != selectedCurrency) pendingCurrency = currency
+                                },
                             )
                             if (index < list.value.lastIndex) {
                                 HairlineDivider(startIndent = 52.dp)
@@ -1304,7 +1335,9 @@ private fun GroupSettingsTab(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val actionColor = if (room.isArchived) colors.accent else colors.negative
+                        // «Архивировать» — нейтральный ink, не «опасный» красный:
+                        // действие обратимо и скрывает группу только у самого юзера.
+                        val actionColor = if (room.isArchived) colors.accent else colors.ink
                         Icon(
                             imageVector = if (room.isArchived) Icons.Outlined.Unarchive else Icons.Outlined.Archive,
                             contentDescription = null,

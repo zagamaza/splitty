@@ -176,17 +176,17 @@
 **Files:**
 - Modify: `ui/groups/{GroupsListScreen,GroupDetailScreen,GroupDashboardScreen}.kt`, `ui/friends/{FriendsListScreen,FriendDetailScreen}.kt`, `ui/activity/ActivityScreen.kt`, `ui/settleup/SettleUpScreen.kt`(+VM), `ui/main/MainScaffold.kt`, strings
 
-- [ ] Группы-список: empty state с кнопками «Создать»/«Присоединиться», прямая кнопка join вместо меню-из-одного, скрыть «Архив» в пустом состоянии, бейдж «не отправлено» на карточках, «Разархивировать» вне clickable-зоны карточки
-- [ ] Группа: empty state операций — честный текст + кнопка «Добавить расход»; «без учёта N неотправленных операций» (полное слово); сегмент «Все/Со мной» — isSelected-семантика + haptic; título чужого долга «X должен(на) — Y»; текст офлайн-гейта = iOS; a11y-объединение строки долга; удалить мёртвый GroupBalancesSheet
-- [ ] Дашборд: иконки плиток → accent; «Я заплатил»→«Заплачено мной»; minimumScaleFactor на суммах плиток
-- [ ] Настройки группы: подтверждение смены валюты («Суммы не пересчитываются — …, у всех участников»); «Архивировать» → нейтральный ink
-- [ ] Друзья: подписи через Glossary (нулевая ветка + «взаимные долги»); empty → «Создать группу»; деталь друга: **CTA «Погасить»** (одна группа → сразу, несколько → выбор; офлайн-гейт); «Все долги погашены» унифицировать
-- [ ] Активность: empty фильтра → «Показать все»; stateDescription фильтра; chevron + merge semantics карточки; «Расчёт»→Glossary.settled
-- [ ] SettleUp: `preselectedDebt` из строки балансов/друга; офлайн — disabled CTA + подпись-причина (вместо алерта по тапу); Haptics.success
-- [ ] Таб «Активность»: BarChart → clock (согласовать с empty state)
-- [ ] DTO-гэп: `debtsUnavailable` из REST-контракта добавить в Android-модели и учитывать в балансах (сервер его шлёт, клиент игнорирует)
-- [ ] unit VM: preselect, glossary-ветки; Roborazzi: empty states
-- [ ] run tests — must pass before next task
+- [x] Группы-список: empty state с кнопками «Создать»/«Присоединиться», прямая кнопка join вместо меню-из-одного, скрыть «Архив» в пустом состоянии, бейдж «не отправлено» на карточках, «Разархивировать» вне clickable-зоны карточки
+- [x] Группа: empty state операций — честный текст + кнопка «Добавить расход»; «без учёта N неотправленных операций» (полное слово); сегмент «Все/Со мной» — isSelected-семантика + haptic; título чужого долга «X должен(на) — Y»; текст офлайн-гейта = iOS; a11y-объединение строки долга; удалить мёртвый GroupBalancesSheet
+- [x] Дашборд: иконки плиток → accent; «Я заплатил»→«Заплачено мной»; minimumScaleFactor на суммах плиток
+- [x] Настройки группы: подтверждение смены валюты («Суммы не пересчитываются — …, у всех участников»); «Архивировать» → нейтральный ink
+- [x] Друзья: подписи через Glossary (нулевая ветка + «взаимные долги»); empty → «Создать группу»; деталь друга: **CTA «Погасить»** (одна группа → сразу, несколько → выбор; офлайн-гейт); «Все долги погашены» унифицировать
+- [x] Активность: empty фильтра → «Показать все»; stateDescription фильтра; chevron + merge semantics карточки; «Расчёт»→Glossary.settled
+- [x] SettleUp: `preselectedDebt` из строки балансов/друга; офлайн — disabled CTA + подпись-причина (вместо алерта по тапу); Haptics.success
+- [x] Таб «Активность»: BarChart → clock (согласовать с empty state)
+- [x] DTO-гэп: `debtsUnavailable` из REST-контракта добавить в Android-модели и учитывать в балансах (сервер его шлёт, клиент игнорирует)
+- [x] unit VM: preselect, glossary-ветки; Roborazzi: empty states
+- [x] run tests — must pass before next task
 
 ### Task 6: Модели позиций + derivedShares (ядро itemized)
 

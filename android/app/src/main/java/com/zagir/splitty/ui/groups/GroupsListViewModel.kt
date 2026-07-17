@@ -6,15 +6,19 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
+import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -27,6 +31,7 @@ class GroupsListViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val outboxSyncer: OutboxSyncer,
+    outboxStore: OutboxStore,
 ) : ViewModel() {
 
     private val _rooms = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
@@ -53,6 +58,16 @@ class GroupsListViewModel @Inject constructor(
 
     /** Текст алерта «Ошибка» (мутации и тихие обновления поверх контента). */
     val alertMessage: StateFlow<String?> = _alertMessage.asStateFlow()
+
+    /**
+     * id комнат с неотправленными (локальными) операциями — для бейджа
+     * «есть неотправленные операции» на карточке группы (порт iOS
+     * `session.outbox.entries(roomId:)`, но одним множеством на весь список).
+     */
+    val pendingRoomIds: StateFlow<Set<String>> =
+        outboxStore.entries
+            .map { entries -> entries.mapTo(mutableSetOf()) { it.roomId } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
     /** Архив грузим лениво — только после первого захода в раздел. */
     private var isArchiveRequested = false

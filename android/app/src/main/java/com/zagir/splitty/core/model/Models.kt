@@ -294,6 +294,13 @@ data class RoomDetail(
     val debts: List<Debt> = emptyList(),
     /** Все операции, новые первыми. */
     val operations: List<Operation> = emptyList(),
+    /**
+     * Долги группы неисчислимы (старые данные бота: доли не сходятся). Сервер
+     * шлёт `debtsUnavailable: true` (omitempty → у здоровых комнат ключа нет,
+     * поэтому default false), при этом `debts=[]` и `myBalance=0`. Клиент
+     * показывает бейдж «долги не считаются» вместо ложного «все в расчёте».
+     */
+    val debtsUnavailable: Boolean = false,
 )
 
 /** Баланс с другом по одной группе (только ненулевые) — в валюте этой группы. */

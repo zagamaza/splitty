@@ -63,6 +63,9 @@
     <string name="friend_groups_section">По группам</string>
     <string name="friend_no_group_debts">Долгов по группам нет</string>
     <string name="friend_room_owed_you">вам должны</string>
+    <string name="friend_settle_up">Погасить</string>
+    <string name="friend_settle_room_picker_title">В какой группе погасить?</string>
+    <string name="friends_create_group">Создать группу</string>
 
     <!-- Активность -->
     <string name="activity_mine_only">Только мои</string>
@@ -80,7 +83,10 @@
     <string name="activity_you_paid">Вы заплатили</string>
     <string name="activity_you_received">Вы получили</string>
     <string name="activity_not_involved">Вы не участвуете</string>
-    <string name="activity_settled">Расчёт</string>
+    <string name="activity_settled">в расчёте</string>
+    <string name="activity_show_all">Показать все</string>
+    <string name="activity_filter_on">включено</string>
+    <string name="activity_filter_off">выключено</string>
 
     <!-- Относительное время (короткий стиль, как iOS RelativeDateTimeFormatter) -->
     <string name="time_just_now">только что</string>
@@ -161,6 +167,10 @@
     <string name="group_you_owe">Вы должны</string>
     <string name="group_no_debts">Нет долгов</string>
     <string name="group_members_settled">Все участники в расчёте</string>
+    <string name="group_debts_unavailable_title">Долги не считаются</string>
+    <string name="group_debts_unavailable_subtitle">Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.</string>
+    <string name="group_card_pending_badge">Есть неотправленные операции</string>
+    <string name="group_settle_offline">Нет соединения. Погашение долга доступно только онлайн</string>
     <string name="group_you_owe_name">Вы должны %1$s</string>
     <string name="group_chip_settle">Погасить долг</string>
     <string name="group_chip_balances">Балансы</string>
@@ -169,7 +179,7 @@
     <string name="group_add_expense">Добавить расход</string>
     <string name="group_settings">Настройки группы</string>
     <string name="group_empty_ops_title">Пока нет расходов</string>
-    <string name="group_empty_ops_subtitle">Добавьте первый расход кнопкой «+ Расход»</string>
+    <string name="group_empty_ops_subtitle">Добавьте первый расход — он появится в этом списке</string>
     <string name="group_op_fallback">Расход</string>
     <string name="group_op_you_paid_sum">Вы заплатили %1$s</string>
     <string name="group_op_paid_sum">%1$s заплатил(а) %2$s</string>
@@ -185,7 +195,7 @@
     <string name="group_balances_title">Балансы</string>
     <string name="group_debt_you_owe">Вы должны %1$s</string>
     <string name="group_debt_owes_you">%1$s должен(на) вам</string>
-    <string name="group_debt_pair">%1$s → %2$s</string>
+    <string name="group_debt_pair">%1$s должен(на) — %2$s</string>
     <string name="group_debt_settle">Погасить</string>
 
     <!-- Группы: настройки -->
@@ -199,6 +209,9 @@
     <string name="group_settings_archive">Архивировать</string>
     <string name="group_settings_unarchive">Разархивировать</string>
     <string name="group_settings_archive_footer">Архив скрывает группу из списка только у вас. Операции и долги сохраняются.</string>
+    <string name="group_currency_change_title">Сменить валюту на %1$s?</string>
+    <string name="group_currency_change_confirm">Сменить на %1$s</string>
+    <string name="group_currency_change_message">Суммы не пересчитываются — изменится только обозначение, у всех участников группы</string>
     <string name="group_invite_message">Присоединяйся к группе «%1$s» в Splitty: %2$s\nКод группы: %3$s</string>
 
     <!-- Группы: карточка операции -->
@@ -237,7 +250,7 @@
     <string name="totals_for_month">За %1$s</string>
     <string name="totals_operation_count">Операций</string>
     <string name="totals_avg_check">Средний чек</string>
-    <string name="totals_i_paid">Я заплатил</string>
+    <string name="totals_i_paid">Заплачено мной</string>
     <string name="totals_my_share">Потрачено на меня</string>
     <string name="totals_by_day">Траты по дням</string>
     <string name="totals_no_recent_spending">Нет трат за последние 30 дней</string>
@@ -278,10 +291,10 @@
     <string name="expense_offline_edit_blocked">Нет соединения. Можно редактировать только неотправленные операции</string>
     <string name="expense_itemized_edit_blocked">Операция по позициям чека — правится там, где создана</string>
     <plurals name="group_hero_pending_ops">
-        <item quantity="one">без учёта %d неотправленной</item>
-        <item quantity="few">без учёта %d неотправленных</item>
-        <item quantity="many">без учёта %d неотправленных</item>
-        <item quantity="other">без учёта %d неотправленных</item>
+        <item quantity="one">без учёта %d неотправленной операции</item>
+        <item quantity="few">без учёта %d неотправленных операций</item>
+        <item quantity="many">без учёта %d неотправленных операций</item>
+        <item quantity="other">без учёта %d неотправленных операций</item>
     </plurals>
     <plurals name="profile_logout_outbox_confirm">
         <item quantity="one">Есть %d неотправленная операция — выйти и удалить её?</item>
@@ -306,5 +319,6 @@
     <string name="settleup_submit">Записать платёж</string>
     <string name="settleup_already_settled">Долг уже погашен</string>
     <string name="settleup_back_to_list">К списку долгов</string>
+    <string name="settleup_offline_caption">Погашение доступно только онлайн</string>
     <string name="profile_app_version">Версия %1$s (%2$d)</string>
 </resources>
