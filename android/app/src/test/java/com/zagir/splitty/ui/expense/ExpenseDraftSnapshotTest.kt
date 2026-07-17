@@ -36,7 +36,7 @@ class ExpenseDraftSnapshotTest {
             amountTexts = mapOf(1L to "700", 2L to "500"),
             draftItems = listOf(OperationItem(name = "Пицца", price = 800, shares = listOf(ItemShare(1L)))),
             parseQuestions = listOf("кто платил?"),
-            isItemizedLocked = true,
+            didRecognize = true,
         )
 
         val restored = decode(encode(snapshot))
@@ -57,7 +57,7 @@ class ExpenseDraftSnapshotTest {
             recipientIds = setOf(1L, 2L),
             splitType = SplitType.EQUALLY,
             draftItems = listOf(OperationItem(name = "Салат", price = 900)),
-            isItemizedLocked = true,
+            didRecognize = true,
         )
 
         val snapshot = decode(encode(ExpenseDraftSnapshot.from(form)))
@@ -77,7 +77,7 @@ class ExpenseDraftSnapshotTest {
         assertEquals(2L, restored.payerId)
         assertEquals(setOf(1L, 2L), restored.recipientIds)
         assertEquals(form.draftItems, restored.draftItems)
-        assertTrue(restored.isItemizedLocked)
+        assertTrue(restored.didRecognize)
     }
 
     @Test

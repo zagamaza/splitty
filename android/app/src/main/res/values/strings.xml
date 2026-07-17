@@ -318,6 +318,25 @@
     <string name="expense_parsing_cancel">Отмена</string>
     <string name="expense_parse_retry">Повторить</string>
     <string name="expense_parse_failed_generic">Не удалось распознать. Данные сохранены — попробуйте ещё раз</string>
+
+    <!-- Форма расхода: itemized-режим (позиции чека), нуджи, отмена -->
+    <string name="expense_derived_by_positions">по позициям чека</string>
+    <string name="expense_derived_incomplete">не все цены указаны</string>
+    <string name="expense_recognized_title">Распознано голосом</string>
+    <string name="expense_recognized_hint">Не то? Добавьте фото чека</string>
+    <string name="expense_recognized_add_photo">Добавить фото чека</string>
+    <string name="expense_correction_title">Правка применена</string>
+    <string name="expense_correction_hint_items">Изменения подсвечены в чеке</string>
+    <string name="expense_correction_hint_flat">Черновик обновлён</string>
+    <string name="expense_undo">Отменить</string>
+    <string name="expense_add_item">Добавить позицию</string>
+    <string name="expense_split_override_title">Сейчас делится по позициям</string>
+    <string name="expense_split_override_action">Поровну на всех</string>
+    <string name="expense_split_override_hint">«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»</string>
+    <string name="expense_unknown_hint">Выберите, кто это — «%1$s»: коснитесь красной метки в чеке</string>
+    <string name="expense_priceless_hint">Укажите цену — коснитесь позиции с меткой «цена?»</string>
+    <string name="expense_delete_local_title">Удалить операцию?</string>
+    <string name="expense_delete_local_message">Неотправленная запись исчезнет из очереди.</string>
     <plurals name="group_hero_pending_ops">
         <item quantity="one">без учёта %d неотправленной операции</item>
         <item quantity="few">без учёта %d неотправленных операций</item>

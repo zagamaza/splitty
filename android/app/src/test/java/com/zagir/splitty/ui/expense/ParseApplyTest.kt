@@ -42,7 +42,7 @@ class ParseApplyTest {
         assertEquals(2L, form.payerId)
         assertEquals(setOf(1L, 2L), form.recipientIds)
         assertTrue(form.draftItems.isEmpty())
-        assertFalse(form.isItemizedLocked)
+        assertFalse(form.hasDraftItems)
         assertEquals(listOf("кто платил?"), form.parseQuestions)
     }
 
@@ -59,7 +59,9 @@ class ParseApplyTest {
         assertEquals("Чек", form.description)
         assertEquals("800", form.sumText)
         assertEquals(items, form.draftItems)
-        assertTrue(form.isItemizedLocked)
+        assertTrue(form.hasDraftItems)
+        // Раскладка сходится (2 участника поровну) → itemized-сохранение доступно.
+        assertTrue(form.canSave)
     }
 
     @Test

@@ -78,6 +78,34 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     return DerivedShares(shares, total.toInt())
 }
 
+/**
+ * userId'ы участников из ОБЫЧНЫХ позиций в стабильном порядке появления
+ * (надбавки делятся по базе, их доли сюда не входят). Порт iOS `itemizedUserIds`.
+ */
+fun List<OperationItem>.itemizedUserIds(): List<Long> {
+    val ordered = LinkedHashSet<Long>()
+    for (item in this) {
+        if (item.isSurcharge) continue
+        for (share in item.shareList) ordered.add(share.userId)
+    }
+    return ordered.toList()
+}
+
+/**
+ * Разбивка «С кого сколько» по позициям (порт iOS `personShares`): обычные позиции
+ * образуют базу, надбавки накладываются сверху; порядок — появление участников в
+ * чеке. null — позиций нет или доли невыводимы (перебор фиксов и т.п.).
+ */
+fun List<OperationItem>.personShares(): List<PersonShare>? {
+    if (isEmpty()) return null
+    val derived = derivedShares() ?: return null
+    val base = this.filter { !it.isSurcharge }.derivedShares()?.shares ?: emptyMap()
+    return itemizedUserIds().mapNotNull { id ->
+        val total = derived.shares[id] ?: return@mapNotNull null
+        PersonShare(userId = id, total = total, surchargePart = total - (base[id] ?: 0))
+    }
+}
+
 /** Участник и его вес для целочисленного взвешенного деления. */
 internal data class WeightShare(val id: Long, val weight: Long)
 

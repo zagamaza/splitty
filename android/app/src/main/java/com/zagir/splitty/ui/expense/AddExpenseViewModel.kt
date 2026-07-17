@@ -5,16 +5,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ExpenseSplit
+import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.ParseDraft
 import com.zagir.splitty.core.model.ParseResponse
+import com.zagir.splitty.core.model.PersonShare
 import com.zagir.splitty.core.model.RecipientSum
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SplitType
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.model.User
+import com.zagir.splitty.core.model.derivedShares
+import com.zagir.splitty.core.model.hasUnknown
+import com.zagir.splitty.core.model.isSurcharge
+import com.zagir.splitty.core.model.itemizedUserIds
+import com.zagir.splitty.core.model.personShares
+import com.zagir.splitty.core.model.shareList
+import com.zagir.splitty.core.money.money
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -46,6 +55,9 @@ private const val MAX_SUM_DIGITS = 9
 private fun digitsOnly(raw: String): String =
     raw.filter { it.isDigit() }.take(MAX_SUM_DIGITS)
 
+/** Текст нудж-тоста «выберите группу» — константа, чтобы выбор группы мог погасить его мгновенно. */
+internal const val SELECT_GROUP_TOAST = "Сначала выберите группу"
+
 /**
  * Политика офлайн-редактирования (фиксированный дизайн v1): создание и правка
  * НЕотправленных (локальных) записей возможны всегда — они живут в outbox;
@@ -57,30 +69,78 @@ internal fun canSaveExpenseOffline(isEditingSyncedOperation: Boolean, isOnline: 
     isOnline || !isEditingSyncedOperation
 
 /**
- * Накатывает ответ AI-распознавания на форму (порт iOS `apply(parse:)`): описание
- * и сумму берём из черновика (если модель их дала), донора — если распознан и он
- * среди участников. Позиции чека сохраняем в [AddExpenseForm.draftItems]; при их
- * наличии сохранение блокируется ([isItemizedLocked]) до itemized-режима формы
- * (Task 10). Черновик НИКОГДА не теряется — пустые поля ответа не затирают ввод.
- * Чистая функция — покрыта юнит-тестами без VM.
+ * Снапшот формы до последней голосовой правки/«Поровну на всех» — для отмены
+ * ([AddExpenseForm.undoingParse]). Хранит ровно то, что может измениться правкой:
+ * позиции, описание, сумму и донора. Порт iOS `undoSnapshot`.
+ */
+@Serializable
+data class UndoSnapshot(
+    val draftItems: List<OperationItem> = emptyList(),
+    val description: String = "",
+    val sumText: String = "",
+    val payerId: Long? = null,
+)
+
+/**
+ * Индексы позиций, отличающихся от прежней версии черновика: изменённые по месту
+ * и добавленные в конец. Удаления не подсвечиваются (строки уже нет). Порт iOS
+ * `changedIndices`. Чистая функция — под JVM-тест.
+ */
+internal fun changedItemIndices(old: List<OperationItem>, new: List<OperationItem>): Set<Int> {
+    val out = HashSet<Int>()
+    new.forEachIndexed { index, item ->
+        if (index >= old.size || old[index] != item) out.add(index)
+    }
+    return out
+}
+
+/**
+ * Накатывает ответ AI-распознавания на форму (порт iOS `apply(parse:)`): описание,
+ * сумму и донора берём из черновика (если модель их дала), позиции становятся
+ * источником правды (itemized-операция), получатели синхронизируются с позициями.
+ * Если это была ПРАВКА непустой формы (голосом/фото поверх распознанного) — кладём
+ * снапшот для «Отменить» и помечаем изменённые позиции. Черновик НИКОГДА не теряется:
+ * пустые поля ответа не затирают ввод. Чистая функция — покрыта юнит-тестами.
  */
 internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseForm {
     val draft = response.draft
     val items = draft.itemList
     val memberIds = members.map { it.id }.toSet()
     val recognizedPayer = draft.donorId?.takeIf { it in memberIds }
-    // Плоский расход (без позиций): по умолчанию делим на всех участников.
-    val recipients = if (items.isEmpty() && recipientIds.isEmpty()) memberIds else recipientIds
-    return copy(
+    val wasCorrection = didRecognize || hasDraftItems
+    val oldItems = draftItems
+    val oldSnapshot = UndoSnapshot(draftItems, description, sumText, payerId)
+
+    val recognizedSomething = draft.description.isNotBlank() || draft.sum >= 1 || items.isNotEmpty()
+    val questions = response.questionList
+    // Совсем пусто и без вопросов — говорим явно, а не молча возвращаем форму.
+    val emptyAlert = if (!recognizedSomething && questions.isEmpty()) {
+        "Не удалось распознать. Скажите ещё раз — с блюдами и ценами"
+    } else {
+        null
+    }
+
+    val correction = wasCorrection && recognizedSomething
+    var next = copy(
         description = draft.description.ifBlank { description },
-        sumText = if (draft.sum > 0) draft.sum.toString() else sumText,
+        sumText = if (draft.sum >= 1) draft.sum.toString() else sumText,
         payerId = recognizedPayer ?: payerId,
-        recipientIds = recipients,
         draftItems = items,
-        isItemizedLocked = items.isNotEmpty(),
-        parseQuestions = response.questionList,
+        parseQuestions = questions,
         parseRetryMessage = null,
+        didRecognize = didRecognize || recognizedSomething,
+        alertMessage = emptyAlert ?: alertMessage,
+        undoSnapshot = if (correction) oldSnapshot else null,
+        canUndoParse = correction,
+        changedItemIndices = if (correction) changedItemIndices(oldItems, items) else emptySet(),
     )
+    // Плоский расход (без позиций) с пустым выбором — делим на всех участников.
+    next = if (items.isEmpty() && next.recipientIds.isEmpty()) {
+        next.copy(recipientIds = memberIds)
+    } else {
+        next
+    }
+    return next.syncingRecipientsFromItems()
 }
 
 /**
@@ -102,6 +162,136 @@ internal fun AddExpenseForm.currentParseDraft(): ParseDraft? {
     }
 }
 
+// --- Операции над позициями чека (itemized) — чистые функции над формой ---
+
+/**
+ * Синхронизирует множество получателей с участниками позиций — чтобы плоские
+ * валидации/сохранение видели тех же людей, что и чек. Порт iOS
+ * `syncRecipientsFromItems`.
+ */
+internal fun AddExpenseForm.syncingRecipientsFromItems(): AddExpenseForm {
+    if (!hasDraftItems) return this
+    val ids = draftItems.itemizedUserIds()
+    return if (ids.isEmpty()) this else copy(recipientIds = ids.toSet())
+}
+
+/** Заменяет позицию по индексу (правка из шита позиции). Порт iOS `replaceItem`. */
+internal fun AddExpenseForm.replacingItem(index: Int, item: OperationItem): AddExpenseForm {
+    if (index !in draftItems.indices) return this
+    val items = draftItems.toMutableList().apply { this[index] = item }
+    return copy(draftItems = items).syncingRecipientsFromItems()
+}
+
+/**
+ * Удаляет позицию чека (AI мог придумать лишнюю строку — путь починить руками,
+ * не передиктовывая). Последняя позиция → возврат к плоской форме. Порт iOS `deleteItem`.
+ */
+internal fun AddExpenseForm.deletingItem(index: Int): AddExpenseForm {
+    if (index !in draftItems.indices) return this
+    val items = draftItems.toMutableList().apply { removeAt(index) }
+    return copy(draftItems = items, changedItemIndices = emptySet()).syncingRecipientsFromItems()
+}
+
+/**
+ * Добавляет пустую позицию (AI мог пропустить блюдо): цена 0 = «цена не определена»,
+ * деление поровну на всех участников. Возвращает новую форму и индекс строки (вью
+ * сразу открывает её шит) либо null, если добавлять не к чему. Порт iOS `addBlankItem`.
+ */
+internal fun AddExpenseForm.addingBlankItem(): Pair<AddExpenseForm, Int?> {
+    if (!hasDraftItems) return this to null
+    val shares = members.map { ItemShare(userId = it.id, weight = 1) }
+    val items = draftItems + OperationItem(name = "", price = 0, qty = 1, shares = shares)
+    return copy(draftItems = items).syncingRecipientsFromItems() to (items.size - 1)
+}
+
+/**
+ * Переключает правило деления надбавки (сбор/чаевые/доставка): «пропорционально
+ * съеденному» ⇄ «поровну на всех». Обычные позиции не трогает. Порт iOS
+ * `toggleSurchargeRule`.
+ */
+internal fun AddExpenseForm.togglingSurchargeRule(index: Int): AddExpenseForm {
+    val item = draftItems.getOrNull(index) ?: return this
+    if (!item.isSurcharge) return this
+    val newSplit = if (item.split == OperationItem.SPLIT_EQUALLY) {
+        OperationItem.SPLIT_PROPORTIONAL
+    } else {
+        OperationItem.SPLIT_EQUALLY
+    }
+    return replacingItem(index, item.copy(shares = null, split = newSplit))
+}
+
+/**
+ * Сопоставляет нераспознанное имя `name` в позиции участнику `userId`: имя убирается
+ * из `unknown`, участник добавляется в доли позиции (вес 1). Возвращает форму с
+ * подтверждающим тостом. Дозапись alias на сервере — side-effect VM. Порт iOS
+ * `resolveUnknown` (без сетевой части).
+ */
+internal fun AddExpenseForm.resolvingUnknown(itemIndex: Int, name: String, userId: Long): AddExpenseForm {
+    val item = draftItems.getOrNull(itemIndex) ?: return this
+    val unknown = (item.unknown ?: emptyList()).filterNot { it.equals(name, ignoreCase = true) }
+    val shares = item.shareList.toMutableList()
+    if (!item.isSurcharge && shares.none { it.userId == userId }) {
+        shares.add(ItemShare(userId = userId, weight = 1))
+    }
+    val updated = item.copy(
+        shares = if (item.isSurcharge) null else shares,
+        unknown = unknown.ifEmpty { null },
+    )
+    val member = members.firstOrNull { it.id == userId }
+    val toast = member?.let { "«$name» — это ${it.displayName}. Запомнил, больше не спрошу" }
+    return replacingItem(itemIndex, updated).copy(toastMessage = toast ?: toastMessage)
+}
+
+/**
+ * Сброс распознанного чека (ручная правка суммы): позиции больше не источник
+ * правды, операция сохранится плоской (равное деление). Порт iOS `resetItems`.
+ */
+internal fun AddExpenseForm.resettingItems(): AddExpenseForm {
+    if (!hasDraftItems) return this
+    val recipients = recipientIds.ifEmpty { members.map { it.id }.toSet() }
+    return copy(
+        draftItems = emptyList(),
+        parseQuestions = emptyList(),
+        splitType = SplitType.EQUALLY,
+        recipientIds = recipients,
+    )
+}
+
+/**
+ * «Поровну на всех»: выбрасывает позиции, оставляя плоскую сумму. Деструктивно
+ * для распознанного чека — кладём снапшот, чтобы баннер «Отменить» вернул всё как
+ * было (тот же механизм undo). Порт iOS `collapseToEqualSplit`.
+ */
+internal fun AddExpenseForm.collapsingToEqualSplit(): AddExpenseForm {
+    if (!hasDraftItems) return this
+    val snapshot = UndoSnapshot(draftItems, description, sumText, payerId)
+    val total = draftItems.derivedShares()?.total
+    return copy(
+        undoSnapshot = snapshot,
+        canUndoParse = true,
+        changedItemIndices = emptySet(),
+        sumText = total?.toString() ?: sumText,
+        draftItems = emptyList(),
+        recipientIds = members.map { it.id }.toSet(),
+        splitType = SplitType.EQUALLY,
+    )
+}
+
+/** Откат последней голосовой правки/«Поровну» к снапшоту формы. Порт iOS `undoParse`. */
+internal fun AddExpenseForm.undoingParse(): AddExpenseForm {
+    val snapshot = undoSnapshot ?: return this
+    return copy(
+        draftItems = snapshot.draftItems,
+        description = snapshot.description,
+        sumText = snapshot.sumText,
+        payerId = snapshot.payerId,
+        undoSnapshot = null,
+        canUndoParse = false,
+        changedItemIndices = emptySet(),
+        parseQuestions = emptyList(),
+    ).syncingRecipientsFromItems()
+}
+
 /**
  * Снимок черновика формы для SavedStateHandle (переживает process death). Только
  * пользовательский ввод + результат распознавания; участники/валюта берутся из
@@ -119,7 +309,7 @@ internal data class ExpenseDraftSnapshot(
     val amountTexts: Map<Long, String> = emptyMap(),
     val draftItems: List<OperationItem> = emptyList(),
     val parseQuestions: List<String> = emptyList(),
-    val isItemizedLocked: Boolean = false,
+    val didRecognize: Boolean = false,
 ) {
     companion object {
         /** Снимок из формы (только поля, которые нужно восстановить). */
@@ -133,7 +323,7 @@ internal data class ExpenseDraftSnapshot(
             amountTexts = form.amountTexts,
             draftItems = form.draftItems,
             parseQuestions = form.parseQuestions,
-            isItemizedLocked = form.isItemizedLocked,
+            didRecognize = form.didRecognize,
         )
 
         /** true — в снимке есть что восстанавливать (не пустой стартовый черновик). */
@@ -153,7 +343,7 @@ internal data class ExpenseDraftSnapshot(
             amountTexts = amountTexts.filterKeys { it in memberIds },
             draftItems = draftItems,
             parseQuestions = parseQuestions,
-            isItemizedLocked = isItemizedLocked,
+            didRecognize = didRecognize,
         )
     }
 }
@@ -169,12 +359,6 @@ data class AddExpenseForm(
     val isEditingSynced: Boolean = false,
     /** true — редактирование неотправленной записи outbox (доступно офлайн). */
     val isEditingLocal: Boolean = false,
-    /**
-     * true — операция с позициями чека (itemized): правка плоской формой затёрла
-     * бы чек, поэтому сохранение запрещено (временно, до itemized-режима формы
-     * в Task 10). Просмотр полей — как раньше.
-     */
-    val isItemizedLocked: Boolean = false,
     /** true — экран открыт без фиксированной группы (сверху выбор чипами). */
     val showsRoomPicker: Boolean,
     /** Группы для выбора (только при [showsRoomPicker]). */
@@ -199,12 +383,23 @@ data class AddExpenseForm(
     /** true — идёт AI-распознавание (parsing-оверлей со спиннером). */
     val isParsing: Boolean = false,
     /**
-     * Позиции чека из AI-распознавания (Task 7 их держит и блокирует сохранение;
-     * интерактивный чек и itemized-сохранение — Task 8/10). Пусто — плоский расход.
+     * Позиции чека itemized-операции: источник правды при [hasDraftItems] —
+     * форма показывает интерактивный чек, сохранение шлёт [draftItems] в POST/PUT.
+     * Пусто — плоский расход.
      */
     val draftItems: List<OperationItem> = emptyList(),
     /** Уточняющие вопросы модели («кто платил?») — показываются под формой. */
     val parseQuestions: List<String> = emptyList(),
+    /** true — форма заполнена распознаванием (голос/фото), а не вручную. */
+    val didRecognize: Boolean = false,
+    /** Индексы позиций, изменённых последней голосовой правкой (подсветка в чеке). */
+    val changedItemIndices: Set<Int> = emptySet(),
+    /** true — доступна отмена последней голосовой правки/«Поровну на всех». */
+    val canUndoParse: Boolean = false,
+    /** Снапшот формы до последней правки — для [undoingParse]; null — отменять нечего. */
+    val undoSnapshot: UndoSnapshot? = null,
+    /** Короткое подтверждение действия (тост «…Запомнил»); null — тоста нет. */
+    val toastMessage: String? = null,
     /**
      * null — ошибки распознавания нет; иначе текст с кнопкой «Повторить» (данные
      * НЕ теряются: фото сохранено в cacheDir, форма осталась как была).
@@ -239,26 +434,130 @@ data class AddExpenseForm(
             return total >= 1 && distributedTotal == total
         }
 
+    // --- Позиции чека (itemized) ---
+
+    /** true — есть распознанный чек: форма показывает карточку-чек вместо плоского деления. */
+    val hasDraftItems: Boolean get() = draftItems.isNotEmpty()
+
+    /** true — хотя бы в одной позиции есть нераспознанное имя (блокирует «Сохранить»). */
+    val hasUnknownItems: Boolean get() = draftItems.any { it.hasUnknown }
+
+    /** true — есть обычная позиция без цены (price < 1): модель услышала блюдо, но не цену. */
+    val hasPricelessItems: Boolean get() = draftItems.any { !it.isSurcharge && it.price < 1 }
+
+    /** Первое нераспознанное имя — для подсказки «выберите, кто такой …». */
+    val firstUnknownName: String? get() = draftItems.firstNotNullOfOrNull { it.unknown?.firstOrNull() }
+
+    /** userId'ы участников из позиций (обычные позиции, стабильный порядок появления). */
+    val itemizedUserIds: List<Long> get() = draftItems.itemizedUserIds()
+
+    /** Клиентское превью долей по позициям (userId→сумма); null — позиции невалидны. */
+    val itemizedShares: Map<Long, Int>? get() = draftItems.derivedShares()?.shares
+
+    /** Итог чека: подытог позиций + сборы; null — позиции невалидны. */
+    val itemizedTotal: Int? get() = draftItems.derivedShares()?.total
+
+    /** Подытог обычных позиций (без надбавок). */
+    val itemizedSubtotal: Int get() = draftItems.filter { !it.isSurcharge }.sumOf { it.price }
+
+    /** Сумма всех надбавок (сборов/чаевых/доставки). */
+    val itemizedSurcharges: Int get() = draftItems.filter { it.isSurcharge }.sumOf { it.price }
+
+    /** Разбивка «С кого сколько» по позициям; null — позиций нет или они невалидны. */
+    val personShares: List<PersonShare>? get() = draftItems.personShares()
+
+    /** true — форма пуста (нет позиций/описания/суммы и это не правка). */
+    val isEmptyForm: Boolean
+        get() = !hasDraftItems && !isEditing && description.isBlank() && (sum ?: 0) == 0
+
     /**
-     * Доступность «Сохранить»: группа выбрана, описание непусто, сумма >= 1,
-     * донор выбран, есть получатели; в режиме «По суммам» — только при Σ == sum.
+     * «Что осталось уточнить» для экрана диктовки (Task 12): нераспознанные имена,
+     * позиции без цены и вопросы модели, не дублирующие первые два. Порт iOS
+     * `missingInfoHints`.
+     */
+    val missingInfoHints: List<String>
+        get() {
+            val hints = ArrayList<String>()
+            val covered = ArrayList<String>()
+            for (item in draftItems) {
+                for (name in item.unknown ?: emptyList()) {
+                    hints.add("Кто это — «$name»?")
+                    covered.add(name.lowercase())
+                }
+            }
+            for (item in draftItems) {
+                if (item.isSurcharge || item.price >= 1) continue
+                val name = item.name.ifEmpty { "позиция" }
+                hints.add("Сколько стоит «$name»?")
+                covered.add(name.lowercase())
+            }
+            for (question in parseQuestions) {
+                val lower = question.lowercase()
+                if (covered.any { lower.contains(it) }) continue
+                hints.add(question)
+            }
+            return hints.take(3)
+        }
+
+    /**
+     * Доступность «Сохранить» (порт iOS `canSave`):
+     * - itemized-черновик: нельзя с нераспознанными именами / без цен / при
+     *   невыводимых долях; расхождение плоского sum с Σ позиций НЕ мешает —
+     *   суммы выводит сервер;
+     * - «По суммам» — только при Σ == sum;
+     * - «Поровну» — активна всегда (остальную валидацию делает [save] алертами).
      */
     val canSave: Boolean
-        get() = !isItemizedLocked &&
-            selectedRoomId != null &&
-            description.isNotBlank() &&
-            (sum ?: 0) >= 1 &&
-            payerId != null &&
-            recipientIds.isNotEmpty() &&
-            (splitType != SplitType.BY_EXACT_AMOUNT || isDistributionBalanced)
+        get() {
+            if (hasDraftItems) {
+                if (hasUnknownItems) return false
+                if (hasPricelessItems) return false
+                return draftItems.derivedShares() != null
+            }
+            if (splitType == SplitType.BY_EXACT_AMOUNT) {
+                return recipientIds.isNotEmpty() && isDistributionBalanced
+            }
+            return true
+        }
+
+    /**
+     * Живая подпись режима «По суммам»: остаток/перерасход/готово (порт iOS
+     * `distributionHint`). Строится через [money] — чистая, годна для тоста и теста.
+     */
+    val distributionHint: String
+        get() = when {
+            recipientIds.isEmpty() -> "Выберите хотя бы одного участника"
+            isDistributionBalanced -> "Сумма распределена полностью"
+            remainingToDistribute < 0 -> "Перерасход: ${money(-remainingToDistribute, currency)}"
+            else -> "Осталось распределить: ${money(remainingToDistribute, currency)}"
+        }
+
+    /**
+     * Почему «Сохранить» заблокирована — для нуджа по тапу (кнопка живая и
+     * объясняет причину тостом, а не молча игнорирует). null — сохранять можно.
+     * Порт iOS `saveBlockedReason`.
+     */
+    val saveBlockedReason: String?
+        get() {
+            if (hasDraftItems) {
+                if (hasUnknownItems) return "Сначала выберите, кто есть кто в позициях"
+                if (hasPricelessItems) return "Укажите цены позиций — без них не посчитать доли"
+                if (draftItems.derivedShares() == null) return "Проверьте позиции чека — доли не сходятся"
+                return null
+            }
+            if (splitType == SplitType.BY_EXACT_AMOUNT && (!isDistributionBalanced || recipientIds.isEmpty())) {
+                return distributionHint
+            }
+            return null
+        }
 }
 
 /**
  * VM формы добавления/редактирования расхода: выбор группы (когда экран
  * открыт с центральной «+»), описание, сумма, донор и способ деления —
- * «Поровну» (recipientIds, доли раскладывает сервер) или «По суммам»
- * (recipientSums, Σ == sum). После успешного сохранения —
- * SessionStore.noteDataChanged() и isSaved = true (экран зовёт onDone).
+ * «Поровну» (recipientIds, доли раскладывает сервер), «По суммам»
+ * (recipientSums, Σ == sum) или itemized-чек (draftItems → производные суммы).
+ * После успешного сохранения — SessionStore.noteDataChanged() и isSaved = true.
  */
 @HiltViewModel
 class AddExpenseViewModel @Inject constructor(
@@ -290,14 +589,6 @@ class AddExpenseViewModel @Inject constructor(
      * правки порядок сохраняется, новые участники добавляются в конец.
      */
     private var editRecipientOrder: List<Long> = emptyList()
-
-    /**
-     * Позиции чека редактируемой операции — проносятся в PUT НЕТРОНУТЫМИ
-     * (см. [SplittyRepository.updateOperation]). Для itemized-операций правка
-     * сейчас всё равно заблокирована ([AddExpenseForm.isItemizedLocked]);
-     * поле — страховка от затирания чека, если правка когда-то пройдёт.
-     */
-    private var editOriginalItems: List<OperationItem>? = null
 
     /**
      * Поколение parse-запроса: новый запрос ОБГОНЯЕТ старый (пользователь во время
@@ -375,11 +666,9 @@ class AddExpenseViewModel @Inject constructor(
     private fun localEntryForm(room: RoomDetail, entry: OutboxEntry, meId: Long?): AddExpenseForm {
         val payload = entry.payload
         editRecipientOrder = payload.recipientOrder
-        editOriginalItems = payload.items
         val form = AddExpenseForm(
             isEditing = true,
             isEditingLocal = true,
-            isItemizedLocked = !payload.items.isNullOrEmpty(),
             showsRoomPicker = false,
             meId = meId,
             description = payload.description,
@@ -390,6 +679,9 @@ class AddExpenseViewModel @Inject constructor(
             amountTexts = payload.recipientSums
                 ?.associate { it.userId to it.sum.toString() }
                 .orEmpty(),
+            // Позиции чека редактируемой локальной записи — сразу источник правды.
+            draftItems = payload.items.orEmpty(),
+            didRecognize = !payload.items.isNullOrEmpty(),
         )
         return appliedRoom(form, room.id, room.members, room.currency)
     }
@@ -399,13 +691,11 @@ class AddExpenseViewModel @Inject constructor(
         var form = AddExpenseForm(
             isEditing = operation != null,
             isEditingSynced = operation != null,
-            isItemizedLocked = !operation?.items.isNullOrEmpty(),
             showsRoomPicker = false,
             meId = meId,
         )
         if (operation != null) {
             editRecipientOrder = operation.recipients.map { it.user.id }
-            editOriginalItems = operation.items
             form = form.copy(
                 description = operation.description,
                 sumText = operation.sum.toString(),
@@ -415,6 +705,10 @@ class AddExpenseViewModel @Inject constructor(
                 // Prefill долей из ХРАНИМЫХ сумм: для «По суммам» — точные,
                 // для «Поровну» — канонические (стартовые при смене режима).
                 amountTexts = operation.recipients.associate { it.user.id to it.sum.toString() },
+                // Позиции чека itemized-операции — источник правды: правка идёт
+                // через интерактивный чек, items уходят в PUT (не затираются).
+                draftItems = operation.items.orEmpty(),
+                didRecognize = !operation.items.isNullOrEmpty(),
             )
         }
         return appliedRoom(form, room.id, room.members, room.currency)
@@ -424,14 +718,16 @@ class AddExpenseViewModel @Inject constructor(
     fun selectRoom(summary: RoomSummary) {
         updateForm { form ->
             if (form.selectedRoomId == summary.id) {
-                form
+                // Нудж «выберите группу» выполнен — гасим именно его тост сразу.
+                if (form.toastMessage == SELECT_GROUP_TOAST) form.copy(toastMessage = null) else form
             } else {
-                appliedRoom(
+                val applied = appliedRoom(
                     form.copy(recipientIds = emptySet(), payerId = null, amountTexts = emptyMap()),
                     summary.id,
                     summary.members,
                     summary.currency,
                 )
+                if (applied.toastMessage == SELECT_GROUP_TOAST) applied.copy(toastMessage = null) else applied
             }
         }
     }
@@ -467,7 +763,15 @@ class AddExpenseViewModel @Inject constructor(
 
     fun onDescriptionChange(value: String) = updateForm { it.copy(description = value) }
 
-    fun onSumChange(raw: String) = updateForm { it.copy(sumText = digitsOnly(raw)) }
+    /**
+     * Ручная правка суммы: если форма показывала распознанный чек — позиции
+     * больше не источник правды (сброс к плоскому равному делению, порт iOS
+     * `resetItems` по фокусу поля суммы).
+     */
+    fun onSumChange(raw: String) = updateForm {
+        val reset = if (it.hasDraftItems) it.resettingItems() else it
+        reset.copy(sumText = digitsOnly(raw))
+    }
 
     fun selectPayer(userId: Long) = updateForm { it.copy(payerId = userId) }
 
@@ -487,6 +791,57 @@ class AddExpenseViewModel @Inject constructor(
     }
 
     fun dismissAlert() = updateForm { it.copy(alertMessage = null) }
+
+    fun dismissToast() = updateForm { it.copy(toastMessage = null) }
+
+    /** Показать короткий тост (причина блокировки «Сохранить», подтверждение). */
+    fun showToast(message: String) = updateForm { it.copy(toastMessage = message) }
+
+    /** Нудж «выберите группу»: тост показывается, поле группы вью встряхивает. */
+    fun nudgeSelectGroup() = updateForm { it.copy(toastMessage = SELECT_GROUP_TOAST) }
+
+    // --- Правка позиций чека (itemized) ---
+
+    /** Заменяет позицию по индексу (write-back шита позиции). */
+    fun replaceItem(index: Int, item: OperationItem) = updateForm { it.replacingItem(index, item) }
+
+    /** Удаляет позицию (шит «Удалить»); последняя — возврат к плоской форме. */
+    fun deleteItem(index: Int) = updateForm { it.deletingItem(index) }
+
+    /** Добавляет пустую позицию; возвращает её индекс (вью открывает шит) либо null. */
+    fun addBlankItem(): Int? {
+        var newIndex: Int? = null
+        updateForm { form ->
+            val (next, index) = form.addingBlankItem()
+            newIndex = index
+            next
+        }
+        return newIndex
+    }
+
+    /** Переключает правило деления сбора (пропорционально ⇄ поровну). */
+    fun toggleSurchargeRule(index: Int) = updateForm { it.togglingSurchargeRule(index) }
+
+    /** «Поровну на всех»: сброс позиций (обратимо баннером «Отменить»). */
+    fun collapseToEqualSplit() = updateForm { it.collapsingToEqualSplit() }
+
+    /** Откат последней голосовой правки/«Поровну» к снапшоту. */
+    fun undoParse() = updateForm { it.undoingParse() }
+
+    /** Принять правку (баннер отмены закрывается, снапшот выбрасывается). */
+    fun dismissUndo() = updateForm { it.copy(canUndoParse = false, undoSnapshot = null) }
+
+    /** Гасит подсветку изменённых позиций (по таймеру из вью). */
+    fun clearChangeHighlights() = updateForm { it.copy(changedItemIndices = emptySet()) }
+
+    /**
+     * Сопоставляет нераспознанное имя участнику: локально применяет доли и
+     * тост, а alias дозаписывает на сервере (best-effort — ошибка не критична).
+     */
+    fun resolveUnknown(itemIndex: Int, name: String, userId: Long) {
+        updateForm { it.resolvingUnknown(itemIndex, name, userId) }
+        viewModelScope.launch { repository.addAlias(userId, name) }
+    }
 
     // --- AI-распознавание расхода (фото чека, Task 7) ---
 
@@ -561,34 +916,68 @@ class AddExpenseViewModel @Inject constructor(
 
     /**
      * Сохранение: POST /operations, PUT (правка серверной) либо правка записи
-     * outbox (локальная). Создание идемпотентно: POST всегда шлёт clientOpId,
-     * и при обрыве сети/таймауте расход уходит в outbox с ТЕМ ЖЕ ключом —
-     * досылка не создаст дубль, даже если первый POST успел примениться.
+     * outbox (локальная). itemized-чек: позиции — источник правды, отправляем
+     * их вместе с производными recipientSums (сервер выводит суммы сам, но тело
+     * обязано нести валидный способ деления). Создание идемпотентно (clientOpId).
      * Защита от двойного тапа — isSaving выставляется синхронно до корутины.
      */
     fun save() {
         val form = currentForm() ?: return
-        if (form.isSaving || !form.canSave) return
-        // Правка серверной операции офлайн невозможна (кнопка задизейблена,
-        // это — страховка от гонки «сеть пропала после тапа»).
-        if (!canSaveExpenseOffline(form.isEditingSynced, isOnline.value)) return
-        val roomId = form.selectedRoomId ?: return
-        val sum = form.sum ?: return
-        val payerId = form.payerId ?: return
+        if (form.isSaving) return
+        // Причина блокировки объясняется тостом во вью — здесь тихий выход.
+        if (form.saveBlockedReason != null) return
+        val roomId = form.selectedRoomId
+        if (roomId == null) {
+            updateForm { it.copy(alertMessage = "Выберите группу") }
+            return
+        }
         val description = form.description.trim()
+        if (description.isEmpty()) {
+            updateForm { it.copy(alertMessage = "Введите описание расхода") }
+            return
+        }
+        val sum = form.sum?.takeIf { it >= 1 }
+        if (sum == null) {
+            updateForm { it.copy(alertMessage = "Введите сумму (целое число рублей, не меньше 1)") }
+            return
+        }
+        val payerId = form.payerId
+        if (payerId == null) {
+            updateForm { it.copy(alertMessage = "Выберите, кто заплатил") }
+            return
+        }
+        if (form.recipientIds.isEmpty()) {
+            updateForm { it.copy(alertMessage = "Выберите хотя бы одного участника") }
+            return
+        }
+        // Правка серверной операции офлайн невозможна (страховка от гонки).
+        if (!canSaveExpenseOffline(form.isEditingSynced, isOnline.value)) {
+            updateForm {
+                it.copy(alertMessage = "Нет соединения. Можно редактировать только неотправленные операции")
+            }
+            return
+        }
+
         val orderedIds = orderedRecipientIds(form)
-        val split = if (form.splitType == SplitType.BY_EXACT_AMOUNT) {
+        val itemsToSend: List<OperationItem>?
+        val split: ExpenseSplit
+        val itemSums = itemizedRecipientSums(form, orderedIds)
+        if (itemSums != null) {
+            // itemized-чек: производные суммы + сами позиции.
+            itemsToSend = form.draftItems
+            split = ExpenseSplit.ByExactAmount(itemSums)
+        } else if (form.splitType == SplitType.BY_EXACT_AMOUNT) {
             // Участники с нулевой/пустой долей опускаются: сервер отклоняет
             // суммы < 1, а при Σ == sum пропуск нулей суммы долей не меняет.
-            ExpenseSplit.ByExactAmount(
+            itemsToSend = null
+            split = ExpenseSplit.ByExactAmount(
                 orderedIds.mapNotNull { id ->
-                    form.enteredAmount(id)
-                        .takeIf { it >= 1 }
-                        ?.let { RecipientSum(userId = id, sum = it) }
+                    form.enteredAmount(id).takeIf { it >= 1 }?.let { RecipientSum(userId = id, sum = it) }
                 }
             )
         } else {
-            ExpenseSplit.Equally(orderedIds)
+            itemsToSend = null
+            split = ExpenseSplit.Equally(orderedIds)
         }
 
         updateForm { it.copy(isSaving = true) }
@@ -601,22 +990,20 @@ class AddExpenseViewModel @Inject constructor(
                     localId != null -> {
                         outboxStore.update(
                             localId,
-                            OutboxPayload.of(description, sum, payerId, split),
+                            OutboxPayload.of(description, sum, payerId, split, items = itemsToSend),
                         )
                         outboxSyncer.syncNow()
                     }
 
                     operationId != null -> {
-                        // items оригинала проносятся НЕТРОНУТЫМИ — плоский PUT
-                        // без них затёр бы чек itemized-операции на сервере.
                         repository.updateOperation(
                             roomId, operationId, description, sum, payerId, split,
-                            items = editOriginalItems,
+                            items = itemsToSend,
                         )
                         sessionStore.noteDataChanged()
                     }
 
-                    else -> createOperation(roomId, description, sum, payerId, split)
+                    else -> createOperation(roomId, description, sum, payerId, split, itemsToSend)
                 }
                 updateForm { it.copy(isSaving = false, isSaved = true) }
             } catch (e: CancellationException) {
@@ -624,6 +1011,21 @@ class AddExpenseViewModel @Inject constructor(
             } catch (e: ApiException) {
                 updateForm { it.copy(isSaving = false, alertMessage = e.message) }
             }
+        }
+    }
+
+    /**
+     * Производные по позициям recipientSums в стабильном порядке [orderedIds]
+     * (недостающие из позиций добавляются следом); null — позиций нет или они
+     * невалидны. Порт iOS `itemizedRecipientSums`.
+     */
+    private fun itemizedRecipientSums(form: AddExpenseForm, orderedIds: List<Long>): List<RecipientSum>? {
+        if (!form.hasDraftItems) return null
+        val shares = form.itemizedShares ?: return null
+        val itemIds = form.itemizedUserIds
+        val ordered = orderedIds.filter { it in itemIds } + itemIds.filter { it !in orderedIds }
+        return ordered.mapNotNull { id ->
+            shares[id]?.takeIf { it >= 1 }?.let { RecipientSum(userId = id, sum = it) }
         }
     }
 
@@ -638,11 +1040,12 @@ class AddExpenseViewModel @Inject constructor(
         sum: Int,
         payerId: Long,
         split: ExpenseSplit,
+        items: List<OperationItem>?,
     ) {
         val localId = UUID.randomUUID().toString()
         if (isOnline.value) {
             try {
-                repository.addOperation(roomId, description, sum, payerId, split, clientOpId = localId)
+                repository.addOperation(roomId, description, sum, payerId, split, items = items, clientOpId = localId)
                 sessionStore.noteDataChanged()
                 return
             } catch (e: ApiException) {
@@ -654,7 +1057,7 @@ class AddExpenseViewModel @Inject constructor(
             OutboxEntry(
                 localId = localId,
                 roomId = roomId,
-                payload = OutboxPayload.of(description, sum, payerId, split),
+                payload = OutboxPayload.of(description, sum, payerId, split, items = items),
                 createdAt = Instant.now(),
             )
         )

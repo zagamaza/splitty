@@ -18,19 +18,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material3.AlertDialog
@@ -48,6 +56,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -79,12 +88,15 @@ import com.zagir.splitty.core.money.currencySymbol
 import com.zagir.splitty.core.money.money
 import com.zagir.splitty.core.money.moneyRange
 import com.zagir.splitty.core.money.shares
+import com.zagir.splitty.ui.components.AppToast
 import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.components.nudgeHighlight
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
@@ -117,12 +129,22 @@ fun AddExpenseScreen(
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val snapshot = state
     val form = if (snapshot is UiState.Content) snapshot.value else null
+    val haptics = rememberHaptics()
 
     // Фото чека → путь к готовому JPEG в cacheDir → распознавание (Task 7).
     val receiptCapture = rememberReceiptCapture { path -> viewModel.parseReceiptImage(path) }
 
+    // Встряска поля группы при нудже (тап по «Сохранить» без выбранной группы).
+    var groupNudge by remember { mutableIntStateOf(0) }
+    // Открытый шит правки позиции чека (индекс в draftItems) / сопоставления имени.
+    var itemEditIndex by remember { mutableStateOf<Int?>(null) }
+    var unknownTarget by remember { mutableStateOf<UnknownTarget?>(null) }
+
     LaunchedEffect(form?.isSaved) {
-        if (form?.isSaved == true) onDone()
+        if (form?.isSaved == true) {
+            haptics.success()
+            onDone()
+        }
     }
 
     val colors = Splitty.colors
@@ -168,10 +190,26 @@ fun AddExpenseScreen(
                         .imePadding()
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
+                    // Кнопка живая: тап при блокировке объясняет причину тостом
+                    // (нет группы → встряска поля + тост), а не молчит. Жёсткий
+                    // disabled — только сохранение в полёте и офлайн-правка синка.
                     PrimaryPillButton(
                         text = stringResource(R.string.common_save),
-                        onClick = viewModel::save,
-                        enabled = form.canSave && !form.isSaving &&
+                        onClick = onSave@{
+                            when {
+                                form.selectedRoomId == null -> {
+                                    haptics.warning()
+                                    groupNudge++
+                                    viewModel.nudgeSelectGroup()
+                                }
+                                form.saveBlockedReason != null -> {
+                                    haptics.warning()
+                                    viewModel.showToast(form.saveBlockedReason!!)
+                                }
+                                else -> viewModel.save()
+                            }
+                        },
+                        enabled = !form.isSaving &&
                             canSaveExpenseOffline(form.isEditingSynced, isOnline),
                     )
                 }
@@ -201,8 +239,12 @@ fun AddExpenseScreen(
                     form = current.value,
                     isOnline = isOnline,
                     viewModel = viewModel,
+                    groupNudge = groupNudge,
                     onTakePhoto = receiptCapture::captureFromCamera,
                     onPickPhoto = receiptCapture::pickFromGallery,
+                    onEditItem = { index -> itemEditIndex = index },
+                    onResolveUnknown = { index, name -> unknownTarget = UnknownTarget(index, name) },
+                    onAddItem = { itemEditIndex = viewModel.addBlankItem() },
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -218,7 +260,39 @@ fun AddExpenseScreen(
                         .padding(innerPadding),
                 )
             }
+
+            // Тост-подтверждение/причина блокировки — поверх содержимого, снизу.
+            AppToast(
+                message = form?.toastMessage,
+                onDismiss = viewModel::dismissToast,
+                modifier = Modifier.padding(innerPadding),
+            )
         }
+    }
+
+    // Шит правки позиции чека (индекс мог устареть после удаления — сверяем с формой).
+    val editIndex = itemEditIndex
+    val editItem = editIndex?.let { form?.draftItems?.getOrNull(it) }
+    if (form != null && editIndex != null && editItem != null) {
+        ItemSheet(
+            item = editItem,
+            members = form.members,
+            currency = form.currency,
+            meId = form.meId,
+            onCommit = { viewModel.replaceItem(editIndex, it) },
+            onDelete = { viewModel.deleteItem(editIndex) },
+            onDismiss = { itemEditIndex = null },
+        )
+    }
+
+    val unknown = unknownTarget
+    if (form != null && unknown != null) {
+        UnknownPickerSheet(
+            name = unknown.name,
+            members = form.members,
+            onPick = { userId -> viewModel.resolveUnknown(unknown.itemIndex, unknown.name, userId) },
+            onDismiss = { unknownTarget = null },
+        )
     }
 
     form?.alertMessage?.let { message ->
@@ -235,6 +309,9 @@ fun AddExpenseScreen(
     }
 }
 
+/** Цель сопоставления нераспознанного имени: позиция и само имя. */
+private data class UnknownTarget(val itemIndex: Int, val name: String)
+
 // MARK: Содержимое формы
 
 @Composable
@@ -242,10 +319,15 @@ private fun ExpenseFormContent(
     form: AddExpenseForm,
     isOnline: Boolean,
     viewModel: AddExpenseViewModel,
+    groupNudge: Int,
     onTakePhoto: () -> Unit,
     onPickPhoto: () -> Unit,
+    onEditItem: (Int) -> Unit,
+    onResolveUnknown: (Int, String) -> Unit,
+    onAddItem: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var confirmDeleteLocal by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState())
@@ -258,11 +340,6 @@ private fun ExpenseFormContent(
         if (form.isEditingSynced && !isOnline) {
             OfflineEditBlockedPlate()
         }
-        // Операцию по позициям чека нельзя править плоской формой (затрёт чек)
-        // — до itemized-режима формы (Task 10) сохранение заблокировано.
-        if (form.isItemizedLocked) {
-            ItemizedEditBlockedPlate()
-        }
         // Ошибка распознавания: черновик не потерян, предлагаем «Повторить».
         form.parseRetryMessage?.let { message ->
             ParseRetryBanner(
@@ -272,18 +349,290 @@ private fun ExpenseFormContent(
             )
         }
         if (form.showsRoomPicker) {
-            GroupPickerCard(form = form, onSelect = viewModel::selectRoom)
+            GroupPickerCard(form = form, groupNudge = groupNudge, onSelect = viewModel::selectRoom)
         }
-        // Распознавание по фото чека — только при создании расхода в выбранной группе.
-        if (!form.isEditing && form.selectedRoomId != null) {
+        // Распознавание по фото чека — только при создании плоского расхода
+        // (при уже распознанном чеке фото добавляется из баннера «Распознано»).
+        if (!form.isEditing && form.selectedRoomId != null && !form.hasDraftItems && !form.didRecognize) {
             ReceiptScanCard(onTakePhoto = onTakePhoto, onPickPhoto = onPickPhoto)
         }
+        // Баннер результата голосовой/фото-правки с «Отменить»; либо плашка
+        // «Распознано голосом» для плоского AI-результата (без позиций).
+        if (form.canUndoParse) {
+            CorrectionBanner(hasItems = form.hasDraftItems, onUndo = viewModel::undoParse)
+        } else if (form.didRecognize && !form.hasDraftItems) {
+            RecognizedBanner(onAddPhoto = onTakePhoto)
+        }
         ExpenseCard(form = form, viewModel = viewModel)
-        SplitCard(form = form, viewModel = viewModel)
+        if (form.hasDraftItems) {
+            ReceiptSection(
+                form = form,
+                viewModel = viewModel,
+                onEditItem = onEditItem,
+                onResolveUnknown = onResolveUnknown,
+                onAddItem = onAddItem,
+            )
+        } else {
+            ParseQuestionLabels(form.parseQuestions)
+            SplitCard(form = form, viewModel = viewModel)
+        }
         // Неотправленную запись можно удалить прямо из формы правки.
         if (form.isEditingLocal) {
-            DeleteLocalCard(enabled = !form.isSaving, onDelete = viewModel::deleteLocal)
+            DeleteLocalCard(enabled = !form.isSaving, onDelete = { confirmDeleteLocal = true })
         }
+    }
+
+    if (confirmDeleteLocal) {
+        val colors = Splitty.colors
+        AlertDialog(
+            onDismissRequest = { confirmDeleteLocal = false },
+            title = { Text(stringResource(R.string.expense_delete_local_title)) },
+            text = { Text(stringResource(R.string.expense_delete_local_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDeleteLocal = false
+                    viewModel.deleteLocal()
+                }) {
+                    Text(stringResource(R.string.op_delete), color = colors.negative)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteLocal = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Секция распознанного чека: интерактивная карточка-чек (тап по строке → шит),
+ * подсказки по нераспознанным именам/ценам, разбивка «С кого сколько»,
+ * «+ Добавить позицию» и карточка переопределения деления «Поровну на всех».
+ */
+@Composable
+private fun ReceiptSection(
+    form: AddExpenseForm,
+    viewModel: AddExpenseViewModel,
+    onEditItem: (Int) -> Unit,
+    onResolveUnknown: (Int, String) -> Unit,
+    onAddItem: () -> Unit,
+) {
+    val colors = Splitty.colors
+    // Подсветка правки — вспышка: гаснет сама через 2.5с.
+    LaunchedEffect(form.changedItemIndices) {
+        if (form.changedItemIndices.isNotEmpty()) {
+            delay(2500)
+            viewModel.clearChangeHighlights()
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        ReceiptCard(
+            items = form.draftItems,
+            members = form.members,
+            currency = form.currency,
+            onEditItem = onEditItem,
+            onResolveUnknown = onResolveUnknown,
+            onToggleSurchargeRule = viewModel::toggleSurchargeRule,
+            highlightedIndices = form.changedItemIndices,
+        )
+        if (form.hasUnknownItems) {
+            form.firstUnknownName?.let { name ->
+                ReceiptHintRow(stringResource(R.string.expense_unknown_hint, name), warn = true)
+            }
+        }
+        if (form.hasPricelessItems) {
+            ReceiptHintRow(stringResource(R.string.expense_priceless_hint), warn = true)
+        }
+        ParseQuestionLabels(form.parseQuestions)
+        // При неопределённых ценах разбивку по людям не показываем (частичные
+        // суммы вводят в заблуждение).
+        if (!form.hasPricelessItems) {
+            form.personShares?.takeIf { it.isNotEmpty() }?.let { shares ->
+                PersonBreakdownCard(
+                    shares = shares,
+                    members = form.members,
+                    currency = form.currency,
+                    meId = form.meId,
+                )
+            }
+        }
+        // AI мог пропустить блюдо — путь добавить руками, не передиктовывая.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onAddItem)
+                .padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AddCircle,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.expense_add_item),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.accent,
+            )
+        }
+        SplitOverrideCard(onCollapse = viewModel::collapseToEqualSplit)
+    }
+}
+
+/** Строка-подсказка под чеком (нераспознанное имя / отсутствие цены). */
+@Composable
+private fun ReceiptHintRow(text: String, warn: Boolean) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Filled.WarningAmber,
+            contentDescription = null,
+            tint = if (warn) colors.negative else colors.inkSecondary,
+            modifier = Modifier.size(16.dp),
+        )
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (warn) colors.negative else colors.inkSecondary,
+        )
+    }
+}
+
+/** Уточняющие вопросы модели («Сколько стоила пицца?») — видимы под формой. */
+@Composable
+private fun ParseQuestionLabels(questions: List<String>) {
+    if (questions.isEmpty()) return
+    val colors = Splitty.colors
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        questions.forEach { question ->
+            Text(
+                text = "• $question",
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.inkSecondary,
+            )
+        }
+    }
+}
+
+/** Инлайн-баннер результата правки: статус + «Отменить» (гаснет сам через 6с). */
+@Composable
+private fun CorrectionBanner(hasItems: Boolean, onUndo: () -> Unit) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.accent.copy(alpha = 0.1f))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AutoAwesome,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(18.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.expense_correction_title),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+            )
+            Text(
+                text = stringResource(
+                    if (hasItems) R.string.expense_correction_hint_items else R.string.expense_correction_hint_flat
+                ),
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+            )
+        }
+        SoftChip(text = stringResource(R.string.expense_undo), onClick = onUndo)
+    }
+}
+
+/** Плашка «Распознано голосом» для плоского AI-результата: справа — «+ фото чека». */
+@Composable
+private fun RecognizedBanner(onAddPhoto: () -> Unit) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.accent.copy(alpha = 0.1f))
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.GraphicEq,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(18.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.expense_recognized_title),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+            )
+            Text(
+                text = stringResource(R.string.expense_recognized_hint),
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(colors.accent.copy(alpha = 0.12f))
+                .clickable(onClick = onAddPhoto),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PhotoCamera,
+                contentDescription = stringResource(R.string.expense_recognized_add_photo),
+                tint = colors.accent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/** Карточка переопределения деления: «Поровну на всех» сбрасывает позиции. */
+@Composable
+private fun SplitOverrideCard(onCollapse: () -> Unit) {
+    val colors = Splitty.colors
+    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SectionHeader(
+                text = stringResource(R.string.expense_split_override_title),
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            SoftChip(text = stringResource(R.string.expense_split_override_action), onClick = onCollapse)
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.expense_split_override_hint),
+            fontSize = 12.sp,
+            color = colors.inkSecondary,
+        )
     }
 }
 
@@ -311,30 +660,6 @@ private fun OfflineEditBlockedPlate() {
     }
 }
 
-/** Плашка «правится там, где создана» — операция по позициям чека (itemized). */
-@Composable
-private fun ItemizedEditBlockedPlate() {
-    val colors = Splitty.colors
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 12.dp) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Description,
-                contentDescription = null,
-                tint = colors.inkSecondary,
-                modifier = Modifier.size(18.dp),
-            )
-            Text(
-                text = stringResource(R.string.expense_itemized_edit_blocked),
-                fontSize = 13.sp,
-                color = colors.inkSecondary,
-            )
-        }
-    }
-}
-
 /** Карточка-кнопка «Удалить» неотправленной записи outbox. */
 @Composable
 private fun DeleteLocalCard(enabled: Boolean, onDelete: () -> Unit) {
@@ -354,13 +679,21 @@ private fun DeleteLocalCard(enabled: Boolean, onDelete: () -> Unit) {
     }
 }
 
-/** Выбор группы чипами (экран открыт с центральной «+»). */
+/** Выбор группы чипами (экран открыт с центральной «+»); встряхивается на нудже. */
 @Composable
 private fun GroupPickerCard(
     form: AddExpenseForm,
+    groupNudge: Int,
     onSelect: (RoomSummary) -> Unit,
 ) {
-    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+    val listState = rememberLazyListState()
+    // Автоскролл к выбранной группе: при 6+ группах активный чип мог оказаться
+    // за экраном — непонятно, выбрано ли что-то.
+    LaunchedEffect(form.selectedRoomId) {
+        val index = form.rooms.indexOfFirst { it.id == form.selectedRoomId }
+        if (index >= 0) listState.animateScrollToItem(index)
+    }
+    SurfaceCard(modifier = Modifier.fillMaxWidth().nudgeHighlight(groupNudge)) {
         SectionHeader(stringResource(R.string.expense_group_section))
         Spacer(Modifier.height(12.dp))
         if (form.rooms.isEmpty()) {
@@ -370,11 +703,11 @@ private fun GroupPickerCard(
                 color = Splitty.colors.inkSecondary,
             )
         } else {
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+            LazyRow(
+                state = listState,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                form.rooms.forEach { room ->
+                items(form.rooms, key = { it.id }) { room ->
                     SoftChip(
                         text = room.name,
                         onClick = { onSelect(room) },
@@ -452,65 +785,98 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
         HorizontalDivider(color = colors.hairline, thickness = 1.dp)
         Spacer(Modifier.height(16.dp))
 
-        // Крупная сумма по центру: символ валюты группы + tnum-цифры.
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = currencySymbol(form.currency),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.inkSecondary,
-            )
-            Spacer(Modifier.width(8.dp))
-            // Шрифт ступенчато уменьшается с длиной числа, чтобы сумма
-            // целиком помещалась на экране (BasicTextField сам не сжимает).
-            val sumFontSize = when {
-                form.sumText.length <= 6 -> 40.sp
-                form.sumText.length <= 8 -> 32.sp
-                else -> 26.sp
-            }
-            BasicTextField(
-                value = form.sumText,
-                onValueChange = viewModel::onSumChange,
-                modifier = Modifier
-                    .widthIn(min = 48.dp)
-                    .weight(1f, fill = false)
-                    .width(IntrinsicSize.Min)
-                    .focusRequester(sumFocusRequester),
-                textStyle = TextStyle(
-                    color = colors.ink,
-                    fontSize = sumFontSize,
-                    fontWeight = FontWeight.SemiBold,
-                    fontFeatureSettings = "tnum",
-                    textAlign = TextAlign.Center,
-                ),
-                singleLine = true,
-                cursorBrush = SolidColor(colors.accent),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                decorationBox = { innerTextField ->
-                    Box(contentAlignment = Alignment.Center) {
-                        if (form.sumText.isEmpty()) {
-                            Text(
-                                text = "0",
-                                fontSize = 40.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.inkSecondary,
-                                style = TextStyle(fontFeatureSettings = "tnum"),
-                            )
+        // В режиме чека сумма — производная от позиций: показываем её крупно,
+        // но read-only (править — через позиции чека, а не затирая их).
+        if (form.hasDraftItems) {
+            DerivedTotal(form = form)
+        } else {
+            // Крупная сумма по центру: символ валюты группы + tnum-цифры.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = currencySymbol(form.currency),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.inkSecondary,
+                )
+                Spacer(Modifier.width(8.dp))
+                // Шрифт ступенчато уменьшается с длиной числа, чтобы сумма
+                // целиком помещалась на экране (BasicTextField сам не сжимает).
+                val sumFontSize = when {
+                    form.sumText.length <= 6 -> 40.sp
+                    form.sumText.length <= 8 -> 32.sp
+                    else -> 26.sp
+                }
+                BasicTextField(
+                    value = form.sumText,
+                    onValueChange = viewModel::onSumChange,
+                    modifier = Modifier
+                        .widthIn(min = 48.dp)
+                        .weight(1f, fill = false)
+                        .width(IntrinsicSize.Min)
+                        .focusRequester(sumFocusRequester),
+                    textStyle = TextStyle(
+                        color = colors.ink,
+                        fontSize = sumFontSize,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFeatureSettings = "tnum",
+                        textAlign = TextAlign.Center,
+                    ),
+                    singleLine = true,
+                    cursorBrush = SolidColor(colors.accent),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.Center) {
+                            if (form.sumText.isEmpty()) {
+                                Text(
+                                    text = "0",
+                                    fontSize = 40.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.inkSecondary,
+                                    style = TextStyle(fontFeatureSettings = "tnum"),
+                                )
+                            }
+                            innerTextField()
                         }
-                        innerTextField()
-                    }
-                },
-            )
+                    },
+                )
+            }
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** Крупный итог itemized-черновика (read-only): сумма выводится из позиций. */
+@Composable
+private fun DerivedTotal(form: AddExpenseForm) {
+    val colors = Splitty.colors
+    val total = form.itemizedTotal ?: (form.itemizedSubtotal + form.itemizedSurcharges)
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = money(total, form.currency),
+            fontSize = 40.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.ink,
+            style = TextStyle(fontFeatureSettings = "tnum"),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(
+                if (form.hasPricelessItems) R.string.expense_derived_incomplete else R.string.expense_derived_by_positions
+            ),
+            fontSize = 12.sp,
+            color = if (form.hasPricelessItems) colors.negative else colors.inkSecondary,
+        )
     }
 }
 

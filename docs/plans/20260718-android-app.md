@@ -241,11 +241,11 @@
 - Create: `ui/expense/{ItemSheet,UnknownPickerSheet}.kt`
 - Modify: `ui/expense/{AddExpenseScreen,AddExpenseViewModel}.kt`, тесты
 
-- [ ] VM: draftItems-режим, saveBlockedReason (живой «Сохранить» с причиной-тостом), undo-снапшоты (undoParse/collapseToEqualSplit + баннер «Правка применена/Отменить»), resetItems при ручной правке суммы, itemized-сохранение (items в POST/outbox) — снимает запрет Task 1
-- [ ] ItemSheet (Долями/Суммами, живая математика, удалить с confirm); «+ Добавить позицию»; unknown-резолв (пикер участников + alias + тост «Запомнил»)
-- [ ] Нуджи: тап по заблокированным кнопкам → встряска поля группы + тост (гаснет при выборе); подтверждение удаления локальной записи; автоскролл чипов группы
-- [ ] Roborazzi: item-sheet weights/amounts — эталон: `docs/prototype/splitty-ai-proto.html` (состояния «Чек собран», «Позиция без цены», «Саня — кто это?», «Правка голосом», «Нудж без группы»); unit: порт AddExpenseAIFlowTests + DistributionTests (расчётные)
-- [ ] run tests — must pass before next task
+- [x] VM: draftItems-режим, saveBlockedReason (живой «Сохранить» с причиной-тостом), undo-снапшоты (undoParse/collapseToEqualSplit + баннер «Правка применена/Отменить»), resetItems при ручной правке суммы, itemized-сохранение (items в POST/outbox) — снимает запрет Task 1
+- [x] ItemSheet (Долями/Суммами, живая математика, удалить с confirm); «+ Добавить позицию»; unknown-резолв (пикер участников + alias + тост «Запомнил»)
+- [x] Нуджи: тап по заблокированным кнопкам → встряска поля группы + тост (гаснет при выборе); подтверждение удаления локальной записи; автоскролл чипов группы
+- [x] Roborazzi: item-sheet weights/amounts — эталон: `docs/prototype/splitty-ai-proto.html` (состояния «Чек собран», «Позиция без цены», «Саня — кто это?», «Правка голосом», «Нудж без группы»); unit: порт AddExpenseAIFlowTests + DistributionTests (расчётные)
+- [x] run tests — must pass before next task
 
 ### Task 11: AudioRecorder
 
