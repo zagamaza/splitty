@@ -193,10 +193,10 @@
 **Files:**
 - Create: `core/model/OperationItems.kt` (логика поверх DTO из Task 1), тесты
 
-- [ ] Порт `Models.swift` 80–350: kind/split/percent/unknown, `derivedShares()` — ТОЧНОЕ зеркало серверного расчёта (веса, фикс-суммы, surcharge proportional/equally, канонизация)
-- [ ] Порт iOS SharesTests + ItemDraftTests полностью (JVM)
-- [ ] Порт кейсов серверного `internal/api/itemsplit_test.go` (включая overflow/error-ветки) — derivedShares должен сходиться с сервером и на краях
-- [ ] run tests — must pass before next task
+- [x] Порт `Models.swift` 80–350: kind/split/percent/unknown, `derivedShares()` — ТОЧНОЕ зеркало серверного расчёта (веса, фикс-суммы, surcharge proportional/equally, канонизация)
+- [x] Порт iOS SharesTests + ItemDraftTests полностью (JVM)
+- [x] Порт кейсов серверного `internal/api/itemsplit_test.go` (включая overflow/error-ветки) — derivedShares должен сходиться с сервером и на краях
+- [x] run tests — must pass before next task
 
 ### Task 7: Parse-эндпоинт + фото чека (AI без голоса — уже фича)
 
