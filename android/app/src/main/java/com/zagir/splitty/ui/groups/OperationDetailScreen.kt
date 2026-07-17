@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import android.content.Context
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,9 +19,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,35 +39,53 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Operation
+import com.zagir.splitty.core.model.OperationFile
 import com.zagir.splitty.core.model.OperationRecipient
 import com.zagir.splitty.core.model.SplitType
+import com.zagir.splitty.core.model.User
+import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
+import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.components.ZoomableImage
+import com.zagir.splitty.ui.components.decodeDownsampled
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.ui.expense.ReceiptCard
 import com.zagir.splitty.ui.theme.Splitty
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * Карточка операции: hero (описание, дата, крупная сумма), «Детали» — донор
- * и получатели с ХРАНИМЫМИ долями, «Изменить»/«Удалить» для донора.
- * Порт iOS OperationDetailView (без просмотра вложений).
+ * Карточка операции: hero (описание, дата, крупная сумма), «Кто платил»/«Кто
+ * участвует» с ХРАНИМЫМИ долями, «Позиции чека» (read-only ReceiptCard),
+ * «Вложения» (просмотр фото с зумом), «Изменить»/«Удалить».
+ * Порт iOS OperationDetailView.
  *
  * [onEdit] — открыть форму расхода в режиме редактирования (roomId, operationId).
  */
@@ -82,6 +105,8 @@ fun OperationDetailScreen(
     val isDeleting by viewModel.isDeleting.collectAsStateWithLifecycle()
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
     var isDeleteConfirmPresented by remember { mutableStateOf(false) }
+    // Вложение, открытое на просмотр (полноэкранный диалог).
+    var previewFile by remember { mutableStateOf<OperationFile?>(null) }
 
     val colors = Splitty.colors
     val card = (state as? UiState.Content)?.value
@@ -137,11 +162,29 @@ fun OperationDetailScreen(
                     operation = current.value.operation,
                     currency = current.value.currency,
                 )
-                OperationDetailsSection(
+                PayerSection(
                     operation = current.value.operation,
                     currency = current.value.currency,
                     meId = meId,
                 )
+                RecipientsSection(
+                    operation = current.value.operation,
+                    currency = current.value.currency,
+                    meId = meId,
+                )
+                // Позиции чека (itemized-операция AI) — только чтение.
+                if (current.value.operation.itemList.isNotEmpty()) {
+                    ItemsSection(
+                        operation = current.value.operation,
+                        members = current.value.members,
+                        currency = current.value.currency,
+                    )
+                }
+                current.value.operation.files
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let { files ->
+                        AttachmentsSection(files = files, onOpen = { previewFile = it })
+                    }
                 // Редактировать/удалять может любой участник комнаты
                 // (Splitwise-семантика, сервер разрешает участникам).
                 if (meId != null) {
@@ -167,7 +210,14 @@ fun OperationDetailScreen(
                     )
                 )
             },
-            text = { Text(stringResource(R.string.op_delete_message)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (card.operation.isDebtRepayment) R.string.op_delete_repayment_message
+                        else R.string.op_delete_message
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -183,6 +233,13 @@ fun OperationDetailScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             },
+        )
+    }
+    previewFile?.let { file ->
+        AttachmentPreviewDialog(
+            file = file,
+            loadBytes = viewModel::fileData,
+            onDismiss = { previewFile = null },
         )
     }
     GroupsAlertDialog(alertMessage, viewModel::dismissAlert)
@@ -247,12 +304,30 @@ private fun OperationHeroCard(operation: Operation, currency: String) {
 }
 
 /**
- * «Детали»: плательщик и получатели с аватарами и долями. Доли — ХРАНИМЫЕ
- * суммы операции (recipients[].sum): при делении «по суммам» именно они,
- * а не пересчёт поровну.
+ * «Кто платил»/«Кто отправил» — донор с полной суммой. Отдельная секция от
+ * получателей (как iOS): плательщик визуально не смешивается с долгами.
  */
 @Composable
-private fun OperationDetailsSection(operation: Operation, currency: String, meId: Long?) {
+private fun PayerSection(operation: Operation, currency: String, meId: Long?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            stringResource(
+                if (operation.isDebtRepayment) R.string.op_who_sent else R.string.op_who_paid
+            ),
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            DonorRow(operation = operation, currency = currency, meId = meId)
+        }
+    }
+}
+
+/**
+ * «Кто участвует»/«Кто получил» — получатели с ХРАНИМЫМИ долями
+ * (recipients[].sum): при делении «по суммам» именно они, а не пересчёт поровну.
+ */
+@Composable
+private fun RecipientsSection(operation: Operation, currency: String, meId: Long?) {
     val colors = Splitty.colors
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -260,7 +335,12 @@ private fun OperationDetailsSection(operation: Operation, currency: String, meId
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SectionHeader(stringResource(R.string.op_details))
+            SectionHeader(
+                stringResource(
+                    if (operation.isDebtRepayment) R.string.op_who_received
+                    else R.string.op_who_participates
+                )
+            )
             if (!operation.isDebtRepayment) {
                 Text(
                     text = stringResource(
@@ -273,9 +353,8 @@ private fun OperationDetailsSection(operation: Operation, currency: String, meId
             }
         }
         SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-            DonorRow(operation = operation, currency = currency, meId = meId)
-            operation.recipients.forEach { recipient ->
-                HairlineDivider(startIndent = 64.dp)
+            operation.recipients.forEachIndexed { index, recipient ->
+                if (index != 0) HairlineDivider(startIndent = 64.dp)
                 RecipientRow(
                     operation = operation,
                     recipient = recipient,
@@ -285,6 +364,71 @@ private fun OperationDetailsSection(operation: Operation, currency: String, meId
             }
         }
     }
+}
+
+/** «Позиции чека»: read-only ReceiptCard с участниками комнаты. */
+@Composable
+private fun ItemsSection(operation: Operation, members: List<User>, currency: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionHeader(
+            stringResource(R.string.op_items),
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        // Колбэки не передаём — карточка полностью read-only.
+        ReceiptCard(items = operation.itemList, members = members, currency = currency)
+    }
+}
+
+/** «Вложения»: список типов (Фото/Видео/Документ) с открытием на просмотр. */
+@Composable
+private fun AttachmentsSection(files: List<OperationFile>, onOpen: (OperationFile) -> Unit) {
+    val colors = Splitty.colors
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            stringResource(R.string.op_attachments),
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            files.forEachIndexed { index, file ->
+                if (index != 0) HairlineDivider(startIndent = 16.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpen(file) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.AttachFile,
+                        contentDescription = null,
+                        tint = colors.inkSecondary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        text = stringResource(attachmentLabel(file.type)),
+                        fontSize = 15.sp,
+                        color = colors.ink,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = colors.inkSecondary.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Строковый ресурс имени типа вложения. */
+private fun attachmentLabel(type: String): Int = when (attachmentKind(type)) {
+    AttachmentKind.PHOTO -> R.string.attach_photo
+    AttachmentKind.VIDEO -> R.string.attach_video
+    AttachmentKind.DOCUMENT -> R.string.attach_document
+    AttachmentKind.OTHER -> R.string.attach_other
 }
 
 @Composable
@@ -447,4 +591,148 @@ private fun OperationActionsCard(
             )
         }
     }
+}
+
+// MARK: - Просмотр вложения
+
+/** Состояние загрузки вложения на просмотр. */
+private sealed interface AttachmentPreview {
+    data object Loading : AttachmentPreview
+    data class Photo(val bitmap: ImageBitmap) : AttachmentPreview
+    /** Не-фото (видео/документ): временный файл под системный «Поделиться». */
+    data class Shareable(val file: java.io.File) : AttachmentPreview
+    data class Failed(val message: String) : AttachmentPreview
+}
+
+/**
+ * Полноэкранный просмотр вложения — порт iOS OperationFileView. Скачивает
+ * байты через VM (auth-заголовок), фото показывает зумируемым ZoomableImage,
+ * прочее — иконкой с кнопкой «Открыть / поделиться» (временный файл + чузер).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AttachmentPreviewDialog(
+    file: OperationFile,
+    loadBytes: suspend (String) -> ByteArray,
+    onDismiss: () -> Unit,
+) {
+    val colors = Splitty.colors
+    val context = LocalContext.current
+    var reloadKey by remember { mutableIntStateOf(0) }
+    var preview by remember { mutableStateOf<AttachmentPreview>(AttachmentPreview.Loading) }
+
+    LaunchedEffect(file.fileId, reloadKey) {
+        preview = AttachmentPreview.Loading
+        preview = try {
+            val bytes = loadBytes(file.fileId)
+            // Пробуем как картинку независимо от типа: сервер иногда шлёт фото
+            // с type=«photo», а не «image». Не декодировалось — значит не фото.
+            val bitmap = withContext(Dispatchers.Default) { decodeDownsampled(bytes) }
+            if (bitmap != null) {
+                AttachmentPreview.Photo(bitmap)
+            } else {
+                AttachmentPreview.Shareable(withContext(Dispatchers.IO) { cacheAttachment(context, file, bytes) })
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            AttachmentPreview.Failed(humanErrorText(e))
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Scaffold(
+            containerColor = colors.bg,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(stringResource(attachmentLabel(file.type)), fontWeight = FontWeight.Bold)
+                    },
+                    actions = {
+                        TextButton(onClick = onDismiss) {
+                            Text(stringResource(R.string.common_done), color = colors.accent)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = colors.bg,
+                        titleContentColor = colors.ink,
+                    ),
+                )
+            },
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                when (val p = preview) {
+                    AttachmentPreview.Loading -> CircularProgressIndicator(color = colors.accent)
+
+                    is AttachmentPreview.Photo -> ZoomableImage(
+                        bitmap = p.bitmap,
+                        contentDescription = stringResource(attachmentLabel(file.type)),
+                    )
+
+                    is AttachmentPreview.Shareable -> ShareFallback(file = file, tempFile = p.file)
+
+                    is AttachmentPreview.Failed -> FailedState(
+                        message = p.message,
+                        onRetry = { reloadKey++ },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Иконка типа + кнопка системного «Поделиться» для не-фото вложений. */
+@Composable
+private fun ShareFallback(file: OperationFile, tempFile: java.io.File) {
+    val colors = Splitty.colors
+    val context = LocalContext.current
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+    ) {
+        Icon(
+            imageVector = if (attachmentKind(file.type) == AttachmentKind.VIDEO) {
+                Icons.Outlined.Movie
+            } else {
+                Icons.Outlined.Description
+            },
+            contentDescription = null,
+            tint = colors.inkSecondary,
+            modifier = Modifier.size(44.dp),
+        )
+        PrimaryPillButton(
+            text = stringResource(R.string.attach_open_share),
+            onClick = { shareFile(context, tempFile) },
+            modifier = Modifier.padding(horizontal = 40.dp),
+        )
+    }
+}
+
+/** Пишет байты во временный файл cacheDir/attachments для FileProvider-шаринга. */
+private fun cacheAttachment(context: Context, file: OperationFile, bytes: ByteArray): java.io.File {
+    val dir = java.io.File(context.cacheDir, "attachments").apply { mkdirs() }
+    val ext = when (attachmentKind(file.type)) {
+        AttachmentKind.VIDEO -> "mp4"
+        else -> "dat"
+    }
+    return java.io.File(dir, "${file.fileId}.$ext").apply { writeBytes(bytes) }
+}
+
+/** Открывает системный чузер «Поделиться» по content:// URI из FileProvider. */
+private fun shareFile(context: Context, file: java.io.File) {
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = context.contentResolver.getType(uri) ?: "application/octet-stream"
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(Intent.createChooser(intent, null))
 }

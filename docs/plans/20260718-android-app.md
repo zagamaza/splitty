@@ -229,11 +229,11 @@
 **Files:**
 - Modify: `ui/groups/{OperationDetailScreen,OperationDetailViewModel}.kt`; Create: `ui/components/ZoomableImage.kt`
 
-- [ ] OperationDetailViewModel: добавить `room.members` в state (сейчас отдаёт только operation+currency — ReceiptCard без members не отрисовать)
-- [ ] Секция «Позиции чека» (read-only ReceiptCard); секции «Кто платил»/«Кто участвует»
-- [ ] Вложения: список с типами («Фото/Видео/Документ»), просмотр фото через `repository.fileData(fileId)` (auth-заголовок; НЕ сырой URL в Coil), ZoomableImage (transformable 1–4x, double-tap, downsample больших)
-- [ ] Текст удаления погашений («не редактируются — удалите и запишите заново»)
-- [ ] unit VM (members/вложения); run tests — must pass
+- [x] OperationDetailViewModel: добавить `room.members` в state (сейчас отдаёт только operation+currency — ReceiptCard без members не отрисовать)
+- [x] Секция «Позиции чека» (read-only ReceiptCard); секции «Кто платил»/«Кто участвует»
+- [x] Вложения: список с типами («Фото/Видео/Документ»), просмотр фото через `repository.fileData(fileId)` (auth-заголовок; НЕ сырой URL в Coil), ZoomableImage (transformable 1–4x, double-tap, downsample больших)
+- [x] Текст удаления погашений («не редактируются — удалите и запишите заново»)
+- [x] unit VM (members/вложения); run tests — must pass
 
 ### Task 10: Форма расхода — itemized-режим, ItemSheet, нуджи
 

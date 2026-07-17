@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Operation
+import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
@@ -32,10 +33,15 @@ class OperationDetailViewModel @Inject constructor(
     private val sessionStore: SessionStore,
 ) : ViewModel() {
 
-    /** Данные карточки: операция + валюта комнаты (в ней все суммы). */
+    /**
+     * Данные карточки: операция + валюта комнаты (в ней все суммы) + участники
+     * комнаты. [members] нужны ReceiptCard'у секции «Позиции чека» — по userId
+     * доли он рисует аватары; без списка участников чек не отрисовать.
+     */
     data class OperationCard(
         val operation: Operation,
         val currency: String,
+        val members: List<User>,
     )
 
     private val paramsFlow = MutableStateFlow<Pair<String, String>?>(null)
@@ -81,6 +87,12 @@ class OperationDetailViewModel @Inject constructor(
         _alertMessage.value = null
     }
 
+    /**
+     * Байты вложения для просмотра. Идёт через repository (auth-заголовок ставит
+     * OkHttp-интерцептор) — сырой URL в Coil не даст авторизоваться на GET /files.
+     */
+    suspend fun fileData(fileId: String): ByteArray = repository.fileData(fileId)
+
     /** DELETE операции; успех — dataVersion bump и [onDeleted] (закрыть экран). */
     fun delete(onDeleted: () -> Unit) {
         val (roomId, operationId) = paramsFlow.value ?: return
@@ -107,7 +119,13 @@ class OperationDetailViewModel @Inject constructor(
             val room = repository.room(roomId).value
             val operation = room.operations.firstOrNull { it.id == operationId }
             _state.value = if (operation != null) {
-                UiState.Content(OperationCard(operation = operation, currency = room.currency))
+                UiState.Content(
+                    OperationCard(
+                        operation = operation,
+                        currency = room.currency,
+                        members = room.members,
+                    )
+                )
             } else {
                 UiState.Error(OPERATION_NOT_FOUND)
             }
@@ -125,4 +143,19 @@ class OperationDetailViewModel @Inject constructor(
     private companion object {
         const val OPERATION_NOT_FOUND = "Операция не найдена"
     }
+}
+
+/** Тип вложения для показа: сырое значение API («video») в UI пугает. */
+enum class AttachmentKind { PHOTO, VIDEO, DOCUMENT, OTHER }
+
+/**
+ * Категория вложения по сырому типу API. Зеркало iOS `attachmentTypeName`:
+ * «photo»/«image» → фото, «video» → видео, «document» → документ, прочее —
+ * нейтральное «вложение».
+ */
+fun attachmentKind(type: String): AttachmentKind = when (type) {
+    "photo", "image" -> AttachmentKind.PHOTO
+    "video" -> AttachmentKind.VIDEO
+    "document" -> AttachmentKind.DOCUMENT
+    else -> AttachmentKind.OTHER
 }

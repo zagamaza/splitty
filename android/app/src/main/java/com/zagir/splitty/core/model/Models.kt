@@ -212,6 +212,9 @@ data class Operation(
 ) {
     val hasFiles: Boolean get() = !files.isNullOrEmpty()
 
+    /** Позиции чека без опциональности (зеркало iOS `operation.itemList`). */
+    val itemList: List<OperationItem> get() = items ?: emptyList()
+
     /**
      * Операция «касается» пользователя: он платил или есть в получателях
      * (фильтры «Со мной» на экране группы и «Только мои» в активности).

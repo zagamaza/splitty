@@ -237,6 +237,24 @@
     <string name="op_delete_expense_title">Удалить расход?</string>
     <string name="op_delete_repayment_title">Удалить платёж?</string>
     <string name="op_delete_message">Операция исчезнет из группы, балансы пересчитаются.</string>
+    <!-- У погашений нет «Изменить» — объясняем, как исправить ошибку. -->
+    <string name="op_delete_repayment_message">Операция исчезнет из группы, балансы пересчитаются. Погашения не редактируются — при ошибке удалите и запишите заново.</string>
+
+    <!-- Группы: секции карточки операции -->
+    <string name="op_who_paid">Кто платил</string>
+    <string name="op_who_sent">Кто отправил</string>
+    <string name="op_who_participates">Кто участвует</string>
+    <string name="op_who_received">Кто получил</string>
+    <string name="op_items">Позиции чека</string>
+
+    <!-- Группы: вложения операции -->
+    <string name="op_attachments">Вложения</string>
+    <string name="attach_photo">Фото</string>
+    <string name="attach_video">Видео</string>
+    <string name="attach_document">Документ</string>
+    <string name="attach_other">Вложение</string>
+    <string name="attach_open_share">Открыть / поделиться</string>
+    <string name="common_done">Готово</string>
 
     <!-- Группы: итоги (дашборд) -->
     <string name="group_tab_operations">Операции</string>
