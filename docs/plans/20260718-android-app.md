@@ -121,10 +121,10 @@
 **Files:**
 - Modify: gradle-файлы, `AndroidManifest.xml`
 
-- [ ] AGP 8.9.1+ (минимум для API 36; wrapper 8.14 совместим), Kotlin/KSP 2.2.x, compileSdk/targetSdk **36**; Compose BOM — НЕ слепо свежий, а совместимый с compileSdk 36 (новейшие могут требовать 37/AGP 9 — проверить release notes)
-- [ ] `android:enableOnBackInvokedCallback="true"` (predictive back), убрать ручной `configChanges`
-- [ ] Полный прогон существующих 48 тестов после бампа
-- [ ] run tests — must pass before next task
+- [x] AGP 8.9.1+ (минимум для API 36; wrapper 8.14 совместим), Kotlin/KSP 2.2.x, compileSdk/targetSdk **36**; Compose BOM — НЕ слепо свежий, а совместимый с compileSdk 36 (новейшие могут требовать 37/AGP 9 — проверить release notes)
+- [x] `android:enableOnBackInvokedCallback="true"` (predictive back), убрать ручной `configChanges`
+- [x] Полный прогон существующих 48 тестов после бампа
+- [x] run tests — must pass before next task
 
 ### Task 2b: Токен в Keystore (миграция без разлогина)
 
