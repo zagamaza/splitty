@@ -13,7 +13,7 @@ Android-клиент Splitty (клон iOS-приложения `ios/`, UX Split
 - DataStore Preferences (токен, адрес сервера)
 - MVVM + UDF: `StateFlow`, sealed `UiState` (`core/UiState.kt`)
 - Gradle version catalog (`gradle/libs.versions.toml`), wrapper 8.14
-- compileSdk/targetSdk 35, minSdk 26, applicationId `com.zagir.splitty`
+- compileSdk/targetSdk 36, minSdk 26, applicationId `com.zagir.splitty`
 
 ## Сборка
 
@@ -21,8 +21,40 @@ Android-клиент Splitty (клон iOS-приложения `ios/`, UX Split
 
 ```bash
 ./gradlew :app:assembleDebug          # APK: app/build/outputs/apk/debug/
-./gradlew :app:testDebugUnitTest      # юнит-тесты (деньги, DTO, код входа)
+./gradlew :app:testDebugUnitTest      # юнит-тесты (обязательны перед коммитом)
+./gradlew :app:verifyRoborazziDebug   # скриншот-тесты дизайн-системы
+./gradlew :app:recordRoborazziDebug   # перезаписать эталоны после правок UI
+./gradlew :app:lintDebug              # Android Lint
+./gradlew :app:assembleRelease        # R8-сборка + verifyReleaseShrinking
 ```
+
+Эталоны Roborazzi лежат в `app/build/outputs/roborazzi/` и **не
+версионируются**: `verifyRoborazziDebug` ловит падения рендера Compose, а не
+пиксельную регрессию между машинами. Сверка с iOS-снапшотами и
+`docs/prototype/splitty-ai-proto.html` — ручная (см. план, Task 15).
+
+## Релиз и раздача тестерам
+
+- **R8 включён** в release (`isMinifyEnabled` + `isShrinkResources`).
+  Всё рефлексивное (сериализаторы kotlinx, Retrofit-интерфейсы, Vosk)
+  держится правилами в `app/proguard-rules.pro`. После `assembleRelease`
+  автоматически идёт `verifyReleaseShrinking` — читает `mapping.txt` и
+  падает, если R8 выкинул сериализаторы или точки входа (иначе поломка
+  всплыла бы только в рантайме у тестера).
+- **Подпись**: `keystore.properties` в корне `android/` (в .gitignore) —
+  `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. Без файла
+  release собирается неподписанным.
+- **Firebase App Distribution**: `firebase.properties` в корне `android/`
+  (в .gitignore) — `appId`, `groups` (по умолчанию `testers`),
+  `serviceCredentialsFile` (путь к service-account json). Раздача:
+
+  ```bash
+  ./gradlew :app:assembleRelease :app:appDistributionUploadRelease
+  ```
+
+  Заметки к сборке — `app/release-notes.txt`.
+- **CI**: `.github/workflows/android.yml` (только на изменения в `android/`) —
+  юнит-тесты, Roborazzi, lint, `assembleDebug` и `assembleRelease` с R8-smoke.
 
 ## Структура
 
@@ -89,20 +121,31 @@ app/src/main/java/com/zagir/splitty/
 
 ## Сервер
 
-Дефолтный адрес — `http://138.124.18.189:18002` (меняется на экране входа,
-поле «Сервер»; для локального бэкенда на эмуляторе — `http://10.0.2.2:7171`).
-Cleartext HTTP разрешён через `res/xml/network_security_config.xml`.
-Вход: код из Telegram-бота `@split_money_bot` (команда `/login`) либо
-dev-вход (`POST /auth/dev`, работает только при `API_DEV_AUTH=true` на сервере).
+Адрес по умолчанию зависит от варианта (`SessionStore.DEFAULT_BASE_URL`):
+в debug — дев-сервер по HTTP, в release — HTTPS-плейсхолдер прод-домена.
+Поле «Сервер» на экране входа доступно только в debug (для локального
+бэкенда на эмуляторе — `http://10.0.2.2:7171`).
 
-## Что ещё не сделано (для следующих агентов)
+Cleartext HTTP разрешён **только в debug**: конфиги разные по вариантам —
+`src/debug/res/xml/network_security_config.xml` и
+`src/release/res/xml/network_security_config.xml` (release cleartext
+запрещает, боевой сервер обязан быть на HTTPS).
 
-Вкладки главного экрана — заглушки (см. `TODO(screens)` в `MainScaffold.kt`):
+Вход: код из Telegram-бота `@split_money_bot` (команда `/login`, код —
+8 символов) либо dev-вход (`POST /auth/dev`, только в debug и при
+`API_DEV_AUTH=true` на сервере).
 
-- Друзья: список балансов (`GET /friends`) + деталь друга
-- Группы: список (`GET /rooms`), деталь группы, балансы/итоги, создание/join,
-  настройки (валюта, архив)
-- Форма добавления расхода (equally / by_exact_amount, предпросмотр долей `shares()`)
-- Активность: лента (`GET /activity`, пагинация limit/offset)
-- Профиль: `GET/PATCH /me`, выход
-- Settle up: погашение долгов (`POST /rooms/{id}/repayments`)
+## Состояние
+
+Все экраны реализованы: группы (список, деталь, дашборд, настройки, создание,
+join), друзья (список + деталь), активность, профиль и уведомления,
+погашение долгов, форма расхода (equally / by_exact_amount / itemized).
+
+AI-флоу на паритете с iOS: hold-to-talk с оверлеем записи, фото чека,
+`POST /rooms/{id}/operations/parse`, чек с позициями (`ReceiptCard`),
+правка позиций (`ItemSheet`), undo и нуджи. Караоке-транскрипт готов, но
+выключен флагом `BuildConfig.KARAOKE_TRANSCRIPT` — ждёт прогона на железе.
+
+Осознанно отложено: WorkManager для outbox (сейчас досылка только при живом
+приложении), type-safe навигация, Room вместо файловых сторов, Coil,
+дисковый кеш аватаров, публикация в Play Console.

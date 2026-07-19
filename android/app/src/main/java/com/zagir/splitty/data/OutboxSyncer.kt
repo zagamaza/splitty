@@ -28,13 +28,27 @@ import kotlinx.coroutines.sync.Mutex
  * потерянного ответа возвращает существующую операцию, а не создаёт дубль.
  */
 @Singleton
-class OutboxSyncer @Inject constructor(
+class OutboxSyncer internal constructor(
     private val outbox: OutboxStore,
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
-    private val networkMonitor: NetworkMonitor,
-    @ApplicationScope private val scope: CoroutineScope,
+    /**
+     * Признак сети как поток, а не сам NetworkMonitor: монитор Android-зависим
+     * (ConnectivityManager), а ветвление судьбы записи — чистая логика, и её
+     * надо гонять юнит-тестами без Robolectric.
+     */
+    private val isOnline: StateFlow<Boolean>,
+    private val scope: CoroutineScope,
 ) {
+    @Inject
+    constructor(
+        outbox: OutboxStore,
+        repository: SplittyRepository,
+        sessionStore: SessionStore,
+        networkMonitor: NetworkMonitor,
+        @ApplicationScope scope: CoroutineScope,
+    ) : this(outbox, repository, sessionStore, networkMonitor.isOnline, scope)
+
     private val mutex = Mutex()
 
     private val _isSyncing = MutableStateFlow(false)
@@ -47,7 +61,7 @@ class OutboxSyncer @Inject constructor(
             // Прогреваем outbox (entries-StateFlow наполняется до первого экрана)
             // и досылаем на каждое появление сети, включая старт приложения.
             outbox.awaitLoaded()
-            networkMonitor.isOnline.collect { online ->
+            isOnline.collect { online ->
                 if (online) sync()
             }
         }
@@ -62,7 +76,7 @@ class OutboxSyncer @Inject constructor(
         if (!mutex.tryLock()) return // синк уже идёт
         try {
             if (sessionStore.currentToken() == null) return
-            if (!networkMonitor.isOnline.value) return
+            if (!isOnline.value) return
             outbox.awaitLoaded()
             val queue = outbox.entries.value.filter { it.status == OutboxStatus.PENDING }
             if (queue.isEmpty()) return

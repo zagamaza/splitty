@@ -1,0 +1,61 @@
+name: Android
+
+on:
+  push:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 21: Robolectric 4.13 не работает на JDK 24, а сборке 21 достаточно
+      # (compileOptions/jvmTarget проекта — 17).
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew :app:testDebugUnitTest
+
+      # Скриншот-тесты: эталоны лежат в build/ и не версионируются, поэтому
+      # шаг ловит падения рендера Compose, а не пиксельную регрессию —
+      # сверка с iOS-снапшотами остаётся ручной (Task 15).
+      - name: Roborazzi
+        run: ./gradlew :app:verifyRoborazziDebug
+
+      - name: Lint
+        run: ./gradlew :app:lintDebug
+
+      - name: Assemble debug
+        run: ./gradlew :app:assembleDebug
+
+      # Release-сборка гоняет R8 и verifyReleaseShrinking: без этого шага
+      # «выкинутый сериализатор» всплывёт только у тестера в рантайме.
+      - name: Assemble release (R8 smoke)
+        run: ./gradlew :app:assembleRelease
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/roborazzi/

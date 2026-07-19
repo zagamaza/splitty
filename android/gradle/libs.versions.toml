@@ -26,6 +26,8 @@ junit = "4.13.2"
 # устройства, Roborazzi снимает/сверяет PNG. Robolectric 4.13 — под кэш SDK 34.
 robolectric = "4.13"
 roborazzi = "1.44.0"
+# Раздача релизных сборок тестерам (Task 14).
+firebaseAppDistribution = "5.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -76,3 +78,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+firebase-appdistribution = { id = "com.google.firebase.appdistribution", version.ref = "firebaseAppDistribution" }

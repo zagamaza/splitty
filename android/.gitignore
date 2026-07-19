@@ -10,3 +10,5 @@ captures/
 
 keystore/
 keystore.properties
+
+firebase.properties

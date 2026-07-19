@@ -289,12 +289,18 @@
 **Files:**
 - Modify: `app/build.gradle.kts`, `proguard-rules.pro`; Create: `.github/workflows/android.yml`
 
-- [ ] R8: isMinifyEnabled + shrinkResources, keep-правила Retrofit/OkHttp (+Vosk если включён), **smoke minified-сборки**
-- [ ] CI: assembleDebug + testDebugUnitTest + lint (+ verifyRoborazziDebug)
-- [ ] Тесты ядра: OutboxSyncer (4xx/5xx/401-ветвление), SplittyRepository (fallback на кеш)
-- [ ] Firebase App Distribution: release-сборка, группа тестеров
-- [ ] Актуализировать android/README («не сделано» уже сделано; новые команды)
-- [ ] run tests — must pass before next task
+- [x] R8: isMinifyEnabled + shrinkResources, keep-правила Retrofit/OkHttp (+Vosk если включён), **smoke minified-сборки**
+  (smoke автоматизирован задачей `verifyReleaseShrinking`: читает mapping.txt
+  и падает, если R8 выкинул сериализаторы или точки входа)
+- [x] CI: assembleDebug + testDebugUnitTest + lint (+ verifyRoborazziDebug)
+  (`.github/workflows/android.yml`, плюс assembleRelease как R8-smoke)
+- [x] Тесты ядра: OutboxSyncer (4xx/5xx/401-ветвление), SplittyRepository (fallback на кеш)
+  (в OutboxSyncer заведён шов: признак сети приходит StateFlow'ом, а не
+  Android-зависимым NetworkMonitor — ветвление гоняется без Robolectric)
+- [x] Firebase App Distribution: release-сборка, группа тестеров
+  (плагин + `firebase.properties` вне git; команда — в android/README)
+- [x] Актуализировать android/README («не сделано» уже сделано; новые команды)
+- [x] run tests — must pass before next task
 
 ### Task 15: Verify acceptance criteria
 
