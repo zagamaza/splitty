@@ -25,6 +25,9 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.ActivityCompat
+import com.zagir.splitty.ui.expense.transcribe.NoopTranscriber
+import com.zagir.splitty.ui.expense.transcribe.Transcriber
+import com.zagir.splitty.ui.expense.transcribe.rememberTranscriber
 import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlin.math.log10
@@ -72,7 +75,18 @@ class AudioRecorderException(message: String) : Exception(message)
  * Живая логика записи не тестируется на JVM (нужно железо); чистая математика —
  * [wrapWav]/[rmsLevel]/[resampleTo16k]/[CappedPcmBuffer] — покрыта unit-тестами.
  */
-class AudioRecorderController(private val context: Context) : VoiceRecorder {
+class AudioRecorderController(
+    private val context: Context,
+    /**
+     * Караоке-транскрипт: кормится ТЕМ ЖЕ PCM, что уходит в WAV (второй захват
+     * микрофона запрещён). По умолчанию выключен — [NoopTranscriber].
+     */
+    private val transcriber: Transcriber = NoopTranscriber,
+) : VoiceRecorder {
+
+    /** Текст караоке или null, если ступень транскрипции выключена (окна нет). */
+    val transcript: String?
+        get() = if (transcriber.isEnabled) transcriber.transcript else null
     /** true — идёт запись (подсветка микрофона и оверлея). */
     override var isRecording by mutableStateOf(false)
         private set
@@ -117,6 +131,7 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
         isRecording = true
         startedAtElapsedMs = SystemClock.elapsedRealtime()
         level = 0f
+        transcriber.start()
 
         val thread = Thread({ readLoop(rec, sampleRate) }, "splitty-audio")
         thread.priority = Thread.MAX_PRIORITY
@@ -142,7 +157,9 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
             val samples16k =
                 if (sampleRate == AUDIO_TARGET_SAMPLE_RATE) frame.copyOf(read)
                 else resampleTo16k(frame, read, sampleRate)
-            pcm.append(shortsToLittleEndian(samples16k))
+            val bytes = shortsToLittleEndian(samples16k)
+            pcm.append(bytes)
+            transcriber.feed(bytes)
             val lvl = rmsLevel(samples16k)
             mainHandler.post { if (isRecording) level = lvl }
         }
@@ -158,6 +175,7 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
         readThread?.join(500)
         readThread = null
         releaseRecord()
+        transcriber.stop()
         isRecording = false
         startedAtElapsedMs = null
         level = 0f
@@ -180,6 +198,8 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
         readThread?.join(500)
         readThread = null
         releaseRecord()
+        transcriber.stop()
+        transcriber.reset()
         pcm.reset()
         isRecording = false
         startedAtElapsedMs = null
@@ -190,6 +210,7 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
     override fun reset() {
         audioData = null
         lastAudioPath = null
+        transcriber.reset()
     }
 
     /** Пробует источники×частоты по порядку; возвращает первую инициализированную запись. */
@@ -259,7 +280,10 @@ class AudioRecorderController(private val context: Context) : VoiceRecorder {
 @Composable
 fun rememberAudioRecorder(): AudioRecorderController {
     val context = LocalContext.current
-    val controller = remember { AudioRecorderController(context.applicationContext) }
+    val transcriber = rememberTranscriber()
+    val controller = remember(transcriber) {
+        AudioRecorderController(context.applicationContext, transcriber)
+    }
     DisposableEffect(Unit) {
         onDispose { controller.cancel() }
     }

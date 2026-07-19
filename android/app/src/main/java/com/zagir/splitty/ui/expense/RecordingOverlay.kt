@@ -49,8 +49,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -90,6 +94,7 @@ fun RecordingOverlay(
     startedAtElapsedMs: Long?,
     micFrame: androidx.compose.ui.geometry.Rect?,
     hints: List<String>,
+    transcript: String? = null,
     onStop: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -170,6 +175,7 @@ fun RecordingOverlay(
         RecordingContent(
             hints = hints,
             showHints = hints.isNotEmpty() && !isCancelling,
+            transcript = transcript,
             isActive = isActive,
             isCancelling = isCancelling,
             isLocked = isLocked,
@@ -281,6 +287,7 @@ fun RecordingOverlay(
 private fun RecordingContent(
     hints: List<String>,
     showHints: Boolean,
+    transcript: String?,
     isActive: Boolean,
     isCancelling: Boolean,
     isLocked: Boolean,
@@ -297,6 +304,13 @@ private fun RecordingContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {
+        if (transcript != null && !isCancelling) {
+            KaraokeWindow(
+                transcript = transcript,
+                reduceMotion = reduceMotion,
+                modifier = Modifier.padding(bottom = 20.dp),
+            )
+        }
         if (showHints) {
             HintsCard(hints = hints)
             Spacer(modifier = Modifier.height(24.dp))
@@ -687,6 +701,66 @@ private fun StatusTexts(
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
+        }
+    }
+}
+
+/**
+ * Транскрипт-«телесуфлёр» (караоке): окно ~3 строки, текст прижат к низу —
+ * свежие слова всегда видны, старые уезжают вверх и растворяются в градиентной
+ * маске. Порт iOS `transcriptWindow`. Показывается только когда транскрайбер
+ * включён (флаг KARAOKE_TRANSCRIPT и живой движок) — иначе окна нет вовсе.
+ */
+@Composable
+private fun KaraokeWindow(
+    transcript: String,
+    reduceMotion: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    // Маска «растворения» сверху рисуется поверх содержимого в DstIn: обычный
+    // градиент-фон закрасил бы затемнение оверлея прямоугольником.
+    val fade = remember {
+        Brush.verticalGradient(
+            0f to Color.Transparent,
+            0.4f to Color.Black,
+            1f to Color.Black,
+        )
+    }
+    Box(
+        modifier = modifier
+            .widthIn(max = 320.dp)
+            .height(128.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(brush = fade, blendMode = BlendMode.DstIn)
+            },
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Crossfade(
+            targetState = transcript,
+            animationSpec = if (reduceMotion) snap() else tween(durationMillis = 180),
+            label = "karaokeTranscript",
+        ) { text ->
+            if (text.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.rec_karaoke_listening),
+                    color = Color.White.copy(alpha = 0.45f),
+                    fontSize = 19.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+            } else {
+                Text(
+                    text = text,
+                    color = Color.White,
+                    fontSize = 21.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 27.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }

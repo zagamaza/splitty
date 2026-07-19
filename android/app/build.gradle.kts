@@ -21,6 +21,12 @@ android {
         targetSdk = 36
         versionCode = 5
         versionName = "1.3"
+
+        // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный
+        // SpeechRecognizer (API 33+) → Vosk-модель on-demand → без караоке. Пока
+        // выключен: качество распознавания на устройствах проверяется PoC-прогоном,
+        // а сам parse работает от аудио и без транскрипта.
+        buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "false")
     }
 
     // Подпись release: ключ и пароли в keystore.properties (в .gitignore).

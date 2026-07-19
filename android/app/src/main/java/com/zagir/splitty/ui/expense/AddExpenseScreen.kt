@@ -462,6 +462,8 @@ fun AddExpenseScreen(
         startedAtElapsedMs = recorder.startedAtElapsedMs,
         micFrame = micFrame,
         hints = form?.missingInfoHints.orEmpty(),
+        // null — ступень караоке выключена: окна транскрипта нет вовсе.
+        transcript = recorder.transcript,
         onStop = voice::stopLocked,
         onCancel = voice::cancelLocked,
     )

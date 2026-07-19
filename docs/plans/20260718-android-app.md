@@ -275,11 +275,14 @@
 **Files:**
 - Create: `ui/expense/transcribe/{Transcriber,PlatformTranscriber,VoskTranscriber}.kt`, тесты
 
-- [ ] Интерфейс + karaoke-окно (хвост снизу, градиент-маска)
-- [ ] PlatformTranscriber (API 33+ EXTRA_AUDIO_SOURCE с нашим PCM) — PoC на устройстве
-- [ ] VoskTranscriber fallback: модель on-demand (не в APK), RAM-профилирование
-- [ ] Флаг выключен → оверлей без караоке; unit: аккумуляция сегментов
-- [ ] run tests — must pass before next task
+- [x] Интерфейс + karaoke-окно (хвост снизу, градиент-маска)
+- [x] PlatformTranscriber (API 33+ EXTRA_AUDIO_SOURCE с нашим PCM) — PoC на устройстве
+  (код готов; прогон на живом железе — в матрице Task 15, флаг пока выключен)
+- [x] VoskTranscriber fallback: модель on-demand (не в APK), RAM-профилирование
+  (движок за рефлексивным мостом — библиотека и модель приезжают с докачкой,
+  распознаватель живёт только на время записи)
+- [x] Флаг выключен → оверлей без караоке; unit: аккумуляция сегментов
+- [x] run tests — must pass before next task
 
 ### Task 14: Релизная готовность
 

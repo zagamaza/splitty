@@ -48,6 +48,7 @@ class RecordingOverlaySnapshotTest {
         level: Float = 0.55f,
         startedAtElapsedMs: Long? = 0L,
         hints: List<String> = emptyList(),
+        transcript: String? = null,
     ) {
         // Оверлей держит собственный цикл кадров (таймер, волна, пульс). С
         // автопрокруткой часов композиция никогда не «успокоится» — фиксируем время.
@@ -66,6 +67,7 @@ class RecordingOverlaySnapshotTest {
                         startedAtElapsedMs = startedAtElapsedMs,
                         micFrame = micFrame,
                         hints = hints,
+                        transcript = transcript,
                         onStop = {},
                         onCancel = {},
                     )
@@ -99,6 +101,18 @@ class RecordingOverlaySnapshotTest {
     @Test fun recordingLocked() = snapshot(
         name = "recording_overlay_locked_light",
         isLocked = true,
+    )
+
+    // Караоке-транскрипт (Task 13, за флагом): окно-«телесуфлёр» над волной.
+    @Test fun recordingKaraoke() = snapshot(
+        name = "recording_overlay_karaoke_light",
+        transcript = "пицца за 800 и кола за 200 пополам с Саней",
+    )
+
+    // Караоке включено, но человек ещё молчит: плейсхолдер «Слушаю…».
+    @Test fun recordingKaraokeListening() = snapshot(
+        name = "recording_overlay_karaoke_empty_light",
+        transcript = "",
     )
 
     // Палец нажат, движок ещё не поднялся: спиннер-дуга, таймера нет.

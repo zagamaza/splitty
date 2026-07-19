@@ -353,6 +353,7 @@
     <string name="expense_voice_correction_a11y">Поправить голосом</string>
     <string name="rec_listening">Слушаю…</string>
     <string name="rec_hints_title">Осталось уточнить</string>
+    <string name="rec_karaoke_listening">Слушаю…</string>
     <string name="rec_status_cancel_title">Отпустите — отмена</string>
     <string name="rec_status_cancel_sub">Верните палец, чтобы продолжить</string>
     <string name="rec_status_locked_title">Запись идёт</string>
