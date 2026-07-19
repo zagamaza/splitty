@@ -847,21 +847,52 @@ class AddExpenseViewModel @Inject constructor(
 
     /**
      * Распознать расход по фото чека: путь к JPEG (в cacheDir) сохраняется в
-     * SavedStateHandle — переживает process death и нужен «Повторить». Запуск —
-     * [launchParse]; обгон предыдущего запроса — через [parseGeneration].
+     * SavedStateHandle — переживает process death и нужен «Повторить». Фото
+     * уходит ВМЕСТЕ с уже записанным голосом (если он был): Gemini сопоставляет
+     * цены с чека и распределение из голоса в одном запросе. Запуск — [launchParse].
      */
     fun parseReceiptImage(path: String) {
         savedStateHandle[KEY_RECEIPT_PATH] = path
-        launchParse { readImageBytes(path) }
+        launchParse()
     }
 
     /**
-     * Повторить распознавание последнего фото (кнопка «Повторить» на баннере
-     * ошибки): диктовка/фото НЕ потеряны — читаем из сохранённого пути.
+     * Распознать расход по голосу: путь к WAV (в cacheDir) сохраняется в
+     * SavedStateHandle (переживает process death, нужен для «Повторить»).
+     * Голос уходит вместе с уже приложенным фото чека (Task 12). Новая диктовка
+     * ЗАМЕНЯЕТ предыдущий голос (перезапись KEY_AUDIO_PATH).
+     */
+    fun parseVoice(audioPath: String) {
+        savedStateHandle[KEY_AUDIO_PATH] = audioPath
+        launchParse()
+    }
+
+    /**
+     * Приложить голос к форме БЕЗ запуска распознавания (экран «Записано» →
+     * «Добавить фото чека»): путь к WAV сохраняется, чтобы последующий
+     * [parseReceiptImage] отправил голос и фото одним запросом.
+     */
+    fun attachAudio(audioPath: String) {
+        savedStateHandle[KEY_AUDIO_PATH] = audioPath
+    }
+
+    /**
+     * Отбросить приложенную диктовку («Отменить запись» на экране «Записано»):
+     * иначе следующее фото чека ушло бы вместе с отменённым голосом.
+     */
+    fun discardAudio() {
+        savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+    }
+
+    /**
+     * Повторить распознавание (кнопка «Повторить» на баннере ошибки): диктовка
+     * и фото НЕ потеряны — читаем из сохранённых путей. Нет ни голоса, ни фото —
+     * повторять нечего.
      */
     fun retryParse() {
-        val path = savedStateHandle.get<String>(KEY_RECEIPT_PATH) ?: return
-        launchParse { readImageBytes(path) }
+        val hasMedia = savedStateHandle.get<String>(KEY_AUDIO_PATH) != null ||
+            savedStateHandle.get<String>(KEY_RECEIPT_PATH) != null
+        if (hasMedia) launchParse()
     }
 
     /**
@@ -877,12 +908,13 @@ class AddExpenseViewModel @Inject constructor(
     fun dismissParseRetry() = updateForm { it.copy(parseRetryMessage = null) }
 
     /**
-     * Общий запуск распознавания: помечает форму isParsing, шлёт медиа + текущий
-     * черновик на /parse, применяет ответ. Ошибка НЕ теряет черновик — форма как
-     * была, показывается баннер «Повторить». Новый запрос обгоняет активный
-     * (см. [parseGeneration]); ответ устаревшего запроса выбрасывается.
+     * Общий запуск распознавания: помечает форму isParsing, шлёт медиа (голос
+     * и/или фото из сохранённых путей) + текущий черновик на /parse, применяет
+     * ответ. Ошибка НЕ теряет черновик — форма как была, показывается баннер
+     * «Повторить». Новый запрос обгоняет активный (см. [parseGeneration]); ответ
+     * устаревшего запроса выбрасывается.
      */
-    private fun launchParse(loadImage: suspend () -> ByteArray?) {
+    private fun launchParse() {
         val form = currentForm() ?: return
         val roomId = form.selectedRoomId
         if (roomId == null) {
@@ -894,10 +926,13 @@ class AddExpenseViewModel @Inject constructor(
         updateForm { it.copy(isParsing = true, parseRetryMessage = null) }
         // Текущий черновик — для голосовой правки (Task 12); при первом фото — null.
         val draft = form.currentParseDraft()
+        val audioPath = savedStateHandle.get<String>(KEY_AUDIO_PATH)
+        val imagePath = savedStateHandle.get<String>(KEY_RECEIPT_PATH)
         viewModelScope.launch {
             try {
-                val image = loadImage()
-                val response = repository.parseOperation(roomId, image = image, draft = draft)
+                val audio = audioPath?.let { readBytes(it) }
+                val image = imagePath?.let { readBytes(it) }
+                val response = repository.parseOperation(roomId, audio = audio, image = image, draft = draft)
                 if (generation != parseGeneration) return@launch // обогнан — игнор
                 updateForm { it.applyingParse(response).copy(isParsing = false) }
                 persistDraft()
@@ -910,7 +945,7 @@ class AddExpenseViewModel @Inject constructor(
         }
     }
 
-    private suspend fun readImageBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
+    private suspend fun readBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
         File(path).takeIf { it.exists() }?.readBytes()
     }
 
@@ -1143,5 +1178,8 @@ class AddExpenseViewModel @Inject constructor(
 
         /** Путь к JPEG чека в cacheDir — для «Повторить» после process death. */
         const val KEY_RECEIPT_PATH = "expense_receipt_path"
+
+        /** Путь к WAV голоса в cacheDir — для «Повторить» и досыла с фото (Task 12). */
+        const val KEY_AUDIO_PATH = "expense_audio_path"
     }
 }

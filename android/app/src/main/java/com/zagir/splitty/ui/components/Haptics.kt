@@ -14,15 +14,28 @@ import androidx.compose.ui.platform.LocalView
 // iOS: tap на выбор чипов/фильтров, success на сохранение/платёж, warning на
 // тап по заблокированной кнопке (нудж).
 
-/** Тактильный отклик, привязанный к текущему [View] (нужен для вибро). */
-class Haptics(private val view: View) {
+/**
+ * Тактильный отклик. Интерфейс, а не класс: машина состояний голосового ввода
+ * (VoiceController) проверяет контракт откликов юнит-тестами на JVM, где View нет.
+ */
+interface Haptics {
     /** Лёгкий отклик на выбор/переключение (чипы, radio, чекбоксы). */
-    fun tap() {
+    fun tap()
+
+    /** Успешное сохранение/платёж/создание. */
+    fun success()
+
+    /** Действие недоступно/требует внимания (тап по заблокированной кнопке). */
+    fun warning()
+}
+
+/** Боевая реализация: отклик через текущий [View] (он владеет вибромотором). */
+class ViewHaptics(private val view: View) : Haptics {
+    override fun tap() {
         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
     }
 
-    /** Успешное сохранение/платёж/создание. */
-    fun success() {
+    override fun success() {
         // CONFIRM (API 30+) — «успех»; на старых версиях лёгкий VIRTUAL_KEY.
         val constant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             HapticFeedbackConstants.CONFIRM
@@ -32,8 +45,7 @@ class Haptics(private val view: View) {
         view.performHapticFeedback(constant)
     }
 
-    /** Действие недоступно/требует внимания (тап по заблокированной кнопке). */
-    fun warning() {
+    override fun warning() {
         // REJECT (API 30+) — «отказ»; на старых версиях LONG_PRESS как «стоп».
         val constant = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             HapticFeedbackConstants.REJECT
@@ -48,5 +60,5 @@ class Haptics(private val view: View) {
 @Composable
 fun rememberHaptics(): Haptics {
     val view = LocalView.current
-    return remember(view) { Haptics(view) }
+    return remember(view) { ViewHaptics(view) }
 }

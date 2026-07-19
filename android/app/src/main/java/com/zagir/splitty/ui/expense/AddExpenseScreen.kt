@@ -1,6 +1,9 @@
 package com.zagir.splitty.ui.expense
 
+import android.os.SystemClock
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +39,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.WarningAmber
@@ -54,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -63,12 +68,22 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -140,6 +155,78 @@ fun AddExpenseScreen(
     var itemEditIndex by remember { mutableStateOf<Int?>(null) }
     var unknownTarget by remember { mutableStateOf<UnknownTarget?>(null) }
 
+    // --- Голосовой ввод (Task 12) ---
+    val context = LocalContext.current
+    val recorder = rememberAudioRecorder()
+    val talkBack = rememberTouchExploration()
+    val voice = remember(recorder, haptics, talkBack) {
+        VoiceController(recorder = recorder, haptics = haptics, talkBack = talkBack)
+    }
+    // Ручной режим: композер уступает место обычным полям (порт iOS manualMode).
+    var manualMode by remember { mutableStateOf(false) }
+    // Фактический фрейм кнопки-микрофона: оверлей рисует свой микрофон РОВНО там
+    // же и того же размера — кнопка визуально «продолжается» в оверлей.
+    var micFrame by remember { mutableStateOf<Rect?>(null) }
+    // Записанное, но ещё не отправленное: экран «Записано» (выбор фото/распознать).
+    var pendingAudioPath by remember { mutableStateOf<String?>(null) }
+    var micPermissionDenied by remember { mutableStateOf(false) }
+    // Подтверждение отмены закреплённой записи по системному «назад».
+    var confirmCancelLocked by remember { mutableStateOf(false) }
+
+    val showComposer = form?.isEmptyForm == true && !manualMode
+    // AI требует сети и выбранной группы; кнопки остаются живыми — тап объясняет.
+    val aiDisabledReason = when {
+        !isOnline -> stringResource(R.string.expense_composer_ai_offline)
+        form?.selectedRoomId == null -> stringResource(R.string.expense_composer_ai_no_group)
+        else -> null
+    }
+
+    voice.onFinish = { path ->
+        if (showComposer) {
+            // Первая надиктовка на пустой форме: сначала спрашиваем про фото
+            // чека — оно уйдёт вместе с голосом одним запросом (точнее цены).
+            viewModel.attachAudio(path)
+            pendingAudioPath = path
+        } else {
+            // Правка готового черновика — уходит сразу, без лишнего шага.
+            viewModel.parseVoice(path)
+        }
+    }
+    voice.onShortTap = { viewModel.showToast(context.getString(R.string.rec_short_tap_hint)) }
+    voice.onCancelled = { }
+    voice.onError = { message -> viewModel.showToast(message) }
+
+    // Разрешение спрашиваем ДО жеста: удержание без него упёрлось бы в отказ
+    // движка уже во время записи (жест «съеден», объяснить нечем).
+    var micGranted by remember { mutableStateOf(hasRecordAudioPermission(context)) }
+    val requestMic = rememberRecordAudioPermission(
+        onGranted = {
+            micGranted = true
+            // Под TalkBack удержания нет — выдача разрешения сразу начинает запись.
+            if (talkBack) voice.toggleTalkBack()
+        },
+        onPermanentlyDenied = { micPermissionDenied = true },
+    )
+
+    // Автостоп по лимиту: минута — потолок записи, дальше распознаём сказанное.
+    val recordStartedAt = recorder.startedAtElapsedMs
+    LaunchedEffect(recordStartedAt) {
+        val startedAt = recordStartedAt ?: return@LaunchedEffect
+        val leftMs = RECORD_LIMIT_SECONDS * 1_000L - (SystemClock.elapsedRealtime() - startedAt)
+        if (leftMs > 0) delay(leftMs)
+        if (recorder.startedAtElapsedMs == startedAt) {
+            viewModel.showToast(context.getString(R.string.rec_limit_toast))
+            voice.autoStop()
+        }
+    }
+
+    // Уход с экрана/сворачивание при живой записи — молча отменяем (не пишем в фоне).
+    DisposableEffect(voice) { onDispose { if (recorder.isRecording) recorder.cancel() } }
+
+    // Predictive back в закреплённой записи — это «Отмена», но с подтверждением:
+    // случайный свайп не должен стирать минуту наговорённого.
+    BackHandler(enabled = voice.isLocked) { confirmCancelLocked = true }
+
     LaunchedEffect(form?.isSaved) {
         if (form?.isSaved == true) {
             haptics.success()
@@ -190,28 +277,92 @@ fun AddExpenseScreen(
                         .imePadding()
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
-                    // Кнопка живая: тап при блокировке объясняет причину тостом
-                    // (нет группы → встряска поля + тост), а не молчит. Жёсткий
-                    // disabled — только сохранение в полёте и офлайн-правка синка.
-                    PrimaryPillButton(
-                        text = stringResource(R.string.common_save),
-                        onClick = onSave@{
-                            when {
-                                form.selectedRoomId == null -> {
-                                    haptics.warning()
-                                    groupNudge++
-                                    viewModel.nudgeSelectGroup()
-                                }
-                                form.saveBlockedReason != null -> {
-                                    haptics.warning()
-                                    viewModel.showToast(form.saveBlockedReason!!)
-                                }
-                                else -> viewModel.save()
-                            }
-                        },
-                        enabled = !form.isSaving &&
-                            canSaveExpenseOffline(form.isEditingSynced, isOnline),
-                    )
+                    // Нудж «AI недоступен»: причина тостом, а не молчаливый disabled.
+                    val nudgeAiUnavailable = {
+                        haptics.warning()
+                        if (form.selectedRoomId == null) {
+                            groupNudge++
+                            viewModel.nudgeSelectGroup()
+                        }
+                        aiDisabledReason?.let(viewModel::showToast)
+                        Unit
+                    }
+                    // Тап (TalkBack): нет разрешения — сначала спрашиваем, потом пишем.
+                    val startVoice = {
+                        when {
+                            aiDisabledReason != null -> nudgeAiUnavailable()
+                            !micGranted -> requestMic()
+                            else -> voice.toggleTalkBack()
+                        }
+                    }
+                    if (showComposer) {
+                        // Пустая форма: БОЛЬШОЙ hold-to-talk микрофон в зоне
+                        // большого пальца — свайп вверх (замок) снизу естественен.
+                        ComposerMicBar(
+                            voice = voice,
+                            talkBack = talkBack,
+                            aiDisabled = aiDisabledReason != null,
+                            micGranted = micGranted,
+                            onBlockedTap = nudgeAiUnavailable,
+                            onRequestPermission = requestMic,
+                            onTalkBackTap = startVoice,
+                            onMicFrame = { micFrame = it },
+                        )
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(11.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircleIconButton(
+                                icon = Icons.Filled.PhotoCamera,
+                                contentDescription = stringResource(R.string.expense_recognized_add_photo),
+                                enabled = aiDisabledReason == null,
+                                onClick = {
+                                    if (aiDisabledReason != null) {
+                                        nudgeAiUnavailable()
+                                    } else {
+                                        receiptCapture.captureFromCamera()
+                                    }
+                                },
+                            )
+                            // Микрофон правки: скажи, что поправить — черновик
+                            // уйдёт на сервер вместе с голосом.
+                            VoiceCorrectionMic(
+                                voice = voice,
+                                talkBack = talkBack,
+                                isRecording = recorder.isRecording,
+                                aiDisabled = aiDisabledReason != null,
+                                micGranted = micGranted,
+                                onBlockedTap = nudgeAiUnavailable,
+                                onRequestPermission = requestMic,
+                                onTalkBackTap = startVoice,
+                                onMicFrame = { micFrame = it },
+                            )
+                            // Кнопка живая: тап при блокировке объясняет причину тостом
+                            // (нет группы → встряска поля + тост), а не молчит. Жёсткий
+                            // disabled — только сохранение в полёте и офлайн-правка синка.
+                            PrimaryPillButton(
+                                text = stringResource(R.string.common_save),
+                                onClick = onSave@{
+                                    when {
+                                        form.selectedRoomId == null -> {
+                                            haptics.warning()
+                                            groupNudge++
+                                            viewModel.nudgeSelectGroup()
+                                        }
+                                        form.saveBlockedReason != null -> {
+                                            haptics.warning()
+                                            viewModel.showToast(form.saveBlockedReason!!)
+                                        }
+                                        else -> viewModel.save()
+                                    }
+                                },
+                                enabled = !form.isSaving &&
+                                    canSaveExpenseOffline(form.isEditingSynced, isOnline),
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
                 }
             }
         },
@@ -240,6 +391,10 @@ fun AddExpenseScreen(
                     isOnline = isOnline,
                     viewModel = viewModel,
                     groupNudge = groupNudge,
+                    showComposer = showComposer,
+                    aiDisabledReason = aiDisabledReason,
+                    onManualMode = { manualMode = true },
+                    onBackToVoice = { manualMode = false },
                     onTakePhoto = receiptCapture::captureFromCamera,
                     onPickPhoto = receiptCapture::pickFromGallery,
                     onEditItem = { index -> itemEditIndex = index },
@@ -248,6 +403,29 @@ fun AddExpenseScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
+                )
+            }
+
+            // Экран «записано, распознавание ещё НЕ началось»: фото/распознать/отмена.
+            val pending = pendingAudioPath
+            if (!voice.isActive && pending != null && form?.isParsing != true) {
+                RecordedReviewOverlay(
+                    audioPath = pending,
+                    onRecognize = {
+                        pendingAudioPath = null
+                        viewModel.parseVoice(pending)
+                    },
+                    onAddPhoto = {
+                        // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
+                        pendingAudioPath = null
+                        receiptCapture.captureFromCamera()
+                    },
+                    onCancel = {
+                        pendingAudioPath = null
+                        viewModel.discardAudio()
+                        recorder.reset()
+                    },
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
 
@@ -268,6 +446,66 @@ fun AddExpenseScreen(
                 modifier = Modifier.padding(innerPadding),
             )
         }
+    }
+
+    // Оверлей записи смонтирован ПОСТОЯННО (в покое alpha 0 и не ловит касания):
+    // дерево уже построено, нажатие лишь проявляет его — иначе сборка Canvas/
+    // градиентов в момент касания и была бы задержкой отклика (порт iOS).
+    RecordingOverlay(
+        isActive = voice.isActive,
+            isCancelling = voice.isCancelling,
+        isLocked = voice.isLocked,
+        isPreparing = voice.isPreparing,
+        dragX = voice.dragX,
+        dragY = voice.dragY,
+        level = recorder.level,
+        startedAtElapsedMs = recorder.startedAtElapsedMs,
+        micFrame = micFrame,
+        hints = form?.missingInfoHints.orEmpty(),
+        onStop = voice::stopLocked,
+        onCancel = voice::cancelLocked,
+    )
+
+    if (confirmCancelLocked) {
+        AlertDialog(
+            onDismissRequest = { confirmCancelLocked = false },
+            title = { Text(stringResource(R.string.rec_locked_back_title)) },
+            text = { Text(stringResource(R.string.rec_locked_back_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmCancelLocked = false
+                    voice.cancelLocked()
+                }) {
+                    Text(stringResource(R.string.common_cancel), color = Splitty.colors.negative)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmCancelLocked = false }) {
+                    Text(stringResource(R.string.common_ok))
+                }
+            },
+        )
+    }
+
+    if (micPermissionDenied) {
+        AlertDialog(
+            onDismissRequest = { micPermissionDenied = false },
+            title = { Text(stringResource(R.string.expense_mic_permission_title)) },
+            text = { Text(stringResource(R.string.expense_mic_permission_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    micPermissionDenied = false
+                    openAppSettings(context)
+                }) {
+                    Text(stringResource(R.string.expense_mic_permission_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { micPermissionDenied = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
     }
 
     // Шит правки позиции чека (индекс мог устареть после удаления — сверяем с формой).
@@ -320,6 +558,10 @@ private fun ExpenseFormContent(
     isOnline: Boolean,
     viewModel: AddExpenseViewModel,
     groupNudge: Int,
+    showComposer: Boolean,
+    aiDisabledReason: String?,
+    onManualMode: () -> Unit,
+    onBackToVoice: () -> Unit,
     onTakePhoto: () -> Unit,
     onPickPhoto: () -> Unit,
     onEditItem: (Int) -> Unit,
@@ -351,30 +593,54 @@ private fun ExpenseFormContent(
         if (form.showsRoomPicker) {
             GroupPickerCard(form = form, groupNudge = groupNudge, onSelect = viewModel::selectRoom)
         }
-        // Распознавание по фото чека — только при создании плоского расхода
-        // (при уже распознанном чеке фото добавляется из баннера «Распознано»).
-        if (!form.isEditing && form.selectedRoomId != null && !form.hasDraftItems && !form.didRecognize) {
-            ReceiptScanCard(onTakePhoto = onTakePhoto, onPickPhoto = onPickPhoto)
-        }
-        // Баннер результата голосовой/фото-правки с «Отменить»; либо плашка
-        // «Распознано голосом» для плоского AI-результата (без позиций).
-        if (form.canUndoParse) {
-            CorrectionBanner(hasItems = form.hasDraftItems, onUndo = viewModel::undoParse)
-        } else if (form.didRecognize && !form.hasDraftItems) {
-            RecognizedBanner(onAddPhoto = onTakePhoto)
-        }
-        ExpenseCard(form = form, viewModel = viewModel)
-        if (form.hasDraftItems) {
-            ReceiptSection(
-                form = form,
-                viewModel = viewModel,
-                onEditItem = onEditItem,
-                onResolveUnknown = onResolveUnknown,
-                onAddItem = onAddItem,
+        if (showComposer) {
+            // Пустая форма — только AI-композер: ручные поля не мешаются с
+            // распознаванием, микрофон живёт в нижней панели (thumb-zone).
+            ComposerCard(
+                aiDisabledReason = aiDisabledReason,
+                onTakePhoto = onTakePhoto,
+                onPickPhoto = onPickPhoto,
+            )
+            ParseQuestionLabels(form.parseQuestions)
+            TextLink(
+                text = stringResource(R.string.expense_composer_manual),
+                accent = false,
+                onClick = onManualMode,
             )
         } else {
-            ParseQuestionLabels(form.parseQuestions)
-            SplitCard(form = form, viewModel = viewModel)
+            // Распознавание по фото чека — только при создании плоского расхода
+            // (при уже распознанном чеке фото добавляется из баннера «Распознано»).
+            if (!form.isEditing && form.selectedRoomId != null && !form.hasDraftItems && !form.didRecognize) {
+                ReceiptScanCard(onTakePhoto = onTakePhoto, onPickPhoto = onPickPhoto)
+            }
+            // Баннер результата голосовой/фото-правки с «Отменить»; либо плашка
+            // «Распознано голосом» для плоского AI-результата (без позиций).
+            if (form.canUndoParse) {
+                CorrectionBanner(hasItems = form.hasDraftItems, onUndo = viewModel::undoParse)
+            } else if (form.didRecognize && !form.hasDraftItems) {
+                RecognizedBanner(onAddPhoto = onTakePhoto)
+            }
+            ExpenseCard(form = form, viewModel = viewModel)
+            if (form.hasDraftItems) {
+                ReceiptSection(
+                    form = form,
+                    viewModel = viewModel,
+                    onEditItem = onEditItem,
+                    onResolveUnknown = onResolveUnknown,
+                    onAddItem = onAddItem,
+                )
+            } else {
+                ParseQuestionLabels(form.parseQuestions)
+                SplitCard(form = form, viewModel = viewModel)
+            }
+            // Из ручного режима можно вернуться к голосу, пока форма пуста.
+            if (form.isEmptyForm) {
+                TextLink(
+                    text = stringResource(R.string.expense_composer_back_to_voice),
+                    accent = true,
+                    onClick = onBackToVoice,
+                )
+            }
         }
         // Неотправленную запись можно удалить прямо из формы правки.
         if (form.isEditingLocal) {
@@ -1320,4 +1586,408 @@ private fun LoadErrorPane(
     modifier: Modifier = Modifier,
 ) {
     FailedState(message = message, onRetry = onRetry, modifier = modifier)
+}
+
+// MARK: AI-композер и голосовой ввод (Task 12)
+
+/**
+ * Композер на пустой форме: подсказка «микрофон внизу» + «Сфотографировать чек».
+ * Сам микрофон — в нижней панели ([ComposerMicBar]), в зоне большого пальца.
+ * Кнопка фото живая и при [aiDisabledReason]: тап объясняет причину, а не молчит.
+ */
+@Composable
+private fun ComposerCard(
+    aiDisabledReason: String?,
+    onTakePhoto: () -> Unit,
+    onPickPhoto: () -> Unit,
+) {
+    val colors = Splitty.colors
+    val disabled = aiDisabledReason != null
+    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.GraphicEq,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.expense_composer_title),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.ink,
+                )
+            }
+            Text(
+                text = stringResource(R.string.expense_composer_hint),
+                fontSize = 13.sp,
+                color = colors.inkSecondary,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+            )
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = colors.hairline)
+            Text(
+                text = stringResource(R.string.expense_composer_or).uppercase(),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.inkSecondary,
+            )
+            HorizontalDivider(modifier = Modifier.weight(1f), color = colors.hairline)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (disabled) 0.45f else 1f)
+                .clip(RoundedCornerShape(50))
+                .background(colors.accent.copy(alpha = 0.12f))
+                .clickable(onClick = onTakePhoto)
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PhotoCamera,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.expense_composer_photo),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.accent,
+            )
+        }
+        // Галерея остаётся доступной и в композере — снимок бывает уже сделан.
+        Spacer(Modifier.height(6.dp))
+        TextLink(
+            text = stringResource(R.string.expense_receipt_pick_photo),
+            accent = true,
+            onClick = onPickPhoto,
+        )
+        aiDisabledReason?.let { reason ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = reason,
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** Текстовая ссылка-действие во всю ширину («Ввести вручную», «Заполнить голосом»). */
+@Composable
+private fun TextLink(text: String, accent: Boolean, onClick: () -> Unit) {
+    val colors = Splitty.colors
+    Text(
+        text = text,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        fontSize = 15.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = if (accent) colors.accent else colors.inkSecondary,
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** Круглая кнопка-иконка нижней панели (фото чека). */
+@Composable
+private fun CircleIconButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Box(
+        modifier = Modifier
+            .size(54.dp)
+            .alpha(if (enabled) 1f else 0.45f)
+            .clip(CircleShape)
+            .background(colors.surface)
+            .border(1.5.dp, colors.accent.copy(alpha = 0.4f), CircleShape)
+            .semantics { this.contentDescription = contentDescription }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colors.accent,
+            modifier = Modifier.size(19.dp),
+        )
+    }
+}
+
+/**
+ * Большой микрофон композера в нижней панели. Squash при касании — отклик
+ * стартует НА кнопке, ещё до того как проявится оверлей: его микрофон
+ * подхватывает ровно с этого места и размера (см. [onMicFrame]).
+ */
+@Composable
+private fun ComposerMicBar(
+    voice: VoiceController,
+    talkBack: Boolean,
+    aiDisabled: Boolean,
+    micGranted: Boolean,
+    onBlockedTap: () -> Unit,
+    onRequestPermission: () -> Unit,
+    onTalkBackTap: () -> Unit,
+    onMicFrame: (Rect) -> Unit,
+) {
+    val colors = Splitty.colors
+    val a11yLabel = stringResource(R.string.expense_record_a11y)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .alpha(if (aiDisabled) 0.45f else 1f)
+                .border(1.5.dp, colors.accent.copy(alpha = 0.22f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(82.dp)
+                    .scale(if (voice.isMicPressed) 0.9f else 1f)
+                    .onGloballyPositioned { onMicFrame(it.boundsInRoot()) }
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(colors.accent, colors.accentPressed)))
+                    .semantics { contentDescription = a11yLabel }
+                    .micHold(
+                        voice = voice,
+                        talkBack = talkBack,
+                        aiDisabled = aiDisabled,
+                        micGranted = micGranted,
+                        onBlockedTap = onBlockedTap,
+                        onRequestPermission = onRequestPermission,
+                        onTalkBackTap = onTalkBackTap,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Mic,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(30.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.expense_composer_hold),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = colors.inkSecondary,
+        )
+    }
+}
+
+/** Круглый микрофон голосовой ПРАВКИ заполненного черновика (нижняя панель). */
+@Composable
+private fun VoiceCorrectionMic(
+    voice: VoiceController,
+    talkBack: Boolean,
+    isRecording: Boolean,
+    aiDisabled: Boolean,
+    micGranted: Boolean,
+    onBlockedTap: () -> Unit,
+    onRequestPermission: () -> Unit,
+    onTalkBackTap: () -> Unit,
+    onMicFrame: (Rect) -> Unit,
+) {
+    val colors = Splitty.colors
+    val a11yLabel = stringResource(R.string.expense_voice_correction_a11y)
+    Box(
+        modifier = Modifier
+            .size(54.dp)
+            .alpha(if (aiDisabled) 0.45f else 1f)
+            .scale(if (voice.isMicPressed) 0.9f else 1f)
+            .onGloballyPositioned { onMicFrame(it.boundsInRoot()) }
+            .clip(CircleShape)
+            .background(if (isRecording) colors.accent else colors.surface)
+            .border(1.5.dp, colors.accent, CircleShape)
+            .semantics { contentDescription = a11yLabel }
+            .micHold(
+                voice = voice,
+                talkBack = talkBack,
+                aiDisabled = aiDisabled,
+                micGranted = micGranted,
+                onBlockedTap = onBlockedTap,
+                onRequestPermission = onRequestPermission,
+                onTalkBackTap = onTalkBackTap,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isRecording) Icons.Filled.GraphicEq else Icons.Filled.Mic,
+            contentDescription = null,
+            tint = if (isRecording) Color.White else colors.accent,
+            modifier = Modifier.size(21.dp),
+        )
+    }
+}
+
+/**
+ * Общая обвязка hold-to-talk для обоих микрофонов: разрешение спрашивается ДО
+ * записи (тап), а сам жест — [micTouchGesture]. При [aiDisabled] жест не
+ * стартует, но тап живой — объясняет причину.
+ */
+private fun Modifier.micHold(
+    voice: VoiceController,
+    talkBack: Boolean,
+    aiDisabled: Boolean,
+    micGranted: Boolean,
+    onBlockedTap: () -> Unit,
+    onRequestPermission: () -> Unit,
+    onTalkBackTap: () -> Unit,
+): Modifier = if (aiDisabled) {
+    clickable(onClick = onBlockedTap)
+} else if (!micGranted) {
+    // Разрешения ещё нет: жест не вешаем — первый тап открывает системный prompt.
+    clickable(onClick = onRequestPermission)
+} else {
+    micTouchGesture(
+        enabled = true,
+        talkBack = talkBack,
+        onTap = onTalkBackTap,
+        onBegan = voice::began,
+        onMoved = voice::moved,
+        onEnded = voice::ended,
+        onSystemCancelled = voice::systemCancelled,
+    )
+}
+
+/**
+ * Экран «записано, распознавание ещё НЕ началось»: явный выбор — добавить фото
+ * чека (уйдёт вместе с голосом одним запросом) или сразу «Распознать».
+ * Транскрипт тут НЕ показываем: локальное распознавание может отличаться от
+ * того, что поймёт модель, и читается как «вот что записалось» — только
+ * нейтральная длительность (порт iOS `reviewOverlay`).
+ */
+@Composable
+private fun RecordedReviewOverlay(
+    audioPath: String,
+    onRecognize: () -> Unit,
+    onAddPhoto: () -> Unit,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Splitty.colors
+    // WAV 16 кГц/16 бит mono ≈ 32 КБ/с — длительности достаточно из размера файла.
+    val seconds = remember(audioPath) { recordedSeconds(java.io.File(audioPath).length()) }
+    Box(
+        modifier = modifier
+            .background(Color.Black.copy(alpha = 0.72f))
+            // Гасим касания по форме под оверлеем.
+            .clickable(enabled = false, onClick = {}),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = stringResource(R.string.rec_review_title),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.rec_review_subtitle, seconds),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.75f),
+            )
+            Spacer(Modifier.height(28.dp))
+            // Иерархия: главное — «Распознать», фото вторично, отмена третья.
+            PrimaryPillButton(
+                text = stringResource(R.string.rec_review_recognize),
+                onClick = onRecognize,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onAddPhoto)
+                    .padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.PhotoCamera,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(17.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.rec_review_add_photo),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.rec_review_add_photo_hint),
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.65f),
+                )
+            }
+            Text(
+                text = stringResource(R.string.rec_review_cancel),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onCancel)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.White.copy(alpha = 0.6f),
+            )
+        }
+    }
 }

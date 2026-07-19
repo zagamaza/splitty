@@ -72,9 +72,9 @@ class AudioRecorderException(message: String) : Exception(message)
  * Живая логика записи не тестируется на JVM (нужно железо); чистая математика —
  * [wrapWav]/[rmsLevel]/[resampleTo16k]/[CappedPcmBuffer] — покрыта unit-тестами.
  */
-class AudioRecorderController(private val context: Context) {
+class AudioRecorderController(private val context: Context) : VoiceRecorder {
     /** true — идёт запись (подсветка микрофона и оверлея). */
-    var isRecording by mutableStateOf(false)
+    override var isRecording by mutableStateOf(false)
         private set
 
     /** Момент старта (elapsedRealtime, мс) — для кольца-прогресса лимита и автостопа; null вне записи. */
@@ -90,7 +90,7 @@ class AudioRecorderController(private val context: Context) {
         private set
 
     /** Путь к WAV последней записи в cacheDir (переживает process death). */
-    var lastAudioPath by mutableStateOf<String?>(null)
+    override var lastAudioPath by mutableStateOf<String?>(null)
         private set
 
     /** MIME записанного аудио (серверный allowlist). */
@@ -107,7 +107,7 @@ class AudioRecorderController(private val context: Context) {
      * Бросает [AudioRecorderException], если ни одна пара источник×частота не поднялась.
      * Разрешение RECORD_AUDIO должно быть выдано ДО вызова (см. [rememberRecordAudioPermission]).
      */
-    fun start() {
+    override fun start() {
         if (isRecording) return
         audioData = null
         val (rec, sampleRate) = openRecord()
@@ -152,7 +152,7 @@ class AudioRecorderController(private val context: Context) {
      * Останавливает запись (отпустили микрофон), собирает WAV в [audioData] и пишет
      * файл. Возвращает данные или null, если запись не велась/пуста.
      */
-    fun stop(): ByteArray? {
+    override fun stop(): ByteArray? {
         if (!isRecording) return null
         running = false
         readThread?.join(500)
@@ -175,7 +175,7 @@ class AudioRecorderController(private val context: Context) {
      * Отменяет запись без сохранения (свайп-отмена/уход экрана/lifecycle). НИКОГДА
      * не оставляет открытый [AudioRecord] — иначе второй захват микрофона повиснет.
      */
-    fun cancel() {
+    override fun cancel() {
         running = false
         readThread?.join(500)
         readThread = null
@@ -187,7 +187,7 @@ class AudioRecorderController(private val context: Context) {
     }
 
     /** Сбрасывает записанное (после отправки/отмены формы). */
-    fun reset() {
+    override fun reset() {
         audioData = null
         lastAudioPath = null
     }
@@ -445,3 +445,7 @@ private fun Context.findActivity(): Activity? {
     }
     return null
 }
+
+/** Выдано ли RECORD_AUDIO: до жеста, чтобы удержание не упиралось в SecurityException. */
+fun hasRecordAudioPermission(context: Context): Boolean =
+    context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
