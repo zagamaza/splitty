@@ -314,8 +314,11 @@
 
 ### Task 16: Документация
 
-- [ ] android/README финализировать; корневой README/CLAUDE.md — android-команды
-- [ ] Переместить план в docs/plans/completed/
+- [x] android/README финализировать; корневой README/CLAUDE.md — android-команды
+  (CLAUDE.md в корне нет — android/iOS-команды и ссылка на прототип добавлены
+  в корневой README, где уже живут заметки о паттернах; заодно поправлена
+  устаревшая строка «Android про Items не знает»)
+- [x] Переместить план в docs/plans/completed/
 
 ## Отложено осознанно (не в этом плане)
 

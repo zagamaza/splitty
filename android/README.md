@@ -84,11 +84,30 @@ app/src/main/java/com/zagir/splitty/
 └── ui/
     ├── theme/Theme.kt                  # семантические токены + SplittyTheme
     ├── components/                     # SurfaceCard, PrimaryPillButton, SoftChip,
-    │                                   # MoneyText, MoneyTotalsText, GradientAvatar
+    │                                   # MoneyText, GradientAvatar, Glossary,
+    │                                   # FailedState, Haptics, AppToast,
+    │                                   # NudgeHighlight, ReduceMotion, ZoomableImage
     ├── AppRoot.kt                      # сессия: логин ↔ главный экран
     ├── auth/                           # LoginScreen + LoginViewModel
+    ├── groups/                         # список, деталь, дашборд, настройки,
+    │                                   # создание, join, деталь операции
+    ├── friends/, activity/, profile/, settleup/
+    ├── expense/                        # форма расхода и весь AI-флоу:
+    │   ├── AddExpenseScreen/ViewModel  # ручной + itemized-режим, undo, нуджи
+    │   ├── ReceiptCard, ItemSheet,     # чек с позициями и правка позиций
+    │   │   PersonBreakdownCard
+    │   ├── AudioRecorderController,    # запись 16k/PCM16 → WAV
+    │   │   MicTouchGesture,            # hold-to-talk (замок, отмена влево)
+    │   │   RecordingOverlay
+    │   ├── ReceiptCaptureController    # Photo Picker / камера, даунскейл
+    │   └── transcribe/                 # караоке-транскрипт (за флагом)
     └── main/MainScaffold.kt            # bottom bar 5 позиций + офлайн-баннер
 ```
+
+Ядро itemized-расчёта — `core/model/OperationItems.kt`: `derivedShares()`
+зеркалит серверный `api.DeriveShares` (веса, фикс-суммы, surcharge,
+канонизация), поэтому клиент и сервер сходятся до копейки; тесты портированы
+из iOS и из серверного `internal/api/itemsplit_test.go`.
 
 ## Ключевые конвенции (обязательны для экранных агентов)
 

@@ -66,11 +66,36 @@ REST-эндпоинт `POST /api/v1/rooms/{roomId}/operations/parse` распо�
   окна сами протухают). Проверяется до чтения тела и вызова модели.
 * **`Operation.Items` — источник правды.** Когда операция создаётся/правится с `items`, сервер
   сам выводит плоские `RecipientsWithSum`/`Sum` из позиций (`api.DeriveShares`) и игнорирует
-  клиентские плоские суммы; `SplitType = by_exact_amount`. Долги, уведомления, бот и Android
-  работают на плоских суммах и про `Items` не знают. Плоская правка без `items` затирает `Items`.
+  клиентские плоские суммы; `SplitType = by_exact_amount`. Долги, уведомления и бот работают
+  на плоских суммах и про `Items` не знают. Плоская правка без `items` затирает `Items` —
+  поэтому оба мобильных клиента проносят `items` оригинала при PUT.
 * **DI (не wire):** `ai.Parser` + `*service.RateLimiter` прокидываются в REST через
   `Server.SetAI(...)` в `cmd/splitty/main.go:initRestServer` (под `GEMINI_API_KEY != ""`),
   а не через wire (wire строит только бота).
 
+## Мобильные клиенты
+
+В репозитории два клиента поверх того же REST API: `ios/` (Swift/SwiftUI, эталон паритета)
+и `android/` (Kotlin/Compose). Оба на паритете по AI-флоу и экранам.
+
+Android (подробности — [android/README.md](android/README.md), запускать из `android/`):
+
+```bash
+./gradlew :app:assembleDebug          # APK: app/build/outputs/apk/debug/
+./gradlew :app:testDebugUnitTest      # юнит-тесты (обязательны перед коммитом)
+./gradlew :app:verifyRoborazziDebug   # скриншот-тесты (эталоны в репозитории)
+./gradlew :app:lintDebug              # Android Lint
+./gradlew :app:assembleRelease        # R8-сборка + verifyReleaseShrinking
+```
+
+iOS (из `ios/`):
+
+```bash
+xcodebuild -project Splitty.xcodeproj -scheme Splitty \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
+```
+
+Визуальный эталон обоих клиентов — `docs/prototype/splitty-ai-proto.html`.
+
 > Примечание: в корне репозитория нет `CLAUDE.md`/`AGENTS.md` — заметки о паттернах AI-парсинга
-> добавлены сюда, в README (ближайший подходящий существующий документ).
+> и командах клиентов добавлены сюда, в README (ближайший подходящий существующий документ).
