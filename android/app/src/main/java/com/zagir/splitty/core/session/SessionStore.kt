@@ -45,6 +45,14 @@ data class Session(
      * расходы при живом токене на диске. См. OfflineDataCleaner.
      */
     val hasStoredToken: Boolean = false,
+    /**
+     * Прочитать DataStore не удалось — это НЕ разлогин, а пустышка-заглушка,
+     * чтобы UI не висел на null. Отличать обязательно: без флага сбой чтения
+     * (в т.ч. CorruptionException, который ReplaceFileCorruptionHandler
+     * превращает в пустые prefs) выглядит бит-в-бит как выход из аккаунта, и
+     * OfflineDataCleaner необратимо стирал очередь неотправленных расходов.
+     */
+    val readFailed: Boolean = false,
 ) {
     val isAuthenticated: Boolean get() = token != null
 }
@@ -111,7 +119,7 @@ class SessionStore @Inject constructor(
         var attempt = 0L
         while (isActive) {
             try {
-                dataStore.data.collect { send(it) }
+                dataStore.data.collect { send(it to false) }
                 return@channelFlow // upstream завершился штатно
             } catch (e: CancellationException) {
                 throw e
@@ -120,14 +128,17 @@ class SessionStore @Inject constructor(
                 // зависания на null («ещё читаем» → пустой экран без выхода).
                 // Дальше продолжаем пытаться — успешное чтение или запись при
                 // входе вернут сессию без перезапуска приложения.
-                send(emptyPreferences())
+                // readFailed=true: заглушка для UI, но НЕ разлогин — потребители,
+                // стирающие данные аккаунта, обязаны её пропускать.
+                send(emptyPreferences() to true)
                 delay(RETRY_DELAY_MS * (attempt + 1).coerceAtMost(RETRY_BACKOFF_STEPS))
                 attempt++
             }
         }
     }
-        .map { prefs ->
+        .map { (prefs, readFailed) ->
             Session(
+                readFailed = readFailed,
                 // Dual-read: сначала новый зашифрованный ключ, иначе старый plain
                 // (ещё не мигрировано либо чистая старая установка). Если шифротекст
                 // не расшифровался (ключ Keystore пропал) — токена нет → разлогин.

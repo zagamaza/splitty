@@ -167,6 +167,7 @@
     <string name="group_you_owe">Вы должны</string>
     <string name="group_no_debts">Нет долгов</string>
     <string name="group_members_settled">Все участники в расчёте</string>
+    <string name="groups_row_debts_unavailable">долги не считаются</string>
     <string name="group_debts_unavailable_title">Долги не считаются</string>
     <string name="group_debts_unavailable_subtitle">Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.</string>
     <string name="group_card_pending_badge">Есть неотправленные операции</string>

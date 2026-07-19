@@ -11,6 +11,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 
@@ -75,6 +77,11 @@ class OutboxSyncer internal constructor(
     private suspend fun sync() {
         if (!mutex.tryLock()) return // синк уже идёт
         try {
+            // Ждём ПЕРВОГО чтения DataStore: state.value == null до него, и на
+            // холодном старте оба триггера (сид isOnline и ON_START) успевали
+            // раньше — sync молча выходил, а очередь лежала неотправленной до
+            // следующего мигания сети.
+            sessionStore.state.filterNotNull().first()
             if (sessionStore.currentToken() == null) return
             if (!isOnline.value) return
             outbox.awaitLoaded()
@@ -83,7 +90,13 @@ class OutboxSyncer internal constructor(
 
             _isSyncing.value = true
             var anySucceeded = false
-            for (entry in queue) {
+            for (queued in queue) {
+                // Пере-читаем запись: пока слали предыдущую, пользователь мог её
+                // отредактировать или удалить. Без этого правка уходила на сервер
+                // СТАРЫМ payload'ом, а исправленную запись мы тут же удаляли, и
+                // удалённая из очереди трата всё равно создавалась в комнате.
+                val entry = outbox.entries.value.firstOrNull { it.localId == queued.localId }
+                    ?.takeIf { it.status == OutboxStatus.PENDING } ?: continue
                 try {
                     send(entry)
                     outbox.remove(entry.localId)

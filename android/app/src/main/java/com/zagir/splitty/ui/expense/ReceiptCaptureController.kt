@@ -90,8 +90,11 @@ fun rememberReceiptCapture(onReceipt: (String) -> Unit): ReceiptCaptureControlle
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicture()
     ) { success ->
-        val file = cameraTarget[0]
-        if (success && file != null) deliver { decodeDownscaledReceipt(context, Uri.fromFile(file)) }
+        // remember не переживает смерть процесса, а запуск камеры — один из самых
+        // частых её триггеров: cameraTarget[0] возвращался null и снимок молча
+        // выбрасывался. Путь детерминированный, поэтому просто пересчитываем.
+        val file = cameraTarget[0] ?: newCameraOutputUri(context).second
+        if (success) deliver { decodeDownscaledReceipt(context, Uri.fromFile(file)) }
     }
 
     fun launchCamera() {

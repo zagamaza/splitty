@@ -26,6 +26,11 @@ class OfflineDataCleaner @Inject constructor(
             var hadToken = false
             sessionStore.state.collect { session ->
                 if (session == null) return@collect // DataStore ещё читается
+                // Сбой чтения DataStore отдаёт пустую сессию-заглушку, неотличимую
+                // от разлогина. Пропускаем её целиком (в т.ч. не трогаем hadToken):
+                // иначе один IO-сбой или CorruptionException необратимо стирал
+                // очередь неотправленных расходов при живых ключах на диске.
+                if (session.readFailed) return@collect
                 // Признак — наличие учётных данных на диске, а не расшифрованный
                 // токен: transient-сбой Keystore даёт token = null при живых
                 // ключах и стирал бы всю очередь неотправленных расходов.

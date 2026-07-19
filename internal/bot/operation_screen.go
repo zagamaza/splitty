@@ -612,9 +612,9 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 
 	slivce := []string{
 		" " + moneySpace(operation.Sum, room.Currency),
-		" " + operation.Description,
+		" " + html.EscapeString(operation.Description),
 		" ",
-		"  " + I18n(u.User, "scrn_payer", operation.Donor.DisplayName),
+		"  " + I18n(u.User, "scrn_payer", html.EscapeString(operation.Donor.DisplayName)),
 		""}
 	tb := NewTableBuilder('-', " | ")
 	tb.AddColumnSimple(Center, func(i int) string {
@@ -801,10 +801,13 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	tb := sdk.NewTableBuilder('-', " | ")
 	tb.AddColumn(sdk.Left, sdk.Monospaced, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
+			// Build() оборачивает таблицу в <code>, а экран уходит с ParseMode=HTML:
+			// имя "a < b" даёт 400 на весь экран, "<a href>" вставляет разметку.
+			name := html.EscapeString(operation.RecipientsWithSum[i].User.DisplayName)
 			if operation.RecipientsWithSum[i].User.ID == recipient.ID {
-				return "-> " + operation.RecipientsWithSum[i].User.DisplayName
+				return "-> " + name
 			}
-			return operation.RecipientsWithSum[i].User.DisplayName
+			return name
 		} else if i == len(operation.RecipientsWithSum) {
 			return "Итого"
 		}
@@ -832,8 +835,8 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 
 📊 Распределение:
 %s`,
-		recipient.DisplayName,
-		operation.Description,
+		html.EscapeString(recipient.DisplayName),
+		html.EscapeString(operation.Description),
 		moneySpace(operation.Sum, room.Currency),
 		tb.Build(),
 	)
@@ -907,7 +910,7 @@ func (h ChangePayerHandler) OnMessage(ctx context.Context, u *api.Update) (respo
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_rm_operation"), deleteBtn.ID.Hex()),
 	})
 
-	text := I18n(u.User, "scrn_choose_payer", operation.Donor.DisplayName)
+	text := I18n(u.User, "scrn_choose_payer", html.EscapeString(operation.Donor.DisplayName))
 
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{createScreen(u, text, &tgButtons)},
@@ -1115,10 +1118,13 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	tb := sdk.NewTableBuilder('-', " | ")
 	tb.AddColumn(sdk.Left, sdk.Monospaced, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
+			// Build() оборачивает таблицу в <code>, а экран уходит с ParseMode=HTML:
+			// имя "a < b" даёт 400 на весь экран, "<a href>" вставляет разметку.
+			name := html.EscapeString(operation.RecipientsWithSum[i].User.DisplayName)
 			if operation.RecipientsWithSum[i].User.ID == recipient.ID {
-				return "-> " + operation.RecipientsWithSum[i].User.DisplayName
+				return "-> " + name
 			}
-			return operation.RecipientsWithSum[i].User.DisplayName
+			return name
 		} else if i == len(operation.RecipientsWithSum) {
 			return "Итого"
 		}
@@ -1149,7 +1155,7 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 📊Распределение:
 %s
     `,
-		recipient.DisplayName,
+		html.EscapeString(recipient.DisplayName),
 		moneySpace(operation.Sum, room.Currency),
 		moneySpace(sum, room.Currency),
 		func() string {

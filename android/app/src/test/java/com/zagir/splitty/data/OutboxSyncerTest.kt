@@ -270,4 +270,48 @@ class OutboxSyncerTest {
         assertEquals(0, server.requestCount)
         assertNull(outbox.entries.value.firstOrNull()?.errorMessage)
     }
+
+    @Test
+    fun `entry deleted while sync is in flight is not sent`(): Unit = runBlocking {
+        outbox.add(entry("a"))
+        outbox.add(entry("b"))
+        val syncer = syncer()
+        // Первый ответ намеренно медленный: успеваем удалить «b» из очереди,
+        // пока летит «a». Синк снимает список один раз — без пере-чтения он
+        // отправит удалённую запись, и трата появится в комнате вопреки удалению.
+        server.enqueue(okOperation("op1", "a").setBodyDelay(600, java.util.concurrent.TimeUnit.MILLISECONDS))
+        server.enqueue(okOperation("op2", "b"))
+
+        online.value = true
+        syncer.syncNow()
+
+        Thread.sleep(150)
+        outbox.remove("b")
+
+        awaitQueue { it.isEmpty() }
+        Thread.sleep(400)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun `entry edited while sync is in flight is sent with the new payload`(): Unit = runBlocking {
+        outbox.add(entry("a"))
+        outbox.add(entry("b", "Старая"))
+        val syncer = syncer()
+        server.enqueue(okOperation("op1", "a").setBodyDelay(600, java.util.concurrent.TimeUnit.MILLISECONDS))
+        server.enqueue(okOperation("op2", "b"))
+
+        online.value = true
+        syncer.syncNow()
+
+        Thread.sleep(150)
+        outbox.update("b", entry("b", "Исправленная").payload)
+
+        awaitQueue { it.isEmpty() }
+        server.takeRequest() // «a»
+        val body = server.takeRequest().body.readUtf8()
+        // Без пере-чтения записи ушёл бы устаревший payload, а исправленную
+        // запись синк тут же удалял — правка не доезжала до сервера вообще.
+        assertTrue(body.contains("Исправленная"), body)
+    }
 }

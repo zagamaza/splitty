@@ -1185,6 +1185,11 @@ class AddExpenseViewModel @Inject constructor(
         if (ExpenseDraftSnapshot.hasContent(snapshot)) {
             savedStateHandle[KEY_DRAFT] =
                 SplittyJson.encodeToString(ExpenseDraftSnapshot.serializer(), snapshot)
+        } else {
+            // Иначе удалённый черновик воскресал: «Отменить» (или очистка всех
+            // позиций) → process death → restoreDraftInto накатывал устаревший
+            // снимок, и распознанный чек возвращался вопреки отмене.
+            savedStateHandle.remove<String>(KEY_DRAFT)
         }
     }
 

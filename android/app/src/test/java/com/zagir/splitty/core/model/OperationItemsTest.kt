@@ -263,6 +263,18 @@ class OperationItemsTest {
         assertEquals(0, result.shares[1L]!!, "нулевой участник заплатил надбавку")
     }
 
+    @Test
+    fun `total over Int MAX_VALUE returns null instead of wrapping`() {
+        // Поле ввода пропускает 9 цифр на позицию, позиций до 50 — сумма легко
+        // перебирает Int. Kotlin'ский toInt() заворачивается молча: пользователь
+        // видел отрицательный итог при активной кнопке «Сохранить» и получал
+        // невнятный 400 от сервера. Ожидаем честный null.
+        val items = List(4) { i ->
+            item("Позиция $i", 900_000_000, share(1L, 1), share(2L, 1))
+        }
+        assertNull(items.derivedShares())
+    }
+
     // --- Фикстуры ---
 
     private fun share(userId: Long, weight: Int) = ItemShare(userId = userId, weight = weight)

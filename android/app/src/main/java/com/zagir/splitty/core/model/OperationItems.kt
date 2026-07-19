@@ -73,8 +73,15 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     for (value in out.values) sum += value
     if (sum != total) return null
 
+    // Считали в Long, отдаём в Int: toInt() в Kotlin молча заворачивается, и
+    // 50 позиций по 9 цифр (столько пропускает поле ввода) давали отрицательный
+    // итог при зелёной кнопке «Сохранить» и невнятном 400 от сервера.
+    if (total > Int.MAX_VALUE) return null
     val shares = HashMap<Long, Int>(out.size)
-    for ((id, value) in out) shares[id] = value.toInt()
+    for ((id, value) in out) {
+        if (value > Int.MAX_VALUE) return null
+        shares[id] = value.toInt()
+    }
     return DerivedShares(shares, total.toInt())
 }
 

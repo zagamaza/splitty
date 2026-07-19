@@ -244,7 +244,12 @@ private fun RoomsList(
 @Composable
 private fun SummaryCard(rooms: List<RoomSummary>) {
     val totals = remember(rooms) {
-        aggregateByCurrency(rooms.map { CurrencySum(currency = it.currency, sum = it.myBalance) })
+        // Комнаты с неисчислимыми долгами не участвуют: их myBalance=0 —
+        // заглушка, а не «в расчёте», и складывать её в итог нельзя.
+        aggregateByCurrency(
+            rooms.filterNot { it.debtsUnavailable }
+                .map { CurrencySum(currency = it.currency, sum = it.myBalance) }
+        )
     }
     val primarySign = totals.firstOrNull()?.sum ?: 0
     val subtitle = when {
@@ -313,7 +318,15 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
                     color = colors.inkSecondary,
                 )
             }
-            if (room.myBalance == 0) {
+            if (room.debtsUnavailable) {
+                // Долги неисчислимы (легаси-данные): честная метка вместо
+                // «в расчёте» — myBalance у таких комнат всегда 0.
+                Text(
+                    text = stringResource(R.string.groups_row_debts_unavailable),
+                    fontSize = 13.sp,
+                    color = colors.inkSecondary,
+                )
+            } else if (room.myBalance == 0) {
                 Text(
                     text = stringResource(R.string.groups_row_settled),
                     fontSize = 14.sp,
