@@ -130,7 +130,7 @@ func TestParse_HappyPathText(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200, body %s", rec.Code, rec.Body.String())
 	}
-	if !fp.called || fp.gotIn.Media != ai.MediaText {
+	if !fp.called || fp.gotIn.Text == "" {
 		t.Fatalf("parser не вызван с текстом: %+v", fp.gotIn)
 	}
 	var res ai.ParseResult
@@ -185,8 +185,25 @@ func TestParse_AudioAacInlined(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200, body %s", rec.Code, rec.Body.String())
 	}
-	if fp.gotIn.Media != ai.MediaAudio || fp.gotIn.Mime != "audio/aac" {
+	if len(fp.gotIn.Audio) == 0 || fp.gotIn.AudioMime != "audio/aac" {
 		t.Fatalf("аудио не передано парсеру: %+v", fp.gotIn)
+	}
+}
+
+func TestParse_AudioAndImageTogether(t *testing.T) {
+	room := newTestRoom()
+	fp := &fakeParser{result: okDraft()}
+	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), fp, nil)
+	ct, body := multipartBody(t, nil, map[string]filePart{
+		"audio": {name: "v.aac", mime: "audio/aac", data: []byte("голос")},
+		"image": {name: "r.jpg", mime: "image/jpeg", data: []byte("фото")},
+	})
+	rec := doParse(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), ct, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body %s", rec.Code, rec.Body.String())
+	}
+	if len(fp.gotIn.Audio) == 0 || len(fp.gotIn.Image) == 0 {
+		t.Fatalf("оба медиа должны дойти до парсера: audio=%d image=%d", len(fp.gotIn.Audio), len(fp.gotIn.Image))
 	}
 }
 

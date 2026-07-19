@@ -157,7 +157,11 @@ class AudioRecorderController(
         try {
             rec.startRecording()
         } catch (_: IllegalStateException) {
+            // Тот же терминальный случай, что и read < 0 ниже: сессия не стартовала
+            // (микрофон занят звонком/другим приложением). Молчаливый выход держал
+            // микрофон и оставлял «идущую» запись на экране до лимита в 60 с.
             running = false
+            mainHandler.post { if (isRecording) deviceLost = true }
             return
         }
         while (running) {

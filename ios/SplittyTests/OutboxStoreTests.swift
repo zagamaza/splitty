@@ -182,4 +182,46 @@ final class OutboxStoreTests: XCTestCase {
         try Data("не json".utf8).write(to: fileURL)
         XCTAssertTrue(makeStore().entries.isEmpty)
     }
+
+    /// Битый файл не должен навсегда отключать запись: раньше didLoad оставался
+    /// false, persist молчал, и офлайн-очередь жила только в памяти — пропадая
+    /// при закрытии приложения.
+    func testCorruptedFileDoesNotDisablePersistence() throws {
+        try FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("не json".utf8).write(to: fileURL)
+
+        let store = makeStore()
+        store.add(roomId: "room1", payload: payload("Такси"))
+        store.waitForPendingWrites()
+
+        XCTAssertEqual(makeStore().entries.count, 1, "запись после битого файла не сохранилась")
+    }
+
+    /// Логаут не должен вернуть на диск очередь ПРЕДЫДУЩЕГО аккаунта: если
+    /// первое чтение провалилось (залоченное устройство), retryLoadIfNeeded
+    /// внутри persist поднимал её обратно, и следующий вошедший отправлял чужие
+    /// расходы в свои комнаты.
+    func testClearWipesFileEvenWhenFirstLoadFailed() throws {
+        let seeded = makeStore()
+        seeded.add(roomId: "room1", payload: payload("Чужой расход"))
+        seeded.waitForPendingWrites()
+
+        // Файл на месте, но нечитаем — didLoad остаётся false, как под
+        // completeFileProtection на залоченном устройстве.
+        let fm = FileManager.default
+        try fm.setAttributes([.posixPermissions: 0], ofItemAtPath: fileURL.path)
+        let store = makeStore()
+        try fm.setAttributes([.posixPermissions: 0o644], ofItemAtPath: fileURL.path)
+
+        store.clear()
+        store.waitForPendingWrites()
+
+        XCTAssertTrue(
+            makeStore().entries.isEmpty,
+            "логаут оставил очередь прошлого аккаунта"
+        )
+    }
 }

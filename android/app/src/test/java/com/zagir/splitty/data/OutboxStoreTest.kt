@@ -239,4 +239,48 @@ class OutboxStoreTest {
         assertEquals(listOf(1L), equally.recipientOrder)
         assertEquals(listOf(1L), exact.recipientOrder)
     }
+
+    @Test
+    fun `unreadable queue file is not overwritten by the next write`() = runTest {
+        // Файл есть, но читать его нельзя (на устройстве — ошибка ввода-вывода).
+        // Раньше это было неотличимо от «файла нет», и первая же запись стирала
+        // очередь неотправленных расходов начисто.
+        file.writeText("[]")
+        file.setReadable(false)
+        val store = store()
+        store.add(entry("local-new"))
+
+        file.setReadable(true)
+        assertEquals("[]", file.readText(), "нечитаемый файл перезаписан вслепую")
+    }
+
+    @Test
+    fun `corrupted queue file does not disable persistence`() = runTest {
+        // Битый JSON восстановлению не подлежит; отказ писать навсегда был бы
+        // хуже — офлайн-расходы жили бы только в памяти и пропадали при закрытии.
+        file.writeText("{ not json")
+        val store = store()
+        store.add(entry("local-1"))
+
+        assertTrue("local-1" in file.readText(), "запись после битого файла не сохранилась")
+        assertEquals(listOf("local-1"), OutboxStore(file, SplittyJson).also { it.awaitLoaded() }.entries.value.map { it.localId })
+    }
+
+    @Test
+    fun `clear wipes the file even when the first read failed`() = runTest {
+        // Реальная последовательность: первое чтение провалилось (на iOS —
+        // залоченное устройство), позже файл снова читается. Логаут не должен
+        // вернуть на диск очередь ПРЕДЫДУЩЕГО аккаунта через слияние в
+        // persistLocked — иначе следующий вошедший отправит чужие расходы.
+        store().add(entry("local-prev"))
+
+        file.setReadable(false)
+        val store = store()
+        store.awaitLoaded() // чтение провалилось, didRead остаётся false
+        file.setReadable(true)
+
+        store.clear()
+
+        assertFalse("local-prev" in file.readText(), "логаут оставил очередь прошлого аккаунта")
+    }
 }

@@ -2,6 +2,7 @@ package bot
 
 import (
 	"fmt"
+	"html"
 	"strings"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -17,11 +18,14 @@ func isItemized(op api.Operation) bool {
 
 // memberName возвращает отображаемое имя участника комнаты по его id,
 // либо "?" если участник не найден (рассинхрон состава комнаты и позиций).
+// Имя — пользовательский ввод, а блок позиций уходит в Telegram с ParseMode=HTML:
+// без экранирования "a < b" в имени даёт 400 от Telegram, и экран операции
+// перестаёт открываться у всех участников комнаты.
 func memberName(members *[]api.User, id int) string {
 	if members != nil {
 		for _, m := range *members {
 			if m.ID == id {
-				return m.DisplayName
+				return html.EscapeString(m.DisplayName)
 			}
 		}
 	}
@@ -31,17 +35,20 @@ func memberName(members *[]api.User, id int) string {
 // itemLabel формирует подпись позиции для показа: количество (×N) для обычных
 // позиций и процент (10%) для надбавок — только для отображения, в расчёте не
 // участвует.
+// Название позиции — пользовательский ввод (клиент шлёт его напрямую), см.
+// memberName про ParseMode=HTML.
 func itemLabel(it api.OperationItem) string {
+	name := html.EscapeString(it.Name)
 	if it.Kind == api.ItemKindSurcharge {
 		if it.Percent != nil {
-			return fmt.Sprintf("%s %d%%", it.Name, *it.Percent)
+			return fmt.Sprintf("%s %d%%", name, *it.Percent)
 		}
-		return it.Name
+		return name
 	}
 	if it.Qty > 1 {
-		return fmt.Sprintf("%s ×%d", it.Name, it.Qty)
+		return fmt.Sprintf("%s ×%d", name, it.Qty)
 	}
-	return it.Name
+	return name
 }
 
 // itemParticipants описывает, кто участвует в позиции: список имён участников

@@ -3,6 +3,7 @@ package com.zagir.splitty.core.session
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.core.model.Me
@@ -12,6 +13,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -82,6 +84,11 @@ class SessionStore @Inject constructor(
 
     /** Текущая сессия; null — DataStore ещё не прочитан (первый кадр приложения). */
     val state: StateFlow<Session?> = dataStore.data
+        // Битый файл настроек — это CorruptionException из dataStore.data. Без
+        // catch корутина шаринга умирает, state навсегда остаётся null (= «ещё
+        // читаем»), и приложение показывает пустой экран без выхода. Пустые
+        // настройки означают разлогин — восстановимо, в отличие от зависания.
+        .catch { emit(emptyPreferences()) }
         .map { prefs ->
             Session(
                 // Dual-read: сначала новый зашифрованный ключ, иначе старый plain

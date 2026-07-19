@@ -264,7 +264,8 @@ extension Array where Element == OperationItem {
         var out = base
         for item in self where item.isSurcharge {
             if item.price <= 0 { return nil }
-            for (id, value) in splitSurcharge(item.price, item.split, base) {
+            guard let surcharge = splitSurcharge(item.price, item.split, base) else { return nil }
+            for (id, value) in surcharge {
                 out[id, default: 0] += value
             }
             total += item.price
@@ -277,9 +278,14 @@ extension Array where Element == OperationItem {
 
 /// Делит `amount` между участниками пропорционально весам; остаток от округления —
 /// по одному тем, у кого доля больше (tie-break по меньшему userId). Зеркало `splitByWeight`.
-private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -> [Int: Int] {
+private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -> [Int: Int]? {
     var out: [Int: Int] = [:]
-    let totalWeight = weights.reduce(0) { $0 + $1.weight }
+    var totalWeight = 0
+    for w in weights {
+        let (sum, overflow) = totalWeight.addingReportingOverflow(w.weight)
+        if overflow { return nil }
+        totalWeight = sum
+    }
     guard totalWeight > 0 else { return out }
 
     // Схлопываем дубли по id и отбрасываем нулевые веса ДО деления (зеркало
@@ -299,11 +305,19 @@ private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -
 
     var given = 0
     for w in order {
-        let value = amount * w.weight / totalWeight
+        // Swift на переполнении не заворачивается, а падает: itemizedShares
+        // пересчитывается на каждое нажатие клавиши, так что это крэш прямо
+        // во время ввода. Сервер здесь возвращает ErrOverflow.
+        let (product, overflow) = amount.multipliedReportingOverflow(by: w.weight)
+        if overflow { return nil }
+        let value = product / totalWeight
         out[w.id] = value
         given += value
     }
     let remainder = amount - given
+    // При корректных входах остаток строго меньше числа участников; иначе это
+    // признак переполнения, и цикл раздачи ниже стал бы неограниченным.
+    guard remainder >= 0, remainder <= order.count else { return nil }
     guard remainder > 0 else { return out }
 
     let ranked = order.sorted { lhs, rhs in
@@ -341,7 +355,8 @@ private func splitItem(_ price: Int, _ shares: [ItemShare]) -> [Int: Int]? {
     if weighted.isEmpty {
         return remainder == 0 ? out : nil
     }
-    for (id, value) in splitByWeight(remainder, weighted) {
+    guard let byWeight = splitByWeight(remainder, weighted) else { return nil }
+    for (id, value) in byWeight {
         out[id, default: 0] += value
     }
     return out
@@ -349,7 +364,7 @@ private func splitItem(_ price: Int, _ shares: [ItemShare]) -> [Int: Int]? {
 
 /// Делит надбавку по базовым долям людей: proportional → вес = базовая доля,
 /// иначе (или база нулевая) — поровну. Зеркало `SplitSurcharge`.
-private func splitSurcharge(_ price: Int, _ rule: String?, _ base: [Int: Int]) -> [Int: Int] {
+private func splitSurcharge(_ price: Int, _ rule: String?, _ base: [Int: Int]) -> [Int: Int]? {
     let ids = base.keys.sorted()
     let totalBase = base.values.reduce(0, +)
     var weights: [(id: Int, weight: Int)] = []

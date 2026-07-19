@@ -41,10 +41,13 @@ func NewLoginScreen(css ChatStateService, lcs LoginCodeService, cfg *Config) *Lo
 	}
 }
 
-// HasReact реагирует на /login только в личном чате
+// HasReact реагирует на /login только в личном чате. «/start login» —
+// диплинк из приложения (t.me/bot?start=login): код выдаётся сразу по
+// кнопке «Открыть бота», без ручного ввода команды.
 func (s LoginScreen) HasReact(u *api.Update) bool {
 	return isPrivate(u) && u.Message != nil &&
-		(u.Message.Text == login || u.Message.Text == login+"@"+s.cfg.BotName)
+		(u.Message.Text == login || u.Message.Text == login+"@"+s.cfg.BotName ||
+			u.Message.Text == start+" login")
 }
 
 // OnMessage returns one entry

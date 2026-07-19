@@ -146,6 +146,17 @@ class OutboxStore(
     private val mutex = Mutex()
     private var isLoaded = false
 
+    /**
+     * Файл удалось прочитать (или его ещё не было) — перезаписывать безопасно.
+     *
+     * Пока false, на диске лежат неотправленные расходы, которых нет в памяти:
+     * первая же запись стёрла бы очередь начисто. Не читается только при ошибке
+     * ввода-вывода — она может быть транзиентной, поэтому чтение повторяется
+     * перед каждой записью. Битый JSON — наоборот, восстановлению не подлежит и
+     * блокировать запись навсегда не должен.
+     */
+    private var didRead = false
+
     private val _entries = MutableStateFlow<List<OutboxEntry>>(emptyList())
 
     /** Все записи outbox в порядке постановки (FIFO). */
@@ -205,7 +216,11 @@ class OutboxStore(
 
     /** Полная очистка (logout). */
     suspend fun clear(): Unit = mutex.withLock {
-        ensureLoadedLocked()
+        // Без didRead=true логаут ушёл бы в ветку слияния persistLocked и вернул
+        // на диск очередь ПРЕДЫДУЩЕГО аккаунта — следующий вошедший отправил бы
+        // чужие расходы в свои комнаты.
+        didRead = true
+        isLoaded = true
         persistLocked(emptyList())
     }
 
@@ -213,20 +228,46 @@ class OutboxStore(
 
     private suspend fun ensureLoadedLocked() {
         if (isLoaded) return
-        _entries.value = withContext(Dispatchers.IO) {
-            if (!file.isFile) return@withContext emptyList()
-            runCatching {
-                json.decodeFromString(ListSerializer(OutboxEntry.serializer()), file.readText())
-            }.getOrDefault(emptyList())
-        }
+        _entries.value = readFileLocked() ?: emptyList()
         isLoaded = true
     }
 
+    /**
+     * Читает очередь с диска. null — файл есть, но прочитать не удалось (ошибка
+     * ввода-вывода): вызывающий обязан НЕ перезаписывать файл. Битый JSON даёт
+     * пустой список и снимает [didRead] — такие данные не вернуть.
+     */
+    private suspend fun readFileLocked(): List<OutboxEntry>? = withContext(Dispatchers.IO) {
+        if (!file.isFile) {
+            didRead = true // очереди ещё не было — писать безопасно
+            return@withContext emptyList()
+        }
+        val text = runCatching { file.readText() }.getOrNull() ?: return@withContext null
+        didRead = true
+        runCatching {
+            json.decodeFromString(ListSerializer(OutboxEntry.serializer()), text)
+        }.getOrDefault(emptyList())
+    }
+
     private suspend fun persistLocked(entries: List<OutboxEntry>) {
+        var toWrite = entries
+        if (!didRead) {
+            // Повторная попытка: ошибка чтения могла быть транзиентной. Записи с
+            // диска, которых нет в памяти, возвращаются в очередь — иначе они
+            // пропали бы при этой же перезаписи.
+            val disk = readFileLocked()
+            if (disk == null) {
+                _entries.value = entries // память обновляем, файл не трогаем
+                return
+            }
+            val known = entries.map { it.localId }.toSet()
+            toWrite = disk.filterNot { it.localId in known } + entries
+        }
+        val outEntries = toWrite
         withContext(Dispatchers.IO) {
             file.parentFile?.mkdirs()
             val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(json.encodeToString(ListSerializer(OutboxEntry.serializer()), entries))
+            tmp.writeText(json.encodeToString(ListSerializer(OutboxEntry.serializer()), outEntries))
             try {
                 Files.move(
                     tmp.toPath(),
@@ -238,6 +279,6 @@ class OutboxStore(
                 Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
         }
-        _entries.value = entries
+        _entries.value = outEntries
     }
 }

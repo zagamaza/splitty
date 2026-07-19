@@ -7,6 +7,7 @@ import (
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/gookit/i18n"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"html"
 	"regexp"
 	"slices"
 	"strconv"
@@ -215,8 +216,11 @@ func shortName(user *api.User) string {
 	return string(sn)
 }
 
+// userLink собирает HTML-ссылку на пользователя. DisplayName задаёт сам
+// пользователь и он может содержать "<" — без экранирования это и инъекция в
+// общее сообщение, и 400 от Telegram, роняющий экран целиком.
 func userLink(user *api.User) string {
-	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", user.ID, user.DisplayName)
+	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", user.ID, html.EscapeString(user.DisplayName))
 }
 
 func moneySpace(sum int, currency string) string {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
@@ -24,7 +25,10 @@ const (
 	maxShareWeight = 100_000       // вес доли участника
 	maxShareAmount = 100_000_000   // фиксированная сумма доли
 	maxItemsTotal  = 1_000_000_000 // суммарная цена всех позиций
-	maxAliasRunes  = 64            // максимальная длина прозвища
+	// название позиции клиент шлёт напрямую, а оно попадает в общее сообщение
+	// бота: без ограничения одна позиция раздувает экран операции для всей комнаты
+	maxItemNameRunes = 100
+	maxAliasRunes    = 64 // максимальная длина прозвища
 )
 
 // handleAddAlias POST /api/v1/users/{userId}/aliases
@@ -137,6 +141,9 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 		}
 		if len(it.Shares) > maxItemShares {
 			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "слишком много участников у позиции"}
+		}
+		if utf8.RuneCountInString(it.Name) > maxItemNameRunes {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "слишком длинное название позиции"}
 		}
 		// kind/split — сырые строки от клиента: без проверки они ложились в базу
 		// как есть и возвращались наружу, а неизвестный split молча трактовался

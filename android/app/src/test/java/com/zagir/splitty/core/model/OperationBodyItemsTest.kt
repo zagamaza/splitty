@@ -89,5 +89,10 @@ class OperationBodyItemsTest {
         )
         val wire = SplittyJson.encodeToString(OperationBody.serializer(), body)
         assertTrue("\"weight\":1" in wire, "weight=1 не ушёл на провод: $wire")
+        // kind обычной позиции нигде не присваивается явно: без @EncodeDefault он
+        // выпадает из тела, сервер видит "" и отвечает 400 на КАЖДЫЙ чек.
+        // Round-trip такое не ловит — декодер восстанавливает дефолт.
+        assertTrue("\"kind\":\"item\"" in wire, "kind не ушёл на провод: $wire")
+        assertTrue("\"qty\":1" in wire, "qty не ушёл на провод: $wire")
     }
 }

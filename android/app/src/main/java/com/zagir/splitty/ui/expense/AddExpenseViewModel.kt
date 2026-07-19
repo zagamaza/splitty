@@ -111,7 +111,11 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
     val oldItems = draftItems
     val oldSnapshot = UndoSnapshot(draftItems, description, sumText, payerId)
 
-    val recognizedSomething = draft.description.isNotBlank() || draft.sum >= 1 || items.isNotEmpty()
+    // Распознанный плательщик — тоже результат: правка «платил Саша» возвращает
+    // черновик, где заполнен только donorId. Без этого условия она считалась
+    // пустым ответом, показывала «Не удалось распознать» и сносила чек.
+    val recognizedSomething = draft.description.isNotBlank() || draft.sum >= 1 ||
+        items.isNotEmpty() || recognizedPayer != null
     val questions = response.questionList
     // Совсем пусто и без вопросов — говорим явно, а не молча возвращаем форму.
     val emptyAlert = if (!recognizedSomething && questions.isEmpty()) {
@@ -121,21 +125,24 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
     }
 
     val correction = wasCorrection && recognizedSomething
+    // Правка без позиций в ответе («платил Саша») не должна стирать собранный
+    // чек: пустые поля ответа не затирают ввод — это касается и позиций.
+    val nextItems = if (wasCorrection && items.isEmpty()) oldItems else items
     var next = copy(
         description = draft.description.ifBlank { description },
         sumText = if (draft.sum >= 1) draft.sum.toString() else sumText,
         payerId = recognizedPayer ?: payerId,
-        draftItems = items,
+        draftItems = nextItems,
         parseQuestions = questions,
         parseRetryMessage = null,
         didRecognize = didRecognize || recognizedSomething,
         alertMessage = emptyAlert ?: alertMessage,
         undoSnapshot = if (correction) oldSnapshot else null,
         canUndoParse = correction,
-        changedItemIndices = if (correction) changedItemIndices(oldItems, items) else emptySet(),
+        changedItemIndices = if (correction) changedItemIndices(oldItems, nextItems) else emptySet(),
     )
     // Плоский расход (без позиций) с пустым выбором — делим на всех участников.
-    next = if (items.isEmpty() && next.recipientIds.isEmpty()) {
+    next = if (nextItems.isEmpty() && next.recipientIds.isEmpty()) {
         next.copy(recipientIds = memberIds)
     } else {
         next
@@ -721,8 +728,20 @@ class AddExpenseViewModel @Inject constructor(
                 // Нудж «выберите группу» выполнен — гасим именно его тост сразу.
                 if (form.toastMessage == SELECT_GROUP_TOAST) form.copy(toastMessage = null) else form
             } else {
+                // Позиции чека привязаны к участникам ПРЕЖНЕЙ группы: оставить их
+                // — значит уйти в itemized-ветку сохранения с чужими userId
+                // (400, а при пересечении составов — деньги не на тех людей).
+                // Снапшот «Отменить» относится к тому же чеку и тоже недействителен.
                 val applied = appliedRoom(
-                    form.copy(recipientIds = emptySet(), payerId = null, amountTexts = emptyMap()),
+                    form.copy(
+                        recipientIds = emptySet(),
+                        payerId = null,
+                        amountTexts = emptyMap(),
+                        draftItems = emptyList(),
+                        undoSnapshot = null,
+                        canUndoParse = false,
+                        changedItemIndices = emptySet(),
+                    ),
                     summary.id,
                     summary.members,
                     summary.currency,

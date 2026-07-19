@@ -108,10 +108,15 @@ final class OutboxStore {
         // ошибку чтения: раньше оба случая давали пустой entries, и первая же
         // запись затирала очередь неотправленных расходов начисто.
         if FileManager.default.fileExists(atPath: fileURL.path) {
-            if let data = try? Data(contentsOf: fileURL),
-               let loaded = try? self.decoder.decode([OutboxEntry].self, from: data) {
-                entries = loaded
+            if let data = try? Data(contentsOf: fileURL) {
+                // Файл прочитан — писать безопасно. Битый JSON (обрыв записи,
+                // смена схемы) восстановлению не подлежит: если оставить
+                // didLoad = false, persist навсегда замолкает и офлайн-очередь
+                // живёт только в памяти, пропадая при закрытии приложения.
                 didLoad = true
+                if let loaded = try? self.decoder.decode([OutboxEntry].self, from: data) {
+                    entries = loaded
+                }
             }
         } else {
             didLoad = true // очереди ещё не было — писать безопасно
@@ -177,6 +182,11 @@ final class OutboxStore {
     @MainActor
     func clear() {
         entries = []
+        // Без didLoad = true логаут ушёл бы в retryLoadIfNeeded и вернул на диск
+        // очередь ПРЕДЫДУЩЕГО аккаунта (первое чтение могло не пройти на
+        // залоченном устройстве) — следующий вошедший отправил бы чужие расходы
+        // в свои комнаты.
+        didLoad = true
         persist()
     }
 
@@ -266,11 +276,11 @@ final class OutboxStore {
     /// возвращаются в очередь — иначе они пропали бы при первой же перезаписи.
     private func retryLoadIfNeeded() {
         guard !didLoad else { return }
-        guard let data = try? Data(contentsOf: fileURL),
-              let loaded = try? decoder.decode([OutboxEntry].self, from: data) else { return }
+        guard let data = try? Data(contentsOf: fileURL) else { return }
+        didLoad = true
+        guard let loaded = try? decoder.decode([OutboxEntry].self, from: data) else { return }
         let known = Set(entries.map(\.localId))
         entries = loaded.filter { !known.contains($0.localId) } + entries
-        didLoad = true
     }
 
     private func persist() {

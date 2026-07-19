@@ -139,3 +139,42 @@ func TestRenderOperationItems_Itemized(t *testing.T) {
 		t.Fatalf("render missing total 1 870 in:\n%s", got)
 	}
 }
+
+// Блок позиций уходит в Telegram с ParseMode=HTML, а название позиции и
+// DisplayName задаёт пользователь. Неэкранированный "<" — это и 400 от Telegram
+// (экран операции перестаёт открываться у всей комнаты), и инъекция ссылки в
+// общее сообщение.
+func TestRenderOperationItems_EscapesUserInput(t *testing.T) {
+	members := []api.User{{ID: 1, DisplayName: `<a href="evil">Аня</a>`}}
+	room := &api.Room{Members: &members, Currency: "RUB"}
+	op := api.Operation{Items: []api.OperationItem{{
+		Name:   "Пицца <b>x</b> & a < b",
+		Price:  100,
+		Qty:    1,
+		Kind:   api.ItemKindItem,
+		Shares: []api.ItemShare{{UserId: 1, Weight: 1}},
+	}}}
+
+	got := renderOperationItems(op, room)
+	for _, raw := range []string{"<b>", `<a href="evil">`, "a < b"} {
+		if strings.Contains(got, raw) {
+			t.Fatalf("сырой HTML %q попал в сообщение: %s", raw, got)
+		}
+	}
+	if !strings.Contains(got, "&lt;b&gt;") {
+		t.Fatalf("название позиции не экранировано: %s", got)
+	}
+	if !strings.Contains(got, "&lt;a href=&#34;evil&#34;&gt;") {
+		t.Fatalf("имя участника не экранировано: %s", got)
+	}
+}
+
+func TestUserLink_EscapesDisplayName(t *testing.T) {
+	got := userLink(&api.User{ID: 42, DisplayName: `<b>bad</b>`})
+	if strings.Contains(got, "<b>") {
+		t.Fatalf("DisplayName не экранирован: %s", got)
+	}
+	if !strings.Contains(got, `<a href="tg://user?id=42">`) {
+		t.Fatalf("ссылка сломана: %s", got)
+	}
+}

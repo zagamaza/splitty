@@ -4,15 +4,6 @@ package ai
 
 import "context"
 
-// MediaKind тип входного медиа.
-type MediaKind int
-
-const (
-	MediaText MediaKind = iota
-	MediaAudio
-	MediaImage
-)
-
 // Participant участник комнаты в виде, пригодном для матчинга имён моделью.
 type Participant struct {
 	UserId      int      `json:"userId"`
@@ -51,15 +42,27 @@ type Draft struct {
 	Items       []DraftItem `json:"items,omitempty"`
 }
 
-// ParseInput вход распознавания: медиа + контекст комнаты + текущий черновик.
+// ParseInput вход распознавания: любая комбинация медиа (фото чека + голос +
+// текст) в одном запросе + контекст комнаты + текущий черновик. Мульти-модально:
+// с фото берутся позиции и цены, из голоса — кто что ел.
 type ParseInput struct {
-	Media        MediaKind
-	Data         []byte // для MediaAudio/MediaImage
-	Mime         string
-	Text         string // для MediaText
+	Audio     []byte // голос (опционально)
+	AudioMime string
+	Image     []byte // фото чека (опционально)
+	ImageMime string
+	Text      string // текстовый ввод (опционально)
+
 	Participants []Participant
 	Currency     string
-	Draft        *Draft // текущий черновик при правке; nil при первом распознавании
+	// Кто отправил запрос: «я/меня/мне» в надиктовке — это он.
+	// 0 — неизвестно (правило в промпт не добавляется).
+	RequesterId int
+	Draft       *Draft // текущий черновик при правке; nil при первом распознавании
+}
+
+// HasMedia сообщает, есть ли хоть один вид ввода.
+func (in ParseInput) HasMedia() bool {
+	return len(in.Audio) > 0 || len(in.Image) > 0 || in.Text != ""
 }
 
 // ParseResult результат: обновлённый черновик и опциональные уточняющие вопросы.

@@ -375,6 +375,24 @@ final class ItemDraftTests: XCTestCase {
         XCTAssertEqual(result.total, 11)
         XCTAssertEqual(result.shares[1], 0, "нулевой участник заплатил надбавку")
     }
+
+    /// Swift на переполнении не заворачивается, а падает. `derivedShares()`
+    /// пересчитывается на каждое нажатие клавиши, поэтому огромный вес — это
+    /// крэш прямо во время ввода. Сервер здесь возвращает ErrOverflow, клиент
+    /// обязан вернуть nil.
+    func testDerivedSharesReturnsNilOnWeightOverflowInsteadOfCrashing() {
+        let items = [
+            // Веса складываются без переполнения (2+1), а вот amount*weight —
+            // переполняется: без guard это trap, а не ошибка.
+            OperationItem(name: "Позиция", price: Int.max, qty: 1, shares: [
+                ItemShare(userId: 1, weight: 2),
+                ItemShare(userId: 2, weight: 1),
+            ]),
+        ]
+        XCTAssertNil(items.derivedShares(), "переполнение веса должно давать nil, а не крэш")
+    }
+
+
 }
 
 // MARK: - Фейк write-path API (шов OperationAPI)

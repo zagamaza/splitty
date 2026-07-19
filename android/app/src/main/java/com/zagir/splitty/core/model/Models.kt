@@ -177,11 +177,27 @@ data class OperationItem(
     val name: String,
     /** ВСЕГДА суммарная стоимость строки (целые единицы, уже с учётом [qty]). */
     val price: Int,
-    /** Количество — только для показа («×10»); в делении НЕ участвует. */
+    /**
+     * Количество — только для показа («×10»); в делении НЕ участвует.
+     *
+     * [EncodeDefault] обязателен (см. [ItemShare.weight]): без него kotlinx
+     * выбрасывает `qty: 1` из тела, а сервер копирует поле без доопределения —
+     * и в базу навсегда уходит `qty: 0`.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val qty: Int = 1,
     /** Доли участников; null/пусто у надбавок (делятся по базе). */
     val shares: List<ItemShare>? = null,
-    /** «item» — обычная позиция, «surcharge» — надбавка (сбор/чаевые/доставка). */
+    /**
+     * «item» — обычная позиция, «surcharge» — надбавка (сбор/чаевые/доставка).
+     *
+     * [EncodeDefault] обязателен (см. [ItemShare.weight]): обычной позиции kind
+     * нигде не присваивается явно, без аннотации поле выпадает из тела, сервер
+     * видит "" и с валидацией kind отвечает 400 на КАЖДОЕ сохранение чека.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val kind: String = KIND_ITEM,
     /** Правило деления надбавки «proportional»|«equally»; null у обычных позиций. */
     val split: String? = null,

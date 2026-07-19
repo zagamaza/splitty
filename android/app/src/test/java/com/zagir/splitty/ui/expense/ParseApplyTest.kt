@@ -105,4 +105,25 @@ class ParseApplyTest {
         assertEquals(1L, draft.donorId)
         assertEquals(items, draft.items)
     }
+
+    @Test
+    fun `correction that recognizes only the payer keeps the receipt`() {
+        val items = listOf(
+            OperationItem(name = "Пицца", price = 600, shares = listOf(ItemShare(userId = 1L))),
+            OperationItem(name = "Кола", price = 200, shares = listOf(ItemShare(userId = 2L))),
+        )
+        val withReceipt = baseForm().copy(draftItems = items, didRecognize = true)
+
+        // «платил Саша» — в черновике заполнен ТОЛЬКО donorId.
+        val response = ParseResponse(
+            draft = ParseDraft(description = "", sum = 0, donorId = 2L, items = null),
+            questions = null,
+        )
+        val form = withReceipt.applyingParse(response)
+
+        assertEquals(items, form.draftItems, "правка плательщика стёрла собранный чек")
+        assertEquals(2L, form.payerId)
+        assertNull(form.alertMessage, "распознанный плательщик — не пустой ответ")
+        assertTrue(form.canUndoParse, "отмена должна остаться доступной")
+    }
 }
