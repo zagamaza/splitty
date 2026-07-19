@@ -1584,9 +1584,30 @@ func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
 func (s *Server) tgGet(ctx context.Context, url string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, redactTgToken(err)
 	}
-	return s.httpClient.Do(req)
+	resp, err := s.httpClient.Do(req)
+	return resp, redactTgToken(err)
+}
+
+// redactTgToken вычищает bot-токен из ошибки: *url.Error печатает полный URL, а
+// токен у telegram лежит в ПУТИ (/bot<token>/getFile) — штатный stripPassword его
+// не трогает, и любой таймаут/обрыв клиента сливал токен в логи.
+func redactTgToken(err error) error {
+	if err == nil {
+		return nil
+	}
+	var uErr *url.Error
+	if errors.As(err, &uErr) {
+		if i := strings.Index(uErr.URL, "/bot"); i >= 0 {
+			if j := strings.Index(uErr.URL[i+4:], "/"); j >= 0 {
+				uErr.URL = uErr.URL[:i+4] + "***" + uErr.URL[i+4+j:]
+			} else {
+				uErr.URL = uErr.URL[:i+4] + "***"
+			}
+		}
+	}
+	return err
 }
 
 // userHasFile проверяет, что fileId встречается в операциях комнат пользователя (включая архивные)

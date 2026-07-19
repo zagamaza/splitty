@@ -220,6 +220,15 @@ fun AddExpenseScreen(
         }
     }
 
+    // Система отобрала микрофон (входящий звонок) — останавливаем как по лимиту:
+    // записанное до обрыва распознаём, но не делаем вид, что запись продолжается.
+    LaunchedEffect(recorder.deviceLost) {
+        if (recorder.deviceLost) {
+            viewModel.showToast(context.getString(R.string.rec_device_lost_toast))
+            voice.autoStop()
+        }
+    }
+
     // Уход с экрана/сворачивание при живой записи — молча отменяем (не пишем в фоне).
     DisposableEffect(voice) { onDispose { if (recorder.isRecording) recorder.cancel() } }
 

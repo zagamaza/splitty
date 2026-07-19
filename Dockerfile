@@ -12,5 +12,8 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /app/app /app/app
+# conf/lang обязателен: initI18n вызывается безусловно и паникует на отсутствующей
+# директории — без этого COPY контейнер не поднимается вообще
+COPY --from=builder /app/conf /app/conf
 RUN mkdir -p /var/data
 ENTRYPOINT ["/app/app"]

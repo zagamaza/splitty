@@ -39,6 +39,13 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 	if amount < 0 {
 		return nil, ErrOverflow
 	}
+	// Схлопываем дубли по id и отбрасываем нулевые веса ДО деления: один и тот же
+	// участник может встретиться в shares дважды, а при proportional-надбавке вес
+	// равен базовой доле и легко равен нулю (человек ничего не ел). Без этого
+	// раздача остатка ниже отдавала бы копейки тому, у кого вес 0, и дважды —
+	// дублю, хотя итоговая сумма сходилась и инвариант молчал.
+	agg := make([]weightShare, 0, len(ws))
+	idx := make(map[int]int, len(ws))
 	totalW := 0
 	for _, w := range ws {
 		if w.weight < 0 {
@@ -49,7 +56,20 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 			return nil, ErrOverflow
 		}
 		totalW += w.weight
+		if w.weight == 0 {
+			continue
+		}
+		if i, ok := idx[w.id]; ok {
+			if agg[i].weight > math.MaxInt-w.weight {
+				return nil, ErrOverflow
+			}
+			agg[i].weight += w.weight
+			continue
+		}
+		idx[w.id] = len(agg)
+		agg = append(agg, w)
 	}
+	ws = agg
 	if totalW <= 0 {
 		return out, nil
 	}

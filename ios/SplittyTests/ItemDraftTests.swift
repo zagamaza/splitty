@@ -354,6 +354,27 @@ final class ItemDraftTests: XCTestCase {
         let reloaded = OutboxStore(fileURL: fileURL)
         XCTAssertEqual(reloaded.entries.first?.payload?.items, items)
     }
+
+    /// Участник с нулевой базой (ничего не ел) не должен получать остаток от
+    /// округления пропорциональной надбавки: до схлопывания нулевых весов он
+    /// выигрывал tie-break по меньшему userId и платил весь сбор.
+    func testSurchargeSkipsZeroBaseParticipant() throws {
+        let items = [
+            OperationItem(name: "Пицца", price: 10, qty: 1, shares: [
+                ItemShare(userId: 1, weight: 1, amount: 0),
+                ItemShare(userId: 2, weight: 1),
+                ItemShare(userId: 3, weight: 1),
+            ]),
+            OperationItem(
+                name: "Сбор", price: 1, qty: 1, shares: nil,
+                kind: OperationItem.kindSurcharge,
+                split: OperationItem.splitProportional
+            ),
+        ]
+        let result = try XCTUnwrap(items.derivedShares())
+        XCTAssertEqual(result.total, 11)
+        XCTAssertEqual(result.shares[1], 0, "нулевой участник заплатил надбавку")
+    }
 }
 
 // MARK: - Фейк write-path API (шов OperationAPI)
@@ -419,4 +440,5 @@ private final class FakeOperationAPI: OperationAPI {
             files: nil
         )
     }
+
 }

@@ -282,8 +282,23 @@ private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -
     let totalWeight = weights.reduce(0) { $0 + $1.weight }
     guard totalWeight > 0 else { return out }
 
+    // Схлопываем дубли по id и отбрасываем нулевые веса ДО деления (зеркало
+    // серверного splitByWeight): один участник может встретиться в shares дважды,
+    // а у proportional-надбавки вес равен базовой доле и часто равен нулю.
+    // Иначе остаток от округления уходил тому, кто ничего не ел, и дважды — дублю.
+    var order: [(id: Int, weight: Int)] = []
+    var indexById: [Int: Int] = [:]
+    for w in weights where w.weight > 0 {
+        if let i = indexById[w.id] {
+            order[i].weight += w.weight
+        } else {
+            indexById[w.id] = order.count
+            order.append(w)
+        }
+    }
+
     var given = 0
-    for w in weights {
+    for w in order {
         let value = amount * w.weight / totalWeight
         out[w.id] = value
         given += value
@@ -291,14 +306,15 @@ private func splitByWeight(_ amount: Int, _ weights: [(id: Int, weight: Int)]) -
     let remainder = amount - given
     guard remainder > 0 else { return out }
 
-    let order = weights.sorted { lhs, rhs in
+    let ranked = order.sorted { lhs, rhs in
         let lv = out[lhs.id] ?? 0
         let rv = out[rhs.id] ?? 0
         if lv != rv { return lv > rv }
         return lhs.id < rhs.id
     }
+    guard !ranked.isEmpty else { return out }
     for i in 0..<remainder {
-        out[order[i % order.count].id, default: 0] += 1
+        out[ranked[i % ranked.count].id, default: 0] += 1
     }
     return out
 }

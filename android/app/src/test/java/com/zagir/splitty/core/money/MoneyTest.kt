@@ -163,4 +163,20 @@ class MoneyTest {
         )
         assertEquals(Int.MAX_VALUE, aggregateByCurrency(huge).single().sum)
     }
+
+    /**
+     * Насыщение при переполнении Int может дать ровно Int.MIN_VALUE, а
+     * abs(Int.MIN_VALUE) отрицателен: крупнейший долг уезжал в конец списка,
+     * и «основной» валютой показывалась не та.
+     */
+    @Test
+    fun `saturated negative total sorts first`() {
+        val got = aggregateByCurrency(
+            listOf(
+                CurrencySum(currency = "USD", sum = 100),
+                CurrencySum(currency = "RUB", sum = Int.MIN_VALUE),
+            )
+        )
+        assertEquals("RUB", got.first().currency)
+    }
 }

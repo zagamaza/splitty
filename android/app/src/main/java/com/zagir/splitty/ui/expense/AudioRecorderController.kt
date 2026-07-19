@@ -110,6 +110,14 @@ class AudioRecorderController(
     /** MIME записанного аудио (серверный allowlist). */
     val mimeType = "audio/wav"
 
+    /**
+     * Сессия записи оборвалась на стороне системы (входящий звонок, отъём
+     * микрофона): цикл чтения получил терминальный код. Экран обязан
+     * остановить запись — иначе UI «пишет» до автостопа впустую.
+     */
+    var deviceLost by mutableStateOf(false)
+        private set
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var record: AudioRecord? = null
     private var readThread: Thread? = null
@@ -124,6 +132,7 @@ class AudioRecorderController(
     override fun start() {
         if (isRecording) return
         audioData = null
+        deviceLost = false
         val (rec, sampleRate) = openRecord()
             ?: throw AudioRecorderException("Не удалось начать запись. Проверьте доступ к микрофону")
         record = rec
@@ -159,6 +168,11 @@ class AudioRecorderController(
             // микрофона, а под замком — навсегда.
             if (read < 0) {
                 running = false
+                // Молча выйти нельзя: isRecording остаётся true, уровень замирает,
+                // и пользователь ещё до минуты смотрит на «идущую» запись, после
+                // чего в parse уходит обрезанный на середине WAV. Сообщаем экрану —
+                // он останавливает запись как по лимиту.
+                mainHandler.post { if (isRecording) deviceLost = true }
                 return
             }
             if (read == 0) continue

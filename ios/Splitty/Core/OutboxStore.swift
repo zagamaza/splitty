@@ -103,11 +103,24 @@ final class OutboxStore {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         self.decoder = decoder
-        if let data = try? Data(contentsOf: fileURL),
-           let loaded = try? self.decoder.decode([OutboxEntry].self, from: data) {
-            entries = loaded
+        // Различаем «файла нет» и «прочитать не удалось». Под
+        // completeFileProtection фоновый запуск на залоченном устройстве даёт
+        // ошибку чтения: раньше оба случая давали пустой entries, и первая же
+        // запись затирала очередь неотправленных расходов начисто.
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            if let data = try? Data(contentsOf: fileURL),
+               let loaded = try? self.decoder.decode([OutboxEntry].self, from: data) {
+                entries = loaded
+                didLoad = true
+            }
+        } else {
+            didLoad = true // очереди ещё не было — писать безопасно
         }
     }
+
+    /// Очередь успешно прочитана (или её ещё не существовало). Пока false —
+    /// сохранять нельзя: перезапись затрёт непрочитанные записи.
+    private var didLoad = false
 
     /// Записи комнаты (для списка операций группы и бейджей), FIFO.
     func entries(roomId: String) -> [OutboxEntry] {
@@ -248,7 +261,23 @@ final class OutboxStore {
         }
     }
 
+    /// Повторная попытка прочитать очередь, если первая (на залоченном
+    /// устройстве) провалилась. Записи с диска, которых нет в памяти,
+    /// возвращаются в очередь — иначе они пропали бы при первой же перезаписи.
+    private func retryLoadIfNeeded() {
+        guard !didLoad else { return }
+        guard let data = try? Data(contentsOf: fileURL),
+              let loaded = try? decoder.decode([OutboxEntry].self, from: data) else { return }
+        let known = Set(entries.map(\.localId))
+        entries = loaded.filter { !known.contains($0.localId) } + entries
+        didLoad = true
+    }
+
     private func persist() {
+        retryLoadIfNeeded()
+        // Пока очередь не прочитана, перезаписывать файл нельзя: на диске могут
+        // лежать неотправленные расходы, которых нет в памяти.
+        guard didLoad else { return }
         // Снимок на вызывающем потоке, encode и запись — в фоне.
         let snapshot = entries
         io.async { [encoder, fileURL] in
@@ -262,9 +291,11 @@ final class OutboxStore {
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
             try? directoryURL.setResourceValues(values)
-            // completeFileProtection + вне бэкапа: очередь содержит суммы и
-            // участников неотправленных расходов.
-            try? data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+            // Вне бэкапа: очередь содержит суммы и участников неотправленных
+            // расходов. Защита — UnlessOpen, а не completeFileProtection:
+            // очередь пишется и из фоновых синков на залоченном устройстве, где
+            // строгий режим отдаёт ошибку записи, и запись молча терялась.
+            try? data.write(to: fileURL, options: [.atomic, .completeFileProtectionUnlessOpen])
         }
     }
 

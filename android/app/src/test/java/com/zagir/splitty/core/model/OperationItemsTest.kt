@@ -247,6 +247,22 @@ class OperationItemsTest {
         assertTrue(beer.hasUnknown)
     }
 
+    /**
+     * Участник с нулевой базой (ничего не ел) не должен получать остаток от
+     * округления пропорциональной надбавки: до схлопывания нулевых весов он
+     * выигрывал tie-break по меньшему userId и платил весь сбор целиком.
+     */
+    @Test
+    fun `надбавка не задевает участника с нулевой базой`() {
+        val items = listOf(
+            item("Пицца", 10, shareAmount(1L, 0), share(2L, 1), share(3L, 1)),
+            surcharge("Сбор", 1, OperationItem.SPLIT_PROPORTIONAL),
+        )
+        val result = assertNotNull(items.derivedShares())
+        assertEquals(11, result.total)
+        assertEquals(0, result.shares[1L]!!, "нулевой участник заплатил надбавку")
+    }
+
     // --- Фикстуры ---
 
     private fun share(userId: Long, weight: Int) = ItemShare(userId = userId, weight = weight)

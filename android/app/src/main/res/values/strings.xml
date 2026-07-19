@@ -373,6 +373,7 @@
     <string name="rec_cancel_a11y">Отменить запись</string>
     <string name="rec_short_tap_hint">Удерживайте микрофон, пока говорите, и отпустите, когда закончите</string>
     <string name="rec_limit_toast">Минута — лимит записи. Распознаю, что успели сказать</string>
+    <string name="rec_device_lost_toast">Запись прервалась. Распознаю, что успели сказать</string>
     <string name="rec_review_title">Записано</string>
     <string name="rec_review_subtitle">Голосовая запись · %1$d сек</string>
     <string name="rec_review_recognize">Распознать</string>

@@ -126,8 +126,21 @@ internal fun splitByWeight(amount: Long, weights: List<WeightShare>): Map<Long, 
     val out = LinkedHashMap<Long, Long>(weights.size)
     if (totalW <= 0) return out
 
-    var given = 0L
+    // Схлопываем дубли по id и отбрасываем нулевые веса ДО деления (зеркало
+    // серверного splitByWeight): один участник может встретиться в shares дважды,
+    // а у proportional-надбавки вес равен базовой доле и часто равен нулю.
+    // Иначе остаток от округления уходил тому, кто ничего не ел, и дважды — дублю.
+    val agg = LinkedHashMap<Long, Long>(weights.size)
     for (w in weights) {
+        if (w.weight == 0L) continue
+        val prev = agg[w.id] ?: 0L
+        if (prev > Long.MAX_VALUE - w.weight) return null
+        agg[w.id] = prev + w.weight
+    }
+    val shares = agg.map { WeightShare(it.key, it.value) }
+
+    var given = 0L
+    for (w in shares) {
         if (w.weight != 0L && amount > Long.MAX_VALUE / w.weight) return null // amount*weight переполняет Long
         val value = amount * w.weight / totalW
         out[w.id] = value
@@ -136,10 +149,11 @@ internal fun splitByWeight(amount: Long, weights: List<WeightShare>): Map<Long, 
     val rem = amount - given
     // при корректных входах остаток строго меньше числа участников; иначе — признак
     // переполнения/бага: не раздаём в цикле (DoS), а сигналим null
-    if (rem < 0 || rem > weights.size) return null
+    if (rem < 0 || rem > shares.size) return null
     if (rem == 0L) return out
+    if (shares.isEmpty()) return out
 
-    val order = weights.sortedWith(
+    val order = shares.sortedWith(
         compareByDescending<WeightShare> { out[it.id] ?: 0L }.thenBy { it.id }
     )
     var i = 0

@@ -28,14 +28,19 @@ func TestSanitize_DropsForeignUserId(t *testing.T) {
 	}
 }
 
-func TestSanitize_NegativePriceDropped(t *testing.T) {
+func TestSanitize_NegativePriceBecomesUndefined(t *testing.T) {
+	// Отрицательная цена — галлюцинация: превращается в price=0
+	// («цена не определена»), участники позиции при этом не теряются.
 	d := ai.Draft{Items: []ai.DraftItem{
 		{Name: "A", Price: -100, Kind: "item", Shares: []ai.ItemShare{{UserId: 1, Weight: 1}}},
 		{Name: "B", Price: 200, Kind: "item", Shares: []ai.ItemShare{{UserId: 1, Weight: 1}}},
 	}}
 	got := sanitizeDraft(d, members(1))
-	if len(got.Items) != 1 || got.Items[0].Name != "B" {
-		t.Fatalf("позиция с отрицательной ценой не отброшена: %+v", got.Items)
+	if len(got.Items) != 2 || got.Items[0].Price != 0 {
+		t.Fatalf("отрицательная цена не обнулена: %+v", got.Items)
+	}
+	if got.Sum != 200 {
+		t.Fatalf("Sum: %d, want 200", got.Sum)
 	}
 }
 
@@ -61,6 +66,84 @@ func TestSanitize_SumRecomputed(t *testing.T) {
 	got := sanitizeDraft(d, members(1))
 	if got.Sum != 330 {
 		t.Fatalf("Sum не пересчитан: %d, want 330", got.Sum)
+	}
+}
+
+func TestSanitize_FlatDraftKeepsModelSum(t *testing.T) {
+	// Плоский черновик (позиций нет — цены не названы): сумма модели живёт,
+	// иначе распознанное «такси 400» затиралось бы в 0.
+	d := ai.Draft{Description: "Такси", Sum: 400}
+	got := sanitizeDraft(d, members(1))
+	if got.Sum != 400 || got.Description != "Такси" {
+		t.Fatalf("плоский черновик испорчен: %+v", got)
+	}
+}
+
+func TestSanitize_KeepsPricelessItemWithShares(t *testing.T) {
+	// Позиция без цены (price=0 — «цена не определена»), но с участниками —
+	// живёт в черновике: раскладку «кто что ел» терять нельзя, цену доспросит UI.
+	d := ai.Draft{
+		Sum: 1200,
+		Items: []ai.DraftItem{
+			{Name: "Пицца", Price: 0, Kind: "item", Shares: []ai.ItemShare{{UserId: 1, Weight: 1}}},
+			{Name: "Салат", Price: 300, Kind: "item", Shares: []ai.ItemShare{{UserId: 1, Weight: 1}}},
+		},
+	}
+	got := sanitizeDraft(d, members(1))
+	if len(got.Items) != 2 {
+		t.Fatalf("позиция без цены выброшена: %+v", got.Items)
+	}
+	// Sum — по известным ценам (0 у неопределённой).
+	if got.Sum != 300 {
+		t.Fatalf("Sum: %d, want 300", got.Sum)
+	}
+}
+
+func TestSanitize_PricelessItemWithoutSharesDropped(t *testing.T) {
+	// Без цены И без участников/unknown — мусор, выбрасывается.
+	d := ai.Draft{Sum: 500, Items: []ai.DraftItem{{Name: "Пицца", Price: 0, Kind: "item"}}}
+	got := sanitizeDraft(d, members(1))
+	if len(got.Items) != 0 {
+		t.Fatalf("пустышка не выброшена: %+v", got.Items)
+	}
+	// Черновик стал плоским — сумма модели сохраняется.
+	if got.Sum != 500 {
+		t.Fatalf("сумма плоского черновика затёрта: %d, want 500", got.Sum)
+	}
+}
+
+func TestSanitize_FlatSumClamped(t *testing.T) {
+	// Бредовые значения суммы плоского черновика обнуляются. Граница — та же,
+	// что у write-path (maxItemsTotal): более строгий порог обнулял бы суммы,
+	// которые сохранить МОЖНО (валюты вроде IDR/VND).
+	for _, sum := range []int{-5, maxItemsTotal + 1} {
+		got := sanitizeDraft(ai.Draft{Sum: sum}, members(1))
+		if got.Sum != 0 {
+			t.Fatalf("sum %d не обнулён: %d", sum, got.Sum)
+		}
+	}
+	// В пределах write-path сумма сохраняется, а не теряется.
+	if got := sanitizeDraft(ai.Draft{Sum: maxItemPrice + 1}, members(1)); got.Sum != maxItemPrice+1 {
+		t.Fatalf("сохраняемая сумма затёрта: %d", got.Sum)
+	}
+}
+
+func TestSanitize_SurchargeOnlyCollapsesToFlat(t *testing.T) {
+	// Чек из одних надбавок (модель пометила такси как surcharge) невалиден —
+	// схлопывается в плоский черновик с сохранением суммы.
+	d := ai.Draft{
+		Description: "Такси",
+		Sum:         400,
+		Items: []ai.DraftItem{
+			{Name: "Такси", Price: 400, Kind: "surcharge", Split: "proportional"},
+		},
+	}
+	got := sanitizeDraft(d, members(1))
+	if len(got.Items) != 0 {
+		t.Fatalf("surcharge-only чек не схлопнут: %+v", got.Items)
+	}
+	if got.Sum != 400 {
+		t.Fatalf("сумма потеряна: %d, want 400", got.Sum)
 	}
 }
 

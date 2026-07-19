@@ -66,7 +66,10 @@ fun aggregateByCurrency(amounts: List<CurrencySum>): List<CurrencySum> {
             )
         }
         .sortedWith(
-            compareByDescending<CurrencySum> { abs(it.sum) }.thenBy { it.currency }
+            // abs на Long, а не на Int: насыщение выше может дать ровно
+            // Int.MIN_VALUE, а abs(Int.MIN_VALUE) отрицателен — крупнейший долг
+            // уезжал в конец списка, и «основной» показывалась не та валюта
+            compareByDescending<CurrencySum> { abs(it.sum.toLong()) }.thenBy { it.currency }
         )
 }
 

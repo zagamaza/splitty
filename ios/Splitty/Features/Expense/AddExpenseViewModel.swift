@@ -1,6 +1,18 @@
 import Foundation
 import Observation
 
+/// Строка разбивки «С кого сколько» itemized-черновика: итог участника и
+/// сколько из него добавили сборы (для подписи «+N ₽ сбор»).
+struct PersonShare: Identifiable, Hashable {
+    let userId: Int
+    /// Полная доля: позиции + сборы (ровно то, что сохранит сервер).
+    let total: Int
+    /// Часть итога, пришедшая от сборов/чаевых; 0 — сборов нет.
+    let surchargePart: Int
+
+    var id: Int { userId }
+}
+
 /// VM экрана добавления/редактирования расхода: выбор группы,
 /// описание, сумма, плательщик, участники и способ деления
 /// («Поровну» — канонически на сервере, «По суммам» — точные доли).
@@ -43,12 +55,33 @@ final class AddExpenseViewModel {
     /// true — идёт AI-распознавание (`POST /parse`): спиннер в композере/нижней
     /// панели, кнопки записи заблокированы. Ошибка распознавания НЕ теряет черновик.
     private(set) var isParsing = false
+    /// Индексы позиций, изменённых/добавленных последней голосовой правкой —
+    /// чек подсвечивает их, чтобы было видно, ЧТО именно поменялось.
+    private(set) var changedItemIndices: Set<Int> = []
+    /// true — доступна отмена последней голосовой правки (`undoParse`).
+    private(set) var canUndoParse = false
+    /// Снапшот формы до последней голосовой правки.
+    private var undoSnapshot: (items: [OperationItem]?, description: String, sum: String, payer: Int?)?
+    /// Короткое подтверждение действия («Саня — это Александр. Запомнил»);
+    /// UI показывает тостом и гасит сам.
+    var toastMessage: String?
+    /// Форма заполнена распознаванием (голос/фото), а не вручную. Нужно, чтобы
+    /// плоский AI-результат (без позиций) не выглядел как обычный ручной ввод.
+    private(set) var didRecognize = false
     /// Уточняющие вопросы модели из последнего ответа («кто платил?») — показываем
     /// подсказкой под чеком; пусто — вопросов нет.
     var parseQuestions: [String] = []
 
     private(set) var isSaving = false
+    /// Сохранение уже завершилось успехом — экран закрывается. Защёлка нужна
+    /// офлайн-веткам: они не делают await, поэтому `isSaving` успевал сброситься
+    /// в defer до второго тапа, и двойной тап клал в outbox два одинаковых расхода
+    /// с разными clientOpId (дедуп по нему не срабатывал).
+    private var didSave = false
     var alertMessage: String?
+    /// Ошибка распознавания с возможностью повторить (запись сохранена во вью):
+    /// отдельно от `alertMessage`, чтобы алерт мог предложить «Повторить».
+    var parseRetryMessage: String?
 
     /// id редактируемой СИНХРОНИЗИРОВАННОЙ операции (nil — создание/локальная).
     private(set) var editOperationId: String?
@@ -136,10 +169,26 @@ final class AddExpenseViewModel {
     var canSave: Bool {
         if hasDraftItems {
             if hasUnknownItems { return false }
+            if hasPricelessItems { return false }
             return draftItemList.derivedShares() != nil
         }
         guard splitType == .byExactAmount else { return true }
         return !recipientIds.isEmpty && isDistributionBalanced
+    }
+
+    /// Почему «Сохранить» заблокирована — для нуджа по тапу (кнопка живая
+    /// и объясняет причину, а не молча игнорирует). nil — сохранять можно.
+    var saveBlockedReason: String? {
+        if hasDraftItems {
+            if hasUnknownItems { return "Сначала выберите, кто есть кто в позициях" }
+            if hasPricelessItems { return "Укажите цены позиций — без них не посчитать доли" }
+            if draftItemList.derivedShares() == nil { return "Проверьте позиции чека — доли не сходятся" }
+            return nil
+        }
+        if splitType == .byExactAmount, !isDistributionBalanced || recipientIds.isEmpty {
+            return distributionHint
+        }
+        return nil
     }
 
     /// Живая подпись режима «По суммам»: остаток/перерасход/готово.
@@ -196,6 +245,13 @@ final class AddExpenseViewModel {
     /// true — хотя бы в одной позиции есть нераспознанное имя (блокирует «Сохранить»).
     var hasUnknownItems: Bool { draftItemList.contains(where: \.hasUnknown) }
 
+    /// true — есть обычная позиция без цены (price=0, «цена не определена»):
+    /// модель услышала блюдо и участников, но не цену. Сохранение заблокировано,
+    /// чек помечает такие позиции «цена?».
+    var hasPricelessItems: Bool {
+        draftItemList.contains { !$0.isSurcharge && $0.price < 1 }
+    }
+
     /// Первое нераспознанное имя — для подсказки «выберите, кто такой …».
     var firstUnknownName: String? {
         for item in draftItemList {
@@ -248,10 +304,88 @@ final class AddExpenseViewModel {
         draftItemList.filter { $0.isSurcharge }.reduce(0) { $0 + $1.price }
     }
 
+    /// Разбивка «С кого сколько» по позициям в стабильном порядке появления
+    /// участников в чеке; nil — позиций нет или они невалидны (перебор фиксов).
+    /// Суммы — точное зеркало серверного расчёта (`derivedShares`).
+    var personShares: [PersonShare]? {
+        guard hasDraftItems, let derived = draftItemList.derivedShares() else { return nil }
+        let base = draftItemList.filter { !$0.isSurcharge }.derivedShares()?.shares ?? [:]
+        return itemizedUserIds.compactMap { id in
+            guard let total = derived.shares[id] else { return nil }
+            return PersonShare(userId: id, total: total, surchargePart: total - (base[id] ?? 0))
+        }
+    }
+
+    /// Переключает правило деления надбавки (сбор/чаевые/доставка):
+    /// «пропорционально съеденному» ⇄ «поровну на всех». Обычные позиции не трогает.
+    func toggleSurchargeRule(at index: Int) {
+        guard var items = draftItems, items.indices.contains(index),
+              items[index].isSurcharge else { return }
+        let item = items[index]
+        let newSplit = item.split == OperationItem.splitEqually
+            ? OperationItem.splitProportional
+            : OperationItem.splitEqually
+        items[index] = OperationItem(
+            name: item.name,
+            price: item.price,
+            qty: item.qty,
+            shares: nil,
+            kind: item.kind,
+            split: newSplit,
+            percent: item.percent,
+            unknown: item.unknown
+        )
+        draftItems = items
+    }
+
+    /// Удаляет позицию чека (AI мог придумать лишнюю строку — путь починить
+    /// руками, не передиктовывая). Последняя позиция → возврат к плоской форме.
+    func deleteItem(at index: Int) {
+        guard var items = draftItems, items.indices.contains(index) else { return }
+        items.remove(at: index)
+        draftItems = items.isEmpty ? nil : items
+        changedItemIndices = []
+        syncRecipientsFromItems()
+    }
+
+    /// Добавляет пустую позицию (AI мог пропустить блюдо): цена 0 = «цена не
+    /// определена», деление поровну на всех участников. Возвращает индекс
+    /// новой строки — вью сразу открывает её шит.
+    func addBlankItem() -> Int? {
+        guard hasDraftItems, var items = draftItems else { return nil }
+        let shares = members.map { ItemShare(userId: $0.id, weight: 1) }
+        items.append(OperationItem(name: "", price: 0, qty: 1, shares: shares))
+        draftItems = items
+        syncRecipientsFromItems()
+        return items.count - 1
+    }
+
+    /// «Поровну на всех»: выбрасывает позиции, оставляя плоскую сумму.
+    /// Деструктивно для распознанного чека — сохраняем снапшот, чтобы
+    /// баннер «Отменить» мог вернуть всё как было (тот же механизм undoParse).
+    func collapseToEqualSplit() {
+        guard hasDraftItems else { return }
+        undoSnapshot = (items: draftItems, description: descriptionText,
+                        sum: sumText, payer: payerId)
+        canUndoParse = true
+        changedItemIndices = []
+        if let total = itemizedTotal {
+            sumText = String(total)
+        }
+        draftItems = nil
+        recipientIds = Set(members.map(\.id))
+    }
+
     /// Применяет ответ AI-распознавания к форме: описание, сумма, донор, позиции.
     /// Позиции становятся источником правды (itemized-операция); участники
-    /// синхронизируются с позициями для последующего сохранения.
+    /// синхронизируются с позициями. Если это была ПРАВКА непустой формы —
+    /// запоминает снапшот для «Отменить» и помечает изменённые позиции.
     func apply(parse response: ParseResponse) {
+        let wasCorrection = didRecognize || hasDraftItems
+        let oldItems = draftItems
+        let oldSnapshot = (items: draftItems, description: descriptionText,
+                           sum: sumText, payer: payerId)
+
         let draft = response.draft
         if !draft.description.isEmpty {
             descriptionText = draft.description
@@ -262,22 +396,60 @@ final class AddExpenseViewModel {
         if let donorId = draft.donorId, members.contains(where: { $0.id == donorId }) {
             payerId = donorId
         }
-        draftItems = draft.items
+        // Голосовая правка БЕЗ позиций в ответе («платил Саша») не должна стирать
+        // уже показанный чек: модель отвечает только тем, что расслышала, а
+        // пустой items здесь означает «про позиции ничего не сказано», а не
+        // «позиций нет». Для первичного распознавания перезаписываем как раньше.
+        if wasCorrection, (draft.items ?? []).isEmpty {
+            // оставляем текущие draftItems
+        } else {
+            draftItems = draft.items
+        }
         parseQuestions = response.questionList
+        // распознали что-то полезное — помечаем форму как «из AI»
+        // Плательщик — тоже распознанное: правка «платил Саша» меняет форму, и
+        // говорить на неё «не удалось распознать» (да ещё и снимать undo) неверно.
+        let recognizedDonor = draft.donorId.map { id in members.contains { $0.id == id } } ?? false
+        let recognizedSomething = !draft.description.isEmpty || draft.sum >= 1
+            || !(draft.items ?? []).isEmpty || recognizedDonor
+        if recognizedSomething {
+            didRecognize = true
+        } else if parseQuestions.isEmpty {
+            // совсем пусто и без вопросов — говорим явно, а не молча возвращаем форму
+            alertMessage = "Не удалось распознать. Скажите ещё раз — с блюдами и ценами"
+        }
+        // Голосовая правка непустой формы: снапшот для отмены + подсветка диффа.
+        if wasCorrection, recognizedSomething {
+            undoSnapshot = oldSnapshot
+            canUndoParse = true
+            changedItemIndices = Self.changedIndices(old: oldItems ?? [], new: draft.items ?? [])
+        } else {
+            changedItemIndices = []
+            canUndoParse = false
+        }
         syncRecipientsFromItems()
     }
 
+    /// Поколение parse-запроса: новый запрос ОБГОНЯЕТ старый (например, во время
+    /// распознавания голоса пользователь добавил фото чека — уходит голос+фото,
+    /// а ответ первого запроса игнорируется).
+    private var parseGeneration = 0
+
     /// AI-распознавание/голосовая правка: шлёт медиа + текущий черновик на `/parse`,
     /// применяет ответ. Ошибка (сеть/сервер) НЕ теряет черновик — форма остаётся
-    /// как была, показывается алерт.
+    /// как была, показывается алерт. Повторный вызов при активном запросе НЕ
+    /// блокируется, а обгоняет его (см. `parseGeneration`).
     func parse(api: APIClient, audio: Data? = nil, image: Data? = nil, text: String? = nil) async {
-        guard !isParsing else { return }
         guard let roomId = selectedRoomId else {
             alertMessage = "Выберите группу"
             return
         }
+        parseGeneration += 1
+        let generation = parseGeneration
         isParsing = true
-        defer { isParsing = false }
+        defer {
+            if generation == parseGeneration { isParsing = false }
+        }
 
         // Текущий черновик передаётся для голосовой правки: сервер применяет
         // только дельту, не пересобирая уже проставленные доли/имена. Пустую
@@ -293,11 +465,90 @@ final class AddExpenseViewModel {
                 text: text,
                 draft: currentDraft
             )
+            // Устаревший ответ (нас обогнал более полный запрос) — выбрасываем.
+            guard generation == parseGeneration else { return }
             apply(parse: response)
+            if didRecognize {
+                Haptics.success()
+            }
         } catch {
             if error.isTaskCancellation { return }
-            alertMessage = error.localizedDescription
+            guard generation == parseGeneration else { return }
+            // Отдельный канал ошибки парсинга: у вью есть lastAudio, и она
+            // предлагает «Повторить» — диктовка НЕ теряется из-за моргнувшей сети.
+            parseRetryMessage = humanErrorText(error)
         }
+    }
+
+    /// Отмена активного распознавания (кнопка на parsing-оверлее): текущий
+    /// запрос обесценивается поколением, форма остаётся как была.
+    func cancelParse() {
+        parseGeneration += 1
+        isParsing = false
+    }
+
+    /// «Что осталось уточнить» для экрана диктовки: нераспознанные имена,
+    /// позиции без цены и вопросы модели (не дублирующие первые два).
+    /// Показывается в оверлее записи при голосовой правке — видно, что сказать.
+    var missingInfoHints: [String] {
+        var hints: [String] = []
+        var covered: [String] = []
+        for item in draftItemList {
+            for name in item.unknown ?? [] {
+                // Безличная форма: «кто такой Маша?» звучала бы криво.
+                hints.append("Кто это — «\(name)»?")
+                covered.append(name.lowercased())
+            }
+        }
+        for item in draftItemList where !item.isSurcharge && item.price < 1 {
+            let name = item.name.isEmpty ? "позиция" : item.name
+            hints.append("Сколько стоит «\(name)»?")
+            covered.append(name.lowercased())
+        }
+        for question in parseQuestions {
+            let lower = question.lowercased()
+            if covered.contains(where: { lower.contains($0) }) { continue }
+            hints.append(question)
+        }
+        return Array(hints.prefix(3))
+    }
+
+    /// Индексы позиций, отличающихся от прежней версии черновика: изменённые
+    /// по месту и добавленные в конец. Удаления не подсвечиваются (строки нет).
+    nonisolated static func changedIndices(old: [OperationItem], new: [OperationItem]) -> Set<Int> {
+        var out: Set<Int> = []
+        for (index, item) in new.enumerated() {
+            if index >= old.count || old[index] != item {
+                out.insert(index)
+            }
+        }
+        return out
+    }
+
+    /// Откат последней голосовой правки к снапшоту формы.
+    func undoParse() {
+        guard let snapshot = undoSnapshot else { return }
+        draftItems = snapshot.items
+        descriptionText = snapshot.description
+        sumText = snapshot.sum
+        payerId = snapshot.payer
+        undoSnapshot = nil
+        canUndoParse = false
+        changedItemIndices = []
+        parseQuestions = []
+        syncRecipientsFromItems()
+    }
+
+    /// Гасит подсветку изменённых позиций (по таймеру из вью).
+    func clearChangeHighlights() {
+        changedItemIndices = []
+    }
+
+    /// Принять правку («Ок»/таймаут карточки): прячет карточку отмены,
+    /// снапшот выбрасывается.
+    func dismissUndo() {
+        canUndoParse = false
+        undoSnapshot = nil
     }
 
     /// Сброс распознанного чека (чип «Поровну на всех» или ручная правка суммы/долей):
@@ -344,6 +595,9 @@ final class AddExpenseViewModel {
         )
         draftItems = items
         syncRecipientsFromItems()
+        if let member = members.first(where: { $0.id == userId }) {
+            toastMessage = "«\(name)» — это \(member.displayName). Запомнил, больше не спрошу"
+        }
         // Дозапись алиаса — best-effort: ошибка (сеть/доступ) не критична для формы.
         Task { try? await api.addAlias(userId: userId, alias: name) }
     }
@@ -423,6 +677,11 @@ final class AddExpenseViewModel {
                 recipientIds = Set(payload.recipientIds ?? [])
                 editRecipientOrder = payload.recipientIds ?? []
             }
+            // Позиции чека неотправленной записи переносим так же, как у
+            // синхронизированной операции: без этого правка описания у офлайн
+            // itemized-расхода уходила в outbox с items=nil и чек терялся
+            // безвозвратно — при синке создавался плоский расход.
+            draftItems = payload.items
         }
 
         state = .loading
@@ -465,6 +724,13 @@ final class AddExpenseViewModel {
         recipientIds = []
         payerId = nil
         amountTexts = [:]
+        // Позиции чека принадлежат участникам ПРЕЖНЕЙ группы: без сброса
+        // сохранение шло по itemized-ветке с чужими userId — 400 от сервера,
+        // а при пересечении id деньги списывались не с тех людей.
+        draftItems = nil
+        undoSnapshot = nil
+        canUndoParse = false
+        changedItemIndices = []
         applyRoom(id: summary.id, members: summary.members, currency: summary.currency)
     }
 
@@ -504,7 +770,7 @@ final class AddExpenseViewModel {
     func save(api: APIClient, outbox: OutboxStore, isOnline: Bool) async -> Bool {
         // Защита от двойного тапа по «Сохранить»: второй Task в том же кадре
         // не должен отправить второй POST (isSaving выставляется до await).
-        guard !isSaving else { return false }
+        guard !isSaving, !didSave else { return false }
         guard let roomId = selectedRoomId else {
             alertMessage = "Выберите группу"
             return false
@@ -581,6 +847,7 @@ final class AddExpenseViewModel {
                     items: itemsToSend
                 )
             )
+            didSave = true
             return true
         }
 
@@ -599,6 +866,7 @@ final class AddExpenseViewModel {
         // Офлайн-создание: в outbox, отправится при появлении сети.
         if editOperationId == nil, !isOnline {
             outbox.add(roomId: roomId, payload: payload, localId: localId)
+            didSave = true
             return true
         }
 
@@ -626,12 +894,14 @@ final class AddExpenseViewModel {
                     clientOpId: localId.uuidString
                 )
             }
+            didSave = true
             return true
         } catch let error as APIError {
             // Сервер недоступен при живой сети (обслуживание, упал бэкенд):
             // создание не теряем — кладём в outbox с ТЕМ ЖЕ localId (идемпотентно).
             if editOperationId == nil, case .transport = error {
                 outbox.add(roomId: roomId, payload: payload, localId: localId)
+                didSave = true
                 return true
             }
             alertMessage = error.localizedDescription

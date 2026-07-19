@@ -124,10 +124,29 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 	if len(req.Items) == 0 {
 		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "нужна хотя бы одна позиция"}
 	}
-	// нераспознанные имена сохранять нельзя
+	// лимиты числа позиций/долей: sanitizeDraft держит их для вывода модели, но
+	// клиент шлёт JSON напрямую — без этой проверки в Mongo уходил бы чек на
+	// десятки тысяч позиций
+	if len(req.Items) > maxDraftItems {
+		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "слишком много позиций в чеке"}
+	}
 	for _, it := range req.Items {
+		// нераспознанные имена сохранять нельзя
 		if len(it.Unknown) > 0 {
 			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "сначала выберите, кто такие: " + strings.Join(it.Unknown, ", ")}
+		}
+		if len(it.Shares) > maxItemShares {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "слишком много участников у позиции"}
+		}
+		// kind/split — сырые строки от клиента: без проверки они ложились в базу
+		// как есть и возвращались наружу, а неизвестный split молча трактовался
+		// как equally
+		if it.Kind != string(api.ItemKindItem) && it.Kind != string(api.ItemKindSurcharge) {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "неизвестный тип позиции"}
+		}
+		if it.Kind == string(api.ItemKindSurcharge) &&
+			it.Split != string(api.SplitProportional) && it.Split != string(api.SplitEqually) {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "неизвестный способ деления надбавки"}
 		}
 	}
 
@@ -145,8 +164,10 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 	// границы величин — защита от переполнения при взвешенном делении (DoS)
 	priceSum := 0
 	for _, it := range apiItems {
-		if it.Price < 0 || it.Price > maxItemPrice {
-			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "цена позиции вне допустимого диапазона"}
+		// price ≥ 1: черновик допускает price=0 («цена не определена»),
+		// но сохранять получек нельзя — клиент блокирует, сервер перепроверяет
+		if it.Price < 1 || it.Price > maxItemPrice {
+			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "у каждой позиции должна быть цена"}
 		}
 		priceSum += it.Price
 		if priceSum > maxItemsTotal {

@@ -311,3 +311,33 @@ func TestDeriveShares_DuplicateUserInItem(t *testing.T) {
 		t.Fatalf("shares = %v, total = %d; ожидали {1:10}, 10", shares, total)
 	}
 }
+
+func TestSplitSurcharge_ZeroBaseParticipantGetsNothing(t *testing.T) {
+	// Участник с нулевой базой (ничего не ел — фикс 0) не должен получить
+	// остаток от округления пропорциональной надбавки: до схлопывания нулевых
+	// весов он выигрывал tie-break по меньшему userId и платил весь сбор.
+	zero := 0
+	items := []OperationItem{
+		{
+			Name:  "Пицца",
+			Price: 10,
+			Kind:  ItemKindItem,
+			Shares: []ItemShare{
+				{UserId: 1, Amount: &zero},
+				{UserId: 2, Weight: 1},
+				{UserId: 3, Weight: 1},
+			},
+		},
+		{Name: "Сбор", Price: 1, Kind: ItemKindSurcharge, Split: SplitProportional},
+	}
+	shares, total, err := DeriveShares(items)
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+	if total != 11 {
+		t.Fatalf("total = %d, want 11", total)
+	}
+	if shares[1] != 0 {
+		t.Fatalf("нулевой участник заплатил надбавку: shares = %v", shares)
+	}
+}
