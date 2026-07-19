@@ -8,6 +8,10 @@ struct FriendDetailView: View {
     /// актуальный баланс подтягивается по .task/.refreshable/dataVersion.
     @State private var friend: FriendBalance
     @State private var errorMessage: String?
+    /// Группа, выбранная для погашения (item-sheet SettleUpView).
+    @State private var settleRoom: FriendRoomBalance?
+    /// Диалог выбора группы, когда общих групп с долгом несколько.
+    @State private var isSettleRoomPickerPresented = false
 
     init(friend: FriendBalance) {
         _friend = State(initialValue: friend)
@@ -31,6 +35,22 @@ struct FriendDetailView: View {
         .refreshable { await reload() }
         .onChange(of: session.dataVersion) {
             Task { await reload() }
+        }
+        // Погашение всегда происходит в конкретной группе: одна общая —
+        // сразу форма, несколько — сначала выбор группы.
+        .confirmationDialog(
+            "В какой группе погасить?",
+            isPresented: $isSettleRoomPickerPresented,
+            titleVisibility: .visible
+        ) {
+            ForEach(friend.rooms) { room in
+                Button(room.roomName) { settleRoom = room }
+            }
+            Button("Отмена", role: .cancel) {}
+        }
+        .sheet(item: $settleRoom) { room in
+            // Параметры — как у GroupDetailView: комната и её валюта.
+            SettleUpView(roomId: room.roomId, currency: room.currency)
         }
         .alert(
             "Ошибка",
@@ -68,11 +88,11 @@ struct FriendDetailView: View {
             UserAvatarView(user: friend.user, size: 88)
             VStack(spacing: 2) {
                 Text(friend.user.displayName)
-                    .font(.system(size: 24, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 24, weight: .semibold)
                     .foregroundStyle(Color.ink)
                 if let username = friend.user.username, !username.isEmpty {
                     Text("@\(username)")
-                        .font(.system(size: 15, design: .rounded))
+                        .scaledFont(size: 15)
                         .foregroundStyle(Color.inkSecondary)
                 }
             }
@@ -83,9 +103,32 @@ struct FriendDetailView: View {
                 // вторичной строкой (разные валюты не складываются).
                 MoneyTotalsText(totals: friend.totals, primarySize: 38, alignment: .center)
             }
+            // Главное действие экрана долга: без него погашение приходилось
+            // искать внутри группы. Показываем только при ненулевом нетто.
+            if !friend.totals.isEmpty && !friend.rooms.isEmpty {
+                Button("Погасить") {
+                    settleUpTapped()
+                }
+                .buttonStyle(.primaryPill)
+                .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+    }
+
+    /// Тап по «Погасить»: офлайн-гейт (как в GroupDetailView — погашения
+    /// офлайн не работают), затем сразу форма или выбор группы.
+    private func settleUpTapped() {
+        guard session.isOnline else {
+            errorMessage = "Нет соединения. Погашение долга доступно только онлайн"
+            return
+        }
+        if friend.rooms.count == 1, let only = friend.rooms.first {
+            settleRoom = only
+        } else {
+            isSettleRoomPickerPresented = true
+        }
     }
 
     /// Подпись — по знаку основной валюты (цвет — в самих суммах).
@@ -97,7 +140,7 @@ struct FriendDetailView: View {
         if primary < 0 {
             return "Вы должны"
         }
-        return "Вы рассчитались"
+        return Glossary.settledHero
     }
 
     /// Секция «По группам»: карточка со строками групп и hairline-разделителями.
@@ -109,7 +152,7 @@ struct FriendDetailView: View {
             VStack(spacing: 0) {
                 if friend.rooms.isEmpty {
                     Text("Долгов по группам нет")
-                        .font(.system(size: 15, design: .rounded))
+                        .scaledFont(size: 15)
                         .foregroundStyle(Color.inkSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
@@ -138,13 +181,15 @@ struct FriendDetailView: View {
     private func roomRow(_ room: FriendRoomBalance) -> some View {
         HStack(spacing: 12) {
             Text(room.roomName)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .scaledFont(size: 16, weight: .medium)
                 .foregroundStyle(Color.ink)
                 .lineLimit(1)
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 2) {
-                Text(room.balance > 0 ? "вам должны" : "вы должны")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                // Glossary.balanceCaption: нулевая ветка обязательна,
+                // тернарник «>0 ? вам : вы» при нуле врал.
+                Text(Glossary.balanceCaption(room.balance))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
                 // Баланс комнаты — в валюте самой комнаты.
                 MoneyText(room.balance, size: 16, currency: room.currency)

@@ -1,0 +1,47 @@
+name: iOS
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+
+jobs:
+  build:
+    name: Build & test
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ios
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Проект генерируется из project.yml (в git его нет), поэтому xcodegen
+      # обязателен до любого вызова xcodebuild.
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      # Главное, ради чего этот workflow заведён: дважды подряд в ветку попадал
+      # HEAD, который НЕ СОБИРАЕТСЯ — исходники, на которые ссылается
+      # закоммиченный код, оставались неотслеживаемыми в рабочем дереве. Локально
+      # всё было зелёным, потому что проверялось грязное дерево, а не коммит.
+      - name: Build
+        run: |
+          xcodebuild -project Splitty.xcodeproj -scheme Splitty \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            build
+
+      # Только юнит-тесты: SplittyUITests требуют живого бэкенда и в CI не гоняются.
+      - name: Unit tests
+        run: |
+          xcodebuild -project Splitty.xcodeproj -scheme Splitty \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -only-testing:SplittyTests test

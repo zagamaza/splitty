@@ -16,6 +16,7 @@ struct ActivityView: View {
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
+                            Haptics.tap()
                             model.isMineOnly.toggle()
                             Task { await model.fillFilteredIfNeeded(repo: session.repo, meId: session.me?.id) }
                         } label: {
@@ -23,7 +24,11 @@ struct ActivityView: View {
                                 ? "person.crop.circle.fill"
                                 : "person.crop.circle")
                         }
+                        // Активный фильтр — акцентный, выключенный — тихий:
+                        // иначе состояние тумблера читалось только по заливке иконки.
+                        .tint(model.isMineOnly ? Color.accent : Color.inkSecondary)
                         .accessibilityLabel("Только мои")
+                        .accessibilityValue(model.isMineOnly ? "включено" : "выключено")
                     }
                 }
                 // .task на контенте (не на NavigationStack): срабатывает и при
@@ -110,15 +115,28 @@ struct ActivityView: View {
         .contentMargins(.bottom, 40, for: .scrollContent)
         .overlay {
             if displayItems.isEmpty {
-                ContentUnavailableView(
-                    model.isMineOnly ? "Нет операций с вами" : "Пока нет активности",
-                    systemImage: "clock",
-                    description: Text(
+                ContentUnavailableView {
+                    Label(
+                        model.isMineOnly ? "Нет операций с вами" : "Пока нет активности",
+                        systemImage: "clock"
+                    )
+                } description: {
+                    Text(
                         model.isMineOnly
                             ? "Операции, где вы платили или участвовали, появятся здесь"
                             : "Здесь появятся расходы и платежи ваших групп"
                     )
-                )
+                } actions: {
+                    // Пустота может быть следствием фильтра — даём выход
+                    // одним тапом вместо поиска тумблера в тулбаре.
+                    if model.isMineOnly {
+                        Button("Показать все") {
+                            model.isMineOnly = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.accent)
+                    }
+                }
             }
         }
     }
@@ -135,16 +153,24 @@ private struct ActivityRow: View {
             UserAvatarView(user: item.operation.donor, size: 44)
             VStack(alignment: .leading, spacing: 6) {
                 title
-                    .font(.system(size: 15, design: .rounded))
+                    .scaledFont(size: 15)
                     .foregroundStyle(Color.ink)
                 position
                 Text(DateFmt.relative(item.operation.createdAt))
-                    .font(.system(size: 12, design: .rounded))
+                    .scaledFont(size: 12, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 0)
+            // Аффорданс перехода: карточка кликабельна (ведёт в группу),
+            // без шеврона это не считывалось.
+            Image(systemName: "chevron.right")
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.top, 4)
         }
         .surfaceCard()
+        // VoiceOver читает карточку одним элементом, а не по кускам.
+        .accessibilityElement(children: .combine)
     }
 
     /// «Загир добавил(а) «Ужин» в группе «Стамбул»» /
@@ -181,7 +207,7 @@ private struct ActivityRow: View {
         let info = positionInfo
         HStack(spacing: 5) {
             Text(info.label)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .scaledFont(size: 14, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
             if let amount = info.amount {
                 MoneyText(amount, role: info.role, size: 15, currency: item.roomCurrency)
@@ -217,7 +243,7 @@ private struct ActivityRow: View {
         if net < 0 {
             return ("Вы должны", -net, .negative)
         }
-        return ("Расчёт", nil, .neutral)
+        return (Glossary.settled, nil, .neutral)
     }
 }
 

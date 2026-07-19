@@ -408,6 +408,30 @@ struct RoomSummary: Codable, Identifiable, Hashable {
     let totalSpent: Int
     /// >0 — мне должны, <0 — я должен, 0 — расчёт.
     let myBalance: Int
+    /// Долги группы неисчислимы (старые данные бота: доли не сходятся). Сервер
+    /// шлёт `debtsUnavailable: true` с `myBalance=0` — без этого флага нулевой
+    /// баланс читался бы как «все в расчёте», то есть ложное утверждение о деньгах.
+    /// omitempty на сервере → у здоровых комнат ключа нет, отсюда default false.
+    var debtsUnavailable: Bool = false
+}
+
+// init(from:) в extension, чтобы сохранить memberwise-инициализатор (объявление
+// init прямо в теле структуры его подавляет). Ключ debtsUnavailable опциональный:
+// сервер шлёт его с omitempty, у здоровых комнат его в ответе нет.
+extension RoomSummary {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        isArchived = try c.decode(Bool.self, forKey: .isArchived)
+        members = try c.decode([User].self, forKey: .members)
+        memberCount = try c.decode(Int.self, forKey: .memberCount)
+        currency = try c.decode(String.self, forKey: .currency)
+        totalSpent = try c.decode(Int.self, forKey: .totalSpent)
+        myBalance = try c.decode(Int.self, forKey: .myBalance)
+        debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
+    }
 }
 
 /// Экран группы одним запросом.
@@ -427,6 +451,26 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     let debts: [Debt]
     /// Все операции, новые первыми.
     let operations: [Operation]
+    /// Долги группы неисчислимы — см. `RoomSummary.debtsUnavailable`.
+    var debtsUnavailable: Bool = false
+}
+
+extension RoomDetail {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        isArchived = try c.decode(Bool.self, forKey: .isArchived)
+        members = try c.decode([User].self, forKey: .members)
+        currency = try c.decode(String.self, forKey: .currency)
+        totalSpent = try c.decode(Int.self, forKey: .totalSpent)
+        mySpent = try c.decode(Int.self, forKey: .mySpent)
+        myBalance = try c.decode(Int.self, forKey: .myBalance)
+        debts = try c.decode([Debt].self, forKey: .debts)
+        operations = try c.decode([Operation].self, forKey: .operations)
+        debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
+    }
 }
 
 /// Баланс с другом по одной группе (только ненулевые) — в валюте этой группы.

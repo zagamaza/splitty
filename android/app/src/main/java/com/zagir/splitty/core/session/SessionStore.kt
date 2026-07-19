@@ -1,6 +1,7 @@
 package com.zagir.splitty.core.session
 
 import androidx.datastore.core.DataStore
+import java.io.IOException
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -12,11 +13,13 @@ import com.zagir.splitty.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -73,6 +76,10 @@ class SessionStore @Inject constructor(
         private val KEY_BASE_URL = stringPreferencesKey("base_url")
         private val KEY_ME = stringPreferencesKey("me_json")
         private val KEY_THEME = stringPreferencesKey("theme")
+
+        /** Повторы чтения DataStore при транзиентной ошибке ввода-вывода. */
+        private const val RETRY_ATTEMPTS = 3L
+        private const val RETRY_DELAY_MS = 200L
     }
 
     init {
@@ -84,6 +91,21 @@ class SessionStore @Inject constructor(
 
     /** Текущая сессия; null — DataStore ещё не прочитан (первый кадр приложения). */
     val state: StateFlow<Session?> = dataStore.data
+        // Транзиентная ошибка ввода-вывода — повторяем: catch ниже терминален
+        // (после него upstream завершён и stateIn больше НИЧЕГО не эмитит), так
+        // что без retry один IOException навсегда ронял сессию в «разлогин» —
+        // пользователь попадал на экран входа, успешно входил, но state не
+        // обновлялся до перезапуска процесса, и все запросы шли без токена.
+        // Попытки ограничены и с паузой: при постоянной ошибке безусловный
+        // retry крутил бы горячий цикл чтения файла.
+        .retryWhen { cause, attempt ->
+            if (cause is IOException && attempt < RETRY_ATTEMPTS) {
+                delay(RETRY_DELAY_MS * (attempt + 1))
+                true
+            } else {
+                false
+            }
+        }
         // Битый файл настроек — это CorruptionException из dataStore.data. Без
         // catch корутина шаринга умирает, state навсегда остаётся null (= «ещё
         // читаем»), и приложение показывает пустой экран без выхода. Пустые

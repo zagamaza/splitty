@@ -1,6 +1,40 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Масштабируемый шрифт (Dynamic Type)
+
+/// Системный шрифт, масштабируемый настройкой размера текста: `size` —
+/// базовый размер при стандартной настройке, растёт/уменьшается вместе с
+/// `relativeTo`. Жёсткий `.font(.system(size:))` Dynamic Type игнорирует —
+/// использовать этот модификатор для всех кастомных размеров.
+private struct ScaledFontModifier: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+    private let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design, relativeTo style: Font.TextStyle) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: style)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
+extension View {
+    /// Шрифт с поддержкой Dynamic Type (см. `ScaledFontModifier`).
+    func scaledFont(
+        size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .rounded,
+        relativeTo style: Font.TextStyle = .body
+    ) -> some View {
+        modifier(ScaledFontModifier(size: size, weight: weight, design: design, relativeTo: style))
+    }
+}
+
 // MARK: - Карточка-поверхность
 
 /// Премиум-карточка: фон `surface`, скругление 20pt (continuous);
@@ -40,10 +74,11 @@ extension View {
 /// белый semibold-текст, pressed — scale 0.98 со spring-анимацией.
 struct PrimaryPillButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
+            .scaledFont(size: 17, weight: .semibold)
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
@@ -51,7 +86,7 @@ struct PrimaryPillButtonStyle: ButtonStyle {
                     .opacity(isEnabled ? 1 : 0.45),
                 in: Capsule()
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.98 : 1)
             .animation(.spring(duration: 0.25), value: configuration.isPressed)
     }
 }
@@ -65,10 +100,11 @@ extension ButtonStyle where Self == PrimaryPillButtonStyle {
 /// (для выбора группы/участника в чипах).
 struct SoftChipButtonStyle: ButtonStyle {
     var isSelected: Bool = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold, design: .rounded))
+            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
             // Чип не переносит текст по буквам в тесных строках («Погасить»).
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
@@ -81,7 +117,7 @@ struct SoftChipButtonStyle: ButtonStyle {
                     : Color.ink.opacity(configuration.isPressed ? 0.12 : 0.06),
                 in: Capsule()
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.98 : 1)
             .animation(.spring(duration: 0.25), value: configuration.isPressed)
     }
 }
@@ -147,12 +183,14 @@ struct MoneyText: View {
         }
     }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         Text(money(abs(amount), currency: currency))
-            .font(.system(size: size, weight: weight, design: .rounded))
+            .scaledFont(size: size, weight: weight)
             .monospacedDigit()
             .foregroundStyle(color)
-            .contentTransition(.numericText(value: Double(amount)))
+            .contentTransition(reduceMotion ? .identity : .numericText(value: Double(amount)))
             .animation(.spring(duration: 0.35), value: amount)
     }
 }
@@ -204,7 +242,7 @@ extension View {
     /// Регистр текста НЕ меняет (важно для UI-тестов).
     func sectionHeaderStyle() -> some View {
         self
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
             .foregroundStyle(Color.inkSecondary)
             .kerning(0.5)
     }
@@ -212,16 +250,31 @@ extension View {
 
 // MARK: - Haptics
 
-/// Хелперы тактильного отклика.
+/// Хелперы тактильного отклика. Генераторы кэшированы: создание
+/// UIFeedbackGenerator на каждое нажатие задерживало первый кадр после касания.
+@MainActor
 enum Haptics {
+    private static let notificationGenerator = UINotificationFeedbackGenerator()
+    private static let impactGenerator: UIImpactFeedbackGenerator = {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        return generator
+    }()
+
     /// Успешное сохранение/платёж/создание.
     static func success() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        notificationGenerator.notificationOccurred(.success)
     }
 
     /// Лёгкий отклик на выбор/переключение (чипы, radio, чекбоксы).
     static func tap() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        impactGenerator.impactOccurred()
+        impactGenerator.prepare()
+    }
+
+    /// Действие недоступно/требует внимания (тап по заблокированной кнопке).
+    static func warning() {
+        notificationGenerator.notificationOccurred(.warning)
     }
 }
 

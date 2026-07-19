@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"html"
 	"slices"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -16,6 +17,12 @@ type TelegramSender interface {
 	Send(c tgbotapi.Chattable) (tgbotapi.Message, error)
 }
 
+// UserFinder читает канонический документ пользователя. Узкий интерфейс (как
+// TelegramSender): Notifier'у нужен только FindById, репозиторий подходит как есть
+type UserFinder interface {
+	FindById(ctx context.Context, id int) (*api.User, error)
+}
+
 // Notifier отправляет участникам комнаты те же telegram-уведомления, что и экраны
 // бота, но по мутациям, пришедшим не из telegram (REST API iOS/Android-приложений).
 // Тексты (ключи scrn_notification_* / scrn_debt_returned_recepient), набор
@@ -24,12 +31,35 @@ type Notifier struct {
 	tg TelegramSender
 	os OperationService
 	bs ButtonService
+	uf UserFinder
 }
 
 // NewNotifier собирает Notifier: os нужен для персиста NotificationSent
-// (как у бота), bs — для сохранения inline-кнопок «Посмотреть операцию»
-func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService) *Notifier {
-	return &Notifier{tg: tg, os: os, bs: bs}
+// (как у бота), bs — для сохранения inline-кнопок «Посмотреть операцию»,
+// uf — для чтения АКТУАЛЬНЫХ настроек уведомлений (см. allowsTelegram)
+func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService, uf UserFinder) *Notifier {
+	return &Notifier{tg: tg, os: os, bs: bs, uf: uf}
+}
+
+// allowsTelegram решает, слать ли уведомление, по КАНОНИЧЕСКОМУ документу
+// пользователя. Получатели приходят из встроенных снимков (room.users[] и
+// op.recipientsWithSum[].user), которые пишутся один раз при входе в комнату и
+// больше не обновляются: PATCH /me/notifications меняет только коллекцию user,
+// поэтому по снимку Notify всегда nil и AllowsTelegram уходит в легаси-ветку —
+// выключенные в приложении уведомления продолжали приходить.
+// Пользователя не удалось прочитать — падаем на снимок, а не молчим.
+func (n *Notifier) allowsTelegram(ctx context.Context, u *api.User, category api.NotifyCategory) bool {
+	if u == nil {
+		return false
+	}
+	if n.uf != nil {
+		if canonical, err := n.uf.FindById(ctx, u.ID); err != nil {
+			log.Warn().Err(err).Int("user", u.ID).Msg("notifier: can't read notify prefs, using embedded snapshot")
+		} else if canonical != nil {
+			return canonical.AllowsTelegram(category)
+		}
+	}
+	return u.AllowsTelegram(category)
 }
 
 // NotifyOperationCreated — паритет с OperationAdded.notificationWhenCreateOperation:
@@ -55,27 +85,34 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		}
 	}
 
+	// Описание операции и название комнаты — сырой пользовательский ввод, а
+	// шаблоны scrn_notification_* уходят с ParseMode=HTML: без экранирования
+	// "a < b" даёт 400 от Telegram (уведомление молча теряется), а "<b>"/"<a
+	// href>" — разметку в чужих ЛС. Ср. memberName/itemLabel в operation_items.go
+	desc := html.EscapeString(op.Description)
+	roomName := html.EscapeString(room.Name)
+
 	var messages []tgbotapi.Chattable
 	// как у бота: назначенный плательщик уведомляется без проверки NotificationOn
 	if op.Donor.ID != author.ID {
 		messages = append(messages, NewMessage(int64(op.Donor.ID),
 			I18n(op.Donor, "scrn_notification_payer_changed",
-				userLink(op.Donor), userLink(&author), op.Description, moneySpace(op.Sum, room.Currency), room.Name),
+				userLink(op.Donor), userLink(&author), desc, moneySpace(op.Sum, room.Currency), roomName),
 			keyboardFor(op.Donor)))
 		op.NotificationSent = append(op.NotificationSent, op.Donor.ID)
 	}
 	for _, r := range op.RecipientsWithSum {
 		recipient := r.User
 		if slices.Contains(op.NotificationSent, recipient.ID) ||
-			!recipient.AllowsTelegram(api.NotifyOperations) ||
+			!n.allowsTelegram(ctx, &recipient, api.NotifyOperations) ||
 			recipient.ID == author.ID ||
 			r.Sum == 0 {
 			continue
 		}
 		messages = append(messages, NewMessage(int64(recipient.ID),
 			I18n(&recipient, "scrn_notification_operation_added",
-				userLink(&recipient), userLink(&author), op.Description, moneySpace(op.Sum, room.Currency),
-				room.Name, moneySpace(int(r.Sum), room.Currency)),
+				userLink(&recipient), userLink(&author), desc, moneySpace(op.Sum, room.Currency),
+				roomName, moneySpace(int(r.Sum), room.Currency)),
 			keyboardFor(&recipient)))
 		op.NotificationSent = append(op.NotificationSent, recipient.ID)
 	}
@@ -139,7 +176,7 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 		return
 	}
 	lender := op.RecipientsWithSum[0].User
-	if lender.ID == author.ID || !lender.AllowsTelegram(api.NotifyDebts) {
+	if lender.ID == author.ID || !n.allowsTelegram(ctx, &lender, api.NotifyDebts) {
 		return
 	}
 
@@ -153,7 +190,7 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 	}
 	n.send([]tgbotapi.Chattable{NewMessage(int64(lender.ID),
 		I18n(&lender, "scrn_debt_returned_recepient",
-			lender.DisplayName, moneySpace(op.Sum, room.Currency), userLink(op.Donor)),
+			html.EscapeString(lender.DisplayName), moneySpace(op.Sum, room.Currency), userLink(op.Donor)),
 		keyboard)})
 }
 

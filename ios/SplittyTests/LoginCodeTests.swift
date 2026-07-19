@@ -29,14 +29,15 @@ final class LoginCodeTests: XCTestCase {
 
     func testIsValidRejectsShortCodes() {
         XCTAssertFalse(LoginCode.isValid(""))
-        XCTAssertFalse(LoginCode.isValid("ABC12"))
+        // Код бота — 8 символов; 6 значимых — ещё не код.
+        XCTAssertFalse(LoginCode.isValid("ABC123"))
         // Пробелы не считаются: значимых символов всего 5.
         XCTAssertFalse(LoginCode.isValid(" A B C 1 2 "))
     }
 
     func testIsValidAcceptsMinLength() {
-        XCTAssertEqual(LoginCode.minLength, 6)
-        XCTAssertTrue(LoginCode.isValid("ABC123"))
+        XCTAssertEqual(LoginCode.minLength, 8)
+        XCTAssertTrue(LoginCode.isValid("ABCD2345"))
     }
 
     func testIsValidAcceptsBotFormat() {

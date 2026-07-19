@@ -66,7 +66,7 @@ func main() {
 		closer.Bind(cl)
 		// бот включён — REST-мутации шлют участникам те же telegram-уведомления,
 		// что и экраны бота (без бота notifier остаётся nil, уведомления no-op)
-		restServer.SetNotifier(bot.NewNotifier(app.TbAPI, restDeps.operationSrv, restDeps.buttonSrv))
+		restServer.SetNotifier(bot.NewNotifier(app.TbAPI, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo))
 		go app.DeIntegrationService.StartPostScheduler()
 		go func() {
 			if err := app.Do(ctx); err != nil {
@@ -85,6 +85,9 @@ func main() {
 type restNotifierDeps struct {
 	operationSrv *service.OperationService
 	buttonSrv    *service.ButtonService
+	// userRepo — канонические настройки уведомлений: встроенные в комнату
+	// снимки пользователей их не содержат (см. Notifier.allowsTelegram)
+	userRepo repository.UserRepository
 }
 
 // initRestServer собирает REST-сервер: mongo-подключение + репозитории + сервисы
@@ -133,7 +136,11 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		log.Info().Msg("AI expense parsing disabled (GEMINI_API_KEY empty)")
 	}
 
-	return server, &restNotifierDeps{operationSrv: operationService, buttonSrv: buttonService}, cleanup, nil
+	return server, &restNotifierDeps{
+		operationSrv: operationService,
+		buttonSrv:    buttonService,
+		userRepo:     userRepository,
+	}, cleanup, nil
 }
 
 // resolveJwtSecret применяет политику JWT-секрета: пустой API_JWT_SECRET допустим

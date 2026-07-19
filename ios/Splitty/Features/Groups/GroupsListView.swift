@@ -15,16 +15,13 @@ struct GroupsListView: View {
                 .navigationTitle("Группы")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        Menu {
-                            Button {
-                                isJoinPresented = true
-                            } label: {
-                                Label("Присоединиться по коду", systemImage: "arrow.right.circle")
-                            }
+                        // Пункт один — прямая кнопка вместо меню-матрёшки.
+                        Button {
+                            isJoinPresented = true
                         } label: {
-                            Image(systemName: "ellipsis.circle")
+                            Image(systemName: "arrow.right.circle")
                         }
-                        .accessibilityLabel("Ещё")
+                        .accessibilityLabel("Присоединиться по коду")
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
@@ -42,11 +39,7 @@ struct GroupsListView: View {
                 .sheet(isPresented: $isJoinPresented) {
                     JoinGroupView {}
                 }
-                .alert("Ошибка", isPresented: alertPresented) {
-                    Button("Ок", role: .cancel) {}
-                } message: {
-                    Text(model.alertMessage ?? "")
-                }
+                .errorAlert($model.alertMessage)
                 // .task на контенте (не на NavigationStack): срабатывает при первом
                 // показе И при возврате (pop) с экрана группы — балансы обновляются.
                 .task { await model.load(repo: session.repo) }
@@ -57,13 +50,6 @@ struct GroupsListView: View {
         }
     }
 
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { model.alertMessage != nil },
-            set: { if !$0 { model.alertMessage = nil } }
-        )
-    }
-
     @ViewBuilder
     private var content: some View {
         switch model.state {
@@ -72,14 +58,8 @@ struct GroupsListView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
         case .failed(let message):
-            ContentUnavailableView {
-                Label("Не удалось загрузить", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text(message)
-            } actions: {
-                Button("Повторить") {
-                    Task { await model.load(repo: session.repo) }
-                }
+            FailedStateView(message: message) {
+                await model.load(repo: session.repo)
             }
             .background(Color.bg)
         case .loaded:
@@ -91,12 +71,14 @@ struct GroupsListView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 if model.rooms.isEmpty {
+                    // Без строки «Архив»: в пустом состоянии она отвлекает
+                    // от первого шага — создать группу или присоединиться.
                     emptyState
                 } else {
                     summaryCard
                     groupCards
+                    archiveRow
                 }
-                archiveRow
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -113,12 +95,23 @@ struct GroupsListView: View {
         .contentMargins(.bottom, 40, for: .scrollContent)
     }
 
-    /// Пустое состояние — дружелюбная карточка вместо системного списка.
+    /// Пустое состояние — дружелюбная карточка вместо системного списка,
+    /// оба первых шага доступны прямо отсюда, не только из тулбара.
     private var emptyState: some View {
         ContentUnavailableView {
             Label("Пока нет групп", systemImage: "person.3")
         } description: {
             Text("Создайте группу или присоединитесь по коду приглашения")
+        } actions: {
+            Button("Создать группу") {
+                isCreatePresented = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.accent)
+            Button("Присоединиться по коду") {
+                isJoinPresented = true
+            }
+            .tint(Color.accent)
         }
         .frame(maxWidth: .infinity)
         .surfaceCard(padding: 8)
@@ -133,7 +126,7 @@ struct GroupsListView: View {
                 .sectionHeaderStyle()
             MoneyTotalsText(totals: model.totals)
             Text(summarySubtitle)
-                .font(.system(size: 15, design: .rounded))
+                .scaledFont(size: 15)
                 .foregroundStyle(Color.inkSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -182,7 +175,7 @@ struct GroupsListView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .opacity(0.6)
             }
-            .font(.system(size: 15, weight: .medium, design: .rounded))
+            .scaledFont(size: 15, weight: .medium)
             .foregroundStyle(Color.inkSecondary)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -206,7 +199,7 @@ private struct GroupCardRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(room.name)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 16, weight: .semibold)
                         .foregroundStyle(Color.ink)
                         .lineLimit(1)
                     if hasLocalOperations {
@@ -234,8 +227,14 @@ private struct GroupCardRow: View {
 
     @ViewBuilder
     private var trailingBalance: some View {
-        if room.myBalance == 0 {
-            Text("расчёт")
+        if room.debtsUnavailable {
+            // Долги неисчислимы (легаси-данные бота): сервер шлёт myBalance=0 —
+            // без этой ветки строка утверждала бы «все в расчёте», хотя долги есть.
+            Text(Glossary.debtsUnavailableShort)
+                .font(.system(size: 14))
+                .foregroundStyle(Color.inkSecondary)
+        } else if room.myBalance == 0 {
+            Text(Glossary.settled)
                 .font(.system(size: 14))
                 .foregroundStyle(Color.inkSecondary)
         } else {
@@ -294,47 +293,55 @@ private struct GroupAvatarView: View {
 
 /// Список архивных групп с кнопкой «Разархивировать».
 private struct ArchivedGroupsView: View {
-    let model: GroupsListViewModel
+    @Bindable var model: GroupsListViewModel
     @Environment(SessionStore.self) private var session
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 16) {
                 ForEach(model.archivedRooms) { room in
-                    // Архивная группа открывается так же, как обычная
-                    // (внутри — read-only бейдж «Группа в архиве»).
-                    NavigationLink {
-                        GroupDetailView(roomId: room.id)
-                    } label: {
-                        HStack(spacing: 14) {
-                            GroupAvatarView(roomId: room.id, name: room.name, size: 46)
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(room.name)
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color.ink)
-                                    .lineLimit(1)
-                                Text(memberCountText(room.memberCount))
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(Color.inkSecondary)
-                            }
-                            Spacer(minLength: 8)
-                            Button("Разархивировать") {
-                                Task {
-                                    await model.unarchive(repo: session.repo, roomId: room.id)
-                                    session.noteDataChanged()
+                    // Кнопка «Разархивировать» — СОСЕД NavigationLink, а не
+                    // часть его label: вложенная кнопка конфликтовала хит-зоной
+                    // с переходом в группу.
+                    HStack(spacing: 14) {
+                        // Архивная группа открывается так же, как обычная
+                        // (внутри — read-only бейдж «Группа в архиве»).
+                        NavigationLink {
+                            GroupDetailView(roomId: room.id)
+                        } label: {
+                            HStack(spacing: 14) {
+                                GroupAvatarView(roomId: room.id, name: room.name, size: 46)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(room.name)
+                                        .scaledFont(size: 16, weight: .semibold)
+                                        .foregroundStyle(Color.ink)
+                                        .lineLimit(1)
+                                    Text(memberCountText(room.memberCount))
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color.inkSecondary)
                                 }
+                                Spacer(minLength: 8)
                             }
-                            .buttonStyle(.softChip)
+                            .contentShape(Rectangle())
                         }
-                        .contentShape(Rectangle())
-                        .surfaceCard()
+                        .buttonStyle(.plain)
+                        Button("Разархивировать") {
+                            Task {
+                                await model.unarchive(repo: session.repo, roomId: room.id)
+                                session.noteDataChanged()
+                            }
+                        }
+                        .buttonStyle(.softChip)
                     }
-                    .buttonStyle(.plain)
+                    .surfaceCard()
                 }
             }
             .padding(16)
         }
         .background(Color.bg)
+        // Свой alert: корневой экран закрыт пушем, его alert не показывается —
+        // ошибки loadArchive/unarchive иначе глотались бы.
+        .errorAlert($model.alertMessage)
         .overlay {
             if model.isArchiveLoading {
                 ProgressView()

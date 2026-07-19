@@ -31,6 +31,11 @@ struct GroupTotalsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
                 .task { await load() }
+                // Единая инвалидация: вкладка живёт долго, без этого статистика
+                // не пересчитывается после добавления расхода/платежа.
+                .onChange(of: session.dataVersion) {
+                    Task { await load() }
+                }
         } else {
             NavigationStack {
                 content
@@ -124,39 +129,41 @@ struct GroupTotalsView: View {
             }
             .padding(16)
         }
+        .refreshable { await load() }
     }
 
     // MARK: Стат-плитки 2×2
 
     /// Плитки: «Всего потрачено», «За <месяц>», «Операций», «Средний чек».
-    /// Иконки тонированы своим цветом палитры (декоративно, identity не несут).
+    /// Иконки тонированы единым `accent`: категориальная палитра кодирует
+    /// участников, декоративное использование её цветов ломало язык дата-виза.
     private func statTiles(_ stats: Statistics) -> some View {
         let average = stats.operationCount > 0 ? stats.totalSpent / stats.operationCount : 0
         return VStack(spacing: 16) {
             HStack(spacing: 16) {
-                statTile(title: "Всего потрачено", icon: "banknote", tint: 0) {
+                statTile(title: "Всего потрачено", icon: "banknote") {
                     MoneyText(stats.totalSpent, role: .neutral, size: 22, currency: stats.currency)
                 }
-                statTile(title: "За \(Self.currentMonthName())", icon: "calendar", tint: 1) {
+                statTile(title: "За \(Self.currentMonthName())", icon: "calendar") {
                     MoneyText(stats.monthSpent, role: .neutral, size: 22, currency: stats.currency)
                 }
             }
             HStack(spacing: 16) {
-                statTile(title: "Операций", icon: "list.bullet", tint: 2) {
+                statTile(title: "Операций", icon: "list.bullet") {
                     Text("\(stats.operationCount)")
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 22, weight: .semibold)
                         .monospacedDigit()
                         .foregroundStyle(Color.ink)
                 }
-                statTile(title: "Средний чек", icon: "chart.bar", tint: 3) {
+                statTile(title: "Средний чек", icon: "chart.bar") {
                     MoneyText(average, role: .neutral, size: 22, currency: stats.currency)
                 }
             }
         }
     }
 
-    /// Личные плитки: «Я заплатил» (донор операций) и «Моя доля» (по хранимым
-    /// долям получателей) — ответ на «сколько я потратил именно в этой тусе».
+    /// Личные плитки: «Заплачено мной» (донор операций) и «Моя доля» (по
+    /// хранимым долям получателей) — ответ на «сколько я потратил в этой тусе».
     @ViewBuilder
     private func myTiles(_ stats: Statistics) -> some View {
         if let meId = session.me?.id {
@@ -164,10 +171,11 @@ struct GroupTotalsView: View {
             let share = stats.shareByMember.first { $0.user.id == meId }?.sum ?? 0
             if paid > 0 || share > 0 {
                 HStack(spacing: 16) {
-                    statTile(title: "Я заплатил", icon: "person.crop.circle", tint: 4) {
+                    // Без гендерной формы: «Я заплатил» врало для половины людей.
+                    statTile(title: "Заплачено мной", icon: "person.crop.circle") {
                         MoneyText(paid, role: .neutral, size: 22, currency: stats.currency)
                     }
-                    statTile(title: "Потрачено на меня", icon: "chart.pie", tint: 5) {
+                    statTile(title: "Потрачено на меня", icon: "chart.pie") {
                         MoneyText(share, role: .neutral, size: 22, currency: stats.currency)
                     }
                 }
@@ -178,14 +186,13 @@ struct GroupTotalsView: View {
     private func statTile(
         title: String,
         icon: String,
-        tint: Int,
         @ViewBuilder value: () -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.chartCategorical[tint])
+                    .scaledFont(size: 13, weight: .semibold, design: .default, relativeTo: .footnote)
+                    .foregroundStyle(Color.accent)
                     .frame(width: 18, height: 18)
                 Text(title)
                     .sectionHeaderStyle()
@@ -362,6 +369,8 @@ private struct DailySpendingCard: View {
                 .sectionHeaderStyle()
             chart
                 .frame(height: 180)
+                // VoiceOver: без сводки график — немой набор баров.
+                .accessibilityLabel("График трат по дням за последний месяц")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard()
@@ -443,6 +452,8 @@ private struct PaidDonutCard: View {
                 .sectionHeaderStyle()
             chart
                 .frame(height: 200)
+                // VoiceOver: сводка вместо немого доната (детали — в легенде).
+                .accessibilityLabel("Диаграмма долей участников в оплатах")
             legend
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -486,12 +497,12 @@ private struct PaidDonutCard: View {
                         .fill(memberColor(slice.userId, palette: palette))
                         .frame(width: 10, height: 10)
                     Text(slice.label)
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundStyle(Color.ink)
                         .lineLimit(1)
                     Spacer(minLength: 8)
                     Text("\(money(slice.sum, currency: currency)) · \(percent(slice))%")
-                        .font(.system(size: 12, design: .rounded))
+                        .scaledFont(size: 12, relativeTo: .footnote)
                         .monospacedDigit()
                         .foregroundStyle(Color.inkSecondary)
                 }
@@ -553,6 +564,8 @@ private struct MemberBarsCard: View {
                 .sectionHeaderStyle()
             chart
                 .frame(height: CGFloat(bars.count) * Self.rowHeight)
+                // VoiceOver: краткая сводка вместо немого набора баров.
+                .accessibilityLabel("График «\(title)» — суммы по участникам")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard()
@@ -643,9 +656,11 @@ private struct MemberNetCard: View {
     private func row(_ net: MemberNet) -> some View {
         HStack(spacing: 8) {
             Text(net.user.displayName)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.ink)
                 .lineLimit(1)
+                // Имя зажато фиксированной шириной — даём ужаться, не обрезая.
+                .minimumScaleFactor(0.8)
                 .frame(width: 88, alignment: .leading)
             divergingBar(net.net)
             MoneyText(net.net, role: .auto, size: 12, currency: currency)
@@ -707,6 +722,8 @@ private struct WeekdayCard: View {
                 .sectionHeaderStyle()
             chart
                 .frame(height: 160)
+                // VoiceOver: без сводки график — немой набор баров.
+                .accessibilityLabel("График трат по дням недели")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard()

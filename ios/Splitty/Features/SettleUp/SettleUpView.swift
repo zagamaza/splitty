@@ -22,9 +22,11 @@ struct SettleUpView: View {
     @State private var alertMessage: String?
     @FocusState private var isSumFocused: Bool
 
+    // Валюта без дефолта: «RUB по умолчанию» молча показывал рубли
+    // в чужих валютных комнатах — вызывающий обязан передать валюту комнаты.
     init(
         roomId: String,
-        currency: String = "RUB",
+        currency: String,
         preselectedDebt: Debt? = nil,
         onDone: (() -> Void)? = nil
     ) {
@@ -45,18 +47,24 @@ struct SettleUpView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .background(Color.bg)
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Отмена") { dismiss() }
-                    }
+                    // Слева — «Назад» только когда форма открыта из списка
+                    // долгов (возврат к выбору); закрытие sheet — всегда
+                    // справа, чтобы leading не собирал два элемента.
                     if selectedDebt != nil && preselectedDebt == nil {
                         ToolbarItem(placement: .topBarLeading) {
                             Button {
                                 selectedDebt = nil
                             } label: {
-                                Image(systemName: "chevron.left")
+                                HStack(spacing: 3) {
+                                    Image(systemName: "chevron.left")
+                                    Text("Назад")
+                                }
                             }
-                            .accessibilityLabel("К списку долгов")
+                            .accessibilityLabel("Назад, к списку долгов")
                         }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Закрыть") { dismiss() }
                     }
                 }
                 .alert("Ошибка", isPresented: alertPresented) {
@@ -89,14 +97,9 @@ struct SettleUpView: View {
     @ViewBuilder
     private var debtPicker: some View {
         if let loadError {
-            ContentUnavailableView {
-                Label("Не удалось загрузить", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text(loadError)
-            } actions: {
-                Button("Повторить") {
-                    Task { await loadDebts() }
-                }
+            // Единый failed-state проекта (стиль кнопки «Повторить» — общий).
+            FailedStateView(message: loadError) {
+                await loadDebts()
             }
         } else if let debts {
             if debts.isEmpty {
@@ -140,7 +143,7 @@ struct SettleUpView: View {
             UserAvatarView(user: debt.lender, size: 40)
             VStack(alignment: .leading, spacing: 3) {
                 Text(debtTitle(debt))
-                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .scaledFont(size: 15, weight: .medium)
                     .foregroundStyle(Color.ink)
                     .lineLimit(2)
                 MoneyText(
@@ -183,7 +186,15 @@ struct SettleUpView: View {
                     }
                 }
                 .buttonStyle(.primaryPill)
-                .disabled(!isSumValid(debt: debt) || isSaving)
+                // Офлайн — кнопка задизейблена с подписью-причиной ниже,
+                // а не alert по тапу (кнопка «работала», но ругалась).
+                .disabled(!isSumValid(debt: debt) || isSaving || !session.isOnline)
+
+                if !session.isOnline {
+                    Text("Погашение доступно только онлайн")
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                        .foregroundStyle(Color.negative)
+                }
             }
             .padding(20)
         }
@@ -201,7 +212,7 @@ struct SettleUpView: View {
                 UserAvatarView(user: debt.lender, size: 64)
             }
             Text(paymentTitle(debt: debt))
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .scaledFont(size: 17, weight: .semibold)
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
         }
@@ -211,12 +222,12 @@ struct SettleUpView: View {
 
     private func paymentTitle(debt: Debt) -> String {
         if debt.debtor.id == meId {
-            return "Вы платите: \(debt.lender.displayName)"
+            return "Вы платите — \(debt.lender.displayName)"
         }
         if debt.lender.id == meId {
             return "\(debt.debtor.displayName) платит вам"
         }
-        return "\(debt.debtor.displayName) платит: \(debt.lender.displayName)"
+        return "\(debt.debtor.displayName) платит — \(debt.lender.displayName)"
     }
 
     /// Карточка суммы: hero-поле rounded + monospacedDigit по центру,
@@ -225,10 +236,10 @@ struct SettleUpView: View {
         VStack(spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(currencySymbol(currency))
-                    .font(.system(size: 28, weight: .medium, design: .rounded))
+                    .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                     .foregroundStyle(Color.inkSecondary)
                 TextField("0", text: $sumText)
-                    .font(.system(size: 42, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 42, weight: .semibold, relativeTo: .title)
                     .monospacedDigit()
                     .foregroundStyle(Color.ink)
                     .keyboardType(.numberPad)
@@ -253,12 +264,12 @@ struct SettleUpView: View {
 
             if let sum = Int(sumText), sum > debt.sum {
                 Text("Не больше долга: \(money(debt.sum, currency: currency))")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.negative)
             } else {
                 Text("Долг: \(money(debt.sum, currency: currency))")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -298,11 +309,8 @@ struct SettleUpView: View {
         // кадре не должен отправить второй POST (isSaving выставляется до await).
         guard !isSaving else { return }
         // Погашения офлайн не работают (зафиксированный дизайн v1):
-        // экран группы не даёт открыть sheet без сети, это страховка.
-        guard session.isOnline else {
-            alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
-            return
-        }
+        // CTA задизейблен с подписью-причиной, это молчаливая страховка.
+        guard session.isOnline else { return }
         guard let sum = Int(sumText), isSumValid(debt: debt) else { return }
         isSaving = true
         defer { isSaving = false }

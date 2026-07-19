@@ -283,4 +283,26 @@ class OutboxStoreTest {
 
         assertFalse("local-prev" in file.readText(), "логаут оставил очередь прошлого аккаунта")
     }
+
+    @Test
+    fun `failed read does not latch loaded state`() = runTest {
+        // Транзиентная ошибка чтения не должна считаться загрузкой: раньше
+        // isLoaded взводился и после провала, очередь навсегда оставалась пустой
+        // в памяти — расходы пропадали из UI, а OutboxSyncer после awaitLoaded
+        // видел пустой список и не досылал их ни при одном восстановлении сети.
+        store().add(entry("local-prev"))
+
+        file.setReadable(false)
+        val store = store()
+        store.awaitLoaded() // чтение провалилось
+
+        file.setReadable(true)
+        store.awaitLoaded() // повторная попытка обязана прочитать файл
+
+        assertEquals(
+            listOf("local-prev"),
+            store.entries.value.map { it.localId },
+            "очередь не перечиталась после транзиентной ошибки — расходы потеряны для UI и досылки",
+        )
+    }
 }

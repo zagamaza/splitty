@@ -24,7 +24,7 @@ struct CreateGroupView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     TextField("Название", text: $name)
-                        .font(.system(size: 17, design: .rounded))
+                        .scaledFont(size: 17)
                         .focused($isNameFocused)
                         .submitLabel(.done)
                         .onSubmit { Task { await create() } }
@@ -61,20 +61,11 @@ struct CreateGroupView: View {
                 }
             }
             .onAppear { isNameFocused = true }
-            .alert("Ошибка", isPresented: alertPresented) {
-                Button("Ок", role: .cancel) {}
-            } message: {
-                Text(alertMessage ?? "")
-            }
+            .errorAlert($alertMessage)
         }
         .presentationDetents([.medium, .large])
-    }
-
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { alertMessage != nil },
-            set: { if !$0 { alertMessage = nil } }
-        )
+        // Введённое название нельзя потерять случайным смахиванием sheet.
+        .interactiveDismissDisabled(!name.isEmpty)
     }
 
     private func create() async {
@@ -89,7 +80,7 @@ struct CreateGroupView: View {
             onCreated()
             dismiss()
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

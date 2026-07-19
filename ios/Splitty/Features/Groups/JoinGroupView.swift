@@ -16,6 +16,10 @@ struct JoinGroupView: View {
         self.onJoined = onJoined
     }
 
+    private var trimmedCode: String {
+        code.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Код группы, извлечённый из введённого текста (код или ссылка-приглашение).
     private var roomId: String {
         var text = code.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -33,13 +37,21 @@ struct JoinGroupView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     TextField("Код группы", text: $code)
-                        .font(.system(size: 17, design: .rounded))
+                        .scaledFont(size: 17)
                         .focused($isCodeFocused)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .submitLabel(.join)
                         .onSubmit { Task { await join() } }
                         .surfaceCard()
+                    // Ввели текст, а код не распознан — объясняем, почему
+                    // кнопка неактивна, вместо молчаливого disabled.
+                    if !trimmedCode.isEmpty, roomId.isEmpty {
+                        Text("Не похоже на код или ссылку группы")
+                            .font(.footnote)
+                            .foregroundStyle(Color.negative)
+                            .padding(.horizontal, 4)
+                    }
                     Text("Вставьте код из приглашения или целиком ссылку вида t.me/split_money_bot?start=room…")
                         .font(.caption)
                         .foregroundStyle(Color.inkSecondary)
@@ -72,20 +84,11 @@ struct JoinGroupView: View {
                 }
             }
             .onAppear { isCodeFocused = true }
-            .alert("Ошибка", isPresented: alertPresented) {
-                Button("Ок", role: .cancel) {}
-            } message: {
-                Text(alertMessage ?? "")
-            }
+            .errorAlert($alertMessage)
         }
         .presentationDetents([.medium, .large])
-    }
-
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { alertMessage != nil },
-            set: { if !$0 { alertMessage = nil } }
-        )
+        // Введённый код нельзя потерять случайным смахиванием sheet.
+        .interactiveDismissDisabled(!code.isEmpty)
     }
 
     private func join() async {
@@ -100,7 +103,7 @@ struct JoinGroupView: View {
             onJoined()
             dismiss()
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

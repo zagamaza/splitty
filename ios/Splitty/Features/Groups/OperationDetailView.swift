@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// Карточка операции: hero-сумма, участники с аватарами и долями,
-/// файл-чек, «Изменить»/«Удалить» — только если текущий пользователь — donor.
+/// файл-чек, «Изменить»/«Удалить» — доступны любому участнику комнаты
+/// (Splitwise-семантика, сервер разрешает участникам).
 struct OperationDetailView: View {
     private let roomId: String
     private let currentUserId: Int
@@ -83,7 +84,13 @@ struct OperationDetailView: View {
             }
             Button("Отмена", role: .cancel) {}
         } message: {
-            Text("Операция исчезнет из группы, балансы пересчитаются.")
+            // У погашений нет «Изменить» — объясняем, как исправить ошибку.
+            Text(
+                operation.isDebtRepayment
+                    ? "Операция исчезнет из группы, балансы пересчитаются. "
+                        + "Погашения не редактируются — при ошибке удалите и запишите заново."
+                    : "Операция исчезнет из группы, балансы пересчитаются."
+            )
         }
         .alert("Ошибка", isPresented: alertPresented) {
             Button("Ок", role: .cancel) {}
@@ -110,12 +117,12 @@ struct OperationDetailView: View {
                     .frame(width: 48, height: 48)
                     .overlay {
                         Image(systemName: operation.isDebtRepayment ? "banknote" : "doc.plaintext")
-                            .font(.system(size: 22))
+                            .scaledFont(size: 22, design: .default)
                             .foregroundStyle(operation.isDebtRepayment ? Color.accent : Color.inkSecondary)
                     }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 17, weight: .semibold)
                         .foregroundStyle(Color.ink)
                     Text("Добавлено \(Self.fullDate.string(from: operation.createdAt))")
                         .font(.caption)
@@ -135,28 +142,46 @@ struct OperationDetailView: View {
         return operation.description.isEmpty ? "Расход" : operation.description
     }
 
-    /// «Детали»: плательщик и получатели с аватарами и долями.
-    /// Доли — ХРАНИМЫЕ суммы операции (`recipients[].sum`): при делении
-    /// «по суммам» именно они, а не пересчёт поровну.
+    /// Две раздельные секции вместо сплошного списка: «Кто платил» (донор с
+    /// полной суммой) и «Кто участвует» (получатели с долями). Доли — ХРАНИМЫЕ
+    /// суммы операции (`recipients[].sum`): при «по суммам» именно они.
     private var participantsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            payerSection
+            recipientsSection
+        }
+    }
+
+    private var payerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(operation.isDebtRepayment ? "Кто отправил" : "Кто платил")
+                .sectionHeaderStyle()
+                .padding(.leading, 4)
+            donorRow
+                .surfaceCard(padding: 0)
+        }
+    }
+
+    private var recipientsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Text("Детали")
+                Text(operation.isDebtRepayment ? "Кто получил" : "Кто участвует")
                     .sectionHeaderStyle()
                 if !operation.isDebtRepayment {
                     Text(operation.splitType == .byExactAmount ? "· по суммам" : "· поровну")
-                        .font(.system(size: 12, design: .rounded))
+                        .scaledFont(size: 12, relativeTo: .footnote)
                         .foregroundStyle(Color.inkSecondary.opacity(0.7))
                 }
             }
             .padding(.leading, 4)
             VStack(spacing: 0) {
-                donorRow
                 ForEach(operation.recipients) { recipient in
-                    Rectangle()
-                        .fill(Color.hairline)
-                        .frame(height: 1)
-                        .padding(.leading, 64)
+                    if recipient.id != operation.recipients.first?.id {
+                        Rectangle()
+                            .fill(Color.hairline)
+                            .frame(height: 1)
+                            .padding(.leading, 64)
+                    }
                     recipientRow(recipient)
                 }
             }
@@ -171,7 +196,7 @@ struct OperationDetailView: View {
                 Text(operation.donor.id == currentUserId ? "Вы" : operation.donor.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.ink)
-                Text(operation.donor.id == currentUserId ? "заплатили" : "заплатил(а)")
+                Text(operation.donor.id == currentUserId ? "заплатили за всех" : "заплатил(а) за всех")
                     .font(.caption)
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -184,8 +209,7 @@ struct OperationDetailView: View {
 
     private func recipientRow(_ recipient: OperationRecipient) -> some View {
         HStack(spacing: 12) {
-            UserAvatarView(user: recipient.user, size: 32)
-                .padding(.leading, 4)
+            UserAvatarView(user: recipient.user, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text(recipient.user.id == currentUserId ? "Вы" : recipient.user.displayName)
                     .font(.subheadline)
@@ -228,93 +252,16 @@ struct OperationDetailView: View {
     /// Позиции чека (itemized-операция, AI-распознавание) — только чтение:
     /// название, количество, участники и цена; подвал Подытог→Сборы→Итого.
     private func itemsSection(_ items: [OperationItem]) -> some View {
-        let subtotal = items.filter { !$0.isSurcharge }.reduce(0) { $0 + $1.price }
-        let surcharges = items.filter { $0.isSurcharge }.reduce(0) { $0 + $1.price }
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("Позиции")
+        var members = operation.recipients.map(\.user)
+        if !members.contains(where: { $0.id == operation.donor.id }) {
+            members.append(operation.donor)
+        }
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Позиции чека")
                 .sectionHeaderStyle()
                 .padding(.leading, 4)
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
-                    if index > 0 {
-                        Rectangle()
-                            .fill(Color.hairline)
-                            .frame(height: 1)
-                            .padding(.leading, 16)
-                    }
-                    itemRow(item)
-                }
-                Rectangle()
-                    .fill(Color.hairline)
-                    .frame(height: 1)
-                itemFooterLine("Подытог", subtotal, bold: false)
-                if surcharges > 0 {
-                    itemFooterLine("Сборы", surcharges, bold: false)
-                }
-                itemFooterLine("Итого", subtotal + surcharges, bold: true)
-            }
-            .surfaceCard(padding: 0)
+            ReceiptView(items: items, members: members, currency: currency)
         }
-    }
-
-    private func itemRow(_ item: OperationItem) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(item.name.isEmpty ? "Позиция" : item.name)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.ink)
-                    if item.qty > 1 {
-                        Text("×\(item.qty)")
-                            .font(.caption.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(Color.inkSecondary)
-                    }
-                }
-                Text(itemParticipants(item))
-                    .font(.caption)
-                    .foregroundStyle(Color.inkSecondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            MoneyText(item.price, role: .neutral, size: 15, currency: currency)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
-    private func itemFooterLine(_ title: String, _ amount: Int, bold: Bool) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: bold ? 15 : 13, weight: bold ? .semibold : .medium, design: .rounded))
-                .foregroundStyle(bold ? Color.ink : Color.inkSecondary)
-            Spacer()
-            MoneyText(amount, role: .neutral, size: bold ? 17 : 13, currency: currency)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-    }
-
-    /// Подпись участников позиции: «Сбор 10% · пропорционально» у надбавки,
-    /// иначе имена участников через запятую.
-    private func itemParticipants(_ item: OperationItem) -> String {
-        if item.isSurcharge {
-            let rule = item.split == OperationItem.splitEqually ? "поровну" : "пропорционально"
-            if let pct = item.percent {
-                return "Сбор \(pct)% · \(rule)"
-            }
-            return "Сбор · \(rule)"
-        }
-        let names = item.shareList.map { share -> String in
-            if let user = operation.recipients.first(where: { $0.user.id == share.userId })?.user {
-                return user.id == currentUserId ? "Вы" : user.displayName
-            }
-            if operation.donor.id == share.userId {
-                return operation.donor.id == currentUserId ? "Вы" : operation.donor.displayName
-            }
-            return "#\(share.userId)"
-        }
-        return names.isEmpty ? "—" : names.joined(separator: ", ")
     }
 
     private func filesSection(_ files: [OperationFile]) -> some View {
@@ -328,10 +275,7 @@ struct OperationDetailView: View {
                         previewFile = file
                     } label: {
                         HStack {
-                            Label(
-                                file.type == "image" ? "Фото (чек)" : "Вложение (\(file.type))",
-                                systemImage: "paperclip"
-                            )
+                            Label(attachmentTypeName(file.type), systemImage: "paperclip")
                             .font(.subheadline)
                             .foregroundStyle(Color.ink)
                             Spacer()
@@ -432,6 +376,18 @@ struct OperationDetailView: View {
     }
 }
 
+// MARK: - Тип вложения
+
+/// Человеческое имя типа вложения: сырое значение API («video») в UI пугает.
+private func attachmentTypeName(_ type: String) -> String {
+    switch type {
+    case "photo", "image": return "Фото"
+    case "video": return "Видео"
+    case "document": return "Документ"
+    default: return "Вложение"
+    }
+}
+
 // MARK: - Просмотр вложения
 
 /// Просмотр файла операции: скачивает GET /files/{fileId};
@@ -443,15 +399,16 @@ private struct OperationFileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var image: UIImage?
     @State private var tempFileURL: URL?
-    @State private var isFailed = false
-    @State private var alertMessage: String?
+    /// Текст ошибки загрузки: показывается ТОЛЬКО failed-state'ом
+    /// (alert поверх него дублировал ту же ошибку двумя окнами).
+    @State private var loadErrorText: String?
 
     var body: some View {
         NavigationStack {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
-                .navigationTitle(file.type == "image" ? "Фото (чек)" : "Вложение")
+                .navigationTitle(attachmentTypeName(file.type))
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
@@ -459,31 +416,18 @@ private struct OperationFileView: View {
                     }
                 }
                 .task { await load() }
-                .alert("Ошибка", isPresented: alertPresented) {
-                    Button("Ок", role: .cancel) {}
-                } message: {
-                    Text(alertMessage ?? "")
-                }
         }
-    }
-
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { alertMessage != nil },
-            set: { if !$0 { alertMessage = nil } }
-        )
     }
 
     @ViewBuilder
     private var content: some View {
         if let image {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
+            // Чеки читают приближая: без зума мелкий текст бесполезен.
+            ZoomableImage(image: image)
         } else if let tempFileURL {
             VStack(spacing: 24) {
                 Image(systemName: file.type == "video" ? "video" : "doc")
-                    .font(.system(size: 44))
+                    .scaledFont(size: 44, design: .default, relativeTo: .title)
                     .foregroundStyle(Color.inkSecondary)
                 ShareLink(item: tempFileURL) {
                     Label("Открыть / поделиться", systemImage: "square.and.arrow.up")
@@ -491,13 +435,9 @@ private struct OperationFileView: View {
                 .buttonStyle(.primaryPill)
                 .padding(.horizontal, 40)
             }
-        } else if isFailed {
-            ContentUnavailableView {
-                Label("Не удалось загрузить", systemImage: "wifi.exclamationmark")
-            } actions: {
-                Button("Повторить") {
-                    Task { await load() }
-                }
+        } else if let loadErrorText {
+            FailedStateView(message: loadErrorText) {
+                await load()
             }
         } else {
             ProgressView()
@@ -505,7 +445,7 @@ private struct OperationFileView: View {
     }
 
     private func load() async {
-        isFailed = false
+        loadErrorText = nil
         do {
             let data = try await session.api.fileData(id: file.fileId)
             if file.type == "image", let uiImage = UIImage(data: data) {
@@ -522,8 +462,80 @@ private struct OperationFileView: View {
         } catch {
             // Отмена .task (закрыли sheet) — не ошибка.
             if error.isTaskCancellation { return }
-            isFailed = true
-            alertMessage = error.localizedDescription
+            loadErrorText = humanErrorText(error)
         }
+    }
+}
+
+// MARK: - Зумируемое фото
+
+/// Фото с pinch-зумом (1×…4×) и перетаскиванием: чеки читают приближая,
+/// в plain `scaledToFit` мелкие строки нечитаемы. Double-tap — сброс к 1×.
+private struct ZoomableImage: View {
+    let image: UIImage
+
+    /// Зафиксированные значения после завершения жеста.
+    @State private var steadyScale: CGFloat = 1
+    @State private var steadyOffset: CGSize = .zero
+    /// «Живые» значения во время жеста.
+    @State private var scale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+
+    /// Пределы масштаба: 1× (исходный) … 4× (читаемость мелкого текста).
+    private static let scaleRange: ClosedRange<CGFloat> = 1...4
+
+    var body: some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .scaleEffect(scale)
+            .offset(offset)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(magnify.simultaneously(with: drag))
+            .onTapGesture(count: 2) { resetZoom() }
+            // Увеличенное фото не должно вылезать под навбар и края экрана.
+            .clipped()
+    }
+
+    private var magnify: some Gesture {
+        MagnifyGesture()
+            .onChanged { value in
+                scale = Self.clamped(steadyScale * value.magnification)
+            }
+            .onEnded { value in
+                steadyScale = Self.clamped(steadyScale * value.magnification)
+                scale = steadyScale
+                // Возврат к 1× сбрасывает и смещение — иначе фото «уезжает».
+                if steadyScale == 1 { resetZoom() }
+            }
+    }
+
+    private var drag: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                // Двигать имеет смысл только увеличенное фото.
+                guard steadyScale > 1 else { return }
+                offset = CGSize(
+                    width: steadyOffset.width + value.translation.width,
+                    height: steadyOffset.height + value.translation.height
+                )
+            }
+            .onEnded { _ in
+                steadyOffset = offset
+            }
+    }
+
+    private func resetZoom() {
+        withAnimation(.spring(duration: 0.3)) {
+            scale = 1
+            offset = .zero
+        }
+        steadyScale = 1
+        steadyOffset = .zero
+    }
+
+    private static func clamped(_ value: CGFloat) -> CGFloat {
+        min(max(value, scaleRange.lowerBound), scaleRange.upperBound)
     }
 }

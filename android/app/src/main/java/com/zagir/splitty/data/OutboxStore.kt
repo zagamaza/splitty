@@ -221,6 +221,10 @@ class OutboxStore(
         // чужие расходы в свои комнаты.
         didRead = true
         isLoaded = true
+        // Память чистим ДО записи: если запись файла упадёт, в _entries не должна
+        // остаться очередь предыдущего аккаунта — иначе следующая же успешная
+        // запись вернула бы её на диск и отправила чужие расходы в свои комнаты.
+        _entries.value = emptyList()
         persistLocked(emptyList())
     }
 
@@ -228,7 +232,13 @@ class OutboxStore(
 
     private suspend fun ensureLoadedLocked() {
         if (isLoaded) return
-        _entries.value = readFileLocked() ?: emptyList()
+        // Только УСПЕШНОЕ чтение считается загрузкой. Раньше isLoaded взводился
+        // и после null (транзиентная ошибка ввода-вывода): очередь навсегда
+        // оставалась пустой в памяти — неотправленные расходы пропадали из UI, а
+        // OutboxSyncer, дождавшись awaitLoaded, видел пустой список и ничего не
+        // досылал при каждом восстановлении сети.
+        val loaded = readFileLocked() ?: return
+        _entries.value = loaded
         isLoaded = true
     }
 

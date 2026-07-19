@@ -40,17 +40,20 @@ struct MainTabView: View {
                 .tabItem { Label("Группы", systemImage: "person.3.fill") }
                 .tag(Tab.groups)
 
-            // Пустая вкладка-заглушка под центральной кнопкой «+».
+            // Пустая вкладка-заглушка под центральной кнопкой «+»:
+            // для VoiceOver невидима — реальное действие у overlay-кнопки.
             Color.clear
-                .tabItem { Text("") }
+                .accessibilityHidden(true)
+                .tabItem { Text("").accessibilityHidden(true) }
                 .tag(Tab.add)
 
+            // clock — согласованно с empty state ленты (chart.bar обещал графики).
             ActivityView()
-                .tabItem { Label("Активность", systemImage: "chart.bar.fill") }
+                .tabItem { Label("Активность", systemImage: "clock.fill") }
                 .tag(Tab.activity)
 
             AccountView()
-                .tabItem { Label("Профиль", systemImage: "person.crop.circle") }
+                .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
                 .tag(Tab.account)
         }
         .tint(Color.accent)
@@ -103,14 +106,20 @@ struct MainTabView: View {
     // MARK: Офлайн-баннер
 
     /// «Офлайн — изменения сохраняются локально» без сети;
-    /// кратко «Отправка…» пока уходит outbox.
-    @ViewBuilder
+    /// кратко «Отправка…» пока уходит outbox. VStack-обёртка постоянна,
+    /// чтобы transition появления/скрытия баннера анимировался.
     private var statusBanner: some View {
-        if !session.isOnline {
-            bannerRow(icon: "wifi.slash", text: "Офлайн — изменения сохраняются локально")
-        } else if session.outbox.isSyncing {
-            bannerRow(icon: "icloud.and.arrow.up", text: "Отправка…")
+        VStack(spacing: 0) {
+            if !session.isOnline {
+                bannerRow(icon: "wifi.slash", text: "Офлайн — изменения сохраняются локально")
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else if session.outbox.isSyncing {
+                bannerRow(icon: "icloud.and.arrow.up", text: "Отправка…")
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
+        .animation(.easeInOut(duration: 0.25), value: session.isOnline)
+        .animation(.easeInOut(duration: 0.25), value: session.outbox.isSyncing)
     }
 
     private func bannerRow(icon: String, text: String) -> some View {
@@ -118,7 +127,7 @@ struct MainTabView: View {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
             Text(text)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
         }
         .foregroundStyle(Color.inkSecondary)
         .frame(maxWidth: .infinity)
@@ -135,6 +144,7 @@ struct MainTabView: View {
     /// изумрудный градиент, мягкая цветная тень, белый plus.
     private var addExpenseButton: some View {
         Button {
+            Haptics.tap()
             isAddExpensePresented = true
         } label: {
             ZStack {

@@ -53,6 +53,9 @@ extension Color {
     static let negative = Color(light: 0xDC5A2E, dark: 0xFB923C)
     /// Тонкие разделители внутри карточек и hairline-бордеры в тёмной теме.
     static let hairline = Color(light: 0xEAECF0, dark: 0x232A33)
+    /// Бумага чека: тёплый почти-белый в светлой теме (чтобы карточка-чек
+    /// читалась как бумага, а не как обычная surface), чуть светлее surface в тёмной.
+    static let receiptPaper = Color(light: 0xFDFCF9, dark: 0x1B2129)
     /// Нажатое состояние акцента (тёмный изумруд): pressed CTA, градиенты.
     static let accentPressed = Color(light: 0x0B7C56, dark: 0x2BB985)
     /// Заливка баров графиков (дашборд «Итоги»). Отдельный от UI-акцента

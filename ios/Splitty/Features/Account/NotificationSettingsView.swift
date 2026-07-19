@@ -7,8 +7,12 @@ struct NotificationSettingsView: View {
     @Environment(SessionStore.self) private var session
     @State private var settings: NotifySettings?
     @State private var errorMessage: String?
-    /// true — PATCH в полёте; тумблеры не блокируем, но изменения сериализуем.
+    /// true — PATCH в полёте; тумблеры задизейблены, чтобы быстрые
+    /// переключения не гонялись между собой (последний ответ сервера побеждал бы).
     @State private var isSaving = false
+    /// Мастер-тумблер (перенесён из AccountView, где дублировал строку-ссылку):
+    /// локальная копия `me.notificationOn`, PATCH /me, при ошибке откат.
+    @State private var masterOn = true
 
     var body: some View {
         Group {
@@ -34,7 +38,13 @@ struct NotificationSettingsView: View {
         .background(Color.bg)
         .navigationTitle("Уведомления")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .task {
+            syncMasterFromMe()
+            await load()
+        }
+        .onChange(of: session.me) {
+            syncMasterFromMe()
+        }
         .alert(
             "Ошибка",
             isPresented: Binding(
@@ -51,33 +61,58 @@ struct NotificationSettingsView: View {
     private func form(_ current: NotifySettings) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                section(
-                    title: "Операции",
-                    footer: "Кто-то добавил или изменил расход в вашей тусе",
-                    telegram: Binding(
-                        get: { current.operations.telegram },
-                        set: { newValue in
-                            var updated = current
-                            updated.operations.telegram = newValue
-                            save(updated)
-                        }
+                masterSection
+                Group {
+                    section(
+                        title: "Операции",
+                        footer: "Кто-то добавил или изменил расход в вашей группе",
+                        telegram: Binding(
+                            get: { current.operations.telegram },
+                            set: { newValue in
+                                var updated = current
+                                updated.operations.telegram = newValue
+                                save(updated)
+                            }
+                        )
                     )
-                )
-                section(
-                    title: "Долги",
-                    footer: "Вам вернули долг",
-                    telegram: Binding(
-                        get: { current.debts.telegram },
-                        set: { newValue in
-                            var updated = current
-                            updated.debts.telegram = newValue
-                            save(updated)
-                        }
+                    section(
+                        title: "Долги",
+                        footer: "Вам вернули долг",
+                        telegram: Binding(
+                            get: { current.debts.telegram },
+                            set: { newValue in
+                                var updated = current
+                                updated.debts.telegram = newValue
+                                save(updated)
+                            }
+                        )
                     )
-                )
+                }
+                // Мастер выключен — категории не действуют, показываем это
+                // визуально и блокируем их переключение.
+                .disabled(!masterOn)
+                .opacity(masterOn ? 1 : 0.5)
             }
             .padding(16)
         }
+    }
+
+    /// Первая секция — мастер-тумблер всех уведомлений (PATCH /me).
+    private var masterSection: some View {
+        Toggle(isOn: $masterOn) {
+            Text("Уведомления")
+                .scaledFont(size: 16)
+                .foregroundStyle(Color.ink)
+        }
+        .tint(Color.accent)
+        .disabled(isSaving)
+        .onChange(of: masterOn) { _, newValue in
+            guard newValue != session.me?.notificationOn else { return }
+            saveMaster(newValue)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+        .surfaceCard(padding: 0)
     }
 
     private func section(title: String, footer: String, telegram: Binding<Bool>) -> some View {
@@ -88,10 +123,13 @@ struct NotificationSettingsView: View {
             VStack(spacing: 0) {
                 Toggle(isOn: telegram) {
                     Label("Telegram", systemImage: "paperplane")
-                        .font(.system(size: 16, design: .rounded))
+                        .scaledFont(size: 16)
                         .foregroundStyle(Color.ink)
                 }
                 .tint(Color.accent)
+                // Пока PATCH в полёте — не даём переключать: быстрые тапы
+                // порождали гонку запросов с непредсказуемым итогом.
+                .disabled(isSaving)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
 
@@ -101,9 +139,9 @@ struct NotificationSettingsView: View {
                 Toggle(isOn: .constant(false)) {
                     HStack(spacing: 6) {
                         Label("Приложение", systemImage: "app.badge")
-                            .font(.system(size: 16, design: .rounded))
+                            .scaledFont(size: 16)
                         Text("скоро")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .scaledFont(size: 11, weight: .semibold, relativeTo: .footnote)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 2)
                             .background(Color.hairline, in: Capsule())
@@ -111,12 +149,13 @@ struct NotificationSettingsView: View {
                     .foregroundStyle(Color.inkSecondary)
                 }
                 .disabled(true)
+                .accessibilityHint("Появится в следующих версиях")
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             }
             .surfaceCard(padding: 0)
             Text(footer)
-                .font(.system(size: 12, design: .rounded))
+                .scaledFont(size: 12, relativeTo: .footnote)
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.horizontal, 4)
         }
@@ -132,15 +171,45 @@ struct NotificationSettingsView: View {
     }
 
     /// Оптимистичное сохранение: UI обновляется сразу, при ошибке — откат.
+    /// На время PATCH тумблеры задизейблены (isSaving) — см. `form`.
     private func save(_ updated: NotifySettings) {
         let previous = settings
         settings = updated
+        isSaving = true
         Task {
+            defer { isSaving = false }
             do {
                 settings = try await session.api.updateNotifications(updated)
             } catch {
                 if error.isTaskCancellation { return }
                 settings = previous
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Мастер-тумблер (PATCH /me)
+
+    private func syncMasterFromMe() {
+        guard let me = session.me else { return }
+        masterOn = me.notificationOn
+    }
+
+    /// Сохраняет мастер-настройку в профиле; при ошибке откатывает тумблер.
+    private func saveMaster(_ newValue: Bool) {
+        isSaving = true
+        Task {
+            defer { isSaving = false }
+            do {
+                session.me = try await session.api.updateMe(
+                    displayName: nil,
+                    lang: nil,
+                    notificationOn: newValue
+                )
+                Haptics.success()
+            } catch {
+                if error.isTaskCancellation { return }
+                syncMasterFromMe()
                 errorMessage = error.localizedDescription
             }
         }

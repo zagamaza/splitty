@@ -369,7 +369,7 @@ final class APIClient: OperationAPI {
 
     /// AI-распознавание расхода: POST /rooms/{id}/operations/parse (multipart).
     /// Первый upload в проекте — тело собирается вручную (URLSession, без сторонних
-    /// зависимостей). Опциональные части: `audio` (audio/aac), `image` (image/jpeg),
+    /// зависимостей). Опциональные части: `audio` (audio/wav), `image` (image/jpeg),
     /// `text` (поле), `draft` (JSON-поле текущего черновика для голосовой правки).
     /// Сервер сам выбирает медиа по приоритету audio → image → text; черновик
     /// НЕ создаёт операцию, а заполняет форму. 400 — не передано ни одного ввода.
@@ -418,7 +418,7 @@ final class APIClient: OperationAPI {
             appendField(name: "draft", value: String(decoding: draftData, as: UTF8.self))
         }
         if let audio {
-            appendFile(name: "audio", filename: "audio.aac", contentType: "audio/aac", data: audio)
+            appendFile(name: "audio", filename: "audio.wav", contentType: "audio/wav", data: audio)
         }
         if let image {
             appendFile(name: "image", filename: "image.jpg", contentType: "image/jpeg", data: image)

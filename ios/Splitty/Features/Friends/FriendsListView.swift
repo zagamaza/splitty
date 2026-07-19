@@ -4,6 +4,9 @@ import SwiftUI
 struct FriendsListView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = FriendsViewModel()
+    /// Sheet создания группы из empty state: друзья появляются только
+    /// через общие группы, поэтому действие ведёт именно туда.
+    @State private var isCreateGroupPresented = false
 
     init() {}
 
@@ -91,12 +94,23 @@ struct FriendsListView: View {
         .contentMargins(.bottom, 40, for: .scrollContent)
         .overlay {
             if model.friends.isEmpty {
-                ContentUnavailableView(
-                    "Пока нет друзей",
-                    systemImage: "person.2",
-                    description: Text("Друзья появятся, когда у вас будут общие группы с расходами")
-                )
+                ContentUnavailableView {
+                    Label("Пока нет друзей", systemImage: "person.2")
+                } description: {
+                    Text("Друзья появятся, когда у вас будут общие группы с расходами")
+                } actions: {
+                    Button("Создать группу") {
+                        isCreateGroupPresented = true
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accent)
+                }
             }
+        }
+        .sheet(isPresented: $isCreateGroupPresented) {
+            // Список обновится через session.dataVersion (bump внутри),
+            // как при создании из GroupsListView.
+            CreateGroupView {}
         }
     }
 
@@ -108,7 +122,7 @@ struct FriendsListView: View {
                 .sectionHeaderStyle()
             MoneyTotalsText(totals: model.totals)
             Text(totalCaption)
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -124,7 +138,7 @@ struct FriendsListView: View {
         if primary < 0 {
             return "Вы должны"
         }
-        return "Все долги погашены"
+        return Glossary.settledHero
     }
 }
 
@@ -136,7 +150,7 @@ private struct FriendRow: View {
         HStack(spacing: 14) {
             UserAvatarView(user: friend.user, size: 48)
             Text(friend.user.displayName)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .scaledFont(size: 17, weight: .semibold)
                 .foregroundStyle(Color.ink)
                 .lineLimit(1)
             Spacer(minLength: 8)
@@ -152,8 +166,8 @@ private struct FriendRow: View {
         let totals = friend.totals
         if let primary = totals.first {
             VStack(alignment: .trailing, spacing: 2) {
-                Text(primary.sum > 0 ? "должен(на) вам" : "вы должны")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                Text(caption(totals: totals, primary: primary))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
                 MoneyTotalsText(
                     totals: totals,
@@ -163,10 +177,22 @@ private struct FriendRow: View {
                 )
             }
         } else {
-            Text("расчёт")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+            Text(Glossary.settled)
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
         }
+    }
+
+    /// Подпись направления: суммы разных знаков по валютам — «взаимные долги»
+    /// (единая подпись «должен вам»/«вы должны» тут врала бы), иначе — по
+    /// знаку основной валюты с обязательной нулевой веткой.
+    private func caption(totals: [CurrencySum], primary: CurrencySum) -> String {
+        let hasPositive = totals.contains { $0.sum > 0 }
+        let hasNegative = totals.contains { $0.sum < 0 }
+        if hasPositive && hasNegative { return "взаимные долги" }
+        if primary.sum > 0 { return "должен(на) вам" }
+        if primary.sum < 0 { return "вы должны" }
+        return Glossary.settled
     }
 }
 

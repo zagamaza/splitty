@@ -58,9 +58,9 @@ final class GroupsListViewModel {
                 return
             }
             if rooms.isEmpty {
-                state = .failed(error.localizedDescription)
+                state = .failed(humanErrorText(error))
             } else {
-                alertMessage = error.localizedDescription
+                alertMessage = humanErrorText(error)
             }
         }
     }
@@ -80,7 +80,7 @@ final class GroupsListViewModel {
             archivedRooms = result.value
         } catch {
             if error.isTaskCancellation { return }
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 
@@ -93,7 +93,7 @@ final class GroupsListViewModel {
             state = .loaded
         } catch {
             if error.isTaskCancellation { return }
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

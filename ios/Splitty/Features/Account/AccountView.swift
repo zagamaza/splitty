@@ -11,10 +11,9 @@ struct AccountView: View {
     @State private var isLogoutConfirmPresented = false
     @State private var errorMessage: String?
 
-    // Локальные копии настроек: правки применяются через PATCH /me,
+    // Локальная копия настройки: правки применяются через PATCH /me,
     // при ошибке откатываются к значениям из профиля.
     @State private var lang = "ru"
-    @State private var notificationOn = true
 
     init() {}
 
@@ -24,7 +23,11 @@ struct AccountView: View {
                 VStack(spacing: 16) {
                     headerSection
                     settingsSection
+                    // Адрес сервера — отладочная информация, пользователю в
+                    // релизе не нужна (менять его всё равно можно только в DEBUG).
+                    #if DEBUG
                     serverSection
+                    #endif
                     logoutSection
                 }
                 .padding(.horizontal, 16)
@@ -77,12 +80,15 @@ struct AccountView: View {
     private var logoutConfirmTitle: String {
         let pending = session.outbox.entries.count
         guard pending > 0 else { return "Выйти из аккаунта?" }
-        return "Есть \(pending) неотправленных операций — выйти и удалить их?"
+        let word = pluralRu(pending, "неотправленная операция", "неотправленные операции", "неотправленных операций")
+        return "Есть \(pending) \(word) — выйти и удалить?"
     }
 
     // MARK: - Секции
 
     /// Профиль-шапка: большой градиентный аватар, имя, @username, id.
+    /// Пока профиль не загружен — placeholder той же геометрии,
+    /// чтобы шапка не исчезала и контент не прыгал.
     @ViewBuilder
     private var headerSection: some View {
         if let me = session.me {
@@ -93,18 +99,30 @@ struct AccountView: View {
                 )
                 VStack(spacing: 2) {
                     Text(me.displayName)
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 24, weight: .semibold)
                         .foregroundStyle(Color.ink)
                     if let username = me.username, !username.isEmpty {
                         Text("@\(username)")
-                            .font(.system(size: 15, design: .rounded))
+                            .scaledFont(size: 15)
                             .foregroundStyle(Color.inkSecondary)
                     }
                     Text("ID: \(String(me.id))")
-                        .font(.system(size: 12, design: .rounded))
+                        .scaledFont(size: 12, relativeTo: .footnote)
                         .monospacedDigit()
                         .foregroundStyle(Color.inkSecondary)
                 }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+        } else {
+            VStack(spacing: 14) {
+                Circle()
+                    .fill(Color.hairline)
+                    .frame(width: 88, height: 88)
+                Text("Имя Фамилия")
+                    .scaledFont(size: 24, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                    .redacted(reason: .placeholder)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
@@ -125,8 +143,6 @@ struct AccountView: View {
                 themeRow
                 rowDivider
                 notificationsLink
-                rowDivider
-                notificationRow
             }
             .surfaceCard(padding: 0)
         }
@@ -140,11 +156,11 @@ struct AccountView: View {
         } label: {
             HStack(spacing: 12) {
                 Text("Имя")
-                    .font(.system(size: 16, design: .rounded))
+                    .scaledFont(size: 16)
                     .foregroundStyle(Color.ink)
                 Spacer(minLength: 8)
                 Text(session.me?.displayName ?? "")
-                    .font(.system(size: 16, design: .rounded))
+                    .scaledFont(size: 16)
                     .foregroundStyle(Color.inkSecondary)
                     .lineLimit(1)
                 Image(systemName: "chevron.right")
@@ -158,34 +174,41 @@ struct AccountView: View {
         .buttonStyle(.plain)
     }
 
-    /// Строка «Язык»: menu-picker справа (ru/en).
+    /// Строка «Язык»: menu-picker справа (ru/en). Настройка уходит в PATCH /me
+    /// и влияет на язык сообщений бота — caption объясняет, зачем она здесь.
     private var langRow: some View {
-        HStack(spacing: 12) {
-            Text("Язык")
-                .font(.system(size: 16, design: .rounded))
-                .foregroundStyle(Color.ink)
-            Spacer(minLength: 8)
-            Picker("Язык", selection: $lang) {
-                Text("Русский").tag("ru")
-                Text("English").tag("en")
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Text("Язык")
+                    .scaledFont(size: 16)
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                Picker("Язык", selection: $lang) {
+                    Text("Русский").tag("ru")
+                    Text("English").tag("en")
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .tint(Color.inkSecondary)
+                .onChange(of: lang) { _, newValue in
+                    guard newValue != session.me?.lang else { return }
+                    Task { await save(lang: newValue) }
+                }
             }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .tint(Color.inkSecondary)
-            .onChange(of: lang) { _, newValue in
-                guard newValue != session.me?.lang else { return }
-                Task { await save(lang: newValue) }
-            }
+            .padding(.vertical, 7)
+            Text("Язык сообщений бота в Telegram")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.bottom, 10)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 7)
     }
 
     /// Строка «Тема»: menu-picker (системная/светлая/тёмная), UserDefaults.
     private var themeRow: some View {
         HStack(spacing: 12) {
             Text("Тема")
-                .font(.system(size: 16, design: .rounded))
+                .scaledFont(size: 16)
                 .foregroundStyle(Color.ink)
             Spacer(minLength: 8)
             Picker("Тема", selection: $themeRaw) {
@@ -202,13 +225,15 @@ struct AccountView: View {
     }
 
     /// Строка «Уведомления»: переход к настройкам категорий и каналов.
+    /// Мастер-тумблер живёт на самом экране уведомлений — здесь он дублировал
+    /// название строки-ссылки и путал.
     private var notificationsLink: some View {
         NavigationLink {
             NotificationSettingsView()
         } label: {
             HStack(spacing: 12) {
                 Text("Уведомления")
-                    .font(.system(size: 16, design: .rounded))
+                    .scaledFont(size: 16)
                     .foregroundStyle(Color.ink)
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
@@ -222,22 +247,7 @@ struct AccountView: View {
         .buttonStyle(.plain)
     }
 
-    /// Строка «Уведомления»: toggle с акцентным tint.
-    private var notificationRow: some View {
-        Toggle(isOn: $notificationOn) {
-            Text("Уведомления")
-                .font(.system(size: 16, design: .rounded))
-                .foregroundStyle(Color.ink)
-        }
-        .tint(Color.accent)
-        .onChange(of: notificationOn) { _, newValue in
-            guard newValue != session.me?.notificationOn else { return }
-            Task { await save(notificationOn: newValue) }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 11)
-    }
-
+    #if DEBUG
     /// Карточка «Сервер»: текущий base URL и версия приложения (read-only, мелко).
     private var serverSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -246,11 +256,11 @@ struct AccountView: View {
                 .padding(.horizontal, 4)
             VStack(alignment: .leading, spacing: 6) {
                 Text(session.baseURLString)
-                    .font(.system(size: 13, design: .rounded))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
                 Text("Версия \(Self.appVersion)")
-                    .font(.system(size: 13, design: .rounded))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -258,6 +268,7 @@ struct AccountView: View {
             .surfaceCard()
         }
     }
+    #endif
 
     /// «1.2 (3)» из бандла — чтобы отличать сборки в TestFlight/на устройстве.
     static var appVersion: String {
@@ -272,7 +283,7 @@ struct AccountView: View {
             isLogoutConfirmPresented = true
         } label: {
             Text("Выйти")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .scaledFont(size: 16, weight: .semibold)
                 .foregroundStyle(Color.negative)
                 .frame(maxWidth: .infinity)
                 .surfaceCard()
@@ -293,7 +304,6 @@ struct AccountView: View {
     private func syncFromMe() {
         guard let me = session.me else { return }
         lang = me.lang
-        notificationOn = me.notificationOn
     }
 
     private func saveName() {
@@ -310,14 +320,13 @@ struct AccountView: View {
     /// при ошибке показывает alert и откатывает локальные настройки.
     private func save(
         displayName: String? = nil,
-        lang: String? = nil,
-        notificationOn: Bool? = nil
+        lang: String? = nil
     ) async {
         do {
             session.me = try await session.api.updateMe(
                 displayName: displayName,
                 lang: lang,
-                notificationOn: notificationOn
+                notificationOn: nil
             )
             Haptics.success()
         } catch {

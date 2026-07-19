@@ -13,10 +13,17 @@ struct GroupSettingsView: View {
     @State private var alertMessage: String?
     /// Справочник валют (GET /currencies); nil — ещё грузится.
     @State private var currencies: [CurrencyInfo]?
+    /// Текст ошибки загрузки справочника, когда кеша нет: без него секция
+    /// застревала бы на вечном спиннере.
+    @State private var currenciesError: String?
     /// Текущая валюта группы (локально, чтобы чекмарк обновлялся сразу).
     @State private var selectedCurrency: String
     /// Код валюты, PUT которой сейчас в полёте (спиннер у строки).
     @State private var savingCurrency: String?
+    /// Валюта, ожидающая подтверждения смены (confirmationDialog): смена
+    /// видна всем участникам группы — без подтверждения слишком легко
+    /// сменить случайным тапом.
+    @State private var pendingCurrency: CurrencyInfo?
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
@@ -65,18 +72,23 @@ struct GroupSettingsView: View {
         }
         .background(Color.bg)
         .task { await loadCurrencies() }
-        .alert("Ошибка", isPresented: alertPresented) {
-            Button("Ок", role: .cancel) {}
-        } message: {
-            Text(alertMessage ?? "")
+        .errorAlert($alertMessage)
+        .confirmationDialog(
+            "Сменить валюту на \(pendingCurrency?.code ?? "")?",
+            isPresented: Binding(
+                get: { pendingCurrency != nil },
+                set: { if !$0 { pendingCurrency = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingCurrency
+        ) { currency in
+            Button("Сменить на \(currency.code)") {
+                Task { await changeCurrency(to: currency.code) }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: { _ in
+            Text("Суммы не пересчитываются — изменится только обозначение, у всех участников группы")
         }
-    }
-
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { alertMessage != nil },
-            set: { if !$0 { alertMessage = nil } }
-        )
     }
 
     // MARK: Секции
@@ -135,6 +147,22 @@ struct GroupSettingsView: View {
                                 .padding(.leading, 52)
                         }
                     }
+                } else if let currenciesError {
+                    // Справочник не загрузился и кеша нет — честная ошибка
+                    // с повтором вместо вечного спиннера.
+                    VStack(spacing: 10) {
+                        Text(currenciesError)
+                            .font(.caption)
+                            .foregroundStyle(Color.inkSecondary)
+                            .multilineTextAlignment(.center)
+                        Button("Повторить") {
+                            Task { await loadCurrencies() }
+                        }
+                        .buttonStyle(.softChip)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 16)
                 } else {
                     ProgressView()
                         .frame(maxWidth: .infinity)
@@ -152,7 +180,10 @@ struct GroupSettingsView: View {
 
     private func currencyRow(_ currency: CurrencyInfo) -> some View {
         Button {
-            Task { await changeCurrency(to: currency.code) }
+            // Не сам PUT, а подтверждение: смена валюты видна всем участникам.
+            if currency.code != selectedCurrency {
+                pendingCurrency = currency
+            }
         } label: {
             HStack(spacing: 12) {
                 Text(currency.flag)
@@ -230,8 +261,10 @@ struct GroupSettingsView: View {
                         Label("Разархивировать", systemImage: "tray.and.arrow.up")
                             .foregroundStyle(Color.accent)
                     } else {
+                        // Обычный ink, не «опасный» красный: действие обратимо
+                        // и скрывает группу только у самого пользователя.
                         Label("Архивировать", systemImage: "archivebox")
-                            .foregroundStyle(Color.negative)
+                            .foregroundStyle(Color.ink)
                     }
                     Spacer(minLength: 0)
                     if isArchiving {
@@ -255,11 +288,12 @@ struct GroupSettingsView: View {
 
     // MARK: Действия
 
-    /// Загружает справочник валют для пикера (ошибка — алерт, пикер со
-    /// спиннером). Через офлайн-кеш: без сети пикер рисуется по последнему
-    /// успешному ответу справочника.
+    /// Загружает справочник валют для пикера. Через офлайн-кеш: без сети
+    /// пикер рисуется по последнему успешному ответу справочника; ошибка
+    /// без кеша — состояние в секции с «Повторить», с кешем — алерт.
     private func loadCurrencies() async {
         guard currencies == nil else { return }
+        currenciesError = nil
         do {
             let result = try await session.repo.currencies { [self] cached in
                 if currencies == nil {
@@ -270,7 +304,13 @@ struct GroupSettingsView: View {
         } catch {
             // Закрытие sheet посреди запроса — не ошибка (конвенция проекта).
             if error.isTaskCancellation { return }
-            alertMessage = error.localizedDescription
+            if currencies == nil {
+                // Кеша нет — ошибка живёт в самой секции с кнопкой «Повторить»:
+                // алерт закрывается, и остался бы вечный спиннер.
+                currenciesError = humanErrorText(error)
+            } else {
+                alertMessage = humanErrorText(error)
+            }
         }
     }
 
@@ -289,7 +329,7 @@ struct GroupSettingsView: View {
             onChange()
         } catch {
             if error.isTaskCancellation { return }
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 
@@ -308,7 +348,7 @@ struct GroupSettingsView: View {
             onChange()
             dismiss()
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

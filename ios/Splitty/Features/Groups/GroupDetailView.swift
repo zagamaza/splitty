@@ -85,18 +85,7 @@ struct GroupDetailView: View {
                     )
                 }
             }
-            .alert("Ошибка", isPresented: alertPresented) {
-                Button("Ок", role: .cancel) {}
-            } message: {
-                Text(model.alertMessage ?? "")
-            }
-    }
-
-    private var alertPresented: Binding<Bool> {
-        Binding(
-            get: { model.alertMessage != nil },
-            set: { if !$0 { model.alertMessage = nil } }
-        )
+            .errorAlert($model.alertMessage)
     }
 
     @ViewBuilder
@@ -106,14 +95,8 @@ struct GroupDetailView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .failed(let message):
-            ContentUnavailableView {
-                Label("Не удалось загрузить", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text(message)
-            } actions: {
-                Button("Повторить") {
-                    Task { await retry() }
-                }
+            FailedStateView(message: message) {
+                await retry()
             }
         case .loaded:
             if let room = model.room {
@@ -121,7 +104,7 @@ struct GroupDetailView: View {
                     tusaTabView(room: room, meId: meId)
                 } else {
                     // Профиль ещё не загружен — нейтральное состояние вместо
-                    // неверных подписей «не участвует» с фейковым id.
+                    // неверных подписей «без вас» с фейковым id.
                     // Кнопка обязательна: pull-to-refresh здесь недоступен,
                     // без неё экран застревал бы до повторного входа.
                     ContentUnavailableView {
@@ -166,7 +149,7 @@ struct GroupDetailView: View {
                     }
                     if sections.isEmpty && isMineOnly {
                         Text("Операций с вами нет")
-                            .font(.system(size: 15, design: .rounded))
+                            .scaledFont(size: 15)
                             .foregroundStyle(Color.inkSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 24)
@@ -202,7 +185,7 @@ struct GroupDetailView: View {
         return VStack(alignment: .leading, spacing: 10) {
             if room.isArchived {
                 Label("Группа в архиве", systemImage: "archivebox")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
             HStack(alignment: .center, spacing: 12) {
@@ -210,27 +193,24 @@ struct GroupDetailView: View {
                 Spacer(minLength: 0)
                 // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок.
                 if canSettle {
-                    Button {
+                    // Тот же стиль, что у «Погасить» в балансах: одно действие —
+                    // один вид, плюс pressed-состояние из коробки.
+                    Button("Погасить") {
                         // Погашения офлайн не работают (зафиксированный дизайн v1).
                         if session.isOnline {
                             isSettleUpPresented = true
                         } else {
                             model.alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
                         }
-                    } label: {
-                        Text("Погасить")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(Color.accent, in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.softChip(isSelected: true))
                 }
             }
             if !localEntries.isEmpty {
-                Text("без учёта \(localEntries.count) неотправленных")
-                    .font(.system(size: 13, design: .rounded))
+                // Родительный падеж после «без учёта»: 1 → «неотправленной
+                // операции», 2 и 5 → «неотправленных операций».
+                Text("без учёта \(localEntries.count) \(pluralRu(localEntries.count, "неотправленной операции", "неотправленных операций", "неотправленных операций"))")
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
         }
@@ -263,7 +243,19 @@ struct GroupDetailView: View {
     /// Hero-статус: «Вам должны … ₽» / «Вы должны … ₽ (Имени)» / «Нет долгов».
     @ViewBuilder
     private func debtHero(room: RoomDetail, meId: Int) -> some View {
-        if room.myBalance > 0 {
+        if room.debtsUnavailable {
+            // Легаси-данные бота: доли не сходятся, сервер шлёт debts=[] и
+            // myBalance=0. Ветка обязана быть ПЕРВОЙ — иначе нулевой баланс
+            // уходит в «Все участники в расчёте», то есть враньё про деньги.
+            VStack(alignment: .leading, spacing: 4) {
+                Text(Glossary.debtsUnavailableHero)
+                    .scaledFont(size: 22, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                Text(Glossary.debtsUnavailableSubtitle)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Color.inkSecondary)
+            }
+        } else if room.myBalance > 0 {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Вам должны")
                     .sectionHeaderStyle()
@@ -285,7 +277,7 @@ struct GroupDetailView: View {
         } else {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Нет долгов")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 22, weight: .semibold)
                     .foregroundStyle(Color.ink)
                 Text("Все участники в расчёте")
                     .font(.system(size: 14))
@@ -307,15 +299,20 @@ struct GroupDetailView: View {
     }
 
     private func segmentButton(_ title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            // Отклик только на реальное переключение, не на повторный тап.
+            if !isOn { Haptics.tap() }
+            action()
+        } label: {
             Text(title)
-                .font(.system(size: 13.5, weight: .semibold, design: .rounded))
+                .scaledFont(size: 13.5, weight: .semibold, relativeTo: .footnote)
                 .foregroundStyle(isOn ? .white : Color.inkSecondary)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
                 .background(isOn ? Color.accent : .clear, in: Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isOn ? [.isSelected] : [])
     }
 
     // MARK: Вкладки тусы
@@ -333,8 +330,10 @@ struct GroupDetailView: View {
                 .tabItem { Label("Балансы", systemImage: "arrow.left.arrow.right") }
                 .tag(TusaTab.balances)
 
-            // Пустая вкладка-заглушка под центральной кнопкой «+».
+            // Пустая вкладка-заглушка под центральной кнопкой «+» —
+            // для VoiceOver её не существует.
             Color.clear
+                .accessibilityHidden(true)
                 .tabItem { Text("") }
                 .tag(TusaTab.add)
 
@@ -382,7 +381,13 @@ struct GroupDetailView: View {
         ContentUnavailableView {
             Label("Пока нет расходов", systemImage: "doc.plaintext")
         } description: {
-            Text("Добавьте первый расход кнопкой «+ Расход»")
+            Text("Добавьте первый расход — он появится в этом списке")
+        } actions: {
+            Button("Добавить расход") {
+                isAddExpensePresented = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(Color.accent)
         }
         .frame(maxWidth: .infinity)
         .surfaceCard(padding: 8)
@@ -424,26 +429,6 @@ struct GroupDetailView: View {
         }
     }
 
-}
-
-// MARK: - Стиль FAB
-
-/// Акцентный pill-FAB с мягкой цветной тенью и spring-нажатием.
-private struct FabPillButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 22)
-            .frame(minHeight: 54)
-            .background(
-                configuration.isPressed ? Color.accentPressed : Color.accent,
-                in: Capsule()
-            )
-            .shadow(color: Color.accentPressed.opacity(0.35), radius: 12, x: 0, y: 6)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.spring(duration: 0.25), value: configuration.isPressed)
-    }
 }
 
 // MARK: - Строка локальной (неотправленной) операции
@@ -506,7 +491,7 @@ private struct LocalOperationRow: View {
             Text(parts.count > 1 ? String(parts[1]) : "")
                 .font(.caption2)
             Text(parts.first.map(String.init) ?? "")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .scaledFont(size: 16, weight: .semibold)
                 .monospacedDigit()
         }
         .foregroundStyle(Color.inkSecondary)
@@ -565,7 +550,7 @@ private struct OperationRow: View {
             Text(parts.count > 1 ? String(parts[1]) : "")
                 .font(.caption2)
             Text(parts.first.map(String.init) ?? "")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .scaledFont(size: 16, weight: .semibold)
                 .monospacedDigit()
         }
         .foregroundStyle(Color.inkSecondary)
@@ -639,11 +624,11 @@ private struct OperationRow: View {
                 MoneyText(net, size: 15, currency: currency)
             }
         } else if myNet != nil {
-            Text("расчёт")
+            Text(Glossary.settled)
                 .font(.caption)
                 .foregroundStyle(Color.inkSecondary)
         } else {
-            Text("не участвует")
+            Text("без вас")
                 .font(.caption)
                 .foregroundStyle(Color.inkSecondary)
         }

@@ -28,9 +28,13 @@ class OfflineDataCleaner @Inject constructor(
                 if (session == null) return@collect // DataStore ещё читается
                 val hasToken = session.token != null
                 if (hadToken && !hasToken) {
-                    cache.clear()
-                    outbox.clear()
-                    avatars.clear()
+                    // Каждая чистка изолирована: без runCatching ошибка записи в
+                    // одной из них вылетала из collect и НАВСЕГДА убивала
+                    // подписку — все последующие разлогины переставали чистить
+                    // что-либо, и данные аккаунта переживали сессию.
+                    runCatching { cache.clear() }
+                    runCatching { outbox.clear() }
+                    runCatching { avatars.clear() }
                 }
                 hadToken = hasToken
             }

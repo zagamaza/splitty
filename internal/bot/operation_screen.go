@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"html"
 	"math"
 	"slices"
 	"sort"
@@ -1345,6 +1346,15 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 	var messages []tgbotapi.Chattable
 	editorUserId := editor.ID
 
+	// Название операции и комнаты — сырой пользовательский ввод (через бота и
+	// через REST), а все шаблоны ниже уходят с ParseMode=HTML: без экранирования
+	// "a < b" даёт 400 от Telegram и уведомление молча теряется, а "<b>"/"<a
+	// href>" вставляет разметку в ЛС других участников. Ср. memberName в
+	// operation_items.go
+	newDesc := html.EscapeString(newOp.Description)
+	oldDesc := html.EscapeString(oldOp.Description)
+	roomName := html.EscapeString(room.Name)
+
 	if oldOp.Donor.ID != newOp.Donor.ID {
 		var targetUser *api.User
 		if editorUserId != newOp.Donor.ID {
@@ -1354,7 +1364,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 		}
 
 		text := I18n(newOp.Donor, "scrn_notification_operation_updated_all",
-			userLink(targetUser), newOp.Description, userLink(editor), "")
+			userLink(targetUser), newDesc, userLink(editor), "")
 		text += "\nБыло:\n" +
 			I18n(langUser, "scrn_user_paid", userLink(oldOp.Donor)) +
 			tableWithPayments(oldOp, room)
@@ -1374,7 +1384,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 	if diff.NameChanged || diff.PhotoAdded {
 		var changeDetails string
 		if diff.NameChanged {
-			changeDetails += fmt.Sprintf("Название изменено: %s -> %s\n", oldOp.Description, newOp.Description)
+			changeDetails += fmt.Sprintf("Название изменено: %s -> %s\n", oldDesc, newDesc)
 		}
 		if diff.PhotoAdded {
 			changeDetails += "Добавлено фото.\n"
@@ -1383,7 +1393,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 		// Уведомляем донора, если он существует и у него включены уведомления
 		notifiedUsers := make(map[int]bool)
 		if newOp.Donor.AllowsTelegram(api.NotifyOperations) {
-			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newOp.Description, userLink(editor), changeDetails)
+			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newDesc, userLink(editor), changeDetails)
 			msg := NewMessage(int64(newOp.Donor.ID), text, keyboard)
 			messages = append(messages, msg)
 			notifiedUsers[newOp.Donor.ID] = true
@@ -1393,7 +1403,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 		for _, r := range newOp.RecipientsWithSum {
 			if r.User.AllowsTelegram(api.NotifyOperations) && !notifiedUsers[r.User.ID] {
 				msg := NewMessage(int64(r.User.ID),
-					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newOp.Description, userLink(editor), changeDetails), keyboard)
+					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newDesc, userLink(editor), changeDetails), keyboard)
 				messages = append(messages, msg)
 				notifiedUsers[r.User.ID] = true
 			}
@@ -1407,7 +1417,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			rAdded.User.ID != newOp.Donor.ID &&
 			rAdded.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(rAdded.User.ID),
-				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", userLink(&rAdded.User), userLink(editor), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
+				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", userLink(&rAdded.User), userLink(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1420,7 +1430,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			change.User.ID != newOp.Donor.ID &&
 			change.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(change.User.ID),
-				I18n(&change.User, "scrn_notification_operation_share_changed", userLink(&change.User), newOp.Description, userLink(editor), moneySpace(newOp.Sum, room.Currency), room.Name, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
+				I18n(&change.User, "scrn_notification_operation_share_changed", userLink(&change.User), newDesc, userLink(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1433,7 +1443,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			rRemoved.User.ID != newOp.Donor.ID &&
 			rRemoved.User.ID != oldOp.Donor.ID {
 			msg := NewMessage(int64(rRemoved.User.ID),
-				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", userLink(&rRemoved.User), userLink(editor), newOp.Description, moneySpace(newOp.Sum, room.Currency), room.Name), keyboard)
+				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", userLink(&rRemoved.User), userLink(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName), keyboard)
 			messages = append(messages, msg)
 		}
 	}

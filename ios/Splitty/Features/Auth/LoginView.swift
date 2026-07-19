@@ -1,12 +1,14 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Одноразовый код входа
 
 /// Нормализация и валидация одноразового кода входа из Telegram-бота.
 /// Чистая строковая логика — покрыта юнит-тестами (LoginCodeTests).
 enum LoginCode {
-    /// Минимальная длина кода: кнопка «Войти по коду» активна от 6 символов.
-    static let minLength = 6
+    /// Минимальная длина кода: бот генерирует ровно 8 символов
+    /// (internal/bot loginCodeLen) — кнопка активна от 8.
+    static let minLength = 8
 
     /// Убирает все пробельные символы (хвосты и разрывы при вставке из чата)
     /// и приводит к верхнему регистру — канонический формат кода бота (ABCD2345).
@@ -31,11 +33,13 @@ struct LoginView: View {
     @Environment(SessionStore.self) private var session
 
     @State private var codeText = ""
+    @State private var isLoggingIn = false
+    @State private var errorMessage: String?
+
+    #if DEBUG
     @State private var telegramIdText = ""
     @State private var displayName = ""
     @State private var username = ""
-    @State private var isLoggingIn = false
-    @State private var errorMessage: String?
 
     /// Начальное состояние dev-блока: на симуляторе раскрыт (UI-тесты зависят
     /// от полей «Telegram ID»/«Имя»/«Войти»), на устройстве — свёрнут.
@@ -44,11 +48,16 @@ struct LoginView: View {
     #else
     @State private var isDevLoginExpanded = false
     #endif
+    #endif
 
     init() {}
 
     var body: some View {
+        // Binding нужен только полю «Сервер» (DEBUG); в релизе шадоу-копия
+        // была бы неиспользуемой переменной.
+        #if DEBUG
         @Bindable var session = session
+        #endif
         ZStack {
             Color.bg
                 .ignoresSafeArea()
@@ -57,8 +66,12 @@ struct LoginView: View {
                 VStack(spacing: 20) {
                     logo
                     telegramLoginCard
+                    // Dev-вход и настройка сервера — только в DEBUG-сборках:
+                    // в релизе это бэкдор мимо авторизации через Telegram.
+                    #if DEBUG
                     devLoginSection
                     serverDisclosure(baseURL: $session.baseURLString)
+                    #endif
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
@@ -89,10 +102,10 @@ struct LoginView: View {
     private var logo: some View {
         VStack(spacing: 10) {
             Text("Splitty")
-                .font(.system(size: 46, weight: .bold, design: .rounded))
+                .scaledFont(size: 46, weight: .bold, relativeTo: .title)
                 .foregroundStyle(Color.accent)
             Text("Делите расходы с друзьями")
-                .font(.system(size: 17, weight: .medium, design: .rounded))
+                .scaledFont(size: 17, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
         }
         .padding(.top, 72)
@@ -110,19 +123,35 @@ struct LoginView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.accent)
                     .padding(.top, 2)
-                Text("Откройте **@split\\_money\\_bot** и отправьте команду /login — бот пришлёт код")
-                    .font(.system(size: 15, design: .rounded))
+                Text("Нажмите «Открыть бота» — он сразу пришлёт код для входа")
+                    .scaledFont(size: 15)
                     .foregroundStyle(Color.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            // Прямой переход в бота: инструкция без кнопки заставляла
+            // руками искать бота в Telegram.
+            Button {
+                openBot()
+            } label: {
+                Label("Открыть бота", systemImage: "paperplane")
+            }
+            .buttonStyle(.softChip)
+
             TextField("Код из Telegram", text: $codeText)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
-                .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 17, weight: .semibold, design: .monospaced)
                 .modifier(LoginFieldStyle())
                 .submitLabel(.go)
                 .onSubmit { loginWithCode() }
+
+            // Пока код короче минимума, объясняем, почему кнопка неактивна.
+            if !LoginCode.isValid(codeText) {
+                Text("Код из бота — 8 символов")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+            }
 
             Button {
                 loginWithCode()
@@ -136,6 +165,7 @@ struct LoginView: View {
         .surfaceCard(padding: 20)
     }
 
+    #if DEBUG
     /// Dev-вход: на симуляторе — всегда раскрытая карточка (как раньше),
     /// на устройстве — свёрнутый DisclosureGroup «Вход для разработки».
     @ViewBuilder
@@ -198,12 +228,13 @@ struct LoginView: View {
                 .padding(.top, 8)
         } label: {
             Text("Сервер")
-                .font(.system(size: 15, weight: .medium, design: .rounded))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
         }
         .tint(Color.inkSecondary)
         .padding(.horizontal, 4)
     }
+    #endif
 
     private var loadingOverlay: some View {
         ZStack {
@@ -217,8 +248,21 @@ struct LoginView: View {
 
     // MARK: - Действия
 
+    /// Открывает Telegram-бота сразу с командой входа: `start=login` —
+    /// бот понимает «/start login» как /login и присылает код одним тапом,
+    /// без ручного ввода команды. Deeplink в приложение, fallback — t.me.
+    private func openBot() {
+        guard let appURL = URL(string: "tg://resolve?domain=split_money_bot&start=login"),
+              let webURL = URL(string: "https://t.me/split_money_bot?start=login") else { return }
+        UIApplication.shared.open(appURL) { opened in
+            if !opened {
+                UIApplication.shared.open(webURL)
+            }
+        }
+    }
+
     /// Вход по коду из бота; 401 (invalid_code) — человеческое сообщение,
-    /// остальные ошибки — как есть (localizedDescription по-русски).
+    /// остальные — через humanErrorText (без сетевого жаргона в алерте).
     private func loginWithCode() {
         let code = LoginCode.normalize(codeText)
         guard code.count >= LoginCode.minLength else { return }
@@ -231,11 +275,12 @@ struct LoginView: View {
             } catch let error as APIError where error.isUnauthorized {
                 errorMessage = "Неверный или просроченный код"
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }
 
+    #if DEBUG
     private var isDevFormValid: Bool {
         (Int(telegramIdText.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
             && !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -263,10 +308,11 @@ struct LoginView: View {
                     username: uname.isEmpty ? nil : uname
                 )
             } catch {
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }
+    #endif
 }
 
 /// Поле ввода: подложка цвета фона экрана + hairline-бордер —
@@ -274,7 +320,7 @@ struct LoginView: View {
 private struct LoginFieldStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .font(.system(size: 17, design: .rounded))
+            .scaledFont(size: 17)
             .foregroundStyle(Color.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)

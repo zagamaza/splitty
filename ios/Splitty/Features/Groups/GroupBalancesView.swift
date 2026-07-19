@@ -10,6 +10,7 @@ struct GroupBalancesView: View {
     @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     @State private var settleDebt: Debt?
+    @State private var alertMessage: String?
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
@@ -19,7 +20,9 @@ struct GroupBalancesView: View {
         self.onChange = onChange
     }
 
-    private var meId: Int { session.me?.id ?? 0 }
+    /// nil, пока профиль не загружен: с фейковым id все долги молча
+    /// выглядели бы «чужими» — без кнопок «Погасить» и без выделения.
+    private var meId: Int? { session.me?.id }
 
     var body: some View {
         if embedded {
@@ -40,18 +43,35 @@ struct GroupBalancesView: View {
 
     private var content: some View {
         Group {
-            if room.debts.isEmpty {
-                ContentUnavailableView {
-                    Label("Нет долгов", systemImage: "checkmark.circle")
-                } description: {
-                    Text("Все участники в расчёте")
+            if let meId {
+                if room.debts.isEmpty {
+                    ContentUnavailableView {
+                        Label("Нет долгов", systemImage: "checkmark.circle")
+                    } description: {
+                        Text("Все участники в расчёте")
+                    }
+                } else {
+                    debtsList(meId: meId)
                 }
             } else {
-                debtsList
+                // Профиль ещё не загружен — честное состояние вместо списка,
+                // где все долги выглядят чужими (тот же паттерн, что в тусе).
+                ContentUnavailableView {
+                    Label("Профиль не загружен", systemImage: "person.crop.circle.badge.exclamationmark")
+                } description: {
+                    Text("Не удалось получить данные вашего профиля")
+                } actions: {
+                    Button("Повторить") {
+                        Task { await session.refreshMe() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.accent)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.bg)
+        .errorAlert($alertMessage)
         .sheet(item: $settleDebt) { debt in
             SettleUpView(roomId: room.id, currency: room.currency, preselectedDebt: debt) {
                 onChange()
@@ -65,12 +85,18 @@ struct GroupBalancesView: View {
     }
 
     /// Одна карточка со строками долгов и hairline-разделителями.
-    private var debtsList: some View {
+    private func debtsList(meId: Int) -> some View {
         ScrollView {
             VStack(spacing: 0) {
                 ForEach(room.debts) { debt in
                     DebtRow(debt: debt, meId: meId, currency: room.currency) {
-                        settleDebt = debt
+                        // Погашения офлайн не работают (зафиксированный дизайн
+                        // v1) — тот же гейт, что у «Погасить» в шапке тусы.
+                        if session.isOnline {
+                            settleDebt = debt
+                        } else {
+                            alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
+                        }
                     }
                     if debt.id != room.debts.last?.id {
                         Rectangle()
@@ -82,6 +108,12 @@ struct GroupBalancesView: View {
             }
             .surfaceCard(padding: 0)
             .padding(16)
+        }
+        .refreshable {
+            // Тот же жест обновления, что на вкладке операций: синк outbox
+            // и единая инвалидация — комнату перечитает родительский экран.
+            await session.syncOutbox()
+            session.noteDataChanged()
         }
     }
 }
@@ -100,18 +132,25 @@ private struct DebtRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            UserAvatarView(user: debt.debtor, size: 36)
-            Image(systemName: "arrow.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.inkSecondary)
-            UserAvatarView(user: debt.lender, size: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.ink)
-                    .lineLimit(2)
-                MoneyText(debt.sum, role: sumRole, size: 15, currency: currency)
+            // Инфо-часть строки — один элемент VoiceOver («Петя должен(на)
+            // Вася, 500 рублей»); кнопка «Погасить» остаётся отдельной.
+            HStack(spacing: 10) {
+                UserAvatarView(user: debt.debtor, size: 36)
+                // Стрелка — чистая декорация, направление уже есть в тексте.
+                Image(systemName: "arrow.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.inkSecondary)
+                    .accessibilityHidden(true)
+                UserAvatarView(user: debt.lender, size: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.ink)
+                        .lineLimit(2)
+                    MoneyText(debt.sum, role: sumRole, size: 15, currency: currency)
+                }
             }
+            .accessibilityElement(children: .combine)
             Spacer(minLength: 8)
             if involvesMe {
                 Button("Погасить", action: onSettle)
@@ -129,7 +168,9 @@ private struct DebtRow: View {
         if debt.lender.id == meId {
             return "\(debt.debtor.displayName) должен(на) вам"
         }
-        return "\(debt.debtor.displayName) → \(debt.lender.displayName)"
+        // Имя кредитора не склоняем (нет надёжной морфологии) — тире вместо
+        // датива, по образцу «Вы платите — Алмаз» в форме погашения.
+        return "\(debt.debtor.displayName) должен(на) — \(debt.lender.displayName)"
     }
 
     /// Цвет суммы: мой долг — negative, долг мне — accent, чужие — нейтрально.

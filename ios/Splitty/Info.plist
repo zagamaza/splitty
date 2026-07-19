@@ -25,7 +25,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.2</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>10</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSAppTransportSecurity</key>
@@ -39,6 +39,8 @@
 	<string>Микрофон нужен, чтобы надиктовать расход голосом</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Доступ к фото нужен, чтобы выбрать фото чека</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Распознавание речи показывает текст надиктовки прямо во время записи</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

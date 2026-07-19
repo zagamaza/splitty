@@ -29,11 +29,12 @@ targets:
         CFBundleLocalizations: [ru]
         CFBundleDisplayName: Splitty
         CFBundleShortVersionString: "1.2"
-        CFBundleVersion: "6"
+        CFBundleVersion: "10"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         # Разрешения для AI-добавления расхода (голос + фото чека).
         NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом
+        NSSpeechRecognitionUsageDescription: Распознавание речи показывает текст надиктовки прямо во время записи
         NSCameraUsageDescription: Камера нужна, чтобы сфотографировать чек
         NSPhotoLibraryUsageDescription: Доступ к фото нужен, чтобы выбрать фото чека
         NSAppTransportSecurity:
