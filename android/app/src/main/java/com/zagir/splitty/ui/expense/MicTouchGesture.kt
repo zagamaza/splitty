@@ -25,11 +25,16 @@ import kotlin.math.max
 
 // --- Пороги и лимиты жеста hold-to-talk (порт iOS AddExpenseView) ---
 
-/** Порог свайпа вверх для «замка» записи (палец можно отпустить). Px, как в iOS (-70). */
-const val MIC_LOCK_THRESHOLD_PX = -70f
+/**
+ * Порог свайпа вверх для «замка» записи (палец можно отпустить). Единицы — **dp**:
+ * iOS-овские -70 это points, а не пиксели, поэтому смещение пальца приводится к dp
+ * в [micTouchGesture]. Если сравнивать сырые пиксели, на 3x-экране замок защёлкнется
+ * уже через ~23 dp хода — то есть почти от любого движения.
+ */
+const val MIC_LOCK_THRESHOLD_DP = -70f
 
-/** Порог свайпа влево для отмены записи. Px, как в iOS (-70). */
-const val MIC_CANCEL_THRESHOLD_PX = -70f
+/** Порог свайпа влево для отмены записи. **dp**, как points в iOS (-70). */
+const val MIC_CANCEL_THRESHOLD_DP = -70f
 
 /** Лимит записи и автостоп — минута (как iOS). */
 const val RECORD_LIMIT_SECONDS = 60
@@ -45,22 +50,31 @@ const val SHORT_TAP_MIN_BYTES = 24_000
  * Срабатывание «замка»: свайп вверх за порог, причём вертикаль доминирует над
  * горизонталью (иначе диагональ влево-вверх ошибочно замкнула бы вместо отмены).
  * Порт iOS `translation.height < -70 && abs(height) >= abs(width)`.
+ * [dx]/[dy] — смещение в **dp**.
  */
 fun micLockTriggered(dx: Float, dy: Float): Boolean =
-    dy < MIC_LOCK_THRESHOLD_PX && abs(dy) >= abs(dx)
+    dy < MIC_LOCK_THRESHOLD_DP && abs(dy) >= abs(dx)
 
 /**
  * Срабатывание отмены: свайп влево за порог, горизонталь доминирует над
  * вертикалью. Порт iOS `translation.width < -70 && abs(width) > abs(height)`.
+ * [dx]/[dy] — смещение в **dp**.
  */
 fun micCancelTriggered(dx: Float, dy: Float): Boolean =
-    dx < MIC_CANCEL_THRESHOLD_PX && abs(dx) > abs(dy)
+    dx < MIC_CANCEL_THRESHOLD_DP && abs(dx) > abs(dy)
 
-/** Прогресс «замка» 0…1 (для анимации иконки-замка). Порт iOS `lockProgress`. */
-fun micLockProgress(dy: Float): Float = (-dy / -MIC_LOCK_THRESHOLD_PX).coerceIn(0f, 1f)
+/** Прогресс «замка» 0…1 (для анимации иконки-замка), [dy] в dp. Порт iOS `lockProgress`. */
+fun micLockProgress(dy: Float): Float = (-dy / -MIC_LOCK_THRESHOLD_DP).coerceIn(0f, 1f)
 
-/** Прогресс отмены 0…1 (для анимации ✕-зоны). Порт iOS `cancelProgress`. */
-fun micCancelProgress(dx: Float): Float = (-dx / -MIC_CANCEL_THRESHOLD_PX).coerceIn(0f, 1f)
+/** Прогресс отмены 0…1 (для анимации ✕-зоны), [dx] в dp. Порт iOS `cancelProgress`. */
+fun micCancelProgress(dx: Float): Float = (-dx / -MIC_CANCEL_THRESHOLD_DP).coerceIn(0f, 1f)
+
+/**
+ * Перевод смещения пальца из пикселей в dp. Вынесено из жеста отдельной функцией
+ * ради теста: сравнение сырых пикселей с dp-порогами — тихая регрессия, которая
+ * никак не проявляется на 1x-эмуляторе и ломает жест на реальном 3x-телефоне.
+ */
+fun micDragPxToDp(px: Float, density: Float): Float = px / density
 
 /** true — запись слишком короткая (случайный тап): обучающий тост вместо отправки. */
 fun isShortTap(wavBytes: Int): Boolean = wavBytes < SHORT_TAP_MIN_BYTES
@@ -311,12 +325,16 @@ fun Modifier.micTouchGesture(
                 break
             }
             val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.first()
+            // Смещение приводим к dp: пороги замка/отмены — это iOS-овские points,
+            // и на сыром пикселе они бы масштабировались вместе с плотностью экрана.
             val offset = change.position - startPos
+            val dx = micDragPxToDp(offset.x, density)
+            val dy = micDragPxToDp(offset.y, density)
             if (change.pressed) {
-                onMoved(offset.x, offset.y)
+                onMoved(dx, dy)
                 change.consume()
             } else {
-                onEnded(offset.x, offset.y)
+                onEnded(dx, dy)
                 change.consume()
                 break
             }

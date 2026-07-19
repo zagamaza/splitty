@@ -314,7 +314,10 @@
     <string name="expense_receipt_scan_hint">Сфотографируйте чек — заполню описание, сумму и позиции</string>
     <string name="expense_receipt_take_photo">Сфотографировать</string>
     <string name="expense_receipt_pick_photo">Выбрать фото</string>
-    <string name="expense_parsing">Распознаю чек…</string>
+    <!-- «Чек» из заголовка убран: оверлей висит и на чисто голосовом пути,
+         где никакого чека нет (копия = iOS). -->
+    <string name="expense_parsing">Распознаю…</string>
+    <string name="expense_parsing_subtitle">Считываю расход и раскладываю по позициям</string>
     <string name="expense_parsing_cancel">Отмена</string>
     <string name="expense_parse_retry">Повторить</string>
     <string name="expense_parse_failed_generic">Не удалось распознать. Данные сохранены — попробуйте ещё раз</string>
@@ -323,7 +326,9 @@
     <string name="expense_derived_by_positions">по позициям чека</string>
     <string name="expense_derived_incomplete">не все цены указаны</string>
     <string name="expense_recognized_title">Распознано голосом</string>
-    <string name="expense_recognized_hint">Не то? Добавьте фото чека</string>
+    <!-- Про микрофон в подсказке важнее фото: голосовая правка черновика иначе
+         никак себя не рекламирует (копия = iOS). -->
+    <string name="expense_recognized_hint">Не то? Зажмите микрофон внизу или добавьте фото чека</string>
     <string name="expense_recognized_add_photo">Добавить фото чека</string>
     <string name="expense_correction_title">Правка применена</string>
     <string name="expense_correction_hint_items">Изменения подсвечены в чеке</string>
@@ -400,9 +405,9 @@
     <string name="settleup_you_owe">Вы должны %1$s</string>
     <string name="settleup_owes_you">%1$s должен(на) вам</string>
     <string name="settleup_owes">%1$s должен(на) %2$s</string>
-    <string name="settleup_you_pay">Вы платите: %1$s</string>
+    <string name="settleup_you_pay">Вы платите — %1$s</string>
     <string name="settleup_pays_you">%1$s платит вам</string>
-    <string name="settleup_pays">%1$s платит: %2$s</string>
+    <string name="settleup_pays">%1$s платит — %2$s</string>
     <string name="settleup_debt_hint">Долг: %1$s</string>
     <string name="settleup_debt_max">Не больше долга: %1$s</string>
     <string name="settleup_submit">Записать платёж</string>
@@ -410,4 +415,11 @@
     <string name="settleup_back_to_list">К списку долгов</string>
     <string name="settleup_offline_caption">Погашение доступно только онлайн</string>
     <string name="profile_app_version">Версия %1$s (%2$d)</string>
+
+    <!-- Подписи графиков для TalkBack: Canvas сам по себе для скринридера пуст,
+         без них четыре диаграммы дашборда просто не существуют. Тексты = iOS
+         (GroupTotalsView.swift accessibilityLabel). -->
+    <string name="totals_chart_daily_a11y">График трат по дням за последний месяц</string>
+    <string name="totals_chart_donut_a11y">Диаграмма долей участников в оплатах</string>
+    <string name="totals_chart_weekday_a11y">График трат по дням недели</string>
 </resources>

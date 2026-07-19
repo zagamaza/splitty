@@ -58,6 +58,7 @@ import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.PrimaryPillButton
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
@@ -77,6 +78,7 @@ fun ActivityScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val myUserId by viewModel.myUserId.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
 
     Column(
         modifier = Modifier
@@ -101,7 +103,11 @@ fun ActivityScreen(
                 if (isMineOnly) R.string.activity_filter_on else R.string.activity_filter_off
             )
             IconButton(
-                onClick = viewModel::toggleMineOnly,
+                onClick = {
+                    // Переключение фильтра — контракт хептиков «выбор» (порт iOS).
+                    haptics.tap()
+                    viewModel.toggleMineOnly()
+                },
                 // stateDescription: TalkBack читает «включено/выключено» у фильтра.
                 modifier = Modifier.semantics { stateDescription = filterState },
             ) {

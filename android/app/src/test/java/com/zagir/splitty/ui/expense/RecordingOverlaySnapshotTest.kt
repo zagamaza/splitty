@@ -68,6 +68,10 @@ class RecordingOverlaySnapshotTest {
                         micFrame = micFrame,
                         hints = hints,
                         transcript = transcript,
+                        // Часы Compose (mainClock) и SystemClock Robolectric — разные:
+                        // без пина фаза волны зависела от реального времени до захвата,
+                        // и снапшоты расходились от прогона к прогону.
+                        frozenNowMs = FROZEN_NOW_MS,
                         onStop = {},
                         onCancel = {},
                     )
@@ -122,4 +126,9 @@ class RecordingOverlaySnapshotTest {
         startedAtElapsedMs = null,
         level = 0f,
     )
+
+    private companion object {
+        /** Пин «сейчас»: вместе с startedAt = 0 даёт таймер 0:00 и стабильную волну. */
+        const val FROZEN_NOW_MS = 0L
+    }
 }

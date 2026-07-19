@@ -28,10 +28,16 @@ Android-клиент Splitty (клон iOS-приложения `ios/`, UX Split
 ./gradlew :app:assembleRelease        # R8-сборка + verifyReleaseShrinking
 ```
 
-Эталоны Roborazzi лежат в `app/build/outputs/roborazzi/` и **не
-версионируются**: `verifyRoborazziDebug` ловит падения рендера Compose, а не
-пиксельную регрессию между машинами. Сверка с iOS-снапшотами и
-`docs/prototype/splitty-ai-proto.html` — ручная (см. план, Task 15).
+Эталоны Roborazzi — 23 PNG в `app/src/test/snapshots/`, **закоммичены**:
+`verifyRoborazziDebug` сверяет попиксельно, то есть ловит и падение рендера
+Compose, и визуальную регрессию. Рендер прибит к Robolectric SDK 34 +
+`Pixel5`-qualifiers, поэтому результат воспроизводим между машинами; после
+осознанной правки UI эталоны перезаписываются `recordRoborazziDebug`.
+
+Чего снапшоты НЕ покрывают (проверяется руками на устройстве): сверка
+бок-о-бок с iOS-снапшотами и `docs/prototype/splitty-ai-proto.html`,
+латентность жеста мика, TalkBack, 200% шрифт, слабый OEM — см. отчёт
+приёмки `docs/plans/20260719-android-acceptance.md`.
 
 ## Релиз и раздача тестерам
 

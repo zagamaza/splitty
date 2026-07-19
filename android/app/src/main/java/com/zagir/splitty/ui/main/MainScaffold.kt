@@ -148,6 +148,7 @@ fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val colors = Splitty.colors
+    val haptics = rememberHaptics()
 
     fun switchTab(route: String) {
         navController.navigate(route) {
@@ -167,7 +168,13 @@ fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
                     // Центральная позиция — приподнятая кнопка «+».
                     NavigationBarItem(
                         selected = false,
-                        onClick = { navController.navigate(MainRoutes.addExpense()) },
+                        onClick = {
+                            // Тот же отклик, что у табов рядом (порт iOS
+                            // MainTabView addExpenseButton) — иначе центральная
+                            // кнопка молчит, а соседние по бару вибрируют.
+                            haptics.tap()
+                            navController.navigate(MainRoutes.addExpense())
+                        },
                         icon = { AddExpenseFab() },
                         colors = NavigationBarItemDefaults.colors(
                             indicatorColor = Color.Transparent,

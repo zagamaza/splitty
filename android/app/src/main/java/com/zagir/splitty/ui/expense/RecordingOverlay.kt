@@ -88,6 +88,7 @@ fun RecordingOverlay(
     isCancelling: Boolean,
     isLocked: Boolean,
     isPreparing: Boolean,
+    /** Смещение пальца от точки нажатия, в **dp** (см. [micTouchGesture]). */
     dragX: Float,
     dragY: Float,
     level: Float,
@@ -98,11 +99,17 @@ fun RecordingOverlay(
     onStop: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Замороженное «сейчас» для снапшот-тестов. Волна и кольцо считают фазу от
+     * живых часов, поэтому без пина картинка зависит от того, сколько миллисекунд
+     * прошло до захвата — снапшоты расходились между прогонами. В проде — null.
+     */
+    frozenNowMs: Long? = null,
 ) {
     val reduceMotion = rememberReduceMotion()
     // Один тик кормит таймер, кольцо и волну: скрытый оверлей не держит
     // отдельные вечные анимации, а reduce motion оставляет только редкий таймер.
-    val nowMs by produceState(
+    val tickedNowMs by produceState(
         initialValue = SystemClock.elapsedRealtime(),
         isActive,
         reduceMotion,
@@ -113,6 +120,7 @@ fun RecordingOverlay(
         }
         value = SystemClock.elapsedRealtime()
     }
+    val nowMs = frozenNowMs ?: tickedNowMs
     val overlayAlpha by animateFloatAsState(
         targetValue = if (isActive) 1f else 0f,
         animationSpec = if (reduceMotion) snap() else tween(durationMillis = 120),
@@ -128,8 +136,10 @@ fun RecordingOverlay(
         animationSpec = if (reduceMotion) snap() else tween(durationMillis = 180),
         label = "recordingMicPop",
     )
-    val lockProgress = (-dragY / 70f).coerceIn(0f, 1f)
-    val cancelProgress = (-dragX / 70f).coerceIn(0f, 1f)
+    // Через общие хелперы, а не свои /70f: пороги жеста и их визуализация обязаны
+    // расходиться только вместе.
+    val lockProgress = micLockProgress(dragY)
+    val cancelProgress = micCancelProgress(dragX)
     val elapsedMs = startedAtElapsedMs
         ?.let { (nowMs - it).coerceAtLeast(0L).coerceAtMost(RECORD_LIMIT_SECONDS * 1_000L) }
     val progress = elapsedMs?.toFloat()?.div(RECORD_LIMIT_SECONDS * 1_000f) ?: 0f
@@ -154,10 +164,17 @@ fun RecordingOverlay(
         val micSize = with(density) { micSizePx.toDp() }
         // После «замка» палец уже отпущен: кнопка стопа остаётся на месте,
         // а не наследует последний drag обычного hold-жеста.
+        // dragX/dragY приходят в dp, а micCenter — в пикселях: переводим, иначе
+        // кнопка следовала бы за пальцем с плотность-зависимым коэффициентом.
         val micOffset = if (isLocked) {
             Offset.Zero
         } else {
-            Offset(max(dragX, -130f) * 0.4f, max(dragY, -130f) * 0.4f)
+            with(density) {
+                Offset(
+                    max(dragX, -130f).dp.toPx() * 0.4f,
+                    max(dragY, -130f).dp.toPx() * 0.4f,
+                )
+            }
         }
         val lockedExtraPx = with(density) { (if (isLocked) 52.dp else 100.dp).toPx() }
         val contentBottom = (

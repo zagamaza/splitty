@@ -72,6 +72,7 @@ import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.components.ZoomableImage
 import com.zagir.splitty.ui.components.decodeDownsampled
 import com.zagir.splitty.ui.components.humanErrorText
@@ -102,6 +103,7 @@ fun OperationDetailScreen(
 
     val state by viewModel.state.collectAsStateWithLifecycle()
     val meIdState by viewModel.meId.collectAsStateWithLifecycle()
+    val haptics = rememberHaptics()
     val isDeleting by viewModel.isDeleting.collectAsStateWithLifecycle()
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
     var isDeleteConfirmPresented by remember { mutableStateOf(false) }
@@ -222,7 +224,14 @@ fun OperationDetailScreen(
                 TextButton(
                     onClick = {
                         isDeleteConfirmPresented = false
-                        viewModel.delete(onDeleted = onBack)
+                        // Успех удаления — тактильное подтверждение до закрытия
+                        // экрана (порт iOS OperationDetailView Haptics.success).
+                        viewModel.delete(
+                            onDeleted = {
+                                haptics.success()
+                                onBack()
+                            },
+                        )
                     },
                 ) {
                     Text(stringResource(R.string.op_delete), color = colors.negative)

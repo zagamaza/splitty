@@ -1555,7 +1555,9 @@ private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) 
     }
     Box(
         modifier = modifier
-            .background(colors.bg.copy(alpha = 0.88f))
+            // Тёмный скрим, а не светлый фон темы: оверлей должен читаться как
+            // «приложение занято», одинаково в обеих темах (порт iOS black 0.55).
+            .background(Color.Black.copy(alpha = 0.55f))
             // Гасим тапы под оверлеем (форму нельзя трогать во время распознавания).
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
@@ -1564,16 +1566,29 @@ private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            CircularProgressIndicator(color = colors.accent)
+            CircularProgressIndicator(color = Color.White)
             Text(
                 text = stringResource(R.string.expense_parsing),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.ink,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+            )
+            // Подзаголовок объясняет, почему ожидание длится секунды, а не мгновение.
+            Text(
+                text = stringResource(R.string.expense_parsing_subtitle),
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 40.dp),
             )
             if (showCancel) {
                 TextButton(onClick = onCancel) {
-                    Text(stringResource(R.string.expense_parsing_cancel), color = colors.accent)
+                    Text(
+                        text = stringResource(R.string.expense_parsing_cancel),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White.copy(alpha = 0.9f),
+                    )
                 }
             }
         }

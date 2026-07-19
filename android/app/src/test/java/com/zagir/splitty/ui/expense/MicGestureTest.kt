@@ -91,6 +91,31 @@ class MicGestureTest {
         assertEquals(0f, micCancelProgress(50f), eps)
     }
 
+    // --- Единицы порогов: dp, а не пиксели ---
+
+    @Test
+    fun `drag is converted from px to dp by density`() {
+        // 210 px на 3x-экране — это 70 dp, ровно порог.
+        assertEquals(70f, micDragPxToDp(210f, density = 3f), eps)
+        assertEquals(70f, micDragPxToDp(70f, density = 1f), eps)
+        assertEquals(70f, micDragPxToDp(175f, density = 2.5f), eps)
+    }
+
+    @Test
+    fun `70 px swipe does not trigger lock or cancel on a 3x screen`() {
+        // Регрессия: пиксели сравнивались с dp-порогом напрямую, и на плотном
+        // экране замок защёлкивался уже через треть нужного хода.
+        val dp = micDragPxToDp(-70f, density = 3f) // ≈ -23.3 dp
+        assertFalse(micLockTriggered(dx = 0f, dy = dp))
+        assertFalse(micCancelTriggered(dx = dp, dy = 0f))
+    }
+
+    @Test
+    fun `210 px swipe does trigger lock on a 3x screen`() {
+        val dp = micDragPxToDp(-211f, density = 3f) // чуть за порогом
+        assertTrue(micLockTriggered(dx = 0f, dy = dp))
+    }
+
     // --- Автостоп по лимиту записи ---
 
     @Test

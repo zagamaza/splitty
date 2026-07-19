@@ -56,6 +56,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -532,11 +534,13 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
         }
         Spacer(Modifier.height(4.dp))
 
+        val dailyChartLabel = stringResource(R.string.totals_chart_daily_a11y)
         Box {
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(176.dp)
+                    .semantics { contentDescription = dailyChartLabel }
                     .pointerInput(points) {
                         detectTapGestures { offset ->
                             val slot = size.width / points.size.toFloat()
@@ -643,9 +647,14 @@ private fun WhoPaidDonutCard(
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(stringResource(R.string.totals_who_paid))
         Spacer(Modifier.height(12.dp))
+        val donutChartLabel = stringResource(R.string.totals_chart_donut_a11y)
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.size(180.dp), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .semantics { contentDescription = donutChartLabel },
+                ) {
                     val stroke = 26.dp.toPx()
                     val diameter = size.minDimension - stroke
                     val topLeft = Offset(
@@ -822,8 +831,13 @@ private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             nets.forEach { bar ->
+                // Имя и сумма строки уже текстовые, а бар — чистая декорация,
+                // поэтому строка склеивается в один элемент «Имя, сумма»
+                // (вместо общей подписи на весь график, как в iOS).
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics(mergeDescendants = true) {},
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -908,10 +922,12 @@ private fun WeekdayCard(totals: List<Int>, currency: String) {
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(stringResource(R.string.totals_by_weekday))
         Spacer(Modifier.height(8.dp))
+        val weekdayChartLabel = stringResource(R.string.totals_chart_weekday_a11y)
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp),
+                .height(150.dp)
+                .semantics { contentDescription = weekdayChartLabel },
         ) {
             val labelArea = 18.dp.toPx()
             val valueArea = 20.dp.toPx() // запас сверху под direct-label максимума
