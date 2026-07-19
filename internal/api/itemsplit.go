@@ -60,7 +60,8 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 			return nil, ErrOverflow
 		}
 		v := amount * w.weight / totalW
-		out[w.id] = v
+		// += , а не = : один и тот же участник может встретиться в shares дважды
+		out[w.id] += v
 		given += v
 	}
 	rem := amount - given

@@ -63,7 +63,7 @@ func TestGemini_Success(t *testing.T) {
 	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
 	c := newTestClient(f)
 
-	res, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "пицца 300", Currency: "RUB"})
+	res, err := c.Parse(context.Background(), ParseInput{Text: "пицца 300", Currency: "RUB"})
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestGemini_APIKeyInHeaderNotURL(t *testing.T) {
 	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
 	c := newTestClient(f)
 
-	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err != nil {
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err != nil {
 		t.Fatalf("ошибка: %v", err)
 	}
 	if f.lastAPIKey != "test-key" {
@@ -91,44 +91,27 @@ func TestGemini_APIKeyInHeaderNotURL(t *testing.T) {
 	}
 }
 
-func TestGemini_RetryOnInvalidJSON(t *testing.T) {
-	good := `{"draft":{"description":"x","sum":100,"items":[]}}`
-	f := &fakeDoer{responses: []fakeResp{
-		{status: 200, body: candidate("не json вовсе")},
-		{status: 200, body: candidate(good)},
-	}}
-	c := newTestClient(f)
-
-	res, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"})
-	if err != nil {
-		t.Fatalf("ожидался успех после ретрая, ошибка: %v", err)
-	}
-	if res.Draft.Sum != 100 {
-		t.Fatalf("неожиданный результат: %+v", res.Draft)
-	}
-	if f.calls != 2 {
-		t.Fatalf("ожидалось 2 вызова (ретрай), было %d", f.calls)
-	}
-}
-
-func TestGemini_InvalidJSONTwiceFails(t *testing.T) {
+// TestGemini_InvalidJSONNotRetried — при temperature=0 и фиксированной
+// responseSchema повтор того же запроса вернёт тот же невалидный ответ,
+// поэтому ретрая нет: ошибка сразу, платный вызов ровно один.
+func TestGemini_InvalidJSONNotRetried(t *testing.T) {
 	f := &fakeDoer{responses: []fakeResp{
 		{status: 200, body: candidate("мусор 1")},
 		{status: 200, body: candidate("мусор 2")},
 	}}
 	c := newTestClient(f)
-	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err == nil {
-		t.Fatal("ожидалась ошибка после двух невалидных ответов")
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err == nil {
+		t.Fatal("ожидалась ошибка на невалидном ответе")
 	}
-	if f.calls != 2 {
-		t.Fatalf("ожидалось 2 вызова, было %d", f.calls)
+	if f.calls != 1 {
+		t.Fatalf("ожидался 1 вызов (без ретрая), было %d", f.calls)
 	}
 }
 
 func TestGemini_HTTPErrorNotRetried(t *testing.T) {
 	f := &fakeDoer{responses: []fakeResp{{status: 500, body: `{"error":"boom"}`}}}
 	c := newTestClient(f)
-	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "тест"}); err == nil {
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err == nil {
 		t.Fatal("ожидалась ошибка на HTTP 500")
 	}
 	if f.calls != 1 {
@@ -138,7 +121,7 @@ func TestGemini_HTTPErrorNotRetried(t *testing.T) {
 
 func TestGemini_EmptyKey(t *testing.T) {
 	c := &GeminiClient{apiKey: "", model: "m", baseURL: "x", http: &fakeDoer{}}
-	if _, err := c.Parse(context.Background(), ParseInput{Media: MediaText, Text: "т"}); err == nil {
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "т"}); err == nil {
 		t.Fatal("ожидалась ошибка при пустом ключе")
 	}
 }
@@ -148,7 +131,7 @@ func TestGemini_AudioInlineBase64(t *testing.T) {
 	f := &fakeDoer{responses: []fakeResp{{status: 200, body: candidate(draft)}}}
 	c := newTestClient(f)
 
-	_, err := c.Parse(context.Background(), ParseInput{Media: MediaAudio, Data: []byte("аудиобайты"), Mime: "audio/aac"})
+	_, err := c.Parse(context.Background(), ParseInput{Audio: []byte("аудиобайты"), AudioMime: "audio/aac"})
 	if err != nil {
 		t.Fatalf("ошибка: %v", err)
 	}

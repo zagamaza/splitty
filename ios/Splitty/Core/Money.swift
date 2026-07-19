@@ -41,7 +41,9 @@ func rubles(_ sum: Int) -> String {
 
 /// Диапазон сумм для неровного деления: `moneyRange(333, 334, currency: "RUB")` → `"333–334 ₽"`.
 func moneyRange(_ minSum: Int, _ maxSum: Int, currency: String) -> String {
-    "\(thousandsGrouped(minSum))–\(money(maxSum, currency: currency))"
+    // thousandsGrouped печатает модуль, поэтому знак нижней границы возвращаем
+    // руками — иначе долг «-100–50 ₽» выглядел как «100–50 ₽».
+    "\(minSum < 0 ? "-" : "")\(thousandsGrouped(minSum))–\(money(maxSum, currency: currency))"
 }
 
 /// Рублёвый диапазон (обёртка moneyRange(_, _, "RUB") — для тестов и легаси).
@@ -85,6 +87,11 @@ func shares(sum: Int, count: Int) -> [Int] {
     guard count > 0 else { return [] }
     let base = sum / count
     let remainder = sum % count
+    // Swift усекает деление к нулю, поэтому у отрицательной суммы остаток
+    // отрицательный и `$0 < remainder` не срабатывал ни разу — Σ долей != sum.
+    if remainder < 0 {
+        return (0..<count).map { $0 < -remainder ? base - 1 : base }
+    }
     return (0..<count).map { $0 < remainder ? base + 1 : base }
 }
 

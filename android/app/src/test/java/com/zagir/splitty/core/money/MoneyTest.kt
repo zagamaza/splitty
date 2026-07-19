@@ -131,4 +131,36 @@ class MoneyTest {
     fun `aggregate of empty list is empty`() {
         assertEquals(emptyList(), aggregateByCurrency(emptyList()))
     }
+
+    /**
+     * Kotlin усекает целочисленное деление к нулю, поэтому для отрицательных
+     * сумм остаток отрицательный: наивное `index < remainder` не срабатывало
+     * ни разу и Σ долей не сходилась с sum вопреки доккомментарию.
+     */
+    @Test
+    fun `shares conserves negative sums`() {
+        for (sum in listOf(0, -1, -5, -10, -100, -999)) {
+            for (count in 1..7) {
+                assertEquals(sum, shares(sum, count).sum(), "shares($sum, $count)")
+            }
+        }
+    }
+
+    @Test
+    fun `moneyRange keeps sign of lower bound`() {
+        assertEquals("-100–50 \u20BD", moneyRange(-100, 50, "RUB"))
+    }
+
+    /**
+     * Итог по валюте копится в Long: заворот в Int менял знак и «вы должны»
+     * превращалось в «вам должны». Насыщаем, а не заворачиваем.
+     */
+    @Test
+    fun `aggregateByCurrency saturates instead of overflowing`() {
+        val huge = listOf(
+            CurrencySum("IDR", Int.MAX_VALUE),
+            CurrencySum("IDR", Int.MAX_VALUE),
+        )
+        assertEquals(Int.MAX_VALUE, aggregateByCurrency(huge).single().sum)
+    }
 }

@@ -507,8 +507,8 @@ func validateOperationRequest(req *operationRequest, room *api.Room) (*api.User,
 	if req.Description == "" {
 		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
 	}
-	if req.Sum < 1 {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "сумма должна быть не меньше 1"}
+	if req.Sum < 1 || req.Sum > maxItemsTotal {
+		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "сумма должна быть от 1 до 1 000 000 000"}
 	}
 	if (len(req.RecipientIds) > 0) == (len(req.RecipientSums) > 0) {
 		return nil, nil, "", &httpError{http.StatusBadRequest, "validation",
@@ -554,8 +554,8 @@ func validateOperationRequest(req *operationRequest, room *api.Room) (*api.User,
 			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "получатель не может повторяться в recipientSums"}
 		}
 		seen[rs.UserId] = true
-		if rs.Sum < 1 {
-			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "суммы получателей должны быть не меньше 1"}
+		if rs.Sum < 1 || rs.Sum > maxItemsTotal {
+			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "суммы получателей должны быть от 1 до 1 000 000 000"}
 		}
 		recipient := findMember(room, rs.UserId)
 		if recipient == nil {

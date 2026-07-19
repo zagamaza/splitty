@@ -43,8 +43,8 @@ func TestGetUserAvatarProxiesAndCaches(t *testing.T) {
 	tg := fakeTelegram(t, true, &calls)
 	defer tg.Close()
 
-	userRepo := newFakeUserRepo(testUser1)
-	s := newTestServer(Config{TgToken: "test-token"}, userRepo, newFakeRoomRepo())
+	userRepo := newFakeUserRepo(testUser1, testUser2)
+	s := newTestServer(Config{TgToken: "test-token"}, userRepo, newFakeRoomRepo(sharedRoom()))
 	s.tgApiURL = tg.URL
 	token := mustToken(t, s, testUser1.ID)
 
@@ -74,8 +74,8 @@ func TestGetUserAvatarNoPhotoCaches404(t *testing.T) {
 	tg := fakeTelegram(t, false, &calls)
 	defer tg.Close()
 
-	userRepo := newFakeUserRepo(testUser1)
-	s := newTestServer(Config{TgToken: "test-token"}, userRepo, newFakeRoomRepo())
+	userRepo := newFakeUserRepo(testUser1, testUser2)
+	s := newTestServer(Config{TgToken: "test-token"}, userRepo, newFakeRoomRepo(sharedRoom()))
 	s.tgApiURL = tg.URL
 	token := mustToken(t, s, testUser1.ID)
 
@@ -93,5 +93,41 @@ func TestGetUserAvatarRequiresAuth(t *testing.T) {
 	rec := doRequest(t, s, "GET", "/api/v1/users/2/avatar", "", "")
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, ожидали 401", rec.Code)
+	}
+}
+
+// TestGetUserAvatarForbidsStranger — токен бота даёт доступ к фото любого
+// собеседника бота, поэтому чужие аватары без общей комнаты отдавать нельзя.
+func TestGetUserAvatarForbidsStranger(t *testing.T) {
+	var calls atomic.Int32
+	tg := fakeTelegram(t, true, &calls)
+	defer tg.Close()
+
+	// testUser3 не состоит в комнате с testUser1
+	s := newTestServer(Config{TgToken: "test-token"},
+		newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(sharedRoom()))
+	s.tgApiURL = tg.URL
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, "GET", "/api/v1/users/3/avatar", token, "")
+	assertErrorCode(t, rec, http.StatusNotFound, "not_found")
+	if calls.Load() != 0 {
+		t.Fatalf("telegram calls = %d, ожидали 0 (запрос не должен дойти до telegram)", calls.Load())
+	}
+}
+
+// TestGetUserAvatarAllowsSelf — своё фото доступно и без общей комнаты.
+func TestGetUserAvatarAllowsSelf(t *testing.T) {
+	var calls atomic.Int32
+	tg := fakeTelegram(t, true, &calls)
+	defer tg.Close()
+
+	s := newTestServer(Config{TgToken: "test-token"}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	s.tgApiURL = tg.URL
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, "GET", "/api/v1/users/1/avatar", token, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
 	}
 }

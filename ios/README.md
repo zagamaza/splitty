@@ -30,12 +30,15 @@ SwiftUI-клиент (iOS 17+) для Splitty с UX в стиле Splitwise. Р�
 ```bash
 cd ios && xcodegen generate
 xcodebuild -project Splitty.xcodeproj -scheme Splitty \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.5' build
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 xcodebuild test -project Splitty.xcodeproj -scheme Splitty \
-  -destination 'platform=iOS Simulator,name=iPhone 16 Pro,OS=18.5'
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-`SplittyTests` — юнит-тесты (форматирование денег), `SplittyUITests` — сквозной
+`SplittyTests` — юнит-тесты (деньги и деление долей, черновики позиций, статистика,
+офлайн-кеш и outbox, AI-флоу формы расхода) плюс `SnapshotRenderTests`, который рендерит
+ключевые экраны в PNG в `/tmp/splitty-snapshots/` для ручной визуальной сверки — эталонов
+у него нет, ассерты минимальные. `SplittyUITests` — сквозной
 демо-прогон по всем экранам против локального бэкенда с seed-данными
 (снимает скриншоты каждого шага в result bundle).
 

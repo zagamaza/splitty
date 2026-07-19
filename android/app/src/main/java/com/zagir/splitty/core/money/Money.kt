@@ -43,7 +43,7 @@ fun money(sum: Int, currency: String): String =
 
 /** Диапазон сумм для неровного деления: moneyRange(333, 334, "RUB") -> "333–334 ₽". */
 fun moneyRange(minSum: Int, maxSum: Int, currency: String): String =
-    thousandsGrouped(minSum) + "–" + money(maxSum, currency)
+    (if (minSum < 0) "-" else "") + thousandsGrouped(minSum) + "–" + money(maxSum, currency)
 
 /**
  * Складывает суммы ПОВАЛЮТНО: суммы в разных валютах никогда не смешиваются.
@@ -57,7 +57,14 @@ fun aggregateByCurrency(amounts: List<CurrencySum>): List<CurrencySum> {
     }
     return totals.entries
         .filter { it.value != 0L }
-        .map { CurrencySum(currency = it.key, sum = it.value.toInt()) }
+        // coerceIn, а не toInt(): при переполнении Int «должен» превратился бы
+        // в «должны вам» (знак меняется) — насыщаем вместо заворота
+        .map {
+            CurrencySum(
+                currency = it.key,
+                sum = it.value.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt(),
+            )
+        }
         .sortedWith(
             compareByDescending<CurrencySum> { abs(it.sum) }.thenBy { it.currency }
         )
@@ -77,5 +84,8 @@ fun shares(sum: Int, count: Int): List<Int> {
     if (count <= 0) return emptyList()
     val base = sum / count
     val remainder = sum % count
+    // Kotlin усекает деление к нулю, поэтому для отрицательных сумм остаток
+    // отрицательный и его надо раздавать вниз — иначе Σ долей != sum
+    if (remainder < 0) return List(count) { index -> if (index < -remainder) base - 1 else base }
     return List(count) { index -> if (index < remainder) base + 1 else base }
 }

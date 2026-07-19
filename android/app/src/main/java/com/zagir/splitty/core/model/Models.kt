@@ -6,7 +6,10 @@ import com.zagir.splitty.core.money.aggregateByCurrency
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -37,7 +40,14 @@ object InstantSerializer : KSerializer<Instant> {
         return try {
             Instant.parse(raw)
         } catch (_: DateTimeParseException) {
-            OffsetDateTime.parse(raw).toInstant()
+            // фолбэк бросает тот же DateTimeParseException — он не ловится
+            // репозиторием (там только SerializationException/IOException),
+            // поэтому переупаковываем в ошибку разбора ответа
+            try {
+                OffsetDateTime.parse(raw).toInstant()
+            } catch (e: DateTimeParseException) {
+                throw SerializationException("невалидная дата в ответе сервера: \"$raw\"", e)
+            }
         }
     }
 
@@ -141,7 +151,16 @@ data class OperationRecipient(
 @Serializable
 data class ItemShare(
     val userId: Long,
-    /** Относительный вес доли (1 = поровну); сервер игнорирует при заданном [amount]. */
+    /**
+     * Относительный вес доли (1 = поровну); сервер игнорирует при заданном [amount].
+     *
+     * [EncodeDefault] обязателен: без него kotlinx выбрасывает `weight: 1` из тела,
+     * сервер видит нулевые веса и либо возвращает 400 («цена позиции не распределена
+     * полностью»), либо при смешанных весах молча считает деление иначе, чем показал
+     * предпросмотр.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val weight: Int = 1,
     /** Фиксированная сумма участника (целые единицы валюты); null — доля по весу. */
     val amount: Int? = null,

@@ -6,7 +6,11 @@ import Security
 enum KeychainStore {
     private static let service = "com.zagir.splitty"
 
-    static func save(_ value: String, key: String) {
+    /// Сохраняет значение. `@discardableResult` — вызывающему обычно нечего
+    /// делать с ошибкой, но молча терять токен нельзя: без успешной записи
+    /// приложение выглядит залогиненным до перезапуска.
+    @discardableResult
+    static func save(_ value: String, key: String) -> Bool {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -14,7 +18,17 @@ enum KeychainStore {
         ]
         SecItemDelete(query as CFDictionary)
         query[kSecValueData as String] = Data(value.utf8)
-        SecItemAdd(query as CFDictionary, nil)
+        // ThisDeviceOnly обязателен: по умолчанию (WhenUnlocked) элемент попадает
+        // в зашифрованные бэкапы и iCloud Keychain и восстанавливается на ДРУГОМ
+        // устройстве вместе с живой сессией. Android-клиент закрыл это же место
+        // исключением session-хранилища из бэкапа.
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            print("KeychainStore.save failed for \(key): OSStatus \(status)")
+            return false
+        }
+        return true
     }
 
     static func read(key: String) -> String? {

@@ -81,37 +81,39 @@ func (c *GeminiClient) Parse(ctx context.Context, in ParseInput) (ParseResult, e
 		return ParseResult{}, err
 	}
 
-	var lastErr error
-	for attempt := 0; attempt < 2; attempt++ {
-		res, err := c.call(ctx, body)
-		if err != nil {
-			return ParseResult{}, err // сетевые/HTTP ошибки не ретраим здесь
-		}
-		parsed, err := parseCandidate(res)
-		if err == nil {
-			return parsed, nil
-		}
-		lastErr = err // невалидный JSON — повторяем один раз
+	res, err := c.call(ctx, body)
+	if err != nil {
+		return ParseResult{}, err
 	}
-	return ParseResult{}, fmt.Errorf("ai: модель вернула невалидный ответ: %w", lastErr)
+	parsed, err := parseCandidate(res)
+	if err != nil {
+		// ретрая нет: при temperature=0 и фиксированной responseSchema повтор
+		// того же запроса детерминированно вернёт тот же невалидный ответ
+		return ParseResult{}, fmt.Errorf("ai: модель вернула невалидный ответ: %w", err)
+	}
+	return parsed, nil
 }
 
 func (c *GeminiClient) buildRequest(in ParseInput) ([]byte, error) {
+	if !in.HasMedia() {
+		return nil, fmt.Errorf("ai: нет ввода (ни фото, ни голоса, ни текста)")
+	}
+	// один запрос — несколько частей: фото чека + аудио + текст вместе
 	parts := []geminiPart{{Text: buildPrompt(in)}}
-	switch in.Media {
-	case MediaAudio, MediaImage:
-		if len(in.Data) == 0 || in.Mime == "" {
-			return nil, fmt.Errorf("ai: пустое медиа или mime")
-		}
+	if len(in.Image) > 0 {
 		parts = append(parts, geminiPart{InlineData: &geminiInline{
-			MimeType: in.Mime,
-			Data:     base64.StdEncoding.EncodeToString(in.Data),
+			MimeType: in.ImageMime,
+			Data:     base64.StdEncoding.EncodeToString(in.Image),
 		}})
-	case MediaText:
-		if strings.TrimSpace(in.Text) == "" {
-			return nil, fmt.Errorf("ai: пустой текст")
-		}
-		parts = append(parts, geminiPart{Text: "Ввод пользователя: " + in.Text})
+	}
+	if len(in.Audio) > 0 {
+		parts = append(parts, geminiPart{InlineData: &geminiInline{
+			MimeType: in.AudioMime,
+			Data:     base64.StdEncoding.EncodeToString(in.Audio),
+		}})
+	}
+	if t := strings.TrimSpace(in.Text); t != "" {
+		parts = append(parts, geminiPart{Text: "Ввод пользователя: " + t})
 	}
 
 	req := geminiRequest{

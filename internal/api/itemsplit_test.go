@@ -291,3 +291,23 @@ func TestDeriveShares_SurchargeZeroPrice(t *testing.T) {
 		t.Fatal("ожидалась ошибка на surcharge с нулевой ценой")
 	}
 }
+
+// TestDeriveShares_DuplicateUserInItem — модель может выдать одного участника
+// в shares позиции дважды; доли должны сложиться, а не затереть друг друга
+// (иначе Σ долей != цене и пользователь получает «баг расчёта»).
+func TestDeriveShares_DuplicateUserInItem(t *testing.T) {
+	items := []OperationItem{{
+		Name:   "Пицца",
+		Price:  10,
+		Kind:   ItemKindItem,
+		Split:  SplitEqually,
+		Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 1, Weight: 1}},
+	}}
+	shares, total, err := DeriveShares(items)
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+	if total != 10 || shares[1] != 10 {
+		t.Fatalf("shares = %v, total = %d; ожидали {1:10}, 10", shares, total)
+	}
+}

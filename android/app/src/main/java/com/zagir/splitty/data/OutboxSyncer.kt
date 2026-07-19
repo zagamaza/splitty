@@ -125,6 +125,9 @@ class OutboxSyncer internal constructor(
                 sum = p.sum,
                 donorId = p.donorId,
                 split = p.toSplit(),
+                // items обязателен: без него сервер уходит в плоскую ветку
+                // (len(req.Items) > 0) и чек офлайн-расхода теряется навсегда
+                items = p.items,
                 clientOpId = entry.localId,
             )
 

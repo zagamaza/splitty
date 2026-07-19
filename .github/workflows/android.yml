@@ -31,14 +31,22 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # -Proborazzi.test.verify=true обязателен: без него Roborazzi по умолчанию
+      # РАБОТАЕТ В РЕЖИМЕ ЗАПИСИ и перезаписывает версионируемые эталоны
+      # (app/src/test/snapshots) прямо перед сверкой — verifyRoborazzi ниже
+      # сравнивал бы их сам с собой и всегда был зелёным.
       - name: Unit tests
-        run: ./gradlew :app:testDebugUnitTest
+        run: ./gradlew :app:testDebugUnitTest -Proborazzi.test.verify=true
 
-      # Скриншот-тесты: эталоны лежат в build/ и не версионируются, поэтому
-      # шаг ловит падения рендера Compose, а не пиксельную регрессию —
-      # сверка с iOS-снапшотами остаётся ручной (Task 15).
+      # Скриншот-тесты: 23 эталона версионируются в app/src/test/snapshots и
+      # сверяются попиксельно. Сверка с iOS-снапшотами остаётся ручной (Task 15).
       - name: Roborazzi
         run: ./gradlew :app:verifyRoborazziDebug
+
+      # Страховка от случайной перезаписи эталонов: если шаг выше их изменил,
+      # значит сверка шла не с тем, что лежит в репозитории.
+      - name: Snapshots unchanged
+        run: git diff --exit-code -- app/src/test/snapshots
 
       - name: Lint
         run: ./gradlew :app:lintDebug

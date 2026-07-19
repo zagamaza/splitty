@@ -253,11 +253,18 @@ final class OutboxStore {
         let snapshot = entries
         io.async { [encoder, fileURL] in
             guard let data = try? encoder.encode(snapshot) else { return }
+            let directory = fileURL.deletingLastPathComponent()
             try? FileManager.default.createDirectory(
-                at: fileURL.deletingLastPathComponent(),
+                at: directory,
                 withIntermediateDirectories: true
             )
-            try? data.write(to: fileURL, options: [.atomic])
+            var directoryURL = directory
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? directoryURL.setResourceValues(values)
+            // completeFileProtection + вне бэкапа: очередь содержит суммы и
+            // участников неотправленных расходов.
+            try? data.write(to: fileURL, options: [.atomic, .completeFileProtection])
         }
     }
 

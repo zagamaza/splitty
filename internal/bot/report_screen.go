@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"html"
 	"strings"
 	"time"
 
@@ -79,8 +80,10 @@ func (s *ReportScreen) OnMessage(ctx context.Context, u *api.Update) (response a
 			log.Warn().Err(err).Msgf("superuser %s not found, report notification skipped", username)
 			continue
 		}
+		// ParseMode=HTML: текст репорта — сырой ввод пользователя, экранируем,
+		// иначе это и HTML-инъекция в ЛС суперюзера, и 400 от Telegram на "a < b"
 		notify := tgbotapi.NewMessage(int64(su.ID),
-			I18n(su, "scrn_report_notify", userLink(u.User), text))
+			I18n(su, "scrn_report_notify", userLink(u.User), html.EscapeString(text)))
 		notify.ParseMode = tgbotapi.ModeHTML
 		chattable = append(chattable, notify)
 	}

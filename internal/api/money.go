@@ -6,7 +6,16 @@ package api
 // при i < r, иначе base. Сумма долей всегда равна sum.
 func ShareOf(sum, n, i int) int {
 	share := sum / n
-	if i < sum%n {
+	rem := sum % n
+	if rem < 0 {
+		// отрицательная сумма (возврат/корректировка): Go усекает деление к нулю,
+		// поэтому остаток раздаём вниз, иначе Σ долей != sum
+		if i < -rem {
+			share--
+		}
+		return share
+	}
+	if i < rem {
 		share++
 	}
 	return share

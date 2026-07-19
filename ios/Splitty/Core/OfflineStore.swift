@@ -47,7 +47,19 @@ actor OfflineStore {
     func write<T: Encodable>(_ value: T, key: String) {
         guard let data = try? encoder.encode(value) else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? data.write(to: fileURL(for: key), options: [.atomic])
+        excludeFromBackup(directory)
+        // completeFileProtection: кеш держит комнаты, долги и профиль — на
+        // заблокированном устройстве он читаться не должен.
+        try? data.write(to: fileURL(for: key), options: [.atomic, .completeFileProtection])
+    }
+
+    /// Помечает каталог как не подлежащий выгрузке в бэкап: иначе история
+    /// расходов и долгов уезжает в iCloud/iTunes-копию открытым текстом.
+    private func excludeFromBackup(_ url: URL) {
+        var url = url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
     }
 
     /// Полная очистка кеша (logout).

@@ -73,7 +73,8 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in.Participants = s.buildParticipants(ctx, room)
-	in.Currency = room.Currency
+	in.Currency = roomCurrencyCode(room)
+	in.RequesterId = userId
 
 	res, err := s.aiParser.Parse(ctx, in)
 	if err != nil {
@@ -91,6 +92,16 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res.Draft = sanitizeDraft(res.Draft, roomMembers(room))
+	// наблюдаемость: что реально распознала модель (для диагностики «пустого» чека)
+	log.Info().
+		Int("items", len(res.Draft.Items)).
+		Int("sum", res.Draft.Sum).
+		Str("description", res.Draft.Description).
+		Int("questions", len(res.Questions)).
+		Bool("hasAudio", len(in.Audio) > 0).
+		Bool("hasImage", len(in.Image) > 0).
+		Bool("hasText", in.Text != "").
+		Msg("ai parse ok")
 	writeJSON(w, http.StatusOK, res)
 }
 
@@ -122,31 +133,30 @@ func parseMultipartInput(r *http.Request) (ai.ParseInput, *httpError) {
 		in.Draft = &d
 	}
 
+	// собираем ВСЕ поданные части (фото + голос + текст можно вместе)
 	if data, mime, hErr := readFilePart(r, "audio", maxAudioBytes, allowedAudioMime); hErr != nil {
 		return ai.ParseInput{}, hErr
 	} else if data != nil {
-		in.Media, in.Data, in.Mime = ai.MediaAudio, data, mime
-		return in, nil
+		in.Audio, in.AudioMime = data, mime
 	}
 
 	if data, mime, hErr := readFilePart(r, "image", maxImageBytes, allowedImageMime); hErr != nil {
 		return ai.ParseInput{}, hErr
 	} else if data != nil {
-		in.Media, in.Data, in.Mime = ai.MediaImage, data, mime
-		return in, nil
+		in.Image, in.ImageMime = data, mime
 	}
 
 	if raw := r.FormValue("text"); raw != "" {
 		if len(raw) > maxTextBytes {
 			return ai.ParseInput{}, &httpError{http.StatusRequestEntityTooLarge, "too_large", "текст слишком длинный"}
 		}
-		if text := strings.TrimSpace(raw); text != "" {
-			in.Media, in.Text = ai.MediaText, text
-			return in, nil
-		}
+		in.Text = strings.TrimSpace(raw)
 	}
 
-	return ai.ParseInput{}, &httpError{http.StatusBadRequest, "validation", "нужно передать audio, image или text"}
+	if !in.HasMedia() {
+		return ai.ParseInput{}, &httpError{http.StatusBadRequest, "validation", "нужно передать audio, image или text"}
+	}
+	return in, nil
 }
 
 // readFilePart читает файловую часть с лимитом размера и проверкой mime.

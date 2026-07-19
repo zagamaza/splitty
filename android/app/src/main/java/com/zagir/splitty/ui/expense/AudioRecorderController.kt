@@ -153,7 +153,15 @@ class AudioRecorderController(
         }
         while (running) {
             val read = rec.read(frame, 0, frame.size)
-            if (read <= 0) continue
+            // Отрицательные коды (ERROR_DEAD_OBJECT при входящем звонке, ERROR,
+            // ERROR_INVALID_OPERATION) — терминальные для сессии. `continue`
+            // превращал это в busy-spin на MAX_PRIORITY-потоке до отпускания
+            // микрофона, а под замком — навсегда.
+            if (read < 0) {
+                running = false
+                return
+            }
+            if (read == 0) continue
             val samples16k =
                 if (sampleRate == AUDIO_TARGET_SAMPLE_RATE) frame.copyOf(read)
                 else resampleTo16k(frame, read, sampleRate)

@@ -30,7 +30,7 @@ jobs:
 #          /home/runner/go/bin/golint
 
   publish:
-    if: github.event_name == 'push' && (contains(github.ref, 'develop') || contains(github.ref, 'master'))
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     needs: [ build ]
     name: Push docker image

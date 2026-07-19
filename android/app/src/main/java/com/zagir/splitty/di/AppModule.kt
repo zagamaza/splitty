@@ -1,6 +1,7 @@
 package com.zagir.splitty.di
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -18,6 +19,7 @@ import java.io.File
 import javax.inject.Qualifier
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.serialization.json.Json
@@ -42,7 +44,16 @@ object AppModule {
     @Singleton
     @ApplicationScope
     fun provideApplicationScope(): CoroutineScope =
-        CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        // CoroutineExceptionHandler обязателен: SupervisorJob защищает соседние
+        // корутины от отмены, но НЕ глотает исключения — любой промах в
+        // фоновой работе (Keystore, DataStore, декодирование аватара) иначе
+        // доходит до дефолтного обработчика потока и убивает процесс.
+        CoroutineScope(
+            SupervisorJob() + Dispatchers.Default +
+                CoroutineExceptionHandler { _, e ->
+                    Log.e("Splitty", "необработанная ошибка в application-скоупе", e)
+                },
+        )
 
     @Provides
     @Singleton

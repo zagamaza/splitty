@@ -11,6 +11,6 @@ RUN GOOS=linux CGO_ENABLED=0 go build -installsuffix cgo -o app ./cmd/splitty
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /app
-COPY --from=0 /app .
-CMD mkdir /var/data
+COPY --from=builder /app/app /app/app
+RUN mkdir -p /var/data
 ENTRYPOINT ["/app/app"]

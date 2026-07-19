@@ -88,7 +88,7 @@ class SessionStore @Inject constructor(
                 // (ещё не мигрировано либо чистая старая установка). Если шифротекст
                 // не расшифровался (ключ Keystore пропал) — токена нет → разлогин.
                 token = prefs[KEY_TOKEN_ENC]?.let { tokenCipher.decrypt(it) } ?: prefs[KEY_TOKEN],
-                baseUrl = prefs[KEY_BASE_URL]?.takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL,
+                baseUrl = usableBaseUrl(prefs[KEY_BASE_URL]),
                 me = prefs[KEY_ME]?.let { raw ->
                     runCatching { SplittyJson.decodeFromString(Me.serializer(), raw) }.getOrNull()
                 },
@@ -98,16 +98,37 @@ class SessionStore @Inject constructor(
         .stateIn(scope, SharingStarted.Eagerly, null)
 
     /**
+     * Сохранённый адрес сервера, пригодный для текущего варианта сборки.
+     *
+     * В release cleartext запрещён network_security_config, поэтому http-адрес,
+     * оставшийся в DataStore от debug-сборки (пакет у вариантов общий), делал бы
+     * приложение неработоспособным: любой запрос падал бы в «Нет соединения»,
+     * а поле смены сервера доступно только в debug — выхода из состояния нет.
+     */
+    private fun usableBaseUrl(saved: String?): String {
+        val url = saved?.takeIf { it.isNotBlank() } ?: return DEFAULT_BASE_URL
+        if (!BuildConfig.DEBUG && url.startsWith("http://")) return DEFAULT_BASE_URL
+        return url
+    }
+
+    /**
      * Переносит plaintext-токен старого формата в шифротекст ровно один раз.
      * Транзакция [DataStore.edit] атомарна: одновременного шифрованного и
      * plain-ключа наружу не видно.
      */
     private suspend fun migrateTokenIfNeeded() {
-        dataStore.edit { prefs ->
-            val plain = prefs[KEY_TOKEN]
-            if (prefs[KEY_TOKEN_ENC] == null && plain != null) {
-                prefs[KEY_TOKEN_ENC] = tokenCipher.encrypt(plain)
-                prefs.remove(KEY_TOKEN)
+        // runCatching: encrypt ходит в Keystore, а тот на части OEM-прошивок
+        // бросает ProviderException/KeyStoreException. Без перехвата исключение
+        // уходит в SupervisorJob-скоуп (он НЕ глотает ошибки) и убивает процесс
+        // на КАЖДОМ старте — миграция не доезжает, крэш-луп без выхода.
+        // Не мигрировали — не страшно: dual-read ниже читает и plaintext.
+        runCatching {
+            dataStore.edit { prefs ->
+                val plain = prefs[KEY_TOKEN]
+                if (prefs[KEY_TOKEN_ENC] == null && plain != null) {
+                    prefs[KEY_TOKEN_ENC] = tokenCipher.encrypt(plain)
+                    prefs.remove(KEY_TOKEN)
+                }
             }
         }
     }

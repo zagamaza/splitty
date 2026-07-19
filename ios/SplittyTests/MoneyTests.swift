@@ -126,4 +126,20 @@ final class MoneyTests: XCTestCase {
 
     // Цветовое правило денег живёт в MoneyText.Role (DesignSystem.swift) —
     // проверяется через роль .auto в SharesTests/позициях, а не отдельной функцией.
+
+    /// Swift усекает деление к нулю: у отрицательной суммы остаток отрицательный,
+    /// и наивное `$0 < remainder` не срабатывало — Σ долей расходилась с sum
+    /// вопреки инварианту в доккомментарии `shares`.
+    func testSharesConservesNegativeSums() {
+        for sum in [0, -1, -5, -10, -100, -999] {
+            for count in 1...7 {
+                XCTAssertEqual(shares(sum: sum, count: count).reduce(0, +), sum,
+                               "shares(sum: \(sum), count: \(count))")
+            }
+        }
+    }
+
+    func testMoneyRangeKeepsSignOfLowerBound() {
+        XCTAssertEqual(moneyRange(-100, 50, currency: "RUB"), "-100–50 ₽")
+    }
 }
