@@ -38,7 +38,10 @@ func main() {
 
 	cfg, err := initConfig()
 	if err != nil {
-		log.Err(err).Msg("Can not init config")
+		// env.Parse возвращает частично заполненную структуру: молча продолжив,
+		// мы поднимаем сервис с нулевыми лимитами (AI_MAX_BODY_BYTES=0 → каждый
+		// /parse отвечает 413) и пустыми секретами. Падаем, как и на logger/REST.
+		log.Fatal().Err(err).Msg("Can not init config")
 	}
 
 	initI18n(cfg)

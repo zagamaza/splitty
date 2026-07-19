@@ -4,6 +4,7 @@ import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.ParseDraft
 import com.zagir.splitty.core.model.ParseResponse
+import com.zagir.splitty.core.model.RecipientSum
 import com.zagir.splitty.core.model.SplitType
 import com.zagir.splitty.core.model.User
 import kotlin.test.Test
@@ -178,6 +179,40 @@ class AddExpenseAIFlowTest {
         ).copy(sumText = "999")
         assertEquals(1000, next.itemizedTotal)
         assertTrue(next.canSave)
+    }
+
+    @Test
+    fun `itemized sum comes from items, not from the stale sum field`() {
+        // Поле суммы в itemized-режиме read-only и не пересчитывается при правке
+        // позиции. Отправив его, мы расходились с Σ долей — сервер отвечал 400
+        // «сумма долей должна равняться сумме операции» на каждую правку чека.
+        val next = form(
+            listOf(OperationItem(name = "Пицца", price = 1200, shares = listOf(ItemShare(1L), ItemShare(2L)))),
+        ).copy(sumText = "1000") // сумма от прошлого разбора, позиция подорожала
+        val sums = listOf(RecipientSum(1L, 600), RecipientSum(2L, 600))
+
+        assertEquals(1200, effectiveSum(next, sums))
+        assertEquals(sums.sumOf { it.sum }, effectiveSum(next, sums), "sum разошёлся с Σ долей → 400")
+    }
+
+    @Test
+    fun `itemized receipt without a recognized total is still saveable`() {
+        // Модель распознала блюда без общей суммы: sumText пуст, а поле read-only
+        // — раньше «Сохранить» была активна, но save() упирался в «Введите сумму»
+        // и черновик спасался только сбросом чека.
+        val next = form(
+            listOf(OperationItem(name = "Пицца", price = 800, shares = listOf(ItemShare(1L), ItemShare(2L)))),
+        ).copy(sumText = "")
+        assertNull(next.sum)
+
+        assertEquals(800, effectiveSum(next, listOf(RecipientSum(1L, 400), RecipientSum(2L, 400))))
+    }
+
+    @Test
+    fun `flat expense still uses the sum field`() {
+        assertEquals(500, effectiveSum(form().copy(sumText = "500"), null))
+        assertNull(effectiveSum(form().copy(sumText = ""), null))
+        assertNull(effectiveSum(form().copy(sumText = "0"), null))
     }
 
     @Test

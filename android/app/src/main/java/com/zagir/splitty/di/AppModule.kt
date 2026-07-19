@@ -3,6 +3,8 @@ package com.zagir.splitty.di
 import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import com.zagir.splitty.core.model.SplittyJson
@@ -29,7 +31,13 @@ import kotlinx.serialization.json.Json
 @Retention(AnnotationRetention.BINARY)
 annotation class ApplicationScope
 
-private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(name = "session")
+// corruptionHandler: без него битый session.preferences_pb даёт CorruptionException
+// на КАЖДОМ старте — приложение навсегда остаётся разлогиненным без пути к
+// восстановлению. Замена на пустые настройки = разлогин один раз, дальше файл цел.
+private val Context.sessionDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "session",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 @Module
 @InstallIn(SingletonComponent::class)

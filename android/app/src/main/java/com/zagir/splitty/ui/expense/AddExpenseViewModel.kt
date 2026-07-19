@@ -69,6 +69,17 @@ internal fun canSaveExpenseOffline(isEditingSyncedOperation: Boolean, isOnline: 
     isOnline || !isEditingSyncedOperation
 
 /**
+ * Сумма операции для отправки: при itemized-чеке — Σ производных долей, иначе
+ * поле ввода. Сервер требует `sum == Σ recipientSums` (иначе 400), а в
+ * itemized-режиме поле суммы read-only и [AddExpenseForm.sumText] не
+ * пересчитывается при правке/удалении позиции — отправлять его нельзя. Заодно
+ * снимается тупик «чек распознан, общей суммы нет»: sumText пуст, а исправить
+ * его негде. null — сохранять нечего. Чистая функция — под JVM-тест.
+ */
+internal fun effectiveSum(form: AddExpenseForm, itemSums: List<RecipientSum>?): Int? =
+    (itemSums?.sumOf { it.sum } ?: form.sum)?.takeIf { it >= 1 }
+
+/**
  * Снапшот формы до последней голосовой правки/«Поровну на всех» — для отмены
  * ([AddExpenseForm.undoingParse]). Хранит ровно то, что может измениться правкой:
  * позиции, описание, сумму и донора. Порт iOS `undoSnapshot`.
@@ -990,7 +1001,15 @@ class AddExpenseViewModel @Inject constructor(
             updateForm { it.copy(alertMessage = "Введите описание расхода") }
             return
         }
-        val sum = form.sum?.takeIf { it >= 1 }
+        val orderedIds = orderedRecipientIds(form)
+        val itemSums = itemizedRecipientSums(form, orderedIds)
+        // itemized: сумма выводится из позиций, а не из поля ввода. Поле в этом
+        // режиме read-only (DerivedTotal), и form.sum не пересчитывается при
+        // правке/удалении позиции — отправив его, мы бы разошлись с Σ долей и
+        // получили 400 «сумма долей должна равняться сумме операции». Плюс при
+        // чеке без распознанной общей суммы form.sum пуст, а исправить его
+        // руками негде — сохранение было тупиком.
+        val sum = effectiveSum(form, itemSums)
         if (sum == null) {
             updateForm { it.copy(alertMessage = "Введите сумму (целое число рублей, не меньше 1)") }
             return
@@ -1012,10 +1031,8 @@ class AddExpenseViewModel @Inject constructor(
             return
         }
 
-        val orderedIds = orderedRecipientIds(form)
         val itemsToSend: List<OperationItem>?
         val split: ExpenseSplit
-        val itemSums = itemizedRecipientSums(form, orderedIds)
         if (itemSums != null) {
             // itemized-чек: производные суммы + сами позиции.
             itemsToSend = form.draftItems
@@ -1073,7 +1090,7 @@ class AddExpenseViewModel @Inject constructor(
      * (недостающие из позиций добавляются следом); null — позиций нет или они
      * невалидны. Порт iOS `itemizedRecipientSums`.
      */
-    private fun itemizedRecipientSums(form: AddExpenseForm, orderedIds: List<Long>): List<RecipientSum>? {
+    internal fun itemizedRecipientSums(form: AddExpenseForm, orderedIds: List<Long>): List<RecipientSum>? {
         if (!form.hasDraftItems) return null
         val shares = form.itemizedShares ?: return null
         val itemIds = form.itemizedUserIds
@@ -1135,7 +1152,7 @@ class AddExpenseViewModel @Inject constructor(
      * операции (сервер раздаёт остаток equally-деления первым в массиве),
      * новые участники — следом; при создании — порядок списка участников.
      */
-    private fun orderedRecipientIds(form: AddExpenseForm): List<Long> {
+    internal fun orderedRecipientIds(form: AddExpenseForm): List<Long> {
         val kept = editRecipientOrder.filter { it in form.recipientIds }
         val added = form.members
             .map { it.id }

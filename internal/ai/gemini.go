@@ -14,6 +14,10 @@ import (
 
 const defaultBaseURL = "https://generativelanguage.googleapis.com/v1beta"
 
+// maxGeminiResponseBytes — потолок чтения ответа модели. Черновик по
+// responseSchema — это единицы килобайт; 4 МБ с огромным запасом.
+const maxGeminiResponseBytes = 4 << 20
+
 // httpDoer позволяет подставить фейковый транспорт в тестах.
 type httpDoer interface {
 	Do(*http.Request) (*http.Response, error)
@@ -144,7 +148,13 @@ func (c *GeminiClient) call(ctx context.Context, body []byte) (geminiResponse, e
 	}
 	defer resp.Body.Close()
 
-	raw, _ := io.ReadAll(resp.Body)
+	// Ответ читаем с потолком: без него скомпрометированный или просто
+	// сбойнувший upstream кладёт произвольный объём в кучу, а на каждый /parse
+	// уже приходится до ~15 МБ медиа в памяти.
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxGeminiResponseBytes))
+	if err != nil {
+		return geminiResponse{}, fmt.Errorf("ai: чтение ответа Gemini: %w", err)
+	}
 	if resp.StatusCode != http.StatusOK {
 		return geminiResponse{}, fmt.Errorf("ai: Gemini вернул %d: %s", resp.StatusCode, truncate(string(raw), 300))
 	}

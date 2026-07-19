@@ -1334,7 +1334,7 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		},
 	}
 
-	messages = append(messages, buildUpdateOperationMessages(getFrom(u), u.User, diff, oldOp, newOp, room, keyboard)...)
+	messages = append(messages, buildUpdateOperationMessages(getFrom(u), u.User, diff, oldOp, newOp, room, keyboard, nil)...)
 	return buttons, messages
 }
 
@@ -1342,9 +1342,18 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 // часть экранного сценария (notificationWhenUpdateOperation) и REST-уведомлений
 // (Notifier). editor — кто внёс изменение (его пропускаем и упоминаем в текстах),
 // langUser — чей язык используется в блоке «Было/Стало» (в боте это u.User)
-func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *api.OperationDiff, oldOp api.Operation, newOp api.Operation, room *api.Room, keyboard [][]tgbotapi.InlineKeyboardButton) []tgbotapi.Chattable {
+func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *api.OperationDiff, oldOp api.Operation, newOp api.Operation, room *api.Room, keyboard [][]tgbotapi.InlineKeyboardButton, allows func(*api.User, api.NotifyCategory) bool) []tgbotapi.Chattable {
 	var messages []tgbotapi.Chattable
 	editorUserId := editor.ID
+
+	// Получатели здесь — встроенные снимки (op.recipientsWithSum[].user), где
+	// Notify всегда nil: PATCH /me/notifications пишет только коллекцию user.
+	// По снимку AllowsTelegram уходит в легаси-ветку и шлёт всегда, поэтому
+	// REST-путь передаёт резолвер канонического документа (Notifier.allowsTelegram).
+	// Бот передаёт nil — у него снимок и есть источник правды.
+	if allows == nil {
+		allows = func(u *api.User, c api.NotifyCategory) bool { return u.AllowsTelegram(c) }
+	}
 
 	// Название операции и комнаты — сырой пользовательский ввод (через бота и
 	// через REST), а все шаблоны ниже уходят с ParseMode=HTML: без экранирования
@@ -1392,7 +1401,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 		// Уведомляем донора, если он существует и у него включены уведомления
 		notifiedUsers := make(map[int]bool)
-		if newOp.Donor.AllowsTelegram(api.NotifyOperations) {
+		if allows(newOp.Donor, api.NotifyOperations) {
 			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newDesc, userLink(editor), changeDetails)
 			msg := NewMessage(int64(newOp.Donor.ID), text, keyboard)
 			messages = append(messages, msg)
@@ -1401,7 +1410,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 		// Уведомляем всех получателей
 		for _, r := range newOp.RecipientsWithSum {
-			if r.User.AllowsTelegram(api.NotifyOperations) && !notifiedUsers[r.User.ID] {
+			if allows(&r.User, api.NotifyOperations) && !notifiedUsers[r.User.ID] {
 				msg := NewMessage(int64(r.User.ID),
 					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newDesc, userLink(editor), changeDetails), keyboard)
 				messages = append(messages, msg)
@@ -1412,7 +1421,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 	// 6.2 Для добавленных получателей – уведомляем их, что их добавили в операцию
 	for _, rAdded := range diff.RecipientsAdded {
-		if rAdded.User.AllowsTelegram(api.NotifyOperations) &&
+		if allows(&rAdded.User, api.NotifyOperations) &&
 			rAdded.User.ID != editorUserId &&
 			rAdded.User.ID != newOp.Donor.ID &&
 			rAdded.User.ID != oldOp.Donor.ID {
@@ -1424,8 +1433,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 	// 6.3 Для получателей, у которых изменилась доля – уведомляем их об изменении
 	for _, change := range diff.RecipientsShareChanged {
-		if ((change.User.NotificationOn != nil && *change.User.NotificationOn) ||
-			change.User.NotificationOn == nil) &&
+		if allows(&change.User, api.NotifyOperations) &&
 			change.User.ID != editorUserId &&
 			change.User.ID != newOp.Donor.ID &&
 			change.User.ID != oldOp.Donor.ID {
@@ -1437,8 +1445,7 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 
 	// 6.4 Для удалённых получателей – уведомляем их о том, что их убрали из операции
 	for _, rRemoved := range diff.RecipientsRemoved {
-		if ((rRemoved.User.NotificationOn != nil && *rRemoved.User.NotificationOn) ||
-			rRemoved.User.NotificationOn == nil) &&
+		if allows(&rRemoved.User, api.NotifyOperations) &&
 			rRemoved.User.ID != editorUserId &&
 			rRemoved.User.ID != newOp.Donor.ID &&
 			rRemoved.User.ID != oldOp.Donor.ID {
@@ -1587,7 +1594,13 @@ func tableWithPayments(operation api.Operation, room *api.Room) string {
 	tb.AddHeader("Сумма")
 	tb.AddColumn(sdk.Left, sdk.Monospaced, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
-			return operation.RecipientsWithSum[i].User.DisplayName
+			// Build() оборачивает таблицу в <code>, а все потребители шлют её с
+			// ParseMode=HTML: имя "a < b" даёт 400 на весь экран операции для
+			// всех участников комнаты, "<a href>" вставляет разметку в чужие ЛС.
+			// Выравнивание считается по len() уже экранированной строки, так что
+			// у имён со спецсимволами колонка чуть уедет — рендерится имя
+			// по-прежнему верно, а без экранирования экран не открывался вовсе.
+			return html.EscapeString(operation.RecipientsWithSum[i].User.DisplayName)
 		}
 		return ""
 	})
@@ -2139,7 +2152,8 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum, room.Currency)), &keyboard)
 	var forRecipientMsg tgbotapi.Chattable
 	if recipient.AllowsTelegram(api.NotifyDebts) {
-		forRecipientMsg = NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", recipient.DisplayName, moneySpace(sum, room.Currency), userLink(donor)), keyboard)
+		// NewMessage шлёт с ParseMode=HTML — то же экранирование, что в notifier.go
+		forRecipientMsg = NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", html.EscapeString(recipient.DisplayName), moneySpace(sum, room.Currency), userLink(donor)), keyboard)
 	}
 
 	return api.TelegramMessage{

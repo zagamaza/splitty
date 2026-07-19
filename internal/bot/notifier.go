@@ -153,7 +153,11 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 		},
 	}
 
-	n.send(buildUpdateOperationMessages(&author, &author, diff, oldOp, newOp, &room, keyboard))
+	// Резолвер канонических настроек: иначе правки/удаления операций уходили бы
+	// даже тем, кто выключил уведомления в приложении (во встроенных снимках
+	// Notify всегда nil). Ср. NotifyOperationCreated.
+	allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(ctx, u, c) }
+	n.send(buildUpdateOperationMessages(&author, &author, diff, oldOp, newOp, &room, keyboard, allows))
 }
 
 // NotifyOperationDeleted — паритет с DeleteDonorOperation: бот при удалении

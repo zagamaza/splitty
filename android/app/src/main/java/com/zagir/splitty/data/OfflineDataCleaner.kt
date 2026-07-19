@@ -26,7 +26,10 @@ class OfflineDataCleaner @Inject constructor(
             var hadToken = false
             sessionStore.state.collect { session ->
                 if (session == null) return@collect // DataStore ещё читается
-                val hasToken = session.token != null
+                // Признак — наличие учётных данных на диске, а не расшифрованный
+                // токен: transient-сбой Keystore даёт token = null при живых
+                // ключах и стирал бы всю очередь неотправленных расходов.
+                val hasToken = session.hasStoredToken
                 if (hadToken && !hasToken) {
                     // Каждая чистка изолирована: без runCatching ошибка записи в
                     // одной из них вылетала из collect и НАВСЕГДА убивала

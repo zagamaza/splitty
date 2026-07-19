@@ -1142,6 +1142,9 @@ struct AddExpenseView: View {
                 // Подсветка правки — вспышка: гаснет сама через пару секунд.
                 guard !model.changedItemIndices.isEmpty else { return }
                 try? await Task.sleep(for: .seconds(2.5))
+                // try? глотает CancellationError: без явной проверки следующий
+                // разбор, сменивший id задачи, гасил бы СВОЮ ЖЕ свежую подсветку.
+                guard !Task.isCancelled else { return }
                 withAnimation(.easeOut(duration: 0.6)) {
                     model.clearChangeHighlights()
                 }
@@ -1237,6 +1240,11 @@ struct AddExpenseView: View {
         .transition(.opacity.combined(with: .move(edge: .top)))
         .task(id: model.changedItemIndices) {
             try? await Task.sleep(for: .seconds(6))
+            // Без проверки отмены баннер умирал через 2.5 с, а не через 6: сброс
+            // changedItemIndices выше меняет id, задача отменяется, try? глотает
+            // CancellationError — и dismissUndo сносил undoSnapshot, делая
+            // голосовую правку неоткатываемой.
+            guard !Task.isCancelled else { return }
             withAnimation(.spring(duration: 0.3)) { model.dismissUndo() }
         }
     }

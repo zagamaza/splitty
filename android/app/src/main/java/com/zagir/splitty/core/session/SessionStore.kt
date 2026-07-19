@@ -1,7 +1,6 @@
 package com.zagir.splitty.core.session
 
 import androidx.datastore.core.DataStore
-import java.io.IOException
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
@@ -13,13 +12,14 @@ import com.zagir.splitty.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,6 +37,14 @@ data class Session(
     val me: Me? = null,
     /** Тема приложения: system / light / dark. */
     val theme: String = SessionStore.THEME_SYSTEM,
+    /**
+     * В DataStore лежат учётные данные (шифротекст или plain-токен) — независимо
+     * от того, удалось ли их расшифровать. Отличает НАСТОЯЩИЙ разлогин (ключи
+     * стёрты) от сбоя расшифровки: transient-ошибка Keystore даёт token = null,
+     * и очистка офлайн-данных по этому признаку уничтожала бы неотправленные
+     * расходы при живом токене на диске. См. OfflineDataCleaner.
+     */
+    val hasStoredToken: Boolean = false,
 ) {
     val isAuthenticated: Boolean get() = token != null
 }
@@ -78,8 +86,10 @@ class SessionStore @Inject constructor(
         private val KEY_THEME = stringPreferencesKey("theme")
 
         /** Повторы чтения DataStore при транзиентной ошибке ввода-вывода. */
-        private const val RETRY_ATTEMPTS = 3L
         private const val RETRY_DELAY_MS = 200L
+
+        /** Потолок множителя паузы между попытками чтения DataStore. */
+        private const val RETRY_BACKOFF_STEPS = 25L
     }
 
     init {
@@ -90,33 +100,39 @@ class SessionStore @Inject constructor(
     }
 
     /** Текущая сессия; null — DataStore ещё не прочитан (первый кадр приложения). */
-    val state: StateFlow<Session?> = dataStore.data
-        // Транзиентная ошибка ввода-вывода — повторяем: catch ниже терминален
-        // (после него upstream завершён и stateIn больше НИЧЕГО не эмитит), так
-        // что без retry один IOException навсегда ронял сессию в «разлогин» —
-        // пользователь попадал на экран входа, успешно входил, но state не
-        // обновлялся до перезапуска процесса, и все запросы шли без токена.
-        // Попытки ограничены и с паузой: при постоянной ошибке безусловный
-        // retry крутил бы горячий цикл чтения файла.
-        .retryWhen { cause, attempt ->
-            if (cause is IOException && attempt < RETRY_ATTEMPTS) {
-                delay(RETRY_DELAY_MS * (attempt + 1))
-                true
-            } else {
-                false
+    val state: StateFlow<Session?> = channelFlow {
+        // Сбор пересоздаётся в цикле, а не через retryWhen + catch: catch
+        // терминален — после него upstream завершён и stateIn не эмитит НИЧЕГО
+        // до перезапуска процесса. Пользователя выбрасывало на экран входа, он
+        // успешно входил, но state не обновлялся и все запросы шли без токена.
+        // Ограниченный retry только снижал вероятность: постоянная ошибка (и
+        // CorruptionException, который тоже IOException) всё равно доводила до
+        // терминального catch.
+        var attempt = 0L
+        while (isActive) {
+            try {
+                dataStore.data.collect { send(it) }
+                return@channelFlow // upstream завершился штатно
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                // Пустые настройки = разлогин: восстановимо, в отличие от
+                // зависания на null («ещё читаем» → пустой экран без выхода).
+                // Дальше продолжаем пытаться — успешное чтение или запись при
+                // входе вернут сессию без перезапуска приложения.
+                send(emptyPreferences())
+                delay(RETRY_DELAY_MS * (attempt + 1).coerceAtMost(RETRY_BACKOFF_STEPS))
+                attempt++
             }
         }
-        // Битый файл настроек — это CorruptionException из dataStore.data. Без
-        // catch корутина шаринга умирает, state навсегда остаётся null (= «ещё
-        // читаем»), и приложение показывает пустой экран без выхода. Пустые
-        // настройки означают разлогин — восстановимо, в отличие от зависания.
-        .catch { emit(emptyPreferences()) }
+    }
         .map { prefs ->
             Session(
                 // Dual-read: сначала новый зашифрованный ключ, иначе старый plain
                 // (ещё не мигрировано либо чистая старая установка). Если шифротекст
                 // не расшифровался (ключ Keystore пропал) — токена нет → разлогин.
                 token = prefs[KEY_TOKEN_ENC]?.let { tokenCipher.decrypt(it) } ?: prefs[KEY_TOKEN],
+                hasStoredToken = prefs[KEY_TOKEN_ENC] != null || prefs[KEY_TOKEN] != null,
                 baseUrl = usableBaseUrl(prefs[KEY_BASE_URL]),
                 me = prefs[KEY_ME]?.let { raw ->
                     runCatching { SplittyJson.decodeFromString(Me.serializer(), raw) }.getOrNull()

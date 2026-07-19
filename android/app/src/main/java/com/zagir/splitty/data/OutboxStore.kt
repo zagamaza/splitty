@@ -197,7 +197,12 @@ class OutboxStore(
     /** Удаляет запись (отправлена успешно либо удалена пользователем). */
     suspend fun remove(localId: String): Unit = mutex.withLock {
         ensureLoadedLocked()
-        persistLocked(_entries.value.filterNot { it.localId == localId })
+        // removed передаётся явно: удаление выражено ОТСУТСТВИЕМ записи, а ветка
+        // слияния persistLocked возвращает с диска всё, чего нет в памяти. Путь
+        // узкий (чтение обязано провалиться в ensureLoadedLocked и починиться в
+        // persistLocked под тем же локом), но исход тяжёлый: удалённый расход
+        // всё равно уходит в комнату, а отправленный — повторно.
+        persistLocked(_entries.value.filterNot { it.localId == localId }, removed = setOf(localId))
     }
 
     /** HTTP 4xx при досылке: запись остаётся, но помечается failed с текстом. */
@@ -259,7 +264,7 @@ class OutboxStore(
         }.getOrDefault(emptyList())
     }
 
-    private suspend fun persistLocked(entries: List<OutboxEntry>) {
+    private suspend fun persistLocked(entries: List<OutboxEntry>, removed: Set<String> = emptySet()) {
         var toWrite = entries
         if (!didRead) {
             // Повторная попытка: ошибка чтения могла быть транзиентной. Записи с
@@ -270,7 +275,7 @@ class OutboxStore(
                 _entries.value = entries // память обновляем, файл не трогаем
                 return
             }
-            val known = entries.map { it.localId }.toSet()
+            val known = entries.map { it.localId }.toSet() + removed
             toWrite = disk.filterNot { it.localId in known } + entries
         }
         val outEntries = toWrite
