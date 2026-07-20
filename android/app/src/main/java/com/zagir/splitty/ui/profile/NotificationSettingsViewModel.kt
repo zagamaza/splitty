@@ -3,15 +3,17 @@ package com.zagir.splitty.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.model.NotifySettings
-import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.ui.components.humanErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -84,6 +86,18 @@ class NotificationSettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { load() }
+        // SessionStore читает DataStore асинхронно и стартует с null: снимок в
+        // конструкторе давал masterOn = true даже при notificationOn = false.
+        // Тумблер рисовался включённым, а выключить его было нельзя — setMaster
+        // сравнивал новое значение с профилем и молча выходил.
+        viewModelScope.launch {
+            sessionStore.state
+                .mapNotNull { it?.me?.notificationOn }
+                .distinctUntilChanged()
+                .collect { fromProfile ->
+                    _state.update { if (it.isSaving) it else it.copy(masterOn = fromProfile) }
+                }
+        }
     }
 
     fun retry() {
@@ -102,18 +116,24 @@ class NotificationSettingsViewModel @Inject constructor(
      */
     fun setMaster(on: Boolean) {
         val current = _state.value
-        val previous = sessionStore.state.value?.me?.notificationOn ?: current.masterOn
-        if (on == previous || current.isSaving) return
+        // Сравниваем с тем, что показано, а не с профилем: пока профиль не
+        // подгрузился, любое сравнение с ним делало тумблер немым.
+        if (on == current.masterOn || current.isSaving) return
+        val previous = current.masterOn
         _state.value = current.applyMaster(on)
         viewModelScope.launch {
             try {
                 val updated = repository.updateMe(notificationOn = on)
+                // sessionStore.updateMe идёт мимо SplittyRepository.call, поэтому
+                // IOException из DataStore не мапится в ApiException: ловим Throwable,
+                // иначе он вылетал из viewModelScope и ронял процесс, а isSaving
+                // навсегда оставался true и блокировал все тумблеры.
                 sessionStore.updateMe(updated)
                 _state.update { it.masterSaved(updated.notificationOn) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: ApiException) {
-                _state.update { it.masterFailed(previous, e.message) }
+            } catch (e: Throwable) {
+                _state.update { it.masterFailed(previous, humanErrorText(e)) }
             }
         }
     }
@@ -129,8 +149,8 @@ class NotificationSettingsViewModel @Inject constructor(
                 _state.update { it.categoriesSaved(repository.updateNotifications(updated)) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: ApiException) {
-                _state.update { it.categoriesFailed(previous, e.message) }
+            } catch (e: Throwable) {
+                _state.update { it.categoriesFailed(previous, humanErrorText(e)) }
             }
         }
     }
@@ -141,8 +161,8 @@ class NotificationSettingsViewModel @Inject constructor(
             _state.update { it.copy(settings = loaded, loadError = null) }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: ApiException) {
-            _state.update { it.copy(loadError = e.message) }
+        } catch (e: Throwable) {
+            _state.update { it.copy(loadError = humanErrorText(e)) }
         }
     }
 }

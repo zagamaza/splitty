@@ -316,28 +316,42 @@ fun Modifier.micTouchGesture(
         }
         val startPos = down.position
         onBegan(down.uptimeMillis)
-        while (true) {
-            val event = awaitPointerEvent(PointerEventPass.Main)
-            // Касание отобрали (родительский скролл, системный жест, звонок):
-            // это НЕ отпускание — записанное отбрасываем молча, без распознавания.
-            if (event.changes.any { it.isConsumed }) {
-                onSystemCancelled()
-                break
+        // finished снимается только штатным отпусканием или уже обработанной
+        // отменой. Настоящий ACTION_CANCEL (шторка, системный диалог, входящий
+        // звонок) приходит не «съеденным» изменением, а отменой корутины
+        // pointerInput: awaitEachGesture её глотал, и ни onEnded, ни
+        // onSystemCancelled не вызывались — запись висела до лимита в 60 с.
+        var finished = false
+        try {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Main)
+                // Касание отобрали (родительский скролл, системный жест, звонок):
+                // это НЕ отпускание — записанное отбрасываем молча, без распознавания.
+                if (event.changes.any { it.isConsumed }) {
+                    finished = true
+                    onSystemCancelled()
+                    break
+                }
+                val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.first()
+                // Смещение приводим к dp: пороги замка/отмены — это iOS-овские points,
+                // и на сыром пикселе они бы масштабировались вместе с плотностью экрана.
+                val offset = change.position - startPos
+                val dx = micDragPxToDp(offset.x, density)
+                val dy = micDragPxToDp(offset.y, density)
+                if (change.pressed) {
+                    onMoved(dx, dy)
+                    change.consume()
+                } else {
+                    finished = true
+                    onEnded(dx, dy)
+                    change.consume()
+                    break
+                }
             }
-            val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.first()
-            // Смещение приводим к dp: пороги замка/отмены — это iOS-овские points,
-            // и на сыром пикселе они бы масштабировались вместе с плотностью экрана.
-            val offset = change.position - startPos
-            val dx = micDragPxToDp(offset.x, density)
-            val dy = micDragPxToDp(offset.y, density)
-            if (change.pressed) {
-                onMoved(dx, dy)
-                change.consume()
-            } else {
-                onEnded(dx, dy)
-                change.consume()
-                break
-            }
+        } finally {
+            // onSystemCancelled не suspend — вызывать из finally безопасно даже
+            // когда сюда пришли по отмене корутины.
+            if (!finished) onSystemCancelled()
         }
     }
 }

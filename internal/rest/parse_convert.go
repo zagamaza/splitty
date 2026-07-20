@@ -28,7 +28,11 @@ const (
 	// название позиции клиент шлёт напрямую, а оно попадает в общее сообщение
 	// бота: без ограничения одна позиция раздувает экран операции для всей комнаты
 	maxItemNameRunes = 100
-	maxAliasRunes    = 64 // максимальная длина прозвища
+	// описание попадает в каждое telegram-уведомление и на экран операции;
+	// telegram режет сообщение на 4096 символах, поэтому без лимита одно
+	// описание ломало отправку всем участникам комнаты сразу
+	maxDescriptionRunes = 200
+	maxAliasRunes       = 64 // максимальная длина прозвища
 )
 
 // handleAddAlias POST /api/v1/users/{userId}/aliases
@@ -120,6 +124,9 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 	req.Description = strings.TrimSpace(req.Description)
 	if req.Description == "" {
 		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
+	}
+	if utf8.RuneCountInString(req.Description) > maxDescriptionRunes {
+		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
 	}
 	donor := findMember(room, req.DonorId)
 	if donor == nil {

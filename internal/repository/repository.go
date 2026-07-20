@@ -38,6 +38,7 @@ type RoomRepository interface {
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	// CreateOperationIfAbsent атомарно добавляет операцию, если в комнате ещё нет
 	// операции с тем же client_op_id (o.ClientOpId обязан быть непустым).
@@ -359,6 +360,26 @@ func getOrderOptions(field string, orderParameter int) *options.FindOptions {
 // Раньше здесь были два неатомарных вызова ($pull, затем $push): падение между ними
 // теряло операцию, а конкурентные обновления дублировали её или «воскрешали» удалённую.
 // MatchedCount == 0 (нет комнаты или операции) — mongo.ErrNoDocuments
+// SetNotificationSent пишет ТОЛЬКО notification_sent, а не всю операцию.
+// Нотификатор работает в отдельной горутине и держит копию операции с момента
+// запроса: полная замена через UpdateOperation откатывала правку, если
+// пользователь успевал отредактировать расход до отправки уведомлений.
+func (rr MongoRoomRepository) SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.M{"_id": hex, "operations._id": operationId}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$.notification_sent": sent}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
 func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {

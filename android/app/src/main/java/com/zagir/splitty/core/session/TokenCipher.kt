@@ -44,6 +44,11 @@ class KeystoreTokenCipher : TokenCipher {
         const val TAG_BITS = 128
     }
 
+    // Все операции с alias'ом синхронизированы: getOrCreateKey — это
+    // read-modify-write, а encrypt зовётся параллельно из migrateTokenIfNeeded и
+    // signIn. Гонка генерировала ключ дважды, и шифротекст проигравшего
+    // расшифровывался в null — пользователь оказывался разлогинен сразу после входа.
+    @Synchronized
     override fun encrypt(plainText: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
@@ -52,6 +57,7 @@ class KeystoreTokenCipher : TokenCipher {
         return Base64.encodeToString(iv + bytes, Base64.NO_WRAP)
     }
 
+    @Synchronized
     override fun decrypt(cipherText: String): String? = runCatching {
         val key = existingKey() ?: return null
         val raw = Base64.decode(cipherText, Base64.NO_WRAP)
@@ -63,6 +69,7 @@ class KeystoreTokenCipher : TokenCipher {
         String(cipher.doFinal(body), Charsets.UTF_8)
     }.getOrNull()
 
+    @Synchronized
     override fun clearKey() {
         runCatching {
             keyStore().takeIf { it.containsAlias(KEY_ALIAS) }?.deleteEntry(KEY_ALIAS)

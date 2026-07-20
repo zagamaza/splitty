@@ -120,8 +120,9 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		return
 	}
 
-	// бот персистит NotificationSent через UpdateOperation — делаем так же
-	if err := n.os.UpdateOperation(ctx, &op, room.ID.Hex()); err != nil {
+	// точечный $set вместо замены всей операции: горутина держит копию с момента
+	// запроса, и полная запись откатывала бы правку, сделанную тем временем
+	if err := n.os.SetNotificationSent(ctx, room.ID.Hex(), op.ID, op.NotificationSent); err != nil {
 		log.Error().Err(err).Msg("notifier: persist notification_sent failed")
 	}
 	n.send(messages)

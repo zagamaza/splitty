@@ -44,6 +44,10 @@ func (noopOperationService) UpdateOperation(context.Context, *api.Operation, str
 	return nil
 }
 
+func (noopOperationService) SetNotificationSent(context.Context, string, primitive.ObjectID, []int) error {
+	return nil
+}
+
 type noopButtonService struct{}
 
 func (noopButtonService) Save(context.Context, *api.Button) (primitive.ObjectID, error) {

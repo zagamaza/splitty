@@ -1,9 +1,19 @@
 package rest
 
 import (
+	"unicode/utf8"
+
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
 )
+
+// truncateRunes режет строку по рунам (не по байтам — иначе кириллица бьётся).
+func truncateRunes(s string, limit int) string {
+	if utf8.RuneCountInString(s) <= limit {
+		return s
+	}
+	return string([]rune(s)[:limit])
+}
 
 // лимиты защищают от галлюцинаций модели (сотни позиций/долей)
 const (
@@ -37,6 +47,9 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 		if it.Price > maxItemPrice {
 			it.Price = maxItemPrice
 		}
+		// та же причина, что и у цены: write-path отбивает длинное название 400,
+		// а UI успевал показать черновик — пользователь видел необъяснимую ошибку
+		it.Name = truncateRunes(it.Name, maxItemNameRunes)
 
 		if it.Kind == string(api.ItemKindSurcharge) {
 			if it.Price == 0 {
@@ -126,6 +139,8 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 	} else if d.Sum < 0 || d.Sum > maxItemsTotal {
 		d.Sum = 0
 	}
+
+	d.Description = truncateRunes(d.Description, maxDescriptionRunes)
 
 	if d.DonorId != nil && !memberSet[*d.DonorId] {
 		d.DonorId = nil

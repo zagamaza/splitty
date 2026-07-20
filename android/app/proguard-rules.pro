@@ -23,6 +23,16 @@
     *** INSTANCE;
     *** descriptor;
 }
+# Константы @Serializable-энумов. R8 в full mode выбрасывает те, на которые нет
+# статических ссылок в коде: у OutboxKind в release оставался только CREATE, и
+# outbox.json с "kind":"update"/"delete" (запись предыдущей версии приложения)
+# ронял разбор всего списка — вся офлайн-очередь терялась. Правило выше про
+# $$serializer это не покрывает: у энумов его не генерируется.
+-keepclassmembers @kotlinx.serialization.Serializable enum com.zagir.splitty.** {
+    <fields>;
+    **[] values();
+    ** valueOf(java.lang.String);
+}
 
 # --- Retrofit / OkHttp -----------------------------------------------------
 # Интерфейсы API — динамические прокси: и сам интерфейс, и его дженерик-

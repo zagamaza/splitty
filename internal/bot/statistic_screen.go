@@ -7,6 +7,7 @@ import (
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"html"
 )
 
 type StatisticService interface {
@@ -87,7 +88,7 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return
 	}
 
-	text := fmt.Sprintf(I18n(u.User, "scrn_statistic", room.Name) + "\n\n\n")
+	text := fmt.Sprintf(I18n(u.User, "scrn_statistic", html.EscapeString(room.Name)) + "\n\n\n")
 	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpace(totalSpendSum, room.Currency)) + "\n\n")
 	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpace(totalUserSpendSum, room.Currency)) + "\n\n")
 	text += debtText + "\n\n"

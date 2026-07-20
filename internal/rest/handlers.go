@@ -507,6 +507,9 @@ func validateOperationRequest(req *operationRequest, room *api.Room) (*api.User,
 	if req.Description == "" {
 		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
 	}
+	if utf8.RuneCountInString(req.Description) > maxDescriptionRunes {
+		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
+	}
 	if req.Sum < 1 || req.Sum > maxItemsTotal {
 		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "сумма должна быть от 1 до 1 000 000 000"}
 	}
@@ -1568,7 +1571,14 @@ func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
 	if contentType == "" {
 		contentType = "application/octet-stream"
 	}
+	// вложение загружает любой участник комнаты, а отдаём мы его со своего
+	// origin: html-файл без этих заголовков исполнялся бы как наша страница
+	if !allowedInlineTypes[contentType] {
+		contentType = "application/octet-stream"
+		w.Header().Set("Content-Disposition", "attachment")
+	}
 	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if cl := fileResp2.Header.Get("Content-Length"); cl != "" {
 		w.Header().Set("Content-Length", cl)
 	}

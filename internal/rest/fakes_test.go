@@ -244,6 +244,24 @@ func (f *fakeRoomRepo) FindRoomsByLikeName(_ context.Context, userId int, name s
 	return &rooms, nil
 }
 
+// SetNotificationSent как mongo-реализация: точечный $set одного поля,
+// остальные поля операции не трогает
+func (f *fakeRoomRepo) SetNotificationSent(_ context.Context, roomId string, operationId primitive.ObjectID, sent []int) error {
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	ops := roomOperations(room)
+	for i := range ops {
+		if ops[i].ID == operationId {
+			ops[i].NotificationSent = sent
+			room.Operations = &ops
+			return nil
+		}
+	}
+	return mongo.ErrNoDocuments
+}
+
 // UpdateOperation как атомарная mongo-реализация: заменяет операцию по _id,
 // mongo.ErrNoDocuments если комнаты или операции нет
 func (f *fakeRoomRepo) UpdateOperation(_ context.Context, o *api.Operation, roomId string) error {

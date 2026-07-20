@@ -73,6 +73,19 @@ class ActivityViewModel @Inject constructor(
 
     private var hasMore = true
 
+    /**
+     * Сколько строк реально отдал сервер. Именно это, а не размер списка в UI —
+     * корректный offset: дубликаты (новые операции сверху сдвигают окно) из
+     * списка выбрасываются, и offset по его размеру отставал. Когда сверху
+     * появлялась целая страница новых операций, следующая страница приходила
+     * полностью дублирующей, размер не менялся, hasMore оставался true — и тот
+     * же offset запрашивался бесконечно.
+     */
+    private var loadedCount = 0
+
+    /** Поколение ленты: подгрузка, стартовавшая до refresh, не должна вернуть старый список. */
+    private var generation = 0
+
     init {
         viewModelScope.launch {
             sessionStore.dataVersion.collect { reloadFirstPage() }
@@ -142,7 +155,9 @@ class ActivityViewModel @Inject constructor(
     private suspend fun reloadFirstPage() {
         try {
             val page = repository.activity(limit = PAGE_SIZE, offset = 0).value
+            generation++ // подгрузки, стартовавшие до этого момента, свой результат выбросят
             _state.value = UiState.Content(page)
+            loadedCount = page.size
             hasMore = page.size == PAGE_SIZE
         } catch (e: ApiException) {
             if (_state.value is UiState.Content) {
@@ -156,13 +171,20 @@ class ActivityViewModel @Inject constructor(
     private suspend fun loadMore() {
         if (!hasMore || _isLoadingMore.value) return
         val current = (_state.value as? UiState.Content)?.value ?: return
+        val startedAt = generation
         _isLoadingMore.value = true
         try {
-            val page = repository.activity(limit = PAGE_SIZE, offset = current.size).value
+            val page = repository.activity(limit = PAGE_SIZE, offset = loadedCount).value
+            if (startedAt != generation) return // лента перезагрузилась — страница устарела
+            val base = (_state.value as? UiState.Content)?.value ?: current
             // Страховка от дублей при сдвиге offset (новые операции сверху).
-            val known = current.mapTo(HashSet()) { it.operation.id }
-            _state.value = UiState.Content(current + page.filter { it.operation.id !in known })
-            hasMore = page.size == PAGE_SIZE
+            val known = base.mapTo(HashSet()) { it.operation.id }
+            val fresh = page.filter { it.operation.id !in known }
+            _state.value = UiState.Content(base + fresh)
+            loadedCount += page.size
+            // Страница целиком из дублей означает, что вниз двигаться некуда:
+            // без этой отсечки цикл повторял бы один и тот же запрос.
+            hasMore = page.size == PAGE_SIZE && fresh.isNotEmpty()
         } catch (e: ApiException) {
             _errorMessage.value = e.message
         } finally {

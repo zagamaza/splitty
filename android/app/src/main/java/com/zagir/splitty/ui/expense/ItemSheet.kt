@@ -188,24 +188,28 @@ fun ItemSheetBody(
     val haptics = rememberHaptics()
     val isSurcharge = item.isSurcharge
 
-    var name by remember { mutableStateOf(item.name) }
-    var priceText by remember { mutableStateOf(if (item.price > 0) item.price.toString() else "") }
+    // Ключ по item обязателен: лист живёт на стабильной позиции композиции, и
+    // смена редактируемой позиции (добавление строки, переприход /parse) не
+    // выводила его из композиции. Без ключа commit() писал имя, цену и деление
+    // предыдущей позиции поверх другой строки чека.
+    var name by remember(item) { mutableStateOf(item.name) }
+    var priceText by remember(item) { mutableStateOf(if (item.price > 0) item.price.toString() else "") }
     // false — «Долями» (веса-степперы), true — «Суммами» (поля сумм).
-    var byAmount by remember { mutableStateOf(item.shareList.any { it.amount != null }) }
-    val participating = remember {
+    var byAmount by remember(item) { mutableStateOf(item.shareList.any { it.amount != null }) }
+    val participating = remember(item) {
         mutableStateMapOf<Long, Boolean>().apply {
             item.shareList.forEach { put(it.userId, true) }
         }
     }
-    val weights = remember {
+    val weights = remember(item) {
         mutableStateMapOf<Long, Int>().apply { item.shareList.forEach { put(it.userId, it.weight) } }
     }
-    val amounts = remember {
+    val amounts = remember(item) {
         mutableStateMapOf<Long, String>().apply {
             item.shareList.forEach { s -> s.amount?.let { put(s.userId, it.toString()) } }
         }
     }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDelete by remember(item) { mutableStateOf(false) }
 
     val participatingSet = participating.filterValues { it }.keys
     val price = priceText.toIntOrNull() ?: 0

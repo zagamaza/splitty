@@ -5,6 +5,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"html"
 	"strconv"
 	"strings"
 )
@@ -46,7 +47,7 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 		return
 	}
 
-	text := I18n(u.User, "scrn_room_setting", room.Name)
+	text := I18n(u.User, "scrn_room_setting", html.EscapeString(room.Name))
 
 	var buttons []tgbotapi.InlineKeyboardButton
 	var toSave []*api.Button
@@ -565,9 +566,9 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 				log.Error().Err(err).Msg("get user failed")
 				continue
 			}
-			text := I18n(user, "scrn_all_operations_added", userLink(user), room.Name)
+			text := I18n(user, "scrn_all_operations_added", userLink(user), html.EscapeString(room.Name))
 			if user.BankDetails != "" {
-				text += I18n(user, "scrn_all_bank_details", user.BankDetails)
+				text += I18n(user, "scrn_all_bank_details", html.EscapeString(user.BankDetails))
 			} else {
 				text += I18n(user, "scrn_all_operations_ps")
 			}

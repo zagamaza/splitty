@@ -21,6 +21,7 @@ import (
 
 type OperationService interface {
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
@@ -1291,7 +1292,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_to_start"), backB.ID.Hex())},
 		}
 		msg := NewMessage(int64(opn.Donor.ID),
-			I18n(opn.Donor, "scrn_notification_payer_changed", userLink(opn.Donor), userLink(getFrom(u)), opn.Description, moneySpace(opn.Sum, room.Currency), room.Name),
+			I18n(opn.Donor, "scrn_notification_payer_changed", userLink(opn.Donor), userLink(getFrom(u)), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name)),
 			keyboard)
 		messages = append(messages, msg)
 		opn.NotificationSent = append(opn.NotificationSent, opn.Donor.ID)
@@ -1309,7 +1310,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 					break
 				}
 			}
-			msg := NewMessage(int64(recipientsWithSum.User.ID), I18n(&recipientsWithSum.User, "scrn_notification_operation_added", userLink(&recipientsWithSum.User), userLink(getFrom(u)), opn.Description, moneySpace(opn.Sum, room.Currency), room.Name, moneySpace(int(recipientWithSum.Sum), room.Currency)),
+			msg := NewMessage(int64(recipientsWithSum.User.ID), I18n(&recipientsWithSum.User, "scrn_notification_operation_added", userLink(&recipientsWithSum.User), userLink(getFrom(u)), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name), moneySpace(int(recipientWithSum.Sum), room.Currency)),
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_view_operation"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_to_start"), backB.ID.Hex())},
@@ -1569,7 +1570,7 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	text := I18n(u.User, "scrn_operation_on_sum", operation.Description, moneySpace(operation.Sum, room.Currency))
+	text := I18n(u.User, "scrn_operation_on_sum", html.EscapeString(operation.Description), moneySpace(operation.Sum, room.Currency))
 	text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
 
 	text += tableWithPayments(operation, room)
@@ -1849,7 +1850,7 @@ func (s ViewFileOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	var msg tgbotapi.Chattable
 	file := operation.Files[0]
 	chatId := getChatID(u)
-	text := I18n(u.User, "scrn_operation_info", operation.Description, room.Name)
+	text := I18n(u.User, "scrn_operation_info", html.EscapeString(operation.Description), html.EscapeString(room.Name))
 	if file.Type == document {
 		message := NewDocumentMessage(chatId, text, file.FileId)
 		message.ReplyToMessageID = getMessageId(u)

@@ -210,9 +210,20 @@ class SessionStore @Inject constructor(
 
     /** Успешный вход: сохранить токен (зашифрованным) и профиль. */
     suspend fun signIn(token: String, me: Me) {
+        // Keystore на части прошивок бросает ProviderException/KeyStoreException —
+        // ровно поэтому migrateTokenIfNeeded обёрнут в runCatching. Здесь падение
+        // было фатальным: сервер уже принял одноразовый код, а приложение
+        // крэшилось до записи токена, и войти становилось невозможно в принципе.
+        // Дегрейд на plain-ключ безопаснее разлогина: dual-read его понимает.
+        val encrypted = runCatching { tokenCipher.encrypt(token) }.getOrNull()
         dataStore.edit { prefs ->
-            prefs[KEY_TOKEN_ENC] = tokenCipher.encrypt(token)
-            prefs.remove(KEY_TOKEN) // страховка: чистый вход не должен оставлять plain-ключ
+            if (encrypted != null) {
+                prefs[KEY_TOKEN_ENC] = encrypted
+                prefs.remove(KEY_TOKEN)
+            } else {
+                prefs[KEY_TOKEN] = token
+                prefs.remove(KEY_TOKEN_ENC)
+            }
             prefs[KEY_ME] = SplittyJson.encodeToString(Me.serializer(), me)
         }
     }

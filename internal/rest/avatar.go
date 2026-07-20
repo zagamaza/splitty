@@ -16,6 +16,31 @@ import (
 // фото профиля меняются редко, а каждый промах — два запроса к telegram
 const avatarCacheTTL = 24 * time.Hour
 
+// maxAvatarBytes — потолок на скачиваемое фото профиля (реальные превью
+// telegram — десятки килобайт).
+const maxAvatarBytes = 2 << 20
+
+// allowedAvatarTypes — типы, которые безопасно отдавать со своего origin.
+var allowedAvatarTypes = map[string]bool{
+	"image/jpeg": true,
+	"image/png":  true,
+	"image/webp": true,
+}
+
+// allowedInlineTypes — вложения операций, которые можно показывать инлайн;
+// всё прочее уходит как octet-stream с Content-Disposition: attachment.
+var allowedInlineTypes = map[string]bool{
+	"image/jpeg":      true,
+	"image/png":       true,
+	"image/webp":      true,
+	"image/gif":       true,
+	"image/heic":      true,
+	"video/mp4":       true,
+	"audio/mpeg":      true,
+	"audio/ogg":       true,
+	"application/pdf": true,
+}
+
 // avatarMaxSide предпочтительная сторона фото: среди размеров telegram
 // берём самый крупный, не превышающий этот порог (хватает для списков)
 const avatarMaxSide = 640
@@ -44,11 +69,19 @@ func (c *avatarCache) get(userId int, now time.Time) (avatarCacheEntry, bool) {
 	return e, true
 }
 
+// put кладёт запись и попутно вычищает протухшие. Без вытеснения get считал
+// протухшее промахом, но из map ничего не удалял: кеш рос на каждого нового
+// пользователя и держал jpeg-и до конца жизни процесса.
 func (c *avatarCache) put(userId int, e avatarCacheEntry) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.entries == nil {
 		c.entries = map[int]avatarCacheEntry{}
+	}
+	for id, old := range c.entries {
+		if e.fetchedAt.Sub(old.fetchedAt) > avatarCacheTTL {
+			delete(c.entries, id)
+		}
 	}
 	c.entries[userId] = e
 }
@@ -154,15 +187,19 @@ func (s *Server) handleGetUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := io.ReadAll(download.Body)
+	// потолок на тело: telegram отдаёт превью профиля, но полагаться на это
+	// нельзя — без лимита ответ произвольного размера уходил целиком в память
+	data, err := io.ReadAll(io.LimitReader(download.Body, maxAvatarBytes))
 	if err != nil {
 		log.Error().Err(err).Msg("telegram avatar read failed")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось скачать фото профиля")
 		return
 	}
 
+	// Content-Type приходит извне и отдаётся нашим origin: любой не-image тип
+	// (например text/html) означал бы хранимую XSS на домене API
 	contentType := download.Header.Get("Content-Type")
-	if contentType == "" || contentType == "application/octet-stream" {
+	if !allowedAvatarTypes[contentType] {
 		contentType = "image/jpeg" // фото профиля telegram — всегда jpeg
 	}
 	entry := avatarCacheEntry{data: data, contentType: contentType, found: true, fetchedAt: s.now()}
@@ -176,6 +213,7 @@ func writeAvatar(w http.ResponseWriter, e avatarCacheEntry) {
 		return
 	}
 	w.Header().Set("Content-Type", e.contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Length", strconv.Itoa(len(e.data)))
 	w.WriteHeader(http.StatusOK)
 	if _, err := w.Write(e.data); err != nil {

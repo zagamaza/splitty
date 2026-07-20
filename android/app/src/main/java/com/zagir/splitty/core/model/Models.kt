@@ -74,10 +74,21 @@ data class Me(
     val notificationOn: Boolean = true,
 )
 
-/** Каналы уведомлений одной категории. */
+/**
+ * Каналы уведомлений одной категории.
+ *
+ * [EncodeDefault] обязателен на всех полях: PATCH /me/notifications трактует
+ * отсутствующее поле как «не менять». Без этого возврат тумблера к дефолтному
+ * значению (telegram обратно в true, push обратно в false) выбрасывался из тела,
+ * сервер сохранял старое значение, а UI показывал новое — настройка «немела».
+ */
 @Serializable
 data class ChannelPrefs(
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val telegram: Boolean = true,
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val push: Boolean = false,
 )
 
@@ -87,7 +98,11 @@ data class ChannelPrefs(
  */
 @Serializable
 data class NotifySettings(
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val operations: ChannelPrefs = ChannelPrefs(),
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val debts: ChannelPrefs = ChannelPrefs(),
 )
 

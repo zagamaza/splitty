@@ -14,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -152,6 +153,20 @@ class AudioRecorderController(
     private val pcm = CappedPcmBuffer(AUDIO_CAP_BYTES)
 
     private fun readLoop(rec: AudioRecord, sampleRate: Int) {
+        // Всё тело цикла под Throwable: это отдельный поток, и любое необработанное
+        // исключение здесь убивало процесс целиком, не отпустив микрофон. Самый
+        // реальный случай — SecurityException, когда RECORD_AUDIO отозвали после
+        // разрешения «только в этот раз», а экран об этом ещё не знает.
+        try {
+            readLoopInner(rec, sampleRate)
+        } catch (t: Throwable) {
+            Log.w("AudioRecorder", "read loop failed: ${t.message}")
+            running = false
+            mainHandler.post { if (isRecording) deviceLost = true }
+        }
+    }
+
+    private fun readLoopInner(rec: AudioRecord, sampleRate: Int) {
         // Кадр ~100 мс: достаточно частый уровень для «живой» волны, без перегрузки.
         val frame = ShortArray(max(sampleRate / 10, 1024))
         try {

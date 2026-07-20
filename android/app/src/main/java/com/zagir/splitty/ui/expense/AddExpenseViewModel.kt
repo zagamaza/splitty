@@ -207,6 +207,18 @@ internal fun AddExpenseForm.replacingItem(index: Int, item: OperationItem): AddE
 internal fun AddExpenseForm.deletingItem(index: Int): AddExpenseForm {
     if (index !in draftItems.indices) return this
     val items = draftItems.toMutableList().apply { removeAt(index) }
+    if (items.isEmpty()) {
+        // Сумму и деление надо привести к плоской форме так же, как это делает
+        // «Поровну на всех». Иначе после удаления всех позиций hasDraftItems
+        // становился false, effectiveSum откатывался к sumText с распознанным
+        // итогом чека, и удалённые позиции сохранялись как расход на всю сумму.
+        return copy(draftItems = items, changedItemIndices = emptySet())
+            .copy(
+                sumText = "",
+                recipientIds = members.map { it.id }.toSet(),
+                splitType = SplitType.EQUALLY,
+            )
+    }
     return copy(draftItems = items, changedItemIndices = emptySet()).syncingRecipientsFromItems()
 }
 

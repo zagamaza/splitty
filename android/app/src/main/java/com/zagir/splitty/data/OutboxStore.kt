@@ -243,7 +243,11 @@ class OutboxStore(
         // OutboxSyncer, дождавшись awaitLoaded, видел пустой список и ничего не
         // досылал при каждом восстановлении сети.
         val loaded = readFileLocked() ?: return
-        _entries.value = loaded
+        // Слияние, а не замена: при неудачном чтении add() кладёт запись только в
+        // память (isLoaded остаётся false). Простое присваивание списка с диска
+        // выбрасывало такой офлайн-расход навсегда — он пропадал из очереди и из UI.
+        val known = _entries.value.mapTo(HashSet()) { it.localId }
+        _entries.value = loaded.filterNot { it.localId in known } + _entries.value
         isLoaded = true
     }
 

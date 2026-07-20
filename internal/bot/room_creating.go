@@ -5,6 +5,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"html"
 	"strings"
 	"time"
 )
@@ -102,7 +103,7 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return api.TelegramMessage{}
 	}
 
-	tbMsg := tgbotapi.NewMessage(getChatID(u), I18n(u.User, "scrn_room_created", room.Name))
+	tbMsg := tgbotapi.NewMessage(getChatID(u), I18n(u.User, "scrn_room_created", html.EscapeString(room.Name)))
 	tbMsg.ParseMode = tgbotapi.ModeHTML
 
 	shareRoomBtn := []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonSwitch(I18n(u.User, "btn_share_room"), room.Name)}
