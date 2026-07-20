@@ -124,7 +124,7 @@ fun ReceiptCard(
                 RowDivider()
                 FooterLine("Подытог", subtotal, currency, total = false)
                 surcharges.forEach { (index, item) ->
-                    SurchargeRow(index, item, currency, onToggleSurchargeRule)
+                    SurchargeRow(index, item, currency, onToggleSurchargeRule, onEditItem)
                 }
             }
             TotalRule()
@@ -348,12 +348,20 @@ private fun SurchargeRow(
     item: OperationItem,
     currency: String,
     onToggle: ((Int) -> Unit)?,
+    onEditItem: ((Int) -> Unit)?,
 ) {
     val colors = Splitty.colors
+    // Тап открывает ItemSheet — без него сбор с нулевой ценой нельзя было ни
+    // отредактировать, ни удалить: derivedShares возвращал null, сохранение
+    // блокировалось «доли не сходятся», и выхода из этого состояния не было.
+    var rowModifier = Modifier
+        .fillMaxWidth()
+        .padding(vertical = 9.dp)
+    if (onEditItem != null) {
+        rowModifier = rowModifier.clickable { onEditItem(index) }
+    }
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 9.dp),
+        modifier = rowModifier,
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

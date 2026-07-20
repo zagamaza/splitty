@@ -33,8 +33,15 @@ class AvatarStore @Inject constructor(
     private val missing = mutableSetOf<Long>()
     private val inflight = mutableSetOf<Long>()
 
+    // Поколение кеша. clear() его увеличивает, и загрузка, стартовавшая до
+    // разлогина, свой результат уже не запишет: иначе ответ, пришедший через
+    // секунду после logout, возвращал в кеш аватар ПРЕДЫДУЩЕГО аккаунта —
+    // ровно то, что OfflineDataCleaner был должен стереть.
+    private var generation = 0
+
     /** Запросить аватар, если его ещё нет в кеше (fire-and-forget). */
     fun request(userId: Long) {
+        val started: Int
         synchronized(this) {
             if (_images.value.containsKey(userId) ||
                 userId in missing || userId in inflight
@@ -42,12 +49,14 @@ class AvatarStore @Inject constructor(
                 return
             }
             inflight += userId
+            started = generation
         }
         scope.launch {
             try {
                 val bytes = repository.userAvatar(userId)
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 synchronized(this@AvatarStore) {
+                    if (started != generation) return@synchronized
                     if (bitmap != null) {
                         _images.value = _images.value + (userId to bitmap.asImageBitmap())
                     } else {
@@ -56,7 +65,9 @@ class AvatarStore @Inject constructor(
                 }
             } catch (e: ApiException) {
                 if (e.status == 404) {
-                    synchronized(this@AvatarStore) { missing += userId }
+                    synchronized(this@AvatarStore) {
+                        if (started == generation) missing += userId
+                    }
                 }
                 // прочие ошибки (сеть) — не кешируем, попробуем ещё раз
             } finally {
@@ -68,8 +79,11 @@ class AvatarStore @Inject constructor(
     /** Полная очистка (logout). */
     fun clear() {
         synchronized(this) {
+            generation++
             _images.value = emptyMap()
             missing.clear()
+            // inflight не чистим: запущенные загрузки сами снимут свои id в
+            // finally, а их результат отсечёт проверка поколения.
         }
     }
 }

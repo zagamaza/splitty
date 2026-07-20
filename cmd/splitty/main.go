@@ -128,6 +128,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService)
 
+	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create login_code indexes")
+	}
+
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
 	if cfg.GeminiApiKey != "" {
 		aiUsageRepo := repository.NewAiUsageRepository(db)

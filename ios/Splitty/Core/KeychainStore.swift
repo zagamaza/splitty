@@ -16,14 +16,24 @@ enum KeychainStore {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key,
         ]
-        SecItemDelete(query as CFDictionary)
-        query[kSecValueData as String] = Data(value.utf8)
         // ThisDeviceOnly обязателен: по умолчанию (WhenUnlocked) элемент попадает
         // в зашифрованные бэкапы и iCloud Keychain и восстанавливается на ДРУГОМ
         // устройстве вместе с живой сессией. Android-клиент закрыл это же место
         // исключением session-хранилища из бэкапа.
-        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let attributes: [String: Any] = [
+            kSecValueData as String: Data(value.utf8),
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+        ]
+        // Сначала update, и только если элемента нет — add. Прежний вариант делал
+        // безусловный SecItemDelete перед SecItemAdd: если add падал (устройство
+        // ещё не разблокировано после перезагрузки — errSecInteractionNotAllowed),
+        // старый рабочий токен был уже стёрт, и пользователя разлогинивало.
+        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var insert = query
+            attributes.forEach { insert[$0.key] = $0.value }
+            status = SecItemAdd(insert as CFDictionary, nil)
+        }
         if status != errSecSuccess {
             print("KeychainStore.save failed for \(key): OSStatus \(status)")
             return false

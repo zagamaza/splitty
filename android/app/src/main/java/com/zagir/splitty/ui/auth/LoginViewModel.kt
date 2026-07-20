@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.auth
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.network.ApiException
@@ -51,6 +52,8 @@ data class LoginUiState(
  * Вход: POST /auth/code (код из Telegram) и POST /auth/dev (dev-режим);
  * поле «Сервер» персистится в SessionStore на каждое изменение.
  */
+private const val TAG = "LoginViewModel"
+
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val repository: SplittyRepository,
@@ -71,7 +74,10 @@ class LoginViewModel @Inject constructor(
     /** Изменение адреса сервера: сразу персистится (действует на следующие запросы). */
     fun onBaseUrlChange(value: String) {
         _state.update { it.copy(baseUrl = value) }
-        viewModelScope.launch { sessionStore.setBaseUrl(value) }
+        viewModelScope.launch {
+            runCatching { sessionStore.setBaseUrl(value) }
+                .onFailure { Log.e(TAG, "persist base url failed", it) }
+        }
     }
 
     /** Вход по коду из бота; 401 (invalid_code) — человеческое сообщение. */
@@ -90,6 +96,13 @@ class LoginViewModel @Inject constructor(
                     e.message
                 }
                 _state.update { it.copy(errorMessage = message) }
+            } catch (e: Exception) {
+                // signIn пишет в DataStore/Keystore мимо SplittyRepository.call —
+                // IOException не оборачивается в ApiException и раньше улетал из
+                // viewModelScope (обработчик стоит только на @ApplicationScope),
+                // роняя процесс прямо на экране входа.
+                Log.e(TAG, "login by code failed", e)
+                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
             }
@@ -118,6 +131,9 @@ class LoginViewModel @Inject constructor(
                 sessionStore.signIn(response.token, response.user)
             } catch (e: ApiException) {
                 _state.update { it.copy(errorMessage = e.message) }
+            } catch (e: Exception) {
+                Log.e(TAG, "dev login failed", e)
+                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
             }

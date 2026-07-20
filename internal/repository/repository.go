@@ -138,6 +138,25 @@ func NewLoginCodeRepository(col *mongo.Database) *MongoLoginCodeRepository {
 	return &MongoLoginCodeRepository{col: col.Collection("login_code")}
 }
 
+// EnsureIndexes создаёт индексы коллекции login_code. Идемпотентно; вызывать при старте.
+//   - уникальный по code: UseLoginCode искал код полным сканом коллекции, которая
+//     росла безвозвратно (каждый /login вставляет документ, никто не удаляет), —
+//     логин деградировал линейно от числа входов за всё время жизни инсталляции;
+//   - TTL по expires_at: протухшие коды удаляет сам mongo (expireAfterSeconds=0).
+func (lr MongoLoginCodeRepository) EnsureIndexes(ctx context.Context) error {
+	_, err := lr.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "code", Value: ascParameter}},
+			Options: options.Index().SetUnique(true).SetName("uniq_code"),
+		},
+		{
+			Keys:    bson.D{{Key: "expires_at", Value: ascParameter}},
+			Options: options.Index().SetExpireAfterSeconds(0).SetName("ttl_expires_at"),
+		},
+	})
+	return err
+}
+
 func (lr MongoLoginCodeRepository) SaveLoginCode(ctx context.Context, c *api.LoginCode) error {
 	res, err := lr.col.InsertOne(ctx, c)
 	if err != nil {

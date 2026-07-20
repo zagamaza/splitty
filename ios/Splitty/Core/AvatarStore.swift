@@ -12,21 +12,29 @@ final class AvatarStore {
     private var missing: Set<Int> = []
     private var inflight: Set<Int> = []
 
+    /// Поколение кеша. `removeAll()` его увеличивает, и загрузка, стартовавшая
+    /// до разлогина, свой результат уже не запишет: иначе ответ, пришедший через
+    /// секунду после logout, возвращал в кеш аватар ПРЕДЫДУЩЕГО аккаунта.
+    private var generation = 0
+
     /// Загружает аватар пользователя, если он ещё не в кеше.
     func load(_ userId: Int, api: APIClient) async {
         guard images[userId] == nil, !missing.contains(userId), !inflight.contains(userId) else {
             return
         }
+        let started = generation
         inflight.insert(userId)
         defer { inflight.remove(userId) }
         do {
             let data = try await api.userAvatar(id: userId)
+            guard started == generation else { return }
             if let image = UIImage(data: data) {
                 images[userId] = image
             } else {
                 missing.insert(userId)
             }
         } catch let error as APIError {
+            guard started == generation else { return }
             if case .server(let status, _, _) = error, status == 404 {
                 missing.insert(userId)
             }
@@ -38,6 +46,7 @@ final class AvatarStore {
 
     /// Полная очистка (logout).
     func removeAll() {
+        generation += 1
         images = [:]
         missing = []
     }

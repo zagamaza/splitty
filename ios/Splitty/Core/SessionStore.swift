@@ -82,9 +82,12 @@ final class SessionStore {
     /// Любой ответ 401 сбрасывает сессию (токен чистится из Keychain).
     var api: APIClient {
         let client = APIClient(baseURL: serverURL, token: token)
+        // Протухший токен — НЕ полный logout: очередь неотправленных офлайн-расходов
+        // должна пережить переавторизацию, иначе фоновый GET с просроченным JWT
+        // молча стирает то, что пользователь ввёл без сети.
         client.onUnauthorized = { [weak self] in
             Task { @MainActor in
-                self?.logout()
+                self?.expireSession()
             }
         }
         return client
@@ -138,11 +141,20 @@ final class SessionStore {
     /// Подтверждение при непустом outbox — на экране «Профиль».
     @MainActor
     func logout() {
-        token = nil
-        me = nil
+        expireSession()
         // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
         Task { [cache] in await cache.removeAll() }
         outbox.clear()
+    }
+
+    /// Истёкшая сессия (401 от сервера): сбрасывает токен и профиль, но
+    /// СОХРАНЯЕТ outbox и read-кеш — пользователь переавторизуется тем же
+    /// аккаунтом, и неотправленные расходы уйдут после входа.
+    /// Полную очистку делает только явный `logout()`.
+    @MainActor
+    func expireSession() {
+        token = nil
+        me = nil
         avatars.removeAll()
     }
 

@@ -478,8 +478,12 @@ data class AddExpenseForm(
     /** true — хотя бы в одной позиции есть нераспознанное имя (блокирует «Сохранить»). */
     val hasUnknownItems: Boolean get() = draftItems.any { it.hasUnknown }
 
-    /** true — есть обычная позиция без цены (price < 1): модель услышала блюдо, но не цену. */
-    val hasPricelessItems: Boolean get() = draftItems.any { !it.isSurcharge && it.price < 1 }
+    /**
+     * true — есть позиция без цены (price < 1): модель услышала блюдо/сбор, но не цену.
+     * Сборы учитываются наравне с позициями: нулевой сбор так же валит derivedShares,
+     * и без чипа «цена?» блокировка сохранения оставалась необъяснённой.
+     */
+    val hasPricelessItems: Boolean get() = draftItems.any { it.price < 1 }
 
     /** Первое нераспознанное имя — для подсказки «выберите, кто такой …». */
     val firstUnknownName: String? get() = draftItems.firstNotNullOfOrNull { it.unknown?.firstOrNull() }

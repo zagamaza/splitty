@@ -2,6 +2,7 @@
 
 package com.zagir.splitty.data
 
+import android.util.Log
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.InstantSerializer
 import com.zagir.splitty.core.model.OperationItem
@@ -23,6 +24,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+
+private const val TAG = "OutboxStore"
 
 // Outbox офлайн-операций (фиксированный дизайн v1, паритет с iOS):
 // созданные без сети расходы копятся в файле outbox.json и досылаются
@@ -283,19 +286,31 @@ class OutboxStore(
             toWrite = disk.filterNot { it.localId in known } + entries
         }
         val outEntries = toWrite
+        // Диск может отказать (нет места, права, съёмное хранилище). Раньше
+        // IOException летел из viewModelScope сохранения расхода — а обработчик
+        // корутинных ошибок стоит только на @ApplicationScope, так что процесс
+        // падал ровно в офлайн-сценарии, где сохранить иначе нельзя. Память
+        // обновляем всегда: запись останется в очереди и уйдёт при синке.
         withContext(Dispatchers.IO) {
-            file.parentFile?.mkdirs()
-            val tmp = File(file.parentFile, "${file.name}.tmp")
-            tmp.writeText(json.encodeToString(ListSerializer(OutboxEntry.serializer()), outEntries))
-            try {
-                Files.move(
-                    tmp.toPath(),
-                    file.toPath(),
-                    StandardCopyOption.ATOMIC_MOVE,
-                    StandardCopyOption.REPLACE_EXISTING,
-                )
-            } catch (_: Exception) {
-                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            runCatching {
+                file.parentFile?.mkdirs()
+                val tmp = File(file.parentFile, "${file.name}.tmp")
+                tmp.writeText(json.encodeToString(ListSerializer(OutboxEntry.serializer()), outEntries))
+                try {
+                    Files.move(
+                        tmp.toPath(),
+                        file.toPath(),
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING,
+                    )
+                } catch (_: Exception) {
+                    Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }.onFailure {
+                // Файл не перезаписан — didRead сбрасываем, чтобы следующая
+                // попытка снова слила очередь с диском, а не затёрла её.
+                didRead = false
+                Log.e(TAG, "outbox persist failed", it)
             }
         }
         _entries.value = outEntries

@@ -196,7 +196,11 @@ internal fun sampleSizeFor(width: Int, height: Int, maxDimension: Int): Int {
     var sample = 1
     var w = width
     var h = height
-    while (w / 2 >= maxDimension && h / 2 >= maxDimension) {
+    // ИЛИ, не И: чек — узкая длинная лента (напр. 1200×9000). При «и» условие
+    // рвалось на короткой стороне, subsample оставался 1 и в память улетал
+    // полноразмерный битмап (~43 МБ на ARGB_8888) — OOM на бюджетных телефонах.
+    // Уменьшать надо, пока в лимит не уложится ДЛИННАЯ сторона.
+    while (w / 2 >= maxDimension || h / 2 >= maxDimension) {
         w /= 2
         h /= 2
         sample *= 2

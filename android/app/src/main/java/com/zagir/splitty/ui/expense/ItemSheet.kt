@@ -94,8 +94,14 @@ internal fun itemSheetShares(
     byAmount: Boolean,
     weights: Map<Long, Int>,
     amounts: Map<Long, String>,
-): List<ItemShare> = members.filter { it.id in participating }.map { member ->
-    val id = member.id
+): List<ItemShare> = run {
+    // Порядок — как в members, но участники, которых нет в members (состав
+    // комнаты изменился с момента создания операции), НЕ выбрасываются: раньше
+    // фильтр по members молча стирал их долю и перераспределял деньги между
+    // остальными, а шит при этом рапортовал «сумма распределена полностью».
+    val ordered = members.map { it.id }.filter { it in participating }
+    ordered + participating.filterNot { it in ordered }
+}.map { id ->
     val fixed = fixedAmountOf(byAmount, amounts, id)
     if (fixed != null) {
         ItemShare(userId = id, weight = 1, amount = fixed)
