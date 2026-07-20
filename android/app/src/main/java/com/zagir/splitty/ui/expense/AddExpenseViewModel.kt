@@ -40,6 +40,7 @@ import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -303,12 +304,18 @@ internal fun AddExpenseForm.resettingItems(): AddExpenseForm {
 internal fun AddExpenseForm.collapsingToEqualSplit(): AddExpenseForm {
     if (!hasDraftItems) return this
     val snapshot = UndoSnapshot(draftItems, description, sumText, payerId)
+    // derivedShares() возвращает null ровно там, откуда сюда и приходят: доли не
+    // сходятся (переполнены фиксы, надбавка с нулевой ценой). Прежний fallback на
+    // sumText оставлял в поле сумму ПРОШЛОГО разбора и делил её поровну на всех —
+    // расход сохранялся с чужим итогом. Считаем итог по позициям напрямую
+    // (тот же фикс, что в iOS AddExpenseViewModel.collapseToEqualSplit).
     val total = draftItems.derivedShares()?.total
+        ?: draftItems.sumOf { it.price }
     return copy(
         undoSnapshot = snapshot,
         canUndoParse = true,
         changedItemIndices = emptySet(),
-        sumText = total?.toString() ?: sumText,
+        sumText = total.toString(),
         draftItems = emptyList(),
         recipientIds = members.map { it.id }.toSet(),
         splitType = SplitType.EQUALLY,
@@ -645,6 +652,9 @@ class AddExpenseViewModel @Inject constructor(
      */
     private var parseGeneration = 0
 
+    /** Активный запрос распознавания — чтобы [cancelParse] реально его рвал. */
+    private var parseJob: Job? = null
+
     /** Первичная настройка (идемпотентна — зовётся из LaunchedEffect экрана). */
     fun start(roomId: String?, operationId: String?, localId: String? = null) {
         if (isStarted) return
@@ -977,6 +987,10 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun cancelParse() {
         parseGeneration++
+        // Одного поколения мало: запрос жил дальше и продолжал заливать до 11 МБ
+        // все 90 секунд таймаута (и оплачивался на стороне модели). Рвём корутину.
+        parseJob?.cancel()
+        parseJob = null
         updateForm { it.copy(isParsing = false) }
     }
 
@@ -1006,7 +1020,10 @@ class AddExpenseViewModel @Inject constructor(
         val draft = form.currentParseDraft()
         val audioPath = savedStateHandle.get<String>(KEY_AUDIO_PATH)
         val imagePath = savedStateHandle.get<String>(KEY_RECEIPT_PATH)
-        viewModelScope.launch {
+        // Новый запрос обгоняет активный — старый не просто обесценивается
+        // поколением, а рвётся: иначе висел бы залив прошлого медиа.
+        parseJob?.cancel()
+        parseJob = viewModelScope.launch {
             try {
                 val audio = audioPath?.let { readBytes(it) }
                 val image = imagePath?.let { readBytes(it) }

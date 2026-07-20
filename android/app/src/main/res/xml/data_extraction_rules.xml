@@ -9,13 +9,16 @@
      требованию. Пути относительны filesDir. -->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="file" path="datastore/session.preferences_pb" />
+        <!-- Каталог целиком: DataStore пишет через session.preferences_pb.tmp,
+             и точечное исключение одного файла выпускало шифротекст токена
+             в бэкап во временном файле. -->
+        <exclude domain="file" path="datastore/" />
         <exclude domain="file" path="outbox.json" />
         <exclude domain="file" path="cache-api/" />
         <exclude domain="file" path="vosk-model-ru/" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="file" path="datastore/session.preferences_pb" />
+        <exclude domain="file" path="datastore/" />
         <exclude domain="file" path="outbox.json" />
         <exclude domain="file" path="cache-api/" />
         <exclude domain="file" path="vosk-model-ru/" />

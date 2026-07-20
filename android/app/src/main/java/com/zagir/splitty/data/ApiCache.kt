@@ -3,6 +3,7 @@ package com.zagir.splitty.data
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -22,6 +23,9 @@ class ApiCache(
     private val json: Json,
 ) {
 
+    /** Счётчик уникальных имён временных файлов (см. [write]). */
+    private val tmpCounter = AtomicLong(0)
+
     /** Ключи кешируемых GET-ответов (v1 офлайн-дизайна). */
     object Keys {
         const val FRIENDS = "friends"
@@ -40,18 +44,26 @@ class ApiCache(
             runCatching {
                 dir.mkdirs()
                 val target = fileFor(key)
-                val tmp = File(dir, "${target.name}.tmp")
-                tmp.writeText(json.encodeToString(serializer, value))
+                // Имя tmp уникально на запись: общий "<key>.tmp" два писателя
+                // одного ключа (первая загрузка + pull-to-refresh) затирали друг
+                // другу на полуслове — в кеш уезжал обрезанный JSON.
+                val tmp = File(dir, "${target.name}.${tmpCounter.incrementAndGet()}.tmp")
                 try {
-                    Files.move(
-                        tmp.toPath(),
-                        target.toPath(),
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING,
-                    )
-                } catch (_: Exception) {
-                    // ФС без атомарного move — обычная замена (тоже одним файлом).
-                    Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    tmp.writeText(json.encodeToString(serializer, value))
+                    try {
+                        Files.move(
+                            tmp.toPath(),
+                            target.toPath(),
+                            StandardCopyOption.ATOMIC_MOVE,
+                            StandardCopyOption.REPLACE_EXISTING,
+                        )
+                    } catch (_: Exception) {
+                        // ФС без атомарного move — обычная замена (тоже одним файлом).
+                        Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    }
+                } finally {
+                    // Имена уникальны — недоехавший tmp иначе копился бы навсегда.
+                    tmp.delete()
                 }
             }
         }

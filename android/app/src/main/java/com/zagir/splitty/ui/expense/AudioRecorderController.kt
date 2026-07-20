@@ -37,7 +37,9 @@ import kotlin.math.min
 import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /** Целевая частота дискретизации записи — как в iOS (audio/wav 16 кГц PCM16 mono). */
@@ -132,11 +134,31 @@ class AudioRecorderController(
      * Поток чтения не завершился за [JOIN_TIMEOUT_MS] — освобождает [AudioRecord]
      * он сам, на своём выходе. Звать release() «поверх» живого read() нельзя:
      * нативный слой уходит в use-after-free.
+     *
+     * Флаг принадлежит КОНКРЕТНОЙ сессии записи, а не контроллеру: общий флаг
+     * вместе с общим полем [record] давал отпускание чужого, уже нового
+     * микрофона, если отставший поток доходил до finally после нового start().
      */
-    @Volatile private var releaseOnReaderExit = false
+    private class ReaderHandoff {
+        @Volatile var releaseByReader = false
+    }
+
+    @Volatile private var handoff: ReaderHandoff? = null
 
     /** Запись WAV на диск — вне главного потока (до 2.8 МБ, это ANR на стопе). */
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Активная запись WAV. [lastAudioPath] известен сразу (путь детерминированный),
+     * но байтов по нему ещё нет — читатель, стартовавший сразу после [stop],
+     * видел пустоту и показывал «Запись не сохранилась» на исправной диктовке
+     * (старый файл к этому моменту уже удалён). Ждём через [awaitAudioPersisted].
+     */
+    @Volatile private var writeJob: Job? = null
+
+    override suspend fun awaitAudioPersisted() {
+        writeJob?.join()
+    }
 
     /**
      * Начинает запись. Подъём [AudioRecord] и цикл чтения — в фоновом потоке:
@@ -146,33 +168,57 @@ class AudioRecorderController(
      */
     override fun start() {
         if (isRecording) return
+        // Предыдущая сессия не отпустила поток чтения: её микрофон ещё открыт, и
+        // её finally вот-вот дёрнет release(). Открывать вторую сессию поверх —
+        // это чужой release() по нашему AudioRecord и дозапись старого PCM
+        // в новый буфер. Ждём столько же, сколько ждал стоп.
+        readThread?.takeIf { it.isAlive }?.let { stale ->
+            stale.join(JOIN_TIMEOUT_MS)
+            if (stale.isAlive) {
+                throw AudioRecorderException("Микрофон ещё занят прошлой записью. Попробуйте ещё раз")
+            }
+        }
+        readThread = null
         audioData = null
         deviceLost = false
         val (rec, sampleRate) = openRecord()
             ?: throw AudioRecorderException("Не удалось начать запись. Проверьте доступ к микрофону")
         record = rec
+        // Свежий буфер на сессию: общий копил хвост прошлой записи в новый WAV.
+        val sessionPcm = CappedPcmBuffer(AUDIO_CAP_BYTES)
+        pcm = sessionPcm
+        val sessionHandoff = ReaderHandoff()
+        handoff = sessionHandoff
         running = true
         isRecording = true
         startedAtElapsedMs = SystemClock.elapsedRealtime()
         level = 0f
         transcriber.start()
 
-        val thread = Thread({ readLoop(rec, sampleRate) }, "splitty-audio")
+        val thread = Thread(
+            { readLoop(rec, sampleRate, sessionPcm, sessionHandoff) },
+            "splitty-audio",
+        )
         thread.priority = Thread.MAX_PRIORITY
         readThread = thread
         thread.start()
     }
 
     /** Цикл чтения PCM: ресемпл к 16 кГц → кап → уровень. Копит [pcm] до стопа. */
-    private val pcm = CappedPcmBuffer(AUDIO_CAP_BYTES)
+    @Volatile private var pcm = CappedPcmBuffer(AUDIO_CAP_BYTES)
 
-    private fun readLoop(rec: AudioRecord, sampleRate: Int) {
+    private fun readLoop(
+        rec: AudioRecord,
+        sampleRate: Int,
+        pcm: CappedPcmBuffer,
+        handoff: ReaderHandoff,
+    ) {
         // Всё тело цикла под Throwable: это отдельный поток, и любое необработанное
         // исключение здесь убивало процесс целиком, не отпустив микрофон. Самый
         // реальный случай — SecurityException, когда RECORD_AUDIO отозвали после
         // разрешения «только в этот раз», а экран об этом ещё не знает.
         try {
-            readLoopInner(rec, sampleRate)
+            readLoopInner(rec, sampleRate, pcm)
         } catch (t: Throwable) {
             Log.w("AudioRecorder", "read loop failed: ${t.message}")
             running = false
@@ -180,14 +226,16 @@ class AudioRecorderController(
         } finally {
             // stop()/cancel() не дождались нас в join — освободить микрофон должны
             // мы: там release() пришёлся бы на живой read() внутри драйвера.
-            if (releaseOnReaderExit) {
-                releaseOnReaderExit = false
-                releaseRecord()
+            // Освобождаем СВОЙ rec, а не поле record: оно могло уже указывать
+            // на микрофон следующей сессии.
+            if (handoff.releaseByReader) {
+                handoff.releaseByReader = false
+                releaseRecord(rec)
             }
         }
     }
 
-    private fun readLoopInner(rec: AudioRecord, sampleRate: Int) {
+    private fun readLoopInner(rec: AudioRecord, sampleRate: Int, pcm: CappedPcmBuffer) {
         // Кадр ~100 мс: достаточно частый уровень для «живой» волны, без перегрузки.
         val frame = ShortArray(max(sampleRate / 10, 1024))
         try {
@@ -253,7 +301,7 @@ class AudioRecorderController(
         val target = audioCacheFile(context)
         runCatching { target.delete() }
         lastAudioPath = target.absolutePath
-        ioScope.launch {
+        writeJob = ioScope.launch {
             runCatching { writeAudioAtomically(target, wav) }
                 .onFailure { Log.w("AudioRecorder", "не удалось сохранить WAV: ${it.message}") }
         }
@@ -267,13 +315,19 @@ class AudioRecorderController(
      */
     private fun joinReaderAndRelease() {
         val thread = readThread
+        val rec = record
         thread?.join(JOIN_TIMEOUT_MS)
-        readThread = null
         if (thread != null && thread.isAlive) {
-            releaseOnReaderExit = true
+            // Поток ещё в read(): отпустит микрофон сам. readThread НЕ обнуляем —
+            // следующий start() обязан его увидеть и не открыть вторую сессию
+            // поверх живой.
+            handoff?.releaseByReader = true
+            record = null
         } else {
-            releaseRecord()
+            readThread = null
+            if (rec != null) releaseRecord(rec)
         }
+        handoff = null
     }
 
     /**
@@ -289,6 +343,15 @@ class AudioRecorderController(
         isRecording = false
         startedAtElapsedMs = null
         level = 0f
+    }
+
+    /**
+     * Уход экрана: останавливает запись и гасит [ioScope]. Без отмены скоупа
+     * незавершённая запись WAV переживала контроллер.
+     */
+    fun dispose() {
+        cancel()
+        ioScope.cancel()
     }
 
     /** Сбрасывает записанное (после отправки/отмены формы). */
@@ -346,16 +409,19 @@ class AudioRecorderController(
     }
 
     @Synchronized
-    private fun releaseRecord() {
-        record?.let {
-            try {
-                if (it.recordingState == AudioRecord.RECORDSTATE_RECORDING) it.stop()
-            } catch (_: IllegalStateException) {
-                // уже остановлен — игнорируем
-            }
-            it.release()
+    /**
+     * Освобождает КОНКРЕТНЫЙ [AudioRecord]. Поле [record] обнуляется, только если
+     * оно всё ещё указывает на него: отставший поток чтения не должен занулять
+     * ссылку на микрофон уже начавшейся следующей записи.
+     */
+    private fun releaseRecord(rec: AudioRecord) {
+        try {
+            if (rec.recordingState == AudioRecord.RECORDSTATE_RECORDING) rec.stop()
+        } catch (_: IllegalStateException) {
+            // уже остановлен — игнорируем
         }
-        record = null
+        rec.release()
+        if (record === rec) record = null
     }
 
     private companion object {
@@ -376,7 +442,7 @@ fun rememberAudioRecorder(): AudioRecorderController {
         AudioRecorderController(context.applicationContext, transcriber)
     }
     DisposableEffect(Unit) {
-        onDispose { controller.cancel() }
+        onDispose { controller.dispose() }
     }
     return controller
 }

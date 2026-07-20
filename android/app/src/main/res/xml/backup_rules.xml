@@ -5,7 +5,9 @@
      выбивает квоту автобэкапа (~25 МБ), и тогда молча перестаёт бэкапиться ВСЁ
      остальное. Скачивается заново по требованию. -->
 <full-backup-content>
-    <exclude domain="file" path="datastore/session.preferences_pb" />
+    <!-- Каталог целиком: DataStore пишет через .tmp, и точечное исключение
+         одного файла выпускало шифротекст токена в бэкап во временном файле. -->
+    <exclude domain="file" path="datastore/" />
     <exclude domain="file" path="outbox.json" />
     <exclude domain="file" path="cache-api/" />
     <exclude domain="file" path="vosk-model-ru/" />

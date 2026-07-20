@@ -120,6 +120,13 @@ interface VoiceRecorder {
     fun cancel()
 
     fun reset()
+
+    /**
+     * Ждёт, пока WAV последней записи реально ляжет по [lastAudioPath]. [stop]
+     * отдаёт путь сразу, а пишет файл асинхронно — читатель без этого ожидания
+     * успевал раньше записи и объявлял исправную диктовку потерянной.
+     */
+    suspend fun awaitAudioPersisted() {}
 }
 
 @Stable

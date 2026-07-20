@@ -50,8 +50,11 @@ class SecurityConfigTest {
         // Список расширяется вместе с каждым новым потребителем filesDir: квота
         // автобэкапа ~25 МБ, и один забытый каталог (модель Vosk — 40-50 МБ)
         // молча отключает бэкап ВСЕГО остального.
+        // datastore — КАТАЛОГОМ, а не файлом session.preferences_pb: DataStore
+        // пишет через .tmp, и точечное исключение выпускало шифротекст токена
+        // в бэкап во временном файле.
         val excludedPaths = listOf(
-            "datastore/session.preferences_pb",
+            "datastore/",
             "outbox.json",
             "cache-api/",
             "vosk-model-ru/",

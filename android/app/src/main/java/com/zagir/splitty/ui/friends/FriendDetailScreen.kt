@@ -47,6 +47,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.FriendRoomBalance
 import com.zagir.splitty.ui.components.FailedState
+import com.zagir.splitty.ui.components.Glossary
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.MoneyTotalsText
@@ -338,11 +339,9 @@ private fun RoomRow(room: FriendRoomBalance, onClick: () -> Unit) {
         )
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = if (room.balance > 0) {
-                    stringResource(R.string.friend_room_owed_you)
-                } else {
-                    stringResource(R.string.friends_you_owe_short)
-                },
+                // Через Glossary: тернарник «>0 ? вам : вы» на нулевом балансе
+                // показывал «вы должны» в полностью рассчитанной группе.
+                text = Glossary.balanceCaption(room.balance),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Splitty.colors.inkSecondary,

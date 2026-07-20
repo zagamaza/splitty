@@ -7,8 +7,10 @@ import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.ui.components.humanErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +43,18 @@ class ProfileViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, SessionStore.THEME_SYSTEM)
 
     fun onThemeSelected(theme: String) {
-        viewModelScope.launch { sessionStore.setTheme(theme) }
+        viewModelScope.launch {
+            // setTheme пишет в DataStore и бросает IOException, а не ApiException:
+            // необработанным он убивал процесс из viewModelScope (тот же фикс уже
+            // сделан в LoginViewModel и NotificationSettingsViewModel).
+            try {
+                sessionStore.setTheme(theme)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _errorMessage.value = humanErrorText(e)
+            }
+        }
     }
 
     val baseUrl: StateFlow<String> = sessionStore.state
@@ -95,9 +108,13 @@ class ProfileViewModel @Inject constructor(
                 if (displayName != null) {
                     sessionStore.noteDataChanged()
                 }
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
                 // Экран откатит локальные значения к профилю (см. ProfileScreen).
-                _errorMessage.value = e.message
+                // Ловим Throwable, а не только ApiException: updateMe пишет
+                // в DataStore и роняет процесс своим IOException.
+                _errorMessage.value = humanErrorText(e)
             } finally {
                 _isSaving.value = false
             }
@@ -106,7 +123,15 @@ class ProfileViewModel @Inject constructor(
 
     /** Выход: чистит токен и профиль — AppRoot сам покажет LoginScreen. */
     fun logout() {
-        viewModelScope.launch { sessionStore.logout() }
+        viewModelScope.launch {
+            try {
+                sessionStore.logout()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _errorMessage.value = humanErrorText(e)
+            }
+        }
     }
 
     fun dismissError() {

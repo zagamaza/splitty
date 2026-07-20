@@ -64,8 +64,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -180,6 +182,8 @@ fun AddExpenseScreen(
     val voice = remember(recorder, haptics, talkBack) {
         VoiceController(recorder = recorder, haptics = haptics, talkBack = talkBack)
     }
+    // Скоуп для дожидания записи WAV на диск перед передачей пути во ViewModel.
+    val voiceScope = rememberCoroutineScope()
     // Ручной режим: композер уступает место обычным полям (порт iOS manualMode).
     var manualMode by remember { mutableStateOf(false) }
     // Фактический фрейм кнопки-микрофона: оверлей рисует свой микрофон РОВНО там
@@ -198,14 +202,20 @@ fun AddExpenseScreen(
     }
 
     voice.onFinish = { path ->
-        if (showComposer) {
-            // Первая надиктовка на пустой форме: сначала спрашиваем про фото
-            // чека — оно уйдёт вместе с голосом одним запросом (точнее цены).
-            // attachAudio заодно поднимает экран «Записано» (pendingAudioPath).
-            viewModel.attachAudio(path)
-        } else {
-            // Правка готового черновика — уходит сразу, без лишнего шага.
-            viewModel.parseVoice(path)
+        // stop() отдаёт путь сразу, а WAV дописывает на IO. Без ожидания
+        // читатель успевал раньше файла (старый уже удалён) и объявлял
+        // исправную диктовку потерянной.
+        voiceScope.launch {
+            recorder.awaitAudioPersisted()
+            if (showComposer) {
+                // Первая надиктовка на пустой форме: сначала спрашиваем про фото
+                // чека — оно уйдёт вместе с голосом одним запросом (точнее цены).
+                // attachAudio заодно поднимает экран «Записано» (pendingAudioPath).
+                viewModel.attachAudio(path)
+            } else {
+                // Правка готового черновика — уходит сразу, без лишнего шага.
+                viewModel.parseVoice(path)
+            }
         }
     }
     voice.onShortTap = { viewModel.showToast(context.getString(R.string.rec_short_tap_hint)) }
@@ -1064,8 +1074,16 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                 ),
                 singleLine = true,
                 cursorBrush = SolidColor(colors.accent),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                keyboardActions = KeyboardActions(onNext = { sumFocusRequester.requestFocus() }),
+                // Поле суммы с sumFocusRequester существует ТОЛЬКО без позиций
+                // чека (см. ниже if (form.hasDraftItems)). С распознанным чеком
+                // «Далее» звало requestFocus по неприкреплённому реквестеру —
+                // IllegalStateException прямо на основном сценарии.
+                keyboardOptions = KeyboardOptions(
+                    imeAction = if (form.hasDraftItems) ImeAction.Done else ImeAction.Next,
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { if (!form.hasDraftItems) sumFocusRequester.requestFocus() },
+                ),
                 decorationBox = { innerTextField ->
                     Box {
                         if (form.description.isEmpty()) {

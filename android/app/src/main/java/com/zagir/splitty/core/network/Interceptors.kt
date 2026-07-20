@@ -51,7 +51,11 @@ class AuthInterceptor @Inject constructor(
                 .build()
         }
         val response = chain.proceed(request)
-        if (response.code == 401 && request.header("Authorization") != null) {
+        // Разлогиниваем, только если 401 пришёл на АКТУАЛЬНЫЙ токен. Проверка
+        // «был ли заголовок» ловила и запрос, улетевший до перелогина: его
+        // запоздалый 401 сносил уже новую сессию — вместе с ключом Keystore
+        // и неотправленной офлайн-очередью (её logout чистит безвозвратно).
+        if (response.code == 401 && token != null && session.currentToken() == token) {
             session.notifyUnauthorized()
         }
         return response
