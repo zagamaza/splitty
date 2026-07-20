@@ -265,13 +265,25 @@ func toOperationDto(o *api.Operation) operationDto {
 		for _, s := range it.Shares {
 			shares = append(shares, itemShareDto{UserId: s.UserId, Weight: s.Weight, Amount: s.Amount})
 		}
+		// Легаси-документы лежат в базе с пустым kind. Отдавать "" наружу
+		// нельзя: клиент честно вернёт его в PUT, а валидация kind ответит
+		// 400 «неизвестный тип позиции» — операция становится неправимой.
+		// Нормализуем к каноническому виду на чтении.
+		kind := it.Kind
+		if kind == "" {
+			kind = api.ItemKindItem
+		}
+		split := it.Split
+		if kind == api.ItemKindSurcharge && split == "" {
+			split = api.SplitProportional
+		}
 		dto.Items = append(dto.Items, operationItemDto{
 			Name:    it.Name,
 			Price:   it.Price,
 			Qty:     it.Qty,
 			Shares:  shares,
-			Kind:    string(it.Kind),
-			Split:   string(it.Split),
+			Kind:    string(kind),
+			Split:   string(split),
 			Percent: it.Percent,
 		})
 	}

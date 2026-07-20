@@ -5,11 +5,20 @@ import Observation
 /// базовый URL сервера (UserDefaults).
 @Observable
 final class SessionStore {
-    /// Дефолтный сервер — прод, в том числе на симуляторе (меняется в поле
-    /// «Сервер» на экране входа). UI-тестам нужен локальный бэкенд — они
-    /// передают его через launch environment `SPLITTY_BASE_URL`; переменная
-    /// имеет приоритет над UserDefaults, чтобы прогоны были детерминированы.
+    /// Дефолтный сервер (меняется в поле «Сервер» на экране входа). UI-тестам
+    /// нужен локальный бэкенд — они передают его через launch environment
+    /// `SPLITTY_BASE_URL`; переменная имеет приоритет над UserDefaults,
+    /// чтобы прогоны были детерминированы.
+    ///
+    /// В release — только https: каждый запрос несёт `Authorization: Bearer`
+    /// с 90-дневным JWT, по plaintext это перехват сессии в любой публичной
+    /// сети. Android закрыл это же место (`SessionStore.DEFAULT_BASE_URL`
+    /// + network_security_config), iOS повторяет инвариант.
+    #if DEBUG
     static let defaultBaseURL = "http://138.124.18.189:18002"
+    #else
+    static let defaultBaseURL = "https://api.splitty.app"
+    #endif
 
     private static let baseURLKey = "splitty.baseURL"
     private static let tokenKey = "splitty.apiToken"
@@ -44,12 +53,21 @@ final class SessionStore {
     private(set) var token: String? {
         didSet {
             if let token {
-                KeychainStore.save(token, key: Self.tokenKey)
+                // Результат записи нельзя ронять: при отказе Keychain
+                // (например errSecInteractionNotAllowed) приложение выглядит
+                // залогиненным до перезапуска, а после — молча выкидывает на
+                // экран входа. Поднимаем флаг, чтобы UI мог предупредить.
+                tokenPersisted = KeychainStore.save(token, key: Self.tokenKey)
             } else {
                 KeychainStore.delete(key: Self.tokenKey)
+                tokenPersisted = true
             }
         }
     }
+
+    /// false — токен живёт только в памяти: Keychain отказал в записи и сессия
+    /// не переживёт перезапуск приложения.
+    private(set) var tokenPersisted = true
 
     var isAuthenticated: Bool { token != nil }
 
@@ -86,16 +104,24 @@ final class SessionStore {
     /// URL сервера из настроек. nil — строка невалидна (пустая, с опечаткой,
     /// без http/https или хоста): дефолтом её НЕ подменяем — пользователь
     /// получит ошибку «Некорректный адрес сервера», а не запросы не туда.
+    ///
+    /// В release схема http отвергается: иначе сохранённый в UserDefaults
+    /// (или подставленный через SPLITTY_BASE_URL) plaintext-адрес обошёл бы
+    /// https-дефолт и снова слал бы Bearer-токен открытым текстом.
     var serverURL: URL? {
         let trimmed = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let url = URL(string: trimmed),
               let scheme = url.scheme?.lowercased(),
-              scheme == "http" || scheme == "https",
               url.host() != nil
         else {
             return nil
         }
+        #if DEBUG
+        guard scheme == "http" || scheme == "https" else { return nil }
+        #else
+        guard scheme == "https" else { return nil }
+        #endif
         return url
     }
 

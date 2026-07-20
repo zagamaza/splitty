@@ -18,8 +18,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Максимум цифр в поле суммы платежа. */
-private const val MAX_SUM_DIGITS = 9
+/**
+ * Максимум цифр в поле суммы платежа. 10 = разрядность Int.MAX_VALUE: при 9
+ * долг в валюте без копеек (IDR/UZS/KZT легко дают ≥ 1 000 000 000) физически
+ * нельзя было ни ввести, ни погасить целиком.
+ */
+private const val MAX_SUM_DIGITS = 10
 
 private fun digitsOnly(raw: String): String =
     raw.filter { it.isDigit() }.take(MAX_SUM_DIGITS)
@@ -130,7 +134,10 @@ class SettleUpViewModel @Inject constructor(
                         meId = sessionStore.state.value?.me?.id,
                         debts = debts,
                         selectedDebt = selected,
-                        sumText = selected?.sum?.toString().orEmpty(),
+                        // Через digitsOnly, как и пользовательский ввод: иначе
+                        // поле сеялось строкой, которую onSumChange потом молча
+                        // укорачивал при первом же касании.
+                        sumText = selected?.sum?.let { sum -> digitsOnly(sum.toString()) }.orEmpty(),
                     )
                 )
             } catch (e: CancellationException) {
@@ -185,13 +192,19 @@ class SettleUpViewModel @Inject constructor(
                         .getOrNull()
                     updateForm { current ->
                         val debts = fresh ?: current.debts
-                        val single = fresh?.singleOrNull()
+                        // Выбор считаем по ТОМУ ЖЕ списку, что показываем: при
+                        // неудачном перечитывании (fresh == null) список остаётся
+                        // старым, и сбрасывать выбор с введённой суммой нельзя —
+                        // иначе экран откатывался на шаг 1 поверх устаревших
+                        // данных, а при единственном долге ещё и без кнопки «к
+                        // списку» (showsBackToList = debts.size > 1).
+                        val single = if (fresh != null) fresh.singleOrNull() else current.selectedDebt
                         current.copy(
                             isSaving = false,
                             alert = SettleUpAlert.DebtSettled,
                             debts = debts,
                             selectedDebt = single,
-                            sumText = single?.sum?.toString().orEmpty(),
+                            sumText = single?.sum?.let { sum -> digitsOnly(sum.toString()) }.orEmpty(),
                         )
                     }
                 } else {

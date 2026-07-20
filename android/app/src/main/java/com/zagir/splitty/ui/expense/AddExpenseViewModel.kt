@@ -991,7 +991,12 @@ class AddExpenseViewModel @Inject constructor(
         // все 90 секунд таймаута (и оплачивался на стороне модели). Рвём корутину.
         parseJob?.cancel()
         parseJob = null
-        updateForm { it.copy(isParsing = false) }
+        // Пути к медиа тоже сбрасываем: иначе отменённая диктовка/фото висели
+        // в savedStateHandle и молча уезжали со СЛЕДУЮЩИМ запросом — ровно та
+        // «дважды применённая правка», от которой защищается parseGeneration.
+        savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+        savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
+        updateForm { it.copy(isParsing = false, parseRetryMessage = null) }
     }
 
     /** Сбросить баннер ошибки распознавания (пользователь его закрыл). */
@@ -1078,6 +1083,10 @@ class AddExpenseViewModel @Inject constructor(
     fun save() {
         val form = currentForm() ?: return
         if (form.isSaving) return
+        // Пока идёт распознавание, форма ещё не наполнена ответом парсера:
+        // сохранение записало бы пустой/старый расход. Дублирует enabled в UI
+        // на случай других вызывающих (нижняя панель не перекрыта оверлеем).
+        if (form.isParsing) return
         // Причина блокировки объясняется тостом во вью — здесь тихий выход.
         if (form.saveBlockedReason != null) return
         val roomId = form.selectedRoomId

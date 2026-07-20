@@ -392,7 +392,12 @@ fun AddExpenseScreen(
                                         else -> viewModel.save()
                                     }
                                 },
-                                enabled = !form.isSaving &&
+                                // !isParsing обязателен: ParsingOverlay лежит
+                                // внутри контента Scaffold и НЕ перекрывает
+                                // нижнюю панель — без этого «Сохранить» во время
+                                // распознавания писал операцию по пустой форме,
+                                // а ответ парсера прилетал на закрывающийся экран.
+                                enabled = !form.isSaving && !form.isParsing &&
                                     canSaveExpenseOffline(form.isEditingSynced, isOnline),
                                 modifier = Modifier.weight(1f),
                             )
@@ -516,17 +521,21 @@ fun AddExpenseScreen(
             onDismissRequest = { confirmCancelLocked = false },
             title = { Text(stringResource(R.string.rec_locked_back_title)) },
             text = { Text(stringResource(R.string.rec_locked_back_message)) },
+            // Подписи были инвертированы: на вопрос «Отменить запись?»
+            // кнопка «Ок» продолжала запись, а «Отмена» уничтожала диктовку.
+            // Теперь действие названо действием: «Отбросить» рвёт запись,
+            // «Продолжить» возвращает к ней.
             confirmButton = {
                 TextButton(onClick = {
                     confirmCancelLocked = false
                     voice.cancelLocked()
                 }) {
-                    Text(stringResource(R.string.common_cancel), color = Splitty.colors.negative)
+                    Text(stringResource(R.string.rec_locked_back_discard), color = Splitty.colors.negative)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmCancelLocked = false }) {
-                    Text(stringResource(R.string.common_ok))
+                    Text(stringResource(R.string.rec_locked_back_continue))
                 }
             },
         )
@@ -661,6 +670,16 @@ private fun ExpenseFormContent(
             // Баннер результата голосовой/фото-правки с «Отменить»; либо плашка
             // «Распознано голосом» для плоского AI-результата (без позиций).
             if (form.canUndoParse) {
+                // Автоскрытие через 6 с — порт iOS (.task(id:) в AddExpenseView).
+                // Без него баннер «Правка применена» висел вечно: dismissUndo не
+                // вызывался ниоткуда, RecognizedBanner («+ фото чека») становился
+                // недостижим, а «Отменить» много позже откатывал форму к давно
+                // неактуальному снимку. Ключ по changedItemIndices перезапускает
+                // отсчёт на каждой новой правке.
+                LaunchedEffect(form.changedItemIndices) {
+                    delay(6_000)
+                    viewModel.dismissUndo()
+                }
                 CorrectionBanner(hasItems = form.hasDraftItems, onUndo = viewModel::undoParse)
             } else if (form.didRecognize && !form.hasDraftItems) {
                 RecognizedBanner(onAddPhoto = onTakePhoto)

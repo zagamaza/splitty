@@ -42,6 +42,15 @@ targets:
           # поэтому для dev-сборки разрешаем произвольные HTTP-загрузки.
           # ВАЖНО: только этот ключ — при наличии более специфичных ключей
           # (NSAllowsLocalNetworking и т.п.) iOS игнорирует NSAllowsArbitraryLoads.
+          #
+          # Этот ключ НЕ является защитой release-сборки и не должен ею считаться:
+          # каждый запрос несёт Authorization: Bearer с 90-дневным JWT, и по
+          # plaintext это перехват сессии. Границу держит код —
+          # SessionStore.defaultBaseURL в release равен https://api.splitty.app,
+          # а serverURL отвергает схему http (см. #if DEBUG там же), так что до
+          # незашифрованного запроса дело не доходит. Android держит тот же
+          # инвариант через network_security_config + SecurityConfigTest.
+          # TODO: когда dev-бэкенд переедет на домен с TLS — снять ключ совсем.
           NSAllowsArbitraryLoads: true
   SplittyTests:
     type: bundle.unit-test

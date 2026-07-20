@@ -240,8 +240,10 @@ class GroupDetailViewModel @Inject constructor(
                     sessionStore.updateMe(repository.me().value)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: ApiException) {
+                } catch (_: Throwable) {
                     // Не критично: экран покажет нейтральное состояние с повтором.
+                    // Throwable, а не ApiException: updateMe пишет в DataStore и
+                    // бросает IOException — необработанным он убивал процесс.
                 }
             }
             val detail = repository.room(roomId).value

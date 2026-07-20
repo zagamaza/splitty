@@ -80,8 +80,13 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionStore.updateMe(repository.me().value)
-            } catch (_: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
                 // Кэш профиля уже показан — сетевые проблемы не критичны.
+                // Ловим Throwable, а не ApiException: updateMe пишет в DataStore
+                // и бросает IOException, который из viewModelScope убивал процесс
+                // (тот же фикс, что в onThemeSelected выше).
             }
         }
     }

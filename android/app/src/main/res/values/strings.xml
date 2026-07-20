@@ -383,6 +383,8 @@
     <string name="rec_review_cancel">Отменить запись</string>
     <string name="rec_locked_back_title">Отменить запись?</string>
     <string name="rec_locked_back_message">Запись будет отброшена.</string>
+    <string name="rec_locked_back_discard">Отбросить</string>
+    <string name="rec_locked_back_continue">Продолжить запись</string>
     <string name="expense_camera_permission_denied">Нужен доступ к камере — разрешите его в настройках или выберите фото из галереи</string>
     <string name="expense_camera_unavailable">На устройстве нет камеры — выберите фото чека из галереи</string>
     <string name="expense_mic_permission_title">Нужен доступ к микрофону</string>

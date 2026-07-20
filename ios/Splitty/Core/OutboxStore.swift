@@ -188,6 +188,21 @@ final class OutboxStore {
         persist()
     }
 
+    /// Значит ли 4xx, что запись больше никогда не пройдёт и её надо пометить
+    /// failed (пользователь исправит руками).
+    ///
+    /// 401/403 — НЕ про данные, а про протухший токен: пометить ими всю очередь
+    /// значило бы обнулить офлайн-ввод при каждой переавторизации, ровно то,
+    /// что `expireSession()` специально пытается сохранить. 408/429 —
+    /// временные, повторим позже. Android держит тот же инвариант
+    /// (`OutboxSyncer`: 401 → break).
+    private func isPermanentReject(_ status: Int) -> Bool {
+        switch status {
+        case 401, 403, 408, 429: return false
+        default: return (400..<500).contains(status)
+        }
+    }
+
     /// Оставляет в очереди только записи вошедшего пользователя (вызывается
     /// при входе): очередь пользователя A не должна уйти на сервер под токеном
     /// пользователя B. Записи без владельца (созданы прошлой версией
@@ -242,7 +257,7 @@ final class OutboxStore {
                 remove(localId: entry.localId)
                 syncedAny = true
             } catch let error as APIError {
-                if case .server(let status, _, _) = error, (400..<500).contains(status) {
+                if case .server(let status, _, _) = error, isPermanentReject(status) {
                     // Сервер отверг операцию — правка данных не поможет сама собой:
                     // помечаем failed, пользователь исправит/удалит. Идём к следующей.
                     markFailed(localId: entry.localId, message: error.localizedDescription)

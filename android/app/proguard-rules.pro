@@ -37,8 +37,10 @@
 # --- Retrofit / OkHttp -----------------------------------------------------
 # Интерфейсы API — динамические прокси: и сам интерфейс, и его дженерик-
 # сигнатуры (тип ответа читается рефлексией) должны пережить R8.
--keep,allowobfuscation,allowshrinking interface com.zagir.splitty.core.network.SplittyApi
--keep,allowobfuscation,allowshrinking interface com.zagir.splitty.core.network.ParseApi
+# Без allowshrinking: с ним R8 вправе удалить сами интерфейсы, что и ловит
+# verifyReleaseShrinking в build.gradle.kts. Retrofit держит их так же.
+-keep,allowobfuscation interface com.zagir.splitty.core.network.SplittyApi
+-keep,allowobfuscation interface com.zagir.splitty.core.network.ParseApi
 -keepattributes Exceptions
 -keep,allowobfuscation,allowshrinking interface retrofit2.Call
 -keep,allowobfuscation,allowshrinking class retrofit2.Response
