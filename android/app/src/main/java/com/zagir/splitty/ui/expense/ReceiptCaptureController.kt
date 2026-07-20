@@ -62,12 +62,19 @@ class ReceiptCaptureController internal constructor(
  * Готовит контроллер съёмки чека. [onReceipt] получает путь к JPEG в cacheDir
  * (даунскейл + поворот по EXIF), когда пользователь выбрал/снял фото. Битый ввод
  * молча игнорируется (пользователь повторит). Обработка — в фоне (IO).
+ *
+ * [onCameraDenied] зовётся при отказе в разрешении CAMERA: экран показывает
+ * подсказку, иначе тап по «Добавить фото чека» выглядел бы как зависание.
  */
 @Composable
-fun rememberReceiptCapture(onReceipt: (String) -> Unit): ReceiptCaptureController {
+fun rememberReceiptCapture(
+    onCameraDenied: () -> Unit = {},
+    onReceipt: (String) -> Unit,
+): ReceiptCaptureController {
     val context = LocalContext.current
     // rememberUpdatedState: лаunchers создаются один раз, но зовут свежий onReceipt.
     val currentOnReceipt by rememberUpdatedState(onReceipt)
+    val currentOnCameraDenied by rememberUpdatedState(onCameraDenied)
     val scope = rememberCoroutineScope()
 
     // Файл-цель камеры пересоздаётся на каждую съёмку; храним между launch и коллбэком.
@@ -105,7 +112,7 @@ fun rememberReceiptCapture(onReceipt: (String) -> Unit): ReceiptCaptureControlle
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted -> if (granted) launchCamera() }
+    ) { granted -> if (granted) launchCamera() else currentOnCameraDenied() }
 
     fun hasCameraPermission(): Boolean =
         context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED

@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -92,11 +93,13 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res.Draft = sanitizeDraft(res.Draft, roomMembers(room))
-	// наблюдаемость: что реально распознала модель (для диагностики «пустого» чека)
+	// наблюдаемость: что реально распознала модель (для диагностики «пустого» чека).
+	// Сам текст описания в лог НЕ пишем — это надиктовка/чек пользователя;
+	// для диагностики достаточно факта, что описание распозналось
 	log.Info().
 		Int("items", len(res.Draft.Items)).
 		Int("sum", res.Draft.Sum).
-		Str("description", res.Draft.Description).
+		Int("descriptionLen", len(res.Draft.Description)).
 		Int("questions", len(res.Questions)).
 		Bool("hasAudio", len(in.Audio) > 0).
 		Bool("hasImage", len(in.Image) > 0).
@@ -164,7 +167,13 @@ func parseMultipartInput(r *http.Request) (ai.ParseInput, *httpError) {
 func readFilePart(r *http.Request, field string, limit int64, allowed map[string]bool) ([]byte, string, *httpError) {
 	file, hdr, err := r.FormFile(field)
 	if err != nil {
-		return nil, "", nil // части нет — не ошибка
+		if errors.Is(err, http.ErrMissingFile) {
+			return nil, "", nil // части нет — не ошибка
+		}
+		// битый multipart или сбой временного файла: не выдаём это за «медиа нет»,
+		// иначе клиент получит невнятное «нужно передать audio, image или text»
+		log.Error().Err(err).Str("field", field).Msg("cannot read multipart file part")
+		return nil, "", &httpError{http.StatusBadRequest, "validation", field + ": не удалось прочитать вложение"}
 	}
 	defer file.Close()
 

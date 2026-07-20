@@ -100,6 +100,9 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if err := validateReviewLoginCode(cfg); err != nil {
+		return nil, nil, nil, err
+	}
 	if cfg.ApiDevAuth {
 		log.Warn().Msg("!!! API_DEV_AUTH=true: POST /api/v1/auth/dev выдаёт токен под ЛЮБЫМ userId без проверки — только для разработки, НИКОГДА не включайте в проде !!!")
 	}
@@ -164,6 +167,32 @@ func resolveJwtSecret(cfg *config) (string, error) {
 	}
 	log.Warn().Msg("!!! API_JWT_SECRET не задан: сгенерирован СЛУЧАЙНЫЙ ЭФЕМЕРНЫЙ секрет — все выданные токены перестанут работать после рестарта; НИКОГДА не используйте это в проде !!!")
 	return hex.EncodeToString(buf), nil
+}
+
+// reviewLoginCodeMinLen минимальная длина REVIEW_LOGIN_CODE. Код постоянный и
+// сам по себе даёт 90-дневный токен демо-аккаунта, поэтому «APPLE2026» и прочие
+// угадываемые строки недопустимы: требуем длину и разнообразие символов
+const reviewLoginCodeMinLen = 16
+
+// validateReviewLoginCode проверяет конфигурацию многоразового кода ревьюеров:
+// код без REVIEW_USER_ID бесполезен, а короткий/однообразный — перебираем
+func validateReviewLoginCode(cfg *config) error {
+	code := strings.TrimSpace(cfg.ReviewLoginCode)
+	if code == "" {
+		return nil
+	}
+	if cfg.ReviewUserId == 0 {
+		return errors.New("REVIEW_LOGIN_CODE задан без REVIEW_USER_ID: код входа ревьюеров некуда логинить")
+	}
+	distinct := map[rune]bool{}
+	for _, r := range code {
+		distinct[r] = true
+	}
+	if len(code) < reviewLoginCodeMinLen || len(distinct) < 8 {
+		return fmt.Errorf("REVIEW_LOGIN_CODE слишком слабый: нужно минимум %d символов и минимум 8 различных "+
+			"(код постоянный и выдаёт 90-дневный токен; сгенерируйте, например, `openssl rand -hex 16`)", reviewLoginCodeMinLen)
+	}
+	return nil
 }
 
 type tgLogger struct {

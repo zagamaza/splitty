@@ -146,8 +146,22 @@ fun AddExpenseScreen(
     val form = if (snapshot is UiState.Content) snapshot.value else null
     val haptics = rememberHaptics()
 
+    val context = LocalContext.current
+    // Записанное, но ещё не отправленное: экран «Записано» (выбор фото/распознать).
+    // Состояние живёт во ViewModel (SavedStateHandle) — переживает поворот и
+    // смерть процесса вместе с самим приложенным к форме голосом.
+    val pendingAudioPath by viewModel.pendingAudioPath.collectAsStateWithLifecycle()
+
     // Фото чека → путь к готовому JPEG в cacheDir → распознавание (Task 7).
-    val receiptCapture = rememberReceiptCapture { path -> viewModel.parseReceiptImage(path) }
+    val receiptCapture = rememberReceiptCapture(
+        // Отказ в доступе к камере: экран «Записано» остаётся на месте (диктовка
+        // не потеряна), пользователю объясняем, почему ничего не открылось.
+        onCameraDenied = {
+            viewModel.showToast(context.getString(R.string.expense_camera_permission_denied))
+        },
+        // Фото доставлено — экран «Записано» гасит сама parseReceiptImage.
+        onReceipt = viewModel::parseReceiptImage,
+    )
 
     // Встряска поля группы при нудже (тап по «Сохранить» без выбранной группы).
     var groupNudge by remember { mutableIntStateOf(0) }
@@ -156,7 +170,6 @@ fun AddExpenseScreen(
     var unknownTarget by remember { mutableStateOf<UnknownTarget?>(null) }
 
     // --- Голосовой ввод (Task 12) ---
-    val context = LocalContext.current
     val recorder = rememberAudioRecorder()
     val talkBack = rememberTouchExploration()
     val voice = remember(recorder, haptics, talkBack) {
@@ -167,8 +180,6 @@ fun AddExpenseScreen(
     // Фактический фрейм кнопки-микрофона: оверлей рисует свой микрофон РОВНО там
     // же и того же размера — кнопка визуально «продолжается» в оверлей.
     var micFrame by remember { mutableStateOf<Rect?>(null) }
-    // Записанное, но ещё не отправленное: экран «Записано» (выбор фото/распознать).
-    var pendingAudioPath by remember { mutableStateOf<String?>(null) }
     var micPermissionDenied by remember { mutableStateOf(false) }
     // Подтверждение отмены закреплённой записи по системному «назад».
     var confirmCancelLocked by remember { mutableStateOf(false) }
@@ -185,8 +196,8 @@ fun AddExpenseScreen(
         if (showComposer) {
             // Первая надиктовка на пустой форме: сначала спрашиваем про фото
             // чека — оно уйдёт вместе с голосом одним запросом (точнее цены).
+            // attachAudio заодно поднимает экран «Записано» (pendingAudioPath).
             viewModel.attachAudio(path)
-            pendingAudioPath = path
         } else {
             // Правка готового черновика — уходит сразу, без лишнего шага.
             viewModel.parseVoice(path)
@@ -417,20 +428,28 @@ fun AddExpenseScreen(
 
             // Экран «записано, распознавание ещё НЕ началось»: фото/распознать/отмена.
             val pending = pendingAudioPath
-            if (!voice.isActive && pending != null && form?.isParsing != true) {
+            // form != null обязательно: на Loading/Error «Распознать» и «Фото»
+            // ничего не запустят (launchParse без формы — no-op), а оверлей уже
+            // ушёл бы, оставив голос приложенным без способа его отменить.
+            // selectedRoomId != null — вторая страховка к персисту группы в
+            // черновике: без группы launchParse откажет, а полноэкранный оверлей
+            // закрыл бы чипы, и выбрать её стало бы нечем. Прячем оверлей —
+            // диктовка не теряется (KEY_PENDING_AUDIO), после выбора группы
+            // экран «Записано» возвращается сам.
+            if (!voice.isActive && pending != null && form != null && !form.isParsing &&
+                form.selectedRoomId != null
+            ) {
                 RecordedReviewOverlay(
                     audioPath = pending,
-                    onRecognize = {
-                        pendingAudioPath = null
-                        viewModel.parseVoice(pending)
-                    },
+                    onRecognize = { viewModel.parseVoice(pending) },
                     onAddPhoto = {
                         // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
-                        pendingAudioPath = null
+                        // Экран «Записано» здесь НЕ гасим: отказ в разрешении или
+                        // отмена съёмки оставили бы диктовку без него.
+                        // Гасит его parseReceiptImage при доставке фото.
                         receiptCapture.captureFromCamera()
                     },
                     onCancel = {
-                        pendingAudioPath = null
                         viewModel.discardAudio()
                         recorder.reset()
                     },

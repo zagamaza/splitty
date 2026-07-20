@@ -344,9 +344,15 @@ internal data class ExpenseDraftSnapshot(
             didRecognize = form.didRecognize,
         )
 
-        /** true — в снимке есть что восстанавливать (не пустой стартовый черновик). */
+        /**
+         * true — в снимке есть что восстанавливать (не пустой стартовый черновик).
+         * Выбранная группа считается содержимым: диктовка с экрана «Записано»
+         * переживает смерть процесса (KEY_PENDING_AUDIO), и без выбранной группы
+         * [launchParse] откажет, а полноэкранный оверлей закроет чипы выбора.
+         */
         fun hasContent(s: ExpenseDraftSnapshot): Boolean =
-            s.description.isNotBlank() || s.sumText.isNotEmpty() || s.draftItems.isNotEmpty()
+            s.selectedRoomId != null ||
+                s.description.isNotBlank() || s.sumText.isNotEmpty() || s.draftItems.isNotEmpty()
     }
 
     /** Накатывает снимок на форму, уже привязанную к комнате (участники/валюта готовы). */
@@ -883,7 +889,10 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun parseReceiptImage(path: String) {
         savedStateHandle[KEY_RECEIPT_PATH] = path
-        launchParse()
+        // Экран «Записано» гасим, ТОЛЬКО если распознавание действительно пошло:
+        // иначе (форма ещё грузится или не загрузилась) голос остался бы
+        // приложенным, а отменить или распознать его было бы уже нечем.
+        if (launchParse()) savedStateHandle[KEY_PENDING_AUDIO] = null
     }
 
     /**
@@ -894,8 +903,19 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun parseVoice(audioPath: String) {
         savedStateHandle[KEY_AUDIO_PATH] = audioPath
-        launchParse()
+        // Гасим экран «Записано», только если распознавание реально стартовало
+        // (см. [parseReceiptImage]).
+        if (launchParse()) savedStateHandle[KEY_PENDING_AUDIO] = null
     }
+
+    /**
+     * Диктовка, ожидающая решения на экране «Записано» (фото / распознать /
+     * отмена), или null. Живёт в SavedStateHandle, а не в state композиции:
+     * иначе поворот экрана или смерть процесса убирали бы оверлей, оставляя
+     * уже приложенный к форме голос без способа его увидеть и отменить.
+     */
+    val pendingAudioPath: StateFlow<String?> =
+        savedStateHandle.getStateFlow<String?>(KEY_PENDING_AUDIO, null)
 
     /**
      * Приложить голос к форме БЕЗ запуска распознавания (экран «Записано» →
@@ -904,6 +924,7 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun attachAudio(audioPath: String) {
         savedStateHandle[KEY_AUDIO_PATH] = audioPath
+        savedStateHandle[KEY_PENDING_AUDIO] = audioPath
     }
 
     /**
@@ -912,6 +933,7 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun discardAudio() {
         savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+        savedStateHandle[KEY_PENDING_AUDIO] = null
     }
 
     /**
@@ -942,14 +964,16 @@ class AddExpenseViewModel @Inject constructor(
      * и/или фото из сохранённых путей) + текущий черновик на /parse, применяет
      * ответ. Ошибка НЕ теряет черновик — форма как была, показывается баннер
      * «Повторить». Новый запрос обгоняет активный (см. [parseGeneration]); ответ
-     * устаревшего запроса выбрасывается.
+     * устаревшего запроса выбрасывается. Возвращает false, если запускать нечего
+     * (форма ещё не загрузилась или группа не выбрана) — вызывающий по этому
+     * признаку решает, гасить ли экран «Записано».
      */
-    private fun launchParse() {
-        val form = currentForm() ?: return
+    private fun launchParse(): Boolean {
+        val form = currentForm() ?: return false
         val roomId = form.selectedRoomId
         if (roomId == null) {
             updateForm { it.copy(alertMessage = "Выберите группу") }
-            return
+            return false
         }
         parseGeneration++
         val generation = parseGeneration
@@ -962,6 +986,22 @@ class AddExpenseViewModel @Inject constructor(
             try {
                 val audio = audioPath?.let { readBytes(it) }
                 val image = imagePath?.let { readBytes(it) }
+                // Пути живут в SavedStateHandle, а файлы — в cacheDir: система могла
+                // вычистить кеш между записью и «Повторить». Без этой проверки на
+                // сервер ушёл бы запрос без медиа и вернулся невнятный 400.
+                if (audio == null && image == null) {
+                    savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+                    savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
+                    savedStateHandle[KEY_PENDING_AUDIO] = null
+                    updateForm {
+                        it.copy(
+                            isParsing = false,
+                            parseRetryMessage = null,
+                            alertMessage = "Запись не сохранилась — надиктуйте или снимите чек заново",
+                        )
+                    }
+                    return@launch
+                }
                 val response = repository.parseOperation(roomId, audio = audio, image = image, draft = draft)
                 if (generation != parseGeneration) return@launch // обогнан — игнор
                 updateForm { it.applyingParse(response).copy(isParsing = false) }
@@ -973,10 +1013,12 @@ class AddExpenseViewModel @Inject constructor(
                 updateForm { it.copy(isParsing = false, parseRetryMessage = humanErrorText(e)) }
             }
         }
+        return true
     }
 
+    /** Байты медиа или null, если файл не пережил очистку кеша/смерть процесса (пустой — тоже null). */
     private suspend fun readBytes(path: String): ByteArray? = withContext(Dispatchers.IO) {
-        File(path).takeIf { it.exists() }?.readBytes()
+        File(path).takeIf { it.isFile && it.length() > 0 }?.readBytes()
     }
 
     /**
@@ -1222,5 +1264,8 @@ class AddExpenseViewModel @Inject constructor(
 
         /** Путь к WAV голоса в cacheDir — для «Повторить» и досыла с фото (Task 12). */
         const val KEY_AUDIO_PATH = "expense_audio_path"
+
+        /** Путь диктовки, ожидающей решения на экране «Записано» (см. [pendingAudioPath]). */
+        const val KEY_PENDING_AUDIO = "expense_pending_audio"
     }
 }

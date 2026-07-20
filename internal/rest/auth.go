@@ -173,11 +173,45 @@ func (s *Server) respondWithToken(w http.ResponseWriter, user *api.User) {
 	writeJSON(w, http.StatusOK, authResponseDto{Token: token, User: toMeDto(user)})
 }
 
+// authFailKey ключ общего (на весь сервер) счётчика неудачных попыток входа по коду
+const authFailKey = "auth_code_failures"
+
+// writeInvalidCode отвечает «неверный код». Текст один на все причины — не
+// раскрываем, что именно не так. Единицу общего бюджета попытка уже заняла
+// на входе в handleAuthCode и, будучи неудачной, не возвращает
+func (s *Server) writeInvalidCode(w http.ResponseWriter) {
+	writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
+}
+
 // handleAuthCode POST /api/v1/auth/code — вход по одноразовому коду,
 // выданному командой /login в личном чате телеграм-бота.
 // Код регистронезависим; проверка и пометка used атомарны (FindOneAndUpdate),
 // поэтому конкурентные запросы с одним кодом дают ровно один успешный вход
 func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
+	// Перебор кода отсекаем до чтения тела и походов в базу. Сначала — общий
+	// бюджет: единица занимается тем же атомарным инкрементом, что и проверяет
+	// лимит, поэтому залп параллельных запросов (в том числе с подделанными
+	// X-Forwarded-For, см. clientIP) не проскочит между check и increment.
+	// Проверка идёт ПЕРВОЙ, чтобы исчерпанный бюджет не заводил новые окна на адрес
+	if !s.authThrottle.allow(authFailKey, authCodeFailuresPerMin) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
+	// per-IP отказ бюджет перебора не тратит: до проверки кода дело не дошло,
+	// иначе один шумный адрес выжигал бы общий бюджет своими же 429
+	if !s.authThrottle.allow("ip:"+clientIP(r), authCodePerIPPerMin) {
+		s.authThrottle.release(authFailKey)
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
+	// Успешный вход бюджет перебора не тратит — резерв возвращаем
+	authSucceeded := false
+	defer func() {
+		if authSucceeded {
+			s.authThrottle.release(authFailKey)
+		}
+	}()
+
 	var req codeAuthRequest
 	if hErr := decodeJSON(r, &req); hErr != nil {
 		hErr.write(w)
@@ -190,14 +224,17 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Многоразовый код ревьюеров App Store: логинит в выделенный демо-аккаунт
-	// без Telegram и без пометки used (ревью может входить многократно)
-	if s.cfg.ReviewLoginCode != "" && code == strings.ToUpper(s.cfg.ReviewLoginCode) && s.cfg.ReviewUserId != 0 {
+	// без Telegram и без пометки used (ревью может входить многократно).
+	// Сравнение постоянного секрета — constant-time
+	if s.cfg.ReviewLoginCode != "" && s.cfg.ReviewUserId != 0 &&
+		subtle.ConstantTimeCompare([]byte(code), []byte(strings.ToUpper(s.cfg.ReviewLoginCode))) == 1 {
 		reviewer, err := s.userRepo.FindById(r.Context(), s.cfg.ReviewUserId)
 		if err != nil {
 			log.Error().Err(err).Msg("review user not found")
-			writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
+			s.writeInvalidCode(w)
 			return
 		}
+		authSucceeded = true
 		s.respondWithToken(w, reviewer)
 		return
 	}
@@ -205,7 +242,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	lc, err := s.loginCodeRepo.UseLoginCode(r.Context(), code, time.Now())
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
+			s.writeInvalidCode(w)
 			return
 		}
 		log.Error().Err(err).Msg("cannot use login code")
@@ -218,7 +255,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	user, err := s.userRepo.FindById(r.Context(), lc.UserId)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
+			s.writeInvalidCode(w)
 			return
 		}
 		log.Error().Err(err).Msg("cannot find user by login code")
@@ -226,6 +263,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authSucceeded = true
 	s.finishAuth(w, r, api.User{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName})
 }
 

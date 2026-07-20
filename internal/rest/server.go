@@ -63,6 +63,9 @@ type Server struct {
 	rateLimiter *service.RateLimiter
 	aiMaxBody   int64
 
+	// authThrottle гасит перебор одноразовых кодов входа (см. throttle.go)
+	authThrottle *throttle
+
 	httpServer *http.Server
 	httpClient *http.Client
 	tgApiURL   string           // базовый url telegram api, переопределяется в тестах
@@ -86,6 +89,7 @@ func NewServer(cfg Config, ur repository.UserRepository, rr repository.RoomRepos
 		loginCodeRepo: lr,
 		roomSrv:       rs,
 		operationSrv:  os,
+		authThrottle:  newThrottle(),
 		httpClient:    &http.Client{Transport: transport},
 		tgApiURL:      "https://api.telegram.org",
 		now:           time.Now,
