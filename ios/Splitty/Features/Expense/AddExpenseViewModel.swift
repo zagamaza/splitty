@@ -369,10 +369,14 @@ final class AddExpenseViewModel {
                         sum: sumText, payer: payerId)
         canUndoParse = true
         changedItemIndices = []
-        if let total = itemizedTotal {
-            sumText = String(total)
-        }
+        // Сумму переносим ВСЕГДА: при невалидных позициях itemizedTotal == nil,
+        // и старое `if let` оставляло в поле сумму от прежнего разбора —
+        // плоский расход сохранялся с чужим итогом. Fallback — подытог + сборы.
+        sumText = String(itemizedTotal ?? (itemizedSubtotal + itemizedSurcharges))
         draftItems = nil
+        // Как в resetItems: без позиций деление снова каноническое «поровну»,
+        // иначе остаётся режим «По суммам» с долями от чека.
+        splitType = .equally
         recipientIds = Set(members.map(\.id))
     }
 
@@ -434,6 +438,28 @@ final class AddExpenseViewModel {
     /// распознавания голоса пользователь добавил фото чека — уходит голос+фото,
     /// а ответ первого запроса игнорируется).
     private var parseGeneration = 0
+    /// Активная задача распознавания: держим ссылку, чтобы «Отмена» на оверлее
+    /// РЕАЛЬНО рвала запрос (multipart до ~2.8 МБ WAV + JPEG и оплаченный вызов
+    /// модели), а не только обесценивала ответ поколением.
+    private var parseTask: Task<Void, Never>?
+
+    /// Запускает распознавание отдельной задачей (её и отменяет `cancelParse`).
+    /// `completion` вызывается на главном актёре после применения ответа —
+    /// вью гасит в нём запись и фокус.
+    func startParse(
+        api: APIClient,
+        audio: Data? = nil,
+        image: Data? = nil,
+        text: String? = nil,
+        completion: (() -> Void)? = nil
+    ) {
+        parseTask?.cancel()
+        parseTask = Task { [weak self] in
+            await self?.parse(api: api, audio: audio, image: image, text: text)
+            guard !Task.isCancelled else { return }
+            completion?()
+        }
+    }
 
     /// AI-распознавание/голосовая правка: шлёт медиа + текущий черновик на `/parse`,
     /// применяет ответ. Ошибка (сеть/сервер) НЕ теряет черновик — форма остаётся
@@ -484,6 +510,8 @@ final class AddExpenseViewModel {
     /// запрос обесценивается поколением, форма остаётся как была.
     func cancelParse() {
         parseGeneration += 1
+        parseTask?.cancel()
+        parseTask = nil
         isParsing = false
     }
 
@@ -569,6 +597,25 @@ final class AddExpenseViewModel {
         items[index] = item
         draftItems = items
         syncRecipientsFromItems()
+    }
+
+    /// Индекс позиции по её клиентскому id; nil — строки уже нет в черновике.
+    /// Шит правки открыт долго, и голосовая правка за это время может
+    /// переставить/заменить позиции: адресация по индексу писала бы в ЧУЖУЮ строку.
+    func indexOfItem(id: UUID) -> Int? {
+        draftItems?.firstIndex { $0.id == id }
+    }
+
+    /// Заменяет позицию по её клиентскому id (правка из шита позиции).
+    func replaceItem(id: UUID, with item: OperationItem) {
+        guard let index = indexOfItem(id: id) else { return }
+        replaceItem(at: index, with: item)
+    }
+
+    /// Удаляет позицию по её клиентскому id (удаление из шита позиции).
+    func deleteItem(id: UUID) {
+        guard let index = indexOfItem(id: id) else { return }
+        deleteItem(at: index)
     }
 
     /// Сопоставляет нераспознанное имя `name` в позиции участнику `userId`: имя
@@ -694,9 +741,16 @@ final class AddExpenseViewModel {
             }
             state = .loaded
         } catch {
-            // Отмена .task (закрыли sheet) — не ошибка.
-            if error.isTaskCancellation { return }
-            state = .failed(error.localizedDescription)
+            // Отмена .task (закрыли sheet) — не ошибка, но состояние обязано
+            // остаться ПОВТОРЯЕМЫМ: с `.loading` и isConfigured=true экран
+            // навсегда застревал на спиннере — .task больше не сработает,
+            // а кнопки «Повторить» в этом состоянии нет.
+            if error.isTaskCancellation {
+                isConfigured = false
+                state = .failed("Загрузка прервана. Попробуйте ещё раз")
+                return
+            }
+            state = .failed(humanErrorText(error))
         }
     }
 
@@ -780,8 +834,15 @@ final class AddExpenseViewModel {
             alertMessage = "Введите описание расхода"
             return false
         }
-        guard let sum, sum >= 1 else {
-            alertMessage = "Введите сумму (целое число рублей, не меньше 1)"
+        // Сумма itemized-черновика — ПРОИЗВОДНАЯ от позиций, а не поле формы:
+        // плоский `sumText` пишется только при разборе и отстаёт от правок
+        // строк (правка 600→900 оставляла в теле запроса старый итог), а у
+        // ответа модели без верхнеуровневой суммы его вообще нет — при живой
+        // кнопке «Сохранить» пользователь получал «Введите сумму» без поля суммы.
+        guard let sum = hasDraftItems ? itemizedTotal : sum, sum >= 1 else {
+            alertMessage = hasDraftItems
+                ? "Проверьте позиции чека — итог не считается"
+                : "Введите сумму (целое число рублей, не меньше 1)"
             return false
         }
         guard let payerId else {
@@ -865,7 +926,7 @@ final class AddExpenseViewModel {
 
         // Офлайн-создание: в outbox, отправится при появлении сети.
         if editOperationId == nil, !isOnline {
-            outbox.add(roomId: roomId, payload: payload, localId: localId)
+            outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
             didSave = true
             return true
         }
@@ -900,14 +961,14 @@ final class AddExpenseViewModel {
             // Сервер недоступен при живой сети (обслуживание, упал бэкенд):
             // создание не теряем — кладём в outbox с ТЕМ ЖЕ localId (идемпотентно).
             if editOperationId == nil, case .transport = error {
-                outbox.add(roomId: roomId, payload: payload, localId: localId)
+                outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
                 didSave = true
                 return true
             }
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
             return false
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
             return false
         }
     }

@@ -148,6 +148,37 @@ func TestAuthCodeGlobalFailureBudget(t *testing.T) {
 	}
 }
 
+// Исчерпанный общий бюджет не должен класть авторизацию целиком: он режет
+// только НЕУДАЧНЫЕ попытки. Иначе один аноним, льющий мусорные коды со
+// сменой X-Forwarded-For, ~2 запросами в секунду закрывал бы вход всем
+func TestAuthCodeGlobalBudgetDoesNotRejectValidCode(t *testing.T) {
+	const reviewCode = "REVIEWCODE1234567890"
+	s := newTestServer(Config{ReviewLoginCode: reviewCode, ReviewUserId: testUser1.ID},
+		newFakeUserRepo(testUser1), newFakeRoomRepo())
+	h := s.Handler()
+
+	attempt := func(ip, code string) int {
+		req := httptest.NewRequest("POST", "/api/v1/auth/code", strings.NewReader(`{"code":"`+code+`"}`))
+		req.Header.Set("X-Forwarded-For", ip)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	// выжигаем общий бюджет мусорными кодами с разных подделанных адресов
+	for i := 0; i < authCodeFailuresPerMin*2; i++ {
+		attempt(fmt.Sprintf("198.51.100.%d.%d", i/256, i%256), "WRONGCODE")
+	}
+	// мусор после исчерпания бюджета отбивается
+	if got := attempt("198.51.100.250", "WRONGCODE"); got != http.StatusTooManyRequests {
+		t.Fatalf("неверный код при исчерпанном бюджете: got %d, want 429", got)
+	}
+	// а верный код обязан пройти
+	if got := attempt("203.0.113.7", reviewCode); got != http.StatusOK {
+		t.Fatalf("верный код отбит исчерпанным бюджетом: got %d, want 200", got)
+	}
+}
+
 // Залп параллельных запросов с уникальными X-Forwarded-For не проскакивает
 // мимо общего бюджета: попытка занимается тем же инкрементом, что и проверяет
 func TestAuthCodeGlobalBudgetUnderConcurrency(t *testing.T) {

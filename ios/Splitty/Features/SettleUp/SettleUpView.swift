@@ -38,7 +38,10 @@ struct SettleUpView: View {
         _sumText = State(initialValue: preselectedDebt.map { String($0.sum) } ?? "")
     }
 
-    private var meId: Int { session.me?.id ?? 0 }
+    /// nil, пока профиль не загружен. Фейковый `?? 0` делал `debt.debtor.id ==
+    /// meId` ложным для ВСЕХ долгов: собственный долг подписывался «X должен(на)
+    /// вам» и красился зелёным. Тот же паттерн, что в балансах и тусе.
+    private var meId: Int? { session.me?.id }
 
     var body: some View {
         NavigationStack {
@@ -85,7 +88,21 @@ struct SettleUpView: View {
 
     @ViewBuilder
     private var content: some View {
-        if let debt = selectedDebt {
+        if meId == nil {
+            // Без профиля направление долга неизвестно: показать форму —
+            // значит наврать, кто кому платит (см. `meId`).
+            ContentUnavailableView {
+                Label("Профиль не загружен", systemImage: "person.crop.circle.badge.exclamationmark")
+            } description: {
+                Text("Не удалось получить данные вашего профиля")
+            } actions: {
+                Button("Повторить") {
+                    Task { await session.refreshMe() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accent)
+            }
+        } else if let debt = selectedDebt {
             paymentForm(debt: debt)
         } else {
             debtPicker
@@ -300,7 +317,7 @@ struct SettleUpView: View {
         } catch {
             // Отмена .task (закрыли sheet) — не ошибка.
             if error.isTaskCancellation { return }
-            loadError = error.localizedDescription
+            loadError = humanErrorText(error)
         }
     }
 
@@ -327,7 +344,7 @@ struct SettleUpView: View {
             onDone?()
             dismiss()
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

@@ -35,6 +35,10 @@ import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** Целевая частота дискретизации записи — как в iOS (audio/wav 16 кГц PCM16 mono). */
 const val AUDIO_TARGET_SAMPLE_RATE = 16_000
@@ -120,9 +124,19 @@ class AudioRecorderController(
         private set
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var record: AudioRecord? = null
+    @Volatile private var record: AudioRecord? = null
     private var readThread: Thread? = null
     @Volatile private var running = false
+
+    /**
+     * Поток чтения не завершился за [JOIN_TIMEOUT_MS] — освобождает [AudioRecord]
+     * он сам, на своём выходе. Звать release() «поверх» живого read() нельзя:
+     * нативный слой уходит в use-after-free.
+     */
+    @Volatile private var releaseOnReaderExit = false
+
+    /** Запись WAV на диск — вне главного потока (до 2.8 МБ, это ANR на стопе). */
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Начинает запись. Подъём [AudioRecord] и цикл чтения — в фоновом потоке:
@@ -163,6 +177,13 @@ class AudioRecorderController(
             Log.w("AudioRecorder", "read loop failed: ${t.message}")
             running = false
             mainHandler.post { if (isRecording) deviceLost = true }
+        } finally {
+            // stop()/cancel() не дождались нас в join — освободить микрофон должны
+            // мы: там release() пришёлся бы на живой read() внутри драйвера.
+            if (releaseOnReaderExit) {
+                releaseOnReaderExit = false
+                releaseRecord()
+            }
         }
     }
 
@@ -213,9 +234,7 @@ class AudioRecorderController(
     override fun stop(): ByteArray? {
         if (!isRecording) return null
         running = false
-        readThread?.join(500)
-        readThread = null
-        releaseRecord()
+        joinReaderAndRelease()
         transcriber.stop()
         isRecording = false
         startedAtElapsedMs = null
@@ -226,8 +245,35 @@ class AudioRecorderController(
         if (raw.isEmpty()) return null
         val wav = wrapWav(raw, AUDIO_TARGET_SAMPLE_RATE)
         audioData = wav
-        lastAudioPath = writeAudioToCache(context, wav)
+        // Путь детерминированный, поэтому известен сразу — а сама запись (до 2.8 МБ)
+        // уходит на IO: на главном потоке она давала ANR ровно в момент отпускания
+        // микрофона. Старый файл удаляем синхронно (это unlink, не запись байтов),
+        // чтобы читатель, успевший раньше, не подхватил ПРЕДЫДУЩУЮ диктовку;
+        // сама запись атомарна (tmp + rename) — рваного WAV не бывает.
+        val target = audioCacheFile(context)
+        runCatching { target.delete() }
+        lastAudioPath = target.absolutePath
+        ioScope.launch {
+            runCatching { writeAudioAtomically(target, wav) }
+                .onFailure { Log.w("AudioRecorder", "не удалось сохранить WAV: ${it.message}") }
+        }
         return wav
+    }
+
+    /**
+     * Дожидается выхода потока чтения и освобождает [AudioRecord]. Не уложился в
+     * таймаут — освобождение делегируется самому потоку ([releaseOnReaderExit]):
+     * release() из-под живого read() роняет нативный аудио-слой.
+     */
+    private fun joinReaderAndRelease() {
+        val thread = readThread
+        thread?.join(JOIN_TIMEOUT_MS)
+        readThread = null
+        if (thread != null && thread.isAlive) {
+            releaseOnReaderExit = true
+        } else {
+            releaseRecord()
+        }
     }
 
     /**
@@ -236,9 +282,7 @@ class AudioRecorderController(
      */
     override fun cancel() {
         running = false
-        readThread?.join(500)
-        readThread = null
-        releaseRecord()
+        joinReaderAndRelease()
         transcriber.stop()
         transcriber.reset()
         pcm.reset()
@@ -301,6 +345,7 @@ class AudioRecorderController(
             .build()
     }
 
+    @Synchronized
     private fun releaseRecord() {
         record?.let {
             try {
@@ -311,6 +356,11 @@ class AudioRecorderController(
             it.release()
         }
         record = null
+    }
+
+    private companion object {
+        /** Сколько ждём выход потока чтения на стопе/отмене, мс. */
+        const val JOIN_TIMEOUT_MS = 500L
     }
 }
 
@@ -438,13 +488,34 @@ private fun le32(v: Int): ByteArray = byteArrayOf(
     ((v shr 24) and 0xFF).toByte(),
 )
 
-/** Пишет WAV в cacheDir; путь переживает process death (восстановление голоса). */
-fun writeAudioToCache(context: Context, bytes: ByteArray): String {
+/**
+ * Файл последней записи в cacheDir. Имя фиксированное (детерминизм, без
+ * Random/времени): нужен только один «последний» голос — перезаписываем.
+ * Путь переживает process death (восстановление голоса).
+ */
+fun audioCacheFile(context: Context): File {
     val dir = File(context.cacheDir, "audio").apply { mkdirs() }
-    // Имя фиксированное (детерминизм, без Random/времени): нужен только один
-    // «последний» голос — перезаписываем.
-    val file = File(dir, "voice.wav")
-    file.writeBytes(bytes)
+    return File(dir, "voice.wav")
+}
+
+/**
+ * Пишет WAV атомарно: сначала tmp, затем переименование. Читатель (отправка на
+ * /parse) видит либо полный файл, либо ничего — но не обрезанный на середине.
+ */
+fun writeAudioAtomically(target: File, bytes: ByteArray) {
+    val tmp = File(target.parentFile, "${target.name}.tmp")
+    tmp.writeBytes(bytes)
+    if (!tmp.renameTo(target)) {
+        // ФС без атомарного rename — обычная перезапись.
+        target.writeBytes(bytes)
+        tmp.delete()
+    }
+}
+
+/** Пишет WAV в cacheDir и возвращает путь (синхронный вариант — для тестов/утилит). */
+fun writeAudioToCache(context: Context, bytes: ByteArray): String {
+    val file = audioCacheFile(context)
+    writeAudioAtomically(file, bytes)
     return file.absolutePath
 }
 

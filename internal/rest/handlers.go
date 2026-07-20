@@ -25,6 +25,10 @@ import (
 )
 
 const maxRoomNameLen = 100
+
+// maxDisplayNameLen потолок имени профиля: оно копируется во встроенные снимки
+// участников всех комнат и подставляется в telegram-уведомления (лимит 4096)
+const maxDisplayNameLen = 100
 const defaultActivityLimit = 30
 
 // maxActivityLimit верхняя граница limit в пагинации активности
@@ -174,6 +178,14 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.DisplayName != nil && strings.TrimSpace(*req.DisplayName) == "" {
 		writeError(w, http.StatusBadRequest, "validation", "имя не может быть пустым")
+		return
+	}
+	// имя копируется во встроенные снимки участников каждой комнаты и попадает
+	// в текст telegram-уведомлений: без потолка (тело ограничено лишь 1 МБ)
+	// одно имя ломало бы доставку уведомлений всей комнате — как и описание
+	// операции, см. maxDescriptionRunes
+	if req.DisplayName != nil && utf8.RuneCountInString(strings.TrimSpace(*req.DisplayName)) > maxDisplayNameLen {
+		writeError(w, http.StatusBadRequest, "validation", "имя не должно превышать 100 символов")
 		return
 	}
 	if req.Lang != nil && *req.Lang != "ru" && *req.Lang != "en" {
@@ -673,7 +685,17 @@ func (s *Server) notifyOperationMutation(ctx context.Context, room *api.Room, au
 	if author == nil {
 		return
 	}
+	// Members и Operations — указатели на слайсы, поэтому поверхностного *room
+	// мало: горутина делила бы с обработчиком те же массивы. Копируем их явно
 	roomCopy := *room
+	if room.Members != nil {
+		members := append([]api.User(nil), *room.Members...)
+		roomCopy.Members = &members
+	}
+	if room.Operations != nil {
+		operations := append([]api.Operation(nil), *room.Operations...)
+		roomCopy.Operations = &operations
+	}
 	authorCopy := *author
 	s.notifyAsync(ctx, func(nctx context.Context, n Notifier) {
 		notify(nctx, n, roomCopy, authorCopy)

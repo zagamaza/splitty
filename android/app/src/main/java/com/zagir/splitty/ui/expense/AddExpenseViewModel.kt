@@ -275,11 +275,19 @@ internal fun AddExpenseForm.resolvingUnknown(itemIndex: Int, name: String, userI
 /**
  * Сброс распознанного чека (ручная правка суммы): позиции больше не источник
  * правды, операция сохранится плоской (равное деление). Порт iOS `resetItems`.
+ *
+ * Снапшот обязателен: одна цифра в поле суммы сносила весь чек безвозвратно, а
+ * у уже сохранённой itemized-операции PUT уходит без позиций — сервер переводит
+ * её в плоскую ветку, и восстановить чек нечем. Как и «Поровну на всех», сброс
+ * теперь обратим баннером «Отменить».
  */
 internal fun AddExpenseForm.resettingItems(): AddExpenseForm {
     if (!hasDraftItems) return this
     val recipients = recipientIds.ifEmpty { members.map { it.id }.toSet() }
     return copy(
+        undoSnapshot = UndoSnapshot(draftItems, description, sumText, payerId),
+        canUndoParse = true,
+        changedItemIndices = emptySet(),
         draftItems = emptyList(),
         parseQuestions = emptyList(),
         splitType = SplitType.EQUALLY,
@@ -1020,6 +1028,12 @@ class AddExpenseViewModel @Inject constructor(
                 }
                 val response = repository.parseOperation(roomId, audio = audio, image = image, draft = draft)
                 if (generation != parseGeneration) return@launch // обогнан — игнор
+                // Медиа израсходовано — пути гасим. Иначе следующее фото чека
+                // тянуло бы с собой СТАРУЮ надиктовку: сервер применял уже
+                // учтённую правку повторно (дубли позиций, удвоенные цены) и
+                // впустую грузил 90-секундный endpoint лишним WAV.
+                savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+                savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
                 updateForm { it.applyingParse(response).copy(isParsing = false) }
                 persistDraft()
             } catch (e: CancellationException) {

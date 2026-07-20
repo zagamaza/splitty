@@ -97,7 +97,12 @@ struct ItemShare: Codable, Hashable, Identifiable {
 /// Позиция чека itemized-операции: что заказали, почём и как делится.
 /// Единый транспортный вид: read-модель операции, черновик `ParseDraft` и
 /// write-path (`OperationBody.items`) — совпадает с серверным `ai.DraftItem`.
-struct OperationItem: Codable, Hashable {
+struct OperationItem: Codable, Hashable, Identifiable {
+    /// Клиентский id строки — НЕ часть контракта (не кодируется и не участвует
+    /// в сравнении). Нужен шиту правки: он живёт долго, а голосовая правка
+    /// может за это время переставить позиции — по индексу «Готово» писало бы
+    /// в чужую строку.
+    let id = UUID()
     /// Название позиции («Пицца», «Сервисный сбор»).
     let name: String
     /// ВСЕГДА суммарная стоимость строки в целых рублях (уже с учётом количества).
@@ -144,6 +149,30 @@ struct OperationItem: Codable, Hashable {
         self.split = split
         self.percent = percent
         self.unknown = unknown
+    }
+
+    /// `id` — клиентская метка строки, поэтому вне кодирования и сравнения:
+    /// иначе одинаковые позиции из ответа и из черновика считались бы разными
+    /// (подсветка диффа, тесты) и id уезжал бы на сервер.
+    private enum CodingKeys: String, CodingKey {
+        case name, price, qty, shares, kind, split, percent, unknown
+    }
+
+    static func == (lhs: OperationItem, rhs: OperationItem) -> Bool {
+        lhs.name == rhs.name && lhs.price == rhs.price && lhs.qty == rhs.qty
+            && lhs.shares == rhs.shares && lhs.kind == rhs.kind && lhs.split == rhs.split
+            && lhs.percent == rhs.percent && lhs.unknown == rhs.unknown
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+        hasher.combine(price)
+        hasher.combine(qty)
+        hasher.combine(shares)
+        hasher.combine(kind)
+        hasher.combine(split)
+        hasher.combine(percent)
+        hasher.combine(unknown)
     }
 }
 

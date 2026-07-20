@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -52,11 +53,19 @@ type avatarCacheEntry struct {
 	fetchedAt   time.Time
 }
 
+// maxAvatarCacheBytes — бюджет памяти под кеш аватаров. Одной только TTL мало:
+// в пределах суток кеш держит по maxAvatarBytes на каждого запрошенного
+// пользователя без ограничения их числа, а /users/{id}/avatar ничем не
+// throttled — комнат у активного пользователя много, и кеш рос бы линейно
+const maxAvatarCacheBytes = 64 << 20
+
 // avatarCache потокобезопасный in-memory кеш аватаров по telegram user id;
 // негативные ответы («у пользователя нет фото») тоже кешируются
 type avatarCache struct {
 	mu      sync.Mutex
 	entries map[int]avatarCacheEntry
+	// bytes — суммарный размер тел в entries, поддерживается put'ом
+	bytes int
 }
 
 func (c *avatarCache) get(userId int, now time.Time) (avatarCacheEntry, bool) {
@@ -69,7 +78,8 @@ func (c *avatarCache) get(userId int, now time.Time) (avatarCacheEntry, bool) {
 	return e, true
 }
 
-// put кладёт запись и попутно вычищает протухшие. Без вытеснения get считал
+// put кладёт запись, вычищает протухшие и держит кеш в пределах бюджета
+// maxAvatarCacheBytes, вытесняя самые старые. Без вытеснения get считал
 // протухшее промахом, но из map ничего не удалял: кеш рос на каждого нового
 // пользователя и держал jpeg-и до конца жизни процесса.
 func (c *avatarCache) put(userId int, e avatarCacheEntry) {
@@ -80,10 +90,32 @@ func (c *avatarCache) put(userId int, e avatarCacheEntry) {
 	}
 	for id, old := range c.entries {
 		if e.fetchedAt.Sub(old.fetchedAt) > avatarCacheTTL {
-			delete(c.entries, id)
+			c.evictLocked(id)
 		}
 	}
+	c.evictLocked(userId) // перезапись: старое тело из счётчика убираем
 	c.entries[userId] = e
+	c.bytes += len(e.data)
+
+	// бюджет исчерпан — выбрасываем самые старые записи, пока не уложимся.
+	// Только что положенную не трогаем: она и есть самая свежая
+	for c.bytes > maxAvatarCacheBytes && len(c.entries) > 1 {
+		oldestId, oldestAt := 0, time.Time{}
+		for id, old := range c.entries {
+			if oldestAt.IsZero() || old.fetchedAt.Before(oldestAt) {
+				oldestId, oldestAt = id, old.fetchedAt
+			}
+		}
+		c.evictLocked(oldestId)
+	}
+}
+
+// evictLocked удаляет запись, поддерживая счётчик байт. Вызывается под c.mu
+func (c *avatarCache) evictLocked(userId int) {
+	if e, ok := c.entries[userId]; ok {
+		c.bytes -= len(e.data)
+		delete(c.entries, userId)
+	}
 }
 
 type tgUserProfilePhotosResponse struct {
@@ -157,7 +189,9 @@ func (s *Server) handleGetUserAvatar(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	getFileURL := fmt.Sprintf("%s/bot%s/getFile?file_id=%s", s.tgApiURL, s.cfg.TgToken, fileId)
+	// file_id — значение из ответа telegram, но в query оно всё равно уходит
+	// экранированным (как в handleGetOperationFile): подставлять сырым нельзя
+	getFileURL := fmt.Sprintf("%s/bot%s/getFile?file_id=%s", s.tgApiURL, s.cfg.TgToken, url.QueryEscape(fileId))
 	fileMeta, err := s.tgGet(ctx, getFileURL)
 	if err != nil {
 		log.Error().Err(err).Msg("telegram getFile (avatar) failed")

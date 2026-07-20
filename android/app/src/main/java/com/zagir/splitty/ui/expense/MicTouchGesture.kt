@@ -325,14 +325,19 @@ fun Modifier.micTouchGesture(
         try {
             while (true) {
                 val event = awaitPointerEvent(PointerEventPass.Main)
+                // Только НАШ палец. `any { isConsumed }` смотрел на все указатели
+                // сразу: второй палец, съеденный скроллом LazyColumn, молча рубил
+                // чужую запись. А fallback на changes.first() считал бы смещение
+                // постороннего указателя относительно нашего startPos — ложные
+                // срабатывания замка и отмены.
+                val change = event.changes.firstOrNull { it.id == down.id } ?: continue
                 // Касание отобрали (родительский скролл, системный жест, звонок):
                 // это НЕ отпускание — записанное отбрасываем молча, без распознавания.
-                if (event.changes.any { it.isConsumed }) {
+                if (change.isConsumed) {
                     finished = true
                     onSystemCancelled()
                     break
                 }
-                val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.first()
                 // Смещение приводим к dp: пороги замка/отмены — это iOS-овские points,
                 // и на сыром пикселе они бы масштабировались вместе с плотностью экрана.
                 val offset = change.position - startPos

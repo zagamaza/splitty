@@ -6,10 +6,28 @@ import SwiftUI
 struct UserAvatarView: View {
     let user: User
     var size: CGFloat = 40
+    /// Чей аватар грузить с сервера; nil — не грузить вовсе. Аватары групп
+    /// строятся на ХЭШЕ id комнаты: он попадает в диапазон настоящих telegram
+    /// id, и GET /users/{хэш}/avatar при совпадении рисовал бы группе ФОТО
+    /// ПОСТОРОННЕГО человека.
+    var avatarUserId: Int?
 
     /// Фото профиля Telegram (кеш в SessionStore.avatars); пока грузится
     /// или фото нет — градиент с инициалами как раньше.
     @Environment(SessionStore.self) private var session
+
+    init(user: User, size: CGFloat = 40) {
+        self.user = user
+        self.size = size
+        self.avatarUserId = user.id
+    }
+
+    /// Явный вариант для нечеловеческих аватаров (группа): `avatarUserId: nil`.
+    init(user: User, size: CGFloat = 40, avatarUserId: Int?) {
+        self.user = user
+        self.size = size
+        self.avatarUserId = avatarUserId
+    }
 
     /// Пастельные пары градиентов (светлый → чуть глубже), подобраны так,
     /// чтобы белые инициалы читались; индекс выбирается по id пользователя.
@@ -60,7 +78,7 @@ struct UserAvatarView: View {
             .fill(gradient)
             .frame(width: size, height: size)
             .overlay {
-                if let image = session.avatars.images[user.id] {
+                if let avatarUserId, let image = session.avatars.images[avatarUserId] {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
@@ -73,8 +91,9 @@ struct UserAvatarView: View {
                         .minimumScaleFactor(0.5)
                 }
             }
-            .task(id: user.id) {
-                await session.avatars.load(user.id, api: session.api)
+            .task(id: avatarUserId) {
+                guard let avatarUserId else { return }
+                await session.avatars.load(avatarUserId, api: session.api)
             }
             .accessibilityLabel(user.displayName)
     }

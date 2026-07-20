@@ -7,6 +7,8 @@ struct FriendsListView: View {
     /// Sheet создания группы из empty state: друзья появляются только
     /// через общие группы, поэтому действие ведёт именно туда.
     @State private var isCreateGroupPresented = false
+    /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
+    @State private var reloadTask: Task<Void, Never>?
 
     init() {}
 
@@ -23,8 +25,10 @@ struct FriendsListView: View {
                 }
                 // Единая инвалидация: перезагрузка после любой мутации данных.
                 .onChange(of: session.dataVersion) {
-                    Task { await model.load(repo: session.repo) }
+                    reloadTask?.cancel()
+                    reloadTask = Task { await model.load(repo: session.repo) }
                 }
+                .onDisappear { reloadTask?.cancel() }
                 .alert(
                     "Ошибка",
                     isPresented: Binding(

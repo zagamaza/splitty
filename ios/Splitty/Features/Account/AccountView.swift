@@ -330,7 +330,7 @@ struct AccountView: View {
             )
             Haptics.success()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = humanErrorText(error)
             syncFromMe()
         }
     }

@@ -272,8 +272,12 @@ func initMongoConnection(ctx context.Context, cfg *config) (*mongo.Database, fun
 		return nil, nil, err
 	}
 	return client.Database(cfg.DbName), func() {
+		// только Error: закрывашка выполняется в цепочке closer'ов, и Fatal
+		// здесь означал бы os.Exit(1) прямо из неё — оставшиеся закрывашки
+		// (в первую очередь restServer.Shutdown) не отработали бы, обрубив
+		// висящие http-запросы из-за разовой ошибки отключения от mongo
 		if err := client.Disconnect(ctx); err != nil {
-			log.Fatal().Err(err).Msg("error while connect to mongo")
+			log.Error().Err(err).Msg("error while disconnect from mongo")
 		}
 	}, nil
 }

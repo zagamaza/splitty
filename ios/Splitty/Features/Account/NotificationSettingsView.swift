@@ -12,7 +12,9 @@ struct NotificationSettingsView: View {
     @State private var isSaving = false
     /// Мастер-тумблер (перенесён из AccountView, где дублировал строку-ссылку):
     /// локальная копия `me.notificationOn`, PATCH /me, при ошибке откат.
-    @State private var masterOn = true
+    /// nil — профиль ещё не загружен: дефолт `true` показывал уведомления
+    /// включёнными тому, у кого они на сервере ВЫКЛЮЧЕНЫ.
+    @State private var masterOn: Bool?
 
     var body: some View {
         Group {
@@ -88,10 +90,10 @@ struct NotificationSettingsView: View {
                         )
                     )
                 }
-                // Мастер выключен — категории не действуют, показываем это
-                // визуально и блокируем их переключение.
-                .disabled(!masterOn)
-                .opacity(masterOn ? 1 : 0.5)
+                // Мастер выключен (или ещё неизвестен) — категории не действуют,
+                // показываем это визуально и блокируем их переключение.
+                .disabled(masterOn != true)
+                .opacity(masterOn == true ? 1 : 0.5)
             }
             .padding(16)
         }
@@ -99,15 +101,17 @@ struct NotificationSettingsView: View {
 
     /// Первая секция — мастер-тумблер всех уведомлений (PATCH /me).
     private var masterSection: some View {
-        Toggle(isOn: $masterOn) {
+        Toggle(isOn: masterBinding) {
             Text("Уведомления")
                 .scaledFont(size: 16)
                 .foregroundStyle(Color.ink)
         }
         .tint(Color.accent)
-        .disabled(isSaving)
+        // Пока профиль не пришёл, состояние тумблера неизвестно — не даём
+        // его трогать (и не утверждаем, что уведомления включены).
+        .disabled(isSaving || masterOn == nil)
         .onChange(of: masterOn) { _, newValue in
-            guard newValue != session.me?.notificationOn else { return }
+            guard let newValue, newValue != session.me?.notificationOn else { return }
             saveMaster(newValue)
         }
         .padding(.horizontal, 16)
@@ -162,11 +166,15 @@ struct NotificationSettingsView: View {
     }
 
     private func load() async {
+        // Сброс обязателен: иначе после удачного повтора старый текст оставался
+        // в errorMessage, и биндинг алерта (errorMessage != nil && settings !=
+        // nil) поднимал ПРОШЛУЮ ошибку поверх корректно загруженного экрана.
+        errorMessage = nil
         do {
             settings = try await session.api.notifications()
         } catch {
             if error.isTaskCancellation { return }
-            errorMessage = error.localizedDescription
+            errorMessage = humanErrorText(error)
         }
     }
 
@@ -183,16 +191,26 @@ struct NotificationSettingsView: View {
             } catch {
                 if error.isTaskCancellation { return }
                 settings = previous
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }
 
     // MARK: - Мастер-тумблер (PATCH /me)
 
+    /// Биндинг тумблера: неизвестное состояние показываем выключенным, но
+    /// сама строка задизейблена — «включено» до загрузки профиля не утверждаем.
+    private var masterBinding: Binding<Bool> {
+        Binding(
+            get: { masterOn ?? false },
+            set: { masterOn = $0 }
+        )
+    }
+
+    /// Профиль пропал (401/офлайн-старт) — возвращаемся в «неизвестно»,
+    /// а не оставляем прошлое значение как факт.
     private func syncMasterFromMe() {
-        guard let me = session.me else { return }
-        masterOn = me.notificationOn
+        masterOn = session.me?.notificationOn
     }
 
     /// Сохраняет мастер-настройку в профиле; при ошибке откатывает тумблер.
@@ -210,7 +228,7 @@ struct NotificationSettingsView: View {
             } catch {
                 if error.isTaskCancellation { return }
                 syncMasterFromMe()
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }

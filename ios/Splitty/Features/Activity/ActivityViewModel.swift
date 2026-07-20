@@ -93,7 +93,7 @@ final class ActivityViewModel {
             // Отмена .task (строка уехала за экран, ушли с вкладки) — не ошибка,
             // молча выходим без ложного «Нет соединения с сервером».
             if error.isTaskCancellation { return }
-            errorMessage = error.localizedDescription
+            errorMessage = humanErrorText(error)
         }
     }
 
@@ -122,9 +122,9 @@ final class ActivityViewModel {
                 return
             }
             if items.isEmpty {
-                state = .failed(error.localizedDescription)
+                state = .failed(humanErrorText(error))
             } else {
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }

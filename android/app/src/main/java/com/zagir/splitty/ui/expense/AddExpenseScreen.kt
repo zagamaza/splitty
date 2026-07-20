@@ -159,6 +159,11 @@ fun AddExpenseScreen(
         onCameraDenied = {
             viewModel.showToast(context.getString(R.string.expense_camera_permission_denied))
         },
+        // Камеры на устройстве нет (манифест допускает такие) — объясняем и
+        // отправляем в галерею, вместо падения процесса на пустом Intent.
+        onCameraUnavailable = {
+            viewModel.showToast(context.getString(R.string.expense_camera_unavailable))
+        },
         // Фото доставлено — экран «Записано» гасит сама parseReceiptImage.
         onReceipt = viewModel::parseReceiptImage,
     )

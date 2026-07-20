@@ -12,6 +12,8 @@ struct FriendDetailView: View {
     @State private var settleRoom: FriendRoomBalance?
     /// Диалог выбора группы, когда общих групп с долгом несколько.
     @State private var isSettleRoomPickerPresented = false
+    /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
+    @State private var reloadTask: Task<Void, Never>?
 
     init(friend: FriendBalance) {
         _friend = State(initialValue: friend)
@@ -34,8 +36,10 @@ struct FriendDetailView: View {
         .task { await reload() }
         .refreshable { await reload() }
         .onChange(of: session.dataVersion) {
-            Task { await reload() }
+            reloadTask?.cancel()
+            reloadTask = Task { await reload() }
         }
+        .onDisappear { reloadTask?.cancel() }
         // Погашение всегда происходит в конкретной группе: одна общая —
         // сразу форма, несколько — сначала выбор группы.
         .confirmationDialog(
@@ -78,7 +82,7 @@ struct FriendDetailView: View {
         } catch {
             // Отмена .task (ушли с экрана) — не ошибка.
             if error.isTaskCancellation { return }
-            errorMessage = error.localizedDescription
+            errorMessage = humanErrorText(error)
         }
     }
 

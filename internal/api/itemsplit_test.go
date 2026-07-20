@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"math"
 	"reflect"
 	"testing"
@@ -279,6 +280,20 @@ func TestDeriveShares_SurchargePercentUsesPriceNotPercent(t *testing.T) {
 	want := map[int]int{1: 600, 2: 600}
 	if !reflect.DeepEqual(got, want) || total != 1200 {
 		t.Fatalf("got %v total %d, want %v total 1200", got, total, want)
+	}
+}
+
+// TestDeriveShares_SurchargeOnly фиксирует, почему чек из одних надбавок
+// обязан отсекаться валидацией ДО DeriveShares: базы нет, делить сбор не по
+// чему, доли выходят пустыми и срабатывает ErrInvariant — утверждение
+// «баг расчёта», а не пользовательская ошибка
+func TestDeriveShares_SurchargeOnly(t *testing.T) {
+	items := []OperationItem{
+		{Name: "Сбор", Price: 100, Kind: ItemKindSurcharge, Split: SplitEqually},
+	}
+	_, _, err := DeriveShares(items)
+	if !errors.Is(err, ErrInvariant) {
+		t.Fatalf("err = %v, want ErrInvariant", err)
 	}
 }
 

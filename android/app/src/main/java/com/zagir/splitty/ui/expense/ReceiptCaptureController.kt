@@ -1,6 +1,7 @@
 package com.zagir.splitty.ui.expense
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -65,16 +66,19 @@ class ReceiptCaptureController internal constructor(
  *
  * [onCameraDenied] зовётся при отказе в разрешении CAMERA: экран показывает
  * подсказку, иначе тап по «Добавить фото чека» выглядел бы как зависание.
+ * [onCameraUnavailable] — камеры на устройстве нет вовсе (см. [launchCamera]).
  */
 @Composable
 fun rememberReceiptCapture(
     onCameraDenied: () -> Unit = {},
+    onCameraUnavailable: () -> Unit = onCameraDenied,
     onReceipt: (String) -> Unit,
 ): ReceiptCaptureController {
     val context = LocalContext.current
     // rememberUpdatedState: лаunchers создаются один раз, но зовут свежий onReceipt.
     val currentOnReceipt by rememberUpdatedState(onReceipt)
     val currentOnCameraDenied by rememberUpdatedState(onCameraDenied)
+    val currentOnCameraUnavailable by rememberUpdatedState(onCameraUnavailable)
     val scope = rememberCoroutineScope()
 
     // Файл-цель камеры пересоздаётся на каждую съёмку; храним между launch и коллбэком.
@@ -107,7 +111,15 @@ fun rememberReceiptCapture(
     fun launchCamera() {
         val (uri, file) = newCameraOutputUri(context)
         cameraTarget[0] = file
-        cameraLauncher.launch(uri)
+        try {
+            cameraLauncher.launch(uri)
+        } catch (_: ActivityNotFoundException) {
+            // camera.any в манифесте объявлена required="false" — приложение
+            // ставится и на устройства без камеры (эмулятор, ТВ-приставка,
+            // урезанный OEM-образ). Там TakePicture не находит обработчика и
+            // необработанное исключение убивало процесс на тапе «Снять чек».
+            currentOnCameraUnavailable()
+        }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(

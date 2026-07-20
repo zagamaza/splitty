@@ -6,6 +6,8 @@ struct GroupsListView: View {
     @State private var model = GroupsListViewModel()
     @State private var isCreatePresented = false
     @State private var isJoinPresented = false
+    /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
+    @State private var reloadTask: Task<Void, Never>?
 
     init() {}
 
@@ -45,8 +47,10 @@ struct GroupsListView: View {
                 .task { await model.load(repo: session.repo) }
                 // Единая инвалидация: перезагрузка после любой мутации данных.
                 .onChange(of: session.dataVersion) {
-                    Task { await model.load(repo: session.repo) }
+                    reloadTask?.cancel()
+                    reloadTask = Task { await model.load(repo: session.repo) }
                 }
+                .onDisappear { reloadTask?.cancel() }
         }
     }
 
@@ -283,7 +287,10 @@ private struct GroupAvatarView: View {
     var body: some View {
         UserAvatarView(
             user: User(id: stableId, username: nil, displayName: String(name.prefix(1))),
-            size: size
+            size: size,
+            // stableId — хэш строки, а НЕ telegram id: фото по нему не грузим,
+            // иначе при совпадении диапазонов группа получала бы чужое фото.
+            avatarUserId: nil
         )
         .accessibilityHidden(true)
     }

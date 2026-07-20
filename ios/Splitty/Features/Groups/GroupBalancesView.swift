@@ -44,7 +44,17 @@ struct GroupBalancesView: View {
     private var content: some View {
         Group {
             if let meId {
-                if room.debts.isEmpty {
+                if room.debtsUnavailable {
+                    // Легаси-данные бота: сервер шлёт debts=[] и myBalance=0.
+                    // Ветка обязана быть ПЕРВОЙ — иначе пустой список уходит
+                    // в «Все участники в расчёте», то есть враньё про деньги
+                    // (тот же гейт, что в шапке тусы и в списке групп).
+                    ContentUnavailableView {
+                        Label(Glossary.debtsUnavailableHero, systemImage: "questionmark.circle")
+                    } description: {
+                        Text(Glossary.debtsUnavailableSubtitle)
+                    }
+                } else if room.debts.isEmpty {
                     ContentUnavailableView {
                         Label("Нет долгов", systemImage: "checkmark.circle")
                     } description: {

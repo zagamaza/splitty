@@ -176,10 +176,16 @@ func (s *Server) respondWithToken(w http.ResponseWriter, user *api.User) {
 // authFailKey ключ общего (на весь сервер) счётчика неудачных попыток входа по коду
 const authFailKey = "auth_code_failures"
 
-// writeInvalidCode отвечает «неверный код». Текст один на все причины — не
-// раскрываем, что именно не так. Единицу общего бюджета попытка уже заняла
-// на входе в handleAuthCode и, будучи неудачной, не возвращает
-func (s *Server) writeInvalidCode(w http.ResponseWriter) {
+// writeInvalidCode отвечает на неудачную попытку входа. Текст один на все
+// причины — не раскрываем, что именно не так. Единицу общего бюджета попытка
+// уже заняла на входе в handleAuthCode и, будучи неудачной, не возвращает.
+// budgetOK=false означает, что общий бюджет перебора исчерпан: код всё равно
+// был проверен (верный бы прошёл), но раз он неверный — отвечаем 429
+func (s *Server) writeInvalidCode(w http.ResponseWriter, budgetOK bool) {
+	if !budgetOK {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
 	writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
 }
 
@@ -188,22 +194,18 @@ func (s *Server) writeInvalidCode(w http.ResponseWriter) {
 // Код регистронезависим; проверка и пометка used атомарны (FindOneAndUpdate),
 // поэтому конкурентные запросы с одним кодом дают ровно один успешный вход
 func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
-	// Перебор кода отсекаем до чтения тела и походов в базу. Сначала — общий
-	// бюджет: единица занимается тем же атомарным инкрементом, что и проверяет
-	// лимит, поэтому залп параллельных запросов (в том числе с подделанными
-	// X-Forwarded-For, см. clientIP) не проскочит между check и increment.
-	// Проверка идёт ПЕРВОЙ, чтобы исчерпанный бюджет не заводил новые окна на адрес
-	if !s.authThrottle.allow(authFailKey, authCodeFailuresPerMin) {
-		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
-		return
-	}
-	// per-IP отказ бюджет перебора не тратит: до проверки кода дело не дошло,
-	// иначе один шумный адрес выжигал бы общий бюджет своими же 429
+	// Первым идёт per-IP окно: это единственный лимит, который вправе отбить
+	// запрос до проверки кода. Он адресный — шумный клиент режет только себя
 	if !s.authThrottle.allow("ip:"+clientIP(r), authCodePerIPPerMin) {
-		s.authThrottle.release(authFailKey)
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
+	// Общий бюджет перебора занимаем тем же атомарным инкрементом, что и
+	// проверяем (залп параллельных запросов не проскочит между check и
+	// increment), но по его исчерпании запрос НЕ обрываем: иначе аноним с
+	// мусорными кодами закрывал бы вход всем. Исчерпанный бюджет лишь превращает
+	// неудачную попытку в 429 — верный код проходит в любом случае
+	budgetOK := s.authThrottle.allow(authFailKey, authCodeFailuresPerMin)
 	// Успешный вход бюджет перебора не тратит — резерв возвращаем
 	authSucceeded := false
 	defer func() {
@@ -231,7 +233,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 		reviewer, err := s.userRepo.FindById(r.Context(), s.cfg.ReviewUserId)
 		if err != nil {
 			log.Error().Err(err).Msg("review user not found")
-			s.writeInvalidCode(w)
+			s.writeInvalidCode(w, budgetOK)
 			return
 		}
 		authSucceeded = true
@@ -242,7 +244,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	lc, err := s.loginCodeRepo.UseLoginCode(r.Context(), code, time.Now())
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			s.writeInvalidCode(w)
+			s.writeInvalidCode(w, budgetOK)
 			return
 		}
 		log.Error().Err(err).Msg("cannot use login code")
@@ -255,7 +257,7 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	user, err := s.userRepo.FindById(r.Context(), lc.UserId)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			s.writeInvalidCode(w)
+			s.writeInvalidCode(w, budgetOK)
 			return
 		}
 		log.Error().Err(err).Msg("cannot find user by login code")

@@ -19,7 +19,27 @@ func truncateRunes(s string, limit int) string {
 const (
 	maxDraftItems = 50
 	maxItemShares = 30
+	// unknown приходит от модели и уходит обратно клиенту, а на write-path ещё
+	// и склеивается в текст 400 (см. validateItemizedRequest): без лимитов
+	// галлюцинация из сотни длинных «имён» раздувала бы и ответ, и ошибку
+	maxItemUnknown      = 10
+	maxUnknownNameRunes = 64
 )
+
+// sanitizeUnknown ограничивает список нераспознанных имён по числу и длине
+func sanitizeUnknown(unknown []string) []string {
+	if len(unknown) == 0 {
+		return unknown
+	}
+	if len(unknown) > maxItemUnknown {
+		unknown = unknown[:maxItemUnknown]
+	}
+	out := make([]string, 0, len(unknown))
+	for _, u := range unknown {
+		out = append(out, truncateRunes(u, maxUnknownNameRunes))
+	}
+	return out
+}
 
 // sanitizeDraft приводит ответ модели к безопасному виду перед показом
 // пользователю: userId только из участников комнаты, неотрицательные цены,
@@ -50,6 +70,7 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 		// та же причина, что и у цены: write-path отбивает длинное название 400,
 		// а UI успевал показать черновик — пользователь видел необъяснимую ошибку
 		it.Name = truncateRunes(it.Name, maxItemNameRunes)
+		it.Unknown = sanitizeUnknown(it.Unknown)
 
 		if it.Kind == string(api.ItemKindSurcharge) {
 			if it.Price == 0 {

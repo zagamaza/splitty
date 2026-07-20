@@ -122,6 +122,24 @@ func recipientSum(op operationDto, userId int) int {
 	return -1
 }
 
+// Имя профиля копируется в снимки участников всех комнат и подставляется в
+// telegram-уведомления (лимит 4096 символов): без потолка одно длинное имя
+// ломало бы доставку уведомлений всей комнате
+func TestPatchMe_DisplayNameTooLong(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	long := strings.Repeat("я", maxDisplayNameLen+1)
+	rec := doRequest(t, s, http.MethodPatch, "/api/v1/me", mustToken(t, s, testUser1.ID),
+		`{"displayName":"`+long+`"}`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	// ровно по границе — проходит
+	rec = doRequest(t, s, http.MethodPatch, "/api/v1/me", mustToken(t, s, testUser1.ID),
+		`{"displayName":"`+strings.Repeat("я", maxDisplayNameLen)+`"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body %s", rec.Code, rec.Body.String())
+	}
+}
+
 // (а) доступ без токена → 401
 func TestRequestWithoutTokenUnauthorized(t *testing.T) {
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())

@@ -3,6 +3,7 @@ package com.zagir.splitty.core.session
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import android.util.Log
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -37,6 +38,7 @@ interface TokenCipher {
 class KeystoreTokenCipher : TokenCipher {
 
     private companion object {
+        const val TAG = "TokenCipher"
         const val KEYSTORE = "AndroidKeyStore"
         const val KEY_ALIAS = "splitty_token_key"
         const val TRANSFORMATION = "AES/GCM/NoPadding"
@@ -51,7 +53,18 @@ class KeystoreTokenCipher : TokenCipher {
     @Synchronized
     override fun encrypt(plainText: String): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        try {
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        } catch (e: Exception) {
+            // Ключ под alias'ом есть, но непригоден: KeyPermanentlyInvalidatedException
+            // (сменили экран блокировки/биометрию) или порча Keystore на OEM-прошивке.
+            // Без самолечения encrypt падал НАВСЕГДА — signIn молча уходил в plaintext
+            // ветку и писал сырой JWT в незашифрованный DataStore на всю жизнь установки.
+            // Битый alias восстановлению не подлежит: сносим и генерируем заново, один раз.
+            Log.w(TAG, "keystore key unusable, regenerating: ${e.javaClass.simpleName}")
+            runCatching { keyStore().takeIf { it.containsAlias(KEY_ALIAS) }?.deleteEntry(KEY_ALIAS) }
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        }
         val iv = cipher.iv // GCM: 12 байт, генерируется провайдером
         val bytes = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         return Base64.encodeToString(iv + bytes, Base64.NO_WRAP)

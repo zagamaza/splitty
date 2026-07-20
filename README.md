@@ -40,6 +40,22 @@ docker-compose up splitty
 curl http://localhost:7171/health
 ```
 
+### Деплой через docker-compose
+
+`API_JWT_SECRET` пробрасывается из окружения хоста (как `TG_TOKEN`) и в файл не коммитится —
+перед `docker-compose up` он **обязан** быть экспортирован, иначе контейнер падает на старте
+и с `restart: always` уходит в crash-loop, унося вместе с REST API и telegram-бота:
+
+```bash
+export TG_TOKEN=...
+export API_JWT_SECRET=$(openssl rand -hex 32)
+docker-compose up -d telegram-bot
+```
+
+Внутри контейнера сервер слушает `0.0.0.0:7171` (дефолтный `localhost:7171` — сокет на
+loopback контейнера, недоступный ни через какой проброс портов), наружу порт публикуется
+как `18001` (`ports: "18001:7171"`).
+
 ## AI-распознавание расхода (голос + фото чека)
 
 REST-эндпоинт `POST /api/v1/rooms/{roomId}/operations/parse` распознаёт расход из голоса,

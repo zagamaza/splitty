@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/almaznur91/splitty/internal/ai"
@@ -33,6 +34,11 @@ const (
 	// описание ломало отправку всем участникам комнаты сразу
 	maxDescriptionRunes = 200
 	maxAliasRunes       = 64 // максимальная длина прозвища
+	// прозвища кладутся в промпт AI на каждый /parse и хранятся в документе
+	// пользователя массивом без ограничений ($addToSet): без потолка любой сосед
+	// по комнате раздувал бы чужой документ к пределу BSON в 16 МБ и оплачиваемый
+	// промпт Gemini заодно. Реальному человеку хватает единиц прозвищ
+	maxAliasesPerUser = 30
 )
 
 // handleAddAlias POST /api/v1/users/{userId}/aliases
@@ -62,9 +68,36 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "validation", "прозвище слишком длинное")
 		return
 	}
+	// Управляющие символы (в первую очередь перевод строки) в прозвище недопустимы:
+	// алиас попадает в промпт AI, и многострочная строка выглядела бы там как
+	// отдельная инструкция модели. В промпте он ещё и экранируется (%q), но
+	// впускать такое в базу незачем — прозвищем это всё равно не является
+	for _, r := range alias {
+		if unicode.IsControl(r) {
+			writeError(w, http.StatusBadRequest, "validation", "прозвище не должно содержать управляющие символы")
+			return
+		}
+	}
 
 	if callerId != targetId && !s.shareRoom(ctx, callerId, targetId) {
 		writeError(w, http.StatusForbidden, "forbidden", "нельзя добавить прозвище пользователю без общей комнаты")
+		return
+	}
+
+	// потолок на число прозвищ проверяем до записи: $addToSet сам по себе
+	// не ограничен, а массив растёт от чужих запросов (см. maxAliasesPerUser)
+	target, err := s.userRepo.FindById(ctx, targetId)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeError(w, http.StatusNotFound, "not_found", "пользователь не найден")
+			return
+		}
+		log.Error().Err(err).Msg("cannot find alias target")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить прозвище")
+		return
+	}
+	if len(target.Aliases) >= maxAliasesPerUser && !containsAlias(target.Aliases, alias) {
+		writeError(w, http.StatusBadRequest, "validation", "у пользователя слишком много прозвищ")
 		return
 	}
 
@@ -78,6 +111,17 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// containsAlias сообщает, есть ли уже такое прозвище: повторная запись
+// существующего алиаса массив не удлиняет ($addToSet), потолок ей не помеха
+func containsAlias(aliases []string, alias string) bool {
+	for _, a := range aliases {
+		if a == alias {
+			return true
+		}
+	}
+	return false
 }
 
 // shareRoom сообщает, состоят ли двое в общей комнате.
@@ -163,6 +207,20 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "неизвестный способ деления надбавки"}
 		}
 	}
+	// Чек из ОДНИХ надбавок раскладывать не по чему: базы нет, SplitSurcharge
+	// вернёт пустую карту, и DeriveShares упрётся в ErrInvariant — внутреннее
+	// утверждение «баг расчёта», из которого клиенту не следует ничего делать.
+	// sanitizeDraft схлопывает такой черновик, но сырой JSON клиента идёт мимо неё
+	hasRegularItem := false
+	for _, it := range req.Items {
+		if it.Kind == string(api.ItemKindItem) {
+			hasRegularItem = true
+			break
+		}
+	}
+	if !hasRegularItem {
+		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "чек не может состоять из одних надбавок"}
+	}
 
 	apiItems := toApiItems(req.Items)
 
@@ -199,7 +257,11 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 
 	shares, total, err := api.DeriveShares(apiItems)
 	if err != nil {
-		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "не удалось разложить позиции: " + err.Error()}
+		// сентинелы DeriveShares (ErrInvariant, ErrOverflow, …) — внутренняя
+		// диагностика, клиенту она ничего не говорит: пишем её в лог, наружу
+		// отдаём один фиксированный текст
+		log.Error().Err(err).Msg("cannot derive shares from items")
+		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "не удалось разложить позиции чека"}
 	}
 	// операция должна иметь положительный итог и хотя бы одного получателя:
 	// иначе (например, единственная позиция с price:0 и пустыми shares) сохранился

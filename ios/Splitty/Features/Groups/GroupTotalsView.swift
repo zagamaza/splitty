@@ -17,6 +17,8 @@ struct GroupTotalsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var stats: Statistics?
     @State private var errorMessage: String?
+    /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
+    @State private var reloadTask: Task<Void, Never>?
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
@@ -34,8 +36,10 @@ struct GroupTotalsView: View {
                 // Единая инвалидация: вкладка живёт долго, без этого статистика
                 // не пересчитывается после добавления расхода/платежа.
                 .onChange(of: session.dataVersion) {
-                    Task { await load() }
+                    reloadTask?.cancel()
+                    reloadTask = Task { await load() }
                 }
+                .onDisappear { reloadTask?.cancel() }
         } else {
             NavigationStack {
                 content
@@ -271,7 +275,7 @@ struct GroupTotalsView: View {
         } catch {
             // Закрытие sheet посреди запроса — не ошибка (конвенция проекта).
             if error.isTaskCancellation { return }
-            errorMessage = error.localizedDescription
+            errorMessage = humanErrorText(error)
         }
     }
 }

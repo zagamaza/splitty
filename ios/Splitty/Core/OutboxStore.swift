@@ -59,6 +59,10 @@ struct OutboxEntry: Codable, Identifiable, Equatable {
     var targetOperationId: String?
     let createdAt: Date
     var status: Status
+    /// Владелец записи — id пользователя, создавшего её. nil у записей старых
+    /// версий. Нужен, чтобы после смены аккаунта очередь пользователя A не
+    /// улетела на сервер под токеном пользователя B (см. `keepOwned`).
+    var ownerUserId: Int?
 
     var id: UUID { localId }
 
@@ -137,7 +141,12 @@ final class OutboxStore {
     /// прямого POST — если ответ потерялся, досылка не создаст дубль.
     @MainActor
     @discardableResult
-    func add(roomId: String, payload: OutboxPayload, localId: UUID = UUID()) -> OutboxEntry {
+    func add(
+        roomId: String,
+        payload: OutboxPayload,
+        localId: UUID = UUID(),
+        ownerUserId: Int? = nil
+    ) -> OutboxEntry {
         let entry = OutboxEntry(
             localId: localId,
             roomId: roomId,
@@ -145,7 +154,8 @@ final class OutboxStore {
             payload: payload,
             targetOperationId: nil,
             createdAt: Date(),
-            status: .pending
+            status: .pending,
+            ownerUserId: ownerUserId
         )
         entries.append(entry)
         persist()
@@ -175,6 +185,22 @@ final class OutboxStore {
     func markFailed(localId: UUID, message: String) {
         guard let index = entries.firstIndex(where: { $0.localId == localId }) else { return }
         entries[index].status = .failed(message: message)
+        persist()
+    }
+
+    /// Оставляет в очереди только записи вошедшего пользователя (вызывается
+    /// при входе): очередь пользователя A не должна уйти на сервер под токеном
+    /// пользователя B. Записи без владельца (созданы прошлой версией
+    /// приложения) достаются `userId` только если аккаунт не менялся.
+    @MainActor
+    func keepOwned(by userId: Int, inheritingOrphans: Bool) {
+        let kept = entries.filter { entry in
+            if let owner = entry.ownerUserId { return owner == userId }
+            return inheritingOrphans
+        }
+        guard kept.count != entries.count else { return }
+        entries = kept
+        didLoad = true
         persist()
     }
 

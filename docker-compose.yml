@@ -7,6 +7,13 @@ services:
     container_name: telegram-bot
     environment:
       - TG_TOKEN
+      # Секрет подписи JWT обязателен: без него resolveJwtSecret валит старт
+      # (log.Fatal), и с restart: always контейнер уходит в crash-loop, унося
+      # заодно telegram-бота. Берётся из окружения хоста (как TG_TOKEN).
+      - API_JWT_SECRET
+      # Дефолт LISTEN — localhost:7171, то есть сокет на loopback контейнера:
+      # снаружи он недоступен ни через какой проброс портов. Слушаем 0.0.0.0.
+      - LISTEN=0.0.0.0:7171
       - LOG_LEVEL=debug
       - DB_HOST=mongodb://mongo:27017/
       - LOG_FMT=json
@@ -15,7 +22,7 @@ services:
       - GEMINI_API_KEY
       - GEMINI_MODEL
     ports:
-      - "18001:18001"
+      - "18001:7171"
 
   mongo:
     image: mongo

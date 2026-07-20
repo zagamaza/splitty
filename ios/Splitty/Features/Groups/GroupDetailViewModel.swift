@@ -29,25 +29,34 @@ final class GroupDetailViewModel {
     /// Текст ошибки для alert (обновления поверх загруженных данных).
     var alertMessage: String?
 
+    /// Поколение загрузки: .task, .refreshable и onChange(dataVersion) могут
+    /// идти одновременно, и «последний ответивший побеждает» возвращал на экран
+    /// УСТАРЕВШИЕ балансы сразу после мутации. Применяем только самую свежую.
+    private var loadGeneration = 0
+
     /// Загрузка/обновление экрана. Спиннер — только при первой загрузке без кеша.
     func load(repo: DataRepo, roomId: String) async {
+        loadGeneration += 1
+        let generation = loadGeneration
         if room == nil {
             state = .loading
         }
         do {
             let result = try await repo.room(id: roomId) { [weak self] cached in
                 // Кеш мгновенно — только пока в памяти нет более свежих данных.
-                guard let self, self.room == nil else { return }
+                guard let self, self.room == nil, generation == self.loadGeneration else { return }
                 self.apply(cached, isFromCache: true)
             }
+            guard generation == loadGeneration else { return }
             apply(result.value, isFromCache: result.isFromCache)
         } catch {
+            guard generation == loadGeneration else { return }
             // Отмена .task (ушли с экрана) — не ошибка.
             if error.isTaskCancellation { return }
             if room == nil {
-                state = .failed(error.localizedDescription)
+                state = .failed(humanErrorText(error))
             } else {
-                alertMessage = error.localizedDescription
+                alertMessage = humanErrorText(error)
             }
         }
     }

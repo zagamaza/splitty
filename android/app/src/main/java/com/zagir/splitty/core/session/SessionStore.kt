@@ -1,5 +1,6 @@
 package com.zagir.splitty.core.session
 
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -70,6 +71,8 @@ class SessionStore @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
     companion object {
+        private const val TAG = "SessionStore"
+
         /**
          * Сервер по умолчанию. В release — HTTPS-плейсхолдер прод-домена
          * (боевой сервер к релизу обязан быть на HTTPS; cleartext из релиза
@@ -215,7 +218,16 @@ class SessionStore @Inject constructor(
         // было фатальным: сервер уже принял одноразовый код, а приложение
         // крэшилось до записи токена, и войти становилось невозможно в принципе.
         // Дегрейд на plain-ключ безопаснее разлогина: dual-read его понимает.
-        val encrypted = runCatching { tokenCipher.encrypt(token) }.getOrNull()
+        val encrypted = runCatching { tokenCipher.encrypt(token) }
+            .onFailure {
+                // Деградация молчаливой быть не должна: сырой JWT ляжет в
+                // незашифрованный DataStore и останется там до следующего входа.
+                // Это последняя линия обороны (иначе войти вообще нельзя), но в
+                // логах она обязана быть видна — иначе проблему Keystore на
+                // прошивке тестера не отличить от нормальной работы.
+                Log.w(TAG, "Keystore недоступен — токен сохраняется В ОТКРЫТОМ ВИДЕ", it)
+            }
+            .getOrNull()
         dataStore.edit { prefs ->
             if (encrypted != null) {
                 prefs[KEY_TOKEN_ENC] = encrypted

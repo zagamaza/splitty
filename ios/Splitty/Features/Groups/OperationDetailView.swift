@@ -371,7 +371,7 @@ struct OperationDetailView: View {
             onChange()
             dismiss()
         } catch {
-            alertMessage = error.localizedDescription
+            alertMessage = humanErrorText(error)
         }
     }
 }

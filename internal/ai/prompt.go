@@ -30,7 +30,15 @@ func buildPrompt(in ParseInput) string {
 				b.WriteString(fmt.Sprintf(", username=@%s", p.Username))
 			}
 			if len(p.Aliases) > 0 {
-				b.WriteString(fmt.Sprintf(", прозвища=[%s]", strings.Join(p.Aliases, ", ")))
+				// прозвища пишет пользователь (в том числе ЧУЖОЙ — любой сосед по
+				// комнате), поэтому в промпт они идут только в кавычках %q, как и
+				// displayName: сырая подстановка позволяла бы вписать в профиль
+				// участника строку с переводом строки и инструкцией для модели
+				quoted := make([]string, 0, len(p.Aliases))
+				for _, a := range p.Aliases {
+					quoted = append(quoted, fmt.Sprintf("%q", a))
+				}
+				b.WriteString(fmt.Sprintf(", прозвища=[%s]", strings.Join(quoted, ", ")))
 			}
 		}
 	}

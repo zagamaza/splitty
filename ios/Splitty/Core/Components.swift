@@ -90,6 +90,13 @@ extension View {
 /// Переводит сетевой/системный сбой в понятный пользователю текст:
 /// сырые `localizedDescription` URLSession в алертах пугают жаргоном.
 func humanErrorText(_ error: Error) -> String {
+    // APIClient заворачивает ЛЮБУЮ сетевую ошибку в APIError.transport(URLError),
+    // поэтому прямая проверка `as? URLError` не срабатывала никогда: вместо
+    // «нет интернета» / «сервер долго не отвечает» пользователь всегда видел
+    // общее «Нет соединения с сервером».
+    if let apiError = error as? APIError, case .transport(let underlying) = apiError {
+        return humanErrorText(underlying)
+    }
     if let urlError = error as? URLError {
         switch urlError.code {
         case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:

@@ -164,6 +164,27 @@ func TestCreatePlainStillWorks(t *testing.T) {
 	}
 }
 
+// TestCreateItemized_SurchargeOnlyRejected — чек из одних надбавок клиент
+// присылает мимо sanitizeDraft (тот схлопывает его только для черновика от
+// модели). Без явной проверки DeriveShares отвечал бы ErrInvariant, и наружу
+// уходило «сумма долей не равна итогу» — непонятно и маскирует настоящие баги
+func TestCreateItemized_SurchargeOnlyRejected(t *testing.T) {
+	room := newItemizedRoom()
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	body := `{
+	  "description":"Только сбор","donorId":1,"sum":0,
+	  "items":[{"name":"Сбор","price":100,"kind":"surcharge","split":"equally"}]
+	}`
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400, body %s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "одних надбавок") {
+		t.Fatalf("непонятный текст ошибки: %s", rec.Body.String())
+	}
+}
+
 func TestCreateItemized_FullReceipt(t *testing.T) {
 	// полный чек: суммы должны сойтись с тем, что считает ядро (DeriveShares)
 	room := newItemizedRoom()

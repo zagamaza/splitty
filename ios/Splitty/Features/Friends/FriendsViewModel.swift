@@ -67,9 +67,9 @@ final class FriendsViewModel {
                 return
             }
             if friends.isEmpty {
-                state = .failed(error.localizedDescription)
+                state = .failed(humanErrorText(error))
             } else {
-                errorMessage = error.localizedDescription
+                errorMessage = humanErrorText(error)
             }
         }
     }

@@ -80,7 +80,10 @@ android {
                     serviceCredentialsFile = it
                 }
                 firebaseProps.getProperty("appId")?.let { appId = it }
-                releaseNotesFile = "app/release-notes.txt"
+                // Абсолютный путь: относительный плагин резолвит от рабочей
+                // директории JVM, а не от корня проекта — из IDE/CI заметки
+                // молча не находились.
+                releaseNotesFile = rootProject.file("app/release-notes.txt").absolutePath
             }
         }
     }
@@ -165,16 +168,49 @@ dependencies {
  */
 val verifyReleaseShrinking by tasks.registering {
     description = "Проверяет, что R8 не выкинул сериализаторы и Retrofit-интерфейсы"
+    // mapping.txt намеренно НЕ объявлен через inputs.file: задача-финализатор
+    // запускается и после падения assembleRelease, и Gradle тогда ронял её на
+    // валидации входов («file does not exist»), перебивая настоящую ошибку R8.
+    // Читаем файл в doLast сами и говорим прямым текстом, чего не хватило.
     val mapping = layout.buildDirectory.file("outputs/mapping/release/mapping.txt")
-    inputs.file(mapping)
     doLast {
-        val text = mapping.get().asFile.readText()
+        val mappingFile = mapping.get().asFile
+        require(mappingFile.isFile) {
+            "Нет ${mappingFile.absolutePath} — assembleRelease не дошёл до R8 " +
+                "(смотри ошибку выше, эта задача лишь проверяет её результат)."
+        }
+        val text = mappingFile.readText()
         val survivors = Regex("""^(com\.zagir\.splitty\.[\w.$]+) ->""", RegexOption.MULTILINE)
             .findAll(text).map { it.groupValues[1] }.toSet()
 
-        val serializers = survivors.count { it.endsWith("\$\$serializer") }
-        require(serializers >= 30) {
-            "R8 выкинул сериализаторы моделей: в mapping их $serializers (ожидали ≥30). " +
+        // Поимённо, а не «сериализаторов ≥ 30»: пороговая проверка проходила и с
+        // четвертью выброшенных моделей — ровно тех, что нужны конкретному экрану.
+        // Список — модели критичных ответов API (docs/API.md) и тела запросов.
+        val requiredSerializers = listOf(
+            "com.zagir.splitty.core.model.Me",
+            "com.zagir.splitty.core.model.User",
+            "com.zagir.splitty.core.model.AuthResponse",
+            "com.zagir.splitty.core.model.RoomSummary",
+            "com.zagir.splitty.core.model.RoomDetail",
+            "com.zagir.splitty.core.model.Operation",
+            "com.zagir.splitty.core.model.OperationItem",
+            "com.zagir.splitty.core.model.OperationBody",
+            "com.zagir.splitty.core.model.ItemShare",
+            "com.zagir.splitty.core.model.RecipientSum",
+            "com.zagir.splitty.core.model.Debt",
+            "com.zagir.splitty.core.model.FriendBalance",
+            "com.zagir.splitty.core.model.ActivityItem",
+            "com.zagir.splitty.core.model.Statistics",
+            "com.zagir.splitty.core.model.CurrencyInfo",
+            "com.zagir.splitty.core.model.ParseDraft",
+            "com.zagir.splitty.core.model.ParseResponse",
+            "com.zagir.splitty.core.model.NotifySettings",
+            "com.zagir.splitty.core.model.CodeLoginBody",
+            "com.zagir.splitty.core.model.RepaymentBody",
+        )
+        val missing = requiredSerializers.filterNot { "$it\$\$serializer" in survivors }
+        require(missing.isEmpty()) {
+            "R8 выкинул сериализаторы: ${missing.joinToString()}. " +
                 "Проверь -keep для kotlinx.serialization в proguard-rules.pro."
         }
         listOf(
@@ -185,7 +221,10 @@ val verifyReleaseShrinking by tasks.registering {
         ).forEach { required ->
             require(required in survivors) { "R8 выкинул $required — сборка нерабочая." }
         }
-        logger.lifecycle("R8-smoke: сериализаторов $serializers, интерфейсы API и точки входа на месте.")
+        logger.lifecycle(
+            "R8-smoke: сериализаторы ${requiredSerializers.size} критичных моделей, " +
+                "интерфейсы API и точки входа на месте."
+        )
     }
 }
 

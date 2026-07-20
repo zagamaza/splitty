@@ -160,6 +160,17 @@ class OutboxStore(
      */
     private var didRead = false
 
+    /**
+     * Очередь уже стёрта логаутом в этом процессе — сливать с диском НЕЛЬЗЯ никогда.
+     *
+     * Одного `didRead = true` в [clear] не хватало: если сама запись файла падала,
+     * persistLocked сбрасывал didRead обратно в false, и первый же add() следующего
+     * аккаунта возвращал с диска очередь ПРЕДЫДУЩЕГО — OutboxSyncer отправлял чужие
+     * расходы в чужие комнаты. Флаг липкий на всё время жизни процесса: после
+     * логаута на диске нет ничего, что имело бы смысл восстанавливать.
+     */
+    private var cleared = false
+
     private val _entries = MutableStateFlow<List<OutboxEntry>>(emptyList())
 
     /** Все записи outbox в порядке постановки (FIFO). */
@@ -228,12 +239,21 @@ class OutboxStore(
         // на диск очередь ПРЕДЫДУЩЕГО аккаунта — следующий вошедший отправил бы
         // чужие расходы в свои комнаты.
         didRead = true
+        cleared = true
         isLoaded = true
         // Память чистим ДО записи: если запись файла упадёт, в _entries не должна
         // остаться очередь предыдущего аккаунта — иначе следующая же успешная
         // запись вернула бы её на диск и отправила чужие расходы в свои комнаты.
         _entries.value = emptyList()
         persistLocked(emptyList())
+        // Запись не удалась (persistLocked снял didRead) — на диске остался JSON
+        // предыдущего аккаунта. Файл целиком удаляем: пустая очередь и отсутствие
+        // файла для нас равнозначны, а чужие расходы пережить логаут не должны.
+        if (!didRead) {
+            withContext(Dispatchers.IO) {
+                runCatching { file.delete() }.onFailure { Log.e(TAG, "outbox clear: delete failed", it) }
+            }
+        }
     }
 
     // --- Файл ---
@@ -273,7 +293,7 @@ class OutboxStore(
 
     private suspend fun persistLocked(entries: List<OutboxEntry>, removed: Set<String> = emptySet()) {
         var toWrite = entries
-        if (!didRead) {
+        if (!didRead && !cleared) {
             // Повторная попытка: ошибка чтения могла быть транзиентной. Записи с
             // диска, которых нет в памяти, возвращаются в очередь — иначе они
             // пропали бы при этой же перезаписи.

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const defaultBaseURL = "https://generativelanguage.googleapis.com/v1beta"
@@ -182,9 +183,12 @@ func parseCandidate(gr geminiResponse) (ParseResult, error) {
 	return out, nil
 }
 
+// truncate режет строку для лога по рунам, а не по байтам: тела ошибок Gemini —
+// JSON с кириллицей, и срез по байту разваливал бы руну пополам, оставляя в
+// логе битый UTF-8 ровно тогда, когда его читают для разбора сбоя
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if utf8.RuneCountInString(s) <= n {
 		return s
 	}
-	return s[:n] + "…"
+	return string([]rune(s)[:n]) + "…"
 }

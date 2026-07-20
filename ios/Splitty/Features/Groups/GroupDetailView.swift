@@ -21,6 +21,9 @@ struct GroupDetailView: View {
     @State private var isMineOnly = false
     /// Локальная запись outbox, открытая на редактирование (sheet).
     @State private var editingEntry: OutboxEntry?
+    /// Задача перезагрузки по dataVersion: держим ссылку и отменяем прежнюю —
+    /// иначе серия мутаций плодит параллельные загрузки одной и той же комнаты.
+    @State private var reloadTask: Task<Void, Never>?
 
     init(roomId: String) {
         self.roomId = roomId
@@ -64,8 +67,10 @@ struct GroupDetailView: View {
             // Единая инвалидация: перезагрузка после любой мутации данных
             // (расход/платёж/архив из sheet'ов бампают dataVersion сами).
             .onChange(of: session.dataVersion) {
-                Task { await model.load(repo: session.repo, roomId: roomId) }
+                reloadTask?.cancel()
+                reloadTask = Task { await model.load(repo: session.repo, roomId: roomId) }
             }
+            .onDisappear { reloadTask?.cancel() }
             // Полноэкранно, а не sheet: форму со введёнными данными нельзя
             // случайно смахнуть — выход только «Отмена»/«Сохранить».
             .fullScreenCover(isPresented: $isAddExpensePresented) {
@@ -267,7 +272,10 @@ struct GroupDetailView: View {
                 if creditors.count == 1, let debt = creditors.first {
                     Text("Вы должны \(debt.lender.displayName)")
                         .sectionHeaderStyle()
-                    MoneyText(debt.sum, role: .negative, size: 40, currency: room.currency)
+                    // Сумма — НЕТТО по группе, а не долг одному кредитору:
+                    // «должен A 100, C должен мне 30» давало здесь 100, а в
+                    // списке групп 70 — две разные цифры про одну комнату.
+                    MoneyText(room.myBalance, size: 40, currency: room.currency)
                 } else {
                     Text("Вы должны")
                         .sectionHeaderStyle()

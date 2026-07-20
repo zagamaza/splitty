@@ -47,10 +47,14 @@ class SecurityConfigTest {
 
     @Test
     fun `backup rules exclude token store, outbox and api cache by exact path`() {
+        // Список расширяется вместе с каждым новым потребителем filesDir: квота
+        // автобэкапа ~25 МБ, и один забытый каталог (модель Vosk — 40-50 МБ)
+        // молча отключает бэкап ВСЕГО остального.
         val excludedPaths = listOf(
             "datastore/session.preferences_pb",
             "outbox.json",
             "cache-api/",
+            "vosk-model-ru/",
         )
         for (rel in listOf(
             "src/main/res/xml/data_extraction_rules.xml",

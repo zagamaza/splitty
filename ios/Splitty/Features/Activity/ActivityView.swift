@@ -4,6 +4,8 @@ import SwiftUI
 struct ActivityView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = ActivityViewModel()
+    /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
+    @State private var reloadTask: Task<Void, Never>?
 
     init() {}
 
@@ -38,8 +40,10 @@ struct ActivityView: View {
                 }
                 // Единая инвалидация: перезагрузка после любой мутации данных.
                 .onChange(of: session.dataVersion) {
-                    Task { await model.load(repo: session.repo) }
+                    reloadTask?.cancel()
+                    reloadTask = Task { await model.load(repo: session.repo) }
                 }
+                .onDisappear { reloadTask?.cancel() }
                 .alert(
                     "Ошибка",
                     isPresented: Binding(

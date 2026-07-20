@@ -29,6 +29,50 @@ final class AudioRecorder {
     /// MIME записанного аудио.
     let mimeType = "audio/wav"
 
+    /// Запись оборвана системой (входящий звонок, сброс медиасервисов).
+    /// Вью гасит оверлей и замок: в закреплённом режиме пальца нет, отмену
+    /// касания UIKit не пришлёт, и «Запись идёт» висела бы над мёртвым движком,
+    /// а автостоп через минуту отправлял бы ОБРЕЗАННЫЙ WAV как полный.
+    var onInterrupted: (() -> Void)?
+
+    /// Подписки на события аудиосессии. Коробка нужна, чтобы снять их в
+    /// deinit: он nonisolated и до main-actor свойств не дотягивается.
+    private let sessionObservers = ObserverBox()
+
+    init() {
+        observeSessionEvents()
+    }
+
+    /// Прерывание сессии (звонок) и сброс медиасервисов: движок остановлен
+    /// системой — приводим состояние в порядок и выбрасываем обрывок.
+    private func observeSessionEvents() {
+        let center = NotificationCenter.default
+        let onInterruption = center.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] note in
+            let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+            guard raw == AVAudioSession.InterruptionType.began.rawValue else { return }
+            MainActor.assumeIsolated { self?.abortByInterruption() }
+        }
+        let onReset = center.addObserver(
+            forName: AVAudioSession.mediaServicesWereResetNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.abortByInterruption() }
+        }
+        sessionObservers.tokens = [onInterruption, onReset]
+    }
+
+    private func abortByInterruption() {
+        guard isRecording || isStarting else { return }
+        stop()
+        reset()
+        onInterrupted?()
+    }
+
     private var engine: AVAudioEngine?
     private let sink = PCMSink()
     private var speechRecognizer: SFSpeechRecognizer?
@@ -42,6 +86,10 @@ final class AudioRecorder {
     private var finalizedTranscript = ""
     /// Кэш решения по Speech-доступу: nil — ещё не спрашивали.
     private var speechAllowed: Bool?
+    /// Сколько сегментов распознавания подряд упало с ошибкой — ограничитель
+    /// перезапусков, чтобы не крутить бесконечный цикл на мёртвом распознавателе.
+    private var speechSegmentFailures = 0
+    private static let maxSpeechSegmentFailures = 3
 
     /// Доступ к микрофону: УЖЕ выданный статус читается синхронно (без
     /// асинхронного TCC-запроса на каждой новой форме — он давал задержку);
@@ -69,7 +117,11 @@ final class AudioRecorder {
     /// на сотни миллисекунд («дикая задержка» при нажатии). Бросает, если
     /// движок не поднялся. Транскрипция — best-effort и старт не блокирует.
     func start() async throws {
-        guard !isRecording, !isStarting else { return }
+        guard !isRecording else { return } // запись уже идёт — оверлей живой
+        // Параллельный старт ещё поднимает движок: молча вернуться нельзя —
+        // вызывающий остался бы с «защёлкнутым» оверлеем без записи, а он
+        // перехватывает касания и форма замирала навсегда.
+        guard !isStarting else { throw AudioRecorderError.alreadyStarting }
         isStarting = true
         defer { isStarting = false }
         audioData = nil
@@ -111,6 +163,12 @@ final class AudioRecorder {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.record, mode: .default)
         try session.setActive(true)
+        // Сессия уже активна и заглушила чужую музыку: КАЖДЫЙ выход по ошибке
+        // ниже обязан её отпустить, иначе плеер пользователя остаётся немым
+        // до перезапуска приложения (стоп-путь такой же).
+        func releaseSession() {
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        }
 
         let engine = AVAudioEngine()
         let input = engine.inputNode
@@ -122,6 +180,7 @@ final class AudioRecorder {
               ),
               let converter = AVAudioConverter(from: inFormat, to: outFormat)
         else {
+            releaseSession()
             throw AudioRecorderError.failedToStart
         }
         let ratio = 16_000.0 / inFormat.sampleRate
@@ -162,6 +221,7 @@ final class AudioRecorder {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
+            releaseSession()
             throw AudioRecorderError.failedToStart
         }
         return EngineBox(engine: engine)
@@ -220,6 +280,7 @@ final class AudioRecorder {
               recognizer.isAvailable else { return }
         speechRecognizer = recognizer
         finalizedTranscript = ""
+        speechSegmentFailures = 0
         startSpeechSegment()
     }
 
@@ -235,8 +296,25 @@ final class AudioRecorder {
             request.requiresOnDeviceRecognition = true
         }
         speechFeed.request = request
-        speechTask = recognizer.recognitionTask(with: request) { [weak self] result, _ in
-            guard let result else { return }
+        speechTask = recognizer.recognitionTask(with: request) { [weak self] result, error in
+            guard let result else {
+                // Ошибка сегмента (таймаут демона, отвалилась он-девайс модель):
+                // без перезапуска новый сегмент не стартует и живой транскрипт
+                // замирает, хотя оверлей продолжает звать «Говорите…».
+                guard error != nil else { return }
+                Task { @MainActor in
+                    guard let self, self.isRecording else { return }
+                    guard self.speechSegmentFailures < Self.maxSpeechSegmentFailures else {
+                        // Распознавание стабильно не работает — молча живём без
+                        // транскрипта: аудио пишется независимо от Speech.
+                        self.stopSpeech()
+                        return
+                    }
+                    self.speechSegmentFailures += 1
+                    self.startSpeechSegment()
+                }
+                return
+            }
             let text = result.bestTranscription.formattedString
             let isFinal = result.isFinal
             Task { @MainActor in
@@ -315,6 +393,19 @@ private final class SpeechFeed: @unchecked Sendable {
     }
 }
 
+/// Держатель подписок NotificationCenter: снимает их при разрушении
+/// владельца (deinit @MainActor-класса до его свойств не дотянется).
+private final class ObserverBox {
+    var tokens: [NSObjectProtocol] = []
+
+    deinit {
+        let center = NotificationCenter.default
+        for token in tokens {
+            center.removeObserver(token)
+        }
+    }
+}
+
 /// Обёртка движка для переноса между потоками (AVAudioEngine не Sendable,
 /// но используется последовательно: собрали в фоне — владеет главный).
 private final class EngineBox: @unchecked Sendable {
@@ -364,11 +455,15 @@ private final class PCMSink: @unchecked Sendable {
 /// Ошибки записи голоса — текст показывается пользователю.
 enum AudioRecorderError: LocalizedError {
     case failedToStart
+    /// Предыдущий старт ещё поднимает движок (двойное нажатие).
+    case alreadyStarting
 
     var errorDescription: String? {
         switch self {
         case .failedToStart:
             return "Не удалось начать запись. Проверьте доступ к микрофону"
+        case .alreadyStarting:
+            return "Запись ещё готовится. Попробуйте ещё раз"
         }
     }
 }

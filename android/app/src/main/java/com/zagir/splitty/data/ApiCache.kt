@@ -68,9 +68,25 @@ class ApiCache(
     /** Полная очистка кеша (logout). */
     suspend fun clear() {
         withContext(Dispatchers.IO) {
-            runCatching { dir.listFiles()?.forEach { it.delete() } }
+            // Рекурсивно: непустой подкаталог обычный delete() не берёт, и данные
+            // прошлого аккаунта пережили бы логаут. Каталог сразу восстанавливаем —
+            // write() рассчитывает, что он существует.
+            runCatching {
+                dir.deleteRecursively()
+                dir.mkdirs()
+            }
         }
     }
 
-    private fun fileFor(key: String): File = File(dir, "$key.json")
+    /**
+     * Имя файла кеша. Ключ склеивается из id, пришедших С СЕРВЕРА, поэтому
+     * всё, кроме `[A-Za-z0-9-_]`, схлопывается в `_`: иначе roomId вида
+     * `../../outbox` уводил запись за пределы каталога кеша (path traversal) —
+     * поверх очереди офлайн-расходов, которую clear() к тому же не стирает.
+     */
+    private fun fileFor(key: String): File = File(dir, "${key.replace(UNSAFE_KEY_CHARS, "_")}.json")
+
+    private companion object {
+        val UNSAFE_KEY_CHARS = Regex("[^A-Za-z0-9\\-_]")
+    }
 }

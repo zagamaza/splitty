@@ -13,6 +13,7 @@ final class SessionStore {
 
     private static let baseURLKey = "splitty.baseURL"
     private static let tokenKey = "splitty.apiToken"
+    private static let userIdKey = "splitty.userId"
 
     /// Профиль текущего пользователя (nil до первого refreshMe/login).
     var me: Me?
@@ -51,6 +52,26 @@ final class SessionStore {
     }
 
     var isAuthenticated: Bool { token != nil }
+
+    /// id владельца локальных данных (кеш + outbox), переживает перезапуск:
+    /// профиль на холодном старте ещё не загружен, а имя namespace кеша нужно
+    /// ДО первого чтения. Персистится в UserDefaults при входе/refreshMe.
+    private(set) var ownerUserId: Int? {
+        didSet {
+            if let ownerUserId {
+                UserDefaults.standard.set(ownerUserId, forKey: Self.userIdKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.userIdKey)
+            }
+        }
+    }
+
+    /// Namespace файлового кеша: ключи GET сами по себе (`me`, `friends`…)
+    /// пользователя не различают, и после смены аккаунта экран мгновенно
+    /// показывал бы профиль и группы ПРЕДЫДУЩЕГО.
+    private var cacheScope: String {
+        ownerUserId.map { "u\($0)" } ?? "anon"
+    }
 
     /// Версия данных на сервере. Увеличивается после каждой мутации
     /// (сохранение/удаление операции, платёж, создание/архив комнаты) —
@@ -97,7 +118,7 @@ final class SessionStore {
     /// перезапись»; сетевая ошибка при наличии кеша → кеш без алерта).
     @MainActor
     var repo: DataRepo {
-        DataRepo(api: api, cache: cache)
+        DataRepo(api: api, cache: cache, scope: cacheScope)
     }
 
     /// Синхронизация outbox (FIFO, сериализовано — см. `OutboxStore.sync`).
@@ -119,21 +140,40 @@ final class SessionStore {
             ?? UserDefaults.standard.string(forKey: Self.baseURLKey)
             ?? Self.defaultBaseURL
         token = KeychainStore.read(key: Self.tokenKey)
+        ownerUserId = UserDefaults.standard.object(forKey: Self.userIdKey) as? Int
     }
 
     /// Вход для разработки: POST /auth/dev, сохраняет токен и профиль.
+    @MainActor
     func loginDev(userId: Int, displayName: String, username: String?) async throws {
         let response = try await api.devLogin(userId: userId, displayName: displayName, username: username)
         token = response.token
         me = response.user
+        adoptOwner(response.user.id)
+    }
+
+    /// Привязывает локальные данные ко вошедшему пользователю. Если вошёл
+    /// ДРУГОЙ аккаунт — кеш прошлого владельца стирается, а его записи outbox
+    /// выбрасываются: иначе syncOutbox отправил бы расходы пользователя A
+    /// под токеном пользователя B.
+    @MainActor
+    private func adoptOwner(_ userId: Int) {
+        let previous = ownerUserId
+        ownerUserId = userId
+        if let previous, previous != userId {
+            Task { [cache] in await cache.removeAll() }
+        }
+        outbox.keepOwned(by: userId, inheritingOrphans: previous == nil || previous == userId)
     }
 
     /// Вход по одноразовому коду из Telegram-бота: POST /auth/code,
     /// сохраняет токен (Keychain) и профиль. 401 — неверный/просроченный код.
+    @MainActor
     func loginWithCode(_ code: String) async throws {
         let response = try await api.loginWithCode(code)
         token = response.token
         me = response.user
+        adoptOwner(response.user.id)
     }
 
     /// Выход: сброс токена/профиля и очистка офлайн-хранилищ (read-кеш
@@ -142,6 +182,7 @@ final class SessionStore {
     @MainActor
     func logout() {
         expireSession()
+        ownerUserId = nil
         // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
         Task { [cache] in await cache.removeAll() }
         outbox.clear()
@@ -172,8 +213,14 @@ final class SessionStore {
                 }
             }
             me = result.value
+            // Токен мог остаться от установки без сохранённого владельца —
+            // подхватываем его, чтобы namespace кеша и outbox были привязаны.
+            adoptOwner(result.value.id)
         } catch let error as APIError where error.isUnauthorized {
-            logout()
+            // Именно expireSession, а НЕ logout: refreshMe зовётся на каждом
+            // старте и на «Профиле», и полная очистка стирала бы outbox —
+            // один протухший токен уносил все неотправленные офлайн-расходы.
+            expireSession()
         } catch {
             // Сервер недоступен и кеша нет — оставляем текущее состояние.
         }

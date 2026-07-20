@@ -126,4 +126,44 @@ class ParseApplyTest {
         assertNull(form.alertMessage, "распознанный плательщик — не пустой ответ")
         assertTrue(form.canUndoParse, "отмена должна остаться доступной")
     }
+
+    // Ручная правка суммы сносит распознанный чек — но обратимо. Иначе одна
+    // цифра в поле суммы уничтожала серверный чек уже сохранённой операции:
+    // PUT уходил без позиций, и сервер переводил её в плоскую ветку.
+    @Test
+    fun `manual sum edit keeps an undo snapshot of the receipt`() {
+        val items = listOf(
+            OperationItem(name = "Пицца", price = 600, shares = listOf(ItemShare(userId = 1L))),
+            OperationItem(name = "Кола", price = 200, shares = listOf(ItemShare(userId = 2L))),
+        )
+        val withReceipt = baseForm().copy(
+            draftItems = items,
+            description = "Ужин",
+            sumText = "800",
+            payerId = 1L,
+            didRecognize = true,
+        )
+
+        val reset = withReceipt.resettingItems()
+        assertTrue(reset.draftItems.isEmpty(), "позиции должны сброситься")
+        assertEquals(SplitType.EQUALLY, reset.splitType)
+        assertTrue(reset.canUndoParse, "баннер «Отменить» обязан появиться")
+        assertEquals(items, reset.undoSnapshot?.draftItems, "снапшот чека не сохранён")
+
+        // «Отменить» после ввода новой суммы возвращает чек целиком.
+        val undone = reset.copy(sumText = "5").undoingParse()
+        assertEquals(items, undone.draftItems)
+        assertEquals("800", undone.sumText)
+        assertEquals("Ужин", undone.description)
+        assertEquals(1L, undone.payerId)
+        assertFalse(undone.canUndoParse)
+    }
+
+    @Test
+    fun `manual sum edit on a flat form does not offer undo`() {
+        val flat = baseForm().copy(sumText = "100")
+        val reset = flat.resettingItems()
+        assertFalse(reset.canUndoParse, "чека не было — отменять нечего")
+        assertNull(reset.undoSnapshot)
+    }
 }

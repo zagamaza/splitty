@@ -145,8 +145,11 @@ struct AddExpenseView: View {
             )
             // Кнопки «Готово»/«Отмена» кликабельны только в закреплённом
             // режиме — пока палец на микрофоне (и в покое) оверлей прозрачен
-            // для касаний.
-            .allowsHitTesting(isRecordingLocked)
+            // для касаний. Проверка recActive обязательна: замок защёлкивается
+            // ДО того, как поднялся движок (isMicPressed при этом снимается), и
+            // невидимый (opacity 0) оверлей всё равно ловил касания — SwiftUI
+            // хит-тестит прозрачные вью, и форма замирала намертво.
+            .allowsHitTesting(isRecordingLocked && recActive)
             .zIndex(2)
             if let toast = model.toastMessage {
                 toastView(toast).zIndex(3)
@@ -154,6 +157,18 @@ struct AddExpenseView: View {
         }
         .animation(.spring(duration: 0.3), value: model.toastMessage)
         .animation(.spring(duration: 0.25), value: isReviewPresented)
+        // Звонок/сброс медиасервисов обрывают запись мимо жестов: в закреплённом
+        // режиме пальца нет, cancelTracking не придёт — снимаем замок сами,
+        // иначе оверлей «Запись идёт» висит над остановленным движком.
+        .onAppear {
+            recorder.onInterrupted = {
+                isRecordingLocked = false
+                isMicPressed = false
+                isCancellingRecording = false
+                recordingDragOffset = .zero
+                model.toastMessage = "Запись прервана системой. Продиктуйте ещё раз"
+            }
+        }
         // Второй хептик — в момент, когда запись РЕАЛЬНО пошла (движок поднялся):
         // ощущение «заработало», даже если подготовка заняла долю секунды.
         .onChange(of: recorder.isRecording) { _, isOn in
@@ -1095,11 +1110,20 @@ struct AddExpenseView: View {
             isReviewPresented = true
             return
         }
-        Task {
-            await model.parse(api: session.api, audio: data, image: capture.imageData)
+        model.startParse(api: session.api, audio: data, image: capture.imageData) {
             recorder.reset()
             focusedField = nil
+            clearAudioAfterParse()
         }
+    }
+
+    /// После УДАЧНОГО разбора надиктовка больше не нужна: иначе следующий
+    /// запрос (например, фото чека) уходил бы вместе со старым голосом поверх
+    /// уже применённого черновика — сервер применял его повторно, и позиции
+    /// задваивались. При ошибке запись остаётся: алерт предлагает «Повторить».
+    private func clearAudioAfterParse() {
+        guard model.parseRetryMessage == nil else { return }
+        lastAudio = nil
     }
 
     /// Отправить фото чека на распознавание (вместе с текущим черновиком —
@@ -1108,10 +1132,10 @@ struct AddExpenseView: View {
     /// правкам до закрытия формы.
     private func sendParse(image: Data? = nil) {
         isReviewPresented = false
-        Task {
-            await model.parse(api: session.api, audio: lastAudio, image: image)
+        model.startParse(api: session.api, audio: lastAudio, image: image) {
             recorder.reset()
             focusedField = nil
+            clearAudioAfterParse()
         }
     }
 
@@ -2219,6 +2243,10 @@ struct ItemSheetView: View {
     @State private var isDeleteConfirmPresented = false
     private let isSurcharge: Bool
     private let originalItem: OperationItem?
+    /// Клиентский id правимой строки: пока шит открыт, голосовая правка может
+    /// переставить/заменить позиции — по индексу «Готово»/«Удалить» попадали
+    /// бы в ЧУЖУЮ строку (replaceItem проверяет только границы массива).
+    private let itemId: UUID?
 
     init(model: AddExpenseViewModel, index: Int, meId: Int?) {
         self.model = model
@@ -2226,6 +2254,7 @@ struct ItemSheetView: View {
         self.meId = meId
         let item = model.draftItemList.indices.contains(index) ? model.draftItemList[index] : nil
         self.originalItem = item
+        self.itemId = item?.id
         self.isSurcharge = item?.isSurcharge ?? false
         _name = State(initialValue: item?.name ?? "")
         _priceText = State(initialValue: item.map { String($0.price) } ?? "")
@@ -2301,7 +2330,9 @@ struct ItemSheetView: View {
             ) {
                 Button("Удалить", role: .destructive) {
                     Haptics.tap()
-                    model.deleteItem(at: index)
+                    if let itemId {
+                        model.deleteItem(id: itemId)
+                    }
                     dismiss()
                 }
                 Button("Отмена", role: .cancel) {}
@@ -2567,7 +2598,7 @@ struct ItemSheetView: View {
 
     /// Пересобирает позицию из состояния шита и пишет обратно в черновик.
     private func commit() {
-        guard let original = originalItem else { return }
+        guard let original = originalItem, let itemId else { return }
         let price = Int(priceText) ?? original.price
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         var newShares: [ItemShare]? = nil
@@ -2583,7 +2614,7 @@ struct ItemSheetView: View {
                     return ItemShare(userId: id, weight: byAmount ? 1 : max(1, weights[id] ?? 1))
                 }
         }
-        model.replaceItem(at: index, with: OperationItem(
+        model.replaceItem(id: itemId, with: OperationItem(
             name: trimmedName.isEmpty ? original.name : trimmedName,
             price: price,
             qty: original.qty,

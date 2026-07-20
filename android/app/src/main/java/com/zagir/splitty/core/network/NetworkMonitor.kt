@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,18 +38,24 @@ class NetworkMonitor @Inject constructor(
         // «офлайн» навсегда — по осевшей сети события больше не приходят.
         // Баннер «Офлайн» не гас, sync() выходил на первой строке, а новые
         // траты уходили в outbox вместо отправки.
-        var current: Network? = manager?.activeNetwork
+        //
+        // AtomicReference, а не var: сюда пишет поток инжекта, а читают и пишут
+        // коллбэки ConnectivityManager со своего потока. Без барьера памяти
+        // коллбэк мог не увидеть seed (или чужую запись), guard по хендоверу
+        // пропускался — и «офлайн» защёлкивало ровно так, как этот guard и должен
+        // предотвращать.
+        val current = AtomicReference(manager?.activeNetwork)
 
         manager?.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 // Дальше придёт onCapabilitiesChanged с VALIDATED; оптимистично true,
                 // чтобы синк стартовал сразу после возвращения сети.
-                current = network
+                current.set(network)
                 _isOnline.value = true
             }
 
             override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                current = network
+                current.set(network)
                 _isOnline.value =
                     capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
                         capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
@@ -56,8 +63,9 @@ class NetworkMonitor @Inject constructor(
 
             override fun onLost(network: Network) {
                 // Ушла не та сеть, что сейчас дефолтная — это хвост хендовера.
-                if (current != null && network != current) return
-                current = null
+                val active = current.get()
+                if (active != null && network != active) return
+                current.set(null)
                 _isOnline.value = false
             }
 

@@ -24,10 +24,15 @@ final class DataRepo {
     /// (страницы активности кроме первой и т.п.).
     let api: APIClient
     private let cache: OfflineStore
+    /// Префикс ключей кеша = владелец данных (см. `SessionStore.cacheScope`):
+    /// без него после смены аккаунта экраны мгновенно рисовали профиль,
+    /// группы и друзей ПРЕДЫДУЩЕГО пользователя.
+    private let scope: String
 
-    init(api: APIClient, cache: OfflineStore) {
+    init(api: APIClient, cache: OfflineStore, scope: String = "anon") {
         self.api = api
         self.cache = cache
+        self.scope = scope
     }
 
     // MARK: Кешируемые GET (ключ = эндпоинт + параметры)
@@ -95,6 +100,7 @@ final class DataRepo {
         onCached: ((T) -> Void)?,
         fetch: () async throws -> T
     ) async throws -> CachedResult<T> {
+        let key = "\(scope)-\(key)"
         // await — хоп на актор кеша: дисковый I/O и JSON-кодек вне main.
         let cached: T? = await cache.read(key: key)
         if let cached {
