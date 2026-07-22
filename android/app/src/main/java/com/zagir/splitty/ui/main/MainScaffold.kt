@@ -3,6 +3,7 @@ package com.zagir.splitty.ui.main
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +33,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -163,24 +167,38 @@ fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
         bottomBar = {
             // Нижний бар — только на вкладках; на детальных экранах скрыт.
             if (currentRoute in MainRoutes.tabs) {
-                NavigationBar(containerColor = colors.surface) {
-                    LeftTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
-                    // Центральная позиция — приподнятая кнопка «+».
-                    NavigationBarItem(
-                        selected = false,
+                // Кнопку «+» рисуем ПОВЕРХ бара в Box (Box не клипует), а не как
+                // icon у NavigationBarItem: NavigationBar клипует контент по своей
+                // высоте, из-за чего приподнятая на -12dp кнопка обрезалась сверху.
+                Box {
+                    NavigationBar(containerColor = colors.surface) {
+                        LeftTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
+                        // Плейсхолдер центральной позиции: держит раскладку табов
+                        // (сама кнопка — оверлеем ниже).
+                        NavigationBarItem(
+                            selected = false,
+                            onClick = {
+                                haptics.tap()
+                                navController.navigate(MainRoutes.addExpense())
+                            },
+                            icon = { Spacer(Modifier.size(58.dp)) },
+                            colors = NavigationBarItemDefaults.colors(
+                                indicatorColor = Color.Transparent,
+                            ),
+                        )
+                        RightTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
+                    }
+                    // Приподнятая кнопка «+» поверх бара, по центру; верхняя часть
+                    // выступает над баром и больше не режется (порт iOS addExpenseButton).
+                    AddExpenseFab(
                         onClick = {
                             // Тот же отклик, что у табов рядом (порт iOS
-                            // MainTabView addExpenseButton) — иначе центральная
-                            // кнопка молчит, а соседние по бару вибрируют.
+                            // MainTabView addExpenseButton).
                             haptics.tap()
                             navController.navigate(MainRoutes.addExpense())
                         },
-                        icon = { AddExpenseFab() },
-                        colors = NavigationBarItemDefaults.colors(
-                            indicatorColor = Color.Transparent,
-                        ),
+                        modifier = Modifier.align(Alignment.TopCenter),
                     )
-                    RightTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
                 }
             }
         },
@@ -433,10 +451,10 @@ private fun RowScope.TabItem(
  * мягкая цветная тень, белый plus (порт addExpenseButton из iOS MainTabView).
  */
 @Composable
-private fun AddExpenseFab() {
+private fun AddExpenseFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = Splitty.colors
     Box(
-        modifier = Modifier
+        modifier = modifier
             .offset(y = (-12).dp)
             .size(58.dp)
             .shadow(
@@ -445,12 +463,14 @@ private fun AddExpenseFab() {
                 ambientColor = colors.accent.copy(alpha = 0.35f),
                 spotColor = colors.accent.copy(alpha = 0.35f),
             )
+            .clip(CircleShape)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(colors.accent, colors.accentPressed),
                 ),
                 shape = CircleShape,
-            ),
+            )
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
