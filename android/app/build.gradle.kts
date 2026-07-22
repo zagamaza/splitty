@@ -86,6 +86,13 @@ android {
                 releaseNotesFile = rootProject.file("app/release-notes.txt").absolutePath
             }
         }
+
+        debug {
+            // На debug-сборке караоке-транскрипт включён для проверки на устройстве
+            // (платформенный SpeechRecognizer on-device). Release до PoC-подтверждения
+            // остаётся на defaultConfig = false.
+            buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "true")
+        }
     }
 
     compileOptions {
