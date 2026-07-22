@@ -270,6 +270,11 @@ fun AddExpenseScreen(
     }
 
     val colors = Splitty.colors
+    // Все модальные оверлеи (Записано/распознавание/запись/тост) рисуем в общем
+    // полноэкранном Box ПОВЕРХ Scaffold. Лёжа внутри контента Scaffold, они
+    // накрывали только середину — топ-бар и мик-бар просвечивали (и сам scrim был
+    // полупрозрачным). Теперь покрытие полное и без «просвечивания».
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = colors.bg,
         topBar = {
@@ -446,54 +451,40 @@ fun AddExpenseScreen(
                 )
             }
 
-            // Экран «записано, распознавание ещё НЕ началось»: фото/распознать/отмена.
-            val pending = pendingAudioPath
-            // form != null обязательно: на Loading/Error «Распознать» и «Фото»
-            // ничего не запустят (launchParse без формы — no-op), а оверлей уже
-            // ушёл бы, оставив голос приложенным без способа его отменить.
-            // selectedRoomId != null — вторая страховка к персисту группы в
-            // черновике: без группы launchParse откажет, а полноэкранный оверлей
-            // закрыл бы чипы, и выбрать её стало бы нечем. Прячем оверлей —
-            // диктовка не теряется (KEY_PENDING_AUDIO), после выбора группы
-            // экран «Записано» возвращается сам.
-            if (!voice.isActive && pending != null && form != null && !form.isParsing &&
-                form.selectedRoomId != null
-            ) {
-                RecordedReviewOverlay(
-                    audioPath = pending,
-                    onRecognize = { viewModel.parseVoice(pending) },
-                    onAddPhoto = {
-                        // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
-                        // Экран «Записано» здесь НЕ гасим: отказ в разрешении или
-                        // отмена съёмки оставили бы диктовку без него.
-                        // Гасит его parseReceiptImage при доставке фото.
-                        receiptCapture.captureFromCamera()
-                    },
-                    onCancel = {
-                        viewModel.discardAudio()
-                        recorder.reset()
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            // Оверлей распознавания: спиннер, «Отмена» — через 2.5с (см. iOS).
-            if (form?.isParsing == true) {
-                ParsingOverlay(
-                    onCancel = viewModel::cancelParse,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                )
-            }
-
-            // Тост-подтверждение/причина блокировки — поверх содержимого, снизу.
-            AppToast(
-                message = form?.toastMessage,
-                onDismiss = viewModel::dismissToast,
-                modifier = Modifier.padding(innerPadding),
-            )
         }
+    }
+
+    // Экран «записано, распознавание ещё НЕ началось»: фото/распознать/отмена.
+    // Полный экран поверх Scaffold: form != null (иначе launchParse — no-op),
+    // selectedRoomId != null (без группы launchParse откажет, а оверлей закрыл бы
+    // чипы). Диктовка переживает скрытие оверлея (KEY_PENDING_AUDIO).
+    val pending = pendingAudioPath
+    if (!voice.isActive && pending != null && form != null && !form.isParsing &&
+        form.selectedRoomId != null
+    ) {
+        RecordedReviewOverlay(
+            audioPath = pending,
+            onRecognize = { viewModel.parseVoice(pending) },
+            onAddPhoto = {
+                // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
+                // Экран «Записано» НЕ гасим: отказ/отмена съёмки оставили бы
+                // диктовку без него. Гасит его parseReceiptImage при доставке фото.
+                receiptCapture.captureFromCamera()
+            },
+            onCancel = {
+                viewModel.discardAudio()
+                recorder.reset()
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+
+    // Оверлей распознавания: спиннер, «Отмена» — через 2.5с (см. iOS).
+    if (form?.isParsing == true) {
+        ParsingOverlay(
+            onCancel = viewModel::cancelParse,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 
     // Оверлей записи смонтирован ПОСТОЯННО (в покое alpha 0 и не ловит касания):
@@ -515,6 +506,16 @@ fun AddExpenseScreen(
         onStop = voice::stopLocked,
         onCancel = voice::cancelLocked,
     )
+
+        // Тост — самым верхним слоем, поверх оверлеев.
+        AppToast(
+            message = form?.toastMessage,
+            onDismiss = viewModel::dismissToast,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding(),
+        )
+    }
 
     if (confirmCancelLocked) {
         AlertDialog(
@@ -1057,9 +1058,15 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
     val descriptionFocusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    // Автофокус: без него форма открывается без курсора и клавиатуры —
-    // неочевидно, что можно печатать сразу.
-    LaunchedEffect(Unit) { descriptionFocusRequester.requestFocus() }
+    // Автофокус ТОЛЬКО для пустой (ручной) формы: без него открытие без курсора и
+    // клавиатуры неочевидно. После голоса карточка монтируется с уже заполненными
+    // описанием/позициями — тогда фокус не запрашиваем, иначе клавиатура лезет
+    // поверх распознанного результата (как это раздражало в iOS).
+    LaunchedEffect(Unit) {
+        if (form.description.isBlank() && !form.hasDraftItems) {
+            descriptionFocusRequester.requestFocus()
+        }
+    }
 
     SurfaceCard(modifier = Modifier.fillMaxWidth()) {
         // Описание.
@@ -1627,7 +1634,7 @@ private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) 
         modifier = modifier
             // Тёмный скрим, а не светлый фон темы: оверлей должен читаться как
             // «приложение занято», одинаково в обеих темах (порт iOS black 0.55).
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(Color(0xFF0C0F13))
             // Гасим тапы под оверлеем (форму нельзя трогать во время распознавания).
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
@@ -1990,7 +1997,7 @@ private fun RecordedReviewOverlay(
     val seconds = remember(audioPath) { recordedSeconds(java.io.File(audioPath).length()) }
     Box(
         modifier = modifier
-            .background(Color.Black.copy(alpha = 0.72f))
+            .background(Color(0xFF0C0F13))
             // Гасим касания по форме под оверлеем.
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,

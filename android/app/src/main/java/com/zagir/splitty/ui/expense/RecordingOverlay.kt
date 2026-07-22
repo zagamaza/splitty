@@ -42,6 +42,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
@@ -57,6 +59,9 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -152,14 +157,26 @@ fun RecordingOverlay(
         reduceMotion = reduceMotion,
     )
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+    // Смещение корня оверлея в координатах композиции: оверлей лежит внутри контента
+    // MainScaffold (ниже статус-бара и баннера сети), а micFrame приходит в boundsInRoot
+    // (от верха окна). Без коррекции мик съезжал ниже реальной кнопки, а scrim не доставал
+    // системные бары (белые полосы сверху/снизу).
+    var rootOffset by remember { mutableStateOf(Offset.Zero) }
+    val windowSizePx = LocalWindowInfo.current.containerSize
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { rootOffset = it.positionInRoot() },
+    ) {
         val density = androidx.compose.ui.platform.LocalDensity.current
         val rootWidthPx = constraints.maxWidth.toFloat()
         val rootHeightPx = constraints.maxHeight.toFloat()
         val defaultMicSizePx = with(density) { 82.dp.toPx() }
         val fallbackCenterY = rootHeightPx - with(density) { 86.dp.toPx() }
-        val micCenter = micFrame?.let { Offset(it.center.x, it.center.y) }
-            ?: Offset(rootWidthPx / 2f, fallbackCenterY)
+        // micFrame (boundsInRoot) → в локальные координаты оверлея, вычитая его смещение.
+        val micCenter = micFrame?.let {
+            Offset(it.center.x - rootOffset.x, it.center.y - rootOffset.y)
+        } ?: Offset(rootWidthPx / 2f, fallbackCenterY)
         val micSizePx = micFrame?.width ?: defaultMicSizePx
         val micSize = with(density) { micSizePx.toDp() }
         // После «замка» палец уже отпущен: кнопка стопа остаётся на месте,
@@ -182,11 +199,16 @@ fun RecordingOverlay(
         ).coerceAtLeast(0f)
         val contentBottomDp = with(density) { contentBottom.toDp() }
 
+        // Фон на ВСЁ окно (перекрывая статус-бар и навбар): рисуем его отдельным
+        // полноэкранным слоем, вынесенным за инсеты MainScaffold обратным смещением.
+        // Отдельный Box (не внутри BoxWithConstraints-раскладки) — чтобы огромный
+        // размер фона не влиял на позиционирование контента/мика.
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .matchParentSize()
                 .alpha(overlayAlpha)
-                .background(Color.Black.copy(alpha = 0.55f)),
+                // Сплошной непрозрачный тёмный фон — оверлей записи как отдельный экран.
+                .background(Color(0xFF0C0F13)),
         )
 
         RecordingContent(
@@ -609,16 +631,21 @@ private fun MicCircle(
             .alpha(if (isPreparing) 0.75f else 1f),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.linearGradient(
-                        listOf(colors.negative, colors.negative.copy(alpha = 0.8f)),
+        // Красный слой отмены рисуем ТОЛЬКО когда действительно отменяем: полагаться
+        // на .alpha(0f) поверх зелёного мика нельзя — фон-слой с нулевой альфой всё
+        // равно просвечивал (оранжевый мик в покое). cancelAlpha даёт кроссфейд.
+        if (cancelAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(cancelAlpha)
+                    .background(
+                        Brush.linearGradient(
+                            listOf(colors.negative, colors.negative.copy(alpha = 0.8f)),
+                        ),
                     ),
-                )
-                .alpha(cancelAlpha),
-        )
+            )
+        }
         Icon(
             imageVector = Icons.Filled.Mic,
             contentDescription = null,
