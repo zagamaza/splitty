@@ -75,6 +75,14 @@ struct NotificationSettingsView: View {
                                 updated.operations.telegram = newValue
                                 save(updated)
                             }
+                        ),
+                        push: Binding(
+                            get: { current.operations.push },
+                            set: { newValue in
+                                var updated = current
+                                updated.operations.push = newValue
+                                save(updated)
+                            }
                         )
                     )
                     section(
@@ -85,6 +93,14 @@ struct NotificationSettingsView: View {
                             set: { newValue in
                                 var updated = current
                                 updated.debts.telegram = newValue
+                                save(updated)
+                            }
+                        ),
+                        push: Binding(
+                            get: { current.debts.push },
+                            set: { newValue in
+                                var updated = current
+                                updated.debts.push = newValue
                                 save(updated)
                             }
                         )
@@ -119,7 +135,12 @@ struct NotificationSettingsView: View {
         .surfaceCard(padding: 0)
     }
 
-    private func section(title: String, footer: String, telegram: Binding<Bool>) -> some View {
+    private func section(
+        title: String,
+        footer: String,
+        telegram: Binding<Bool>,
+        push: Binding<Bool>
+    ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .sectionHeaderStyle()
@@ -139,21 +160,15 @@ struct NotificationSettingsView: View {
 
                 Rectangle().fill(Color.hairline).frame(height: 1).padding(.leading, 16)
 
-                // Пуши появятся вместе с APNs/FCM — тумблер-задел, пока недоступен.
-                Toggle(isOn: .constant(false)) {
-                    HStack(spacing: 6) {
-                        Label("Приложение", systemImage: "app.badge")
-                            .scaledFont(size: 16)
-                        Text("скоро")
-                            .scaledFont(size: 11, weight: .semibold, relativeTo: .footnote)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Color.hairline, in: Capsule())
-                    }
-                    .foregroundStyle(Color.inkSecondary)
+                // Push-канал (APNs/FCM). Значение читается с сервера, PATCH —
+                // тем же оптимистичным save, что и telegram.
+                Toggle(isOn: push) {
+                    Label("Приложение", systemImage: "app.badge")
+                        .scaledFont(size: 16)
+                        .foregroundStyle(Color.ink)
                 }
-                .disabled(true)
-                .accessibilityHint("Появится в следующих версиях")
+                .tint(Color.accent)
+                .disabled(isSaving)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
             }

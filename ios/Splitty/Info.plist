@@ -41,6 +41,10 @@
 	<string>Доступ к фото нужен, чтобы выбрать фото чека</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Распознавание речи показывает текст надиктовки прямо во время записи</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

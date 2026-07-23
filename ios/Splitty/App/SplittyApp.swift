@@ -30,6 +30,9 @@ enum AppTheme: String, CaseIterable {
 struct SplittyApp: App {
     @State private var session = SessionStore()
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
+    // UIKit-делегат нужен для инициализации push (Firebase + APNs), SwiftUI-
+    // жизненный цикл сохраняется.
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     var body: some Scene {
         WindowGroup {
@@ -40,7 +43,15 @@ struct SplittyApp: App {
                 // на корне переключает их во всей иерархии.
                 .preferredColorScheme((AppTheme(rawValue: themeRaw) ?? .system).colorScheme)
                 .task {
+                    // Привязываем сессию к push-менеджеру: если FCM-токен уже
+                    // получен и пользователь авторизован — токен уйдёт на бэкенд.
+                    PushManager.shared.attach(session: session)
                     await session.refreshMe()
+                }
+                // Логин/логаут → (пере)регистрация FCM-токена. Отвязка при выходе
+                // делается ЯВНО в AccountView до logout (там JWT ещё валиден).
+                .onChange(of: session.isAuthenticated) {
+                    PushManager.shared.authStateChanged()
                 }
         }
     }

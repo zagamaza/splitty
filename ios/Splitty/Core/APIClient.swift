@@ -260,6 +260,29 @@ final class APIClient: OperationAPI {
         )
     }
 
+    // MARK: Устройства (push-токены)
+
+    /// POST /api/v1/me/devices — привязать FCM-токен этого устройства к аккаунту
+    /// (нужно для native-пушей). Идемпотентно: повтор с тем же токеном обновляет
+    /// платформу, дублей не плодит. Ответ 204 без тела.
+    func registerDevice(token: String, platform: String = "ios") async throws {
+        struct Body: Encodable {
+            let token: String
+            let platform: String
+        }
+        try await send("POST", "/api/v1/me/devices", body: Body(token: token, platform: platform))
+    }
+
+    /// DELETE /api/v1/me/devices (тело `{"token": …}`) — отвязать токен при выходе.
+    /// Отсутствие токена на сервере ошибкой не считается (idempotent). Звать, пока
+    /// JWT ещё валиден (до `logout`), иначе запрос словит 401.
+    func unregisterDevice(token: String) async throws {
+        struct Body: Encodable {
+            let token: String
+        }
+        try await send("DELETE", "/api/v1/me/devices", body: Body(token: token))
+    }
+
     // MARK: Комнаты (группы)
 
     func rooms(archived: Bool) async throws -> [RoomSummary] {

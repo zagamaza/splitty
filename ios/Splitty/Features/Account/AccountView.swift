@@ -56,9 +56,13 @@ struct AccountView: View {
             titleVisibility: .visible
         ) {
             Button("Выйти", role: .destructive) {
-                // Вместе с сессией чистятся офлайн-кеш и outbox
-                // (неотправленные операции пропадут — о них предупреждает title).
-                session.logout()
+                // Отвязать FCM-токен ПОКА JWT валиден, затем выйти. Вместе с
+                // сессией чистятся офлайн-кеш и outbox (неотправленные операции
+                // пропадут — о них предупреждает title).
+                Task {
+                    await PushManager.shared.unregisterCurrentToken()
+                    session.logout()
+                }
             }
             Button("Отмена", role: .cancel) {}
         }

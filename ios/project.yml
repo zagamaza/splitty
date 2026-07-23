@@ -7,12 +7,28 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk.git
+    from: "11.0.0"
 targets:
   Splitty:
     type: application
     platform: iOS
     sources:
       - Splitty
+    dependencies:
+      # Только Messaging: тянет FirebaseCore транзитивно, без Analytics и пр.
+      - package: Firebase
+        product: FirebaseMessaging
+    entitlements:
+      path: Splitty/Splitty.entitlements
+      properties:
+        # Окружение APNs подставляется из build-setting APS_ENVIRONMENT (ниже):
+        # Debug → development (sandbox, запуск из Xcode), Release → production
+        # (TestFlight/App Store). Xcode раскрывает $(...) в entitlements при
+        # подписи. Один и тот же .p8 в Firebase залит в обе строки (dev+prod).
+        aps-environment: $(APS_ENVIRONMENT)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zagir.splitty
@@ -20,10 +36,18 @@ targets:
         TARGETED_DEVICE_FAMILY: 1
         DEVELOPMENT_TEAM: K8922Y6R3M
         CODE_SIGN_STYLE: Automatic
+      configs:
+        Debug:
+          APS_ENVIRONMENT: development
+        Release:
+          APS_ENVIRONMENT: production
     info:
       path: Splitty/Info.plist
       properties:
         UILaunchScreen: {}
+        # Тихие/фоновые push-уведомления (FCM доставляет через APNs).
+        UIBackgroundModes:
+          - remote-notification
         CFBundleIconName: AppIcon
         CFBundleDevelopmentRegion: ru
         CFBundleLocalizations: [ru]
