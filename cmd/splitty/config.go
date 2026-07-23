@@ -34,6 +34,11 @@ type config struct {
 	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
 	AiParseDailyQuota int    `env:"AI_PARSE_DAILY_QUOTA" envDefault:"50"`
 	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
+
+	// FCM push. Путь к service-account JSON Firebase Admin (см. firebase-service-
+	// account.json, в .gitignore). Пусто — пуши выключены (NoopSender), сервер
+	// работает как раньше.
+	FirebaseCredentialsFile string `env:"FIREBASE_CREDENTIALS_FILE" envDefault:""`
 }
 
 func initConfig() (*config, error) {

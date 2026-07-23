@@ -2,10 +2,12 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"html"
 	"slices"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/push"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 )
@@ -15,6 +17,14 @@ import (
 // бота в тестах
 type TelegramSender interface {
 	Send(c tgbotapi.Chattable) (tgbotapi.Message, error)
+}
+
+// NoopTelegramSender — заглушка, когда telegram-бот выключен (нет TG_TOKEN):
+// telegram-уведомления no-op, а push-канал Notifier'а работает независимо.
+type NoopTelegramSender struct{}
+
+func (NoopTelegramSender) Send(tgbotapi.Chattable) (tgbotapi.Message, error) {
+	return tgbotapi.Message{}, nil
 }
 
 // UserFinder читает канонический документ пользователя. Узкий интерфейс (как
@@ -28,17 +38,43 @@ type UserFinder interface {
 // Тексты (ключи scrn_notification_* / scrn_debt_returned_recepient), набор
 // получателей и inline-кнопки — паритет со сценариями operation_screen.go
 type Notifier struct {
-	tg TelegramSender
-	os OperationService
-	bs ButtonService
-	uf UserFinder
+	tg   TelegramSender
+	os   OperationService
+	bs   ButtonService
+	uf   UserFinder
+	push push.Sender
 }
 
 // NewNotifier собирает Notifier: os нужен для персиста NotificationSent
 // (как у бота), bs — для сохранения inline-кнопок «Посмотреть операцию»,
-// uf — для чтения АКТУАЛЬНЫХ настроек уведомлений (см. allowsTelegram)
-func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService, uf UserFinder) *Notifier {
-	return &Notifier{tg: tg, os: os, bs: bs, uf: uf}
+// uf — для чтения АКТУАЛЬНЫХ настроек уведомлений (см. allowsTelegram),
+// pushSender — для native-пушей приложениям (nil/NoopSender = пуши выключены).
+func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService, uf UserFinder, pushSender push.Sender) *Notifier {
+	return &Notifier{tg: tg, os: os, bs: bs, uf: uf, push: pushSender}
+}
+
+// pushToUser шлёт native-пуш пользователю, если он включил push-канал категории.
+// Канонический документ (с PushTokens и Notify) читаем через uf — во встроенных
+// снимках их нет. Best-effort: ошибки/отсутствие токенов молчат.
+func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.NotifyCategory, title, body string, data map[string]string) {
+	if n.push == nil || n.uf == nil {
+		return
+	}
+	canonical, err := n.uf.FindById(ctx, userID)
+	if err != nil || canonical == nil || !canonical.WantsPush(category) || len(canonical.PushTokens) == 0 {
+		return
+	}
+	n.push.SendToUser(ctx, *canonical, push.Notification{Title: title, Body: body, Data: data})
+}
+
+// opPushData — данные deeplink пуша по операции (комната/операция + канал Android).
+func opPushData(room api.Room, op api.Operation) map[string]string {
+	return map[string]string{
+		"channel":     "operations",
+		"roomId":      room.ID.Hex(),
+		"operationId": fmt.Sprintf("%v", op.ID),
+		"type":        "operation",
+	}
 }
 
 // allowsTelegram решает, слать ли уведомление, по КАНОНИЧЕСКОМУ документу
@@ -100,6 +136,9 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 				userLink(op.Donor), userLink(&author), desc, moneySpace(op.Sum, room.Currency), roomName),
 			keyboardFor(op.Donor)))
 		op.NotificationSent = append(op.NotificationSent, op.Donor.ID)
+		n.pushToUser(ctx, op.Donor.ID, api.NotifyOperations, room.Name,
+			fmt.Sprintf("%s назначил вас плательщиком «%s»", author.DisplayName, op.Description),
+			opPushData(room, op))
 	}
 	for _, r := range op.RecipientsWithSum {
 		recipient := r.User
@@ -115,6 +154,10 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 				roomName, moneySpace(int(r.Sum), room.Currency)),
 			keyboardFor(&recipient)))
 		op.NotificationSent = append(op.NotificationSent, recipient.ID)
+		n.pushToUser(ctx, recipient.ID, api.NotifyOperations, room.Name,
+			fmt.Sprintf("%s добавил расход «%s» — ваша доля %s",
+				author.DisplayName, op.Description, moneySpace(int(r.Sum), room.Currency)),
+			opPushData(room, op))
 	}
 	if len(messages) == 0 {
 		return
@@ -181,7 +224,16 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 		return
 	}
 	lender := op.RecipientsWithSum[0].User
-	if lender.ID == author.ID || !n.allowsTelegram(ctx, &lender, api.NotifyDebts) {
+	if lender.ID == author.ID {
+		return
+	}
+
+	// Push независим от telegram-канала: у кредитора tg может быть выключен, а push включён.
+	n.pushToUser(ctx, lender.ID, api.NotifyDebts, room.Name,
+		fmt.Sprintf("%s вернул вам долг %s", op.Donor.DisplayName, moneySpace(op.Sum, room.Currency)),
+		map[string]string{"channel": "debts", "roomId": room.ID.Hex(), "type": "debt"})
+
+	if !n.allowsTelegram(ctx, &lender, api.NotifyDebts) {
 		return
 	}
 

@@ -136,6 +136,36 @@ func (f *fakeUserRepo) FindByIds(_ context.Context, ids []int) ([]api.User, erro
 	return out, nil
 }
 
+func (f *fakeUserRepo) AddPushToken(_ context.Context, userId int, token api.PushToken) error {
+	u, ok := f.users[userId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	for i, t := range u.PushTokens {
+		if t.Token == token.Token {
+			u.PushTokens[i] = token
+			return nil
+		}
+	}
+	u.PushTokens = append(u.PushTokens, token)
+	return nil
+}
+
+func (f *fakeUserRepo) RemovePushToken(_ context.Context, userId int, token string) error {
+	u, ok := f.users[userId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	kept := u.PushTokens[:0]
+	for _, t := range u.PushTokens {
+		if t.Token != token {
+			kept = append(kept, t)
+		}
+	}
+	u.PushTokens = kept
+	return nil
+}
+
 func (f *fakeUserRepo) AddAlias(_ context.Context, userId int, alias string) error {
 	u, ok := f.users[userId]
 	if !ok {

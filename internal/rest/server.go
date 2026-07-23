@@ -157,6 +157,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))
 	mux.Handle("GET /api/v1/me/notifications", s.auth(s.handleGetNotifications))
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
+	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))
+	mux.Handle("DELETE /api/v1/me/devices", s.auth(s.handleUnregisterDevice))
 
 	mux.Handle("GET /api/v1/rooms", s.auth(s.handleListRooms))
 	mux.Handle("POST /api/v1/rooms", s.auth(s.handleCreateRoom))

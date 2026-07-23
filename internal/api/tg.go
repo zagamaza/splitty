@@ -95,6 +95,16 @@ type User struct {
 	// Александр Петров). Глобальные (не по комнате), пополняются, когда
 	// пользователь разрешает нераспознанное имя в UI
 	Aliases []string `json:"aliases,omitempty" bson:"aliases,omitempty"`
+	// PushTokens — FCM-токены устройств пользователя (по одному на девайс).
+	// Пополняются при логине/refresh, чистятся на logout и при отбраковке FCM
+	// (UNREGISTERED). Дедуп по token (см. UserRepository.AddPushToken).
+	PushTokens []PushToken `json:"-" bson:"push_tokens,omitempty"`
+}
+
+// PushToken — FCM-токен одного устройства пользователя.
+type PushToken struct {
+	Token    string `json:"token" bson:"token"`
+	Platform string `json:"platform" bson:"platform,omitempty"` // "android" | "ios"
 }
 
 // ChannelPrefs каналы доставки уведомлений одной категории;
@@ -121,10 +131,16 @@ const (
 )
 
 // AllowsTelegram слать ли пользователю telegram-уведомление категории.
-// Приоритет: явная настройка категории → легаси-правила (operations —
-// глобальный NotificationOn бота, debts — исторически слались всегда)
+// Приоритет: глобальный выключатель NotificationOn (мастер-тумблер) → явная
+// настройка категории → легаси-дефолт (по умолчанию включено). Мастер работает
+// как настоящий kill-switch: выключен — не шлём ничего (любой канал, любая
+// категория, включая долги), даже если per-category telegram явно включён.
 func (u *User) AllowsTelegram(category NotifyCategory) bool {
 	if u == nil {
+		return false
+	}
+	// Глобальный выключатель имеет приоритет над всем остальным.
+	if u.NotificationOn != nil && !*u.NotificationOn {
 		return false
 	}
 	if u.Notify != nil {
@@ -136,15 +152,18 @@ func (u *User) AllowsTelegram(category NotifyCategory) bool {
 			return *prefs.Telegram
 		}
 	}
-	if category == NotifyDebts {
-		return true
-	}
-	return u.NotificationOn == nil || *u.NotificationOn
+	// Мастер включён (или не задан → включён): по умолчанию telegram-канал
+	// активен для обеих категорий.
+	return true
 }
 
-// WantsPush хочет ли пользователь push категории (доставка появится с APNs/FCM)
+// WantsPush хочет ли пользователь push категории. Как и telegram, подчиняется
+// глобальному выключателю NotificationOn: мастер выключен — push не шлём.
 func (u *User) WantsPush(category NotifyCategory) bool {
 	if u == nil || u.Notify == nil {
+		return false
+	}
+	if u.NotificationOn != nil && !*u.NotificationOn {
 		return false
 	}
 	prefs := u.Notify.Operations

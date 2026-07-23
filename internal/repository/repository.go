@@ -27,6 +27,8 @@ type UserRepository interface {
 	FindByUsername(ctx context.Context, username string) (*api.User, error)
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	AddAlias(ctx context.Context, userId int, alias string) error
+	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
+	RemovePushToken(ctx context.Context, userId int, token string) error
 }
 
 type RoomRepository interface {
@@ -552,6 +554,38 @@ func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias str
 		return err
 	}
 	// целевого пользователя нет — не молчаливый no-op, а явная ошибка (404 в хендлере)
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
+// AddPushToken регистрирует FCM-токен устройства (идемпотентно): сначала убираем
+// прежнюю запись с тем же token (мог сменить платформу/пользователя), затем
+// добавляем. Дубли токенов недопустимы — один токен = одно устройство.
+func (r MongoUserRepository) AddPushToken(ctx context.Context, userId int, token api.PushToken) error {
+	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
+	if _, err := r.col.UpdateOne(ctx, f, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token.Token}}}); err != nil {
+		return err
+	}
+	res, err := r.col.UpdateOne(ctx, f, bson.M{"$push": bson.M{"push_tokens": token}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
+// RemovePushToken убирает токен (logout или отбраковка FCM). Отсутствие токена —
+// не ошибка (idempotent): 404 только если самого пользователя нет.
+func (r MongoUserRepository) RemovePushToken(ctx context.Context, userId int, token string) error {
+	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
+	res, err := r.col.UpdateOne(ctx, f, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token}}})
+	if err != nil {
+		return err
+	}
 	if res.MatchedCount == 0 {
 		return mongo.ErrNoDocuments
 	}

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/push"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/gookit/i18n"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -75,7 +76,7 @@ func room() api.Room {
 func TestNotifierEscapesUserInput(t *testing.T) {
 	loadLang(t)
 	tg := &captureSender{}
-	n := NewNotifier(tg, noopOperationService{}, noopButtonService{}, stubUserFinder{})
+	n := NewNotifier(tg, noopOperationService{}, noopButtonService{}, stubUserFinder{}, push.NoopSender{})
 
 	r := room()
 	r.Name = "Бар <b>X</b>"
@@ -125,7 +126,7 @@ func TestNotifierUsesCanonicalNotifyPrefs(t *testing.T) {
 
 	tg := &captureSender{}
 	n := NewNotifier(tg, noopOperationService{}, noopButtonService{},
-		stubUserFinder{users: map[int]*api.User{3: canonical}})
+		stubUserFinder{users: map[int]*api.User{3: canonical}}, push.NoopSender{})
 
 	author := api.User{ID: 1, DisplayName: "Автор"}
 	op := api.Operation{

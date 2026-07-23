@@ -12,6 +12,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
+	"github.com/almaznur91/splitty/internal/push"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/rest"
 	"github.com/almaznur91/splitty/internal/service"
@@ -60,16 +61,17 @@ func main() {
 	closer.Bind(restCleanup)
 	closer.Bind(restServer.Shutdown)
 
-	// бот опционален: без TG_TOKEN или при ошибке инициализации продолжаем только с REST API
+	// бот опционален: без TG_TOKEN или при ошибке инициализации продолжаем только с REST API.
+	// telegram-отправитель — реальный (бот поднят) либо noop; push-канал Notifier'а
+	// работает независимо от бота (FCM по REST-мутациям iOS/Android).
+	var tgSender bot.TelegramSender = bot.NoopTelegramSender{}
 	if cfg.TgToken == "" {
 		log.Warn().Msg("TG_TOKEN is empty, telegram bot disabled, serving rest api only")
 	} else if app, cl, err := initApp(ctx, cfg); err != nil {
 		log.Warn().Err(err).Msg("Can not init telegram bot, serving rest api only")
 	} else {
 		closer.Bind(cl)
-		// бот включён — REST-мутации шлют участникам те же telegram-уведомления,
-		// что и экраны бота (без бота notifier остаётся nil, уведомления no-op)
-		restServer.SetNotifier(bot.NewNotifier(app.TbAPI, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo))
+		tgSender = app.TbAPI
 		go app.DeIntegrationService.StartPostScheduler()
 		go func() {
 			if err := app.Do(ctx); err != nil {
@@ -77,6 +79,9 @@ func main() {
 			}
 		}()
 	}
+	// REST-мутации участникам: те же telegram-уведомления, что и экраны бота
+	// (когда бот включён), + native-пуши FCM (по WantsPush).
+	restServer.SetNotifier(bot.NewNotifier(tgSender, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo, restDeps.pushSender))
 
 	if err := restServer.Run(ctx); err != nil {
 		log.Error().Err(err).Msg("rest api failed")
@@ -91,6 +96,9 @@ type restNotifierDeps struct {
 	// userRepo — канонические настройки уведомлений: встроенные в комнату
 	// снимки пользователей их не содержат (см. Notifier.allowsTelegram)
 	userRepo repository.UserRepository
+	// pushSender — доставка native-пушей (FCM) по outbox-подходу; NoopSender,
+	// когда FCM не сконфигурирован.
+	pushSender push.Sender
 }
 
 // initRestServer собирает REST-сервер: mongo-подключение + репозитории + сервисы
@@ -146,10 +154,29 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		log.Info().Msg("AI expense parsing disabled (GEMINI_API_KEY empty)")
 	}
 
+	// Push (FCM) по outbox-подходу: персистентная очередь push_outbox + фоновый
+	// воркер с ретраями/бэк-оффом. Пустой credentials-файл — NoopSender (пуши
+	// выключены), остальной сервер работает как раньше.
+	var pushSender push.Sender = push.NoopSender{}
+	if cfg.FirebaseCredentialsFile != "" {
+		pushOutbox := repository.NewPushOutboxRepository(db)
+		worker, wErr := push.NewWorker(ctx, cfg.FirebaseCredentialsFile, pushOutbox, userRepository, userRepository)
+		if wErr != nil {
+			log.Warn().Err(wErr).Msg("cannot init FCM worker, push disabled")
+		} else {
+			pushSender = push.NewSender(pushOutbox)
+			go worker.Run(ctx)
+			log.Info().Msg("FCM push enabled (outbox worker started)")
+		}
+	} else {
+		log.Info().Msg("FCM push disabled (FIREBASE_CREDENTIALS_FILE empty)")
+	}
+
 	return server, &restNotifierDeps{
 		operationSrv: operationService,
 		buttonSrv:    buttonService,
 		userRepo:     userRepository,
+		pushSender:   pushSender,
 	}, cleanup, nil
 }
 
