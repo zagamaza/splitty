@@ -17,7 +17,12 @@ final class SessionStore {
     #if DEBUG
     static let defaultBaseURL = "http://138.124.18.189:18002"
     #else
-    static let defaultBaseURL = "https://api.splitty.app"
+    // ВРЕМЕННО (сборка «для друзей», internal TestFlight): TLS-домена на бэкенд
+    // нет (api.splitty.app не резолвится), поэтому release тоже ходит на дев-
+    // сервер по голому HTTP-IP. Cleartext разрешён через NSAllowsArbitraryLoads.
+    // Android держит тот же временный инвариант. TODO: вернуть
+    // https://api.splitty.app (и https-guard в serverURL), когда поднимется TLS.
+    static let defaultBaseURL = "http://138.124.18.189:18002"
     #endif
 
     private static let baseURLKey = "splitty.baseURL"
@@ -117,11 +122,10 @@ final class SessionStore {
         else {
             return nil
         }
-        #if DEBUG
+        // ВРЕМЕННО release тоже допускает http: дев-бэкенд по голому IP (нет TLS-
+        // домена, сборка для друзей). Вернуть на release-only `https`, когда
+        // поднимется api.splitty.app (см. defaultBaseURL выше).
         guard scheme == "http" || scheme == "https" else { return nil }
-        #else
-        guard scheme == "https" else { return nil }
-        #endif
         return url
     }
 

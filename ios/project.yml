@@ -53,7 +53,7 @@ targets:
         CFBundleLocalizations: [ru]
         CFBundleDisplayName: Splitty
         CFBundleShortVersionString: "1.2"
-        CFBundleVersion: "10"
+        CFBundleVersion: "11"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         # Разрешения для AI-добавления расхода (голос + фото чека).
