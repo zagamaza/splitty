@@ -21,6 +21,14 @@ services:
       # в файл не коммитится. Пустой ключ → фича выключена (/parse отдаёт 503).
       - GEMINI_API_KEY
       - GEMINI_MODEL
+      # FCM push: путь к service-account JSON Firebase Admin ВНУТРИ контейнера.
+      # Файл монтируется ниже с хоста (сам секрет в git не коммитится — см.
+      # .gitignore). Отсутствует/битый — сервер стартует, пуши просто выключены
+      # (NewWorker → log.Warn, не fatal).
+      - FIREBASE_CREDENTIALS_FILE=/app/firebase-service-account.json
+    volumes:
+      # Секрет кладётся рядом с docker-compose.yml на хосте и монтируется ro.
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
     ports:
       - "18001:7171"
 

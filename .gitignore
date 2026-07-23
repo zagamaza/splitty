@@ -13,3 +13,4 @@ cover.out
 # local artifacts
 /bin/
 /mongo/
+firebase-service-account.json
