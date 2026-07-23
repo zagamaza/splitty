@@ -14,3 +14,10 @@ cover.out
 /bin/
 /mongo/
 firebase-service-account.json
+
+# App Store Connect: приватные ключи и provisioning-профили — НИКОГДА в git
+# (полный доступ к Apple-аккаунту). Лежат локально в ios/asc/, но не коммитятся.
+ios/asc/keys/
+ios/asc/profiles/
+ios/asc/certs/
+ios/asc/__pycache__/
