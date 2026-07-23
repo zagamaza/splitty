@@ -1,9 +1,14 @@
 package com.zagir.splitty
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,9 +39,15 @@ class MainActivity : ComponentActivity() {
     /** Кеш аватаров Telegram — провайдится всем GradientAvatar. */
     @Inject lateinit var avatarStore: AvatarStore
 
+    // Разрешение на пуши (Android 13+); отказ не критичен — токен всё равно
+    // регистрируется, просто система не покажет баннер.
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        requestNotificationPermissionIfNeeded()
         setContent {
             val session by sessionStore.state.collectAsStateWithLifecycle()
             val darkTheme = when (session?.theme) {
@@ -56,5 +67,14 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // Триггер синка «приложение вернулось на передний план».
         outboxSyncer.syncNow()
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+        val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

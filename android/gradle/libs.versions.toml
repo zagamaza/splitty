@@ -28,8 +28,18 @@ robolectric = "4.13"
 roborazzi = "1.44.0"
 # Раздача релизных сборок тестерам (Task 14).
 firebaseAppDistribution = "5.1.1"
+# Gradle Play Publisher — заливка AAB в Play через Play Developer API.
+# 3.12.x — ветка под Gradle 8.x (4.x требует Gradle ≥9.1).
+play-publisher = "3.12.1"
+# Firebase Cloud Messaging (native-пуши). BoM фиксирует совместимые версии
+# firebase-* (версию у firebase-messaging не указываем). google-services —
+# gradle-плагин, подхватывающий google-services.json.
+googleServices = "4.5.0"
+firebaseBom = "34.16.0"
 
 [libraries]
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
@@ -79,3 +89,5 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 firebase-appdistribution = { id = "com.google.firebase.appdistribution", version.ref = "firebaseAppDistribution" }
+play-publisher = { id = "com.github.triplet.play", version.ref = "play-publisher" }
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }

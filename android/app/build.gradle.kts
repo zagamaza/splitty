@@ -10,6 +10,9 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.roborazzi)
     alias(libs.plugins.firebase.appdistribution)
+    alias(libs.plugins.play.publisher)
+    // Подхватывает google-services.json → BuildConfig/ресурсы Firebase (FCM).
+    alias(libs.plugins.google.services)
 }
 
 android {
@@ -20,7 +23,7 @@ android {
         applicationId = "com.zagir.splitty"
         minSdk = 26
         targetSdk = 36
-        versionCode = 5
+        versionCode = 6
         versionName = "1.3"
 
         // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный
@@ -119,7 +122,28 @@ kotlin {
     }
 }
 
+// Gradle Play Publisher — заливка AAB в Play через Play Developer API одной
+// командой (`./gradlew publishReleaseBundle --track internal`). Креды — service-
+// account JSON: путь берём из -PPLAY_SA=<abs>, иначе android/play-sa.json (в
+// .gitignore). Файла нет — publish-таски упадут с внятным сообщением, обычная
+// сборка не ломается. GPP НЕ обходит production-гейт новых Play-аккаунтов.
+val playSaFile = (findProperty("PLAY_SA") as String?)
+    ?.let { file(it) }
+    ?: rootProject.file("play-sa.json")
+play {
+    if (playSaFile.exists()) {
+        serviceAccountCredentials.set(playSaFile)
+    }
+    defaultToAppBundles.set(true)
+    // Безопасный дефолт: голый publishReleaseBundle льёт в internal testing.
+    track.set("internal")
+}
+
 dependencies {
+    // Firebase Cloud Messaging (native-пуши). BoM держит версии согласованными.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

@@ -1,0 +1,37 @@
+{
+  "project_info": {
+    "project_number": "327021108128",
+    "project_id": "gen-lang-client-0912753294",
+    "storage_bucket": "gen-lang-client-0912753294.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:327021108128:android:7e68796b7976924209a2c5",
+        "android_client_info": {
+          "package_name": "com.zagir.splitty"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFMDwrWysgOJiUmoNZcf8TuZgCp3eiGyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "327021108128-cffr455tse5pt61tf5up1urdqks95a9n.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "dev.zagirnur.de"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -3,6 +3,7 @@ package com.zagir.splitty.data
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.AliasBody
+import com.zagir.splitty.core.model.DeviceBody
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.CreateRoomBody
@@ -244,6 +245,12 @@ class SplittyRepository @Inject constructor(
         }
 
     // --- Файлы ---
+
+    /** Привязать FCM-токен устройства (native-пуши). */
+    suspend fun registerDevice(token: String) = call { api.registerDevice(DeviceBody(token)) }
+
+    /** Отвязать FCM-токен (logout). */
+    suspend fun unregisterDevice(token: String) = call { api.unregisterDevice(DeviceBody(token)) }
 
     /** Эффективные настройки уведомлений. */
     suspend fun notifications(): NotifySettings = call { api.notifications() }

@@ -1,6 +1,5 @@
 package com.zagir.splitty.ui.profile
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,8 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -163,18 +159,26 @@ private fun SettingsContent(
                 title = stringResource(R.string.notifications_operations),
                 footer = stringResource(R.string.notifications_operations_footer),
                 telegramOn = settings.operations.telegram,
+                pushOn = settings.operations.push,
                 enabled = state.categoriesEnabled,
                 onTelegramChange = { on ->
                     onChange(settings.copy(operations = settings.operations.copy(telegram = on)))
+                },
+                onPushChange = { on ->
+                    onChange(settings.copy(operations = settings.operations.copy(push = on)))
                 },
             )
             NotifySection(
                 title = stringResource(R.string.notifications_debts),
                 footer = stringResource(R.string.notifications_debts_footer),
                 telegramOn = settings.debts.telegram,
+                pushOn = settings.debts.push,
                 enabled = state.categoriesEnabled,
                 onTelegramChange = { on ->
                     onChange(settings.copy(debts = settings.debts.copy(telegram = on)))
+                },
+                onPushChange = { on ->
+                    onChange(settings.copy(debts = settings.debts.copy(push = on)))
                 },
             )
         }
@@ -217,8 +221,10 @@ private fun NotifySection(
     title: String,
     footer: String,
     telegramOn: Boolean,
+    pushOn: Boolean,
     enabled: Boolean,
     onTelegramChange: (Boolean) -> Unit,
+    onPushChange: (Boolean) -> Unit,
 ) {
     val colors = Splitty.colors
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -230,14 +236,12 @@ private fun NotifySection(
                 enabled = enabled,
                 onChange = onTelegramChange,
             )
-            // Пуши появятся вместе с APNs/FCM — тумблер-задел, пока недоступен.
+            // Push-канал (FCM): значение с сервера, PATCH тем же saveCategories.
             ChannelRow(
                 title = stringResource(R.string.notifications_channel_push),
-                badge = stringResource(R.string.notifications_soon),
-                a11yHint = stringResource(R.string.notifications_soon_hint),
-                checked = false,
-                enabled = false,
-                onChange = {},
+                checked = pushOn,
+                enabled = enabled,
+                onChange = onPushChange,
             )
         }
         Text(
@@ -255,23 +259,12 @@ private fun ChannelRow(
     checked: Boolean,
     enabled: Boolean,
     onChange: (Boolean) -> Unit,
-    badge: String? = null,
-    a11yHint: String? = null,
 ) {
     val colors = Splitty.colors
-    val rowModifier = Modifier
-        .fillMaxWidth()
-        .then(
-            // TalkBack: объясняем, почему «Приложение» недоступно («скоро»).
-            if (a11yHint != null) {
-                Modifier.semantics { stateDescription = a11yHint }
-            } else {
-                Modifier
-            }
-        )
-        .padding(horizontal = 16.dp, vertical = 6.dp)
     Row(
-        modifier = rowModifier,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -279,18 +272,6 @@ private fun ChannelRow(
             fontSize = 16.sp,
             color = if (enabled) colors.ink else colors.inkSecondary,
         )
-        if (badge != null) {
-            Text(
-                text = badge,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.inkSecondary,
-                modifier = Modifier
-                    .padding(start = 8.dp)
-                    .background(colors.hairline, RoundedCornerShape(999.dp))
-                    .padding(horizontal = 7.dp, vertical = 2.dp),
-            )
-        }
         Spacer(Modifier.weight(1f))
         Switch(
             checked = checked,

@@ -3,6 +3,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Native-пуши (FCM); на Android 13+ требуется runtime-разрешение. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Фото чека камерой (AI-распознавание); камера не обязательна для установки. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
@@ -45,6 +47,19 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Приём FCM-пушей. -->
+        <service
+            android:name=".push.SplittyMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <!-- Канал для фоновых notification-пушей (когда трей рисует система). -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="operations" />
     </application>
 
 </manifest>

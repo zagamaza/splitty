@@ -7,6 +7,7 @@ import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.push.PushTokenRegistrar
 import com.zagir.splitty.ui.components.humanErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,6 +29,7 @@ import kotlinx.coroutines.launch
 class ProfileViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
+    private val pushTokenRegistrar: PushTokenRegistrar,
     outboxStore: OutboxStore,
 ) : ViewModel() {
 
@@ -130,6 +132,8 @@ class ProfileViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch {
             try {
+                // Отвязать FCM-токен ПОКА JWT ещё валиден (best-effort, не блокирует выход).
+                pushTokenRegistrar.unregisterCurrent()
                 sessionStore.logout()
             } catch (e: CancellationException) {
                 throw e

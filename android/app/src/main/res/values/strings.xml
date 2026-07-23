@@ -113,8 +113,6 @@
     <string name="notifications_debts_footer">Вам вернули долг</string>
     <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">Приложение</string>
-    <string name="notifications_soon">скоро</string>
-    <string name="notifications_soon_hint">Появится в следующих версиях</string>
     <string name="profile_theme">Тема</string>
     <string name="profile_theme_system">Системная</string>
     <string name="profile_theme_light">Светлая</string>

@@ -10,6 +10,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CodeLoginBody(val code: String)
 
+/** POST/DELETE /me/devices — FCM-токен устройства для native-пушей. */
+@Serializable
+data class DeviceBody(val token: String, val platform: String = "android")
+
 /** POST /auth/dev (только при API_DEV_AUTH=true на сервере). */
 @Serializable
 data class DevLoginBody(

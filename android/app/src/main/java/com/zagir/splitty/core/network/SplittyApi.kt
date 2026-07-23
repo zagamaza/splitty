@@ -4,6 +4,7 @@ import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.CodeLoginBody
+import com.zagir.splitty.core.model.DeviceBody
 import com.zagir.splitty.core.model.CreateRoomBody
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
@@ -23,6 +24,7 @@ import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -58,6 +60,14 @@ interface SplittyApi {
     /** Частичное обновление настроек уведомлений; ответ — новые значения. */
     @PATCH("api/v1/me/notifications")
     suspend fun updateNotifications(@Body settings: NotifySettings): NotifySettings
+
+    /** Привязать FCM-токен устройства (native-пуши). Идемпотентно; 204. */
+    @POST("api/v1/me/devices")
+    suspend fun registerDevice(@Body body: DeviceBody)
+
+    /** Отвязать FCM-токен (logout). DELETE с телом — через @HTTP. 204. */
+    @HTTP(method = "DELETE", path = "api/v1/me/devices", hasBody = true)
+    suspend fun unregisterDevice(@Body body: DeviceBody)
 
     @PATCH("api/v1/me")
     suspend fun updateMe(@Body body: UpdateMeBody): Me
