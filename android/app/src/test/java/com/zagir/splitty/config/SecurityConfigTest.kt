@@ -24,15 +24,21 @@ class SecurityConfigTest {
     }
 
     @Test
-    fun `release network config forbids cleartext`() {
+    fun `release cleartext is globally forbidden and scoped to the temp dev ip`() {
+        // ВРЕМЕННО (сборка «для друзей», internal-трек): cleartext в release
+        // разрешён ТОЧЕЧНО для дев-бэкенда на голом IP, пока нет https-домена.
+        // Глобально (base-config) cleartext по-прежнему запрещён — послабление
+        // только scoped domain-config. TODO: вернуть полный запрет cleartext
+        // (assertFalse на "true") и https, когда поднимется TLS-домен
+        // (см. SessionStore.DEFAULT_BASE_URL и парный release/xml).
         val xml = resFile("src/release/res/xml/network_security_config.xml").readText()
-        assertFalse(
-            xml.contains("cleartextTrafficPermitted=\"true\""),
-            "release-конфиг НЕ должен разрешать cleartext",
+        assertTrue(
+            xml.contains("<base-config cleartextTrafficPermitted=\"false\""),
+            "release base-config обязан глобально запрещать cleartext",
         )
         assertTrue(
-            xml.contains("cleartextTrafficPermitted=\"false\""),
-            "release-конфиг должен явно запрещать cleartext",
+            xml.contains("138.124.18.189"),
+            "cleartext в release допустим только точечно для дев-IP 138.124.18.189",
         )
     }
 
@@ -82,13 +88,21 @@ class SecurityConfigTest {
     }
 
     @Test
-    fun `default base url is https in a real production host`() {
-        // Плейсхолдер прод-домена обязан быть HTTPS; боевой HTTP-IP — только debug.
+    fun `default base url is https or the temporary http dev ip`() {
+        // ВРЕМЕННО (сборка «для друзей»): DEFAULT_BASE_URL — дев-бэкенд по голому
+        // HTTP-IP, пока нет https-домена. Гард всё же держим: адрес обязан быть
+        // ЛИБО https-доменом, ЛИБО ровно этим известным дев-IP — случайный
+        // http-адрес не пройдёт. TODO: вернуть строгий assert на https, когда
+        // поднимется TLS-домен (парный release network_security_config тоже).
         val src = resFile(
             "src/main/java/com/zagir/splitty/core/session/SessionStore.kt",
         ).readText()
-        val releaseUrl = Regex("else \"(https://[^\"]+)\"").find(src)?.groupValues?.get(1)
-        assertNotNull(releaseUrl, "release DEFAULT_BASE_URL должен быть https-строкой")
-        assertTrue(releaseUrl.startsWith("https://"), "release-адрес обязан быть HTTPS")
+        val url = Regex("DEFAULT_BASE_URL[\\s\\S]*?get\\(\\) = \"([^\"]+)\"")
+            .find(src)?.groupValues?.get(1)
+        assertNotNull(url, "DEFAULT_BASE_URL должен быть строковым литералом")
+        assertTrue(
+            url.startsWith("https://") || url == "http://138.124.18.189:18002",
+            "DEFAULT_BASE_URL: либо https-домен, либо временный дев-IP 138.124.18.189",
+        )
     }
 }

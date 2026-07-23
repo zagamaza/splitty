@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- RELEASE-вариант: cleartext ЗАПРЕЩЁН — прод-сервер обязан быть на HTTPS.
-     Явно указываем false (дефолт для targetSdk 28+ и так false, но фиксируем
-     инвариант, чтобы никакой merge не включил cleartext обратно). -->
+<!-- RELEASE-вариант: cleartext по умолчанию ЗАПРЕЩЁН — прод-сервер обязан быть на
+     HTTPS. ВРЕМЕННО (сборка «для друзей», internal-трек) точечно разрешаем cleartext
+     ТОЛЬКО для дев-бэкенда на голом IP, пока нет https-домена. Убрать domain-config,
+     когда появится TLS-адрес (см. SessionStore.DEFAULT_BASE_URL). -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">138.124.18.189</domain>
+    </domain-config>
 </network-security-config>
