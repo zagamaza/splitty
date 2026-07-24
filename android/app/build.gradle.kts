@@ -23,7 +23,7 @@ android {
         applicationId = "com.zagir.splitty"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
+        versionCode = 10
         versionName = "1.3"
 
         // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный

@@ -199,16 +199,20 @@ fun RecordingOverlay(
         ).coerceAtLeast(0f)
         val contentBottomDp = with(density) { contentBottom.toDp() }
 
-        // Фон на ВСЁ окно (перекрывая статус-бар и навбар): рисуем его отдельным
-        // полноэкранным слоем, вынесенным за инсеты MainScaffold обратным смещением.
-        // Отдельный Box (не внутри BoxWithConstraints-раскладки) — чтобы огромный
-        // размер фона не влиял на позиционирование контента/мика.
+        // Фон на ВСЁ окно (перекрывая статус-бар и навбар): оверлей лежит внутри
+        // контента MainScaffold, поэтому matchParentSize() кроет только его
+        // область — по краям оставались светлые полосы, и слой читался чёрной
+        // панелью, а не полноэкранным экраном записи (на iOS это .ignoresSafeArea).
+        // Сдвигаем слой обратно на rootOffset и растягиваем на размер окна.
         Box(
             modifier = Modifier
-                .matchParentSize()
+                .offset { IntOffset(-rootOffset.x.roundToInt(), -rootOffset.y.roundToInt()) }
+                .size(
+                    width = with(density) { windowSizePx.width.toDp() },
+                    height = with(density) { windowSizePx.height.toDp() },
+                )
                 .alpha(overlayAlpha)
-                // Сплошной непрозрачный тёмный фон — оверлей записи как отдельный экран.
-                .background(Color(0xFF0C0F13)),
+                .background(RecordingScrim),
         )
 
         RecordingContent(
@@ -925,3 +929,11 @@ private enum class RecordingStatus(
     Preparing(R.string.rec_status_preparing_title, R.string.rec_status_preparing_sub),
     Recording(R.string.rec_status_recording_title, R.string.rec_status_recording_sub),
 }
+
+/**
+ * Фон оверлея записи. На iOS это тёмный `ultraThinMaterial` + `Color.black.opacity(0.35)`,
+ * что визуально читается СЕРЫМ, а не чёрным. Здесь берём сплошной серый (без
+ * прозрачности — блюра под оверлеем всё равно нет): раньше стоял `bg` тёмной
+ * темы `#0C0F13`, самый тёмный токен палитры, и экран выглядел чёрным.
+ */
+private val RecordingScrim = Color(0xFF2B3038)
