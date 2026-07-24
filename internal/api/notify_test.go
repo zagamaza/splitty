@@ -42,14 +42,28 @@ func TestNotificationOnAllowsGranular(t *testing.T) {
 	}
 }
 
-// Дефолт (мастер не задан → включён, тонких настроек нет): telegram включён для
-// обеих категорий, push выключен (нужно явное включение).
+// Дефолт (мастер не задан → включён, тонких настроек нет): оба канала включены
+// для обеих категорий. Push по умолчанию ON — реально доедет только на
+// устройство с зарегистрированным FCM-токеном.
 func TestNotificationDefaults(t *testing.T) {
 	u := &User{}
 	if !u.AllowsTelegram(NotifyOperations) || !u.AllowsTelegram(NotifyDebts) {
 		t.Fatal("telegram по умолчанию включён для обеих категорий")
 	}
-	if u.WantsPush(NotifyOperations) || u.WantsPush(NotifyDebts) {
-		t.Fatal("push по умолчанию выключен")
+	if !u.WantsPush(NotifyOperations) || !u.WantsPush(NotifyDebts) {
+		t.Fatal("push по умолчанию включён для обеих категорий")
+	}
+}
+
+// Явное выключение push перекрывает дефолт.
+func TestNotificationPushExplicitOff(t *testing.T) {
+	u := &User{Notify: &NotifySettings{
+		Operations: ChannelPrefs{Push: boolp(false)},
+	}}
+	if u.WantsPush(NotifyOperations) {
+		t.Fatal("operations.push выключен явно — должен вернуть false")
+	}
+	if !u.WantsPush(NotifyDebts) {
+		t.Fatal("debts.push не трогали — остаётся дефолтным (true)")
 	}
 }

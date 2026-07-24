@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// Дефолты без явных настроек: операции — по легаси notification_on (true),
-// долги — исторически всегда, пуши выключены.
+// Дефолты без явных настроек: оба канала (telegram и push) включены для обеих
+// категорий — push доедет только на устройство с зарегистрированным токеном.
 func TestGetNotificationsDefaults(t *testing.T) {
 	userRepo := newFakeUserRepo(testUser1)
 	s := newTestServer(Config{}, userRepo, newFakeRoomRepo())
@@ -24,8 +24,8 @@ func TestGetNotificationsDefaults(t *testing.T) {
 	if !dto.Operations.Telegram || !dto.Debts.Telegram {
 		t.Fatalf("telegram-каналы по умолчанию включены, got %+v", dto)
 	}
-	if dto.Operations.Push || dto.Debts.Push {
-		t.Fatalf("push по умолчанию выключен, got %+v", dto)
+	if !dto.Operations.Push || !dto.Debts.Push {
+		t.Fatalf("push по умолчанию включён, got %+v", dto)
 	}
 }
 

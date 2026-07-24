@@ -157,20 +157,29 @@ func (u *User) AllowsTelegram(category NotifyCategory) bool {
 	return true
 }
 
-// WantsPush хочет ли пользователь push категории. Как и telegram, подчиняется
-// глобальному выключателю NotificationOn: мастер выключен — push не шлём.
+// WantsPush хочет ли пользователь push категории. Симметрично AllowsTelegram:
+// глобальный выключатель NotificationOn → явная настройка категории → дефолт
+// «включено». Push включён по умолчанию — устройство всё равно получит его
+// только после регистрации FCM-токена (и выданного системного разрешения),
+// так что для тех, кто не ставил приложение, это ничего не меняет.
 func (u *User) WantsPush(category NotifyCategory) bool {
-	if u == nil || u.Notify == nil {
+	if u == nil {
 		return false
 	}
+	// Глобальный выключатель имеет приоритет над всем остальным.
 	if u.NotificationOn != nil && !*u.NotificationOn {
 		return false
 	}
-	prefs := u.Notify.Operations
-	if category == NotifyDebts {
-		prefs = u.Notify.Debts
+	if u.Notify != nil {
+		prefs := u.Notify.Operations
+		if category == NotifyDebts {
+			prefs = u.Notify.Debts
+		}
+		if prefs.Push != nil {
+			return *prefs.Push
+		}
 	}
-	return prefs.Push != nil && *prefs.Push
+	return true
 }
 
 func DefineLang(u *User) string {
