@@ -23,14 +23,15 @@ android {
         applicationId = "com.zagir.splitty"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
+        versionCode = 8
         versionName = "1.3"
 
         // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный
-        // SpeechRecognizer (API 33+) → Vosk-модель on-demand → без караоке. Пока
-        // выключен: качество распознавания на устройствах проверяется PoC-прогоном,
-        // а сам parse работает от аудио и без транскрипта.
-        buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "false")
+        // SpeechRecognizer (API 33+) → Vosk-модель on-demand → без караоке.
+        // Включён и в release: на устройствах без API 33+ ступень просто не
+        // поднимется (окна транскрипта не будет), а сам parse работает от аудио
+        // и без транскрипта — деградация мягкая.
+        buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "true")
     }
 
     // Подпись release: ключ и пароли в keystore.properties (в .gitignore).
@@ -90,12 +91,8 @@ android {
             }
         }
 
-        debug {
-            // На debug-сборке караоке-транскрипт включён для проверки на устройстве
-            // (платформенный SpeechRecognizer on-device). Release до PoC-подтверждения
-            // остаётся на defaultConfig = false.
-            buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "true")
-        }
+        // Отдельный debug-override для KARAOKE_TRANSCRIPT больше не нужен —
+        // в defaultConfig караоке включено для всех типов сборки.
     }
 
     compileOptions {

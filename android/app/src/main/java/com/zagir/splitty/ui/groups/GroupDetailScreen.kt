@@ -67,6 +67,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -623,36 +624,47 @@ private fun TusaBar(
     onAdd: () -> Unit,
 ) {
     val colors = Splitty.colors
-    NavigationBar(containerColor = colors.surface) {
-        TusaTabItem(
-            title = stringResource(R.string.group_tab_operations),
-            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-            isSelected = selected == TUSA_TAB_OPS,
-        ) { onSelect(TUSA_TAB_OPS) }
-        TusaTabItem(
-            title = stringResource(R.string.group_balances_title),
-            icon = Icons.Outlined.SwapHoriz,
-            isSelected = selected == TUSA_TAB_BALANCES,
-        ) { onSelect(TUSA_TAB_BALANCES) }
-        // Центральная позиция — приподнятая кнопка «+» (как в MainScaffold).
-        NavigationBarItem(
-            selected = false,
+    // Кнопку «+» рисуем ПОВЕРХ бара в Box (Box не клипует), а не как icon
+    // у NavigationBarItem: NavigationBar клипует контент по своей высоте, из-за
+    // чего приподнятая на -12dp кнопка обрезалась сверху, а переразмеренный
+    // item тянул высоту бара вверх. Тот же приём, что в MainScaffold.
+    Box {
+        NavigationBar(containerColor = colors.surface) {
+            TusaTabItem(
+                title = stringResource(R.string.group_tab_operations),
+                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                isSelected = selected == TUSA_TAB_OPS,
+            ) { onSelect(TUSA_TAB_OPS) }
+            TusaTabItem(
+                title = stringResource(R.string.group_balances_title),
+                icon = Icons.Outlined.SwapHoriz,
+                isSelected = selected == TUSA_TAB_BALANCES,
+            ) { onSelect(TUSA_TAB_BALANCES) }
+            // Плейсхолдер центральной позиции: держит раскладку табов
+            // (сама кнопка — оверлеем ниже).
+            NavigationBarItem(
+                selected = false,
+                onClick = { if (enabled) onAdd() },
+                icon = { Spacer(Modifier.size(58.dp)) },
+                colors = NavigationBarItemDefaults.colors(
+                    indicatorColor = Color.Transparent,
+                ),
+            )
+            TusaTabItem(
+                title = stringResource(R.string.totals_title),
+                icon = Icons.Outlined.PieChart,
+                isSelected = selected == TUSA_TAB_TOTALS,
+            ) { onSelect(TUSA_TAB_TOTALS) }
+            TusaTabItem(
+                title = stringResource(R.string.group_settings_short),
+                icon = Icons.Outlined.Settings,
+                isSelected = selected == TUSA_TAB_SETTINGS,
+            ) { onSelect(TUSA_TAB_SETTINGS) }
+        }
+        TusaAddFab(
             onClick = { if (enabled) onAdd() },
-            icon = { TusaAddFab() },
-            colors = NavigationBarItemDefaults.colors(
-                indicatorColor = Color.Transparent,
-            ),
+            modifier = Modifier.align(Alignment.TopCenter),
         )
-        TusaTabItem(
-            title = stringResource(R.string.totals_title),
-            icon = Icons.Outlined.PieChart,
-            isSelected = selected == TUSA_TAB_TOTALS,
-        ) { onSelect(TUSA_TAB_TOTALS) }
-        TusaTabItem(
-            title = stringResource(R.string.group_settings_short),
-            icon = Icons.Outlined.Settings,
-            isSelected = selected == TUSA_TAB_SETTINGS,
-        ) { onSelect(TUSA_TAB_SETTINGS) }
     }
 }
 
@@ -681,10 +693,10 @@ private fun RowScope.TusaTabItem(
 
 /** Приподнятая кнопка «+» бара тусы (копия AddExpenseFab из MainScaffold). */
 @Composable
-private fun TusaAddFab() {
+private fun TusaAddFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = Splitty.colors
     Box(
-        modifier = Modifier
+        modifier = modifier
             .offset(y = (-12).dp)
             .size(58.dp)
             .shadow(
@@ -693,12 +705,14 @@ private fun TusaAddFab() {
                 ambientColor = colors.accent.copy(alpha = 0.35f),
                 spotColor = colors.accent.copy(alpha = 0.35f),
             )
+            .clip(CircleShape)
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(colors.accent, colors.accentPressed),
                 ),
                 shape = CircleShape,
-            ),
+            )
+            .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
