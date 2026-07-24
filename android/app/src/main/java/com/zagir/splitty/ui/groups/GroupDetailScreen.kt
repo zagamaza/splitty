@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -153,8 +154,14 @@ fun GroupDetailScreen(
 
     Scaffold(
         containerColor = colors.bg,
+        // Экран вложен в Scaffold MainScaffold, который системные инсеты УЖЕ
+        // применил (на детальных экранах его bottomBar скрыт, и нижний инсет
+        // уходит в innerPadding). Повторное применение здесь поднимало TusaBar
+        // на высоту системной навигации — бар «прыгал» относительно вкладок.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
+                windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
                         text = detail?.name ?: stringResource(R.string.group_fallback_title),
@@ -629,7 +636,13 @@ private fun TusaBar(
     // чего приподнятая на -12dp кнопка обрезалась сверху, а переразмеренный
     // item тянул высоту бара вверх. Тот же приём, что в MainScaffold.
     Box {
-        NavigationBar(containerColor = colors.surface) {
+        // windowInsets = 0: инсет нижней системной навигации уже применён
+        // родительским MainScaffold (см. contentWindowInsets выше) — иначе бар
+        // приподнимался над низом экрана и не совпадал с баром вкладок.
+        NavigationBar(
+            containerColor = colors.surface,
+            windowInsets = WindowInsets(0, 0, 0, 0),
+        ) {
             TusaTabItem(
                 title = stringResource(R.string.group_tab_operations),
                 icon = Icons.AutoMirrored.Outlined.ReceiptLong,
