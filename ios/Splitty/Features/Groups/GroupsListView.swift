@@ -17,11 +17,17 @@ struct GroupsListView: View {
                 .navigationTitle("Группы")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        // Пункт один — прямая кнопка вместо меню-матрёшки.
+                        // Иконка без подписи не читалась — что она делает,
+                        // угадать нельзя. Теперь иконка + текст «Присоединиться».
                         Button {
                             isJoinPresented = true
                         } label: {
-                            Image(systemName: "arrow.right.circle")
+                            // В навбаре Label со systemImage схлопывается в
+                            // иконку — собираем текст+иконку кастомным HStack.
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.right.circle")
+                                Text("Присоединиться")
+                            }
                         }
                         .accessibilityLabel("Присоединиться по коду")
                     }

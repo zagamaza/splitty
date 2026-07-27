@@ -1,6 +1,7 @@
 package com.zagir.splitty.ui.groups
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,13 +27,20 @@ import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -46,6 +55,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -110,35 +121,59 @@ private fun GroupsListContent(
     var isCreatePresented by rememberSaveable { mutableStateOf(false) }
     var isJoinPresented by rememberSaveable { mutableStateOf(false) }
     val colors = Splitty.colors
+    // Большой заголовок «Группы» схлопывается в инлайн-тайтл при скролле,
+    // кнопки остаются (порт iOS large-title navigation).
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = colors.bg,
         topBar = {
-            TopAppBar(
+            LargeTopAppBar(
+                scrollBehavior = scrollBehavior,
                 title = {
                     Text(
                         text = stringResource(R.string.groups_title),
                         fontWeight = FontWeight.Bold,
                     )
                 },
-                // Пункт один — прямая кнопка «Присоединиться» вместо меню-матрёшки
-                // из одного пункта (порт iOS toolbar `.topBarLeading`).
+                // Голая иконка не читалась — теперь обведённая кнопка
+                // «Присоединиться» (порт iOS `.topBarLeading`).
                 navigationIcon = {
-                    IconButton(onClick = { isJoinPresented = true }) {
+                    OutlinedButton(
+                        onClick = { isJoinPresented = true },
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        border = BorderStroke(1.dp, colors.accent),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
+                        modifier = Modifier.padding(start = 8.dp),
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Login,
-                            contentDescription = stringResource(R.string.groups_join_by_code),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = stringResource(R.string.groups_join_short),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = colors.bg,
+                    scrolledContainerColor = colors.bg,
                     titleContentColor = colors.ink,
-                    navigationIconContentColor = colors.ink,
-                    actionIconContentColor = colors.ink,
+                    navigationIconContentColor = colors.accent,
+                    actionIconContentColor = colors.accent,
                 ),
                 actions = {
-                    IconButton(onClick = { isCreatePresented = true }) {
+                    OutlinedIconButton(
+                        onClick = { isCreatePresented = true },
+                        border = BorderStroke(1.dp, colors.accent),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.accent),
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) {
                         Icon(
                             imageVector = Icons.Filled.Add,
                             contentDescription = stringResource(R.string.groups_create_group),
@@ -579,22 +614,47 @@ private fun JoinGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Unit
     var code by rememberSaveable { mutableStateOf("") }
     val canSubmit = parseRoomCode(code).isNotEmpty() && !isMutating
     val submit = { if (canSubmit) viewModel.joinGroup(code, onSuccess = onDismiss) }
+    val clipboard = LocalClipboardManager.current
+    val colors = Splitty.colors
 
     GroupFormSheet(
         title = stringResource(R.string.groups_join_title),
         onDismiss = onDismiss,
     ) {
-        GroupsTextField(
-            value = code,
-            onValueChange = { code = it },
-            placeholder = stringResource(R.string.groups_join_placeholder),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                imeAction = ImeAction.Done,
-            ),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-        )
+        // Код никто не набирает руками — его присылают ссылкой. Кнопка
+        // «Вставить» подставляет содержимое буфера в один тап.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            GroupsTextField(
+                value = code,
+                onValueChange = { code = it },
+                placeholder = stringResource(R.string.groups_join_placeholder),
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
+                    autoCorrectEnabled = false,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+            )
+            Spacer(Modifier.width(4.dp))
+            TextButton(
+                onClick = { clipboard.getText()?.text?.let { code = it } },
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.ContentPaste,
+                    contentDescription = null,
+                    tint = colors.accent,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.groups_join_paste),
+                    fontSize = 15.sp,
+                    color = colors.accent,
+                )
+            }
+        }
         Spacer(Modifier.height(10.dp))
         Text(
             text = stringResource(R.string.groups_join_hint),

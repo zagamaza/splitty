@@ -41,10 +41,11 @@ import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Attachment
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.PersonAddAlt
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,6 +53,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -70,8 +73,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -147,6 +152,8 @@ fun GroupDetailScreen(
 
     // Вкладка нижнего бара тусы: операции / балансы / итоги / настройки.
     var tusaTab by rememberSaveable { mutableStateOf(TUSA_TAB_OPS) }
+    // Шит приглашения — открывается из баннера, участников и настроек.
+    var isInvitePresented by rememberSaveable { mutableStateOf(false) }
 
     val colors = Splitty.colors
     val detail = (state as? UiState.Content)?.value
@@ -240,6 +247,7 @@ fun GroupDetailScreen(
                         room = current.value,
                         meId = meId,
                         viewModel = viewModel,
+                        onInvite = { isInvitePresented = true },
                         modifier = Modifier.padding(innerPadding),
                     )
 
@@ -252,6 +260,7 @@ fun GroupDetailScreen(
                         onRefresh = viewModel::refresh,
                         onSettleUp = settleUp,
                         onAddExpense = { onAddExpense(roomId) },
+                        onInvite = { isInvitePresented = true },
                         onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
                         onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
                         modifier = Modifier.padding(innerPadding),
@@ -261,7 +270,142 @@ fun GroupDetailScreen(
         }
     }
 
+    if (isInvitePresented && detail != null) {
+        InviteBottomSheet(room = detail, onDismiss = { isInvitePresented = false })
+    }
+
     GroupsAlertDialog(alertMessage, viewModel::dismissAlert)
+}
+
+/**
+ * Шит приглашения: главное действие — поделиться ссылкой (друг открывает
+ * бота и вступает в один тап), код — вторичный способ (тап копирует).
+ * Порт iOS InviteGroupView.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InviteBottomSheet(room: RoomDetail, onDismiss: () -> Unit) {
+    val colors = Splitty.colors
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val haptics = rememberHaptics()
+    var copied by remember { mutableStateOf(false) }
+    val inviteLink = "https://t.me/split_money_bot?start=room${room.id}"
+    val inviteMessage = stringResource(R.string.group_invite_message, room.name, inviteLink, room.id)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = colors.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.invite_sheet_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+            PrimaryPillButton(
+                text = stringResource(R.string.invite_share_link),
+                onClick = {
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, inviteMessage)
+                    }
+                    context.startActivity(Intent.createChooser(send, null))
+                },
+            )
+            // Код — вторичный способ: строка, тап копирует в буфер.
+            SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            clipboard.setText(AnnotatedString(room.id))
+                            haptics.tap()
+                            copied = true
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = room.id,
+                        fontSize = 13.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = colors.inkSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        imageVector = if (copied) Icons.Filled.Check else Icons.Outlined.ContentCopy,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Баннер «В группе только вы»: зовёт добавить друзей. Порт iOS inviteBanner. */
+@Composable
+private fun InviteBanner(onClick: () -> Unit) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.linearGradient(listOf(colors.accent, colors.accentPressed))
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(13.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.PersonAddAlt,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(22.dp),
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.invite_banner_title),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+            )
+            Text(
+                text = stringResource(R.string.invite_banner_subtitle),
+                fontSize = 12.5.sp,
+                color = Color.White.copy(alpha = 0.9f),
+            )
+        }
+        Text(
+            text = stringResource(R.string.invite_banner_action),
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(Color.White.copy(alpha = 0.22f))
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        )
+    }
 }
 
 // MARK: - Контент
@@ -277,6 +421,7 @@ private fun GroupDetailContent(
     onRefresh: () -> Unit,
     onSettleUp: () -> Unit,
     onAddExpense: () -> Unit,
+    onInvite: () -> Unit,
     onOpenOperation: (String) -> Unit,
     onEditLocalOperation: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -310,6 +455,12 @@ private fun GroupDetailContent(
                     pendingCount = localOperations.size,
                     onSettleUp = onSettleUp,
                 )
+            }
+            // Пока в группе только вы — зовём добавить друзей.
+            if (room.members.size <= 1 && !room.isArchived) {
+                item(key = "invite-banner") {
+                    InviteBanner(onClick = onInvite)
+                }
             }
             item(key = "mine-segment") {
                 MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
@@ -1130,6 +1281,7 @@ private fun GroupSettingsTab(
     room: RoomDetail,
     meId: Long?,
     viewModel: GroupDetailViewModel,
+    onInvite: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(Unit) { viewModel.loadCurrencies() }
@@ -1140,11 +1292,7 @@ private fun GroupSettingsTab(
     val isArchiving by viewModel.isArchiving.collectAsStateWithLifecycle()
 
     val colors = Splitty.colors
-    val context = LocalContext.current
     val haptics = rememberHaptics()
-    // Ссылка-приглашение, совместимая с deep-link бота.
-    val inviteLink = "https://t.me/split_money_bot?start=room${room.id}"
-    val inviteMessage = stringResource(R.string.group_invite_message, room.name, inviteLink, room.id)
     val selectedCurrency = selectedOverride ?: room.currency
     // Смена валюты — с подтверждением: суммы НЕ пересчитываются, меняется
     // только обозначение у всех участников (порт iOS confirmationDialog).
@@ -1183,10 +1331,36 @@ private fun GroupSettingsTab(
 
             // Участники
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(
-                    stringResource(R.string.group_settings_members),
-                    modifier = Modifier.padding(start = 4.dp),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    SectionHeader(stringResource(R.string.group_settings_members))
+                    Spacer(Modifier.weight(1f))
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = onInvite)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.PersonAddAlt,
+                            contentDescription = null,
+                            tint = colors.accent,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.group_settings_members_invite),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.accent,
+                        )
+                    }
+                }
                 SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
                     room.members.forEachIndexed { index, member ->
                         Row(
@@ -1288,25 +1462,19 @@ private fun GroupSettingsTab(
                 )
             }
 
-            // Приглашение
+            // Приглашение — строка открывает шит (ссылка + код).
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                val send = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, inviteMessage)
-                                }
-                                context.startActivity(Intent.createChooser(send, null))
-                            }
+                            .clickable(onClick = onInvite)
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Share,
+                            imageVector = Icons.Outlined.PersonAddAlt,
                             contentDescription = null,
                             tint = colors.accent,
                             modifier = Modifier.size(18.dp),
@@ -1317,25 +1485,12 @@ private fun GroupSettingsTab(
                             fontWeight = FontWeight.Medium,
                             color = colors.accent,
                         )
-                    }
-                    HairlineDivider(startIndent = 16.dp)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.group_settings_code),
-                            fontSize = 15.sp,
-                            color = colors.ink,
-                        )
                         Spacer(Modifier.weight(1f))
-                        Text(
-                            text = room.id,
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = colors.inkSecondary,
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = colors.inkSecondary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }

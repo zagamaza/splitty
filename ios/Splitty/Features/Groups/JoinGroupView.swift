@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Присоединение к группе по коду приглашения (roomId).
 /// Принимает и «голый» код, и ссылку вида t.me/…?start=room<id>.
@@ -36,14 +37,31 @@ struct JoinGroupView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    TextField("Код группы", text: $code)
-                        .scaledFont(size: 17)
-                        .focused($isCodeFocused)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .submitLabel(.join)
-                        .onSubmit { Task { await join() } }
-                        .surfaceCard()
+                    HStack(spacing: 8) {
+                        TextField("Ссылка или код", text: $code)
+                            .scaledFont(size: 17)
+                            .focused($isCodeFocused)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                            .submitLabel(.join)
+                            .onSubmit { Task { await join() } }
+                        // Код никто не набирает руками — его присылают ссылкой.
+                        // Кнопка вставляет из буфера в один тап.
+                        if UIPasteboard.general.hasStrings {
+                            Button {
+                                if let pasted = UIPasteboard.general.string {
+                                    code = pasted
+                                }
+                            } label: {
+                                Label("Вставить", systemImage: "doc.on.clipboard")
+                                    .labelStyle(.titleAndIcon)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Color.accent)
+                            }
+                            .fixedSize()
+                        }
+                    }
+                    .surfaceCard()
                     // Ввели текст, а код не распознан — объясняем, почему
                     // кнопка неактивна, вместо молчаливого disabled.
                     if !trimmedCode.isEmpty, roomId.isEmpty {

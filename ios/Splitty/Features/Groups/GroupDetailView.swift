@@ -16,6 +16,7 @@ struct GroupDetailView: View {
     @State private var tusaTab: TusaTab = .operations
     @State private var isSettleUpPresented = false
     @State private var isAddExpensePresented = false
+    @State private var isInvitePresented = false
     /// Фильтр списка операций: только те, где я донор или в получателях
     /// (аналог фильтра «Мои операции» в телеграм-боте).
     @State private var isMineOnly = false
@@ -90,6 +91,11 @@ struct GroupDetailView: View {
                     )
                 }
             }
+            .sheet(isPresented: $isInvitePresented) {
+                if let room = model.room {
+                    InviteGroupView(room: room)
+                }
+            }
             .errorAlert($model.alertMessage)
     }
 
@@ -140,6 +146,7 @@ struct GroupDetailView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 headerCard(room: room, meId: meId)
+                inviteBanner(room: room)
                 mineSegment
                 // Локальные (неотправленные) операции — СВЕРХУ списка.
                 if !localEntries.isEmpty {
@@ -180,6 +187,49 @@ struct GroupDetailView: View {
             return ops.isEmpty
                 ? nil
                 : GroupDetailViewModel.MonthSection(id: section.id, title: section.title, operations: ops)
+        }
+    }
+
+    /// Баннер-приглашение: пока в группе только вы, зовём добавить друзей.
+    /// Прячется, когда участников стало больше, и в архивной группе.
+    @ViewBuilder
+    private func inviteBanner(room: RoomDetail) -> some View {
+        if room.members.count <= 1 && !room.isArchived {
+            Button {
+                isInvitePresented = true
+            } label: {
+                HStack(spacing: 13) {
+                    Image(systemName: "person.2.badge.plus.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("В группе только вы")
+                            .scaledFont(size: 15, weight: .bold)
+                            .foregroundStyle(.white)
+                        Text("Позовите друзей, чтобы делить расходы")
+                            .scaledFont(size: 12.5, relativeTo: .footnote)
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
+                    Spacer(minLength: 8)
+                    Text("Пригласить")
+                        .scaledFont(size: 13.5, weight: .semibold, relativeTo: .footnote)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color.white.opacity(0.22), in: Capsule())
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    LinearGradient(
+                        colors: [Color.accent, Color.accentPressed],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 

@@ -147,7 +147,9 @@
     <string name="groups_create_hint">Например: «Поездка в Стамбул» или «Квартира».</string>
     <string name="groups_create_button">Создать</string>
     <string name="groups_join_title">Присоединиться</string>
-    <string name="groups_join_placeholder">Код группы</string>
+    <string name="groups_join_short">Присоединиться</string>
+    <string name="groups_join_placeholder">Ссылка или код</string>
+    <string name="groups_join_paste">Вставить</string>
     <string name="groups_join_hint">Вставьте код из приглашения или целиком ссылку вида t.me/split_money_bot?start=room…</string>
     <string name="groups_join_button">Присоединиться</string>
     <plurals name="groups_member_count">
@@ -203,8 +205,15 @@
     <string name="group_settings_currency">Валюта</string>
     <string name="group_settings_currency_footer">В валюте группы показываются все её суммы: расходы, долги и итоги.</string>
     <string name="group_settings_invite">Пригласить в группу</string>
+    <string name="group_settings_members_invite">Пригласить</string>
     <string name="group_settings_code">Код группы</string>
-    <string name="group_settings_invite_footer">Отправьте другу ссылку или код — по нему можно присоединиться через «Присоединиться по коду».</string>
+    <string name="group_settings_invite_footer">Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».</string>
+    <!-- Приглашение: шит и баннер -->
+    <string name="invite_sheet_title">Пригласить в группу</string>
+    <string name="invite_share_link">Поделиться ссылкой</string>
+    <string name="invite_banner_title">В группе только вы</string>
+    <string name="invite_banner_subtitle">Позовите друзей, чтобы делить расходы</string>
+    <string name="invite_banner_action">Пригласить</string>
     <string name="group_settings_archive">Архивировать</string>
     <string name="group_settings_unarchive">Разархивировать</string>
     <string name="group_settings_archive_footer">Архив скрывает группу из списка только у вас. Операции и долги сохраняются.</string>

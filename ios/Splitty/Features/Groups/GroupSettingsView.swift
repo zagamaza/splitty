@@ -11,6 +11,7 @@ struct GroupSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isArchiving = false
     @State private var alertMessage: String?
+    @State private var isInvitePresented = false
     /// Справочник валют (GET /currencies); nil — ещё грузится.
     @State private var currencies: [CurrencyInfo]?
     /// Текст ошибки загрузки справочника, когда кеша нет: без него секция
@@ -32,15 +33,6 @@ struct GroupSettingsView: View {
         self.embedded = embedded
         self.onChange = onChange
         _selectedCurrency = State(initialValue: room.currency)
-    }
-
-    /// Ссылка-приглашение, совместимая с deep-link бота.
-    private var inviteLink: String {
-        "https://t.me/split_money_bot?start=room\(room.id)"
-    }
-
-    private var inviteMessage: String {
-        "Присоединяйся к группе «\(room.name)» в Splitty: \(inviteLink)\nКод группы: \(room.id)"
     }
 
     var body: some View {
@@ -73,6 +65,9 @@ struct GroupSettingsView: View {
         .background(Color.bg)
         .task { await loadCurrencies() }
         .errorAlert($alertMessage)
+        .sheet(isPresented: $isInvitePresented) {
+            InviteGroupView(room: room)
+        }
         .confirmationDialog(
             "Сменить валюту на \(pendingCurrency?.code ?? "")?",
             isPresented: Binding(
@@ -95,9 +90,19 @@ struct GroupSettingsView: View {
 
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Участники")
-                .sectionHeaderStyle()
-                .padding(.leading, 4)
+            HStack {
+                Text("Участники")
+                    .sectionHeaderStyle()
+                Spacer(minLength: 8)
+                Button {
+                    isInvitePresented = true
+                } label: {
+                    Label("Пригласить", systemImage: "person.badge.plus")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.accent)
+                }
+            }
+            .padding(.horizontal, 4)
             VStack(spacing: 0) {
                 ForEach(room.members) { member in
                     HStack(spacing: 12) {
@@ -213,38 +218,25 @@ struct GroupSettingsView: View {
 
     private var inviteSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            VStack(spacing: 0) {
-                ShareLink(item: inviteMessage) {
-                    HStack {
-                        Label("Пригласить в группу", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Color.accent)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                Rectangle()
-                    .fill(Color.hairline)
-                    .frame(height: 1)
-                    .padding(.leading, 16)
+            Button {
+                isInvitePresented = true
+            } label: {
                 HStack {
-                    Text("Код группы")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.ink)
-                    Spacer(minLength: 8)
-                    Text(room.id)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(Color.inkSecondary)
-                        .textSelection(.enabled)
+                    Label("Пригласить в группу", systemImage: "person.badge.plus")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.accent)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .surfaceCard(padding: 0)
-            Text("Отправьте другу ссылку или код — по нему можно присоединиться через «Присоединиться по коду».")
+            Text("Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».")
                 .font(.caption)
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.horizontal, 4)
