@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // avatarCacheTTL как долго держим аватар (и факт его отсутствия) в памяти:
@@ -133,6 +134,10 @@ type tgUserProfilePhotosResponse struct {
 // handleGetUserAvatar GET /api/v1/users/{userId}/avatar — фото профиля
 // Telegram (через getUserProfilePhotos + getFile), 404 если фото нет или
 // скрыто настройками приватности. Ответ кешируется в памяти на сутки.
+//
+// {userId} — НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY, а не telegram id: в telegram уходит
+// user.TelegramID канонического документа. Пользователю без telegram отдаём
+// 404 — клиенты рисуют инициалы.
 func (s *Server) handleGetUserAvatar(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId, err := strconv.Atoi(r.PathValue("userId"))
@@ -152,13 +157,32 @@ func (s *Server) handleGetUserAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ключ кеша — номер Splitty: привязка/отвязка telegram не должна путать
+	// закешированные картинки разных пользователей между собой
 	if e, ok := s.avatars.get(userId, s.now()); ok {
 		writeAvatar(w, e)
 		return
 	}
 
+	// telegram id берём из КАНОНИЧЕСКОГО документа: _id давно не равен
+	// telegram id, а у google/apple-пользователей его нет вовсе
+	user, err := s.userRepo.FindById(ctx, userId)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			writeError(w, http.StatusNotFound, "not_found", "пользователь не найден")
+			return
+		}
+		log.Error().Err(err).Msg("cannot find avatar owner")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось получить фото профиля")
+		return
+	}
+	if !user.HasTelegram() {
+		writeError(w, http.StatusNotFound, "not_found", "у пользователя нет фото профиля")
+		return
+	}
+
 	photosURL := fmt.Sprintf("%s/bot%s/getUserProfilePhotos?user_id=%d&limit=1",
-		s.tgApiURL, s.cfg.TgToken, userId)
+		s.tgApiURL, s.cfg.TgToken, *user.TelegramID)
 	resp, err := s.tgGet(ctx, photosURL)
 	if err != nil {
 		log.Error().Err(err).Msg("telegram getUserProfilePhotos failed")

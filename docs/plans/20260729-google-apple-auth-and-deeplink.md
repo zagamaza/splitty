@@ -390,12 +390,18 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `internal/rest/avatar.go`
 - Modify: `internal/rest/avatar_test.go`
 
-- [ ] в `handleGetUserAvatar` (`avatar.go:136`) резолвить пользователя через `s.userRepo.FindById` и брать telegram id из `TelegramID`
-- [ ] у пользователя без telegram — `404 not_found` (клиенты рисуют инициалы), не 500 и не 503
-- [ ] ключ кеша (`avatar.go:155`) оставить по номеру Splitty — не путается при привязке/отвязке
-- [ ] сохранить проверку доступа (`avatar.go:145-149`)
-- [ ] написать тесты: 404 без telegram; успешный путь шлёт в Telegram `telegram_id`, а не `_id`; отказ в доступе к чужому аватару без общей комнаты
-- [ ] `go test ./internal/...` — зелёные перед Task 9
+- [x] в `handleGetUserAvatar` (`avatar.go:136`) резолвить пользователя через `s.userRepo.FindById` и брать telegram id из `TelegramID`
+- [x] у пользователя без telegram — `404 not_found` (клиенты рисуют инициалы), не 500 и не 503
+- [x] ключ кеша (`avatar.go:155`) оставить по номеру Splitty — не путается при привязке/отвязке
+- [x] сохранить проверку доступа (`avatar.go:145-149`)
+- [x] написать тесты: 404 без telegram; успешный путь шлёт в Telegram `telegram_id`, а не `_id`; отказ в доступе к чужому аватару без общей комнаты
+- [x] `go test ./internal/...` — зелёные перед Task 9
+
+**Как сделано:**
+- порядок в хендлере: проверка доступа → `TgToken` → кеш по номеру Splitty → `FindById` → `HasTelegram()`. Резолв стоит ПОСЛЕ кеша: попадание в кеш не требует telegram id вовсе, и лишнего запроса в mongo на каждый экран со списком аватаров не появляется
+- `mongo.ErrNoDocuments` от `FindById` → `404 not_found` (снимок участника в комнате может пережить владельца), прочие ошибки → 500
+- «нет telegram» намеренно НЕ кешируется: это один запрос в mongo, а не два в telegram, и после привязки telegram (Task 12) аватар обязан появиться сразу, а не через сутки
+- фикстуры аватарных тестов получили хелперы `withTelegram`/`tgIDOf`; telegram id намеренно НЕ равен `_id`, иначе тест не отличил бы одно от другого, а `fakeTelegram` теперь сверяет пришедший `user_id` с ожидаемым telegram id
 
 ### Task 9: Верификация OIDC ID-токенов
 
