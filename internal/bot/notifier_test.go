@@ -66,6 +66,12 @@ func (s stubUserFinder) FindById(_ context.Context, id int) (*api.User, error) {
 	return s.users[id], nil
 }
 
+// tgUser собирает КАНОНИЧЕСКОГО telegram-пользователя: номер Splitty и telegram id
+// различаются намеренно — отправка и упоминания обязаны брать второй.
+func tgUser(id, tgID int, name string) *api.User {
+	return &api.User{ID: id, TelegramID: &tgID, DisplayName: name}
+}
+
 func room() api.Room {
 	return api.Room{ID: primitive.NewObjectID(), Name: "Тусa", Currency: "RUB"}
 }
@@ -76,7 +82,14 @@ func room() api.Room {
 func TestNotifierEscapesUserInput(t *testing.T) {
 	loadLang(t)
 	tg := &captureSender{}
-	n := NewNotifier(tg, noopOperationService{}, noopButtonService{}, stubUserFinder{}, push.NoopSender{})
+	// снимки (donor/recipient) телефонного id не несут — telegram_id живёт только
+	// в канонических документах, которые отдаёт finder
+	finder := stubUserFinder{users: map[int]*api.User{
+		1: tgUser(1, 1001, "Автор"),
+		2: tgUser(2, 1002, "Плательщик"),
+		3: tgUser(3, 1003, "Гость"),
+	}}
+	n := NewNotifier(tg, noopOperationService{}, noopButtonService{}, finder, push.NoopSender{})
 
 	r := room()
 	r.Name = "Бар <b>X</b>"
@@ -117,16 +130,18 @@ func TestNotifierUsesCanonicalNotifyPrefs(t *testing.T) {
 	off := false
 	// Снимок в комнате — «уведомления не настроены» (легаси-ветка = слать).
 	stale := api.User{ID: 3, DisplayName: "Гость"}
-	// Канонический документ — пользователь выключил уведомления об операциях.
-	canonical := &api.User{
+	// Канонический документ — telegram привязан, но уведомления об операциях выключены.
+	tgID := 1003
+	canonicalUser := &api.User{
 		ID:          3,
+		TelegramID:  &tgID,
 		DisplayName: "Гость",
 		Notify:      &api.NotifySettings{Operations: api.ChannelPrefs{Telegram: &off}},
 	}
 
 	tg := &captureSender{}
 	n := NewNotifier(tg, noopOperationService{}, noopButtonService{},
-		stubUserFinder{users: map[int]*api.User{3: canonical}}, push.NoopSender{})
+		stubUserFinder{users: map[int]*api.User{3: canonicalUser}}, push.NoopSender{})
 
 	author := api.User{ID: 1, DisplayName: "Автор"}
 	op := api.Operation{

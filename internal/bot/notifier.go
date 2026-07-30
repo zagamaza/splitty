@@ -83,19 +83,17 @@ func opPushData(room api.Room, op api.Operation) map[string]string {
 // больше не обновляются: PATCH /me/notifications меняет только коллекцию user,
 // поэтому по снимку Notify всегда nil и AllowsTelegram уходит в легаси-ветку —
 // выключенные в приложении уведомления продолжали приходить.
-// Пользователя не удалось прочитать — падаем на снимок, а не молчим.
-func (n *Notifier) allowsTelegram(ctx context.Context, u *api.User, category api.NotifyCategory) bool {
+//
+// Нет привязки к Telegram (вход через Google/Apple) — канал недоступен целиком.
+// Сюда же попадает случай «канонический документ не прочитался»: в снимке
+// telegram_id нет никогда, а значит и chat id взять неоткуда — слать некуда.
+// Push от этого не страдает, он идёт отдельным путём (pushToUser).
+func (n *Notifier) allowsTelegram(cu *canonicalUsers, u *api.User, category api.NotifyCategory) bool {
 	if u == nil {
 		return false
 	}
-	if n.uf != nil {
-		if canonical, err := n.uf.FindById(ctx, u.ID); err != nil {
-			log.Warn().Err(err).Int("user", u.ID).Msg("notifier: can't read notify prefs, using embedded snapshot")
-		} else if canonical != nil {
-			return canonical.AllowsTelegram(category)
-		}
-	}
-	return u.AllowsTelegram(category)
+	c := cu.get(u)
+	return c.HasTelegram() && c.AllowsTelegram(category)
 }
 
 // NotifyOperationCreated — паритет с OperationAdded.notificationWhenCreateOperation:
@@ -128,38 +126,52 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 	desc := html.EscapeString(op.Description)
 	roomName := html.EscapeString(room.Name)
 
+	// chat id и упоминания — из канонических документов: во встроенных снимках
+	// telegram_id нет никогда (api.User.Snapshot его обнуляет)
+	cu := canonical(ctx, n.uf)
+	sentBefore := len(op.NotificationSent)
+
 	var messages []tgbotapi.Chattable
 	// как у бота: назначенный плательщик уведомляется без проверки NotificationOn
 	if op.Donor.ID != author.ID {
-		messages = append(messages, NewMessage(int64(op.Donor.ID),
-			I18n(op.Donor, "scrn_notification_payer_changed",
-				userLink(op.Donor), userLink(&author), desc, moneySpace(op.Sum, room.Currency), roomName),
-			keyboardFor(op.Donor)))
 		op.NotificationSent = append(op.NotificationSent, op.Donor.ID)
+		// push независим от telegram-канала: у google-пользователя telegram нет вовсе
 		n.pushToUser(ctx, op.Donor.ID, api.NotifyOperations, room.Name,
 			fmt.Sprintf("%s назначил вас плательщиком «%s»", author.DisplayName, op.Description),
 			opPushData(room, op))
+		if chatId, ok := cu.chatID(op.Donor); ok {
+			messages = append(messages, NewMessage(chatId,
+				I18n(op.Donor, "scrn_notification_payer_changed",
+					cu.link(op.Donor), cu.link(&author), desc, moneySpace(op.Sum, room.Currency), roomName),
+				keyboardFor(op.Donor)))
+		}
 	}
 	for _, r := range op.RecipientsWithSum {
 		recipient := r.User
 		if slices.Contains(op.NotificationSent, recipient.ID) ||
-			!n.allowsTelegram(ctx, &recipient, api.NotifyOperations) ||
 			recipient.ID == author.ID ||
 			r.Sum == 0 {
 			continue
 		}
-		messages = append(messages, NewMessage(int64(recipient.ID),
-			I18n(&recipient, "scrn_notification_operation_added",
-				userLink(&recipient), userLink(&author), desc, moneySpace(op.Sum, room.Currency),
-				roomName, moneySpace(int(r.Sum), room.Currency)),
-			keyboardFor(&recipient)))
 		op.NotificationSent = append(op.NotificationSent, recipient.ID)
 		n.pushToUser(ctx, recipient.ID, api.NotifyOperations, room.Name,
 			fmt.Sprintf("%s добавил расход «%s» — ваша доля %s",
 				author.DisplayName, op.Description, moneySpace(int(r.Sum), room.Currency)),
 			opPushData(room, op))
+		if !n.allowsTelegram(cu, &recipient, api.NotifyOperations) {
+			continue
+		}
+		chatId, ok := cu.chatID(&recipient)
+		if !ok {
+			continue
+		}
+		messages = append(messages, NewMessage(chatId,
+			I18n(&recipient, "scrn_notification_operation_added",
+				cu.link(&recipient), cu.link(&author), desc, moneySpace(op.Sum, room.Currency),
+				roomName, moneySpace(int(r.Sum), room.Currency)),
+			keyboardFor(&recipient)))
 	}
-	if len(messages) == 0 {
+	if len(op.NotificationSent) == sentBefore {
 		return
 	}
 
@@ -197,11 +209,12 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 		},
 	}
 
-	// Резолвер канонических настроек: иначе правки/удаления операций уходили бы
-	// даже тем, кто выключил уведомления в приложении (во встроенных снимках
-	// Notify всегда nil). Ср. NotifyOperationCreated.
-	allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(ctx, u, c) }
-	n.send(buildUpdateOperationMessages(&author, &author, diff, oldOp, newOp, &room, keyboard, allows))
+	// Резолвер канонических документов: без него правки/удаления операций уходили
+	// бы даже тем, кто выключил уведомления в приложении (во встроенных снимках
+	// Notify всегда nil), а chat id брать было бы неоткуда. Ср. NotifyOperationCreated.
+	cu := canonical(ctx, n.uf)
+	allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(cu, u, c) }
+	n.send(buildUpdateOperationMessages(cu, &author, &author, diff, oldOp, newOp, &room, keyboard, allows))
 }
 
 // NotifyOperationDeleted — паритет с DeleteDonorOperation: бот при удалении
@@ -233,7 +246,12 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 		fmt.Sprintf("%s вернул вам долг %s", op.Donor.DisplayName, moneySpace(op.Sum, room.Currency)),
 		map[string]string{"channel": "debts", "roomId": room.ID.Hex(), "type": "debt"})
 
-	if !n.allowsTelegram(ctx, &lender, api.NotifyDebts) {
+	cu := canonical(ctx, n.uf)
+	if !n.allowsTelegram(cu, &lender, api.NotifyDebts) {
+		return
+	}
+	chatId, ok := cu.chatID(&lender)
+	if !ok {
 		return
 	}
 
@@ -245,9 +263,9 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(&lender, "btn_done"), rb.ID.Hex())},
 	}
-	n.send([]tgbotapi.Chattable{NewMessage(int64(lender.ID),
+	n.send([]tgbotapi.Chattable{NewMessage(chatId,
 		I18n(&lender, "scrn_debt_returned_recepient",
-			html.EscapeString(lender.DisplayName), moneySpace(op.Sum, room.Currency), userLink(op.Donor)),
+			html.EscapeString(lender.DisplayName), moneySpace(op.Sum, room.Currency), cu.link(op.Donor)),
 		keyboard)})
 }
 

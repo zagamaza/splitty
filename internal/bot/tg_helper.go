@@ -6,6 +6,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/gookit/i18n"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"html"
 	"regexp"
@@ -126,6 +127,9 @@ func getChatID(update *api.Update) int64 {
 	if update.CallbackQuery != nil && update.CallbackQuery.Message != nil {
 		chatId = update.CallbackQuery.Message.Chat.ID
 	} else if update.CallbackQuery != nil {
+		// ИСКЛЮЧЕНИЕ из правила «в Telegram уходит только user.TelegramID»:
+		// From пришёл в самом апдейте от Telegram, это telegram id по определению,
+		// а не номер Splitty. Резолвить его через репозиторий не нужно и нечем
 		chatId = int64(update.CallbackQuery.From.ID)
 	} else {
 		chatId = update.Message.Chat.ID
@@ -216,11 +220,91 @@ func shortName(user *api.User) string {
 	return string(sn)
 }
 
-// userLink собирает HTML-ссылку на пользователя. DisplayName задаёт сам
-// пользователь и он может содержать "<" — без экранирования это и инъекция в
-// общее сообщение, и 400 от Telegram, роняющий экран целиком.
+// telegramChatID возвращает chat id для отправки в Telegram. false — у пользователя
+// нет привязки к Telegram (вход через Google/Apple), telegram-канал пропускается,
+// push при этом работает независимо.
+//
+// ВАЖНО: u обязан быть КАНОНИЧЕСКИМ документом пользователя. Во встроенных снимках
+// комнат (room.users[], op.donor, op.recipientsWithSum[].user) telegram_id нет
+// никогда — api.User.Snapshot() его обнуляет, а старые снимки писались ещё до
+// появления поля. Для резолва есть canonicalUsers.
+func telegramChatID(u *api.User) (int64, bool) {
+	if !u.HasTelegram() {
+		return 0, false
+	}
+	return int64(*u.TelegramID), true
+}
+
+// canonicalUsers резолвит канонические документы пользователей: и chat id для
+// отправки, и упоминания в текстах должны браться из коллекции user, а не из
+// встроенного снимка комнаты. Без этого telegram-уведомления перестали бы
+// уходить вообще, а упоминания потеряли бы ссылку tg://user у всех живых
+// telegram-пользователей.
+//
+// Кеш на время одной отрисовки: одного и того же участника (донор + получатель +
+// редактор) уведомление упоминает по несколько раз, читать его повторно незачем.
+type canonicalUsers struct {
+	ctx   context.Context
+	uf    UserFinder
+	cache map[int]*api.User
+}
+
+// canonical собирает резолвер на время обработки одного апдейта/уведомления.
+// uf может быть nil — тогда резолвер прозрачно отдаёт то, что ему передали
+func canonical(ctx context.Context, uf UserFinder) *canonicalUsers {
+	return &canonicalUsers{ctx: ctx, uf: uf, cache: make(map[int]*api.User)}
+}
+
+// get отдаёт канонический документ. Не нашли или ошибка — возвращаем исходный
+// снимок: имя в тексте важнее ссылки, а отправку всё равно отсечёт telegramChatID
+func (c *canonicalUsers) get(u *api.User) *api.User {
+	if u == nil {
+		return nil
+	}
+	if c == nil || c.uf == nil {
+		return u
+	}
+	if cached, ok := c.cache[u.ID]; ok {
+		return cached
+	}
+	res := u
+	if found, err := c.uf.FindById(c.ctx, u.ID); err != nil {
+		log.Warn().Err(err).Int("user", u.ID).Msg("can't read canonical user, using embedded snapshot")
+	} else if found != nil {
+		res = found
+	}
+	c.cache[u.ID] = res
+	return res
+}
+
+// link — упоминание пользователя по каноническому документу
+func (c *canonicalUsers) link(u *api.User) string {
+	return userLink(c.get(u))
+}
+
+// chatID — chat id пользователя по каноническому документу
+func (c *canonicalUsers) chatID(u *api.User) (int64, bool) {
+	return telegramChatID(c.get(u))
+}
+
+// userLink собирает упоминание пользователя. Кликабельная ссылка tg://user
+// возможна только у пользователя с привязанным Telegram; у вошедших через
+// Google/Apple остаётся экранированное имя. DisplayName задаёт сам пользователь
+// и он может содержать "<" — без экранирования это и инъекция в общее сообщение,
+// и 400 от Telegram, роняющий экран целиком.
+//
+// user обязан быть КАНОНИЧЕСКИМ: во встроенных снимках telegram_id нет никогда,
+// поэтому по снимку ссылка не соберётся (см. canonicalUsers.link).
 func userLink(user *api.User) string {
-	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", user.ID, html.EscapeString(user.DisplayName))
+	if user == nil {
+		return ""
+	}
+	name := html.EscapeString(user.DisplayName)
+	chatId, ok := telegramChatID(user)
+	if !ok {
+		return name
+	}
+	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", chatId, name)
 }
 
 func moneySpace(sum int, currency string) string {

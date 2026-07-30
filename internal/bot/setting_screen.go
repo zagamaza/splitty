@@ -561,9 +561,15 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 			backB := api.NewButton(viewStart, &api.CallbackData{})
 			buttons = append(buttons, rb, viewUserOpsB, setBankBtn, backB)
 
+			// КАНОНИЧЕСКИЙ документ: room.Members — снимки, telegram_id в них нет
 			user, err := bot.us.FindById(ctx, user.ID)
 			if err != nil {
 				log.Error().Err(err).Msg("get user failed")
+				continue
+			}
+			chatId, ok := telegramChatID(user)
+			if !ok {
+				// вход через Google/Apple: telegram-канала у пользователя нет
 				continue
 			}
 			text := I18n(user, "scrn_all_operations_added", userLink(user), html.EscapeString(room.Name))
@@ -572,7 +578,7 @@ func (bot *FinishedAddOperation) OnMessage(ctx context.Context, u *api.Update) (
 			} else {
 				text += I18n(user, "scrn_all_operations_ps")
 			}
-			msg := NewMessage(int64(user.ID), text,
+			msg := NewMessage(chatId, text,
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_view_room"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_user_debts"), viewUserOpsB.ID.Hex())},

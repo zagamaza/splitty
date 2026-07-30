@@ -1258,7 +1258,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 			return
 		}
 		newOp := opn
-		buttons, messages = notificationWhenUpdateOperation(u, oldOp, newOp, room, buttons, messages)
+		buttons, messages = notificationWhenUpdateOperation(canonical(ctx, s.us), u, oldOp, newOp, room, buttons, messages)
 	} else {
 		messages = s.notificationWhenCreateOperation(ctx, u, opn, room, rb, backB, messages)
 	}
@@ -1286,16 +1286,22 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 
 func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *api.Update, opn api.Operation, room *api.Room, rb *api.Button, backB *api.Button, messages []tgbotapi.Chattable) []tgbotapi.Chattable {
 
+	// Донор и получатели здесь — встроенные снимки, telegram_id в них нет никогда:
+	// и chat id, и упоминания резолвим через канонические документы
+	cu := canonical(ctx, s.us)
+
 	if opn.Donor.ID != u.User.ID {
-		keyboard := [][]tgbotapi.InlineKeyboardButton{
-			{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_view_operation"), rb.ID.Hex())},
-			{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_to_start"), backB.ID.Hex())},
+		if chatId, ok := cu.chatID(opn.Donor); ok {
+			keyboard := [][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_view_operation"), rb.ID.Hex())},
+				{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_to_start"), backB.ID.Hex())},
+			}
+			msg := NewMessage(chatId,
+				I18n(opn.Donor, "scrn_notification_payer_changed", cu.link(opn.Donor), userLink(u.User), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name)),
+				keyboard)
+			messages = append(messages, msg)
+			opn.NotificationSent = append(opn.NotificationSent, opn.Donor.ID)
 		}
-		msg := NewMessage(int64(opn.Donor.ID),
-			I18n(opn.Donor, "scrn_notification_payer_changed", userLink(opn.Donor), userLink(getFrom(u)), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name)),
-			keyboard)
-		messages = append(messages, msg)
-		opn.NotificationSent = append(opn.NotificationSent, opn.Donor.ID)
 	}
 
 	for _, recipientsWithSum := range opn.RecipientsWithSum {
@@ -1303,6 +1309,10 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 			recipientsWithSum.User.AllowsTelegram(api.NotifyOperations) &&
 			recipientsWithSum.User.ID != u.User.ID &&
 			recipientsWithSum.Sum != 0 {
+			chatId, ok := cu.chatID(&recipientsWithSum.User)
+			if !ok {
+				continue
+			}
 			var recipientWithSum api.RecipientWithSum
 			for _, r := range opn.RecipientsWithSum {
 				if r.User.ID == recipientsWithSum.User.ID {
@@ -1310,7 +1320,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 					break
 				}
 			}
-			msg := NewMessage(int64(recipientsWithSum.User.ID), I18n(&recipientsWithSum.User, "scrn_notification_operation_added", userLink(&recipientsWithSum.User), userLink(getFrom(u)), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name), moneySpace(int(recipientWithSum.Sum), room.Currency)),
+			msg := NewMessage(chatId, I18n(&recipientsWithSum.User, "scrn_notification_operation_added", cu.link(&recipientsWithSum.User), userLink(u.User), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name), moneySpace(int(recipientWithSum.Sum), room.Currency)),
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_view_operation"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_to_start"), backB.ID.Hex())},
@@ -1325,7 +1335,10 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 	return messages
 }
 
-func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp api.Operation, room *api.Room, buttons []*api.Button, messages []tgbotapi.Chattable) ([]*api.Button, []tgbotapi.Chattable) {
+// notificationWhenUpdateOperation — экранный сценарий бота. cu резолвит
+// канонические документы участников: chat id и упоминания нельзя брать из
+// встроенных снимков операции, там нет telegram_id
+func notificationWhenUpdateOperation(cu *canonicalUsers, u *api.Update, oldOp api.Operation, newOp api.Operation, room *api.Room, buttons []*api.Button, messages []tgbotapi.Chattable) ([]*api.Button, []tgbotapi.Chattable) {
 	diff := computeOperationDiff(oldOp, newOp)
 	if diff == nil {
 		return buttons, messages
@@ -1343,15 +1356,18 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 
 	// editor — КАНОНИЧЕСКИЙ пользователь: внутри buildUpdateOperationMessages его
 	// ID сравнивается с ID доноров операции, то есть работает как номер Splitty
-	messages = append(messages, buildUpdateOperationMessages(u.User, u.User, diff, oldOp, newOp, room, keyboard, nil)...)
+	messages = append(messages, buildUpdateOperationMessages(cu, u.User, u.User, diff, oldOp, newOp, room, keyboard, nil)...)
 	return buttons, messages
 }
 
 // buildUpdateOperationMessages собирает уведомления об изменении операции — общая
 // часть экранного сценария (notificationWhenUpdateOperation) и REST-уведомлений
 // (Notifier). editor — кто внёс изменение (его пропускаем и упоминаем в текстах),
-// langUser — чей язык используется в блоке «Было/Стало» (в боте это u.User)
-func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *api.OperationDiff, oldOp api.Operation, newOp api.Operation, room *api.Room, keyboard [][]tgbotapi.InlineKeyboardButton, allows func(*api.User, api.NotifyCategory) bool) []tgbotapi.Chattable {
+// langUser — чей язык используется в блоке «Было/Стало» (в боте это u.User).
+// cu резолвит канонические документы: доноры и получатели приходят встроенными
+// снимками операции, а telegram_id в снимках нет никогда — без резолва и chat id
+// взять неоткуда, и упоминание получится некликабельным
+func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser *api.User, diff *api.OperationDiff, oldOp api.Operation, newOp api.Operation, room *api.Room, keyboard [][]tgbotapi.InlineKeyboardButton, allows func(*api.User, api.NotifyCategory) bool) []tgbotapi.Chattable {
 	var messages []tgbotapi.Chattable
 	editorUserId := editor.ID
 
@@ -1382,17 +1398,21 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 		}
 
 		text := I18n(newOp.Donor, "scrn_notification_operation_updated_all",
-			userLink(targetUser), newDesc, userLink(editor), "")
+			cu.link(targetUser), newDesc, cu.link(editor), "")
 		text += "\nБыло:\n" +
-			I18n(langUser, "scrn_user_paid", userLink(oldOp.Donor)) +
+			I18n(langUser, "scrn_user_paid", cu.link(oldOp.Donor)) +
 			tableWithPayments(oldOp, room)
 		text += "\n\nСтало:\n" +
-			I18n(langUser, "scrn_user_paid", userLink(newOp.Donor)) +
+			I18n(langUser, "scrn_user_paid", cu.link(newOp.Donor)) +
 			tableWithPayments(newOp, room)
 
 		for _, donor := range []*api.User{newOp.Donor, oldOp.Donor} {
 			if editorUserId != donor.ID {
-				msg := NewMessage(int64(donor.ID), text, keyboard)
+				chatId, ok := cu.chatID(donor)
+				if !ok {
+					continue
+				}
+				msg := NewMessage(chatId, text, keyboard)
 				messages = append(messages, msg)
 			}
 		}
@@ -1411,19 +1431,25 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 		// Уведомляем донора, если он существует и у него включены уведомления
 		notifiedUsers := make(map[int]bool)
 		if allows(newOp.Donor, api.NotifyOperations) {
-			text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", userLink(newOp.Donor), newDesc, userLink(editor), changeDetails)
-			msg := NewMessage(int64(newOp.Donor.ID), text, keyboard)
-			messages = append(messages, msg)
+			if chatId, ok := cu.chatID(newOp.Donor); ok {
+				text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", cu.link(newOp.Donor), newDesc, cu.link(editor), changeDetails)
+				msg := NewMessage(chatId, text, keyboard)
+				messages = append(messages, msg)
+			}
 			notifiedUsers[newOp.Donor.ID] = true
 		}
 
 		// Уведомляем всех получателей
 		for _, r := range newOp.RecipientsWithSum {
 			if allows(&r.User, api.NotifyOperations) && !notifiedUsers[r.User.ID] {
-				msg := NewMessage(int64(r.User.ID),
-					I18n(&r.User, "scrn_notification_operation_updated_all", userLink(&r.User), newDesc, userLink(editor), changeDetails), keyboard)
-				messages = append(messages, msg)
 				notifiedUsers[r.User.ID] = true
+				chatId, ok := cu.chatID(&r.User)
+				if !ok {
+					continue
+				}
+				msg := NewMessage(chatId,
+					I18n(&r.User, "scrn_notification_operation_updated_all", cu.link(&r.User), newDesc, cu.link(editor), changeDetails), keyboard)
+				messages = append(messages, msg)
 			}
 		}
 	}
@@ -1434,8 +1460,12 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			rAdded.User.ID != editorUserId &&
 			rAdded.User.ID != newOp.Donor.ID &&
 			rAdded.User.ID != oldOp.Donor.ID {
-			msg := NewMessage(int64(rAdded.User.ID),
-				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", userLink(&rAdded.User), userLink(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
+			chatId, ok := cu.chatID(&rAdded.User)
+			if !ok {
+				continue
+			}
+			msg := NewMessage(chatId,
+				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", cu.link(&rAdded.User), cu.link(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1446,8 +1476,12 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			change.User.ID != editorUserId &&
 			change.User.ID != newOp.Donor.ID &&
 			change.User.ID != oldOp.Donor.ID {
-			msg := NewMessage(int64(change.User.ID),
-				I18n(&change.User, "scrn_notification_operation_share_changed", userLink(&change.User), newDesc, userLink(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
+			chatId, ok := cu.chatID(&change.User)
+			if !ok {
+				continue
+			}
+			msg := NewMessage(chatId,
+				I18n(&change.User, "scrn_notification_operation_share_changed", cu.link(&change.User), newDesc, cu.link(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1458,8 +1492,12 @@ func buildUpdateOperationMessages(editor *api.User, langUser *api.User, diff *ap
 			rRemoved.User.ID != editorUserId &&
 			rRemoved.User.ID != newOp.Donor.ID &&
 			rRemoved.User.ID != oldOp.Donor.ID {
-			msg := NewMessage(int64(rRemoved.User.ID),
-				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", userLink(&rRemoved.User), userLink(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName), keyboard)
+			chatId, ok := cu.chatID(&rRemoved.User)
+			if !ok {
+				continue
+			}
+			msg := NewMessage(chatId,
+				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", cu.link(&rRemoved.User), cu.link(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1521,15 +1559,19 @@ type ViewDonorOperation struct {
 	os  OperationService
 	bs  ButtonService
 	rs  RoomService
+	us  UserService
 	cfg *Config
 }
 
-// NewViewDonorOperation makes a bot for SO
-func NewViewDonorOperation(bs ButtonService, os OperationService, rs RoomService, cfg *Config) *ViewDonorOperation {
+// NewViewDonorOperation makes a bot for SO.
+// us нужен, чтобы упоминание плательщика собиралось по КАНОНИЧЕСКОМУ документу:
+// операция хранит донора встроенным снимком, а telegram_id в снимках нет
+func NewViewDonorOperation(bs ButtonService, os OperationService, rs RoomService, us UserService, cfg *Config) *ViewDonorOperation {
 	return &ViewDonorOperation{
 		os:  os,
 		bs:  bs,
 		rs:  rs,
+		us:  us,
 		cfg: cfg,
 	}
 }
@@ -1573,7 +1615,7 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		return
 	}
 	text := I18n(u.User, "scrn_operation_on_sum", html.EscapeString(operation.Description), moneySpace(operation.Sum, room.Currency))
-	text += I18n(u.User, "scrn_user_paid", userLink(operation.Donor))
+	text += I18n(u.User, "scrn_user_paid", canonical(ctx, s.us).link(operation.Donor))
 
 	text += tableWithPayments(operation, room)
 
@@ -1641,15 +1683,19 @@ type DeleteDonorOperation struct {
 	bs  ButtonService
 	os  OperationService
 	rs  RoomService
+	us  UserService
 	cfg *Config
 }
 
-func NewDeleteDonorOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, cfg *Config) *DeleteDonorOperation {
+// us нужен для резолва КАНОНИЧЕСКИХ участников удаляемой операции: chat id и
+// упоминания нельзя брать из встроенных снимков, telegram_id в них нет
+func NewDeleteDonorOperation(s ChatStateService, bs ButtonService, os OperationService, rs RoomService, us UserService, cfg *Config) *DeleteDonorOperation {
 	return &DeleteDonorOperation{
 		css: s,
 		bs:  bs,
 		os:  os,
 		rs:  rs,
+		us:  us,
 		cfg: cfg,
 	}
 }
@@ -1677,7 +1723,7 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 	if operation.OldOperationId != nil {
 		oldOperation := findOperationByID(room, u.Button.CallbackData.OperationId)
 		operation.RecipientsWithSum = []api.RecipientWithSum{}
-		buttons, messages = notificationWhenUpdateOperation(u, oldOperation, operation, room, buttons, messages)
+		buttons, messages = notificationWhenUpdateOperation(canonical(ctx, s.us), u, oldOperation, operation, room, buttons, messages)
 
 		if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, oldOperation.ID); err != nil {
 			log.Error().Err(err).Msg("delete operation failed")
@@ -1939,7 +1985,7 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	text := I18n(u.User, "scrn_debt_repayment")
-	text += I18n(u.User, "scrn_debt_returning", userLink(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+	text += I18n(u.User, "scrn_debt_returning", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
 
 	lender, err := s.us.FindById(ctx, debt.Lender.ID)
 	if err == nil && lender != nil && lender.BankDetails != "" {
@@ -2042,7 +2088,7 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 	}
 
 	text := I18n(u.User, "scrn_debt_repayment")
-	text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+	text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
 
 	lender, err := s.us.FindById(ctx, debt.Lender.ID)
 	if err == nil && lender != nil && lender.BankDetails != "" {
@@ -2113,7 +2159,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	if err != nil || sum > debt.Sum {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
-		text += I18n(u.User, "scrn_debt_returning_operation", userLink(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+		text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
 
 		lender, err := s.us.FindById(ctx, debt.Debtor.ID)
 		if err == nil && lender != nil && lender.BankDetails != "" {
@@ -2163,9 +2209,11 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
 	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum, room.Currency)), &keyboard)
 	var forRecipientMsg tgbotapi.Chattable
-	if recipient.AllowsTelegram(api.NotifyDebts) {
+	// recipient и donor уже канонические (s.us.FindById и u.User), поэтому chat id
+	// берётся напрямую; нет привязки к telegram — сообщение не собираем
+	if chatId, ok := telegramChatID(recipient); ok && recipient.AllowsTelegram(api.NotifyDebts) {
 		// NewMessage шлёт с ParseMode=HTML — то же экранирование, что в notifier.go
-		forRecipientMsg = NewMessage(int64(recipient.ID), I18n(u.User, "scrn_debt_returned_recepient", html.EscapeString(recipient.DisplayName), moneySpace(sum, room.Currency), userLink(donor)), keyboard)
+		forRecipientMsg = NewMessage(chatId, I18n(u.User, "scrn_debt_returned_recepient", html.EscapeString(recipient.DisplayName), moneySpace(sum, room.Currency), userLink(donor)), keyboard)
 	}
 
 	return api.TelegramMessage{

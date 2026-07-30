@@ -321,21 +321,39 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `internal/bot/report_screen.go` (1 место)
 - Modify: `internal/bot/tg_helper.go` (`userLink` :222; **`:129` — исключение, не трогать**)
 - Create: `internal/bot/notifier_no_telegram_test.go`
+- ➕ Modify: `cmd/splitty/wire_gen.go` — `ViewDonorOperation` и `DeleteDonorOperation` получили `us UserService` (резолвер канонических участников), поэтому конструкторы и порядок объявления `userService` в графе пришлось поправить
+- ➕ Modify: `internal/bot/notifier_test.go`, `internal/bot/operation_items_test.go` — фикстуры теперь задают `TelegramID`
 
-- [ ] завести в `internal/bot` хелпер `telegramChatID(u *api.User) (int64, bool)` — возвращает `*u.TelegramID` и `true` только при `u.HasTelegram()`
-- [ ] заменить отправки в `notifier.go` (:134, :151, :248) на путь через `telegramChatID` с пропуском получателя при `false`
-- [ ] **chat id брать из КАНОНИЧЕСКОГО документа**, а не из встроенного снимка: в снимках `telegram_id` не будет никогда (они писались до этого плана и санитайзятся после Task 3). В `notifier.go` для этого уже есть `n.uf.FindById` (:63, :92); в `operation_screen.go` — поле `us UserService` с `FindById` (см. `internal/bot/tg_helper.go:17`). **Без этого telegram-уведомления перестанут ходить вообще**
-- [ ] `allowsTelegram` (`notifier.go:87`) дополнить: `false`, если у канонического пользователя нет telegram
-- [ ] `pushToUser` (:59) **не трогать** — push обязан работать для google-пользователей
-- [ ] `userLink` (`tg_helper.go:222`): без telegram возвращать экранированное имя без `<a href>`
-- [ ] **⚠️ главная ловушка задачи: `userLink` тоже обязан получать КАНОНИЧЕСКОГО пользователя.** Почти все его вызовы получают объекты, у которых `TelegramID` будет `nil` всегда: (а) встроенные снимки (`op.Donor`, `recipientsWithSum[].User`) — старые писались до плана, новые санитайзятся в Task 3; (б) автор через `getFrom` (`internal/bot/bot.go:176`) — это **сырой** пользователь из апдейта, а не канонический `upd.User`. Если этого не сделать, после задачи **все живые telegram-пользователи потеряют кликабельные упоминания** в уведомлениях и экранах бота
-- [ ] для автора использовать `upd.User` (канонический после Task 6), а не `getFrom`. **Task 6 уже вычистил `getFrom` из мест, где он служил доменным id** — здесь остаются только вызовы `userLink(getFrom(u))` (`operation_screen.go:1295`, `:1313`, `:1344`), их тоже перевести на `u.User`
-- [ ] пройти 9 мест в `operation_screen.go`, по одному в `setting_screen.go` (:575) и `report_screen.go` (:85, суперюзеры из `SUPER_USER`, резолвятся через `FindByUsername`)
-- [ ] **резолвер доступен не везде**: из 9 мест в `operation_screen.go` только 3 живут в структурах с полем `us UserService` (`OperationAdded`, `AddRecepientOperation`); места около :1393-1459 — свободные функции `notificationWhenUpdateOperation`/`buildUpdateOperationMessages`, куда резолвер придётся протащить параметром, изменив и вызов из `notifier.go:204`
-- [ ] **`tg_helper.go:129` (`int64(update.CallbackQuery.From.ID)`) не трогать** — это telegram id из самого входящего апдейта, он корректен по определению. Финальная проверка: `grep -rn "int64(.*\.ID)" --include="*.go" internal/ | grep -v _test` должен оставить **ровно одно** совпадение — эту строку
-- [ ] написать тесты: пользователь без telegram не получает telegram-сообщение, но получает push; с telegram — получает оба; chat id взят из канонического документа, а не из снимка (снимок содержит другой/пустой `telegram_id`); `userLink` без telegram не содержит `href`
-- [ ] **обязательный тест-антирегрессия**: у пользователя С telegram `userLink` содержит `tg://user?id=<telegram_id>` — и это проверяется на пути, где пользователь пришёл **из снимка комнаты**. Без такого теста «зелёный» прогон будет означать успешно сломанные упоминания
-- [ ] `go test ./internal/...` — зелёные перед Task 8
+- [x] завести в `internal/bot` хелпер `telegramChatID(u *api.User) (int64, bool)` — возвращает `*u.TelegramID` и `true` только при `u.HasTelegram()`
+- [x] заменить отправки в `notifier.go` (:134, :151, :248) на путь через `telegramChatID` с пропуском получателя при `false`
+- [x] **chat id брать из КАНОНИЧЕСКОГО документа**, а не из встроенного снимка: в снимках `telegram_id` не будет никогда (они писались до этого плана и санитайзятся после Task 3). В `notifier.go` для этого уже есть `n.uf.FindById` (:63, :92); в `operation_screen.go` — поле `us UserService` с `FindById` (см. `internal/bot/tg_helper.go:17`). **Без этого telegram-уведомления перестанут ходить вообще**
+- [x] `allowsTelegram` (`notifier.go:87`) дополнить: `false`, если у канонического пользователя нет telegram
+- [x] `pushToUser` (:59) **не трогать** — push обязан работать для google-пользователей
+- [x] `userLink` (`tg_helper.go:222`): без telegram возвращать экранированное имя без `<a href>`
+- [x] **⚠️ главная ловушка задачи: `userLink` тоже обязан получать КАНОНИЧЕСКОГО пользователя.** Почти все его вызовы получают объекты, у которых `TelegramID` будет `nil` всегда: (а) встроенные снимки (`op.Donor`, `recipientsWithSum[].User`) — старые писались до плана, новые санитайзятся в Task 3; (б) автор через `getFrom` (`internal/bot/bot.go:176`) — это **сырой** пользователь из апдейта, а не канонический `upd.User`. Если этого не сделать, после задачи **все живые telegram-пользователи потеряют кликабельные упоминания** в уведомлениях и экранах бота
+- [x] для автора использовать `upd.User` (канонический после Task 6), а не `getFrom`. **Task 6 уже вычистил `getFrom` из мест, где он служил доменным id** — здесь остаются только вызовы `userLink(getFrom(u))` (`operation_screen.go:1295`, `:1313`, `:1344`), их тоже перевести на `u.User`
+- [x] пройти 9 мест в `operation_screen.go`, по одному в `setting_screen.go` (:575) и `report_screen.go` (:85, суперюзеры из `SUPER_USER`, резолвятся через `FindByUsername`)
+- [x] **резолвер доступен не везде**: из 9 мест в `operation_screen.go` только 3 живут в структурах с полем `us UserService` (`OperationAdded`, `AddRecepientOperation`); места около :1393-1459 — свободные функции `notificationWhenUpdateOperation`/`buildUpdateOperationMessages`, куда резолвер придётся протащить параметром, изменив и вызов из `notifier.go:204`
+- [x] **`tg_helper.go:129` (`int64(update.CallbackQuery.From.ID)`) не трогать** — это telegram id из самого входящего апдейта, он корректен по определению. Финальная проверка: `grep -rn "int64(.*\.ID)" --include="*.go" internal/ | grep -v _test` должен оставить **ровно одно** совпадение — эту строку
+- [x] написать тесты: пользователь без telegram не получает telegram-сообщение, но получает push; с telegram — получает оба; chat id взят из канонического документа, а не из снимка (снимок содержит другой/пустой `telegram_id`); `userLink` без telegram не содержит `href`
+- [x] **обязательный тест-антирегрессия**: у пользователя С telegram `userLink` содержит `tg://user?id=<telegram_id>` — и это проверяется на пути, где пользователь пришёл **из снимка комнаты**. Без такого теста «зелёный» прогон будет означать успешно сломанные упоминания
+- [x] `go test ./internal/...` — зелёные перед Task 8
+
+**Как сделано (для следующих задач):**
+- в `tg_helper.go` появился `canonicalUsers` — резолвер канонических документов с кешем на время одной отрисовки; методы `link` (упоминание) и `chatID` (адрес отправки). Все пути уведомлений в `internal/bot` ходят через него, а `userLink` остался чистой функцией и требует УЖЕ канонического пользователя
+- `NotifyOperationCreated` перестроен так, что push больше не гасится настройками telegram-канала (раньше `!allowsTelegram` делал `continue` до `pushToUser`, и google-пользователь не получил бы ничего). `NotificationSent` помечается при уведомлении по любому каналу
+- ⚠️ **осталось вне объёма Task 7**: `all_room.go:280` (`createRoomInfoText`, список участников комнаты) и `statistic_screen.go:158` (история долгов) рендерят `userLink` по снимкам и теперь показывают имя без ссылки. Это списочные рендеры: поштучный резолв дал бы N запросов на экран, правильное решение — батч `FindByIds` в `UserRepository`. Вынесено в Task 7a
+
+### Task 7a: ➕ Кликабельные упоминания в списочных экранах бота
+
+**Files:**
+- Modify: `internal/repository/repository.go`, `internal/rest/fakes_test.go`
+- Modify: `internal/bot/all_room.go`, `internal/bot/room_screen.go`, `internal/bot/statistic_screen.go`
+
+- [ ] добавить в `UserRepository` батч-метод `FindByIds(ctx, ids []int) ([]api.User, error)` (+ реализация, + фейк — см. «Правило расширения интерфейсов»)
+- [ ] прокинуть резолвер в `createRoomInfoText` (`all_room.go:261`, вызовы `all_room.go:69`, `room_screen.go:73,141`) и в `statistic_screen.go:158`, чтобы упоминания собирались по каноническим документам одним запросом на экран
+- [ ] тест: участник комнаты с telegram виден в списке как `tg://user?id=<telegram_id>`, участник без telegram — простым именем
+- [ ] `go test ./internal/...` — зелёные
 
 ### Task 8: Аватары через telegram_id
 

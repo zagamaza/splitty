@@ -170,7 +170,10 @@ func TestRenderOperationItems_EscapesUserInput(t *testing.T) {
 }
 
 func TestUserLink_EscapesDisplayName(t *testing.T) {
-	got := userLink(&api.User{ID: 42, DisplayName: `<b>bad</b>`})
+	tgID := 42
+	// ID (номер Splitty) и telegram id намеренно различаются: ссылка обязана
+	// собираться по telegram id
+	got := userLink(&api.User{ID: 1_000_000_000_007, TelegramID: &tgID, DisplayName: `<b>bad</b>`})
 	if strings.Contains(got, "<b>") {
 		t.Fatalf("DisplayName не экранирован: %s", got)
 	}

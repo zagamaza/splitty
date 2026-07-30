@@ -80,9 +80,16 @@ func (s *ReportScreen) OnMessage(ctx context.Context, u *api.Update) (response a
 			log.Warn().Err(err).Msgf("superuser %s not found, report notification skipped", username)
 			continue
 		}
+		// su — канонический документ (FindByUsername), но telegram у него может быть
+		// не привязан (вход через Google/Apple) — тогда слать в telegram некуда
+		chatId, ok := telegramChatID(su)
+		if !ok {
+			log.Warn().Msgf("superuser %s has no telegram, report notification skipped", username)
+			continue
+		}
 		// ParseMode=HTML: текст репорта — сырой ввод пользователя, экранируем,
 		// иначе это и HTML-инъекция в ЛС суперюзера, и 400 от Telegram на "a < b"
-		notify := tgbotapi.NewMessage(int64(su.ID),
+		notify := tgbotapi.NewMessage(chatId,
 			I18n(su, "scrn_report_notify", userLink(u.User), html.EscapeString(text)))
 		notify.ParseMode = tgbotapi.ModeHTML
 		chattable = append(chattable, notify)
