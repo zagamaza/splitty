@@ -52,7 +52,7 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 	var buttons []tgbotapi.InlineKeyboardButton
 	var toSave []*api.Button
 
-	if isArchived(room, getFrom(u)) {
+	if isArchived(room, u.User) {
 		btn := api.NewButton(unArchiveRoom, &api.CallbackData{RoomId: roomId})
 		toSave = append(toSave, btn)
 		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_return_from_archive"), btn.ID.Hex()))
@@ -181,11 +181,11 @@ func (bot *ArchiveRoom) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	var errCallback *tgbotapi.CallbackConfig = nil
 	if hasAction(u, archiveRoom) {
-		if err := bot.rss.ArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+		if err := bot.rss.ArchiveRoom(ctx, u.User.ID, roomId); err != nil {
 			log.Error().Err(err).Msg("ArchiveRoom faield")
 		}
 	} else {
-		if err := bot.rss.UnArchiveRoom(ctx, getFrom(u).ID, roomId); err != nil {
+		if err := bot.rss.UnArchiveRoom(ctx, u.User.ID, roomId); err != nil {
 			log.Error().Err(err).Msg("UnArchiveRoom failed")
 		}
 	}
@@ -655,7 +655,7 @@ func (bot WantSetBankDetails) HasReact(u *api.Update) bool {
 }
 
 func (bot *WantSetBankDetails) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: bankDetailsSet, CallbackData: &api.CallbackData{}}
+	cs := &api.ChatState{UserId: u.User.ID, Action: bankDetailsSet, CallbackData: &api.CallbackData{}}
 	if u.Button.CallbackData != nil {
 		cs.CallbackData.RoomId = u.Button.CallbackData.RoomId
 		cs.CallbackData.ExternalData = u.Button.CallbackData.ExternalData

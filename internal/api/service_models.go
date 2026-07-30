@@ -112,10 +112,15 @@ type Debt struct {
 
 // ChatState stores user state
 type ChatState struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	UserId       int                `json:"userId" bson:"user_id"`
-	Action       Action             `json:"action" bson:"action"`
-	CallbackData *CallbackData      `json:"callbackData" bson:"callback_data"`
+	ID primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	// UserId — НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY (u.User.ID), не telegram id и не chat
+	// id. Исторически сюда писали getChatID(u), и состояние находилось лишь
+	// потому, что _id == telegram id == chat id приватного чата. У аккаунта,
+	// пришедшего через Google и привязавшего telegram, эти числа разные, и
+	// смешивать их — значит терять многошаговые сценарии между шагами
+	UserId       int           `json:"userId" bson:"user_id"`
+	Action       Action        `json:"action" bson:"action"`
+	CallbackData *CallbackData `json:"callbackData" bson:"callback_data"`
 }
 
 // Button which is sent to the user as ReplyMarkup

@@ -69,6 +69,9 @@ func (f *fakeUserIDAllocator) NextUserID(context.Context) (int, error) {
 // fakeUserRepo in-memory реализация repository.UserRepository для тестов
 type fakeUserRepo struct {
 	users map[int]*api.User
+	// alloc — собственный аллокатор номеров: настоящий MongoUserRepository тоже
+	// владеет им сам, потому что UpsertTelegramUser вызывается из графа бота
+	alloc *fakeUserIDAllocator
 }
 
 func newFakeUserRepo(users ...api.User) *fakeUserRepo {
@@ -119,6 +122,52 @@ func (f *fakeUserRepo) CreateIdentityUser(_ context.Context, u api.User) error {
 
 // errDuplicateKey имитирует E11000 unique-индекса
 var errDuplicateKey = errors.New("E11000 duplicate key error")
+
+// UpsertTelegramUser повторяет логику mongo-реализации: поиск по telegram_id,
+// иначе создание с _id == telegram id, а при занятом _id — с синтетическим
+// номером из аллокатора. user_lang проставляется только когда в базе пусто
+func (f *fakeUserRepo) UpsertTelegramUser(ctx context.Context, tgID int, username, displayName, userLang string) (*api.User, error) {
+	existing, err := f.FindByTelegramID(ctx, tgID)
+	if err == nil {
+		stored := f.users[existing.ID]
+		stored.Username = username
+		if strings.TrimSpace(displayName) != "" {
+			stored.DisplayName = displayName
+		}
+		if userLang != "" && stored.UserLang == "" {
+			stored.UserLang = userLang
+		}
+		user := *stored
+		return &user, nil
+	}
+	if err != mongo.ErrNoDocuments {
+		return nil, err
+	}
+
+	id := tgID
+	if _, occupied := f.users[tgID]; occupied {
+		if id, err = f.allocator().NextUserID(ctx); err != nil {
+			return nil, err
+		}
+	}
+	tg := tgID
+	if err = f.CreateIdentityUser(ctx, api.User{
+		ID: id, TelegramID: &tg, Username: username, DisplayName: displayName, UserLang: userLang,
+	}); err != nil {
+		return nil, err
+	}
+	return f.FindById(ctx, id)
+}
+
+// allocator — ленивый аллокатор фейка: номера обязаны начинаться с того же
+// значения, что и боевые (10^12), иначе тест не отличит синтетический номер от
+// telegram id
+func (f *fakeUserRepo) allocator() *fakeUserIDAllocator {
+	if f.alloc == nil {
+		f.alloc = newFakeUserIDAllocator()
+	}
+	return f.alloc
+}
 
 func (f *fakeUserRepo) FindByTelegramID(_ context.Context, tgID int) (*api.User, error) {
 	return f.findLive(func(u *api.User) bool { return u.TelegramID != nil && *u.TelegramID == tgID })

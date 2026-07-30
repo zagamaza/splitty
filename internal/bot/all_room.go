@@ -38,7 +38,7 @@ func (bot AllRoomInline) HasReact(u *api.Update) bool {
 func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
 	rooms := bot.findRoomsByUpdate(ctx, u)
-	userId := getFrom(u).ID
+	userId := u.User.ID
 
 	var results []interface{}
 	for _, room := range *rooms {
@@ -109,7 +109,7 @@ func (bot *AllRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 	size := u.User.CountInPage
 	skip := page * size
 
-	rooms, err := bot.rs.FindRoomsByUserId(ctx, getFrom(u).ID)
+	rooms, err := bot.rs.FindRoomsByUserId(ctx, u.User.ID)
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot find rooms")
 		return
@@ -196,7 +196,7 @@ func (bot *ArchivedRooms) OnMessage(ctx context.Context, u *api.Update) (respons
 	size := 5
 	skip := page * size
 
-	rooms, err := bot.rs.FindArchivedRoomsByUserId(ctx, getFrom(u).ID)
+	rooms, err := bot.rs.FindArchivedRoomsByUserId(ctx, u.User.ID)
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot find rooms")
 		return

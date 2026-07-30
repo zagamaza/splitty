@@ -19,6 +19,12 @@ type ButtonService interface {
 
 type UserService interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
+	// UpsertTelegramUser резолвит личность по telegram_id и возвращает
+	// КАНОНИЧЕСКИЙ документ пользователя. UpsertUser здесь не годится: он ищет
+	// по _id, а _id равен telegram id только у исторических аккаунтов — у
+	// пришедшего через Google и привязавшего telegram он синтетический, и
+	// UpsertUser завёл бы ему второй профиль
+	UpsertTelegramUser(ctx context.Context, tgID int, username, displayName, userLang string) (*api.User, error)
 }
 
 type DeIntegrationService interface {
@@ -80,7 +86,11 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				break
 			}
 
-			upd.User, err = l.UserService.UpsertUser(ctx, *user)
+			// user — СЫРОЙ пользователь из апдейта, его ID это telegram id.
+			// Дальше по коду бота законен только upd.User: у него ID — номер
+			// Splitty, который у google-первого аккаунта с привязанным telegram
+			// telegram-овскому id не равен
+			upd.User, err = l.UserService.UpsertTelegramUser(ctx, user.ID, user.Username, user.DisplayName, user.UserLang)
 			if err != nil {
 				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
 				break
@@ -118,17 +128,42 @@ func (l *TelegramListener) populateBtn(ctx context.Context, upd *api.Update) err
 	return nil
 }
 
+// populateChatState подтягивает незавершённый многошаговый сценарий бота.
+//
+// Ключ — КАНОНИЧЕСКИЙ номер Splitty (upd.User.ID), а не сырой telegram id из
+// апдейта. Часть экранов и раньше сохраняла состояние по u.User.ID, и находилось
+// оно лишь потому, что сегодня _id == telegram id. У пользователя, пришедшего
+// через Google и привязавшего telegram, _id ≥ 10^12 при telegram id порядка
+// 10^9 — состояния, записанные по канонику, по сырому id не нашлись бы никогда,
+// и многошаговые сценарии (ввод суммы, добавление файла) молча ломались бы.
+//
+// Поиск по сырому telegram id — ПЕРЕХОДНЫЙ fallback: в момент выкатки у людей
+// есть незавершённые сценарии, записанные по telegram/chat id. Убрать можно,
+// когда такие состояния протухнут.
 func (l *TelegramListener) populateChatState(ctx context.Context, upd *api.Update) error {
-	var userId int
+	var rawTelegramID int
 	if upd.Message != nil {
-		userId = upd.Message.From.ID
+		rawTelegramID = upd.Message.From.ID
 	} else if upd.CallbackQuery != nil && upd.CallbackQuery.Message != nil {
-		userId = upd.CallbackQuery.From.ID
+		rawTelegramID = upd.CallbackQuery.From.ID
+	}
+	if rawTelegramID == 0 {
+		return nil
+	}
+
+	userId := rawTelegramID
+	if upd.User != nil {
+		userId = upd.User.ID
 	}
 
 	cs, err := l.ChatStateService.FindByUserId(ctx, userId)
 	if err != nil {
 		return errors.Wrapf(err, "failed to find ChatState by id %q", err)
+	}
+	if cs == nil && userId != rawTelegramID {
+		if cs, err = l.ChatStateService.FindByUserId(ctx, rawTelegramID); err != nil {
+			return errors.Wrapf(err, "failed to find ChatState by telegram id %q", err)
+		}
 	}
 	upd.ChatState = cs
 	return nil

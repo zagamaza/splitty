@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -23,6 +24,12 @@ type UserRepository interface {
 	// UpsertUser не касается. Занятый _id или занятая личность — duplicate key
 	// (см. IsDuplicateKey), на этом строится retry входа через Google/Apple
 	CreateIdentityUser(ctx context.Context, u api.User) error
+	// UpsertTelegramUser резолвит telegram-личность: ищет живого пользователя по
+	// telegram_id и заводит нового, если такого нет. Возвращает КАНОНИЧЕСКИЙ
+	// документ, чей _id — номер Splitty, а не telegram id (совпадают они только
+	// у исторических аккаунтов). userLang проставляется при создании и когда в
+	// базе пусто; заполненный не затирается
+	UpsertTelegramUser(ctx context.Context, tgID int, username, displayName, userLang string) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
 	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
@@ -643,6 +650,112 @@ func (r MongoUserRepository) CreateIdentityUser(ctx context.Context, u api.User)
 // другим аккаунтом). Делегирует в общий счётчик коллекции sequence
 func (r MongoUserRepository) NextUserID(ctx context.Context) (int, error) {
 	return r.seq.NextUserID(ctx)
+}
+
+// upsertTelegramAttempts — сколько раз UpsertTelegramUser переспрашивает базу на
+// duplicate key. Двух хватило бы на любую реальную гонку (проигравший видит
+// победителя со второй попытки), третья — запас на цепочку «_id занят → взяли
+// синтетический → и он уже занят»
+const upsertTelegramAttempts = 3
+
+// UpsertTelegramUser — единственная точка входа telegram-личности. Ищет живого
+// пользователя по telegram_id и, если не нашёл, заводит нового.
+//
+// _id нового пользователя по умолчанию равен telegram id: так исторически
+// заведены ВСЕ существующие аккаунты, и сохранение этого правила означает, что
+// у обычного telegram-пользователя _id остаётся привычным. Если же _id уже
+// занят другим документом (например, tombstone удалённого аккаунта или
+// google-пользователь, чей синтетический номер совпал), номер берётся из
+// аллокатора, а telegram_id остаётся telegram-овским.
+//
+// Найденному пользователю _id НИКОГДА не меняется — инвариант плана.
+func (r MongoUserRepository) UpsertTelegramUser(ctx context.Context, tgID int, username, displayName, userLang string) (*api.User, error) {
+	var lastErr error
+	for attempt := 0; attempt < upsertTelegramAttempts; attempt++ {
+		// Поиск по личности идёт ПЕРВЫМ шагом каждой итерации, а не только
+		// первой: на duplicate key это ровно та проверка, которая разрешает
+		// гонку двух апдейтов одного нового пользователя — проигравший
+		// подбирает документ, созданный победителем. Ветка «занят → сразу
+		// аллокатор» вместо этого вставила бы второго пользователя с тем же
+		// telegram_id, получила E11000 уже по unique-индексу и потеряла апдейт
+		existing, err := r.FindByTelegramID(ctx, tgID)
+		if err == nil {
+			return r.refreshTelegramProfile(ctx, existing, username, displayName, userLang)
+		}
+		if err != mongo.ErrNoDocuments {
+			return nil, err
+		}
+
+		id := tgID
+		occupied, err := r.idOccupied(ctx, tgID)
+		if err != nil {
+			return nil, err
+		}
+		if occupied {
+			if id, err = r.NextUserID(ctx); err != nil {
+				return nil, err
+			}
+		}
+
+		tg := tgID
+		err = r.CreateIdentityUser(ctx, api.User{
+			ID:          id,
+			TelegramID:  &tg,
+			Username:    username,
+			DisplayName: displayName,
+			UserLang:    userLang,
+		})
+		if err == nil {
+			return r.FindById(ctx, id)
+		}
+		if !IsDuplicateKey(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, errors.Wrapf(lastErr, "не удалось создать telegram-пользователя %d за %d попыток", tgID, upsertTelegramAttempts)
+}
+
+// idOccupied — существует ли документ с таким _id. Удалённые (tombstone) тоже
+// считаются занявшими номер: документ никуда не делся и вставка по нему упадёт
+func (r MongoUserRepository) idOccupied(ctx context.Context, id int) (bool, error) {
+	_, err := r.FindById(ctx, id)
+	if err == nil {
+		return true, nil
+	}
+	if err == mongo.ErrNoDocuments {
+		return false, nil
+	}
+	return false, err
+}
+
+// refreshTelegramProfile подтягивает изменившийся telegram-профиль найденного
+// пользователя. Пишется только то, что реально поменялось:
+//   - user_name обновляется всегда (в telegram его можно снять, и пустое
+//     значение — тоже значение);
+//   - display_name — только непустое: вход через Login Widget без фамилии и
+//     имени не должен затирать имя, известное боту;
+//   - user_lang — только когда в базе пусто. Заполненный язык принадлежит
+//     пользователю (он мог выбрать его руками), апдейты бота его не трогают
+func (r MongoUserRepository) refreshTelegramProfile(ctx context.Context, u *api.User, username, displayName, userLang string) (*api.User, error) {
+	set := bson.M{}
+	if username != u.Username {
+		set["user_name"] = username
+	}
+	if strings.TrimSpace(displayName) != "" && displayName != u.DisplayName {
+		set["display_name"] = displayName
+	}
+	if userLang != "" && u.UserLang == "" {
+		set["user_lang"] = userLang
+	}
+	if len(set) == 0 {
+		return u, nil
+	}
+	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: u.ID}}}}
+	if _, err := r.col.UpdateOne(ctx, f, bson.D{{Key: "$set", Value: set}}); err != nil {
+		return nil, err
+	}
+	return r.FindById(ctx, u.ID)
 }
 
 // IsDuplicateKey — ошибка уникального индекса (E11000). В драйвере 1.4.4 нет

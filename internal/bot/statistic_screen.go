@@ -57,7 +57,7 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	if err != nil {
 		return
 	}
-	totalUserSpendSum, err := bot.ss.GetUserCostsSum(ctx, getFrom(u).ID, roomId)
+	totalUserSpendSum, err := bot.ss.GetUserCostsSum(ctx, u.User.ID, roomId)
 	if err != nil {
 		return
 	}
@@ -67,7 +67,7 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return
 	}
 
-	debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSum(ctx, getFrom(u).ID, room.ID.Hex())
+	debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSum(ctx, u.User.ID, room.ID.Hex())
 	if err != nil {
 		return
 	}

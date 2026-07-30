@@ -95,7 +95,7 @@ func (bot ViewUserDebts) HasReact(u *api.Update) bool {
 
 func (bot ViewUserDebts) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
-	userId := getFrom(u).ID
+	userId := u.User.ID
 	page := u.Button.CallbackData.Page
 	size := u.User.CountInPage
 	skip := page * size
@@ -186,7 +186,7 @@ func (bot ViewAllDebts) HasReact(u *api.Update) bool {
 
 func (bot ViewAllDebts) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
-	userId := getFrom(u).ID
+	userId := u.User.ID
 	page := u.Button.CallbackData.Page
 	size := u.User.CountInPage
 	skip := page * size

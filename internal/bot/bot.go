@@ -173,6 +173,17 @@ func contains(s []string, e string) bool {
 	return false
 }
 
+// getFrom возвращает СЫРОГО пользователя из входящего telegram-апдейта: его ID —
+// telegram user id, а НЕ номер пользователя Splitty.
+//
+// Как доменный id это значение использовать нельзя: у аккаунта, пришедшего через
+// Google и привязавшего telegram, _id ≥ 10^12 при telegram id порядка 10^9, и
+// поиск комнат/долгов/статистики по нему вернёт чужие или пустые данные, а
+// запись в Operation.Donor испортит входные данные расчёта долгов. Канонический
+// пользователь лежит в update.User (его проставляет UpsertTelegramUser).
+//
+// Законное применение одно — когда нужен именно telegram id входящего апдейта
+// (см. getChatID в tg_helper.go:129).
 func getFrom(update *api.Update) *api.User {
 	var user api.User
 	if update.CallbackQuery != nil {

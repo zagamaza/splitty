@@ -78,6 +78,86 @@ func TestAuthTelegramHashValidation(t *testing.T) {
 	}
 }
 
+// TestAuthTelegramResolvesByTelegramID: вход через Login Widget обязан резолвить
+// личность по telegram_id, а sub токена — брать из _id НАЙДЕННОГО пользователя.
+// У аккаунта, пришедшего через Google и привязавшего telegram, _id синтетический,
+// а req.Id — telegram id; резолв по _id завёл бы ему второй профиль
+func TestAuthTelegramResolvesByTelegramID(t *testing.T) {
+	const (
+		tgID       = 42
+		canonical  = 1_000_000_000_900
+		wantedName = "Загир"
+	)
+	tg := tgID
+	userRepo := newFakeUserRepo(api.User{
+		ID: canonical, Username: "zagir", DisplayName: wantedName,
+		GoogleSub: "sub-1", TelegramID: &tg, UserLang: "ru",
+	})
+	s := newTestServer(Config{TgToken: testTgToken}, userRepo, newFakeRoomRepo())
+
+	authDate := time.Now().Unix()
+	hash := signTelegramFields(map[string]string{
+		"auth_date":  fmt.Sprintf("%d", authDate),
+		"first_name": wantedName,
+		"id":         fmt.Sprintf("%d", tgID),
+		"username":   "zagir",
+	}, testTgToken)
+	body := fmt.Sprintf(`{"id": %d, "firstName": %q, "username": "zagir", "authDate": %d, "hash": "%s"}`,
+		tgID, wantedName, authDate, hash)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/telegram", "", body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID != canonical {
+		t.Errorf("resp.User.ID = %d, want %d (номер Splitty, а не telegram id)", resp.User.ID, canonical)
+	}
+	if userId, err := s.parseToken(resp.Token); err != nil || userId != canonical {
+		t.Errorf("parseToken = (%d, %v), want (%d, nil)", userId, err, canonical)
+	}
+	if _, ok := userRepo.users[tgID]; ok {
+		t.Errorf("заведён второй профиль под номером telegram id %d", tgID)
+	}
+	if len(userRepo.users) != 1 {
+		t.Errorf("в базе %d пользователей, ожидался 1", len(userRepo.users))
+	}
+	// язык, выбранный пользователем, вход через виджет не затирает
+	if userRepo.users[canonical].UserLang != "ru" {
+		t.Errorf("user_lang = %q, want ru", userRepo.users[canonical].UserLang)
+	}
+}
+
+// TestAuthTelegramCreatesUserWithTelegramID: новому пользователю проставляется
+// telegram_id — без него ни бот, ни аватары его больше не найдут
+func TestAuthTelegramCreatesUserWithTelegramID(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s := newTestServer(Config{TgToken: testTgToken}, userRepo, newFakeRoomRepo())
+
+	authDate := time.Now().Unix()
+	hash := signTelegramFields(map[string]string{
+		"auth_date": fmt.Sprintf("%d", authDate),
+		"id":        "77",
+	}, testTgToken)
+	body := fmt.Sprintf(`{"id": 77, "authDate": %d, "hash": "%s"}`, authDate, hash)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/telegram", "", body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	created, ok := userRepo.users[77]
+	if !ok {
+		t.Fatal("пользователь не создан")
+	}
+	if created.TelegramID == nil || *created.TelegramID != 77 {
+		t.Fatalf("telegram_id = %v, want 77", created.TelegramID)
+	}
+}
+
 func TestAuthTelegramInvalidHash(t *testing.T) {
 	s := newTestServer(Config{TgToken: testTgToken}, newFakeUserRepo(), newFakeRoomRepo())
 

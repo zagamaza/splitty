@@ -154,7 +154,20 @@ func (s *Server) handleAuthTelegram(w http.ResponseWriter, r *http.Request) {
 	}
 
 	displayName := strings.TrimSpace(strings.TrimSpace(req.FirstName) + " " + strings.TrimSpace(req.LastName))
-	s.finishAuth(w, r, api.User{ID: req.Id, Username: req.Username, DisplayName: displayName})
+
+	// Резолв идёт по telegram_id, а не по _id: req.Id — telegram id, и равен _id
+	// он только у исторических аккаунтов. sub токена — _id НАЙДЕННОГО
+	// пользователя, иначе у google-аккаунта с привязанным telegram завёлся бы
+	// второй профиль под номером, равным telegram id.
+	// Язык не передаём: Login Widget его не присылает, а затирать выбранный
+	// пользователем нельзя (пустой userLang UpsertTelegramUser игнорирует)
+	user, err := s.userRepo.UpsertTelegramUser(r.Context(), req.Id, req.Username, displayName, "")
+	if err != nil {
+		log.Error().Err(err).Msg("cannot upsert telegram user")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить пользователя")
+		return
+	}
+	s.respondWithToken(w, user)
 }
 
 type codeAuthRequest struct {
@@ -189,6 +202,10 @@ func (s *Server) writeInvalidCode(w http.ResponseWriter, budgetOK bool) {
 	writeError(w, http.StatusUnauthorized, "invalid_code", "неверный, просроченный или уже использованный код")
 }
 
+// handleAuthCode: резолв по _id корректен и после перехода на telegram_id —
+// lc.UserId это уже номер Splitty (код выдаётся боту, который знает канонического
+// пользователя), а не telegram id.
+//
 // handleAuthCode POST /api/v1/auth/code — вход по одноразовому коду,
 // выданному командой /login в личном чате телеграм-бота.
 // Код регистронезависим; проверка и пометка used атомарны (FindOneAndUpdate),
@@ -275,7 +292,12 @@ type devAuthRequest struct {
 	Username    string `json:"username"`
 }
 
-// handleAuthDev POST /api/v1/auth/dev — вход для разработки, только при API_DEV_AUTH=true
+// handleAuthDev POST /api/v1/auth/dev — вход для разработки, только при API_DEV_AUTH=true.
+//
+// Резолв остаётся по _id (req.UserId — номер Splitty, а не telegram id), поэтому
+// dev-пользователи создаются БЕЗ telegram_id. Следствия ожидаемые, не баги:
+// telegram-уведомления им не идут (канал пропускается при пустом telegram_id),
+// а /users/{id}/avatar отдаёт 404 — клиенты рисуют инициалы
 func (s *Server) handleAuthDev(w http.ResponseWriter, r *http.Request) {
 	if !s.cfg.DevAuth {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")

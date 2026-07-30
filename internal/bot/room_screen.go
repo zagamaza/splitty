@@ -123,7 +123,7 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 		return
 	}
 
-	if !containsUserId(room.Members, getFrom(u).ID) {
+	if !containsUserId(room.Members, u.User.ID) {
 		return api.TelegramMessage{
 			Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), I18n(u.User, "msg_not_be_in_rooms"))},
 			Send:      true,

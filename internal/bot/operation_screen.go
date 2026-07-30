@@ -183,7 +183,7 @@ func (s WantDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		}
 	}
 
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: addDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
+	cs := &api.ChatState{UserId: u.User.ID, Action: addDonorOperation, CallbackData: &api.CallbackData{RoomId: roomId}}
 	err = s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
@@ -255,7 +255,7 @@ func (s AddSplitTypeDonorOperation) OnMessage(ctx context.Context, u *api.Update
 	s.css.CleanChatState(ctx, u.ChatState)
 	u.ChatState.CallbackData.ExternalData = purchaseText
 	u.ChatState.CallbackData.Page = sum
-	err = s.css.Save(ctx, &api.ChatState{UserId: int(getChatID(u)), Action: addedOperation, CallbackData: u.ChatState.CallbackData})
+	err = s.css.Save(ctx, &api.ChatState{UserId: u.User.ID, Action: addedOperation, CallbackData: u.ChatState.CallbackData})
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
 		return
@@ -776,7 +776,7 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	}
 
 	h.css.CleanChatState(ctx, u.ChatState)
-	cs := &api.ChatState{UserId: int(getChatID(u)),
+	cs := &api.ChatState{UserId: u.User.ID,
 		CallbackData: &api.CallbackData{RoomId: room.ID.Hex(), UserId: recipient.ID, OperationId: operation.ID},
 		Action:       setSumDonorOperation}
 
@@ -1078,7 +1078,7 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 
 	s.css.CleanChatState(ctx, u.ChatState)
 	u.ChatState.CallbackData.Page = sum
-	cs := &api.ChatState{UserId: int(getChatID(u)),
+	cs := &api.ChatState{UserId: u.User.ID,
 		CallbackData: u.ChatState.CallbackData,
 		Action:       saveSumDonorOperation,
 	}
@@ -1286,7 +1286,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 
 func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *api.Update, opn api.Operation, room *api.Room, rb *api.Button, backB *api.Button, messages []tgbotapi.Chattable) []tgbotapi.Chattable {
 
-	if opn.Donor.ID != getFrom(u).ID {
+	if opn.Donor.ID != u.User.ID {
 		keyboard := [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_view_operation"), rb.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_to_start"), backB.ID.Hex())},
@@ -1301,7 +1301,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 	for _, recipientsWithSum := range opn.RecipientsWithSum {
 		if !slices.Contains(opn.NotificationSent, recipientsWithSum.User.ID) &&
 			recipientsWithSum.User.AllowsTelegram(api.NotifyOperations) &&
-			recipientsWithSum.User.ID != getFrom(u).ID &&
+			recipientsWithSum.User.ID != u.User.ID &&
 			recipientsWithSum.Sum != 0 {
 			var recipientWithSum api.RecipientWithSum
 			for _, r := range opn.RecipientsWithSum {
@@ -1341,7 +1341,9 @@ func notificationWhenUpdateOperation(u *api.Update, oldOp api.Operation, newOp a
 		},
 	}
 
-	messages = append(messages, buildUpdateOperationMessages(getFrom(u), u.User, diff, oldOp, newOp, room, keyboard, nil)...)
+	// editor — КАНОНИЧЕСКИЙ пользователь: внутри buildUpdateOperationMessages его
+	// ID сравнивается с ID доноров операции, то есть работает как номер Splitty
+	messages = append(messages, buildUpdateOperationMessages(u.User, u.User, diff, oldOp, newOp, room, keyboard, nil)...)
 	return buttons, messages
 }
 
@@ -2023,7 +2025,7 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 		return
 	}
 
-	cs := &api.ChatState{UserId: int(getChatID(u)),
+	cs := &api.ChatState{UserId: u.User.ID,
 		Action:       addRecipientOperation,
 		CallbackData: &api.CallbackData{RoomId: roomId, UserId: lenderUserId}}
 	err = s.css.Save(ctx, cs)
@@ -2132,7 +2134,10 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		log.Error().Err(err).Msgf("find user failed %v", u.ChatState.CallbackData.UserId)
 		return
 	}
-	donor := getFrom(u)
+	// donor — КАНОНИЧЕСКИЙ пользователь: его _id уходит в Operation.Donor и
+	// дальше в документ комнаты как участник расчёта. getFrom(u) положил бы
+	// сюда сырой telegram id, то есть невалидные входные данные для долгов
+	donor := u.User
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
 		Sum:               sum,

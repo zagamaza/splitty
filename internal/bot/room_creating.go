@@ -38,7 +38,7 @@ func (s RoomCreating) HasReact(u *api.Update) bool {
 // OnMessage returns one entry
 func (s RoomCreating) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 
-	cs := &api.ChatState{UserId: int(getChatID(u)), Action: createRoom}
+	cs := &api.ChatState{UserId: u.User.ID, Action: createRoom}
 	err := s.css.Save(ctx, cs)
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
@@ -91,7 +91,10 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 	defer rs.css.CleanChatState(ctx, u.ChatState)
 
 	r := &api.Room{
-		Members:    &[]api.User{u.Message.From},
+		// Создатель попадает в снимок участников комнаты, а значит его ID
+		// участвует в расчёте долгов. u.Message.From — сырой пользователь из
+		// апдейта с telegram id; нужен канонический номер Splitty
+		Members:    &[]api.User{*u.User},
 		Name:       u.Message.Text,
 		Operations: &[]api.Operation{},
 		CreateAt:   time.Now(),
