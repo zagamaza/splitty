@@ -18,6 +18,11 @@ const ascParameter = 1
 
 type UserRepository interface {
 	UpsertUser(ctx context.Context, u api.User) (*api.User, error)
+	// CreateIdentityUser вставляет нового пользователя целиком (InsertOne, а не
+	// upsert): только так записываются поля личности, которых частичный $set в
+	// UpsertUser не касается. Занятый _id или занятая личность — duplicate key
+	// (см. IsDuplicateKey), на этом строится retry входа через Google/Apple
+	CreateIdentityUser(ctx context.Context, u api.User) error
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetNotificationUser(ctx context.Context, userId int, notification bool) error
 	SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error
@@ -25,6 +30,13 @@ type UserRepository interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
 	FindByIds(ctx context.Context, ids []int) ([]api.User, error)
 	FindByUsername(ctx context.Context, username string) (*api.User, error)
+	// FindByTelegramID, FindByGoogleSub, FindByAppleSub ищут пользователя по
+	// личности. Удалённые (tombstone с deleted_at) не находятся — иначе после
+	// удаления аккаунта повторная регистрация с той же личностью упиралась бы в
+	// собственный труп. mongo.ErrNoDocuments — не найден
+	FindByTelegramID(ctx context.Context, tgID int) (*api.User, error)
+	FindByGoogleSub(ctx context.Context, sub string) (*api.User, error)
+	FindByAppleSub(ctx context.Context, sub string) (*api.User, error)
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
@@ -216,8 +228,73 @@ func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u api.User, roomId
 	}
 
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "users", Value: u}}}})
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "users", Value: u.Snapshot()}}}})
 	return err
+}
+
+// Санитайз встроенных снимков.
+//
+// Документы room хранят пользователей целиком: users[], operations[].donor,
+// operations[].recipients[], operations[].recipients_with_sum[].user. Без
+// очистки туда навсегда осели бы telegram_id/google_sub/apple_sub/email и
+// push-токены — их там никто не обновляет и не удаляет, а при удалении аккаунта
+// они пережили бы сам аккаунт. Санитайз стоит на границе репозитория, а не у
+// вызывающих: так его нельзя забыть в новом месте записи.
+//
+// Все три функции возвращают КОПИЮ и не трогают аргумент: вызывающий код
+// продолжает работать с полным объектом (например, шлёт уведомления по нему).
+
+// sanitizeUsers возвращает копию среза с обнулёнными полями личности
+func sanitizeUsers(users *[]api.User) *[]api.User {
+	if users == nil {
+		return nil
+	}
+	out := make([]api.User, len(*users))
+	for i, u := range *users {
+		out[i] = u.Snapshot()
+	}
+	return &out
+}
+
+// sanitizeOperation возвращает копию операции с санитайзнутыми снимками
+// пользователей; суммы, доли и id не трогаются
+func sanitizeOperation(o *api.Operation) *api.Operation {
+	if o == nil {
+		return nil
+	}
+	c := *o
+	if c.Donor != nil {
+		d := c.Donor.Snapshot()
+		c.Donor = &d
+	}
+	c.Recipients = sanitizeUsers(c.Recipients)
+	if c.RecipientsWithSum != nil {
+		rws := make([]api.RecipientWithSum, len(c.RecipientsWithSum))
+		copy(rws, c.RecipientsWithSum)
+		for i := range rws {
+			rws[i].User = rws[i].User.Snapshot()
+		}
+		c.RecipientsWithSum = rws
+	}
+	return &c
+}
+
+// sanitizeRoom возвращает копию комнаты с санитайзнутыми участниками и
+// операциями
+func sanitizeRoom(r *api.Room) *api.Room {
+	if r == nil {
+		return nil
+	}
+	c := *r
+	c.Members = sanitizeUsers(c.Members)
+	if c.Operations != nil {
+		ops := make([]api.Operation, len(*c.Operations))
+		for i := range *c.Operations {
+			ops[i] = *sanitizeOperation(&(*c.Operations)[i])
+		}
+		c.Operations = &ops
+	}
+	return &c
 }
 
 func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId string) error {
@@ -234,7 +311,7 @@ func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId 
 }
 
 func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error) {
-	res, err := rr.col.InsertOne(ctx, r)
+	res, err := rr.col.InsertOne(ctx, sanitizeRoom(r))
 	if err != nil {
 		log.Error().Err(err).Msg("insert failed")
 	}
@@ -407,7 +484,7 @@ func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operat
 		return err
 	}
 	filter := bson.M{"_id": hex, "operations._id": o.ID}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": o}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(o)}})
 	if err != nil {
 		return err
 	}
@@ -425,7 +502,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	if err != nil {
 		return err
 	}
-	res, err := rr.col.UpdateOne(ctx, bson.M{"_id": hex}, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: o}}}})
+	res, err := rr.col.UpdateOne(ctx, bson.M{"_id": hex}, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return err
 	}
@@ -451,7 +528,7 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 		return false, err
 	}
 	filter := bson.M{"_id": hex, "operations.client_op_id": bson.M{"$ne": o.ClientOpId}}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: o}}}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return false, err
 	}
@@ -493,7 +570,36 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 }
 
 func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, error) {
-	res := r.col.FindOne(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: id}}}})
+	return r.findOne(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: id}}}})
+}
+
+// notDeleted — фильтр «живой аккаунт»: у tombstone-документов (см. удаление
+// аккаунта) поле deleted_at выставлено, и по личности они находиться не должны
+var notDeleted = bson.D{{Key: "deleted_at", Value: bson.D{{Key: "$exists", Value: false}}}}
+
+// FindByTelegramID ищет живого пользователя по telegram-личности. Именно этот
+// метод (а не FindById) — точка входа telegram: _id равен telegram id только у
+// исторических аккаунтов, у пришедших через Google/Apple он синтетический
+func (r MongoUserRepository) FindByTelegramID(ctx context.Context, tgID int) (*api.User, error) {
+	return r.findOne(ctx, append(bson.D{{Key: "telegram_id", Value: bson.D{{Key: "$eq", Value: tgID}}}}, notDeleted...))
+}
+
+// FindByGoogleSub ищет живого пользователя по sub из id-токена Google
+func (r MongoUserRepository) FindByGoogleSub(ctx context.Context, sub string) (*api.User, error) {
+	return r.findOne(ctx, append(bson.D{{Key: "google_sub", Value: bson.D{{Key: "$eq", Value: sub}}}}, notDeleted...))
+}
+
+// FindByAppleSub ищет живого пользователя по sub из id-токена Apple
+func (r MongoUserRepository) FindByAppleSub(ctx context.Context, sub string) (*api.User, error) {
+	return r.findOne(ctx, append(bson.D{{Key: "apple_sub", Value: bson.D{{Key: "$eq", Value: sub}}}}, notDeleted...))
+}
+
+// findOne — общий путь чтения пользователя: декодирование плюс дефолты, которые
+// исторически проставлял FindById (count_in_page и notification_on отсутствуют у
+// старых документов). Поиск по личности обязан отдавать точно такой же объект,
+// как поиск по _id, иначе поведение зависело бы от способа входа
+func (r MongoUserRepository) findOne(ctx context.Context, filter interface{}) (*api.User, error) {
+	res := r.col.FindOne(ctx, filter)
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
@@ -508,6 +614,74 @@ func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, e
 		cs.NotificationOn = func() *bool { b := true; return &b }()
 	}
 	return cs, nil
+}
+
+// CreateIdentityUser вставляет пользователя целиком. Именно InsertOne, а не
+// upsert: UpsertUser пишет частичный $set из четырёх полей и записать через него
+// google_sub/apple_sub/telegram_id/email невозможно. Вставка также даёт честный
+// duplicate key на занятом _id или занятой личности — вызывающий (вход через
+// Google/Apple/Telegram) на нём строит повторный поиск, разрешающий гонку двух
+// первых входов одного человека
+func (r MongoUserRepository) CreateIdentityUser(ctx context.Context, u api.User) error {
+	_, err := r.col.InsertOne(ctx, u)
+	return err
+}
+
+// IsDuplicateKey — ошибка уникального индекса (E11000). В драйвере 1.4.4 нет
+// mongo.IsDuplicateKeyError (появился в 1.5), поэтому код разбираем сами
+func IsDuplicateKey(err error) bool {
+	if err == nil {
+		return false
+	}
+	isDupCode := func(code int) bool {
+		return code == 11000 || code == 11001 || code == 12582
+	}
+	var we mongo.WriteException
+	if errors.As(err, &we) {
+		for _, e := range we.WriteErrors {
+			if isDupCode(e.Code) {
+				return true
+			}
+		}
+	}
+	var bwe mongo.BulkWriteException
+	if errors.As(err, &bwe) {
+		for _, e := range bwe.WriteErrors {
+			if isDupCode(e.Code) {
+				return true
+			}
+		}
+	}
+	var ce mongo.CommandError
+	if errors.As(err, &ce) {
+		return isDupCode(int(ce.Code))
+	}
+	return false
+}
+
+// EnsureIndexes создаёт unique sparse индексы по полям личности. Идемпотентно;
+// вызывать при старте, до бэкфилла telegram_id.
+//
+// sparse обязателен: без него unique-индекс считает отсутствующее поле значением
+// null и второй же пользователь без google_sub упал бы на duplicate key.
+// unique обязателен: без него гонка двух первых входов одного человека создаёт
+// два аккаунта с одной личностью, и повторный вход становится лотереей
+func (r MongoUserRepository) EnsureIndexes(ctx context.Context) error {
+	_, err := r.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "telegram_id", Value: ascParameter}},
+			Options: options.Index().SetUnique(true).SetSparse(true).SetName("uniq_telegram_id"),
+		},
+		{
+			Keys:    bson.D{{Key: "google_sub", Value: ascParameter}},
+			Options: options.Index().SetUnique(true).SetSparse(true).SetName("uniq_google_sub"),
+		},
+		{
+			Keys:    bson.D{{Key: "apple_sub", Value: ascParameter}},
+			Options: options.Index().SetUnique(true).SetSparse(true).SetName("uniq_apple_sub"),
+		},
+	})
+	return err
 }
 
 // FindByUsername ищет пользователя по telegram-username (для нотификаций

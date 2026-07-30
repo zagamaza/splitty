@@ -140,6 +140,15 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
 	}
 
+	// Индексы личностей — фатально, в отличие от login_code: без unique sparse по
+	// telegram_id/google_sub/apple_sub гонка двух первых входов одного человека
+	// создаёт два аккаунта с одной личностью, и дальше повторный вход попадает в
+	// случайный из них. Стартовать в таком режиме нельзя
+	if err := userRepository.EnsureIndexes(ctx); err != nil {
+		cleanup()
+		return nil, nil, nil, errors.Wrap(err, "cannot create user identity indexes")
+	}
+
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
 	if cfg.GeminiApiKey != "" {
 		aiUsageRepo := repository.NewAiUsageRepository(db)

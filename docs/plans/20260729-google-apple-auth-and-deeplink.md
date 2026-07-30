@@ -215,19 +215,19 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Create: `internal/repository/user_identity_test.go`
 - Modify: `cmd/splitty/main.go`
 
-- [ ] добавить в интерфейс `UserRepository` (`repository.go:19`): `FindByTelegramID(ctx, tgID int) (*api.User, error)`, `FindByGoogleSub(ctx, sub string) (*api.User, error)`, `FindByAppleSub(ctx, sub string) (*api.User, error)`
-- [ ] реализовать три метода по образцу `FindById` (`repository.go:495`), включая `mongo.ErrNoDocuments`
-- [ ] **все три обязаны исключать удалённых**: добавить в фильтр `deleted_at: {$exists: false}` — иначе tombstone заблокирует повторную регистрацию с той же личностью
-- [ ] **добавить метод создания `CreateIdentityUser(ctx, u api.User) error` через `InsertOne`** (именно insert, не upsert — на duplicate key строится retry в Tasks 6/10/11). Существующий `UpsertUser` (`repository.go:595-604`) пишет **только** `_id`, `user_lang`, `display_name`, `user_name` — записать через него `google_sub`/`apple_sub`/`email` невозможно, поэтому без этого метода Tasks 10/11 физически неисполнимы
-- [ ] побочный полезный эффект: `UpsertUser` — частичный `$set`, поэтому вход по `/auth/code` и апдейты бота **не затирают** поля личности
-- [ ] **применить санитайз снимка**: в `JoinToRoom` (`repository.go:208`) заменить `$push {users: u}` на `$push {users: u.Snapshot()}`; то же в `SaveRoom`, `CreateOperation`, `CreateOperationIfAbsent`, `UpdateOperation` для `Donor`, `Recipients`, `RecipientsWithSum[].User`
-- [ ] санитайз делать **на границе репозитория**, а не у вызывающих — так его нельзя забыть
-- [ ] добавить `MongoUserRepository.EnsureIndexes(ctx)` по образцу `repository.go:148`: **unique + sparse** индексы по `telegram_id`, `google_sub`, `apple_sub` (без `sparse` unique упадёт на документах, где поля нет)
-- [ ] вызвать `userRepository.EnsureIndexes(ctx)` в `cmd/splitty/main.go` рядом с `loginCodeRepository.EnsureIndexes` (:139), **но ошибку считать фатальной**, а не Warn: без unique-индексов возможны дубликаты личностей
-- [ ] **дописать все новые методы в `fakeUserRepo`** (`internal/rest/fakes_test.go:45-182`) — иначе пакет `rest` не скомпилируется. Учесть: `service.UserService` **встраивает** `repository.UserRepository`, поэтому расширение интерфейса протекает и в бота — проверить, что `internal/service` и `internal/bot` собираются
-- [ ] написать интеграционные тесты (через хелпер из Task 1): поиск по каждой из трёх личностей находит нужного; удалённый (с `deleted_at`) не находится; unique-индекс отвергает второго пользователя с тем же `google_sub`; два пользователя без `google_sub` сосуществуют (sparse работает); `CreateIdentityUser` на занятом `_id` возвращает duplicate key; `UpsertUser` не затирает `google_sub`
-- [ ] написать тест санитайза: после `JoinToRoom` документ комнаты не содержит `email`, `google_sub`, `apple_sub`, `telegram_id`
-- [ ] `go test ./internal/...` — зелёные перед Task 4
+- [x] добавить в интерфейс `UserRepository` (`repository.go:19`): `FindByTelegramID(ctx, tgID int) (*api.User, error)`, `FindByGoogleSub(ctx, sub string) (*api.User, error)`, `FindByAppleSub(ctx, sub string) (*api.User, error)`
+- [x] реализовать три метода по образцу `FindById` (`repository.go:495`), включая `mongo.ErrNoDocuments`
+- [x] **все три обязаны исключать удалённых**: добавить в фильтр `deleted_at: {$exists: false}` — иначе tombstone заблокирует повторную регистрацию с той же личностью
+- [x] **добавить метод создания `CreateIdentityUser(ctx, u api.User) error` через `InsertOne`** (именно insert, не upsert — на duplicate key строится retry в Tasks 6/10/11). Существующий `UpsertUser` (`repository.go:595-604`) пишет **только** `_id`, `user_lang`, `display_name`, `user_name` — записать через него `google_sub`/`apple_sub`/`email` невозможно, поэтому без этого метода Tasks 10/11 физически неисполнимы
+- [x] побочный полезный эффект: `UpsertUser` — частичный `$set`, поэтому вход по `/auth/code` и апдейты бота **не затирают** поля личности
+- [x] **применить санитайз снимка**: в `JoinToRoom` (`repository.go:208`) заменить `$push {users: u}` на `$push {users: u.Snapshot()}`; то же в `SaveRoom`, `CreateOperation`, `CreateOperationIfAbsent`, `UpdateOperation` для `Donor`, `Recipients`, `RecipientsWithSum[].User`
+- [x] санитайз делать **на границе репозитория**, а не у вызывающих — так его нельзя забыть
+- [x] добавить `MongoUserRepository.EnsureIndexes(ctx)` по образцу `repository.go:148`: **unique + sparse** индексы по `telegram_id`, `google_sub`, `apple_sub` (без `sparse` unique упадёт на документах, где поля нет)
+- [x] вызвать `userRepository.EnsureIndexes(ctx)` в `cmd/splitty/main.go` рядом с `loginCodeRepository.EnsureIndexes` (:139), **но ошибку считать фатальной**, а не Warn: без unique-индексов возможны дубликаты личностей
+- [x] **дописать все новые методы в `fakeUserRepo`** (`internal/rest/fakes_test.go:45-182`) — иначе пакет `rest` не скомпилируется. Учесть: `service.UserService` **встраивает** `repository.UserRepository`, поэтому расширение интерфейса протекает и в бота — проверить, что `internal/service` и `internal/bot` собираются
+- [x] написать интеграционные тесты (через хелпер из Task 1): поиск по каждой из трёх личностей находит нужного; удалённый (с `deleted_at`) не находится; unique-индекс отвергает второго пользователя с тем же `google_sub`; два пользователя без `google_sub` сосуществуют (sparse работает); `CreateIdentityUser` на занятом `_id` возвращает duplicate key; `UpsertUser` не затирает `google_sub`
+- [x] написать тест санитайза: после `JoinToRoom` документ комнаты не содержит `email`, `google_sub`, `apple_sub`, `telegram_id`
+- [x] `go test ./internal/...` — зелёные перед Task 4
 
 ### Task 4: Аллокатор номеров пользователей Splitty
 

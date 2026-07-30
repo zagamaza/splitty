@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -69,6 +70,58 @@ func (f *fakeUserRepo) UpsertUser(_ context.Context, u api.User) (*api.User, err
 	}
 	user := *f.users[u.ID]
 	return &user, nil
+}
+
+// CreateIdentityUser как mongo-реализация: чистая вставка, занятый _id или
+// занятая личность — duplicate key (в тестах достаточно самого факта ошибки)
+func (f *fakeUserRepo) CreateIdentityUser(_ context.Context, u api.User) error {
+	if _, ok := f.users[u.ID]; ok {
+		return errDuplicateKey
+	}
+	for _, existing := range f.users {
+		if u.TelegramID != nil && existing.TelegramID != nil && *u.TelegramID == *existing.TelegramID {
+			return errDuplicateKey
+		}
+		if u.GoogleSub != "" && existing.GoogleSub == u.GoogleSub {
+			return errDuplicateKey
+		}
+		if u.AppleSub != "" && existing.AppleSub == u.AppleSub {
+			return errDuplicateKey
+		}
+	}
+	user := u
+	f.users[u.ID] = &user
+	return nil
+}
+
+// errDuplicateKey имитирует E11000 unique-индекса
+var errDuplicateKey = errors.New("E11000 duplicate key error")
+
+func (f *fakeUserRepo) FindByTelegramID(_ context.Context, tgID int) (*api.User, error) {
+	return f.findLive(func(u *api.User) bool { return u.TelegramID != nil && *u.TelegramID == tgID })
+}
+
+func (f *fakeUserRepo) FindByGoogleSub(_ context.Context, sub string) (*api.User, error) {
+	return f.findLive(func(u *api.User) bool { return u.GoogleSub != "" && u.GoogleSub == sub })
+}
+
+func (f *fakeUserRepo) FindByAppleSub(_ context.Context, sub string) (*api.User, error) {
+	return f.findLive(func(u *api.User) bool { return u.AppleSub != "" && u.AppleSub == sub })
+}
+
+// findLive — поиск по личности: удалённые (tombstone) не находятся, как и в
+// mongo-реализации с фильтром deleted_at: {$exists: false}
+func (f *fakeUserRepo) findLive(match func(*api.User) bool) (*api.User, error) {
+	for _, u := range f.users {
+		if u.IsDeleted() {
+			continue
+		}
+		if match(u) {
+			copied := *u
+			return &copied, nil
+		}
+	}
+	return nil, mongo.ErrNoDocuments
 }
 
 func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {
