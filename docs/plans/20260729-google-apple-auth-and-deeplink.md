@@ -363,7 +363,26 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - `warmed` — множество id, по которым батч уже отвечал: пользователя, которого батч не нашёл (снимок пережил владельца), `get()` больше не перечитывает поштучно, иначе один «мёртвый» участник вернул бы экрану N запросов
 - `createRoomInfoText` теперь принимает `*canonicalUsers` первым параметром; `AllRoomInline`, `JoinRoom`, `ViewRoom`, `ViewAllDebtOperations` получили поле `us UserService`
 - в inline-выдаче `AllRoomInline` резолвер один на все комнаты выдачи — участники пересекаются, кеш переживает цикл (тест `TestAllRoomInlineReusesResolverAcrossRooms`: 2 комнаты → 1 запрос)
-- ⚠️ **обнаружено, вне объёма задачи**: `all_room.go:330` (`findRoomsByUpdate` ищет комнаты по `u.InlineQuery.From.ID`) и `room_screen.go:39` (`JoinToRoom(ctx, u.CallbackQuery.From, …)` кладёт в снимок комнаты сырого пользователя из апдейта) — тот же класс, что чинил Task 6, но в его построчный список они не попали. После Task 12 у google-первого пользователя с привязанным telegram это даст пустую inline-выдачу и участника с чужим `_id` в снимке. Требует отдельной задачи
+- ⚠️ **обнаружено, вне объёма задачи**: `all_room.go:330` (`findRoomsByUpdate` ищет комнаты по `u.InlineQuery.From.ID`) и `room_screen.go:39` (`JoinToRoom(ctx, u.CallbackQuery.From, …)` кладёт в снимок комнаты сырого пользователя из апдейта) — тот же класс, что чинил Task 6, но в его построчный список они не попали. После Task 12 у google-первого пользователя с привязанным telegram это даст пустую inline-выдачу и участника с чужим `_id` в снимке. Вынесено в Task 7b
+
+### Task 7b: ➕ Канонический id в inline-поиске и JoinToRoom
+
+**Files:**
+- Modify: `internal/bot/all_room.go` (`findRoomsByUpdate` :329)
+- Modify: `internal/bot/room_screen.go` (`JoinRoom.OnMessage` :43)
+- Modify: `internal/bot/canonical_id_test.go`, `internal/bot/list_mentions_test.go` (фейки запоминают, чем именно их спросили)
+
+- [x] `all_room.go:330` — `FindRoomsByLikeName(ctx, u.InlineQuery.From.ID, …)` берёт сырой telegram id: комнаты хранят канонические номера участников, поэтому после Task 12 у google-первого пользователя inline-выдача будет ПУСТОЙ. Заменить на `u.User.ID`, той же правкой поправить лог на `:332`
+- [x] `room_screen.go:43` — `JoinToRoom(ctx, u.CallbackQuery.From, roomId)` кладёт во встроенный снимок `room.users[]` сырого пользователя из апдейта. Это тот же класс порчи данных, что `Operation.Donor` в Task 6: участник с чужим `_id` навсегда оседает в документе комнаты и ломает расчёт долгов. Заменить на `*u.User`, пометить комментарием почему
+- [x] проверить ОСТАЛЬНЫЕ прямые чтения `From` мимо `getFrom`: `grep -rn "\.Message\.From\|\.CallbackQuery\.From\|\.InlineQuery\.From" --include="*.go" internal/ | grep -v _test`. Законны и не трогаются: тело самого `getFrom` (`bot.go:189-194`), `tg_helper.go:137` (`getChatID` — нужен именно telegram chat id входящего апдейта, исключение зафиксировано в Task 7) и всё в `internal/events/telegram.go` (ингресс telegram-личности: там `From` — единственный источник telegram id). После правок доменных использований в остатке остаться не должно
+- [x] тест на inline-поиск: комнаты ищутся номером Splitty, а не telegram id (фейк `RoomService` запоминает переданный `userId`)
+- [x] тест на join: в `JoinToRoom` уходит пользователь с `_id` = номер Splitty, а не сырой telegram id
+- [x] `go test ./internal/...` — зелёные
+
+**Как сделано:**
+- обе правки однострочные (`u.User.ID` и `*u.User`), санитайз снимка при join уже делает репозиторий (`repository.go:250`, `u.Snapshot()`) — трогать его не понадобилось
+- аудит прямых чтений `From`: в остатке только тело `getFrom` (`bot.go:189-194`), `getChatID` (`tg_helper.go:137`) и `internal/events/telegram.go` — все три законны и уже помечены комментариями. Доменных использований `From` мимо `getFrom` в `internal/bot` больше нет
+- фейки `inlineRoomService`/`joiningRoomService` из Task 7a дополнены записью аргументов (`askedUserIDs`, `joined`) — новых заглушек не заводили. Оба теста проверены на «падают до фикса»
 
 ### Task 8: Аватары через telegram_id
 

@@ -40,7 +40,10 @@ func (bot JoinRoom) HasReact(u *api.Update) bool {
 func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	roomId := u.Button.CallbackData.RoomId
 
-	err := bot.rs.JoinToRoom(ctx, u.CallbackQuery.From, roomId)
+	// участник уходит во встроенный снимок room.users[], а его ID участвует в
+	// расчёте долгов. u.CallbackQuery.From — сырой пользователь из апдейта с
+	// telegram id; нужен канонический номер Splitty
+	err := bot.rs.JoinToRoom(ctx, *u.User, roomId)
 	if err != nil {
 		log.Error().Err(err).Msgf("join room failed %v", roomId)
 		return

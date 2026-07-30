@@ -317,6 +317,44 @@ func (c *capturingCreateRoomService) CreateRoom(_ context.Context, r *api.Room) 
 	return &saved, nil
 }
 
+// TestInlineRoomSearchUsesCanonicalUserID: inline-поиск комнат читал
+// u.InlineQuery.From.ID напрямую, минуя getFrom, поэтому построчная чистка
+// Task 6 его не задела. Комнаты хранят канонические номера участников — по
+// сырому telegram id выдача была бы пустой
+func TestInlineRoomSearchUsesCanonicalUserID(t *testing.T) {
+	loadLang(t)
+	rs := &inlineRoomService{rooms: []api.Room{*roomWithMembers()}}
+	us := &countingUserService{users: canonicalMembers()}
+	screen := NewAllRoomInline(noopChatStateService{}, noopButtonService{}, rs, &recordingStatisticService{}, us, &Config{})
+
+	upd := canonicalUpdate(viewAllRooms, &api.CallbackData{})
+	upd.InlineQuery = &api.InlineQuery{ID: "q1", From: api.User{ID: rawTelegramID}, Query: "Тус"}
+
+	screen.OnMessage(context.Background(), upd)
+
+	assertAskedCanonical(t, rs.askedUserIDs)
+}
+
+// TestJoinToRoomWritesCanonicalUser: пользователь уходит во встроенный снимок
+// room.users[] целым документом, и его ID участвует в расчёте долгов. Сырой
+// telegram id здесь — та же порча данных, что Operation.Donor в Task 6
+func TestJoinToRoomWritesCanonicalUser(t *testing.T) {
+	loadLang(t)
+	room := roomWithMembers()
+	rs := &joiningRoomService{room: room}
+	us := &countingUserService{users: canonicalMembers()}
+	screen := NewJoinRoom(noopChatStateService{}, noopButtonService{}, rs, us, &Config{})
+
+	screen.OnMessage(context.Background(), canonicalUpdate(joinRoom, &api.CallbackData{RoomId: room.ID.Hex()}))
+
+	if len(rs.joined) != 1 {
+		t.Fatalf("JoinToRoom вызван %d раз, want 1", len(rs.joined))
+	}
+	if got := rs.joined[0].ID; got != canonicalUserID {
+		t.Fatalf("в снимок комнаты ушёл пользователь с id=%d, want %d", got, canonicalUserID)
+	}
+}
+
 // assertAskedCanonical — сервис спрошен номером Splitty, а не telegram id
 func assertAskedCanonical(t *testing.T, asked []int) {
 	t.Helper()

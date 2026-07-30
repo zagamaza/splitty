@@ -181,23 +181,31 @@ func (s *stubDebtOperationService) GetAllDebtOperations(context.Context, string)
 	return &s.ops, nil
 }
 
-// inlineRoomService — RoomService для inline-выдачи AllRoomInline
+// inlineRoomService — RoomService для inline-выдачи AllRoomInline; запоминает,
+// каким номером его спросили (см. TestInlineRoomSearchUsesCanonicalUserID)
 type inlineRoomService struct {
 	RoomService
-	rooms []api.Room
+	rooms        []api.Room
+	askedUserIDs []int
 }
 
-func (r *inlineRoomService) FindRoomsByLikeName(context.Context, int, string) (*[]api.Room, error) {
+func (r *inlineRoomService) FindRoomsByLikeName(_ context.Context, userId int, _ string) (*[]api.Room, error) {
+	r.askedUserIDs = append(r.askedUserIDs, userId)
 	return &r.rooms, nil
 }
 
-// joiningRoomService — RoomService для JoinRoom: join no-op, комната одна
+// joiningRoomService — RoomService для JoinRoom: join no-op, комната одна;
+// запоминает пользователя, ушедшего в снимок участников
 type joiningRoomService struct {
 	RoomService
-	room *api.Room
+	room   *api.Room
+	joined []api.User
 }
 
-func (r *joiningRoomService) JoinToRoom(context.Context, api.User, string) error { return nil }
+func (r *joiningRoomService) JoinToRoom(_ context.Context, u api.User, _ string) error {
+	r.joined = append(r.joined, u)
+	return nil
+}
 func (r *joiningRoomService) FindById(context.Context, string) (*api.Room, error) {
 	return r.room, nil
 }

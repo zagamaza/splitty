@@ -327,9 +327,13 @@ func definePartyType(finishedAddOperationCount int, memberCount int, paidOffDebt
 }
 
 func (bot AllRoomInline) findRoomsByUpdate(ctx context.Context, u *api.Update) *[]api.Room {
-	rooms, err := bot.rs.FindRoomsByLikeName(ctx, u.InlineQuery.From.ID, u.InlineQuery.Query)
+	// комнаты хранят канонические номера участников, поэтому искать нужно по
+	// u.User.ID. u.InlineQuery.From.ID — сырой telegram id из апдейта: у
+	// аккаунта, пришедшего через Google и привязавшего telegram, он не совпадает
+	// с номером Splitty, и выдача оказалась бы пустой
+	rooms, err := bot.rs.FindRoomsByLikeName(ctx, u.User.ID, u.InlineQuery.Query)
 	if err != nil {
-		log.Error().Err(err).Msgf("can't send query to telegram %v", u.InlineQuery.From.ID)
+		log.Error().Err(err).Msgf("can't send query to telegram %v", u.User.ID)
 	}
 	return rooms
 }
