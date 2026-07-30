@@ -88,7 +88,7 @@
 ### Среда, сборка, тесты
 
 ```bash
-# Go: тулчейн go1.22 из go.mod НЕ скачивается (сети нет) — работаем локальным 1.23.5
+# Go: работаем локальным 1.23.5 с GOTOOLCHAIN=local — тулчейн из go.mod не тянем
 GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go build ./...
 GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...
 GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go vet ./...
@@ -109,7 +109,7 @@ cd ios && xcodebuild test -project Splitty.xcodeproj -scheme Splitty \
 
 **Mongo для тестов доступен**: локально поднят контейнер `splitty-app-mongo-1` (образ `mongo:7`) на `localhost:27017`, образ уже скачан — сеть не нужна.
 
-**Сеть недоступна.** Новые зависимости, требующие скачивания (SPM `GoogleSignIn-iOS` в Task 16, `androidx.credentials`/`googleid` в Task 18), могут не установиться. Правило: агент **пробует** добавить зависимость; если резолв падает по сети — помечает задачу `⚠️ заблокировано: нет сети` в этом файле, коммитит код без сборки и **переходит к следующей задаче**, не пытаясь обойти. Go-зависимости не добавляются вовсе — используем уже имеющиеся.
+**Сеть доступна** (проверено 30.07.2026: github и `proxy.golang.org` отвечают). Новые зависимости (SPM `GoogleSignIn-iOS` в Task 16, `androidx.credentials`/`googleid` в Task 18) должны резолвиться штатно. Аварийный выход на случай, если резолв всё же падает по сети: агент помечает задачу `⚠️ заблокировано: нет сети` в этом файле, коммитит код без сборки и **переходит к следующей задаче**, не пытаясь обойти — но это исключение, а не ожидаемый сценарий. **Go-зависимости всё равно не добавляются**: всё нужное (`golang-jwt/jwt/v5`, `crypto/*`) уже есть, новых модулей план не требует.
 
 ## Development Approach
 
@@ -719,7 +719,28 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 
 **Консоли**
 
-- Google Cloud Console: OAuth client id для iOS (bundle `com.zagir.splitty`), Android (package + SHA-1 **Play App Signing**, не локального debug-ключа) и Web (серверный audience для Credential Manager). Все три — в `GOOGLE_CLIENT_IDS`.
+- Google Cloud Console: **✅ сделано 30.07.2026.** Проект `gen-lang-client-0912753294` (Splitty, номер 327021108128), аккаунт `zagamaza2025@gmail.com`. Созданы четыре OAuth-клиента:
+
+  | Клиент | Тип | Client ID (префикс `327021108128-`) |
+  |---|---|---|
+  | Splitty Web (server audience) | Web | `rm91uurc2il489qnv8hn32o1kcakemnl.apps.googleusercontent.com` |
+  | Splitty iOS | iOS | `v1psnu3utn5govgn3n30h2omhvb21t1o.apps.googleusercontent.com` |
+  | Splitty Android (Play App Signing) | Android | `8fk676qqflrmiejmasgfa8vnq8j9e1b3.apps.googleusercontent.com` |
+  | Splitty Android (debug keystore) | Android | `2tgkjnoeeq7q2669ojh0p8gnvcfan1sg.apps.googleusercontent.com` |
+
+  iOS — bundle `com.zagir.splitty`, Team `K8922Y6R3M`. Android — package `com.zagir.splitty`; SHA-1 Play App Signing `18:BC:FD:81:BE:0A:40:1E:D8:93:91:8D:FA:5D:F0:D6:34:0C:AB:F6`, SHA-1 локального debug-ключа `8B:F8:FC:55:7B:4B:14:79:7C:93:7C:9A:2D:A6:7F:2D:4E:49:D1:E6` (второй клиент нужен, иначе вход в debug-сборке падает с `error 10`).
+
+  **⚠️ в `GOOGLE_CLIENT_IDS` (Task 10) идут только ДВА — iOS и Web.** Это список допустимых `aud`, а Android-клиенты в `aud` не появляются никогда: Credential Manager выдаёт токен с `aud` = **серверный (Web) client id**, а Android-клиенты нужны Google лишь для сверки package+подписи. Класть их в `GOOGLE_CLIENT_IDS` — расширять множество принимаемых audience без причины:
+
+  ```
+  GOOGLE_CLIENT_IDS=327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o.apps.googleusercontent.com:327021108128-rm91uurc2il489qnv8hn32o1kcakemnl.apps.googleusercontent.com
+  ```
+
+  Серверный client id для `GetGoogleIdOption` на Android (Task 18) и reversed client id для `CFBundleURLTypes` на iOS (Task 16) — оттуда же: Web-клиент и `com.googleusercontent.apps.327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o` соответственно.
+
+  **SHA-256 Play App Signing для `assetlinks.json`** (Task 14, `ANDROID_CERT_SHA256`): `E6:8C:8C:AF:20:18:20:2B:E3:93:BF:BE:AE:B9:DA:E6:AB:E7:BD:AE:AA:39:D2:20:9D:24:E4:75:B4:ED:E7:D0`.
+
+  Осталось вручную: **Publishing status проекта = Testing** (Google Auth Platform → Audience). Пока так, войти смогут только добавленные тестировщики (сейчас 1 из 100). Перед выкаткой нажать «Publish app» — со скоупами `openid/email/profile` верификация Google не требуется.
 - Apple Developer Portal: capability **Sign in with Apple** для App ID `com.zagir.splitty` (Team `K8922Y6R3M`); bundle id — в `APPLE_CLIENT_IDS`.
 - Apple Developer Portal → Keys: создать ключ с включённым **Sign in with Apple**, скачать `.p8` (**отдаётся один раз**). Team ID → `APPLE_TEAM_ID`, Key ID → `APPLE_KEY_ID`, содержимое файла → `APPLE_PRIVATE_KEY`. Нужен для `auth/revoke` при удалении аккаунта (5.1.1(v)); **в git не коммитить**.
 - Play Console → App integrity: SHA-256 сертификата Play App Signing для `assetlinks.json`.
