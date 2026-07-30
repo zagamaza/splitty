@@ -17,6 +17,10 @@ import (
 
 type UserService interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
+	// FindByIds — батч-чтение канонических документов. Списочные экраны
+	// (участники комнаты, история долгов) упоминают десятки пользователей,
+	// поштучный FindById дал бы N чтений на одну отрисовку (см. canonicalUsers.warm)
+	FindByIds(ctx context.Context, ids []int) ([]api.User, error)
 	FindByUsername(ctx context.Context, username string) (*api.User, error)
 	SetUserLang(ctx context.Context, userId int, lang string) error
 	SetCountInPage(ctx context.Context, userId int, count int) error
@@ -247,12 +251,59 @@ type canonicalUsers struct {
 	ctx   context.Context
 	uf    UserFinder
 	cache map[int]*api.User
+	// warmed — id, по которым батч уже отвечал. Канонического документа у них
+	// в базе нет (иначе он лежал бы в cache), и поштучно перечитывать их
+	// незачем: иначе списочный экран всё равно выродился бы в N запросов
+	warmed map[int]struct{}
 }
 
 // canonical собирает резолвер на время обработки одного апдейта/уведомления.
 // uf может быть nil — тогда резолвер прозрачно отдаёт то, что ему передали
 func canonical(ctx context.Context, uf UserFinder) *canonicalUsers {
-	return &canonicalUsers{ctx: ctx, uf: uf, cache: make(map[int]*api.User)}
+	return &canonicalUsers{
+		ctx:    ctx,
+		uf:     uf,
+		cache:  make(map[int]*api.User),
+		warmed: make(map[int]struct{}),
+	}
+}
+
+// warm прогревает кеш одним запросом. Нужен списочным экранам (участники
+// комнаты, история долгов): без него отрисовка списка из N участников
+// превратилась бы в N чтений пользователя. Best-effort — ошибка батча просто
+// оставляет кеш пустым, get() дочитает поштучно
+func (c *canonicalUsers) warm(ids []int) {
+	if c == nil || c.uf == nil || len(ids) == 0 {
+		return
+	}
+	var missing []int
+	for _, id := range ids {
+		if _, cached := c.cache[id]; cached {
+			continue
+		}
+		if _, done := c.warmed[id]; done {
+			continue
+		}
+		if slices.Contains(missing, id) {
+			continue
+		}
+		missing = append(missing, id)
+	}
+	if len(missing) == 0 {
+		return
+	}
+	users, err := c.uf.FindByIds(c.ctx, missing)
+	if err != nil {
+		log.Warn().Err(err).Msg("can't batch read canonical users, falling back to embedded snapshots")
+		return
+	}
+	for i := range users {
+		u := users[i]
+		c.cache[u.ID] = &u
+	}
+	for _, id := range missing {
+		c.warmed[id] = struct{}{}
+	}
 }
 
 // get отдаёт канонический документ. Не нашли или ошибка — возвращаем исходный
@@ -266,6 +317,11 @@ func (c *canonicalUsers) get(u *api.User) *api.User {
 	}
 	if cached, ok := c.cache[u.ID]; ok {
 		return cached
+	}
+	if _, ok := c.warmed[u.ID]; ok {
+		// батч по этому id уже отработал и канонического документа не нашёл —
+		// поштучное чтение вернуло бы то же самое
+		return u
 	}
 	res := u
 	if found, err := c.uf.FindById(c.ctx, u.ID); err != nil {

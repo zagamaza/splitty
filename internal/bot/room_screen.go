@@ -13,15 +13,17 @@ type JoinRoom struct {
 	css ChatStateService
 	bs  ButtonService
 	rs  RoomService
+	us  UserService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService, cfg *Config) *JoinRoom {
+func NewJoinRoom(s ChatStateService, bs ButtonService, rs RoomService, us UserService, cfg *Config) *JoinRoom {
 	return &JoinRoom{
 		css: s,
 		bs:  bs,
 		rs:  rs,
+		us:  us,
 		cfg: cfg,
 	}
 }
@@ -70,7 +72,7 @@ func (bot JoinRoom) OnMessage(ctx context.Context, u *api.Update) (response api.
 		return
 	}
 
-	text := createRoomInfoText(room, u)
+	text := createRoomInfoText(canonical(ctx, bot.us), room, u)
 	link := "http://t.me/" + bot.cfg.BotName + "?start=" + string(viewRoom) + room.ID.Hex()
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
@@ -87,16 +89,18 @@ type ViewRoom struct {
 	bs  ButtonService
 	rs  RoomService
 	css ChatStateService
+	us  UserService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewViewRoom(bs ButtonService, rs RoomService, css ChatStateService, cfg *Config) *ViewRoom {
+func NewViewRoom(bs ButtonService, rs RoomService, css ChatStateService, us UserService, cfg *Config) *ViewRoom {
 	return &ViewRoom{
 		bs:  bs,
 		rs:  rs,
 		cfg: cfg,
 		css: css,
+		us:  us,
 	}
 }
 
@@ -138,7 +142,7 @@ func (bot *ViewRoom) OnMessage(ctx context.Context, u *api.Update) (response api
 	settB := api.NewButton(roomSetting, data)
 	staticsB := api.NewButton(statistics, data)
 
-	text := createRoomInfoText(room, u)
+	text := createRoomInfoText(canonical(ctx, bot.us), room, u)
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_add_operation"), startOpB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_opt"), viewOpsB.ID.Hex()),

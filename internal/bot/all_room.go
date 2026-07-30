@@ -15,16 +15,18 @@ type AllRoomInline struct {
 	bs  ButtonService
 	rs  RoomService
 	ss  StatisticService
+	us  UserService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, ss StatisticService, cfg *Config) *AllRoomInline {
+func NewAllRoomInline(s ChatStateService, bs ButtonService, rs RoomService, ss StatisticService, us UserService, cfg *Config) *AllRoomInline {
 	return &AllRoomInline{
 		css: s,
 		bs:  bs,
 		rs:  rs,
 		ss:  ss,
+		us:  us,
 		cfg: cfg,
 	}
 }
@@ -39,6 +41,10 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 	rooms := bot.findRoomsByUpdate(ctx, u)
 	userId := u.User.ID
+
+	// один резолвер на всю выдачу: участники повторяются от комнаты к комнате,
+	// кеш переживает весь цикл и экономит запросы
+	cu := canonical(ctx, bot.us)
 
 	var results []interface{}
 	for _, room := range *rooms {
@@ -66,7 +72,7 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 			continue
 		}
 
-		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(&room, u), [][]tgbotapi.InlineKeyboardButton{
+		article := NewInlineResultArticle(room.Name, debtText, createRoomInfoText(cu, &room, u), [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_join"), joinB.ID.Hex())},
 			{tgbotapi.NewInlineKeyboardButtonURL(I18n(u.User, "btn_start"), "http://t.me/"+bot.cfg.BotName+"?start=room"+room.ID.Hex())},
 		})
@@ -258,7 +264,20 @@ const (
 	Finished
 )
 
-func createRoomInfoText(r *api.Room, u *api.Update) string {
+// createRoomInfoText рисует карточку комнаты со списком участников.
+//
+// cu обязателен: участники берутся из встроенного снимка комнаты, где
+// telegram_id нет никогда (api.User.Snapshot() его обнуляет), и без резолва
+// канонических документов упоминания выродились бы в простые имена у всех
+// telegram-пользователей. Резолв идёт одним батчем на весь список, а не
+// поштучно — экран комнаты рисуется на каждое нажатие кнопки
+func createRoomInfoText(cu *canonicalUsers, r *api.Room, u *api.Update) string {
+	memberIds := make([]int, 0, len(*r.Members))
+	for _, v := range *r.Members {
+		memberIds = append(memberIds, v.ID)
+	}
+	cu.warm(memberIds)
+
 	finishedAddOperationCount := len(r.RoomStates.FinishedAddOperation)
 	paidOffDebtCunt := len(r.RoomStates.PaidOffDebt)
 	memberCount := len(*r.Members)
@@ -277,7 +296,7 @@ func createRoomInfoText(r *api.Room, u *api.Update) string {
 	text := I18n(u.User, "scrn_room", r.Name, partyStatus, GetCurrencyFlag(r.Currency))
 
 	for _, v := range *r.Members {
-		text += "- " + userLink(&v)
+		text += "- " + cu.link(&v)
 
 		if slices.Contains(r.RoomStates.PaidOffDebt, v.ID) && DebtDistributing == partyType {
 			text += " 🤝"

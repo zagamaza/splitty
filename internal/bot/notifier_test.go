@@ -66,6 +66,16 @@ func (s stubUserFinder) FindById(_ context.Context, id int) (*api.User, error) {
 	return s.users[id], nil
 }
 
+func (s stubUserFinder) FindByIds(_ context.Context, ids []int) ([]api.User, error) {
+	var out []api.User
+	for _, id := range ids {
+		if u, ok := s.users[id]; ok && u != nil {
+			out = append(out, *u)
+		}
+	}
+	return out, nil
+}
+
 // tgUser собирает КАНОНИЧЕСКОГО telegram-пользователя: номер Splitty и telegram id
 // различаются намеренно — отправка и упоминания обязаны брать второй.
 func tgUser(id, tgID int, name string) *api.User {

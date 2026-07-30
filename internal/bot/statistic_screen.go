@@ -114,16 +114,18 @@ type ViewAllDebtOperations struct {
 	rs  RoomService
 	bs  ButtonService
 	os  OperationService
+	us  UserService
 	cfg *Config
 }
 
 // NewStackOverflow makes a bot for SO
-func NewViewAllDebtOperations(css ChatStateService, rs RoomService, bs ButtonService, os OperationService, cfg *Config) *ViewAllDebtOperations {
+func NewViewAllDebtOperations(css ChatStateService, rs RoomService, bs ButtonService, os OperationService, us UserService, cfg *Config) *ViewAllDebtOperations {
 	return &ViewAllDebtOperations{
 		css: css,
 		rs:  rs,
 		bs:  bs,
 		os:  os,
+		us:  us,
 		cfg: cfg,
 	}
 }
@@ -153,9 +155,25 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 	var text = I18n(u.User, "scrn_debt_history") + "\n\n"
 	var keyboard [][]tgbotapi.InlineKeyboardButton
 
+	// участники истории приходят из снимков операций, где telegram_id нет
+	// никогда — упоминания собираем по каноническим документам, одним запросом
+	// на страницу
+	cu := canonical(ctx, bot.us)
+	var pageUserIds []int
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
-		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", userLink(op.Donor), moneySpace(op.Sum, room.Currency), userLink(&(op.RecipientsWithSum)[0].User)+"\n\n")
+		if op.Donor != nil {
+			pageUserIds = append(pageUserIds, op.Donor.ID)
+		}
+		if len(op.RecipientsWithSum) > 0 {
+			pageUserIds = append(pageUserIds, op.RecipientsWithSum[0].User.ID)
+		}
+	}
+	cu.warm(pageUserIds)
+
+	for i := skip; i < skip+size && i < len(*ops); i++ {
+		op := (*ops)[i]
+		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", cu.link(op.Donor), moneySpace(op.Sum, room.Currency), cu.link(&(op.RecipientsWithSum)[0].User)+"\n\n")
 	}
 
 	var navRow []tgbotapi.InlineKeyboardButton

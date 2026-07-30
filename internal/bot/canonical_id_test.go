@@ -100,6 +100,16 @@ func (s stubBotUserService) FindById(_ context.Context, id int) (*api.User, erro
 	return s.users[id], nil
 }
 
+func (s stubBotUserService) FindByIds(_ context.Context, ids []int) ([]api.User, error) {
+	var out []api.User
+	for _, id := range ids {
+		if u, ok := s.users[id]; ok && u != nil {
+			out = append(out, *u)
+		}
+	}
+	return out, nil
+}
+
 type noopRoomStateService struct{ RoomStateService }
 
 func (noopRoomStateService) DefinePaidOfDebtsUserIdsAndSave(context.Context, *api.Room) error {
@@ -140,7 +150,8 @@ func TestViewRoomChecksMembershipByCanonicalID(t *testing.T) {
 		Name:    "Тусa",
 		Members: &[]api.User{{ID: canonicalUserID, DisplayName: "Канонический"}},
 	}}
-	screen := NewViewRoom(noopButtonService{}, r, noopChatStateService{}, &Config{})
+	screen := NewViewRoom(noopButtonService{}, r, noopChatStateService{},
+		stubBotUserService{users: map[int]*api.User{}}, &Config{})
 
 	upd := canonicalUpdate(viewRoom, &api.CallbackData{RoomId: roomID.Hex()})
 	resp := screen.OnMessage(context.Background(), upd)

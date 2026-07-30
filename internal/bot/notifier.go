@@ -27,10 +27,12 @@ func (NoopTelegramSender) Send(tgbotapi.Chattable) (tgbotapi.Message, error) {
 	return tgbotapi.Message{}, nil
 }
 
-// UserFinder читает канонический документ пользователя. Узкий интерфейс (как
-// TelegramSender): Notifier'у нужен только FindById, репозиторий подходит как есть
+// UserFinder читает канонические документы пользователей. Узкий интерфейс (как
+// TelegramSender), репозиторий подходит как есть. FindByIds нужен списочным
+// экранам бота: один запрос на отрисовку вместо N (см. canonicalUsers.warm)
 type UserFinder interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
+	FindByIds(ctx context.Context, ids []int) ([]api.User, error)
 }
 
 // Notifier отправляет участникам комнаты те же telegram-уведомления, что и экраны

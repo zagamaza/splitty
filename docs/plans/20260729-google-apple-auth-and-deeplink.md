@@ -347,13 +347,23 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 ### Task 7a: ➕ Кликабельные упоминания в списочных экранах бота
 
 **Files:**
-- Modify: `internal/repository/repository.go`, `internal/rest/fakes_test.go`
+- ~~Modify: `internal/repository/repository.go`, `internal/rest/fakes_test.go`~~ — `FindByIds` там уже был (добавлен под AI-парсинг чеков, `internal/rest/parse_handler.go:207`), правки не понадобились
 - Modify: `internal/bot/all_room.go`, `internal/bot/room_screen.go`, `internal/bot/statistic_screen.go`
+- ➕ Modify: `internal/bot/tg_helper.go` (батч-прогрев `canonicalUsers.warm` + `FindByIds` в `UserService`), `internal/bot/notifier.go` (`FindByIds` в `UserFinder`)
+- ➕ Modify: `cmd/splitty/wire_gen.go` — четыре конструктора получили `userService`
+- ➕ Create: `internal/bot/list_mentions_test.go`; Modify: `internal/bot/canonical_id_test.go`, `internal/bot/notifier_test.go` (фейки дополнены `FindByIds`)
 
-- [ ] добавить в `UserRepository` батч-метод `FindByIds(ctx, ids []int) ([]api.User, error)` (+ реализация, + фейк — см. «Правило расширения интерфейсов»)
-- [ ] прокинуть резолвер в `createRoomInfoText` (`all_room.go:261`, вызовы `all_room.go:69`, `room_screen.go:73,141`) и в `statistic_screen.go:158`, чтобы упоминания собирались по каноническим документам одним запросом на экран
-- [ ] тест: участник комнаты с telegram виден в списке как `tg://user?id=<telegram_id>`, участник без telegram — простым именем
-- [ ] `go test ./internal/...` — зелёные
+- [x] добавить в `UserRepository` батч-метод `FindByIds(ctx, ids []int) ([]api.User, error)` (+ реализация, + фейк — см. «Правило расширения интерфейсов») — **уже существовал**: `repository.go:836` (`$in` по `_id`) и `fakeUserRepo.FindByIds` (`fakes_test.go:254`). Заводить второй батч не стали
+- [x] прокинуть резолвер в `createRoomInfoText` (`all_room.go:261`, вызовы `all_room.go:69`, `room_screen.go:73,141`) и в `statistic_screen.go:158`, чтобы упоминания собирались по каноническим документам одним запросом на экран
+- [x] тест: участник комнаты с telegram виден в списке как `tg://user?id=<telegram_id>`, участник без telegram — простым именем
+- [x] `go test ./internal/...` — зелёные
+
+**Как сделано:**
+- переиспользован резолвер Task 7: у `canonicalUsers` появился `warm(ids []int)` — один `FindByIds` на экран, результат ложится в тот же кеш, из которого читают `link`/`chatID`. Второго механизма не заводили
+- `warmed` — множество id, по которым батч уже отвечал: пользователя, которого батч не нашёл (снимок пережил владельца), `get()` больше не перечитывает поштучно, иначе один «мёртвый» участник вернул бы экрану N запросов
+- `createRoomInfoText` теперь принимает `*canonicalUsers` первым параметром; `AllRoomInline`, `JoinRoom`, `ViewRoom`, `ViewAllDebtOperations` получили поле `us UserService`
+- в inline-выдаче `AllRoomInline` резолвер один на все комнаты выдачи — участники пересекаются, кеш переживает цикл (тест `TestAllRoomInlineReusesResolverAcrossRooms`: 2 комнаты → 1 запрос)
+- ⚠️ **обнаружено, вне объёма задачи**: `all_room.go:330` (`findRoomsByUpdate` ищет комнаты по `u.InlineQuery.From.ID`) и `room_screen.go:39` (`JoinToRoom(ctx, u.CallbackQuery.From, …)` кладёт в снимок комнаты сырого пользователя из апдейта) — тот же класс, что чинил Task 6, но в его построчный список они не попали. После Task 12 у google-первого пользователя с привязанным telegram это даст пустую inline-выдачу и участника с чужим `_id` в снимке. Требует отдельной задачи
 
 ### Task 8: Аватары через telegram_id
 
