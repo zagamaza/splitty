@@ -89,8 +89,15 @@ type LoginCodeRepository interface {
 	UseLoginCode(ctx context.Context, code string, now time.Time) (*api.LoginCode, error)
 }
 
+// MongoUserRepository владеет собственным аллокатором номеров (seq), а не
+// получает его снаружи. Причина: UpsertTelegramUser — метод UserRepository, и
+// вызывается он из графа БОТА (internal/events/telegram.go), который про
+// rest.Server ничего не знает. Аллокатор, проброшенный только в rest.Server,
+// был бы там недоступен, а менять сигнатуру NewUserRepository пришлось бы в
+// обоих графах, включая сгенерированный wire_gen.go
 type MongoUserRepository struct {
 	col *mongo.Collection
+	seq *MongoSequenceRepository
 }
 
 type MongoRoomRepository struct {
@@ -132,8 +139,12 @@ func (br MongoBugReportRepository) SaveBugReport(ctx context.Context, r *api.Bug
 	return nil
 }
 
+// NewUserRepository. Сигнатура намеренно не меняется: она вызывается из двух
+// графов (cmd/splitty/main.go и сгенерированный wire_gen.go), и добавление
+// параметра потребовало бы перегенерации wire. База уже передаётся — коллекцию
+// sequence поднимаем прямо здесь
 func NewUserRepository(col *mongo.Database) *MongoUserRepository {
-	return &MongoUserRepository{col: col.Collection("user")}
+	return &MongoUserRepository{col: col.Collection("user"), seq: NewSequenceRepository(col)}
 }
 
 func NewRoomRepository(col *mongo.Database) *MongoRoomRepository {
@@ -625,6 +636,13 @@ func (r MongoUserRepository) findOne(ctx context.Context, filter interface{}) (*
 func (r MongoUserRepository) CreateIdentityUser(ctx context.Context, u api.User) error {
 	_, err := r.col.InsertOne(ctx, u)
 	return err
+}
+
+// NextUserID выдаёт номер для пользователя, у которого нет пригодного _id
+// (вход через Google/Apple, а также telegram-вход, чей telegram id уже занят
+// другим аккаунтом). Делегирует в общий счётчик коллекции sequence
+func (r MongoUserRepository) NextUserID(ctx context.Context) (int, error) {
+	return r.seq.NextUserID(ctx)
 }
 
 // IsDuplicateKey — ошибка уникального индекса (E11000). В драйвере 1.4.4 нет

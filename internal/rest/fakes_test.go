@@ -43,6 +43,29 @@ func (f *fakeLoginCodeRepo) UseLoginCode(_ context.Context, code string, now tim
 	return &used, nil
 }
 
+// fakeUserIDAllocator in-memory реализация userIDAllocator: раздаёт номера с
+// того же значения, что и настоящий аллокатор (repository.firstSyntheticUserID
+// == 10^12), но без mongo. Тесты входа через Google/Apple проверяют, что
+// созданному пользователю достался синтетический номер, поэтому стартовое
+// значение обязано совпадать с боевым
+type fakeUserIDAllocator struct {
+	next int
+	err  error
+}
+
+func newFakeUserIDAllocator() *fakeUserIDAllocator {
+	return &fakeUserIDAllocator{next: 1_000_000_000_000}
+}
+
+func (f *fakeUserIDAllocator) NextUserID(context.Context) (int, error) {
+	if f.err != nil {
+		return 0, f.err
+	}
+	id := f.next
+	f.next++
+	return id, nil
+}
+
 // fakeUserRepo in-memory реализация repository.UserRepository для тестов
 type fakeUserRepo struct {
 	users map[int]*api.User

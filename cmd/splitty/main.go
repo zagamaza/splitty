@@ -122,6 +122,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	userRepository := repository.NewUserRepository(db)
 	roomRepository := repository.NewRoomRepository(db)
 	loginCodeRepository := repository.NewLoginCodeRepository(db)
+	// аллокатор номеров для входа через Google/Apple. Счётчик один на базу:
+	// MongoUserRepository держит свой экземпляр над той же коллекцией sequence,
+	// а $inc атомарен, поэтому одинаковый номер два экземпляра не выдадут
+	sequenceRepository := repository.NewSequenceRepository(db)
 	roomService := service.NewRoomService(roomRepository)
 	operationService := service.NewOperationService(roomRepository)
 	buttonService := service.NewButtonService(repository.NewButtonRepository(db))
@@ -134,7 +138,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		ReviewLoginCode: cfg.ReviewLoginCode,
 		ReviewUserId:    cfg.ReviewUserId,
 	}
-	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService)
+	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")

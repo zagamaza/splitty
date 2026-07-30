@@ -29,6 +29,13 @@ type Notifier interface {
 	NotifyRepaymentCreated(ctx context.Context, room api.Room, op api.Operation, author api.User)
 }
 
+// userIDAllocator выдаёт номера пользователей Splitty, у которых нет telegram
+// id (вход через Google/Apple). Интерфейс объявлен здесь узким, чтобы в тестах
+// подставлялся фейк без mongo. Реализация — repository.MongoSequenceRepository
+type userIDAllocator interface {
+	NextUserID(ctx context.Context) (int, error)
+}
+
 // Config конфигурация REST-сервера
 type Config struct {
 	Listen    string // адрес http-сервера, например "localhost:7171"
@@ -54,6 +61,9 @@ type Server struct {
 	loginCodeRepo repository.LoginCodeRepository
 	roomSrv       *service.RoomService
 	operationSrv  *service.OperationService
+	// userIDs выдаёт номер новому пользователю без telegram id — нужен входу
+	// через Google/Apple
+	userIDs userIDAllocator
 	// notifier опционален (см. SetNotifier): nil — уведомления выключены (no-op)
 	notifier Notifier
 
@@ -75,7 +85,8 @@ type Server struct {
 
 // NewServer собирает сервер со всеми зависимостями
 func NewServer(cfg Config, ur repository.UserRepository, rr repository.RoomRepository,
-	lr repository.LoginCodeRepository, rs *service.RoomService, os *service.OperationService) *Server {
+	lr repository.LoginCodeRepository, rs *service.RoomService, os *service.OperationService,
+	ua userIDAllocator) *Server {
 	// клиент для telegram: без общего Timeout, иначе он режет скачивание больших
 	// файлов (таймер тикает и во время чтения тела). Ограничиваем только фазу
 	// соединения/заголовков, а тело привязано к контексту входящего запроса
@@ -89,6 +100,7 @@ func NewServer(cfg Config, ur repository.UserRepository, rr repository.RoomRepos
 		loginCodeRepo: lr,
 		roomSrv:       rs,
 		operationSrv:  os,
+		userIDs:       ua,
 		authThrottle:  newThrottle(),
 		httpClient:    &http.Client{Transport: transport},
 		tgApiURL:      "https://api.telegram.org",

@@ -39,7 +39,8 @@ func newTestServerWithLoginCodes(cfg Config, userRepo *fakeUserRepo, roomRepo *f
 	}
 	return NewServer(cfg, userRepo, roomRepo, codeRepo,
 		service.NewRoomService(roomRepo),
-		service.NewOperationService(roomRepo))
+		service.NewOperationService(roomRepo),
+		newFakeUserIDAllocator())
 }
 
 // newTestRoom комната с участниками 1 и 2 и ЛЕГАСИ-операцией эпохи master-2021

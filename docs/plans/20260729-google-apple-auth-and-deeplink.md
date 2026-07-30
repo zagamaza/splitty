@@ -238,17 +238,17 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `internal/rest/server.go`
 - Modify: `cmd/splitty/main.go`
 
-- [ ] создать `MongoSequenceRepository` над коллекцией `sequence` с методом `NextUserID(ctx) (int, error)`
-- [ ] реализовать через `FindOneAndUpdate` с `$inc` и `SetUpsert(true)`, документ `{_id: "user_id", value: int}`, `ReturnDocument(options.After)`
-- [ ] константа `firstSyntheticUserID = 1_000_000_000_000`; при первом вызове вернуть именно её
-- [ ] **`$inc` и `$setOnInsert` на одно поле в Mongo конфликтуют** («updating the path ... would create a conflict») — наивная реализация упадёт. Использовать один из рецептов и записать выбранный комментарием: (а) хранить в документе **смещение**, начиная с 0, и возвращать `firstSyntheticUserID + value`; либо (б) до первого `$inc` сделать `InsertOne({_id:"user_id", value: firstSyntheticUserID-1})` с игнорированием duplicate key. Вариант (а) проще и не имеет гонки на старте
-- [ ] **⚠️ аллокатор нужен в ДВУХ графах, и главный из них — не REST.** `UpsertTelegramUser` (Task 6) — метод `repository.UserRepository`, и вызывается он из `internal/events/telegram.go:83`, то есть из графа **бота**, который к `rest.Server` отношения не имеет. Пробросить аллокатор только в `rest.Server` — значит сделать шаг «взять номер из аллокатора» в Task 6 неисполнимым
-- [ ] решение: аллокатор живёт **внутри `MongoUserRepository`**. `NewUserRepository(col *mongo.Database)` (`repository.go:123`) уже принимает базу — поднять коллекцию `sequence` прямо в конструкторе, **сигнатуру не менять**. Тогда оба вызова (`cmd/splitty/main.go:122` и `cmd/splitty/wire_gen.go:53`) остаются как есть
-- [ ] **если сигнатуру всё же менять** — правятся ОБА вызова, включая `wire_gen.go:53`, и утверждение из Context «wire для этого плана не нужен» перестаёт быть верным: `wire.go:30` придётся перегенерировать. Это дороже; выбирать только при веской причине и записать её комментарием
-- [ ] пробросить аллокатор ещё и в `rest.Server` — он нужен `handleAuthGoogle`/`handleAuthApple` (Tasks 10-11): добавить поле в структуру `Server` (`internal/rest/server.go:47`) и параметр в `NewServer`, обновив единственный вызов в `main.go:137` и вызовы в тестах
-- [ ] объявить в `internal/rest` узкий интерфейс `userIDAllocator interface { NextUserID(ctx) (int, error) }` — чтобы в тестах подставлялся фейк без mongo
-- [ ] написать интеграционные тесты: первый вызов возвращает `firstSyntheticUserID`; последовательные монотонно растут; 10 конкурентных горутин дают 10 различных значений
-- [ ] `go test ./internal/...` — зелёные перед Task 5
+- [x] создать `MongoSequenceRepository` над коллекцией `sequence` с методом `NextUserID(ctx) (int, error)`
+- [x] реализовать через `FindOneAndUpdate` с `$inc` и `SetUpsert(true)`, документ `{_id: "user_id", value: int}`, `ReturnDocument(options.After)`
+- [x] константа `firstSyntheticUserID = 1_000_000_000_000`; при первом вызове вернуть именно её
+- [x] **`$inc` и `$setOnInsert` на одно поле в Mongo конфликтуют** («updating the path ... would create a conflict») — наивная реализация упадёт. Использовать один из рецептов и записать выбранный комментарием: (а) хранить в документе **смещение**, начиная с 0, и возвращать `firstSyntheticUserID + value`; либо (б) до первого `$inc` сделать `InsertOne({_id:"user_id", value: firstSyntheticUserID-1})` с игнорированием duplicate key. Вариант (а) проще и не имеет гонки на старте
+- [x] **⚠️ аллокатор нужен в ДВУХ графах, и главный из них — не REST.** `UpsertTelegramUser` (Task 6) — метод `repository.UserRepository`, и вызывается он из `internal/events/telegram.go:83`, то есть из графа **бота**, который к `rest.Server` отношения не имеет. Пробросить аллокатор только в `rest.Server` — значит сделать шаг «взять номер из аллокатора» в Task 6 неисполнимым
+- [x] решение: аллокатор живёт **внутри `MongoUserRepository`**. `NewUserRepository(col *mongo.Database)` (`repository.go:123`) уже принимает базу — поднять коллекцию `sequence` прямо в конструкторе, **сигнатуру не менять**. Тогда оба вызова (`cmd/splitty/main.go:122` и `cmd/splitty/wire_gen.go:53`) остаются как есть
+- [x] **если сигнатуру всё же менять** — правятся ОБА вызова, включая `wire_gen.go:53`, и утверждение из Context «wire для этого плана не нужен» перестаёт быть верным: `wire.go:30` придётся перегенерировать. Это дороже; выбирать только при веской причине и записать её комментарием
+- [x] пробросить аллокатор ещё и в `rest.Server` — он нужен `handleAuthGoogle`/`handleAuthApple` (Tasks 10-11): добавить поле в структуру `Server` (`internal/rest/server.go:47`) и параметр в `NewServer`, обновив единственный вызов в `main.go:137` и вызовы в тестах
+- [x] объявить в `internal/rest` узкий интерфейс `userIDAllocator interface { NextUserID(ctx) (int, error) }` — чтобы в тестах подставлялся фейк без mongo
+- [x] написать интеграционные тесты: первый вызов возвращает `firstSyntheticUserID`; последовательные монотонно растут; 10 конкурентных горутин дают 10 различных значений
+- [x] `go test ./internal/...` — зелёные перед Task 5
 
 ### Task 5: Одноразовый бэкфилл telegram_id = _id
 
