@@ -410,16 +410,28 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Create: `internal/oidc/jwks.go`
 - Create: `internal/oidc/verifier_test.go`
 
-- [ ] **не писать свой разбор JWT**: использовать уже имеющийся прямой `github.com/golang-jwt/jwt/v5` (`go.mod:11`) — `jwt.ParseWithClaims` c `jwt.WithValidMethods([]string{"RS256"})`, `jwt.WithIssuer`, `jwt.WithAudience`, `jwt.WithExpirationRequired`, `jwt.WithLeeway(5*time.Minute)`. Своими руками — только загрузка и парсинг JWKS
-- [ ] **не подключать `github.com/MicahParks/keyfunc v1.9.0`** (`go.mod:31`, indirect): он написан под `jwt/v4`, а мы на `v5` — несовместимо. Свой `jwt.Keyfunc` поверх кеша
-- [ ] `type Claims struct { Subject, Email, Nonce string }` + `jwt.RegisteredClaims`
-- [ ] `type Verifier interface { Verify(ctx, idToken string) (*Claims, error) }` — интерфейс нужен для фейков в Tasks 10-12
-- [ ] `JWKSCache`: загрузка по URL, парсинг **только RSA** (`n`/`e`), выбор по `kid`. **ES256 и EC-ключи не поддерживать** — ни Google, ни Apple их не используют (YAGNI)
-- [ ] обновление кеша по TTL **и** по промаху `kid`, но не чаще раза в 5 минут — иначе мусорный `kid` в токене становится DoS на провайдера
-- [ ] `http.Client` с таймаутом 10 с и `io.LimitReader` на 1 МБ — внешнему хосту не доверяем
-- [ ] конструкторы `NewGoogle(clientIDs []string)` (JWKS `https://www.googleapis.com/oauth2/v3/certs`, `iss` ∈ {`https://accounts.google.com`, `accounts.google.com`}) и `NewApple(clientIDs []string)` (JWKS `https://appleid.apple.com/auth/keys`, `iss` = `https://appleid.apple.com`)
-- [ ] написать тесты на локально сгенерированных RSA-ключах (`crypto/rsa`, без сети): валидный токен проходит; истёкший — ошибка; чужой `aud` — ошибка; чужой `iss` — ошибка; `alg: none` отвергается; HS256 отвергается; неизвестный `kid` триггерит **один** refresh и затем ошибку; повторный промах `kid` в пределах 5 минут в сеть не ходит
-- [ ] `go test ./internal/...` — зелёные перед Task 10
+- [x] **не писать свой разбор JWT**: использовать уже имеющийся прямой `github.com/golang-jwt/jwt/v5` (`go.mod:11`) — `jwt.ParseWithClaims` c `jwt.WithValidMethods([]string{"RS256"})`, `jwt.WithIssuer`, `jwt.WithAudience`, `jwt.WithExpirationRequired`, `jwt.WithLeeway(5*time.Minute)`. Своими руками — только загрузка и парсинг JWKS
+- [x] **не подключать `github.com/MicahParks/keyfunc v1.9.0`** (`go.mod:31`, indirect): он написан под `jwt/v4`, а мы на `v5` — несовместимо. Свой `jwt.Keyfunc` поверх кеша
+- [x] `type Claims struct { Subject, Email, Nonce string }` + `jwt.RegisteredClaims`
+- [x] `type Verifier interface { Verify(ctx, idToken string) (*Claims, error) }` — интерфейс нужен для фейков в Tasks 10-12
+- [x] `JWKSCache`: загрузка по URL, парсинг **только RSA** (`n`/`e`), выбор по `kid`. **ES256 и EC-ключи не поддерживать** — ни Google, ни Apple их не используют (YAGNI)
+- [x] обновление кеша по TTL **и** по промаху `kid`, но не чаще раза в 5 минут — иначе мусорный `kid` в токене становится DoS на провайдера
+- [x] `http.Client` с таймаутом 10 с и `io.LimitReader` на 1 МБ — внешнему хосту не доверяем
+- [x] конструкторы `NewGoogle(clientIDs []string)` (JWKS `https://www.googleapis.com/oauth2/v3/certs`, `iss` ∈ {`https://accounts.google.com`, `accounts.google.com`}) и `NewApple(clientIDs []string)` (JWKS `https://appleid.apple.com/auth/keys`, `iss` = `https://appleid.apple.com`)
+- [x] написать тесты на локально сгенерированных RSA-ключах (`crypto/rsa`, без сети): валидный токен проходит; истёкший — ошибка; чужой `aud` — ошибка; чужой `iss` — ошибка; `alg: none` отвергается; HS256 отвергается; неизвестный `kid` триггерит **один** refresh и затем ошибку; повторный промах `kid` в пределах 5 минут в сеть не ходит
+- [x] `go test ./internal/...` — зелёные перед Task 10
+
+**Как сделано (для следующих задач):**
+- `Verifier` — интерфейс, реализация `providerVerifier` (неэкспортируемая); в Tasks 10-12 подставляется фейк, `nil` в конфиге = провайдер выключен
+- `Claims` встраивает `jwt.RegisteredClaims`, поэтому `sub` читается как `claims.Subject`; добавлены `Email` и `Nonce` (последний нужен Apple-потоку Task 11)
+- [decision] `jwt.WithAudience(ids...)` в v5.3.1 имеет семантику ИЛИ (`WithAllAudiences` — это И), поэтому несколько client id проверяются штатной опцией. А вот `jwt.WithIssuer` принимает ровно одно значение, и у Google издателей два — опция ставится только когда издатель один (Apple), а проверка вхождения `iss` в список всё равно делается своей после разбора. Ветвление задокументировано комментарием у поля `issuers`
+- [decision] троттлинг обновления считается от **последнего похода** за JWKS, успешного или нет: иначе лежащий провайдер получал бы запрос на каждый вход
+- [decision] если TTL истёк, а обновление не удалось — работаем на устаревших ключах вместо отказа во входе всем (тест `TestStaleKeysUsedWhenRefreshFails`). Ошибка возвращается только когда кеш пуст вовсе
+- [decision] мьютекс кеша держится и на время HTTP-запроса: параллельные входы ждут один поход за ключами, а не устраивают стадо запросов к провайдеру
+- [decision] ключи короче 2048 бит, `use != "sig"`, `alg != RS256` и не-RSA записи из JWKS отбрасываются молча — одна негодная запись в наборе не должна ронять весь набор
+- проверка `alg` (`WithValidMethods`) в jwt/v5 срабатывает **до** вызова `keyfunc`, поэтому `alg:none`/HS256-подделки не вызывают похода в сеть — это зафиксировано отдельным тестом (`TestVerifyRejectsAlgNoneAndHS256` считает обращения к JWKS)
+- часы кеша (`jwksCache.now`) вынесены в поле — тесты двигают время, `time.Sleep` в тестах нет
+- новых зависимостей не добавлено: `go.mod`/`go.sum` не изменились
 
 ### Task 10: POST /api/v1/auth/google
 
