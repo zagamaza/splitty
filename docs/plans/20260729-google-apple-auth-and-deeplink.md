@@ -194,18 +194,18 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `internal/api/tg.go`
 - Create: `internal/api/user_test.go`
 
-- [ ] добавить в `User` поля: `TelegramID *int` (`bson:"telegram_id,omitempty" json:"-"`), `GoogleSub string` (`bson:"google_sub,omitempty" json:"-"`), `AppleSub string` (`bson:"apple_sub,omitempty" json:"-"`), `Email string` (`bson:"email,omitempty" json:"-"`), `DeletedAt *time.Time` (`bson:"deleted_at,omitempty" json:"-"`), `AppleRefreshToken string` (`bson:"apple_refresh_token,omitempty" json:"-"` — нужен для отзыва токенов при удалении аккаунта, см. Tasks 11 и 13)
-- [ ] у всех новых полей `json:"-"` — они не должны протечь в API-ответы
-- [ ] переписать комментарий к `User.ID`: это НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY, telegram id живёт в `TelegramID`
-- [ ] добавить `func (u *User) HasTelegram() bool` — `u != nil && u.TelegramID != nil && *u.TelegramID != 0`
-- [ ] добавить `func (u *User) IsDeleted() bool` — `u != nil && u.DeletedAt != nil`
-- [ ] добавить **`func (u User) Snapshot() User`** — возвращает копию с обнулёнными `TelegramID`, `GoogleSub`, `AppleSub`, `Email`, `AppleRefreshToken`, `DeletedAt`, `PushTokens`, `Notify`, `Aliases`, `BankDetails`; предназначен для записи во встроенные снимки комнат
-- [ ] задокументировать в комментарии к `Snapshot`, зачем он: `JoinToRoom` (`repository.go:219`) и операции пишут `api.User` целиком, и без санитайза поля личности (включая `email`) осели бы в документах `room` навсегда
-- [ ] написать тесты `HasTelegram` (nil-получатель, nil-поле, ноль, валидное значение) и `IsDeleted`
-- [ ] написать тест `Snapshot`: все поля личности обнулены, а `ID`/`Username`/`DisplayName`/`UserLang` сохранены
-- [ ] написать тест-страж: рефлексией пройти по полям `User` и убедиться, что `Snapshot` обнуляет все поля из списка чувствительных — чтобы новое поле, добавленное позже, не утекло молча
-- [ ] написать bson-тест: `omitempty` не пишет пустые новые поля
-- [ ] `go test ./internal/...` — зелёные перед Task 3
+- [x] добавить в `User` поля: `TelegramID *int` (`bson:"telegram_id,omitempty" json:"-"`), `GoogleSub string` (`bson:"google_sub,omitempty" json:"-"`), `AppleSub string` (`bson:"apple_sub,omitempty" json:"-"`), `Email string` (`bson:"email,omitempty" json:"-"`), `DeletedAt *time.Time` (`bson:"deleted_at,omitempty" json:"-"`), `AppleRefreshToken string` (`bson:"apple_refresh_token,omitempty" json:"-"` — нужен для отзыва токенов при удалении аккаунта, см. Tasks 11 и 13)
+- [x] у всех новых полей `json:"-"` — они не должны протечь в API-ответы
+- [x] переписать комментарий к `User.ID`: это НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY, telegram id живёт в `TelegramID`
+- [x] добавить `func (u *User) HasTelegram() bool` — `u != nil && u.TelegramID != nil && *u.TelegramID != 0`
+- [x] добавить `func (u *User) IsDeleted() bool` — `u != nil && u.DeletedAt != nil`
+- [x] добавить **`func (u User) Snapshot() User`** — возвращает копию с обнулёнными `TelegramID`, `GoogleSub`, `AppleSub`, `Email`, `AppleRefreshToken`, `DeletedAt`, `PushTokens`, `Notify`, `Aliases`, `BankDetails`; предназначен для записи во встроенные снимки комнат
+- [x] задокументировать в комментарии к `Snapshot`, зачем он: `JoinToRoom` (`repository.go:219`) и операции пишут `api.User` целиком, и без санитайза поля личности (включая `email`) осели бы в документах `room` навсегда
+- [x] написать тесты `HasTelegram` (nil-получатель, nil-поле, ноль, валидное значение) и `IsDeleted`
+- [x] написать тест `Snapshot`: все поля личности обнулены, а `ID`/`Username`/`DisplayName`/`UserLang` сохранены
+- [x] написать тест-страж: рефлексией пройти по полям `User` и убедиться, что `Snapshot` обнуляет все поля из списка чувствительных — чтобы новое поле, добавленное позже, не утекло молча
+- [x] написать bson-тест: `omitempty` не пишет пустые новые поля
+- [x] `go test ./internal/...` — зелёные перед Task 3
 
 ### Task 3: Методы поиска по личностям, индексы и санитайз снимков в репозитории
 

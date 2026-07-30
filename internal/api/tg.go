@@ -80,6 +80,12 @@ type Video struct {
 
 // User defines user info of the Message
 type User struct {
+	// ID — НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY, а не telegram user id. Исторически они
+	// совпадали (telegram был единственным способом входа), поэтому у старых
+	// аккаунтов _id действительно равен telegram id. Telegram-личность теперь
+	// живёт в отдельном поле TelegramID, а пользователи, пришедшие через
+	// Google/Apple, получают синтетический номер из аллокатора и telegram id не
+	// имеют вовсе. В Telegram API можно передавать только TelegramID.
 	ID             int    `json:"id" bson:"_id"`
 	Username       string `json:"userName" bson:"user_name"`
 	DisplayName    string `json:"displayName" bson:"display_name"`
@@ -99,6 +105,58 @@ type User struct {
 	// Пополняются при логине/refresh, чистятся на logout и при отбраковке FCM
 	// (UNREGISTERED). Дедуп по token (см. UserRepository.AddPushToken).
 	PushTokens []PushToken `json:"-" bson:"push_tokens,omitempty"`
+	// TelegramID — telegram user id, если аккаунт связан с telegram. nil у
+	// пользователей, вошедших через Google/Apple. Unique sparse в mongo.
+	TelegramID *int `json:"-" bson:"telegram_id,omitempty"`
+	// GoogleSub — sub из id-токена Google. Unique sparse в mongo.
+	GoogleSub string `json:"-" bson:"google_sub,omitempty"`
+	// AppleSub — sub из id-токена Apple. Unique sparse в mongo.
+	AppleSub string `json:"-" bson:"apple_sub,omitempty"`
+	// Email — best-effort, НЕ идентификатор: Apple отдаёт relay-адрес и только
+	// при первом входе, почта меняется. Аккаунты по email не склеиваются.
+	Email string `json:"-" bson:"email,omitempty"`
+	// DeletedAt — tombstone: аккаунт удалён. Документ остаётся (иначе upsert-методы
+	// репозитория воскресили бы его, а выданный JWT продолжал бы работать),
+	// но PII вычищена, а поля личности освобождены под повторную регистрацию.
+	DeletedAt *time.Time `json:"-" bson:"deleted_at,omitempty"`
+	// AppleRefreshToken — refresh token Apple, полученный обменом authorization
+	// code при входе. Нужен, чтобы при удалении аккаунта отозвать токены через
+	// POST https://appleid.apple.com/auth/revoke (Apple Guideline 5.1.1(v)).
+	AppleRefreshToken string `json:"-" bson:"apple_refresh_token,omitempty"`
+}
+
+// HasTelegram — привязан ли к аккаунту telegram. Только для таких пользователей
+// имеет смысл отправка в Telegram API и ссылки вида tg://user?id=.
+func (u *User) HasTelegram() bool {
+	return u != nil && u.TelegramID != nil && *u.TelegramID != 0
+}
+
+// IsDeleted — помечен ли аккаунт удалённым (tombstone).
+func (u *User) IsDeleted() bool {
+	return u != nil && u.DeletedAt != nil
+}
+
+// Snapshot возвращает копию пользователя, пригодную для записи во встроенный
+// снимок комнаты: поля личности, PII и персональные настройки обнулены.
+//
+// Зачем: JoinToRoom (repository.go) делает $push {users: u} целым api.User, и
+// операции точно так же кладут пользователя в Donor/Recipients. Без санитайза
+// telegram_id, google_sub, apple_sub, email и push-токены осели бы в документах
+// room навсегда — их оттуда никто не чистит и не обновляет. Снимок нужен только
+// ради id и отображаемого имени, всё остальное читается из канонического
+// документа user.
+func (u User) Snapshot() User {
+	u.TelegramID = nil
+	u.GoogleSub = ""
+	u.AppleSub = ""
+	u.Email = ""
+	u.AppleRefreshToken = ""
+	u.DeletedAt = nil
+	u.PushTokens = nil
+	u.Notify = nil
+	u.Aliases = nil
+	u.BankDetails = ""
+	return u
 }
 
 // PushToken — FCM-токен одного устройства пользователя.
