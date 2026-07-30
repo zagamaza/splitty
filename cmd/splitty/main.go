@@ -153,6 +153,16 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		return nil, nil, nil, errors.Wrap(err, "cannot create user identity indexes")
 	}
 
+	// Порядок фиксирован: сначала индексы, потом бэкфилл. Индекс по telegram_id
+	// — sparse, поэтому он спокойно строится на документах, где поля ещё нет;
+	// обратный порядок ничего бы не дал. Ошибка фатальна: сервер без
+	// проставленных telegram_id не может ни отправить telegram-уведомление, ни
+	// найти существующего пользователя по telegram-личности
+	if _, err := repository.BackfillTelegramID(ctx, db); err != nil {
+		cleanup()
+		return nil, nil, nil, errors.Wrap(err, "cannot backfill telegram_id")
+	}
+
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
 	if cfg.GeminiApiKey != "" {
 		aiUsageRepo := repository.NewAiUsageRepository(db)
