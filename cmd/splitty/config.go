@@ -27,6 +27,14 @@ type config struct {
 	ReviewLoginCode string `env:"REVIEW_LOGIN_CODE" envDefault:""`
 	ReviewUserId    int    `env:"REVIEW_USER_ID" envDefault:"0"`
 
+	// GoogleClientIds — OAuth client id приложений (iOS, Android, web), которым
+	// Google выпускает ID-токены; любой из них принимается как aud. Разделитель
+	// ":", потому что client id содержит точки и дефисы, но не двоеточия.
+	// Пусто — вход через Google выключен и POST /api/v1/auth/google отдаёт 503.
+	// ВНИМАНИЕ: envDefault:"" со сплитом даёт [""], а не пустой срез — пустые
+	// элементы обязательно отфильтровать (см. nonEmptyValues в main.go)
+	GoogleClientIds []string `env:"GOOGLE_CLIENT_IDS" envSeparator:":" envDefault:""`
+
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
 	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`

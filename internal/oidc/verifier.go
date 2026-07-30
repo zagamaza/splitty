@@ -37,6 +37,11 @@ type Claims struct {
 	jwt.RegisteredClaims
 	Email string `json:"email"`
 	Nonce string `json:"nonce"`
+	// Name — отображаемое имя из профиля. Есть у Google (при scope profile) и
+	// нет у Apple: Apple отдаёт имя отдельным полем на клиенте и только при
+	// первом входе. Используется лишь при СОЗДАНИИ пользователя — переименовать
+	// себя в Splitty провайдер права не имеет.
+	Name string `json:"name"`
 }
 
 // Verifier проверяет ID-токен провайдера. Интерфейс, а не структура, чтобы в

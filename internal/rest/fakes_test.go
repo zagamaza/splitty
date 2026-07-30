@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/oidc"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -66,6 +68,38 @@ func (f *fakeUserIDAllocator) NextUserID(context.Context) (int, error) {
 	return id, nil
 }
 
+// fakeOIDCVerifier — oidc.Verifier без сети и без ключей: знакомый токен
+// отдаёт заранее заданные claims, любой другой — ошибку. Тесты входа через
+// провайдеров проверяют поведение хендлера, а не разбор JWT (он покрыт в
+// internal/oidc)
+type fakeOIDCVerifier struct {
+	tokens map[string]*oidc.Claims
+	calls  int
+}
+
+func newFakeVerifier() *fakeOIDCVerifier {
+	return &fakeOIDCVerifier{tokens: map[string]*oidc.Claims{}}
+}
+
+// with регистрирует валидный токен с claims провайдера
+func (f *fakeOIDCVerifier) with(idToken, sub, email, name string) *fakeOIDCVerifier {
+	f.tokens[idToken] = &oidc.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{Subject: sub},
+		Email:            email,
+		Name:             name,
+	}
+	return f
+}
+
+func (f *fakeOIDCVerifier) Verify(_ context.Context, idToken string) (*oidc.Claims, error) {
+	f.calls++
+	claims, ok := f.tokens[idToken]
+	if !ok {
+		return nil, errors.New("подпись не проверена")
+	}
+	return claims, nil
+}
+
 // fakeUserRepo in-memory реализация repository.UserRepository для тестов
 type fakeUserRepo struct {
 	users map[int]*api.User
@@ -120,8 +154,13 @@ func (f *fakeUserRepo) CreateIdentityUser(_ context.Context, u api.User) error {
 	return nil
 }
 
-// errDuplicateKey имитирует E11000 unique-индекса
-var errDuplicateKey = errors.New("E11000 duplicate key error")
+// errDuplicateKey имитирует E11000 unique-индекса. Именно WriteException
+// драйвера, а не errors.New: боевой код узнаёт дубликат через
+// repository.IsDuplicateKey, и на плоской ошибке retry входа через
+// Google/Apple в тестах молча превращался бы в 500
+var errDuplicateKey error = mongo.WriteException{
+	WriteErrors: []mongo.WriteError{{Code: 11000, Message: "E11000 duplicate key error"}},
+}
 
 // UpsertTelegramUser повторяет логику mongo-реализации: поиск по telegram_id,
 // иначе создание с _id == telegram id, а при занятом _id — с синтетическим

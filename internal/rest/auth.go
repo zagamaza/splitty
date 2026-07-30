@@ -14,7 +14,10 @@ import (
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/oidc"
+	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -284,6 +287,103 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 
 	authSucceeded = true
 	s.finishAuth(w, r, api.User{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName})
+}
+
+type googleAuthRequest struct {
+	IdToken string `json:"idToken"`
+}
+
+// identityAuthAttempts — сколько раз вход через внешнего провайдера
+// переспрашивает базу на duplicate key. Двух хватает на любую реальную гонку
+// (проигравший видит документ победителя со второй попытки), третья — запас
+const identityAuthAttempts = 3
+
+// handleAuthGoogle POST /api/v1/auth/google — вход по ID-токену Google.
+// Тело: {"idToken":"…"}. Пользователь ищется по google_sub; не нашли — заводим
+// нового с синтетическим номером из аллокатора (telegram id у него нет)
+func (s *Server) handleAuthGoogle(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.GoogleVerifier == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "вход через Google не сконфигурирован")
+		return
+	}
+	// Ключ троттлинга с собственным префиксом: "ip:"+clientIP, как у /auth/code
+	// (см. handleAuthCode), означал бы общий бюджет — вход через Google выжигал
+	// бы попытки входа по коду с того же адреса и наоборот
+	if !s.authThrottle.allow("google:"+clientIP(r), oauthPerIPPerMin) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
+
+	var req googleAuthRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
+		hErr.write(w)
+		return
+	}
+	idToken := strings.TrimSpace(req.IdToken)
+	if idToken == "" {
+		writeError(w, http.StatusBadRequest, "validation", "поле idToken обязательно")
+		return
+	}
+
+	claims, err := s.cfg.GoogleVerifier.Verify(r.Context(), idToken)
+	if err != nil {
+		// Причину наружу не отдаём: подпись, издатель, aud и срок — подсказки
+		// тому, кто подбирает токен. Детали остаются в логах
+		log.Warn().Err(err).Msg("google id token rejected")
+		writeError(w, http.StatusUnauthorized, "unauthorized", "не удалось проверить токен Google")
+		return
+	}
+
+	user, err := s.resolveGoogleUser(r.Context(), claims)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot resolve google user")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить пользователя")
+		return
+	}
+	s.respondWithToken(w, user)
+}
+
+// resolveGoogleUser находит пользователя по google_sub или заводит нового.
+//
+// Аккаунты по email НЕ склеиваются, даже при полном совпадении: почту меняют,
+// Apple выдаёт relay-адрес, и доверять ей как идентификатору нельзя. Привязка
+// google-личности к существующему аккаунту — только явная (см. /me/link/*)
+func (s *Server) resolveGoogleUser(ctx context.Context, claims *oidc.Claims) (*api.User, error) {
+	var lastErr error
+	for attempt := 0; attempt < identityAuthAttempts; attempt++ {
+		// Поиск по личности идёт первым шагом КАЖДОЙ итерации, а не только
+		// первой: duplicate key здесь означает гонку двух первых входов одного
+		// человека (номер из аллокатора атомарен и сам по себе не конфликтует),
+		// поэтому проигравший обязан подобрать документ, созданный победителем.
+		// Слепой retry «взять новый номер и вставить снова» упёрся бы в
+		// unique-индекс по google_sub все три раза и отдал клиенту 500
+		existing, err := s.userRepo.FindByGoogleSub(ctx, claims.Subject)
+		if err == nil {
+			return existing, nil
+		}
+		if err != mongo.ErrNoDocuments {
+			return nil, err
+		}
+
+		id, err := s.userIDs.NextUserID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		err = s.userRepo.CreateIdentityUser(ctx, api.User{
+			ID:          id,
+			GoogleSub:   claims.Subject,
+			Email:       claims.Email,
+			DisplayName: strings.TrimSpace(claims.Name),
+		})
+		if err == nil {
+			return s.userRepo.FindById(ctx, id)
+		}
+		if !repository.IsDuplicateKey(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, errors.Wrapf(lastErr, "не удалось создать google-пользователя за %d попыток", identityAuthAttempts)
 }
 
 type devAuthRequest struct {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
+	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/push"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/rest"
@@ -137,6 +138,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		TgToken:         cfg.TgToken,
 		ReviewLoginCode: cfg.ReviewLoginCode,
 		ReviewUserId:    cfg.ReviewUserId,
+		GoogleVerifier:  initGoogleVerifier(cfg),
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
 
@@ -201,6 +203,36 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		userRepo:     userRepository,
 		pushSender:   pushSender,
 	}, cleanup, nil
+}
+
+// initGoogleVerifier собирает верификатор ID-токенов Google. Возвращает nil
+// (вход через Google выключен, хендлер отвечает 503), когда не задан ни один
+// client id.
+//
+// Фильтрация пустых элементов обязательна: env-парсер со сплитом по ":" на
+// envDefault:"" отдаёт срез из одной ПУСТОЙ строки, а не пустой срез. Без неё
+// len(clientIDs) == 1, верификатор считался бы сконфигурированным с невозможным
+// audience "" и на каждый честный токен отвечал бы 401 вместо честного 503 —
+// вместо «фича не настроена» клиент видел бы «вас не пускают»
+func initGoogleVerifier(cfg *config) oidc.Verifier {
+	clientIDs := nonEmptyValues(cfg.GoogleClientIds)
+	if len(clientIDs) == 0 {
+		log.Info().Msg("Google sign-in disabled (GOOGLE_CLIENT_IDS empty)")
+		return nil
+	}
+	log.Info().Msgf("Google sign-in enabled for %d client id(s)", len(clientIDs))
+	return oidc.NewGoogle(clientIDs)
+}
+
+// nonEmptyValues отбрасывает пустые элементы env-списка (см. initGoogleVerifier)
+func nonEmptyValues(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, v := range values {
+		if trimmed := strings.TrimSpace(v); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 // resolveJwtSecret применяет политику JWT-секрета: пустой API_JWT_SECRET допустим

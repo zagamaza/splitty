@@ -441,18 +441,29 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `cmd/splitty/config.go`
 - Modify: `cmd/splitty/main.go`
 - Modify: `internal/rest/auth_test.go`
+- ➕ Modify: `internal/rest/throttle.go` (константа `oauthPerIPPerMin`), `internal/rest/fakes_test.go` (фейк verifier + честный `errDuplicateKey`), `internal/oidc/verifier.go` (claim `name`)
+- ➕ Create: `cmd/splitty/config_test.go` (тест на фильтрацию пустых client id)
 
-- [ ] добавить в `cmd/splitty/config.go` поле `GoogleClientIds []string` (`env:"GOOGLE_CLIENT_IDS" envSeparator:":" envDefault:""`)
-- [ ] **отфильтровать пустые элементы в `main.go`** перед решением «verifier включён»: `envDefault:""` со сплитом даёт `[""]`, а не пустой срез — иначе google-вход считался бы сконфигурированным с невозможным audience и отвечал 401 вместо честного 503
-- [ ] добавить в `rest.Config` (`server.go:32`) поле `GoogleVerifier oidc.Verifier` (nil = выключено), собрать в `main.go`
-- [ ] реализовать `handleAuthGoogle`: тело `{"idToken":"…"}`; пусто → `400 validation`; verifier nil → `503 unavailable`; ошибка верификации → `401 unauthorized` **без деталей причины**
-- [ ] поиск по `google_sub` → нашли: выдать токен; не нашли: создать через `CreateIdentityUser` с `_id` из аллокатора
-- [ ] **retry при duplicate key начинается с повторного `FindByGoogleSub`**: дубль означает гонку двух первых входов одного человека (номер из `$inc` атомарен и не конфликтует), поэтому проигравший должен подобрать созданного победителем. Слепой retry «взять новый номер и вставить снова» упрётся в unique-индекс по `google_sub` все 3 раза и отдаст 500
-- [ ] **не склеивать аккаунты по email автоматически** — email не доверенный идентификатор (Apple relay, смена почты); только явная привязка (Task 12)
-- [ ] зарегистрировать `mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)` рядом с `server.go:152-154`
-- [ ] применить per-IP троттлинг **с собственным префиксом ключа**: `s.authThrottle.allow("google:"+clientIP(r), …)`. Использовать буквально `"ip:"+clientIP(r)` как у `/auth/code` (`auth.go:199`) **нельзя** — общий ключ означал бы, что вход через Google выжигает бюджет входа по коду с того же IP и наоборот
-- [ ] написать тесты (фейковый verifier): новый пользователь получает `_id ≥ 10¹²` и не имеет `telegram_id`; повторный вход находит того же по `google_sub`, дубля нет; невалидный токен → 401; нет конфига → 503; пустое тело → 400; троттлинг срабатывает
-- [ ] `go test ./internal/...` — зелёные перед Task 11
+- [x] добавить в `cmd/splitty/config.go` поле `GoogleClientIds []string` (`env:"GOOGLE_CLIENT_IDS" envSeparator:":" envDefault:""`)
+- [x] **отфильтровать пустые элементы в `main.go`** перед решением «verifier включён»: `envDefault:""` со сплитом даёт `[""]`, а не пустой срез — иначе google-вход считался бы сконфигурированным с невозможным audience и отвечал 401 вместо честного 503
+- [x] добавить в `rest.Config` (`server.go:32`) поле `GoogleVerifier oidc.Verifier` (nil = выключено), собрать в `main.go`
+- [x] реализовать `handleAuthGoogle`: тело `{"idToken":"…"}`; пусто → `400 validation`; verifier nil → `503 unavailable`; ошибка верификации → `401 unauthorized` **без деталей причины**
+- [x] поиск по `google_sub` → нашли: выдать токен; не нашли: создать через `CreateIdentityUser` с `_id` из аллокатора
+- [x] **retry при duplicate key начинается с повторного `FindByGoogleSub`**: дубль означает гонку двух первых входов одного человека (номер из `$inc` атомарен и не конфликтует), поэтому проигравший должен подобрать созданного победителем. Слепой retry «взять новый номер и вставить снова» упрётся в unique-индекс по `google_sub` все 3 раза и отдаст 500
+- [x] **не склеивать аккаунты по email автоматически** — email не доверенный идентификатор (Apple relay, смена почты); только явная привязка (Task 12)
+- [x] зарегистрировать `mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)` рядом с `server.go:152-154`
+- [x] применить per-IP троттлинг **с собственным префиксом ключа**: `s.authThrottle.allow("google:"+clientIP(r), …)`. Использовать буквально `"ip:"+clientIP(r)` как у `/auth/code` (`auth.go:199`) **нельзя** — общий ключ означал бы, что вход через Google выжигает бюджет входа по коду с того же IP и наоборот
+- [x] написать тесты (фейковый verifier): новый пользователь получает `_id ≥ 10¹²` и не имеет `telegram_id`; повторный вход находит того же по `google_sub`, дубля нет; невалидный токен → 401; нет конфига → 503; пустое тело → 400; троттлинг срабатывает
+- [x] `go test ./internal/...` — зелёные перед Task 11
+
+**Как сделано (для следующих задач):**
+- `handleAuthGoogle` (`internal/rest/auth.go`) — порядок: nil-verifier → 503, троттлинг, разбор тела, верификация, резолв. Проверка конфига стоит ДО троттлинга: выключенная фича обязана отвечать 503 независимо от того, сколько раз клиент постучался
+- резолв вынесен в `resolveGoogleUser` — цикл на `identityAuthAttempts = 3`, начинающийся с `FindByGoogleSub` на КАЖДОЙ итерации (тест `TestAuthGoogleDuplicateKeyPicksUpWinner` проверяет, что проигравший гонку подбирает документ победителя и второй вставки не делает)
+- [decision] `oauthPerIPPerMin = 20` — свой лимит, а не `authCodePerIPPerMin`: перебирать тут нечего (подпись провайдера не подделать), лимит про стоимость разбора и походов за JWKS, а за одним адресом сидит NAT. Ключ `"google:"+clientIP(r)`; тест проверяет, что после исчерпания бюджета Google вход по коду с того же адреса всё ещё отвечает `invalid_code`, а не `rate_limited`
+- [decision] ➕ в `oidc.Claims` добавлен claim `name`: клиент Google (Task 16) шлёт только `idToken`, имя больше взять неоткуда, а пользователь без `display_name` виден в комнатах пустой строкой. Пишется ТОЛЬКО при создании — переименовывать существующего провайдер права не имеет. Email в `display_name` не подставляется: это утекло бы в снимки комнат (`Snapshot()` чистит `email`, но не `display_name`)
+- [deviation] `errDuplicateKey` в `fakes_test.go` был `errors.New(...)`, а боевой код узнаёт дубликат через `repository.IsDuplicateKey` (разбор типов драйвера) — на плоской ошибке retry молча превращался в 500. Заменён на `mongo.WriteException{Code: 11000}`; фейк `UpsertTelegramUser` от этого не пострадал
+- [decision] `initGoogleVerifier` в `main.go` возвращает интерфейсный `nil` (никакого typed-nil): отдельного флага «включено» не нужно, `cfg.GoogleVerifier == nil` — единственный признак
+- Google-пользователь создаётся с `google_sub`, `email`, `display_name` и БЕЗ `telegram_id`. Следствия те же, что у dev-входа: telegram-уведомления ему не идут, `/users/{id}/avatar` отдаёт 404 — клиенты рисуют инициалы
 
 ### Task 11: POST /api/v1/auth/apple
 

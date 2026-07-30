@@ -12,6 +12,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
@@ -48,6 +49,11 @@ type Config struct {
 	// пустой код — механизм выключен
 	ReviewLoginCode string
 	ReviewUserId    int
+	// GoogleVerifier проверяет ID-токены Google для POST /auth/google.
+	// nil — вход через Google не сконфигурирован (GOOGLE_CLIENT_IDS пуст),
+	// эндпоинт отвечает 503. Интерфейс, а не client id: в тестах подставляется
+	// фейк и в сеть никто не ходит
+	GoogleVerifier oidc.Verifier
 }
 
 // Server REST API сервер со всеми зависимостями.
@@ -163,6 +169,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("POST /api/v1/auth/telegram", s.handleAuthTelegram)
 	mux.HandleFunc("POST /api/v1/auth/code", s.handleAuthCode)
+	mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)
 	mux.HandleFunc("POST /api/v1/auth/dev", s.handleAuthDev)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))

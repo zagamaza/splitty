@@ -1,18 +1,21 @@
 package rest
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/service"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -330,5 +333,224 @@ func TestAuthCodeReviewLogin(t *testing.T) {
 	rec := doRequest(t, s2, "POST", "/api/v1/auth/code", "", `{"code":"applereview"}`)
 	if rec.Code != 401 {
 		t.Fatalf("выключенный механизм должен давать 401, got %d", rec.Code)
+	}
+}
+
+// --- вход через Google: POST /api/v1/auth/google ---
+
+const testGoogleToken = "valid-google-id-token"
+
+// newGoogleServer сервер с фейковым верификатором, знающим testGoogleToken
+func newGoogleServer(userRepo *fakeUserRepo, sub, email, name string) (*Server, *fakeOIDCVerifier) {
+	v := newFakeVerifier().with(testGoogleToken, sub, email, name)
+	return newTestServer(Config{GoogleVerifier: v}, userRepo, newFakeRoomRepo()), v
+}
+
+func postGoogle(t *testing.T, s *Server, idToken string) *httptest.ResponseRecorder {
+	t.Helper()
+	return doRequest(t, s, http.MethodPost, "/api/v1/auth/google", "", fmt.Sprintf(`{"idToken": %q}`, idToken))
+}
+
+// Новый пользователь получает СИНТЕТИЧЕСКИЙ номер из аллокатора и не имеет
+// telegram_id: номер telegram ему взять неоткуда, а _id, равный чему-то
+// маленькому, столкнулся бы с историческими telegram-аккаунтами
+func TestAuthGoogleCreatesUserWithSyntheticID(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newGoogleServer(userRepo, "google-sub-1", "user@example.com", "Загир Нурмухаметов")
+
+	rec := postGoogle(t, s, testGoogleToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID < 1_000_000_000_000 {
+		t.Fatalf("_id = %d, ожидался синтетический номер ≥ 10^12", resp.User.ID)
+	}
+	if userId, err := s.parseToken(resp.Token); err != nil || userId != resp.User.ID {
+		t.Errorf("parseToken = (%d, %v), want (%d, nil)", userId, err, resp.User.ID)
+	}
+	created, ok := userRepo.users[resp.User.ID]
+	if !ok {
+		t.Fatalf("пользователь %d не создан", resp.User.ID)
+	}
+	if created.GoogleSub != "google-sub-1" {
+		t.Errorf("google_sub = %q, want google-sub-1", created.GoogleSub)
+	}
+	if created.Email != "user@example.com" {
+		t.Errorf("email = %q, want user@example.com", created.Email)
+	}
+	if created.DisplayName != "Загир Нурмухаметов" {
+		t.Errorf("display_name = %q, want имя из токена", created.DisplayName)
+	}
+	if created.TelegramID != nil {
+		t.Errorf("telegram_id = %v, у google-пользователя его быть не должно", *created.TelegramID)
+	}
+	// поля личности наружу не отдаются
+	if strings.Contains(rec.Body.String(), "google-sub-1") || strings.Contains(rec.Body.String(), "user@example.com") {
+		t.Errorf("ответ содержит поля личности: %s", rec.Body.String())
+	}
+}
+
+// Повторный вход находит того же пользователя по google_sub — дубля нет,
+// новый номер у аллокатора не берётся
+func TestAuthGoogleSecondLoginReusesAccount(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newGoogleServer(userRepo, "google-sub-1", "user@example.com", "Загир")
+
+	first := postGoogle(t, s, testGoogleToken)
+	second := postGoogle(t, s, testGoogleToken)
+	if first.Code != http.StatusOK || second.Code != http.StatusOK {
+		t.Fatalf("статусы = %d и %d, want 200 и 200", first.Code, second.Code)
+	}
+	var r1, r2 authResponseDto
+	if err := json.Unmarshal(first.Body.Bytes(), &r1); err != nil {
+		t.Fatalf("cannot parse first response: %v", err)
+	}
+	if err := json.Unmarshal(second.Body.Bytes(), &r2); err != nil {
+		t.Fatalf("cannot parse second response: %v", err)
+	}
+	if r1.User.ID != r2.User.ID {
+		t.Errorf("повторный вход дал другой _id: %d и %d", r1.User.ID, r2.User.ID)
+	}
+	if len(userRepo.users) != 1 {
+		t.Errorf("в базе %d пользователей, ожидался 1", len(userRepo.users))
+	}
+}
+
+// Аккаунты по email НЕ склеиваются: почта не идентификатор (её меняют, Apple
+// отдаёт relay-адрес). Совпадение email с существующим аккаунтом обязано дать
+// НОВЫЙ профиль, а не вход в чужой
+func TestAuthGoogleDoesNotMergeByEmail(t *testing.T) {
+	existing := api.User{ID: 500, Username: "zagir", DisplayName: "Загир", Email: "user@example.com"}
+	userRepo := newFakeUserRepo(existing)
+	s, _ := newGoogleServer(userRepo, "google-sub-1", "user@example.com", "Загир")
+
+	rec := postGoogle(t, s, testGoogleToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID == existing.ID {
+		t.Fatalf("вход по совпавшему email пустил в чужой аккаунт %d", existing.ID)
+	}
+	if userRepo.users[existing.ID].GoogleSub != "" {
+		t.Errorf("существующему аккаунту молча привязали google_sub")
+	}
+}
+
+// Невалидный токен — 401 без объяснения причины: подпись, издатель, aud и срок
+// это подсказки тому, кто подбирает токен
+func TestAuthGoogleInvalidToken(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newGoogleServer(userRepo, "google-sub-1", "user@example.com", "Загир")
+
+	rec := postGoogle(t, s, "forged-token")
+	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+	if strings.Contains(rec.Body.String(), "подпись не проверена") {
+		t.Errorf("причина отказа утекла клиенту: %s", rec.Body.String())
+	}
+	if len(userRepo.users) != 0 {
+		t.Errorf("по невалидному токену создан пользователь")
+	}
+}
+
+// Без GOOGLE_CLIENT_IDS верификатор nil: честный 503, а не 401 — клиенту важно
+// отличить «не настроено» от «вас не пускают»
+func TestAuthGoogleNotConfigured(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(), newFakeRoomRepo())
+	rec := postGoogle(t, s, testGoogleToken)
+	assertErrorCode(t, rec, http.StatusServiceUnavailable, "unavailable")
+}
+
+func TestAuthGoogleValidation(t *testing.T) {
+	s, v := newGoogleServer(newFakeUserRepo(), "google-sub-1", "", "")
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/google", "", `{}`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	rec = doRequest(t, s, http.MethodPost, "/api/v1/auth/google", "", `{"idToken": "   "}`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	if v.calls != 0 {
+		t.Errorf("пустой токен ушёл в верификатор %d раз(а)", v.calls)
+	}
+}
+
+// Троттлинг per-IP работает и имеет СВОЙ префикс ключа: бюджет входа через
+// Google не должен пересекаться с бюджетом /auth/code с того же адреса
+func TestAuthGoogleThrottled(t *testing.T) {
+	s, _ := newGoogleServer(newFakeUserRepo(), "google-sub-1", "", "")
+
+	for i := 0; i < oauthPerIPPerMin; i++ {
+		if rec := postGoogle(t, s, "forged-token"); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("попытка %d: status = %d, want 401", i, rec.Code)
+		}
+	}
+	rec := postGoogle(t, s, "forged-token")
+	assertErrorCode(t, rec, http.StatusTooManyRequests, "rate_limited")
+
+	// бюджет входа по коду с того же адреса не тронут
+	codeRec := doRequest(t, s, http.MethodPost, "/api/v1/auth/code", "", `{"code":"ABCDEF"}`)
+	assertErrorCode(t, codeRec, http.StatusUnauthorized, "invalid_code")
+}
+
+// racingUserRepo имитирует проигрыш гонки двух ПЕРВЫХ входов одного человека:
+// пока проигравший ходил в аллокатор, победитель вставил документ с тем же
+// google_sub, и вставка проигравшего отбивается duplicate key
+type racingUserRepo struct {
+	*fakeUserRepo
+	winner  api.User
+	raced   bool
+	creates int
+}
+
+func (r *racingUserRepo) CreateIdentityUser(ctx context.Context, u api.User) error {
+	r.creates++
+	if !r.raced {
+		r.raced = true
+		winner := r.winner
+		r.fakeUserRepo.users[winner.ID] = &winner
+		return errDuplicateKey
+	}
+	return r.fakeUserRepo.CreateIdentityUser(ctx, u)
+}
+
+// Retry на duplicate key ОБЯЗАН начинаться с повторного FindByGoogleSub:
+// проигравший гонку подбирает документ победителя. Слепой retry «взять новый
+// номер и вставить снова» упёрся бы в unique-индекс по google_sub все три раза
+func TestAuthGoogleDuplicateKeyPicksUpWinner(t *testing.T) {
+	const winnerID = 1_000_000_000_777
+	base := newFakeUserRepo()
+	repo := &racingUserRepo{
+		fakeUserRepo: base,
+		winner:       api.User{ID: winnerID, GoogleSub: "google-sub-1", DisplayName: "Загир"},
+	}
+	v := newFakeVerifier().with(testGoogleToken, "google-sub-1", "user@example.com", "Загир")
+	roomRepo := newFakeRoomRepo()
+	s := NewServer(Config{JwtSecret: "test-secret", GoogleVerifier: v}, repo, roomRepo, newFakeLoginCodeRepo(),
+		service.NewRoomService(roomRepo), service.NewOperationService(roomRepo), newFakeUserIDAllocator())
+
+	rec := postGoogle(t, s, testGoogleToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID != winnerID {
+		t.Errorf("resp.User.ID = %d, want %d (документ победителя гонки)", resp.User.ID, winnerID)
+	}
+	if repo.creates != 1 {
+		t.Errorf("CreateIdentityUser вызван %d раз(а), ожидался 1: повторная вставка упёрлась бы в unique-индекс", repo.creates)
+	}
+	if len(base.users) != 1 {
+		t.Errorf("в базе %d пользователей, ожидался 1", len(base.users))
 	}
 }
