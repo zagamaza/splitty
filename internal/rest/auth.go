@@ -386,6 +386,191 @@ func (s *Server) resolveGoogleUser(ctx context.Context, claims *oidc.Claims) (*a
 	return nil, errors.Wrapf(lastErr, "не удалось создать google-пользователя за %d попыток", identityAuthAttempts)
 }
 
+// appleAuthRequest — тело POST /auth/apple.
+//
+// Имени в ID-токене Apple нет: его отдают клиенту отдельным объектом и ТОЛЬКО
+// при первом входе, поэтому displayName приезжает полем запроса. Nonce клиент
+// присылает СЫРЫМ — в токене лежит его SHA256 (см. checkAppleNonce).
+// authorizationCode нужен не входу, а удалению аккаунта: обменяв его на refresh
+// token сейчас, мы сможем отозвать токены Apple потом (Guideline 5.1.1(v))
+type appleAuthRequest struct {
+	IdToken           string `json:"idToken"`
+	DisplayName       string `json:"displayName"`
+	Nonce             string `json:"nonce"`
+	AuthorizationCode string `json:"authorizationCode"`
+}
+
+// handleAuthApple POST /api/v1/auth/apple — вход по ID-токену Sign in with Apple.
+// Пользователь ищется по apple_sub; не нашли — заводим нового с синтетическим
+// номером из аллокатора (telegram id у него нет)
+func (s *Server) handleAuthApple(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.AppleVerifier == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "вход через Apple не сконфигурирован")
+		return
+	}
+	// Свой префикс ключа, как и у Google: общий с /auth/code бюджет означал бы,
+	// что один способ входа выжигает попытки другого с того же адреса
+	if !s.authThrottle.allow("apple:"+clientIP(r), oauthPerIPPerMin) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
+
+	var req appleAuthRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
+		hErr.write(w)
+		return
+	}
+	idToken := strings.TrimSpace(req.IdToken)
+	if idToken == "" {
+		writeError(w, http.StatusBadRequest, "validation", "поле idToken обязательно")
+		return
+	}
+	// Nonce обязателен: без него токен, перехваченный у другого приложения или
+	// переигранный позже, принимался бы как свежий вход
+	if strings.TrimSpace(req.Nonce) == "" {
+		writeError(w, http.StatusBadRequest, "validation", "поле nonce обязательно")
+		return
+	}
+
+	claims, err := s.cfg.AppleVerifier.Verify(r.Context(), idToken)
+	if err != nil {
+		// Причину наружу не отдаём — см. handleAuthGoogle
+		log.Warn().Err(err).Msg("apple id token rejected")
+		writeError(w, http.StatusUnauthorized, "unauthorized", "не удалось проверить токен Apple")
+		return
+	}
+	if !checkAppleNonce(req.Nonce, claims.Nonce) {
+		log.Warn().Msg("apple id token nonce mismatch")
+		writeError(w, http.StatusUnauthorized, "unauthorized", "не удалось проверить токен Apple")
+		return
+	}
+
+	// Обмен кода стоит ДО резолва пользователя: свежий refresh token нужен и
+	// новому (пишется при вставке), и существующему. Best-effort — см. exchangeAppleCode
+	refreshToken := s.exchangeAppleCode(r.Context(), req.AuthorizationCode)
+
+	user, err := s.resolveAppleUser(r.Context(), claims, req.DisplayName, refreshToken)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot resolve apple user")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить пользователя")
+		return
+	}
+	s.respondWithToken(w, user)
+}
+
+// checkAppleNonce сверяет сырой nonce клиента с тем, что Apple положил в токен.
+//
+// Клиент генерирует случайный nonce, кладёт в запрос к Apple его SHA256 в hex и
+// присылает нам ОРИГИНАЛ — совпадение хешей доказывает, что токен выпущен по
+// запросу именно этого клиента, а не переигран. Сравнение constant-time
+func checkAppleNonce(rawNonce, tokenNonce string) bool {
+	sum := sha256.Sum256([]byte(rawNonce))
+	expected := hex.EncodeToString(sum[:])
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(strings.ToLower(strings.TrimSpace(tokenNonce)))) == 1
+}
+
+// exchangeAppleCode меняет одноразовый authorizationCode на refresh token,
+// который понадобится при удалении аккаунта (POST /auth/revoke у Apple).
+//
+// Best-effort по построению: пустой код, невыключенный ключ .p8 (AppleTokens ==
+// nil — локальная разработка) или недоступный Apple дают пустую строку и Warn
+// в лог. Вход обязан пройти в любом случае: человек не виноват, что машинерия
+// отзыва временно недоступна
+func (s *Server) exchangeAppleCode(ctx context.Context, code string) string {
+	code = strings.TrimSpace(code)
+	if code == "" || s.cfg.AppleTokens == nil {
+		return ""
+	}
+	refreshToken, err := s.cfg.AppleTokens.ExchangeCode(ctx, code)
+	if err != nil {
+		log.Warn().Err(err).Msg("не удалось обменять authorizationCode Apple: отзыв токенов при удалении аккаунта будет невозможен")
+		return ""
+	}
+	return refreshToken
+}
+
+// resolveAppleUser находит пользователя по apple_sub или заводит нового.
+//
+// Аккаунты по email НЕ склеиваются — тем более здесь: Apple по умолчанию
+// выдаёт relay-адрес вида xxx@privaterelay.appleid.com. Адрес валиден и письма
+// доходят, но принадлежит он паре «человек + приложение» и идентификатором быть
+// не может (см. также resolveGoogleUser)
+func (s *Server) resolveAppleUser(ctx context.Context, claims *oidc.Claims, displayName, refreshToken string) (*api.User, error) {
+	var lastErr error
+	for attempt := 0; attempt < identityAuthAttempts; attempt++ {
+		// Поиск по личности — первым шагом КАЖДОЙ итерации: duplicate key здесь
+		// означает гонку двух первых входов одного человека, и проигравший
+		// обязан подобрать документ победителя (подробнее — в resolveGoogleUser)
+		existing, err := s.userRepo.FindByAppleSub(ctx, claims.Subject)
+		if err == nil {
+			return s.fillAppleProfile(ctx, existing, claims.Email, displayName, refreshToken), nil
+		}
+		if err != mongo.ErrNoDocuments {
+			return nil, err
+		}
+
+		id, err := s.userIDs.NextUserID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		err = s.userRepo.CreateIdentityUser(ctx, api.User{
+			ID:       id,
+			AppleSub: claims.Subject,
+			// email и имя Apple присылает только сейчас, при первом входе —
+			// другого шанса их сохранить не будет
+			Email:             strings.TrimSpace(claims.Email),
+			DisplayName:       strings.TrimSpace(displayName),
+			AppleRefreshToken: refreshToken,
+		})
+		if err == nil {
+			return s.userRepo.FindById(ctx, id)
+		}
+		if !repository.IsDuplicateKey(err) {
+			return nil, err
+		}
+		lastErr = err
+	}
+	return nil, errors.Wrapf(lastErr, "не удалось создать apple-пользователя за %d попыток", identityAuthAttempts)
+}
+
+// fillAppleProfile дозаполняет профиль существующего пользователя.
+//
+// Email и имя Apple отдаёт ТОЛЬКО при первом входе, поэтому при повторных они
+// приходят пустыми — записывать их нечем и нельзя. Непустое значение пишется
+// лишь в ПУСТОЕ поле: провайдер вправе дать нам имя, которого мы не знаем, но
+// не вправе переименовать человека, который уже назвался в Splitty сам.
+// Refresh token, наоборот, обновляется всегда — каждый вход выдаёт новый.
+//
+// Ошибка записи не валит вход: аккаунт уже найден, а дозаполнение профиля и
+// машинерия отзыва — не повод отказать человеку во входе
+func (s *Server) fillAppleProfile(ctx context.Context, u *api.User, email, displayName, refreshToken string) *api.User {
+	email, displayName = strings.TrimSpace(email), strings.TrimSpace(displayName)
+	if u.Email != "" {
+		email = ""
+	}
+	if u.DisplayName != "" {
+		displayName = ""
+	}
+	if email == "" && displayName == "" && refreshToken == "" {
+		return u
+	}
+	if err := s.userRepo.UpdateAppleProfile(ctx, u.ID, email, displayName, refreshToken); err != nil {
+		log.Warn().Err(err).Int("userId", u.ID).Msg("не удалось дописать профиль Apple")
+		return u
+	}
+	updated := *u
+	if email != "" {
+		updated.Email = email
+	}
+	if displayName != "" {
+		updated.DisplayName = displayName
+	}
+	if refreshToken != "" {
+		updated.AppleRefreshToken = refreshToken
+	}
+	return &updated
+}
+
 type devAuthRequest struct {
 	UserId      int    `json:"userId"`
 	DisplayName string `json:"displayName"`

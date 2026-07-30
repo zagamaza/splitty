@@ -415,3 +415,62 @@ func TestSanitizeDoesNotMutateArgument(t *testing.T) {
 		t.Fatalf("nil должен оставаться nil")
 	}
 }
+
+// TestUpdateAppleProfile — дозаполнение данных, которые Apple присылает только
+// при первом входе. Пустые аргументы не пишутся, tombstone не трогается
+func TestUpdateAppleProfile(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	seedUsers(t, db, api.User{ID: 1_000_000_000_010, AppleSub: "asub", DisplayName: "Загир", Email: "keep@example.com"})
+
+	// пустые значения не затирают сохранённое, refresh token записывается
+	if err := repo.UpdateAppleProfile(ctx, 1_000_000_000_010, "", "", "refresh-1"); err != nil {
+		t.Fatalf("UpdateAppleProfile упал: %v", err)
+	}
+	got, err := repo.FindByAppleSub(ctx, "asub")
+	if err != nil {
+		t.Fatalf("пользователь не найден: %v", err)
+	}
+	if got.Email != "keep@example.com" || got.DisplayName != "Загир" {
+		t.Fatalf("сохранённый профиль затёрт: %+v", got)
+	}
+	if got.AppleRefreshToken != "refresh-1" {
+		t.Fatalf("apple_refresh_token = %q, want refresh-1", got.AppleRefreshToken)
+	}
+
+	// непустые значения пишутся, refresh token обновляется на новый
+	if err := repo.UpdateAppleProfile(ctx, 1_000_000_000_010, "new@example.com", "Zagir", "refresh-2"); err != nil {
+		t.Fatalf("UpdateAppleProfile упал: %v", err)
+	}
+	if got, err = repo.FindByAppleSub(ctx, "asub"); err != nil {
+		t.Fatalf("пользователь не найден: %v", err)
+	}
+	if got.Email != "new@example.com" || got.DisplayName != "Zagir" || got.AppleRefreshToken != "refresh-2" {
+		t.Fatalf("обновление не применилось: %+v", got)
+	}
+}
+
+// TestUpdateAppleProfileSkipsDeleted — гонка «медленный вход через Apple ↔
+// удаление аккаунта»: дописывать refresh token в tombstone нельзя, иначе
+// удалённый аккаунт снова обзаводится живым токеном Apple
+func TestUpdateAppleProfileSkipsDeleted(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	deletedAt := time.Now()
+	seedUsers(t, db, api.User{ID: 1_000_000_000_011, DisplayName: "Удалённый", DeletedAt: &deletedAt})
+
+	if err := repo.UpdateAppleProfile(ctx, 1_000_000_000_011, "leak@example.com", "Загир", "refresh-1"); err != nil {
+		t.Fatalf("UpdateAppleProfile упал: %v", err)
+	}
+	got, err := repo.FindById(ctx, 1_000_000_000_011)
+	if err != nil {
+		t.Fatalf("tombstone не найден: %v", err)
+	}
+	if got.Email != "" || got.AppleRefreshToken != "" || got.DisplayName != "Удалённый" {
+		t.Fatalf("tombstone дополнен данными Apple: %+v", got)
+	}
+}

@@ -35,6 +35,21 @@ type config struct {
 	// элементы обязательно отфильтровать (см. nonEmptyValues в main.go)
 	GoogleClientIds []string `env:"GOOGLE_CLIENT_IDS" envSeparator:":" envDefault:""`
 
+	// AppleClientIds — client id, которым Apple выпускает ID-токены: bundle id
+	// приложения и/или Services ID. Пусто — вход через Apple выключен и
+	// POST /api/v1/auth/apple отдаёт 503. Пустые элементы фильтруются так же,
+	// как у Google (см. nonEmptyValues в main.go)
+	AppleClientIds []string `env:"APPLE_CLIENT_IDS" envSeparator:":" envDefault:""`
+
+	// AppleTeamId/AppleKeyId/ApplePrivateKey — доступ к token-эндпоинтам Apple
+	// (обмен authorizationCode и отзыв токенов при удалении аккаунта, требование
+	// Guideline 5.1.1(v)). ApplePrivateKey — СОДЕРЖИМОЕ файла .p8, а не путь:
+	// ключ приезжает секретом окружения и в репозиторий не попадает НИКОГДА.
+	// Пустой ключ — обмен выключен, вход через Apple при этом работает
+	AppleTeamId     string `env:"APPLE_TEAM_ID" envDefault:""`
+	AppleKeyId      string `env:"APPLE_KEY_ID" envDefault:""`
+	ApplePrivateKey string `env:"APPLE_PRIVATE_KEY" envDefault:""`
+
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
 	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`

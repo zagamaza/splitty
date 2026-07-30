@@ -473,23 +473,38 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `cmd/splitty/config.go`
 - Modify: `cmd/splitty/main.go`
 - Modify: `internal/rest/auth_test.go`
+- ➕ Create: `internal/oidc/apple_client_secret.go`, `internal/oidc/apple_client_secret_test.go`
+- ➕ Modify: `internal/repository/repository.go` (`UpdateAppleProfile`), `internal/rest/fakes_test.go` (фейк репозитория + фейк обмена токенов), `internal/repository/user_identity_test.go`, `cmd/splitty/config_test.go`
 
-- [ ] добавить `AppleClientIds []string` (`env:"APPLE_CLIENT_IDS" envSeparator:":"`) и `AppleVerifier` по образцу Task 10, включая фильтрацию пустых элементов
-- [ ] троттлинг с собственным префиксом `"apple:"+clientIP(r)` (см. обоснование в Task 10)
-- [ ] создание — через `CreateIdentityUser`, retry при duplicate key начинается с повторного `FindByAppleSub` (см. Task 10)
-- [ ] тело запроса: `{"idToken":"…", "displayName":"…", "nonce":"…", "authorizationCode":"…"}` — Apple отдаёт имя не в токене, а отдельно на клиенте; `authorizationCode` нужен для отзыва при удалении аккаунта (пункт ниже)
-- [ ] **⚠️ отзыв токенов Apple обязателен по Guideline 5.1.1(v)**: приложение с Sign in with Apple, предлагающее удаление аккаунта, обязано вызывать `POST https://appleid.apple.com/auth/revoke`. Для этого нужен refresh token, а получить его можно **только** обменом `authorizationCode` в момент входа — позже он протухает (валиден ~5 минут и одноразовый). Значит обмен делается здесь, а не в Task 13
-- [ ] добавить в `cmd/splitty/config.go`: `AppleTeamId` (`env:"APPLE_TEAM_ID"`), `AppleKeyId` (`env:"APPLE_KEY_ID"`), `ApplePrivateKey` (`env:"APPLE_PRIVATE_KEY"` — содержимое `.p8`, **не путь**; ключ в git не коммитить)
-- [ ] создать `internal/oidc/apple_client_secret.go`: `client_secret` для Apple — это ES256-JWT (`iss`=TeamID, `sub`=bundle id, `aud`=`https://appleid.apple.com`, `kid`=KeyID, TTL ≤ 6 месяцев), подписанный ключом из `.p8`. Использовать `jwt/v5` + `crypto/ecdsa`; ключ парсить `x509.ParsePKCS8PrivateKey`
-- [ ] при первом входе обменять `authorizationCode` на refresh token (`POST https://appleid.apple.com/auth/token`, `grant_type=authorization_code`) и сохранить в `AppleRefreshToken`. Обмен — **best-effort**: сеть недоступна или Apple ответил ошибкой → залогировать Warn и **всё равно выдать токен входа**, вход не должен падать из-за этого
-- [ ] при пустом `ApplePrivateKey` обмен пропускать целиком, залогировав Info один раз на старте — локальная разработка не должна требовать ключа Apple
-- [ ] **проверка nonce обязательна**: клиент шлёт сырой nonce, в токене лежит его SHA256; сравнивать `claims.Nonce == hex(sha256(req.Nonce))` constant-time; несовпадение → `401`. Без этой проверки nonce на клиенте (Task 15) — бутафория
-- [ ] **Apple присылает email только при ПЕРВОМ входе**: при создании сохранить `email`; при последующих входах, если в базе email уже есть, а в токене пусто — **не затирать**
-- [ ] то же для `display_name` — заполнять только если пусто
-- [ ] комментарием отметить: адрес вида `@privaterelay.appleid.com` валиден, но не пригоден для склейки аккаунтов
-- [ ] зарегистрировать `POST /api/v1/auth/apple`, повесить тот же троттлинг
-- [ ] написать тесты: первый вход сохраняет email и имя; повторный с пустым email не затирает; повторный с пустым именем не затирает; поиск по `apple_sub` не плодит дублей; **несовпадение nonce → 401**; невалидный токен → 401; нет конфига → 503; **обмен `authorizationCode` сохраняет `apple_refresh_token`**; **ошибка обмена не валит вход** (токен всё равно выдан, поле пустое); генерация `client_secret` даёт валидный ES256-JWT с ожидаемыми `iss`/`sub`/`aud`/`kid` (на локально сгенерированном ключе, без сети)
-- [ ] `go test ./internal/...` — зелёные перед Task 12
+- [x] добавить `AppleClientIds []string` (`env:"APPLE_CLIENT_IDS" envSeparator:":"`) и `AppleVerifier` по образцу Task 10, включая фильтрацию пустых элементов
+- [x] троттлинг с собственным префиксом `"apple:"+clientIP(r)` (см. обоснование в Task 10)
+- [x] создание — через `CreateIdentityUser`, retry при duplicate key начинается с повторного `FindByAppleSub` (см. Task 10)
+- [x] тело запроса: `{"idToken":"…", "displayName":"…", "nonce":"…", "authorizationCode":"…"}` — Apple отдаёт имя не в токене, а отдельно на клиенте; `authorizationCode` нужен для отзыва при удалении аккаунта (пункт ниже)
+- [x] **⚠️ отзыв токенов Apple обязателен по Guideline 5.1.1(v)**: приложение с Sign in with Apple, предлагающее удаление аккаунта, обязано вызывать `POST https://appleid.apple.com/auth/revoke`. Для этого нужен refresh token, а получить его можно **только** обменом `authorizationCode` в момент входа — позже он протухает (валиден ~5 минут и одноразовый). Значит обмен делается здесь, а не в Task 13
+- [x] добавить в `cmd/splitty/config.go`: `AppleTeamId` (`env:"APPLE_TEAM_ID"`), `AppleKeyId` (`env:"APPLE_KEY_ID"`), `ApplePrivateKey` (`env:"APPLE_PRIVATE_KEY"` — содержимое `.p8`, **не путь**; ключ в git не коммитить)
+- [x] создать `internal/oidc/apple_client_secret.go`: `client_secret` для Apple — это ES256-JWT (`iss`=TeamID, `sub`=bundle id, `aud`=`https://appleid.apple.com`, `kid`=KeyID, TTL ≤ 6 месяцев), подписанный ключом из `.p8`. Использовать `jwt/v5` + `crypto/ecdsa`; ключ парсить `x509.ParsePKCS8PrivateKey`
+- [x] при первом входе обменять `authorizationCode` на refresh token (`POST https://appleid.apple.com/auth/token`, `grant_type=authorization_code`) и сохранить в `AppleRefreshToken`. Обмен — **best-effort**: сеть недоступна или Apple ответил ошибкой → залогировать Warn и **всё равно выдать токен входа**, вход не должен падать из-за этого
+- [x] при пустом `ApplePrivateKey` обмен пропускать целиком, залогировав Info один раз на старте — локальная разработка не должна требовать ключа Apple
+- [x] **проверка nonce обязательна**: клиент шлёт сырой nonce, в токене лежит его SHA256; сравнивать `claims.Nonce == hex(sha256(req.Nonce))` constant-time; несовпадение → `401`. Без этой проверки nonce на клиенте (Task 15) — бутафория
+- [x] **Apple присылает email только при ПЕРВОМ входе**: при создании сохранить `email`; при последующих входах, если в базе email уже есть, а в токене пусто — **не затирать**
+- [x] то же для `display_name` — заполнять только если пусто
+- [x] комментарием отметить: адрес вида `@privaterelay.appleid.com` валиден, но не пригоден для склейки аккаунтов
+- [x] зарегистрировать `POST /api/v1/auth/apple`, повесить тот же троттлинг
+- [x] написать тесты: первый вход сохраняет email и имя; повторный с пустым email не затирает; повторный с пустым именем не затирает; поиск по `apple_sub` не плодит дублей; **несовпадение nonce → 401**; невалидный токен → 401; нет конфига → 503; **обмен `authorizationCode` сохраняет `apple_refresh_token`**; **ошибка обмена не валит вход** (токен всё равно выдан, поле пустое); генерация `client_secret` даёт валидный ES256-JWT с ожидаемыми `iss`/`sub`/`aud`/`kid` (на локально сгенерированном ключе, без сети)
+- [x] `go test ./internal/...` — зелёные перед Task 12
+
+**Как сделано (для следующих задач):**
+- `handleAuthApple` (`internal/rest/auth.go`) повторяет порядок Google: nil-verifier → 503, троттлинг `"apple:"+clientIP`, разбор тела, верификация, **проверка nonce**, обмен кода, резолв. Пустой `nonce` в теле — `400 validation`: проверять было бы нечего, а молча пропустить значит вернуть бутафорию
+- [decision] обмен `authorizationCode` делается на КАЖДОМ входе, а не только первом: Apple выдаёт новый код при каждом входе и (важнее) старый refresh token может быть отозван пользователем в настройках Apple ID. Тест `TestAuthAppleStoresRefreshToken` проверяет, что повторный вход перезаписывает токен
+- [decision] обмен стоит ДО резолва пользователя, чтобы refresh token попал в документ сразу при вставке (`CreateIdentityUser`), а не вторым запросом
+- [deviation] ➕ в `UserRepository` добавлен `UpdateAppleProfile(ctx, userId, email, displayName, refreshToken)`: записать `email`/`apple_refresh_token` существующему пользователю было физически нечем — `UpsertUser` пишет частичный `$set` из четырёх полей и личности не касается. Фильтр `{_id, deleted_at: {$exists:false}}`, без upsert (правило из Task 12 применено заранее: гонка «вход ↔ `DELETE /me`» иначе дописала бы живой refresh token в tombstone). Фейк в `internal/rest/fakes_test.go` дополнен тем же коммитом
+- [decision] «не затирать» реализовано в ДВА слоя: хендлер (`fillAppleProfile`) пишет непустое значение только в ПУСТОЕ поле — провайдер вправе сообщить неизвестное нам имя, но не вправе переименовать человека, назвавшегося в Splitty сам; репозиторий вдобавок игнорирует пустые аргументы
+- [decision] ошибка `UpdateAppleProfile` НЕ валит вход (Warn + вход с несохранённым дозаполнением): аккаунт уже найден, а дозаполнение профиля и машинерия отзыва — не повод отказать во входе. Тот же принцип, что у best-effort обмена
+- [decision] TTL `client_secret` — 5 минут вместо разрешённых Apple шести месяцев: секрет собирается на каждый запрос (ES256 стоит микросекунды), кеш и ротация не нужны, а цена утечки из логов ниже
+- [decision] `client_id` для `client_secret` — ПЕРВЫЙ элемент `APPLE_CLIENT_IDS`: секрет подписывается ровно под один `sub` (bundle id приложения). Services ID веб-потока, если появится, потребует отдельного секрета
+- [decision] `APPLE_PRIVATE_KEY` нормализуется: экранированные `\n` превращаются в переводы строк — PEM многострочный, а в env его кладут одной строкой (docker-compose, секреты CI), и без нормализации обмен молча выключался бы при формально заданном ключе
+- [decision] негодный ключ или отсутствие `APPLE_CLIENT_IDS` при заданном ключе НЕ роняют старт: `initAppleTokens` возвращает nil с Warn. Класть весь сервис из-за необязательной интеграции нельзя; вход через Apple при этом продолжает работать
+- отзыв токенов (`POST /auth/revoke`) в этой задаче намеренно НЕ реализован — он нужен Task 13, а `AppleTokenClient.ClientSecret()` экспортирован именно для него
 
 ### Task 12: Привязка и отвязка способов входа
 

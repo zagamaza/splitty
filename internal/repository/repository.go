@@ -44,6 +44,11 @@ type UserRepository interface {
 	FindByTelegramID(ctx context.Context, tgID int) (*api.User, error)
 	FindByGoogleSub(ctx context.Context, sub string) (*api.User, error)
 	FindByAppleSub(ctx context.Context, sub string) (*api.User, error)
+	// UpdateAppleProfile дописывает то, что приходит из потока Sign in with
+	// Apple: email и имя (Apple отдаёт их ТОЛЬКО при первом входе) и refresh
+	// token для последующего отзыва при удалении аккаунта. Пустые значения
+	// игнорируются — затирать сохранённое нечем и незачем
+	UpdateAppleProfile(ctx context.Context, userId int, email, displayName, refreshToken string) error
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
@@ -610,6 +615,35 @@ func (r MongoUserRepository) FindByGoogleSub(ctx context.Context, sub string) (*
 // FindByAppleSub ищет живого пользователя по sub из id-токена Apple
 func (r MongoUserRepository) FindByAppleSub(ctx context.Context, sub string) (*api.User, error) {
 	return r.findOne(ctx, append(bson.D{{Key: "apple_sub", Value: bson.D{{Key: "$eq", Value: sub}}}}, notDeleted...))
+}
+
+// UpdateAppleProfile дописывает данные из потока Sign in with Apple.
+//
+// Пустые аргументы пропускаются: Apple отдаёт email и имя только при ПЕРВОМ
+// входе, и при всех последующих $set пустой строкой стёр бы сохранённое.
+// Решение «заполнять или не трогать» принимает вызывающий (он видит текущий
+// документ), здесь — вторая линия обороны.
+//
+// Ни upsert, ни фильтр по одному _id: обновляется только ЖИВОЙ документ.
+// Иначе гонка «медленный вход через Apple ↔ параллельное удаление аккаунта»
+// дописала бы apple_refresh_token в tombstone
+func (r MongoUserRepository) UpdateAppleProfile(ctx context.Context, userId int, email, displayName, refreshToken string) error {
+	set := bson.M{}
+	if email != "" {
+		set["email"] = email
+	}
+	if displayName != "" {
+		set["display_name"] = displayName
+	}
+	if refreshToken != "" {
+		set["apple_refresh_token"] = refreshToken
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
+	_, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: set}})
+	return err
 }
 
 // findOne — общий путь чтения пользователя: декодирование плюс дефолты, которые

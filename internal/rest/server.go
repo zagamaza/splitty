@@ -54,6 +54,15 @@ type Config struct {
 	// эндпоинт отвечает 503. Интерфейс, а не client id: в тестах подставляется
 	// фейк и в сеть никто не ходит
 	GoogleVerifier oidc.Verifier
+	// AppleVerifier проверяет ID-токены Sign in with Apple для POST /auth/apple.
+	// nil — вход через Apple не сконфигурирован (APPLE_CLIENT_IDS пуст),
+	// эндпоинт отвечает 503
+	AppleVerifier oidc.Verifier
+	// AppleTokens меняет authorizationCode на refresh token, без которого при
+	// удалении аккаунта нечего отзывать (Apple Guideline 5.1.1(v)). nil —
+	// ключ .p8 не задан: вход работает как обычно, обмен просто не делается,
+	// чтобы локальная разработка не требовала ключа Apple
+	AppleTokens oidc.AppleTokenExchanger
 }
 
 // Server REST API сервер со всеми зависимостями.
@@ -170,6 +179,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/telegram", s.handleAuthTelegram)
 	mux.HandleFunc("POST /api/v1/auth/code", s.handleAuthCode)
 	mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)
+	mux.HandleFunc("POST /api/v1/auth/apple", s.handleAuthApple)
 	mux.HandleFunc("POST /api/v1/auth/dev", s.handleAuthDev)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))

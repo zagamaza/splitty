@@ -91,6 +91,31 @@ func (f *fakeOIDCVerifier) with(idToken, sub, email, name string) *fakeOIDCVerif
 	return f
 }
 
+// withNonce проставляет claim nonce уже зарегистрированному токену: Apple
+// кладёт туда хеш сырого nonce, присланного клиентом
+func (f *fakeOIDCVerifier) withNonce(idToken, nonce string) *fakeOIDCVerifier {
+	if claims, ok := f.tokens[idToken]; ok {
+		claims.Nonce = nonce
+	}
+	return f
+}
+
+// fakeAppleTokens — oidc.AppleTokenExchanger без сети: отдаёт заданный refresh
+// token либо заданную ошибку и запоминает коды, с которыми его звали
+type fakeAppleTokens struct {
+	refreshToken string
+	err          error
+	codes        []string
+}
+
+func (f *fakeAppleTokens) ExchangeCode(_ context.Context, code string) (string, error) {
+	f.codes = append(f.codes, code)
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.refreshToken, nil
+}
+
 func (f *fakeOIDCVerifier) Verify(_ context.Context, idToken string) (*oidc.Claims, error) {
 	f.calls++
 	claims, ok := f.tokens[idToken]
@@ -233,6 +258,25 @@ func (f *fakeUserRepo) findLive(match func(*api.User) bool) (*api.User, error) {
 		}
 	}
 	return nil, mongo.ErrNoDocuments
+}
+
+// UpdateAppleProfile как mongo-реализация: пустые значения не пишутся (Apple
+// присылает email и имя только при первом входе), tombstone не трогается
+func (f *fakeUserRepo) UpdateAppleProfile(_ context.Context, userId int, email, displayName, refreshToken string) error {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return nil
+	}
+	if email != "" {
+		u.Email = email
+	}
+	if displayName != "" {
+		u.DisplayName = displayName
+	}
+	if refreshToken != "" {
+		u.AppleRefreshToken = refreshToken
+	}
+	return nil
 }
 
 func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {

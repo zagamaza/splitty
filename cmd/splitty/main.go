@@ -139,6 +139,8 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		ReviewLoginCode: cfg.ReviewLoginCode,
 		ReviewUserId:    cfg.ReviewUserId,
 		GoogleVerifier:  initGoogleVerifier(cfg),
+		AppleVerifier:   initAppleVerifier(cfg),
+		AppleTokens:     initAppleTokens(cfg),
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
 
@@ -222,6 +224,51 @@ func initGoogleVerifier(cfg *config) oidc.Verifier {
 	}
 	log.Info().Msgf("Google sign-in enabled for %d client id(s)", len(clientIDs))
 	return oidc.NewGoogle(clientIDs)
+}
+
+// initAppleVerifier собирает верификатор ID-токенов Sign in with Apple.
+// Возвращает nil (вход через Apple выключен, хендлер отвечает 503), когда не
+// задан ни один client id. Фильтрация пустых элементов обязательна по той же
+// причине, что и у Google (см. initGoogleVerifier)
+func initAppleVerifier(cfg *config) oidc.Verifier {
+	clientIDs := nonEmptyValues(cfg.AppleClientIds)
+	if len(clientIDs) == 0 {
+		log.Info().Msg("Apple sign-in disabled (APPLE_CLIENT_IDS empty)")
+		return nil
+	}
+	log.Info().Msgf("Apple sign-in enabled for %d client id(s)", len(clientIDs))
+	return oidc.NewApple(clientIDs)
+}
+
+// initAppleTokens собирает клиента token-эндпоинтов Apple: обмен
+// authorizationCode на refresh token при входе и отзыв токенов при удалении
+// аккаунта (Guideline 5.1.1(v)).
+//
+// Возвращает nil, когда ключ .p8 не задан или собрать клиента не удалось —
+// вход через Apple продолжает работать, просто без refresh token. Требовать
+// ключ Apple для локальной разработки нельзя, а падать на старте из-за него —
+// значит класть весь сервис ради одной необязательной интеграции.
+//
+// client id берётся первый из списка: client_secret подписывается ровно под
+// один sub, и это bundle id приложения (Services ID веб-потока, если он
+// когда-нибудь появится, потребует отдельного секрета)
+func initAppleTokens(cfg *config) oidc.AppleTokenExchanger {
+	if strings.TrimSpace(cfg.ApplePrivateKey) == "" {
+		log.Info().Msg("Apple token exchange disabled (APPLE_PRIVATE_KEY empty): токены Apple при удалении аккаунта отозвать будет нечем")
+		return nil
+	}
+	clientIDs := nonEmptyValues(cfg.AppleClientIds)
+	if len(clientIDs) == 0 {
+		log.Warn().Msg("APPLE_PRIVATE_KEY задан без APPLE_CLIENT_IDS: обмен токенов Apple выключен")
+		return nil
+	}
+	client, err := oidc.NewAppleTokenClient(cfg.AppleTeamId, cfg.AppleKeyId, clientIDs[0], cfg.ApplePrivateKey)
+	if err != nil {
+		log.Warn().Err(err).Msg("cannot init apple token client, обмен authorizationCode выключен")
+		return nil
+	}
+	log.Info().Msg("Apple token exchange enabled")
+	return client
 }
 
 // nonEmptyValues отбрасывает пустые элементы env-списка (см. initGoogleVerifier)

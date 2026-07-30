@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -537,6 +538,369 @@ func TestAuthGoogleDuplicateKeyPicksUpWinner(t *testing.T) {
 		service.NewRoomService(roomRepo), service.NewOperationService(roomRepo), newFakeUserIDAllocator())
 
 	rec := postGoogle(t, s, testGoogleToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID != winnerID {
+		t.Errorf("resp.User.ID = %d, want %d (документ победителя гонки)", resp.User.ID, winnerID)
+	}
+	if repo.creates != 1 {
+		t.Errorf("CreateIdentityUser вызван %d раз(а), ожидался 1: повторная вставка упёрлась бы в unique-индекс", repo.creates)
+	}
+	if len(base.users) != 1 {
+		t.Errorf("в базе %d пользователей, ожидался 1", len(base.users))
+	}
+}
+
+// --- вход через Apple: POST /api/v1/auth/apple ---
+
+const (
+	testAppleToken = "valid-apple-id-token"
+	testAppleNonce = "raw-nonce-from-client"
+)
+
+// appleNonceHash — то, что Apple кладёт в claim nonce: hex(sha256(сырой nonce))
+func appleNonceHash(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+// newAppleServer сервер с фейковым верификатором, знающим testAppleToken с
+// правильным хешем nonce
+func newAppleServer(userRepo *fakeUserRepo, sub, email string) (*Server, *fakeOIDCVerifier) {
+	v := newFakeVerifier().with(testAppleToken, sub, email, "").withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	return newTestServer(Config{AppleVerifier: v}, userRepo, newFakeRoomRepo()), v
+}
+
+// postApple шлёт вход через Apple. displayName приходит отдельным полем: в
+// токене имени нет
+func postApple(t *testing.T, s *Server, idToken, displayName, nonce, code string) *httptest.ResponseRecorder {
+	t.Helper()
+	body := fmt.Sprintf(`{"idToken": %q, "displayName": %q, "nonce": %q, "authorizationCode": %q}`,
+		idToken, displayName, nonce, code)
+	return doRequest(t, s, http.MethodPost, "/api/v1/auth/apple", "", body)
+}
+
+func appleLogin(t *testing.T, s *Server, displayName string) *httptest.ResponseRecorder {
+	t.Helper()
+	return postApple(t, s, testAppleToken, displayName, testAppleNonce, "")
+}
+
+// Первый вход: синтетический номер, apple_sub, email из токена и имя из тела
+// запроса. Больше Apple ни email, ни имя не пришлёт — сохранить их можно только
+// сейчас
+func TestAuthAppleCreatesUserWithEmailAndName(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "abc123@privaterelay.appleid.com")
+
+	rec := appleLogin(t, s, "Загир Нурмухаметов")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if resp.User.ID < 1_000_000_000_000 {
+		t.Fatalf("_id = %d, ожидался синтетический номер ≥ 10^12", resp.User.ID)
+	}
+	if userId, err := s.parseToken(resp.Token); err != nil || userId != resp.User.ID {
+		t.Errorf("parseToken = (%d, %v), want (%d, nil)", userId, err, resp.User.ID)
+	}
+	created, ok := userRepo.users[resp.User.ID]
+	if !ok {
+		t.Fatalf("пользователь %d не создан", resp.User.ID)
+	}
+	if created.AppleSub != "apple-sub-1" {
+		t.Errorf("apple_sub = %q, want apple-sub-1", created.AppleSub)
+	}
+	// relay-адрес валиден и письма доходят, но склеивать по нему аккаунты нельзя
+	if created.Email != "abc123@privaterelay.appleid.com" {
+		t.Errorf("email = %q, want relay-адрес из токена", created.Email)
+	}
+	if created.DisplayName != "Загир Нурмухаметов" {
+		t.Errorf("display_name = %q, want имя из тела запроса", created.DisplayName)
+	}
+	if created.TelegramID != nil {
+		t.Errorf("telegram_id = %v, у apple-пользователя его быть не должно", *created.TelegramID)
+	}
+	if strings.Contains(rec.Body.String(), "apple-sub-1") || strings.Contains(rec.Body.String(), "privaterelay") {
+		t.Errorf("ответ содержит поля личности: %s", rec.Body.String())
+	}
+}
+
+// Повторный вход приходит БЕЗ email и без имени (Apple отдаёт их только один
+// раз) — сохранённое затирать нельзя
+func TestAuthAppleSecondLoginKeepsEmailAndName(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "abc123@privaterelay.appleid.com", "").
+		withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	s := newTestServer(Config{AppleVerifier: v}, userRepo, newFakeRoomRepo())
+
+	first := appleLogin(t, s, "Загир")
+	if first.Code != http.StatusOK {
+		t.Fatalf("первый вход: status = %d, body: %s", first.Code, first.Body.String())
+	}
+
+	// второй вход: токен без email, имя пустое
+	v.with(testAppleToken, "apple-sub-1", "", "").withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	second := appleLogin(t, s, "")
+	if second.Code != http.StatusOK {
+		t.Fatalf("второй вход: status = %d, body: %s", second.Code, second.Body.String())
+	}
+
+	var r1, r2 authResponseDto
+	if err := json.Unmarshal(first.Body.Bytes(), &r1); err != nil {
+		t.Fatalf("cannot parse first response: %v", err)
+	}
+	if err := json.Unmarshal(second.Body.Bytes(), &r2); err != nil {
+		t.Fatalf("cannot parse second response: %v", err)
+	}
+	if r1.User.ID != r2.User.ID {
+		t.Errorf("повторный вход дал другой _id: %d и %d", r1.User.ID, r2.User.ID)
+	}
+	if len(userRepo.users) != 1 {
+		t.Errorf("в базе %d пользователей, ожидался 1", len(userRepo.users))
+	}
+	stored := userRepo.users[r1.User.ID]
+	if stored.Email != "abc123@privaterelay.appleid.com" {
+		t.Errorf("email = %q, повторный вход затёр сохранённый адрес", stored.Email)
+	}
+	if stored.DisplayName != "Загир" {
+		t.Errorf("display_name = %q, повторный вход затёр имя", stored.DisplayName)
+	}
+	if r2.User.DisplayName != "Загир" {
+		t.Errorf("в ответе display_name = %q, want Загир", r2.User.DisplayName)
+	}
+}
+
+// Обратный случай: аккаунт есть, но профиль пуст (первый вход прошёл до того,
+// как клиент научился присылать имя) — непустое значение обязано дозаполниться
+func TestAuthAppleFillsEmptyProfile(t *testing.T) {
+	existing := api.User{ID: 1_000_000_000_005, AppleSub: "apple-sub-1"}
+	userRepo := newFakeUserRepo(existing)
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "abc123@privaterelay.appleid.com")
+
+	rec := appleLogin(t, s, "Загир")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	stored := userRepo.users[existing.ID]
+	if stored.Email != "abc123@privaterelay.appleid.com" {
+		t.Errorf("email = %q, пустое поле не дозаполнено", stored.Email)
+	}
+	if stored.DisplayName != "Загир" {
+		t.Errorf("display_name = %q, пустое поле не дозаполнено", stored.DisplayName)
+	}
+}
+
+// Провайдер не вправе переименовать человека, который уже назвался в Splitty сам
+func TestAuthAppleDoesNotRenameExistingUser(t *testing.T) {
+	existing := api.User{ID: 1_000_000_000_005, AppleSub: "apple-sub-1", DisplayName: "Загир", Email: "me@example.com"}
+	userRepo := newFakeUserRepo(existing)
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "abc123@privaterelay.appleid.com")
+
+	if rec := appleLogin(t, s, "Zagir From Apple"); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	stored := userRepo.users[existing.ID]
+	if stored.DisplayName != "Загир" {
+		t.Errorf("display_name = %q, провайдер переименовал существующего пользователя", stored.DisplayName)
+	}
+	if stored.Email != "me@example.com" {
+		t.Errorf("email = %q, провайдер переписал сохранённый адрес", stored.Email)
+	}
+}
+
+// Несовпадение nonce — 401. Без этой проверки nonce на клиенте бутафория:
+// перехваченный или переигранный токен пускали бы как свежий вход
+func TestAuthAppleNonceMismatch(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "user@example.com")
+
+	rec := postApple(t, s, testAppleToken, "Загир", "another-nonce", "")
+	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+	if len(userRepo.users) != 0 {
+		t.Errorf("по токену с чужим nonce создан пользователь")
+	}
+
+	// хеш вместо сырого значения тоже не проходит: сравнивается hex(sha256(raw))
+	rec = postApple(t, s, testAppleToken, "Загир", appleNonceHash(testAppleNonce), "")
+	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+}
+
+// Токен без claim nonce (провайдер его не вернул) тоже отвергается
+func TestAuthAppleRejectsTokenWithoutNonce(t *testing.T) {
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "", "")
+	s := newTestServer(Config{AppleVerifier: v}, newFakeUserRepo(), newFakeRoomRepo())
+
+	rec := appleLogin(t, s, "Загир")
+	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+}
+
+func TestAuthAppleInvalidToken(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "user@example.com")
+
+	rec := postApple(t, s, "forged-token", "Загир", testAppleNonce, "")
+	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+	if strings.Contains(rec.Body.String(), "подпись не проверена") {
+		t.Errorf("причина отказа утекла клиенту: %s", rec.Body.String())
+	}
+	if len(userRepo.users) != 0 {
+		t.Errorf("по невалидному токену создан пользователь")
+	}
+}
+
+// Без APPLE_CLIENT_IDS — честный 503, а не 401
+func TestAuthAppleNotConfigured(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(), newFakeRoomRepo())
+	rec := appleLogin(t, s, "Загир")
+	assertErrorCode(t, rec, http.StatusServiceUnavailable, "unavailable")
+}
+
+func TestAuthAppleValidation(t *testing.T) {
+	s, v := newAppleServer(newFakeUserRepo(), "apple-sub-1", "")
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/apple", "", `{}`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	rec = postApple(t, s, "   ", "Загир", testAppleNonce, "")
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	// пустой nonce — тоже 400: проверять было бы нечего
+	rec = postApple(t, s, testAppleToken, "Загир", "  ", "")
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	if v.calls != 0 {
+		t.Errorf("невалидное тело ушло в верификатор %d раз(а)", v.calls)
+	}
+}
+
+// Троттлинг per-IP со СВОИМ префиксом: бюджет входа через Apple не пересекается
+// ни с Google, ни с входом по коду
+func TestAuthAppleThrottled(t *testing.T) {
+	s, _ := newAppleServer(newFakeUserRepo(), "apple-sub-1", "")
+
+	for i := 0; i < oauthPerIPPerMin; i++ {
+		if rec := postApple(t, s, "forged-token", "", testAppleNonce, ""); rec.Code != http.StatusUnauthorized {
+			t.Fatalf("попытка %d: status = %d, want 401", i, rec.Code)
+		}
+	}
+	rec := postApple(t, s, "forged-token", "", testAppleNonce, "")
+	assertErrorCode(t, rec, http.StatusTooManyRequests, "rate_limited")
+
+	// бюджет входа по коду с того же адреса не тронут
+	codeRec := doRequest(t, s, http.MethodPost, "/api/v1/auth/code", "", `{"code":"ABCDEF"}`)
+	assertErrorCode(t, codeRec, http.StatusUnauthorized, "invalid_code")
+}
+
+// authorizationCode меняется на refresh token — иначе при удалении аккаунта
+// отзывать у Apple будет нечего (Guideline 5.1.1(v))
+func TestAuthAppleStoresRefreshToken(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	tokens := &fakeAppleTokens{refreshToken: "apple-refresh-1"}
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "user@example.com", "").
+		withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	s := newTestServer(Config{AppleVerifier: v, AppleTokens: tokens}, userRepo, newFakeRoomRepo())
+
+	rec := postApple(t, s, testAppleToken, "Загир", testAppleNonce, "auth-code-1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if got := userRepo.users[resp.User.ID].AppleRefreshToken; got != "apple-refresh-1" {
+		t.Errorf("apple_refresh_token = %q, want apple-refresh-1", got)
+	}
+	if len(tokens.codes) != 1 || tokens.codes[0] != "auth-code-1" {
+		t.Errorf("в обмен ушли коды %q, ожидался ровно auth-code-1", tokens.codes)
+	}
+	if strings.Contains(rec.Body.String(), "apple-refresh-1") {
+		t.Errorf("refresh token утёк клиенту: %s", rec.Body.String())
+	}
+
+	// повторный вход обновляет refresh token существующего пользователя
+	tokens.refreshToken = "apple-refresh-2"
+	if rec = postApple(t, s, testAppleToken, "", testAppleNonce, "auth-code-2"); rec.Code != http.StatusOK {
+		t.Fatalf("повторный вход: status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+	if got := userRepo.users[resp.User.ID].AppleRefreshToken; got != "apple-refresh-2" {
+		t.Errorf("apple_refresh_token = %q, повторный вход не обновил токен", got)
+	}
+}
+
+// Без authorizationCode в обмен никто не ходит
+func TestAuthAppleSkipsExchangeWithoutCode(t *testing.T) {
+	tokens := &fakeAppleTokens{refreshToken: "apple-refresh-1"}
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "", "").
+		withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	s := newTestServer(Config{AppleVerifier: v, AppleTokens: tokens}, newFakeUserRepo(), newFakeRoomRepo())
+
+	if rec := appleLogin(t, s, "Загир"); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+	if len(tokens.codes) != 0 {
+		t.Errorf("обмен вызван без кода: %q", tokens.codes)
+	}
+}
+
+// Обмен best-effort: недоступный Apple не должен закрывать вход. Отсутствие
+// refresh token — проблема отзыва при удалении, а не повод не пустить человека
+func TestAuthAppleExchangeFailureDoesNotBlockLogin(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	tokens := &fakeAppleTokens{err: errors.New("apple недоступен")}
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "user@example.com", "").
+		withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	s := newTestServer(Config{AppleVerifier: v, AppleTokens: tokens}, userRepo, newFakeRoomRepo())
+
+	rec := postApple(t, s, testAppleToken, "Загир", testAppleNonce, "auth-code-1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("сбой обмена уронил вход: status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+	var resp authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if got := userRepo.users[resp.User.ID].AppleRefreshToken; got != "" {
+		t.Errorf("apple_refresh_token = %q, при сбое обмена он должен остаться пустым", got)
+	}
+}
+
+// Без ключа .p8 (AppleTokens == nil) вход работает как обычно: локальная
+// разработка не обязана иметь ключ Apple
+func TestAuthAppleWorksWithoutPrivateKey(t *testing.T) {
+	userRepo := newFakeUserRepo()
+	s, _ := newAppleServer(userRepo, "apple-sub-1", "user@example.com")
+
+	rec := postApple(t, s, testAppleToken, "Загир", testAppleNonce, "auth-code-1")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Retry на duplicate key начинается с повторного FindByAppleSub: проигравший
+// гонку двух первых входов подбирает документ победителя
+func TestAuthAppleDuplicateKeyPicksUpWinner(t *testing.T) {
+	const winnerID = 1_000_000_000_888
+	base := newFakeUserRepo()
+	repo := &racingUserRepo{
+		fakeUserRepo: base,
+		winner:       api.User{ID: winnerID, AppleSub: "apple-sub-1", DisplayName: "Загир"},
+	}
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "user@example.com", "").
+		withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	roomRepo := newFakeRoomRepo()
+	s := NewServer(Config{JwtSecret: "test-secret", AppleVerifier: v}, repo, roomRepo, newFakeLoginCodeRepo(),
+		service.NewRoomService(roomRepo), service.NewOperationService(roomRepo), newFakeUserIDAllocator())
+
+	rec := appleLogin(t, s, "Загир")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
 	}
