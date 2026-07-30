@@ -179,14 +179,14 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `README.md`
 - Modify: `docker-compose.yml`
 
-- [ ] создать хелпер `func testDB(t *testing.T) *mongo.Database`: читает `MONGO_TEST_URI` (по умолчанию `mongodb://localhost:27017`), подключается с таймаутом 3 с
-- [ ] при недоступном mongo — `t.Skip("mongo недоступен: задайте MONGO_TEST_URI или поднимите docker compose up mongo")`, **не** `t.Fatal`
-- [ ] база на каждый тест — уникальная (`splitty_test_<nanotime>_<counter>`), удаление в `t.Cleanup` через `db.Drop(ctx)`
-- [ ] добавить хелпер `seedUsers(t, db, users ...api.User)` — вставка документов напрямую, для подготовки состояния
-- [ ] написать самопроверку: тест, который создаёт базу, пишет документ, читает его и убеждается, что после `Cleanup` базы нет
-- [ ] **зафиксировать `image: mongo:7` в `docker-compose.yml:36`**: сейчас там `image: mongo`, то есть `latest`, а локально скачан только `mongo:7` (контейнер `splitty-app-mongo-1`). Без сети `docker compose up -d mongo` попытается стянуть `latest` и упадёт — инструкция из README не сработает ровно тогда, когда она нужна
-- [ ] описать в `README.md` раздел «Тесты репозитория»: как поднять mongo (`docker compose up -d mongo` после фиксации тега, либо `docker start splitty-app-mongo-1`, если контейнер уже создан), как задать `MONGO_TEST_URI`, что тесты скипаются без него
-- [ ] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/repository/...` — зелёные (или явный skip) перед Task 2
+- [x] создать хелпер `func testDB(t *testing.T) *mongo.Database`: читает `MONGO_TEST_URI` (по умолчанию `mongodb://localhost:27017`), подключается с таймаутом 3 с
+- [x] при недоступном mongo — `t.Skip("mongo недоступен: задайте MONGO_TEST_URI или поднимите docker compose up mongo")`, **не** `t.Fatal`
+- [x] база на каждый тест — уникальная (`splitty_test_<nanotime>_<counter>`), удаление в `t.Cleanup` через `db.Drop(ctx)`
+- [x] добавить хелпер `seedUsers(t, db, users ...api.User)` — вставка документов напрямую, для подготовки состояния
+- [x] написать самопроверку: тест, который создаёт базу, пишет документ, читает его и убеждается, что после `Cleanup` базы нет
+- [x] **зафиксировать `image: mongo:7` в `docker-compose.yml:36`**: сейчас там `image: mongo`, то есть `latest`, а локально скачан только `mongo:7` (контейнер `splitty-app-mongo-1`). Без сети `docker compose up -d mongo` попытается стянуть `latest` и упадёт — инструкция из README не сработает ровно тогда, когда она нужна
+- [x] описать в `README.md` раздел «Тесты репозитория»: как поднять mongo (`docker compose up -d mongo` после фиксации тега, либо `docker start splitty-app-mongo-1`, если контейнер уже создан), как задать `MONGO_TEST_URI`, что тесты скипаются без него
+- [x] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/repository/...` — зелёные (или явный skip) перед Task 2
 
 ### Task 2: Поля личности в модели User + защита снимков
 

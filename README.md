@@ -89,6 +89,34 @@ REST-эндпоинт `POST /api/v1/rooms/{roomId}/operations/parse` распо�
   `Server.SetAI(...)` в `cmd/splitty/main.go:initRestServer` (под `GEMINI_API_KEY != ""`),
   а не через wire (wire строит только бота).
 
+## Тесты репозитория
+
+Тесты пакета `internal/repository` — интеграционные: они идут в **живой** mongo, потому что
+проверяют ровно то, чего мок не воспроизводит (уникальные sparse-индексы, атомарность `$inc`,
+поведение upsert). Каждый тест получает свою базу `splitty_test_<nanotime>_<counter>`, которая
+удаляется в `t.Cleanup`, — параллельные прогоны друг другу не мешают, мусор не остаётся.
+
+Поднять mongo:
+
+```bash
+docker compose up -d mongo          # образ зафиксирован тегом mongo:7
+docker start splitty-app-mongo-1    # если контейнер уже создан
+```
+
+Прогон:
+
+```bash
+go test ./internal/repository/...
+
+# другой адрес — через MONGO_TEST_URI (по умолчанию mongodb://localhost:27017)
+MONGO_TEST_URI=mongodb://somehost:27017 go test ./internal/repository/...
+```
+
+**Если mongo недоступен, тесты скипаются, а не падают** (`t.Skip` с подсказкой) — `go test ./...`
+на машине без docker остаётся зелёным. Обратная сторона: зелёный прогон сам по себе не
+доказывает, что репозиторий проверен, — работая над `internal/repository`, убедитесь, что в
+выводе `go test -v` нет `SKIP`.
+
 ## Мобильные клиенты
 
 В репозитории два клиента поверх того же REST API: `ios/` (Swift/SwiftUI, эталон паритета)
