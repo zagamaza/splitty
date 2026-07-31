@@ -84,6 +84,17 @@ func (r *MongoPushOutboxRepository) Delete(ctx context.Context, id string) error
 	return err
 }
 
+// DeleteByUserId выбрасывает из очереди все неотправленные пуши пользователя.
+//
+// Нужен удалению аккаунта, и это не «технический мусор»: в очереди лежат уже
+// ОТРЕНДЕРЕННЫЕ title/body, а тексты уведомлений содержат имя автора и описание
+// расхода (см. bot.Notifier). Без чистки человеку после удаления аккаунта
+// доставился бы пуш со старым именем — уже затёртым во всех комнатах.
+func (r *MongoPushOutboxRepository) DeleteByUserId(ctx context.Context, userID int) error {
+	_, err := r.col.DeleteMany(ctx, bson.M{"user_id": userID})
+	return err
+}
+
 func (r *MongoPushOutboxRepository) Reschedule(ctx context.Context, id string, nextAt time.Time, attempts int) error {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

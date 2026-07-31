@@ -34,6 +34,16 @@ func (f *fakeLoginCodeRepo) SaveLoginCode(_ context.Context, c *api.LoginCode) e
 	return nil
 }
 
+// DeleteByUserId как mongo-реализация: DeleteMany по user_id
+func (f *fakeLoginCodeRepo) DeleteByUserId(_ context.Context, userId int) error {
+	for code, c := range f.codes {
+		if c.UserId == userId {
+			delete(f.codes, code)
+		}
+	}
+	return nil
+}
+
 // UseLoginCode как атомарная mongo-реализация: живой код ({code, used:false,
 // expires_at > now}) помечается использованным, иначе mongo.ErrNoDocuments
 func (f *fakeLoginCodeRepo) UseLoginCode(_ context.Context, code string, now time.Time) (*api.LoginCode, error) {
@@ -101,12 +111,16 @@ func (f *fakeOIDCVerifier) withNonce(idToken, nonce string) *fakeOIDCVerifier {
 	return f
 }
 
-// fakeAppleTokens — oidc.AppleTokenExchanger без сети: отдаёт заданный refresh
-// token либо заданную ошибку и запоминает коды, с которыми его звали
+// fakeAppleTokens — oidc.AppleTokens без сети: отдаёт заданный refresh token
+// либо заданную ошибку и запоминает, с какими кодами и токенами его звали
 type fakeAppleTokens struct {
 	refreshToken string
 	err          error
 	codes        []string
+	// revoked — токены, для которых вызывали RevokeToken; revokeErr имитирует
+	// недоступность Apple при удалении аккаунта
+	revoked   []string
+	revokeErr error
 }
 
 func (f *fakeAppleTokens) ExchangeCode(_ context.Context, code string) (string, error) {
@@ -115,6 +129,11 @@ func (f *fakeAppleTokens) ExchangeCode(_ context.Context, code string) (string, 
 		return "", f.err
 	}
 	return f.refreshToken, nil
+}
+
+func (f *fakeAppleTokens) RevokeToken(_ context.Context, refreshToken string) error {
+	f.revoked = append(f.revoked, refreshToken)
+	return f.revokeErr
 }
 
 func (f *fakeOIDCVerifier) Verify(_ context.Context, idToken string) (*oidc.Claims, error) {
@@ -352,7 +371,30 @@ func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider str
 	return nil
 }
 
-// fakeChatStates — chatStateCleaner без mongo: запоминает, по каким id его звали
+// SoftDeleteUser как mongo-реализация: tombstone вместо удаления документа,
+// PII и личности вычищаются, display_name заменяется плейсхолдером.
+// Идемпотентен — повторный вызов пишет то же самое
+func (f *fakeUserRepo) SoftDeleteUser(_ context.Context, userId int) error {
+	u, ok := f.users[userId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	now := time.Now()
+	u.DeletedAt = &now
+	u.DisplayName = repository.DeletedUserPlaceholder
+	u.Username = ""
+	u.Email = ""
+	u.GoogleSub = ""
+	u.AppleSub = ""
+	u.TelegramID = nil
+	u.AppleRefreshToken = ""
+	u.PushTokens = nil
+	u.Aliases = nil
+	u.BankDetails = ""
+	return nil
+}
+
+// fakeChatStates — userDataCleaner без mongo: запоминает, по каким id его звали
 type fakeChatStates struct {
 	deleted []int
 	err     error
@@ -482,6 +524,12 @@ type fakeRoomRepo struct {
 	// атомарной проверки+вставки — симулирует конкурентный запрос, успевший
 	// вставить операцию с тем же client_op_id раньше нас
 	beforeCreateIfAbsent func(roomId string)
+	// anonymizeErr — одноразовый сбой AnonymizeUser: имитирует падение
+	// удаления аккаунта ПОСЛЕ tombstone, чтобы проверить, что аккаунт уже
+	// недоступен, а повторный вызов доводит анонимизацию до конца
+	anonymizeErr error
+	// anonymized — id, по которым анонимизация действительно отработала
+	anonymized []int
 }
 
 func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
@@ -719,6 +767,54 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 		return mongo.ErrNoDocuments
 	}
 	room.Currency = currency
+	return nil
+}
+
+// AnonymizeUser как mongo-реализация: во всех встроенных снимках заменяет
+// display_name плейсхолдером и вычищает PII, не трогая id, суммы и доли.
+// anonymizeErr имитирует сбой посреди удаления аккаунта (одна попытка)
+func (f *fakeRoomRepo) AnonymizeUser(_ context.Context, userId int, placeholder string) error {
+	if err := f.anonymizeErr; err != nil {
+		f.anonymizeErr = nil
+		return err
+	}
+	f.anonymized = append(f.anonymized, userId)
+	anonymize := func(u *api.User) {
+		if u == nil || u.ID != userId {
+			return
+		}
+		u.DisplayName = placeholder
+		u.Username = ""
+		u.Email = ""
+		u.GoogleSub = ""
+		u.AppleSub = ""
+		u.TelegramID = nil
+		u.PushTokens = nil
+		u.Aliases = nil
+		u.BankDetails = ""
+	}
+	for _, room := range f.rooms {
+		members := roomMembers(room)
+		for i := range members {
+			anonymize(&members[i])
+		}
+		room.Members = &members
+
+		ops := roomOperations(room)
+		for i := range ops {
+			anonymize(ops[i].Donor)
+			if ops[i].Recipients != nil {
+				recipients := *ops[i].Recipients
+				for j := range recipients {
+					anonymize(&recipients[j])
+				}
+			}
+			for j := range ops[i].RecipientsWithSum {
+				anonymize(&ops[i].RecipientsWithSum[j].User)
+			}
+		}
+		room.Operations = &ops
+	}
 	return nil
 }
 

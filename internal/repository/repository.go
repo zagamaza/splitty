@@ -56,6 +56,12 @@ type UserRepository interface {
 	// mongo.ErrNoDocuments; личность занята другим — duplicate key
 	SetIdentity(ctx context.Context, userId int, provider string, value interface{}) error
 	ClearIdentity(ctx context.Context, userId int, provider string) error
+	// SoftDeleteUser помечает аккаунт удалённым (tombstone) и вычищает из него
+	// PII и личности. Документ НЕ удаляется: пять методов ниже работают через
+	// upsert по _id и воскресили бы пользователя пустым документом от первого же
+	// запроса со старым токеном. Идемпотентен — повторный вызов дописывает то же
+	// самое. Пользователя нет — mongo.ErrNoDocuments
+	SoftDeleteUser(ctx context.Context, userId int) error
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
@@ -85,6 +91,13 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
+	// AnonymizeUser затирает имя пользователя во ВСЕХ встроенных снимках комнат
+	// (users[], operations[].donor, operations[].recipients[],
+	// operations[].recipients_with_sum[].user) и вычищает оттуда поля личности.
+	// Числовые id, суммы, доли и item.shares[].user_id не меняются — расчёт
+	// долгов после анонимизации обязан дать тот же результат.
+	// Идемпотентен: повторный вызов переписывает те же значения
+	AnonymizeUser(ctx context.Context, userId int, placeholder string) error
 }
 
 type ChatStateRepository interface {
@@ -106,6 +119,9 @@ type LoginCodeRepository interface {
 	// UseLoginCode атомарно помечает код использованным; если код не найден,
 	// просрочен или уже использован — mongo.ErrNoDocuments
 	UseLoginCode(ctx context.Context, code string, now time.Time) (*api.LoginCode, error)
+	// DeleteByUserId удаляет коды входа пользователя — нужен удалению аккаунта:
+	// живой код продолжал бы выдавать токен на tombstone
+	DeleteByUserId(ctx context.Context, userId int) error
 }
 
 // MongoUserRepository владеет собственным аллокатором номеров (seq), а не
@@ -136,6 +152,10 @@ type MongoLoginCodeRepository struct {
 
 type BugReportRepository interface {
 	SaveBugReport(ctx context.Context, r *api.BugReport) error
+	// DeleteByUserId удаляет репорты пользователя. Нужен удалению аккаунта:
+	// bug_report хранит username, display_name и СВОБОДНЫЙ ТЕКСТ жалобы —
+	// это реальный PII, а не технический мусор
+	DeleteByUserId(ctx context.Context, userId int) error
 }
 
 type MongoBugReportRepository struct {
@@ -156,6 +176,12 @@ func (br MongoBugReportRepository) SaveBugReport(ctx context.Context, r *api.Bug
 		return errors.New("insert bug report failed")
 	}
 	return nil
+}
+
+// DeleteByUserId удаляет все репорты пользователя (чистка PII при удалении аккаунта)
+func (br MongoBugReportRepository) DeleteByUserId(ctx context.Context, userId int) error {
+	_, err := br.col.DeleteMany(ctx, bson.M{"user_id": userId})
+	return err
 }
 
 // NewUserRepository. Сигнатура намеренно не меняется: она вызывается из двух
@@ -229,6 +255,15 @@ func (lr MongoLoginCodeRepository) UseLoginCode(ctx context.Context, code string
 		return nil, err
 	}
 	return lc, nil
+}
+
+// DeleteByUserId удаляет коды входа пользователя. Вызывается при удалении
+// аккаунта: невыданный/неиспользованный код иначе продолжал бы логинить в
+// tombstone, а auth-middleware отвергал бы выданный токен — вход выглядел бы
+// сломанным вместо «аккаунта нет»
+func (lr MongoLoginCodeRepository) DeleteByUserId(ctx context.Context, userId int) error {
+	_, err := lr.col.DeleteMany(ctx, bson.M{"user_id": userId})
+	return err
 }
 
 func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Room, error) {
@@ -599,6 +634,107 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 	return err
 }
 
+// DeletedUserPlaceholder — имя, которое остаётся от удалённого пользователя: и
+// в самом tombstone-документе, и во встроенных снимках комнат. Снимки не
+// перечитываются из канонического документа, поэтому имя приходится затирать
+// в каждом из них отдельно (см. AnonymizeUser)
+const DeletedUserPlaceholder = "Удалённый пользователь"
+
+// snapshotPIIFields — поля снимка, которые вычищаются при анонимизации.
+//
+// user_name — часть отображаемой личности (@ник виден всем участникам).
+// Остальные попали бы в снимок только у документов, записанных ДО санитайза
+// (см. Snapshot и sanitizeUsers): там telegram_id/google_sub/apple_sub/email и
+// push-токены лежат прямо в room, и удаление аккаунта обязано их оттуда убрать
+var snapshotPIIFields = []string{
+	"user_name", "email", "google_sub", "apple_sub", "telegram_id",
+	"push_tokens", "aliases", "bank_details",
+}
+
+// anonymizeTargets — пути до снимков пользователя внутри документа room.
+//
+// ⚠️ Почему четыре независимых UpdateMany, а не один с общими arrayFilters.
+// Поля recipients и recipients_with_sum объявлены БЕЗ omitempty
+// (api.Operation), а текущий код заполняет только одно из них: бот пишет
+// recipients_with_sum, REST явно обнуляет recipients. В базе поэтому лежит
+// recipients: null у всех современных документов и recipients_with_sum: null у
+// архаичных. Обход пути operations.$[o].recipients.$[r] по null роняет ВЕСЬ
+// UpdateMany ошибкой «cannot apply array updates to non-array» — то есть один
+// легаси-документ в базе превратил бы DELETE /me в 500 для всех.
+// Защита двойная: аррай-фильтр {$type: "array"} не даёт спуститься в null, а
+// разбиение на независимые запросы не даёт одному пути уронить остальные
+func anonymizeTargets(userId int) []struct {
+	filter       bson.M
+	path         string
+	arrayFilters []interface{}
+} {
+	return []struct {
+		filter       bson.M
+		path         string
+		arrayFilters []interface{}
+	}{
+		{
+			// участники комнаты
+			filter:       bson.M{"users": bson.M{"$elemMatch": bson.M{"_id": userId}}},
+			path:         "users.$[u]",
+			arrayFilters: []interface{}{bson.M{"u._id": userId}},
+		},
+		{
+			// автор расхода
+			filter:       bson.M{"operations": bson.M{"$elemMatch": bson.M{"donor._id": userId}}},
+			path:         "operations.$[o].donor",
+			arrayFilters: []interface{}{bson.M{"o.donor._id": userId}},
+		},
+		{
+			// легаси-получатели (архаичные документы)
+			filter: bson.M{"operations": bson.M{"$elemMatch": bson.M{"recipients._id": userId}}},
+			path:   "operations.$[o].recipients.$[r]",
+			arrayFilters: []interface{}{
+				bson.M{"o.recipients": bson.M{"$type": "array"}},
+				bson.M{"r._id": userId},
+			},
+		},
+		{
+			// получатели с долями (современные документы)
+			filter: bson.M{"operations": bson.M{"$elemMatch": bson.M{"recipients_with_sum.user._id": userId}}},
+			path:   "operations.$[o].recipients_with_sum.$[r].user",
+			arrayFilters: []interface{}{
+				bson.M{"o.recipients_with_sum": bson.M{"$type": "array"}},
+				bson.M{"r.user._id": userId},
+			},
+		},
+	}
+}
+
+// AnonymizeUser затирает имя удалённого пользователя во всех встроенных снимках
+// и вычищает оттуда PII.
+//
+// Меняются РОВНО display_name и поля из snapshotPIIFields. Числовые id, суммы,
+// доли, item.shares[].user_id остаются как были: расчёт долгов после удаления
+// аккаунта обязан дать тот же результат, что и до него (инвариант плана).
+//
+// Вызывается ПОСЛЕ SoftDeleteUser и никогда до: если анонимизация пройдёт, а
+// tombstone упадёт, аккаунт останется живым с затёртым во всех комнатах именем,
+// и восстановить его будет неоткуда — снимки из канонического документа не
+// перестраиваются
+func (rr MongoRoomRepository) AnonymizeUser(ctx context.Context, userId int, placeholder string) error {
+	for _, t := range anonymizeTargets(userId) {
+		unset := bson.M{}
+		for _, field := range snapshotPIIFields {
+			unset[t.path+"."+field] = ""
+		}
+		update := bson.D{
+			{Key: "$set", Value: bson.M{t.path + ".display_name": placeholder}},
+			{Key: "$unset", Value: unset},
+		}
+		opts := options.Update().SetArrayFilters(options.ArrayFilters{Filters: t.arrayFilters})
+		if _, err := rr.col.UpdateMany(ctx, t.filter, update, opts); err != nil {
+			return errors.Wrapf(err, "анонимизация снимков по пути %s", t.path)
+		}
+	}
+	return nil
+}
+
 func (r MongoUserRepository) FindById(ctx context.Context, id int) (*api.User, error) {
 	return r.findOne(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: id}}}})
 }
@@ -716,6 +852,54 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 	}
 	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
 	res, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$unset", Value: bson.M{field: ""}}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
+// SoftDeleteUser ставит tombstone: помечает документ удалённым, чистит PII и
+// освобождает личности.
+//
+// Документ НЕ удаляется намеренно. Во-первых, auth-middleware выдаёт 401 по
+// признаку deleted_at, а не по отсутствию документа — отличать «удалён» от
+// «никогда не существовал» нужно, чтобы старый токен не проходил. Во-вторых,
+// пять методов репозитория работают через upsert по _id (SetUserLang,
+// SetCountInPage, SetNotifySettings, SetNotificationUser, SetUserBankDetails):
+// после DeleteOne первый же запрос со старым токеном воскресил бы пользователя
+// пустым документом.
+//
+// Личности ($unset telegram_id/google_sub/apple_sub) освобождаются, чтобы
+// человек мог зарегистрироваться заново тем же Google/Apple/Telegram: unique
+// sparse индекс не видит отсутствующих полей.
+//
+// Фильтра notDeleted здесь НЕТ и upsert'а тоже: метод обязан быть повторяемым
+// (запрос DELETE /me мог упасть после этого шага, и его повторяют), но
+// создавать документ из ничего он не должен — нет пользователя, значит
+// mongo.ErrNoDocuments
+func (r MongoUserRepository) SoftDeleteUser(ctx context.Context, userId int) error {
+	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
+	update := bson.D{
+		{Key: "$set", Value: bson.M{
+			"deleted_at":   time.Now(),
+			"display_name": DeletedUserPlaceholder,
+		}},
+		{Key: "$unset", Value: bson.M{
+			"user_name":           "",
+			"email":               "",
+			"google_sub":          "",
+			"apple_sub":           "",
+			"telegram_id":         "",
+			"apple_refresh_token": "",
+			"push_tokens":         "",
+			"aliases":             "",
+			"bank_details":        "",
+		}},
+	}
+	res, err := r.col.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}

@@ -190,3 +190,55 @@ func TestAppleExchangeCodeErrors(t *testing.T) {
 		})
 	}
 }
+
+// Отзыв токенов: форма ровно та, что ждёт Apple (Guideline 5.1.1(v)).
+// Успешный ответ Apple — 200 с ПУСТЫМ телом, поэтому парсить его нельзя
+func TestAppleRevokeToken(t *testing.T) {
+	c, key := newTestAppleClient(t)
+
+	var gotForm url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			t.Errorf("cannot parse form: %v", err)
+		}
+		gotForm = r.PostForm
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+	c.revokeURL = srv.URL
+
+	if err := c.RevokeToken(context.Background(), "r-1"); err != nil {
+		t.Fatalf("RevokeToken: %v", err)
+	}
+	if got := gotForm.Get("token"); got != "r-1" {
+		t.Errorf("token = %q, want r-1", got)
+	}
+	if got := gotForm.Get("token_type_hint"); got != "refresh_token" {
+		t.Errorf("token_type_hint = %q, want refresh_token", got)
+	}
+	if got := gotForm.Get("client_id"); got != "dev.zagirnur.splitty" {
+		t.Errorf("client_id = %q, want client id приложения", got)
+	}
+	secret := gotForm.Get("client_secret")
+	if _, err := jwt.ParseWithClaims(secret, &jwt.RegisteredClaims{}, func(_ *jwt.Token) (interface{}, error) {
+		return &key.PublicKey, nil
+	}, jwt.WithValidMethods([]string{"ES256"})); err != nil {
+		t.Errorf("client_secret в форме не проверился: %v", err)
+	}
+}
+
+// Отказ Apple обязан быть видимой ошибкой: вызывающий (удаление аккаунта)
+// решает сам, что она нефатальна, но молча считать отзыв успешным нельзя
+func TestAppleRevokeTokenError(t *testing.T) {
+	c, _ := newTestAppleClient(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"invalid_client"}`))
+	}))
+	defer srv.Close()
+	c.revokeURL = srv.URL
+
+	if err := c.RevokeToken(context.Background(), "r-1"); err == nil {
+		t.Error("ожидалась ошибка отзыва")
+	}
+}

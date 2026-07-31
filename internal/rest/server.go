@@ -37,11 +37,15 @@ type userIDAllocator interface {
 	NextUserID(ctx context.Context) (int, error)
 }
 
-// chatStateCleaner удаляет незавершённые сценарии бота пользователя.
-// Интерфейс узкий, а не repository.ChatStateRepository целиком: REST нужен
-// ровно один метод, а полный интерфейс распухал бы фейками в каждом тесте.
-// Реализация — repository.MongoChatStateRepository
-type chatStateCleaner interface {
+// userDataCleaner удаляет записи пользователя из побочной коллекции
+// (chat_state, bug_report, push_outbox).
+//
+// Интерфейс узкий, а не репозиторный целиком: REST нужен ровно один метод, а
+// полные интерфейсы распухали бы фейками в каждом тесте — и правило расширения
+// интерфейсов (см. план) било бы по каждой будущей задаче. Реализации —
+// repository.MongoChatStateRepository, MongoBugReportRepository,
+// MongoPushOutboxRepository
+type userDataCleaner interface {
 	DeleteByUserId(ctx context.Context, userId int) error
 }
 
@@ -66,11 +70,11 @@ type Config struct {
 	// nil — вход через Apple не сконфигурирован (APPLE_CLIENT_IDS пуст),
 	// эндпоинт отвечает 503
 	AppleVerifier oidc.Verifier
-	// AppleTokens меняет authorizationCode на refresh token, без которого при
-	// удалении аккаунта нечего отзывать (Apple Guideline 5.1.1(v)). nil —
-	// ключ .p8 не задан: вход работает как обычно, обмен просто не делается,
-	// чтобы локальная разработка не требовала ключа Apple
-	AppleTokens oidc.AppleTokenExchanger
+	// AppleTokens меняет authorizationCode на refresh token при входе и
+	// отзывает его при удалении аккаунта (Apple Guideline 5.1.1(v)). nil —
+	// ключ .p8 не задан: вход работает как обычно, обмен и отзыв просто не
+	// делаются, чтобы локальная разработка не требовала ключа Apple
+	AppleTokens oidc.AppleTokens
 }
 
 // Server REST API сервер со всеми зависимостями.
@@ -89,9 +93,18 @@ type Server struct {
 	userIDs userIDAllocator
 	// notifier опционален (см. SetNotifier): nil — уведомления выключены (no-op)
 	notifier Notifier
-	// chatStates опционален (см. SetChatStates): нужен только отвязке telegram,
-	// nil — чистка состояний бота пропускается
-	chatStates chatStateCleaner
+	// chatStates опционален (см. SetChatStates): нужен отвязке telegram и
+	// удалению аккаунта, nil — чистка состояний бота пропускается
+	chatStates userDataCleaner
+	// bugReports и pushOutbox опциональны (см. SetBugReports/SetPushOutbox):
+	// нужны только удалению аккаунта, где вычищается PII побочных коллекций.
+	// nil — соответствующая коллекция не чистится
+	bugReports userDataCleaner
+	pushOutbox userDataCleaner
+
+	// accounts кеширует «жив ли аккаунт» для auth-middleware: без него проверка
+	// tombstone стоила бы запроса в mongo на КАЖДЫЙ авторизованный запрос
+	accounts *accountCache
 
 	// AI-парсинг расхода опционален (см. SetAI): nil aiParser — фича выключена
 	// (эндпоинт /parse отдаёт 503), остальной сервер работает как раньше
@@ -127,6 +140,7 @@ func NewServer(cfg Config, ur repository.UserRepository, rr repository.RoomRepos
 		roomSrv:       rs,
 		operationSrv:  os,
 		userIDs:       ua,
+		accounts:      newAccountCache(),
 		authThrottle:  newThrottle(),
 		httpClient:    &http.Client{Transport: transport},
 		tgApiURL:      "https://api.telegram.org",
@@ -154,12 +168,28 @@ func (s *Server) SetNotifier(n Notifier) {
 	s.notifier = n
 }
 
-// SetChatStates подключает коллекцию состояний бота: отвязка telegram чистит
-// незавершённые сценарии пользователя (см. clearChatState). Вызывать до Run.
+// SetChatStates подключает коллекцию состояний бота: отвязка telegram и
+// удаление аккаунта чистят незавершённые сценарии пользователя (chat_state
+// хранит текст расхода в CallbackData.ExternalData — это PII). Вызывать до Run.
 // Отдельный setter, а не параметр NewServer — не ломает вызовы конструктора в
-// тестах. Nil-безопасно: без него отвязка просто не чистит состояния
-func (s *Server) SetChatStates(c chatStateCleaner) {
+// тестах. Nil-безопасно: без него состояния просто не чистятся
+func (s *Server) SetChatStates(c userDataCleaner) {
 	s.chatStates = c
+}
+
+// SetBugReports подключает коллекцию репортов о багах. Нужна удалению аккаунта:
+// bug_report хранит username, display_name и свободный текст жалобы.
+// Вызывать до Run, nil-безопасно
+func (s *Server) SetBugReports(c userDataCleaner) {
+	s.bugReports = c
+}
+
+// SetPushOutbox подключает очередь пушей. Нужна удалению аккаунта: в очереди
+// лежат отрендеренные title/body с именами и описаниями расходов, и без чистки
+// человеку доставился бы пуш со старым именем уже после анонимизации комнат.
+// Вызывать до Run, nil-безопасно
+func (s *Server) SetPushOutbox(c userDataCleaner) {
+	s.pushOutbox = c
 }
 
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
@@ -203,6 +233,10 @@ func (s *Server) Handler() http.Handler {
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))
+	// Единственный маршрут под authDeleted: удалённому аккаунту нужно позволить
+	// ПОВТОРИТЬ удаление, иначе запрос, упавший после tombstone, некому довести
+	// до конца — обычный auth отверг бы его 401 (см. handleDeleteMe)
+	mux.Handle("DELETE /api/v1/me", s.authDeleted(s.handleDeleteMe))
 	mux.Handle("GET /api/v1/me/notifications", s.auth(s.handleGetNotifications))
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
 	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))

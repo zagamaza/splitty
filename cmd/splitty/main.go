@@ -143,10 +143,20 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		AppleTokens:     initAppleTokens(cfg),
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
-	// Состояния бота нужны REST только для одной операции — отвязки telegram:
-	// незавершённый сценарий, оставшийся от прежнего профиля, иначе подхватился
-	// бы новым (см. rest.clearChatState). Коллекция та же, что у графа бота
+
+	// Побочные коллекции с PII. Все три создаются БЕЗУСЛОВНО: до этого
+	// chat_state и bug_report жили только в графе бота (wire_gen.go), а
+	// push_outbox — под условием FirebaseCredentialsFile, и удалению аккаунта
+	// было физически нечем вычистить текст расхода, текст жалобы и
+	// отрендеренные пуши. Сам репозиторий безвреден и без FCM — условным
+	// остаётся только воркер доставки (см. ниже)
+	pushOutbox := repository.NewPushOutboxRepository(db)
+	// Состояния бота нужны отвязке telegram (незавершённый сценарий прежнего
+	// профиля иначе подхватился бы новым, см. rest.clearChatState) и удалению
+	// аккаунта. Коллекции те же, что у графа бота
 	server.SetChatStates(repository.NewChatStateRepository(db))
+	server.SetBugReports(repository.NewBugReportRepository(db))
+	server.SetPushOutbox(pushOutbox)
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
@@ -190,7 +200,6 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// выключены), остальной сервер работает как раньше.
 	var pushSender push.Sender = push.NoopSender{}
 	if cfg.FirebaseCredentialsFile != "" {
-		pushOutbox := repository.NewPushOutboxRepository(db)
 		worker, wErr := push.NewWorker(ctx, cfg.FirebaseCredentialsFile, pushOutbox, userRepository, userRepository)
 		if wErr != nil {
 			log.Warn().Err(wErr).Msg("cannot init FCM worker, push disabled")
@@ -245,8 +254,8 @@ func initAppleVerifier(cfg *config) oidc.Verifier {
 }
 
 // initAppleTokens собирает клиента token-эндпоинтов Apple: обмен
-// authorizationCode на refresh token при входе и отзыв токенов при удалении
-// аккаунта (Guideline 5.1.1(v)).
+// authorizationCode на refresh token при входе (POST /auth/token) и отзыв этого
+// токена при удалении аккаунта (POST /auth/revoke, Guideline 5.1.1(v)).
 //
 // Возвращает nil, когда ключ .p8 не задан или собрать клиента не удалось —
 // вход через Apple продолжает работать, просто без refresh token. Требовать
@@ -256,7 +265,7 @@ func initAppleVerifier(cfg *config) oidc.Verifier {
 // client id берётся первый из списка: client_secret подписывается ровно под
 // один sub, и это bundle id приложения (Services ID веб-потока, если он
 // когда-нибудь появится, потребует отдельного секрета)
-func initAppleTokens(cfg *config) oidc.AppleTokenExchanger {
+func initAppleTokens(cfg *config) oidc.AppleTokens {
 	if strings.TrimSpace(cfg.ApplePrivateKey) == "" {
 		log.Info().Msg("Apple token exchange disabled (APPLE_PRIVATE_KEY empty): токены Apple при удалении аккаунта отозвать будет нечем")
 		return nil

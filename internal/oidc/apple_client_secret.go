@@ -20,6 +20,10 @@ const (
 	// appleTokenURL — обмен authorizationCode на токены Apple.
 	appleTokenURL = "https://appleid.apple.com/auth/token"
 
+	// appleRevokeURL — отзыв выданных токенов. Обязателен при удалении аккаунта
+	// по Apple Guideline 5.1.1(v).
+	appleRevokeURL = "https://appleid.apple.com/auth/revoke"
+
 	// appleAudience — получатель client_secret: сам Apple.
 	appleAudience = "https://appleid.apple.com"
 
@@ -38,8 +42,9 @@ const (
 	maxAppleResponseBytes = 1 << 20
 )
 
-// AppleTokenExchanger обменивает одноразовый authorizationCode, полученный
-// клиентом при Sign in with Apple, на refresh token.
+// AppleTokens — token-эндпоинты Apple, нужные жизненному циклу аккаунта:
+// обмен authorizationCode на refresh token при входе и отзыв этого токена при
+// удалении аккаунта.
 //
 // Refresh token нужен НЕ для входа: Apple Guideline 5.1.1(v) требует, чтобы
 // приложение с Sign in with Apple при удалении аккаунта отзывало выданные
@@ -47,10 +52,13 @@ const (
 // его можно только обменом кода в момент входа — код одноразовый и живёт
 // около пяти минут, до удаления аккаунта он не доживёт.
 //
-// Интерфейс объявлен здесь, чтобы хендлер входа подставлял в тестах фейк и
-// никуда не ходил по сети.
-type AppleTokenExchanger interface {
+// Интерфейс объявлен здесь, чтобы хендлеры входа и удаления подставляли в
+// тестах фейк и никуда не ходили по сети.
+type AppleTokens interface {
 	ExchangeCode(ctx context.Context, code string) (string, error)
+	// RevokeToken отзывает refresh token. Вызывающий обязан считать ошибку
+	// НЕфатальной: недоступность Apple не должна блокировать удаление аккаунта
+	RevokeToken(ctx context.Context, refreshToken string) error
 }
 
 // AppleTokenClient — клиент token-эндпоинта Apple. Авторизуется client_secret'ом
@@ -63,8 +71,9 @@ type AppleTokenClient struct {
 
 	httpClient *http.Client
 	now        func() time.Time
-	// tokenURL переопределяется в тестах, чтобы не ходить к Apple
-	tokenURL string
+	// tokenURL и revokeURL переопределяются в тестах, чтобы не ходить к Apple
+	tokenURL  string
+	revokeURL string
 }
 
 // NewAppleTokenClient собирает клиента из данных Apple Developer: Team ID,
@@ -88,6 +97,7 @@ func NewAppleTokenClient(teamID, keyID, clientID, privateKeyPEM string) (*AppleT
 		httpClient: &http.Client{Timeout: appleHTTPTimeout},
 		now:        time.Now,
 		tokenURL:   appleTokenURL,
+		revokeURL:  appleRevokeURL,
 	}, nil
 }
 
@@ -139,35 +149,12 @@ func (c *AppleTokenClient) ClientSecret() (string, error) {
 // Вызывающий обязан считать ошибку НЕфатальной: вход через Apple не должен
 // падать из-за того, что недоступна машинерия отзыва токенов.
 func (c *AppleTokenClient) ExchangeCode(ctx context.Context, code string) (string, error) {
-	secret, err := c.ClientSecret()
+	body, err := c.postForm(ctx, c.tokenURL, url.Values{
+		"code":       {code},
+		"grant_type": {"authorization_code"},
+	})
 	if err != nil {
 		return "", err
-	}
-
-	form := url.Values{
-		"client_id":     {c.clientID},
-		"client_secret": {secret},
-		"code":          {code},
-		"grant_type":    {"authorization_code"},
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.tokenURL, strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", fmt.Errorf("oidc: не удалось собрать запрос к Apple: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("oidc: запрос к Apple не удался: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAppleResponseBytes))
-	if err != nil {
-		return "", fmt.Errorf("oidc: не удалось прочитать ответ Apple: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("oidc: apple вернул %d на обмен кода: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var payload struct {
@@ -181,4 +168,54 @@ func (c *AppleTokenClient) ExchangeCode(ctx context.Context, code string) (strin
 		return "", fmt.Errorf("oidc: apple не вернул refresh_token (error=%q)", payload.Error)
 	}
 	return payload.RefreshToken, nil
+}
+
+// RevokeToken отзывает refresh token пользователя (POST /auth/revoke).
+//
+// Обязателен при удалении аккаунта: Apple Guideline 5.1.1(v) требует, чтобы
+// приложение с Sign in with Apple не только удаляло аккаунт у себя, но и
+// отзывало выданные ему токены. Успешный ответ Apple — 200 с пустым телом.
+//
+// Вызывающий обязан считать ошибку НЕфатальной: удаление аккаунта не может
+// зависеть от доступности Apple, иначе человек не сможет удалиться, пока
+// провайдер лежит.
+func (c *AppleTokenClient) RevokeToken(ctx context.Context, refreshToken string) error {
+	_, err := c.postForm(ctx, c.revokeURL, url.Values{
+		"token":           {refreshToken},
+		"token_type_hint": {"refresh_token"},
+	})
+	return err
+}
+
+// postForm выполняет form-post к эндпоинту Apple, дописывая в форму
+// client_id и свежий client_secret. Тело читается ограниченно
+// (io.LimitReader): внешнему хосту не доверяем
+func (c *AppleTokenClient) postForm(ctx context.Context, endpoint string, form url.Values) ([]byte, error) {
+	secret, err := c.ClientSecret()
+	if err != nil {
+		return nil, err
+	}
+	form.Set("client_id", c.clientID)
+	form.Set("client_secret", secret)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("oidc: не удалось собрать запрос к Apple: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("oidc: запрос к Apple не удался: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxAppleResponseBytes))
+	if err != nil {
+		return nil, fmt.Errorf("oidc: не удалось прочитать ответ Apple: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("oidc: apple вернул %d на %s: %s", resp.StatusCode, endpoint, strings.TrimSpace(string(body)))
+	}
+	return body, nil
 }

@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -57,8 +58,89 @@ func (s *Server) parseToken(tokenStr string) (int, error) {
 	return strconv.Atoi(claims.Subject)
 }
 
-// auth — middleware: Bearer-токен → userId в context
+// accountTTL сколько auth-middleware помнит вердикт «аккаунт жив/удалён».
+// Компромисс: за минуту токен удалённого перестаёт работать везде, а обычный
+// запрос платит один поход в mongo раз в минуту, а не на каждый вызов.
+// Собственное удаление кеш не ждёт — handleDeleteMe чистит свою запись сам
+const accountTTL = 60 * time.Second
+
+// accountCacheMax — потолок числа записей. Кеш держит только int→(bool, time),
+// но расти безгранично он не должен: при переполнении сбрасывается целиком
+// (проще LRU и безопасно — потеря записи стоит одного запроса в mongo)
+const accountCacheMax = 10000
+
+// accountCache — кеш вердиктов auth-middleware о состоянии аккаунта.
+//
+// Зачем вообще проверка в middleware: currentUser вызывается лишь в 7 хендлерах
+// из ~25, поэтому без неё токен удалённого пользователя ещё 90 дней открывал бы
+// комнаты, операции и создание расходов — просто потому, что эти хендлеры
+// канонический документ не читают
+type accountCache struct {
+	mu      sync.Mutex
+	entries map[int]accountEntry
+	ttl     time.Duration
+	max     int
+	now     func() time.Time // подменяется в тестах
+}
+
+type accountEntry struct {
+	alive bool
+	until time.Time
+}
+
+func newAccountCache() *accountCache {
+	return &accountCache{entries: map[int]accountEntry{}, ttl: accountTTL, max: accountCacheMax, now: time.Now}
+}
+
+// get возвращает вердикт и признак попадания в кеш
+func (c *accountCache) get(userId int) (alive, hit bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	e, ok := c.entries[userId]
+	if !ok {
+		return false, false
+	}
+	if c.now().After(e.until) {
+		delete(c.entries, userId)
+		return false, false
+	}
+	return e.alive, true
+}
+
+func (c *accountCache) put(userId int, alive bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if len(c.entries) >= c.max {
+		c.entries = map[int]accountEntry{}
+	}
+	c.entries[userId] = accountEntry{alive: alive, until: c.now().Add(c.ttl)}
+}
+
+// forget убирает запись немедленно. Нужен handleDeleteMe: сам запрос DELETE /me
+// проходит через middleware и прогревает кеш вердиктом «жив», поэтому без явной
+// чистки удалённый пользователь ещё accountTTL ходил бы с рабочим токеном
+func (c *accountCache) forget(userId int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.entries, userId)
+}
+
+// auth — middleware: Bearer-токен → userId в context. Токен удалённого аккаунта
+// отвергается (401)
 func (s *Server) auth(next http.HandlerFunc) http.Handler {
+	return s.authenticate(next, false)
+}
+
+// authDeleted — то же, но пропускает и удалённых. Нужен ровно одному маршруту,
+// DELETE /me: удаление обязано быть повторяемым, а повторяет его тот самый
+// пользователь, которого предыдущая попытка уже пометила tombstone
+func (s *Server) authDeleted(next http.HandlerFunc) http.Handler {
+	return s.authenticate(next, true)
+}
+
+func (s *Server) authenticate(next http.HandlerFunc, allowDeleted bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header.Get("Authorization")
 		if !strings.HasPrefix(header, "Bearer ") {
@@ -70,8 +152,42 @@ func (s *Server) auth(next http.HandlerFunc) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "невалидный токен")
 			return
 		}
+		if !allowDeleted {
+			alive, hErr := s.accountAlive(r.Context(), userId)
+			if hErr != nil {
+				hErr.write(w)
+				return
+			}
+			if !alive {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "аккаунт удалён")
+				return
+			}
+		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyUserId, userId)))
 	})
+}
+
+// accountAlive — существует ли пользователь и не помечен ли он удалённым.
+//
+// Ошибка базы НЕ трактуется как «жив»: отвечаем 500, а не пропускаем запрос.
+// Fail-open здесь ничего бы не спас (хендлеры всё равно ходят в ту же mongo),
+// а fail-closed не даёт лежащей базе стать обходом инвалидации токена
+func (s *Server) accountAlive(ctx context.Context, userId int) (bool, *httpError) {
+	if alive, hit := s.accounts.get(userId); hit {
+		return alive, nil
+	}
+	user, err := s.userRepo.FindById(ctx, userId)
+	if err == mongo.ErrNoDocuments {
+		s.accounts.put(userId, false)
+		return false, nil
+	}
+	if err != nil {
+		log.Error().Err(err).Int("userId", userId).Msg("cannot check account status")
+		return false, &httpError{http.StatusInternalServerError, "internal", "не удалось проверить аккаунт"}
+	}
+	alive := !user.IsDeleted()
+	s.accounts.put(userId, alive)
+	return alive, nil
 }
 
 // userIdFromCtx возвращает userId, положенный auth-middleware
