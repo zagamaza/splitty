@@ -10,6 +10,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CodeLoginBody(val code: String)
 
+/**
+ * POST /auth/google — id-токен из Credential Manager. Сервер сам проверяет
+ * подпись по JWKS Google и сверяет `aud` со списком GOOGLE_CLIENT_IDS,
+ * поэтому клиент не разбирает токен и ничего кроме него не шлёт.
+ */
+@Serializable
+data class GoogleLoginBody(val idToken: String)
+
 /** POST/DELETE /me/devices — FCM-токен устройства для native-пушей. */
 @Serializable
 data class DeviceBody(val token: String, val platform: String = "android")

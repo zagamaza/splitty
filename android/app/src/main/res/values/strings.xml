@@ -10,6 +10,7 @@
 
     <!-- Логин -->
     <string name="login_tagline">Делите расходы с друзьями</string>
+    <string name="login_google_button">Войти через Google</string>
     <string name="login_telegram_section">Вход через Telegram</string>
     <string name="login_telegram_hint">Нажмите «Открыть бота» — он сразу пришлёт код для входа</string>
     <string name="login_open_bot">Открыть бота</string>

@@ -1,7 +1,9 @@
 package com.zagir.splitty.ui.auth
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
@@ -72,6 +74,10 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var isDevExpanded by remember { mutableStateOf(false) }
     var isServerExpanded by remember { mutableStateOf(false) }
+    // LocalActivity появился только в activity-compose 1.10 (у нас 1.9.3),
+    // поэтому активити достаём разворачиванием ContextWrapper'ов сами.
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
 
     Box(
         modifier = Modifier
@@ -88,6 +94,17 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Logo()
+            // Вход через Google — над блоком входа по коду: для человека без
+            // Telegram это единственный путь внутрь, и он не должен искать его
+            // под инструкцией про бота.
+            GoogleSignInButton(
+                enabled = !state.isLoggingIn,
+                onClick = {
+                    // Credential Manager рисует системный лист поверх активити —
+                    // application-контекст ему не подходит.
+                    activity?.let(viewModel::loginWithGoogle)
+                },
+            )
             TelegramLoginCard(
                 code = state.code,
                 isValid = state.isCodeValid,
@@ -155,6 +172,51 @@ private fun Logo() {
             color = Splitty.colors.inkSecondary,
         )
     }
+}
+
+/**
+ * Кнопка входа через Google: нейтральная подложка + hairline, геометрия
+ * повторяет iOS (высота 52, радиус 14). Акцентную заливку (`PrimaryPillButton`)
+ * не берём — она перетянула бы внимание с основного входа по коду, а логотип G
+ * не рисуем: своей отрисовкой чужого бренда легко нарушить его гайдлайны.
+ */
+@Composable
+private fun GoogleSignInButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .background(colors.surface, shape)
+            .border(1.dp, colors.hairline, shape)
+            .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.login_google_button),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (enabled) colors.ink else colors.inkSecondary,
+        )
+    }
+}
+
+/**
+ * Активити из дерева Compose-контекстов: `LocalContext` внутри диалога или
+ * кастомного `ContextWrapper` — не активити, а Credential Manager без неё
+ * не покажет системный лист.
+ */
+private fun Context.findActivity(): Activity? {
+    var current: Context? = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }
 
 /** Основной вход: одноразовый код из Telegram-бота → POST /auth/code. */

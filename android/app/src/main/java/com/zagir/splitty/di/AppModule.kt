@@ -7,6 +7,8 @@ import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import com.zagir.splitty.core.auth.CredentialManagerGoogleIdTokenProvider
+import com.zagir.splitty.core.auth.GoogleIdTokenProvider
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.session.KeystoreTokenCipher
 import com.zagir.splitty.core.session.TokenCipher
@@ -71,6 +73,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideTokenCipher(): TokenCipher = KeystoreTokenCipher()
+
+    /** Вход через Google: обёртка над Credential Manager (Task 18). */
+    @Provides
+    @Singleton
+    fun provideGoogleIdTokenProvider(): GoogleIdTokenProvider =
+        CredentialManagerGoogleIdTokenProvider()
 
     /** Офлайн-кеш GET-ответов: JSON-файлы в filesDir/cache-api. */
     @Provides

@@ -32,6 +32,17 @@ android {
         // поднимется (окна транскрипта не будет), а сам parse работает от аудио
         // и без транскрипта — деградация мягкая.
         buildConfigField("boolean", "KARAOKE_TRANSCRIPT", "true")
+
+        // Вход через Google (Task 18). Это WEB-клиент проекта Google Cloud:
+        // именно он попадает в `aud` id-токена и сверяется бэкендом
+        // (GOOGLE_CLIENT_IDS). Android-клиенты (Play App Signing и локальный
+        // debug-keystore) не передаются никуда — Google сопоставляет их сам по
+        // package name + SHA-1 сертификата подписи.
+        buildConfigField(
+            "String",
+            "GOOGLE_SERVER_CLIENT_ID",
+            "\"327021108128-rm91uurc2il489qnv8hn32o1kcakemnl.apps.googleusercontent.com\"",
+        )
     }
 
     // Подпись release: ключ и пароли в keystore.properties (в .gitignore).
@@ -170,6 +181,12 @@ dependencies {
 
     implementation(libs.datastore.preferences)
 
+    // Вход через Google: системный выбор аккаунта (Credential Manager) +
+    // провайдер Play Services под ним + разбор GoogleIdTokenCredential.
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
     testImplementation(libs.junit)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -234,6 +251,7 @@ val verifyReleaseShrinking by tasks.registering {
             "com.zagir.splitty.core.model.ParseResponse",
             "com.zagir.splitty.core.model.NotifySettings",
             "com.zagir.splitty.core.model.CodeLoginBody",
+            "com.zagir.splitty.core.model.GoogleLoginBody",
             "com.zagir.splitty.core.model.RepaymentBody",
         )
         val missing = requiredSerializers.filterNot { "$it\$\$serializer" in survivors }

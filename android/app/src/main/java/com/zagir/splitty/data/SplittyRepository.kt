@@ -12,6 +12,7 @@ import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.FriendBalance
+import com.zagir.splitty.core.model.GoogleLoginBody
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
@@ -80,6 +81,10 @@ class SplittyRepository @Inject constructor(
 
     suspend fun loginDev(userId: Long, displayName: String, username: String?): AuthResponse =
         call { api.loginDev(DevLoginBody(userId = userId, displayName = displayName, username = username)) }
+
+    /** Вход через Google: id-токен из Credential Manager обменивается на сессию. */
+    suspend fun loginWithGoogle(idToken: String): AuthResponse =
+        call { api.loginWithGoogle(GoogleLoginBody(idToken)) }
 
     // --- Профиль ---
 

@@ -1,8 +1,11 @@
 package com.zagir.splitty.ui.auth
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zagir.splitty.core.auth.GoogleIdTokenProvider
+import com.zagir.splitty.core.auth.GoogleSignInException
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
@@ -49,8 +52,9 @@ data class LoginUiState(
 }
 
 /**
- * Вход: POST /auth/code (код из Telegram) и POST /auth/dev (dev-режим);
- * поле «Сервер» персистится в SessionStore на каждое изменение.
+ * Вход: POST /auth/google (Credential Manager), POST /auth/code (код из
+ * Telegram) и POST /auth/dev (dev-режим); поле «Сервер» персистится в
+ * SessionStore на каждое изменение.
  */
 private const val TAG = "LoginViewModel"
 
@@ -58,6 +62,7 @@ private const val TAG = "LoginViewModel"
 class LoginViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
+    private val googleIdTokenProvider: GoogleIdTokenProvider,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
@@ -77,6 +82,44 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             runCatching { sessionStore.setBaseUrl(value) }
                 .onFailure { Log.e(TAG, "persist base url failed", it) }
+        }
+    }
+
+    /**
+     * Вход через Google: системный лист выбора аккаунта (Credential Manager) →
+     * id-токен → POST /auth/google.
+     *
+     * [activityContext] — контекст активити: лист рисуется поверх неё.
+     * Отмена пользователем не показывает ошибку — он и так знает, что закрыл
+     * лист, а алерт поверх собственного действия читается как сбой.
+     */
+    fun loginWithGoogle(activityContext: Context) {
+        if (_state.value.isLoggingIn) return
+        _state.update { it.copy(isLoggingIn = true) }
+        viewModelScope.launch {
+            try {
+                val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
+                val response = repository.loginWithGoogle(idToken)
+                sessionStore.signIn(response.token, response.user)
+            } catch (e: GoogleSignInException) {
+                _state.update { it.copy(errorMessage = e.message) }
+            } catch (e: ApiException) {
+                // 401 здесь — «сервер отверг id-токен» (протухший/чужой aud),
+                // а не «неверный код»: пользователю сообщаем ровно это.
+                val message = if (e.isUnauthorized) {
+                    "Не удалось войти через Google"
+                } else {
+                    e.message
+                }
+                _state.update { it.copy(errorMessage = message) }
+            } catch (e: Exception) {
+                // См. комментарий в loginWithCode: signIn пишет в
+                // DataStore/Keystore мимо ApiException-обёртки.
+                Log.e(TAG, "google login failed", e)
+                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
+            } finally {
+                _state.update { it.copy(isLoggingIn = false) }
+            }
         }
     }
 

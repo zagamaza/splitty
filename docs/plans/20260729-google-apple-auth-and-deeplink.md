@@ -761,18 +761,34 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/auth/LoginViewModel.kt`
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/auth/LoginScreen.kt`
 - Modify: `android/app/src/main/res/values/strings.xml`
+- ➕ Create: `android/app/src/main/java/com/zagir/splitty/core/auth/GoogleIdTokenProvider.kt` — обёртка над Credential Manager (порт iOS `GoogleSignInService`), чтобы SDK не растекался по VM и экрану и чтобы вход был тестируем
+- ➕ Modify: `android/app/src/main/java/com/zagir/splitty/core/model/Requests.kt` — тела запросов живут здесь, а не в `Models.kt`
+- ➕ Modify: `android/app/src/main/java/com/zagir/splitty/di/AppModule.kt` — привязка `GoogleIdTokenProvider`
+- ➕ Create: `android/app/src/test/java/com/zagir/splitty/ui/auth/LoginGoogleTest.kt`
 
-- [ ] добавить в version catalog `androidx.credentials:credentials`, `androidx.credentials:credentials-play-services-auth`, `com.google.android.libraries.identity.googleid:googleid`; подключить в `app/build.gradle.kts`
-- [ ] **если Gradle не резолвит зависимости из-за отсутствия сети** — пометить `⚠️ заблокировано: нет сети`, закоммитить и перейти к Task 19
-- [ ] добавить `@POST("api/v1/auth/google")` в `SplittyApi` и модель `GoogleLoginBody(idToken)` в `Models.kt`
-- [ ] **добавить `GoogleLoginBody` (и любые другие новые `@Serializable`) в список `requiredSerializers`** в `app/build.gradle.kts:217-238` — иначе R8 их выкинет, задача `verifyReleaseShrinking` упадёт, а без неё релиз падал бы уже у тестера
-- [ ] `SplittyRepository.loginWithGoogle(idToken)` по образцу входа по коду
-- [ ] в `LoginViewModel` — запуск Credential Manager с `GetGoogleIdOption`, серверный client id из `BuildConfig` (плейсхолдер + `TODO`)
-- [ ] `GetCredentialCancellationException` обрабатывать тихо
-- [ ] кнопка «Войти через Google» в `LoginScreen` над блоком входа по коду; строки — в `strings.xml`
-- [ ] **не добавлять Sign in with Apple на Android**: требует веб-редиректа и домена, а правило Apple 4.8 действует только на iOS
-- [ ] написать unit-тесты `LoginViewModel`: успешный вход обновляет сессию; ошибка API кладёт `errorMessage`; отмена не показывает ошибку
-- [ ] `./gradlew :app:testDebugUnitTest` — зелёные перед Task 19
+- [x] добавить в version catalog `androidx.credentials:credentials`, `androidx.credentials:credentials-play-services-auth`, `com.google.android.libraries.identity.googleid:googleid`; подключить в `app/build.gradle.kts`
+- [x] **если Gradle не резолвит зависимости из-за отсутствия сети** — не понадобилось: резолв прошёл штатно (`credentials 1.5.0`, `credentials-play-services-auth 1.5.0`, `googleid 1.1.1`; последний подтягивается и транзитивно провайдером, версии сошлись)
+- [x] добавить `@POST("api/v1/auth/google")` в `SplittyApi` и модель `GoogleLoginBody(idToken)` в ~~`Models.kt`~~ `Requests.kt`
+- [x] **добавить `GoogleLoginBody` (и любые другие новые `@Serializable`) в список `requiredSerializers`** в `app/build.gradle.kts` — проверено прогоном `assembleRelease` (R8-smoke: 21 модель)
+- [x] `SplittyRepository.loginWithGoogle(idToken)` по образцу входа по коду
+- [x] в `LoginViewModel` — запуск Credential Manager с `GetGoogleIdOption`, серверный client id из `BuildConfig` (**плейсхолдер не понадобился** — вписан реальный WEB client id)
+- [x] `GetCredentialCancellationException` обрабатывать тихо
+- [x] кнопка «Войти через Google» в `LoginScreen` над блоком входа по коду; строки — в `strings.xml`
+- [x] **не добавлять Sign in with Apple на Android**: требует веб-редиректа и домена, а правило Apple 4.8 действует только на iOS
+- [x] написать unit-тесты `LoginViewModel`: успешный вход обновляет сессию; ошибка API кладёт `errorMessage`; отмена не показывает ошибку
+- [x] `./gradlew :app:testDebugUnitTest` — зелёные перед Task 19 (330 тестов, из них 5 новых)
+
+**Как сделано (для следующих задач):**
+- `GoogleIdTokenProvider` (`core/auth/GoogleIdTokenProvider.kt`) — единственное место, где живёт Credential Manager. Отдаёт наружу голый id-токен, `null` на отмену и `GoogleSignInException` с готовым к показу текстом на всё остальное. **Task 21 (привязка Google к аккаунту) обязан переиспользовать `idToken()`**, а не звать SDK заново
+- [decision] интерфейс + Hilt-провайд, а не прямой вызов SDK из VM: реальный `CredentialManager` требует Play Services и системный лист, в JVM его нет — без шва три требуемых теста (успех/ошибка/отмена) не пишутся вовсе
+- [decision] `setFilterByAuthorizedAccounts(false)`: при первом входе авторизованных аккаунтов нет по определению, и с `true` лист был бы пуст (`NoCredentialException`). `setAutoSelectEnabled(false)` — вход не должен случаться от одного тапа без подтверждения
+- [decision] `NoCredentialException` отделён от прочих сбоев: «на устройстве нет Google-аккаунта» лечится действием пользователя, и текст даёт именно его, а не «не удалось войти»
+- [decision] WEB client id лежит в `BuildConfig` (`GOOGLE_SERVER_CLIENT_ID`) — он же `aud` токена, его сверяет бэкенд. Android-клиенты (Play App Signing SHA-1 `18:BC:…:F6`, локальный debug SHA-1 `8B:F8:…:E6`) в код НЕ попадают: Google сопоставляет их по package name + подписи
+- [deviation] `GoogleLoginBody` положен в `Requests.kt`, а не в `Models.kt` как написано в пункте: в проекте тела запросов давно живут отдельным файлом (`CodeLoginBody`, `DevLoginBody` рядом), пакет тот же — строка в `requiredSerializers` не меняется
+- [deviation] кнопка Google оформлена нейтрально (подложка `surface` + hairline, высота 52, радиус 14 — геометрия iOS), а не акцентным `PrimaryPillButton`: две акцентные заливки подряд перетянули бы внимание с основного входа по коду. Логотип G не рисуем — по той же причине, что и логотип Apple в Task 15
+- [decision] активити для листа достаётся разворачиванием `ContextWrapper` (`Context.findActivity()` в `LoginScreen.kt`), а не `LocalActivity`: тот появился в activity-compose 1.10, у проекта 1.9.3, и подъём версии ради одной строки тянул бы за собой весь граф Compose
+- [decision] повторный тап по кнопке гасится тем же флагом `isLoggingIn`, что и остальные входы (тест `second tap while signing in is ignored`) — иначе поверх системного листа открывается второй
+- ⚠️ проверить вживую вход нельзя: нет устройства/эмулятора с Play Services, а Publishing status проекта Google = Testing. Проверены резолв зависимостей, `assembleDebug`, `assembleRelease` (R8-smoke прошёл — сериализатор `GoogleLoginBody` дожил до APK) и 330 юнит-тестов
 
 ### Task 19: Android — app links и отложенный join-intent
 

@@ -10,6 +10,7 @@ import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.FriendBalance
+import com.zagir.splitty.core.model.GoogleLoginBody
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.Operation
@@ -47,6 +48,10 @@ interface SplittyApi {
 
     @POST("api/v1/auth/dev")
     suspend fun loginDev(@Body body: DevLoginBody): AuthResponse
+
+    /** Вход через Google: id-токен от Credential Manager (Task 18). */
+    @POST("api/v1/auth/google")
+    suspend fun loginWithGoogle(@Body body: GoogleLoginBody): AuthResponse
 
     // --- Профиль ---
 
