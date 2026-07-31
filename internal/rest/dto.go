@@ -35,11 +35,16 @@ type userDto struct {
 }
 
 type meDto struct {
-	ID             int    `json:"id"`
-	Username       string `json:"username"`
-	DisplayName    string `json:"displayName"`
-	Lang           string `json:"lang"`
-	NotificationOn bool   `json:"notificationOn"`
+	ID          int    `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Lang        string `json:"lang"`
+	// LinkedProviders — привязанные способы входа ("telegram", "google",
+	// "apple"): по ним клиент рисует экран «Способы входа» и понимает, какой
+	// отвязать нельзя (последний). Наружу отдаётся только ФАКТ привязки —
+	// сами идентификаторы личности остаются в базе
+	LinkedProviders []string `json:"linkedProviders"`
+	NotificationOn  bool     `json:"notificationOn"`
 }
 
 type fileDto struct {
@@ -229,11 +234,12 @@ func toUserDtos(users []api.User) []userDto {
 
 func toMeDto(u *api.User) meDto {
 	return meDto{
-		ID:             u.ID,
-		Username:       u.Username,
-		DisplayName:    toUserDto(u).DisplayName,
-		Lang:           api.DefineLang(u),
-		NotificationOn: u.NotificationOn == nil || *u.NotificationOn,
+		ID:              u.ID,
+		Username:        u.Username,
+		DisplayName:     toUserDto(u).DisplayName,
+		Lang:            api.DefineLang(u),
+		LinkedProviders: linkedProviders(u),
+		NotificationOn:  u.NotificationOn == nil || *u.NotificationOn,
 	}
 }
 

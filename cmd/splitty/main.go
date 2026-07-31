@@ -143,6 +143,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		AppleTokens:     initAppleTokens(cfg),
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
+	// Состояния бота нужны REST только для одной операции — отвязки telegram:
+	// незавершённый сценарий, оставшийся от прежнего профиля, иначе подхватился
+	// бы новым (см. rest.clearChatState). Коллекция та же, что у графа бота
+	server.SetChatStates(repository.NewChatStateRepository(db))
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")

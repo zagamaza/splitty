@@ -474,3 +474,220 @@ func TestUpdateAppleProfileSkipsDeleted(t *testing.T) {
 		t.Fatalf("tombstone дополнен данными Apple: %+v", got)
 	}
 }
+
+// TestSetAndClearIdentity — привязка и отвязка каждого способа входа: значение
+// ложится в своё поле, а ClearIdentity делает именно $unset (не пустую строку и
+// не null), иначе unique sparse индекс считал бы поле занятым
+func TestSetAndClearIdentity(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	if err := repo.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("EnsureIndexes упал: %v", err)
+	}
+	seedUsers(t, db, api.User{ID: 1_000_000_000_020, DisplayName: "Загир"})
+
+	tests := []struct {
+		provider string
+		value    interface{}
+		field    string
+		find     func() (*api.User, error)
+	}{
+		{IdentityTelegram, 304898122, "telegram_id", func() (*api.User, error) { return repo.FindByTelegramID(ctx, 304898122) }},
+		{IdentityGoogle, "gsub-20", "google_sub", func() (*api.User, error) { return repo.FindByGoogleSub(ctx, "gsub-20") }},
+		{IdentityApple, "asub-20", "apple_sub", func() (*api.User, error) { return repo.FindByAppleSub(ctx, "asub-20") }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.provider, func(t *testing.T) {
+			if err := repo.SetIdentity(ctx, 1_000_000_000_020, tc.provider, tc.value); err != nil {
+				t.Fatalf("SetIdentity упал: %v", err)
+			}
+			u, err := tc.find()
+			if err != nil || u.ID != 1_000_000_000_020 {
+				t.Fatalf("после привязки пользователь не находится по личности: u=%+v err=%v", u, err)
+			}
+
+			if err := repo.ClearIdentity(ctx, 1_000_000_000_020, tc.provider); err != nil {
+				t.Fatalf("ClearIdentity упал: %v", err)
+			}
+			if _, err := tc.find(); err != mongo.ErrNoDocuments {
+				t.Fatalf("после отвязки пользователь всё ещё находится по личности: %v", err)
+			}
+
+			// именно $unset: поля в документе быть не должно
+			var raw bson.M
+			if err := db.Collection("user").FindOne(ctx, bson.M{"_id": 1_000_000_000_020}).Decode(&raw); err != nil {
+				t.Fatalf("документ не прочитан: %v", err)
+			}
+			if _, exists := raw[tc.field]; exists {
+				t.Fatalf("поле %s осталось в документе после ClearIdentity: %v", tc.field, raw[tc.field])
+			}
+		})
+	}
+
+	// неизвестный провайдер — ошибка, а не молчаливая запись мусорного поля
+	if err := repo.SetIdentity(ctx, 1_000_000_000_020, "vkontakte", "x"); err == nil {
+		t.Fatal("SetIdentity принял неизвестный способ входа")
+	}
+	if err := repo.ClearIdentity(ctx, 1_000_000_000_020, "vkontakte"); err == nil {
+		t.Fatal("ClearIdentity принял неизвестный способ входа")
+	}
+}
+
+// TestSetIdentityTaken — личность, занятая другим документом, отвергается
+// unique-индексом, а не переезжает молча
+func TestSetIdentityTaken(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	if err := repo.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("EnsureIndexes упал: %v", err)
+	}
+	seedUsers(t, db,
+		api.User{ID: 1, GoogleSub: "gsub-taken"},
+		api.User{ID: 2},
+	)
+
+	if err := repo.SetIdentity(ctx, 2, IdentityGoogle, "gsub-taken"); !IsDuplicateKey(err) {
+		t.Fatalf("ожидался duplicate key, получено: %v", err)
+	}
+}
+
+// ⚠️ TestSetIdentitySkipsDeleted — гонка «медленный /me/link/google ↔ DELETE /me».
+//
+// Привязка уже прошла middleware, параллельно аккаунт стал tombstone с
+// вычищенными личностями. Если бы SetIdentity делал upsert или фильтровал только
+// по _id, google_sub осел бы НА TOMBSTONE: найти такого пользователя нельзя
+// (поиск по личностям пропускает удалённых), но unique sparse индекс значение
+// уже занял — человек навсегда потерял бы возможность зарегистрироваться заново
+// тем же Google-аккаунтом, а создание падало бы на duplicate key
+func TestSetIdentitySkipsDeleted(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	if err := repo.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("EnsureIndexes упал: %v", err)
+	}
+	deletedAt := time.Now()
+	seedUsers(t, db, api.User{ID: 304898122, DisplayName: "Удалённый", DeletedAt: &deletedAt})
+
+	if err := repo.SetIdentity(ctx, 304898122, IdentityGoogle, "gsub-race"); err != mongo.ErrNoDocuments {
+		t.Fatalf("SetIdentity на tombstone: ожидался mongo.ErrNoDocuments, получено %v", err)
+	}
+	if err := repo.ClearIdentity(ctx, 304898122, IdentityGoogle); err != mongo.ErrNoDocuments {
+		t.Fatalf("ClearIdentity на tombstone: ожидался mongo.ErrNoDocuments, получено %v", err)
+	}
+
+	var raw bson.M
+	if err := db.Collection("user").FindOne(ctx, bson.M{"_id": 304898122}).Decode(&raw); err != nil {
+		t.Fatalf("tombstone не прочитан: %v", err)
+	}
+	if _, exists := raw["google_sub"]; exists {
+		t.Fatalf("личность записана на tombstone: %v", raw["google_sub"])
+	}
+
+	// личность свободна: тем же google_sub можно зарегистрироваться заново
+	if err := repo.CreateIdentityUser(ctx, api.User{ID: 1_000_000_000_030, GoogleSub: "gsub-race"}); err != nil {
+		t.Fatalf("повторная регистрация с тем же google_sub упала: %v", err)
+	}
+}
+
+// TestSetIdentityDoesNotUpsert — несуществующий пользователь не создаётся:
+// иначе токен, переживший чистку базы, воскрешал бы аккаунт пустым документом
+func TestSetIdentityDoesNotUpsert(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	if err := repo.SetIdentity(ctx, 777, IdentityGoogle, "gsub-ghost"); err != mongo.ErrNoDocuments {
+		t.Fatalf("ожидался mongo.ErrNoDocuments, получено: %v", err)
+	}
+	n, err := db.Collection("user").CountDocuments(ctx, bson.M{})
+	if err != nil {
+		t.Fatalf("count упал: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("SetIdentity создал %d документ(ов) — upsert запрещён", n)
+	}
+}
+
+// ⚠️ TestUnlinkTelegramThenBotUpdate — цена отвязки telegram, зафиксированная
+// тестом (см. rest.telegramUnlinkWarning).
+//
+// Исторический пользователь (_id == telegram_id) привязал Google и отвязал
+// telegram. Следующий апдейт бота идёт через UpsertTelegramUser: по telegram_id
+// пусто, а _id, равный telegram id, занят его же собственным документом →
+// заводится ВТОРОЙ профиль с синтетическим номером. Это принятое поведение
+// (вариант «а» плана), но старые комнаты обязаны остаться на первом профиле —
+// именно это здесь и проверяется
+func TestUnlinkTelegramThenBotUpdate(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+	rooms := NewRoomRepository(db)
+
+	if err := repo.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("EnsureIndexes упал: %v", err)
+	}
+	const tgID = 304898122
+	owner := api.User{ID: tgID, Username: "zagir", DisplayName: "Загир", TelegramID: intPtr(tgID), GoogleSub: "gsub-unlink"}
+	seedUsers(t, db, owner)
+
+	room := &api.Room{
+		Name:       "Поездка",
+		Members:    &[]api.User{owner},
+		Operations: &[]api.Operation{},
+		CreateAt:   time.Now(),
+	}
+	if _, err := rooms.SaveRoom(ctx, room); err != nil {
+		t.Fatalf("SaveRoom упал: %v", err)
+	}
+
+	if err := repo.ClearIdentity(ctx, tgID, IdentityTelegram); err != nil {
+		t.Fatalf("ClearIdentity упал: %v", err)
+	}
+
+	// апдейт из бота после отвязки
+	created, err := repo.UpsertTelegramUser(ctx, tgID, "zagir", "Загир", "ru")
+	if err != nil {
+		t.Fatalf("UpsertTelegramUser упал: %v", err)
+	}
+	if created.ID == tgID {
+		t.Fatal("бот вернул СТАРЫЙ профиль: telegram_id остался привязанным, отвязка не сработала")
+	}
+	if created.ID < firstSyntheticUserID {
+		t.Fatalf("второму профилю выдан номер %d, ожидался синтетический (>= %d)", created.ID, firstSyntheticUserID)
+	}
+
+	n, err := db.Collection("user").CountDocuments(ctx, bson.M{})
+	if err != nil {
+		t.Fatalf("count упал: %v", err)
+	}
+	if n != 2 {
+		t.Fatalf("в коллекции user %d документ(ов), ожидалось 2 (старый профиль + заведённый ботом)", n)
+	}
+
+	// главное: данные никуда не делись — комнаты остались на первом профиле,
+	// который открывается прежним способом входа (Google)
+	ownerRooms, err := rooms.FindRoomsByUserId(ctx, tgID)
+	if err != nil {
+		t.Fatalf("FindRoomsByUserId упал: %v", err)
+	}
+	if ownerRooms == nil || len(*ownerRooms) != 1 || (*ownerRooms)[0].Name != "Поездка" {
+		t.Fatalf("комнаты первого профиля потерялись: %+v", ownerRooms)
+	}
+	if _, err := repo.FindByGoogleSub(ctx, "gsub-unlink"); err != nil {
+		t.Fatalf("первый профиль не находится по google_sub: %v", err)
+	}
+	// у нового профиля своих комнат нет — это ожидаемо, ради этого и предупреждение
+	freshRooms, err := rooms.FindRoomsByUserId(ctx, created.ID)
+	if err != nil {
+		t.Fatalf("FindRoomsByUserId упал: %v", err)
+	}
+	if freshRooms != nil && len(*freshRooms) != 0 {
+		t.Fatalf("у нового профиля неожиданно есть комнаты: %+v", freshRooms)
+	}
+}

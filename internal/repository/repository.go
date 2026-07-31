@@ -49,6 +49,13 @@ type UserRepository interface {
 	// token для последующего отзыва при удалении аккаунта. Пустые значения
 	// игнорируются — затирать сохранённое нечем и незачем
 	UpdateAppleProfile(ctx context.Context, userId int, email, displayName, refreshToken string) error
+	// SetIdentity/ClearIdentity привязывают и отвязывают способ входа (provider —
+	// одна из констант Identity*). Оба работают только по ЖИВОМУ документу и
+	// никогда его не создают: почему именно так — в комментарии к
+	// MongoUserRepository.SetIdentity. Пользователя нет или он удалён —
+	// mongo.ErrNoDocuments; личность занята другим — duplicate key
+	SetIdentity(ctx context.Context, userId int, provider string, value interface{}) error
+	ClearIdentity(ctx context.Context, userId int, provider string) error
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
@@ -644,6 +651,78 @@ func (r MongoUserRepository) UpdateAppleProfile(ctx context.Context, userId int,
 	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
 	_, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: set}})
 	return err
+}
+
+// Имена способов входа. Одни и те же строки живут в пути REST-эндпоинта
+// (/api/v1/me/link/{provider}) и в маппинге на поля документа, поэтому
+// объявлены один раз здесь, а не литералами в двух пакетах
+const (
+	IdentityTelegram = "telegram"
+	IdentityGoogle   = "google"
+	IdentityApple    = "apple"
+)
+
+// identityFields — поле документа, хранящее личность провайдера. Значения
+// совпадают с полями api.User (telegram_id, google_sub, apple_sub), по которым
+// построены unique sparse индексы (см. EnsureIndexes)
+var identityFields = map[string]string{
+	IdentityTelegram: "telegram_id",
+	IdentityGoogle:   "google_sub",
+	IdentityApple:    "apple_sub",
+}
+
+// IsKnownIdentityProvider — поддерживается ли такой способ входа
+func IsKnownIdentityProvider(provider string) bool {
+	_, ok := identityFields[provider]
+	return ok
+}
+
+// SetIdentity привязывает личность провайдера к пользователю.
+//
+// Ни upsert, ни фильтра по одному _id: обновляется ТОЛЬКО живой документ.
+// Гонка, ради которой это критично: медленный POST /me/link/google уже прошёл
+// auth-middleware, параллельно приходит DELETE /me, ставит tombstone и вычищает
+// личности — и upsert (или фильтр без deleted_at) дописал бы google_sub обратно
+// НА TOMBSTONE. Поиск по личностям удалённых пропускает, а unique sparse индекс
+// значение уже занял: человек не смог бы зарегистрироваться заново тем же
+// Google-аккаунтом, а создание падало бы на duplicate key до ручной правки базы.
+//
+// Пользователя нет или он удалён — mongo.ErrNoDocuments (а не тихий no-op:
+// вызывающий обязан отличить «записали» от «записывать было некуда»).
+// Личность занята другим документом — duplicate key от unique-индекса
+func (r MongoUserRepository) SetIdentity(ctx context.Context, userId int, provider string, value interface{}) error {
+	field, ok := identityFields[provider]
+	if !ok {
+		return errors.Errorf("неизвестный способ входа: %q", provider)
+	}
+	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
+	res, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: bson.M{field: value}}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
+// ClearIdentity отвязывает способ входа: $unset, а не запись пустого значения —
+// unique sparse индекс не должен видеть ни null, ни "". Фильтр и отсутствие
+// upsert — по той же причине, что в SetIdentity
+func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, provider string) error {
+	field, ok := identityFields[provider]
+	if !ok {
+		return errors.Errorf("неизвестный способ входа: %q", provider)
+	}
+	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
+	res, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$unset", Value: bson.M{field: ""}}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
 }
 
 // findOne — общий путь чтения пользователя: декодирование плюс дефолты, которые

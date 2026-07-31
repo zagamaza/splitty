@@ -37,6 +37,14 @@ type userIDAllocator interface {
 	NextUserID(ctx context.Context) (int, error)
 }
 
+// chatStateCleaner удаляет незавершённые сценарии бота пользователя.
+// Интерфейс узкий, а не repository.ChatStateRepository целиком: REST нужен
+// ровно один метод, а полный интерфейс распухал бы фейками в каждом тесте.
+// Реализация — repository.MongoChatStateRepository
+type chatStateCleaner interface {
+	DeleteByUserId(ctx context.Context, userId int) error
+}
+
 // Config конфигурация REST-сервера
 type Config struct {
 	Listen    string // адрес http-сервера, например "localhost:7171"
@@ -81,6 +89,9 @@ type Server struct {
 	userIDs userIDAllocator
 	// notifier опционален (см. SetNotifier): nil — уведомления выключены (no-op)
 	notifier Notifier
+	// chatStates опционален (см. SetChatStates): нужен только отвязке telegram,
+	// nil — чистка состояний бота пропускается
+	chatStates chatStateCleaner
 
 	// AI-парсинг расхода опционален (см. SetAI): nil aiParser — фича выключена
 	// (эндпоинт /parse отдаёт 503), остальной сервер работает как раньше
@@ -143,6 +154,14 @@ func (s *Server) SetNotifier(n Notifier) {
 	s.notifier = n
 }
 
+// SetChatStates подключает коллекцию состояний бота: отвязка telegram чистит
+// незавершённые сценарии пользователя (см. clearChatState). Вызывать до Run.
+// Отдельный setter, а не параметр NewServer — не ломает вызовы конструктора в
+// тестах. Nil-безопасно: без него отвязка просто не чистит состояния
+func (s *Server) SetChatStates(c chatStateCleaner) {
+	s.chatStates = c
+}
+
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
 // nil parser оставляет фичу выключенной (503). Отдельный setter, а не параметр
 // NewServer — не ломает существующие вызовы конструктора в тестах.
@@ -188,6 +207,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
 	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))
 	mux.Handle("DELETE /api/v1/me/devices", s.auth(s.handleUnregisterDevice))
+	mux.Handle("POST /api/v1/me/link/{provider}", s.auth(s.handleLinkIdentity))
+	mux.Handle("DELETE /api/v1/me/link/{provider}", s.auth(s.handleUnlinkIdentity))
 
 	mux.Handle("GET /api/v1/rooms", s.auth(s.handleListRooms))
 	mux.Handle("POST /api/v1/rooms", s.auth(s.handleCreateRoom))

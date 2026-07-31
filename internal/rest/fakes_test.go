@@ -8,6 +8,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/oidc"
+	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -277,6 +278,89 @@ func (f *fakeUserRepo) UpdateAppleProfile(_ context.Context, userId int, email, 
 		u.AppleRefreshToken = refreshToken
 	}
 	return nil
+}
+
+// SetIdentity как mongo-реализация: пишет только в ЖИВОЙ существующий документ
+// (никакого upsert — иначе гонка с удалением аккаунта посадила бы личность на
+// tombstone), а занятая кем-то ещё личность даёт duplicate key unique-индекса.
+// Индекс глобален, поэтому занятость проверяется и по удалённым документам
+func (f *fakeUserRepo) SetIdentity(_ context.Context, userId int, provider string, value interface{}) error {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return mongo.ErrNoDocuments
+	}
+	for id, other := range f.users {
+		if id == userId {
+			continue
+		}
+		switch provider {
+		case repository.IdentityTelegram:
+			if tg, isInt := value.(int); isInt && other.TelegramID != nil && *other.TelegramID == tg {
+				return errDuplicateKey
+			}
+		case repository.IdentityGoogle:
+			if sub, isStr := value.(string); isStr && other.GoogleSub == sub {
+				return errDuplicateKey
+			}
+		case repository.IdentityApple:
+			if sub, isStr := value.(string); isStr && other.AppleSub == sub {
+				return errDuplicateKey
+			}
+		}
+	}
+	switch provider {
+	case repository.IdentityTelegram:
+		tg, isInt := value.(int)
+		if !isInt {
+			return errors.New("telegram_id должен быть int")
+		}
+		u.TelegramID = &tg
+	case repository.IdentityGoogle:
+		sub, isStr := value.(string)
+		if !isStr {
+			return errors.New("google_sub должен быть строкой")
+		}
+		u.GoogleSub = sub
+	case repository.IdentityApple:
+		sub, isStr := value.(string)
+		if !isStr {
+			return errors.New("apple_sub должен быть строкой")
+		}
+		u.AppleSub = sub
+	default:
+		return errors.New("неизвестный способ входа")
+	}
+	return nil
+}
+
+// ClearIdentity как mongo-реализация: $unset по живому документу
+func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider string) error {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return mongo.ErrNoDocuments
+	}
+	switch provider {
+	case repository.IdentityTelegram:
+		u.TelegramID = nil
+	case repository.IdentityGoogle:
+		u.GoogleSub = ""
+	case repository.IdentityApple:
+		u.AppleSub = ""
+	default:
+		return errors.New("неизвестный способ входа")
+	}
+	return nil
+}
+
+// fakeChatStates — chatStateCleaner без mongo: запоминает, по каким id его звали
+type fakeChatStates struct {
+	deleted []int
+	err     error
+}
+
+func (f *fakeChatStates) DeleteByUserId(_ context.Context, userId int) error {
+	f.deleted = append(f.deleted, userId)
+	return f.err
 }
 
 func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {
