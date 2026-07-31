@@ -71,7 +71,60 @@ data class Me(
     val username: String? = null,
     val displayName: String,
     val lang: String = "ru",
+    /**
+     * Привязанные способы входа («telegram», «google», «apple») — сервер отдаёт
+     * только ФАКТ привязки, сами идентификаторы личности наружу не уходят.
+     * По этому списку экран «Профиль» рисует секцию «Способы входа» и решает,
+     * какой способ отвязывать нельзя (последний).
+     *
+     * Дефолт `emptyList()` обязателен: ключ появился в API позже, и в
+     * офлайн-кеше ([com.zagir.splitty.data.ApiCache]) и в DataStore сессии
+     * лежат профили, записанные БЕЗ него — без дефолта строгий разбор ронял бы
+     * весь кешированный профиль на первом же холодном старте.
+     */
+    val linkedProviders: List<String> = emptyList(),
     val notificationOn: Boolean = true,
+) {
+    /** Привязан ли способ входа к аккаунту. */
+    fun isLinked(provider: LoginProvider): Boolean = provider.id in linkedProviders
+
+    /**
+     * Можно ли отвязать способ входа.
+     *
+     * Последний способ отвязывать нельзя: JWT живёт 90 дней, и аккаунт,
+     * оставшийся без единого входа, станет недоступен навсегда. Сервер отвечает
+     * на это `409 last_identity`, но кнопка обязана гаснуть ДО запроса — иначе
+     * человек узнаёт о запрете из алерта уже после действия.
+     */
+    fun canUnlink(provider: LoginProvider): Boolean =
+        isLinked(provider) && linkedProviders.size > 1
+}
+
+/**
+ * Способ входа в аккаунт. [id] — та же строка, что приезжает в
+ * [Me.linkedProviders] и уходит в путь `/api/v1/me/link/{provider}`: одна
+ * константа на клиент и сервер, литералами по экранам её дублировать нельзя.
+ *
+ * `apple` объявлен ради полноты контракта (его отдаёт сервер аккаунтам,
+ * вошедшим с iPhone) — на Android его не привязать: Sign in with Apple без
+ * веб-редиректа тут не работает, и строку без действия экран не рисует.
+ */
+enum class LoginProvider(val id: String, val title: String) {
+    TELEGRAM("telegram", "Telegram"),
+    GOOGLE("google", "Google"),
+    APPLE("apple", "Apple"),
+}
+
+/**
+ * Ответ `/me/link/{provider}` (и POST, и DELETE): актуальный профиль с
+ * пересчитанным `linkedProviders` — список НЕ досочиняется на клиенте.
+ * [warning] приходит после отвязки Telegram (бот заведёт отдельный профиль),
+ * и экран обязан его показать.
+ */
+@Serializable
+data class LinkedProvidersResponse(
+    val user: Me,
+    val warning: String? = null,
 )
 
 /**

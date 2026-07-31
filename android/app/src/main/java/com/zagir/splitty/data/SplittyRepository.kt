@@ -13,6 +13,8 @@ import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.GoogleLoginBody
+import com.zagir.splitty.core.model.LinkedProvidersResponse
+import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
@@ -98,6 +100,23 @@ class SplittyRepository @Inject constructor(
     ): Me = call {
         api.updateMe(UpdateMeBody(displayName = displayName, lang = lang, notificationOn = notificationOn))
     }
+
+    // --- Способы входа и удаление аккаунта ---
+
+    /** Привязать Google к текущему аккаунту; ответ — профиль с новым списком. */
+    suspend fun linkGoogle(idToken: String): LinkedProvidersResponse =
+        call { api.linkGoogle(GoogleLoginBody(idToken)) }
+
+    /** Отвязать способ входа; ответ несёт профиль и (для telegram) warning. */
+    suspend fun unlinkProvider(provider: LoginProvider): LinkedProvidersResponse =
+        call { api.unlinkProvider(provider.id) }
+
+    /**
+     * Удалить аккаунт. Кеш чистит не репозиторий, а [OfflineDataCleaner] по
+     * пропаже токена — здесь только запрос, чтобы «удалили на сервере» и
+     * «стёрли с устройства» не расходились при сетевой ошибке.
+     */
+    suspend fun deleteAccount() = call { api.deleteAccount() }
 
     // --- Комнаты (группы) ---
 

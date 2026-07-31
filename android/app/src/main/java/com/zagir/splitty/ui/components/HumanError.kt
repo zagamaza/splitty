@@ -35,6 +35,28 @@ fun humanErrorText(error: Throwable): String {
         ?: "Что-то пошло не так. Попробуйте ещё раз"
 }
 
+/**
+ * Текст ошибки привязки/отвязки способа входа (порт iOS `identityErrorText`).
+ *
+ * Коды сервера (`identity_taken`, `last_identity`) пользователю не показываем:
+ * ему нужно объяснение и следующий шаг, а не идентификатор ошибки. Свой текст,
+ * а не серверный `message`, потому что «что делать дальше» зависит от экрана:
+ * здесь это «войдите через тот профиль» и «сначала привяжите другой способ».
+ */
+fun identityErrorText(error: Throwable): String {
+    val api = error as? ApiException ?: return humanErrorText(error)
+    return when {
+        api.code == "identity_taken" ->
+            "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+        api.code == "last_identity" ->
+            "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
+        // 401 здесь — не протухшая сессия (её обрабатывает AuthInterceptor),
+        // а отказ провайдера: подпись/срок/aud id-токена не сошлись.
+        api.isUnauthorized -> "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+        else -> humanErrorText(error)
+    }
+}
+
 /** Отличает таймаут от прочих сетевых сбоев (SocketTimeout / прерванный I/O). */
 private fun isTimeout(error: Throwable?): Boolean = when (error) {
     is SocketTimeoutException -> true

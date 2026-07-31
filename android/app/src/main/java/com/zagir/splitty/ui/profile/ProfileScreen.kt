@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -47,11 +49,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
+import com.zagir.splitty.core.auth.findActivity
 import com.zagir.splitty.core.session.SessionStore
+import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.SectionHeader
+import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
@@ -70,12 +75,21 @@ fun ProfileScreen(
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val noticeMessage by viewModel.noticeMessage.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
+    val isIdentityBusy by viewModel.isIdentityBusy.collectAsStateWithLifecycle()
+    val isDeleting by viewModel.isDeleting.collectAsStateWithLifecycle()
     val pendingOutboxCount by viewModel.pendingOutboxCount.collectAsStateWithLifecycle()
 
     var isEditNamePresented by remember { mutableStateOf(false) }
     var nameDraft by remember { mutableStateOf("") }
     var isLogoutConfirmPresented by remember { mutableStateOf(false) }
+    var isDeleteConfirmPresented by remember { mutableStateOf(false) }
+    var providerToUnlink by remember { mutableStateOf<LoginProvider?>(null) }
+    // Credential Manager рисует системный лист поверх активити —
+    // application-контекст ему не подходит (см. core/auth/ActivityContext.kt).
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
 
     // Локальная копия настройки языка: применяется оптимистично, PATCH /me —
     // фоном; ключ по значению профиля возвращает драфт к серверному значению.
@@ -125,12 +139,24 @@ fun ProfileScreen(
                 },
                 onThemeSelected = viewModel::onThemeSelected,
             )
+            LoginMethodsSection(
+                me = me,
+                enabled = !isIdentityBusy && !isDeleting,
+                onLink = { activity?.let(viewModel::linkGoogle) },
+                onUnlinkRequest = { providerToUnlink = it },
+            )
             // Адрес сервера — отладочная информация, в релизе пользователю не
             // нужна (менять его всё равно можно только в DEBUG на экране входа).
             if (BuildConfig.DEBUG) {
                 ServerSection(baseUrl)
             }
             LogoutSection(onClick = { isLogoutConfirmPresented = true })
+            // «Удалить аккаунт» — последним пунктом экрана: и Apple Guideline
+            // 5.1.1(v), и Google Play требуют удаление в пару тапов от профиля.
+            DeleteAccountSection(
+                isDeleting = isDeleting,
+                onClick = { isDeleteConfirmPresented = true },
+            )
             // Запас снизу — под центральную кнопку «+» таб-бара.
             Spacer(Modifier.height(32.dp))
         }
@@ -208,6 +234,77 @@ fun ProfileScreen(
         )
     }
 
+    val provider = providerToUnlink
+    if (provider != null) {
+        AlertDialog(
+            onDismissRequest = { providerToUnlink = null },
+            title = {
+                Text(stringResource(R.string.profile_unlink_confirm_title, provider.title))
+            },
+            text = { Text(stringResource(R.string.profile_unlink_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        providerToUnlink = null
+                        viewModel.unlink(provider)
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_login_method_unlink),
+                        color = Splitty.colors.negative,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { providerToUnlink = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    if (isDeleteConfirmPresented) {
+        AlertDialog(
+            onDismissRequest = { isDeleteConfirmPresented = false },
+            title = { Text(stringResource(R.string.profile_delete_confirm_title)) },
+            text = { Text(stringResource(R.string.profile_delete_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeleteConfirmPresented = false
+                        viewModel.deleteAccount()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_delete_account),
+                        color = Splitty.colors.negative,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDeleteConfirmPresented = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+
+    // Предупреждение об отвязке Telegram — СВОЙ диалог, не «Ошибка»: отвязка
+    // прошла, но человеку важно узнать, что бот заведёт ему отдельный профиль.
+    val notice = noticeMessage
+    if (notice != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissNotice,
+            title = { Text(stringResource(R.string.profile_notice_title)) },
+            text = { Text(notice) },
+            confirmButton = {
+                TextButton(onClick = viewModel::dismissNotice) {
+                    Text(stringResource(R.string.profile_notice_ok))
+                }
+            },
+        )
+    }
+
     val message = errorMessage
     if (message != null) {
         AlertDialog(
@@ -219,6 +316,168 @@ fun ProfileScreen(
                     Text(stringResource(R.string.common_ok))
                 }
             },
+        )
+    }
+}
+
+/**
+ * Карточка «Способы входа»: по строке на провайдера — привязать/отвязать.
+ * Источник истины — `me.linkedProviders` с сервера: локально список не
+ * досочиняется, каждая мутация приходит ответом на запрос.
+ *
+ * Пока профиль не прочитан (`me == null`) секции нет вовсе: рисовать «Не
+ * привязан» по пустому списку значило бы соврать про состояние аккаунта.
+ */
+@Composable
+private fun LoginMethodsSection(
+    me: Me?,
+    enabled: Boolean,
+    onLink: () -> Unit,
+    onUnlinkRequest: (LoginProvider) -> Unit,
+) {
+    if (me == null) return
+    // Google — всегда: его можно и привязать, и отвязать прямо здесь.
+    // Telegram — ТОЛЬКО когда уже привязан: привязка требует Telegram Login
+    // Widget (подписанные ботом id/auth_date/hash), которого в приложении нет,
+    // и кнопка «Привязать» рядом с ним обещала бы несуществующее.
+    // Apple на Android не показываем вовсе: Sign in with Apple здесь без
+    // веб-редиректа не работает, а отвязать его можно с iPhone.
+    val providers = listOf(LoginProvider.GOOGLE, LoginProvider.TELEGRAM)
+        .filter { it != LoginProvider.TELEGRAM || me.isLinked(it) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            text = stringResource(R.string.profile_login_methods_section),
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        SurfaceCard(
+            modifier = Modifier.fillMaxWidth(),
+            padding = 0.dp,
+        ) {
+            providers.forEachIndexed { index, provider ->
+                if (index > 0) {
+                    HairlineDivider()
+                }
+                LoginMethodRow(
+                    provider = provider,
+                    isLinked = me.isLinked(provider),
+                    // Кнопка гаснет ДО запроса: сервер ответил бы 409
+                    // last_identity, но узнавать о запрете из алерта уже после
+                    // действия — плохо.
+                    canUnlink = me.canUnlink(provider),
+                    enabled = enabled,
+                    onLink = onLink,
+                    onUnlinkRequest = { onUnlinkRequest(provider) },
+                )
+            }
+        }
+        Text(
+            // Когда способ входа остался один, объясняем, почему его кнопка
+            // «Отвязать» неактивна — иначе она читается как поломка.
+            text = if (me.linkedProviders.size <= 1) {
+                stringResource(R.string.profile_login_methods_footer_last)
+            } else {
+                stringResource(R.string.profile_login_methods_footer)
+            },
+            modifier = Modifier.padding(horizontal = 4.dp),
+            fontSize = 12.sp,
+            color = Splitty.colors.inkSecondary,
+        )
+    }
+}
+
+/** Строка способа входа: название, статус привязки и действие справа. */
+@Composable
+private fun LoginMethodRow(
+    provider: LoginProvider,
+    isLinked: Boolean,
+    canUnlink: Boolean,
+    enabled: Boolean,
+    onLink: () -> Unit,
+    onUnlinkRequest: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = provider.title,
+                fontSize = 16.sp,
+                color = Splitty.colors.ink,
+            )
+            Text(
+                text = if (isLinked) {
+                    stringResource(R.string.profile_login_method_linked)
+                } else {
+                    stringResource(R.string.profile_login_method_not_linked)
+                },
+                modifier = Modifier.padding(top = 2.dp),
+                fontSize = 12.sp,
+                color = Splitty.colors.inkSecondary,
+            )
+        }
+        if (isLinked) {
+            SoftChip(
+                text = stringResource(R.string.profile_login_method_unlink),
+                onClick = onUnlinkRequest,
+                enabled = enabled && canUnlink,
+            )
+        } else {
+            SoftChip(
+                text = stringResource(R.string.profile_login_method_link),
+                onClick = onLink,
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+/**
+ * Карточка-кнопка «Удалить аккаунт»: negative-текст, подтверждение диалогом
+ * и подпись о том, что расходы и долги в группах остаются.
+ */
+@Composable
+private fun DeleteAccountSection(isDeleting: Boolean, onClick: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SurfaceCard(
+            modifier = Modifier.fillMaxWidth(),
+            padding = 0.dp,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !isDeleting, onClick = onClick)
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Splitty.colors.negative,
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.profile_delete_account),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Splitty.colors.negative,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.profile_delete_account_caption),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            fontSize = 12.sp,
+            color = Splitty.colors.inkSecondary,
+            textAlign = TextAlign.Center,
         )
     }
 }

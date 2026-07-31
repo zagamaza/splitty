@@ -127,6 +127,10 @@ fun PrimaryPillButton(
 /**
  * Вторичная кнопка-чип: мягкая серая pill; [isSelected] — акцентная заливка
  * (для выбора группы/участника, фильтров). Аналог iOS `.softChip(isSelected:)`.
+ *
+ * [enabled] = false гасит и клик, и текст: чип в роли действия («Отвязать»
+ * последний способ входа) обязан выглядеть недоступным ДО запроса, а не
+ * молча ничего не делать.
  */
 @Composable
 fun SoftChip(
@@ -134,6 +138,7 @@ fun SoftChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
+    enabled: Boolean = true,
 ) {
     val colors = Splitty.colors
     val reduceMotion = rememberReduceMotion()
@@ -146,8 +151,13 @@ fun SoftChip(
     )
     val background = when {
         isSelected -> colors.accent.copy(alpha = 0.14f)
-        pressed -> colors.ink.copy(alpha = 0.12f)
+        pressed && enabled -> colors.ink.copy(alpha = 0.12f)
         else -> colors.ink.copy(alpha = 0.06f)
+    }
+    val contentColor = when {
+        !enabled -> colors.inkSecondary.copy(alpha = 0.5f)
+        isSelected -> colors.accent
+        else -> colors.ink
     }
     Box(
         modifier = modifier
@@ -157,6 +167,7 @@ fun SoftChip(
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
+                enabled = enabled,
                 onClick = onClick,
             )
             .padding(horizontal = 16.dp, vertical = 10.dp),
@@ -166,7 +177,7 @@ fun SoftChip(
             text = text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (isSelected) colors.accent else colors.ink,
+            color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

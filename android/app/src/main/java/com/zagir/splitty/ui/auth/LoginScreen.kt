@@ -1,9 +1,7 @@
 package com.zagir.splitty.ui.auth
 
-import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
@@ -58,6 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
+import com.zagir.splitty.core.auth.findActivity
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
@@ -74,8 +73,6 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var isDevExpanded by remember { mutableStateOf(false) }
     var isServerExpanded by remember { mutableStateOf(false) }
-    // LocalActivity появился только в activity-compose 1.10 (у нас 1.9.3),
-    // поэтому активити достаём разворачиванием ContextWrapper'ов сами.
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
 
@@ -203,20 +200,6 @@ private fun GoogleSignInButton(
             color = if (enabled) colors.ink else colors.inkSecondary,
         )
     }
-}
-
-/**
- * Активити из дерева Compose-контекстов: `LocalContext` внутри диалога или
- * кастомного `ContextWrapper` — не активити, а Credential Manager без неё
- * не покажет системный лист.
- */
-private fun Context.findActivity(): Activity? {
-    var current: Context? = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }
 
 /** Основной вход: одноразовый код из Telegram-бота → POST /auth/code. */

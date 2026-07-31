@@ -871,16 +871,29 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `android/app/src/main/res/values/strings.xml`
 - Modify: `android/app/build.gradle.kts`
 
-- [ ] **каталога `ui/account/` не существует** — работаем в `ui/profile/`; `logout()` уже есть в `ProfileViewModel.kt:132`
-- [ ] добавить `linkedProviders` в `Me` (`Models.kt`)
-- [ ] секция «Способы входа» и «Удалить аккаунт» — паритет с iOS (Task 20), включая текст подтверждения про сохранение долгов
-- [ ] отвязку последнего способа блокировать в UI
-- [ ] после удаления — `logout` + чистка DataStore, `PendingJoinStore`, офлайн-кеша
-- [ ] строки — в `strings.xml`, не хардкодом
-- [ ] **новые `@Serializable`-модели добавить в `requiredSerializers`** (`build.gradle.kts:217-238`)
-- [ ] перезаписать Roborazzi-эталоны, если менялся вид экрана профиля
-- [ ] написать тесты `ProfileViewModel`: успешное удаление разлогинивает; ошибка сети не разлогинивает; отвязка последнего способа заблокирована
-- [ ] `./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — зелёные (включая `verifyReleaseShrinking`) перед Task 22
+- [x] **каталога `ui/account/` не существует** — работаем в `ui/profile/`; `logout()` уже есть в `ProfileViewModel.kt:132`
+- [x] добавить `linkedProviders` в `Me` (`Models.kt`)
+- [x] секция «Способы входа» и «Удалить аккаунт» — паритет с iOS (Task 20), включая текст подтверждения про сохранение долгов
+- [x] отвязку последнего способа блокировать в UI
+- [x] после удаления — `logout` + чистка DataStore, `PendingJoinStore`, офлайн-кеша
+- [x] строки — в `strings.xml`, не хардкодом
+- [x] **новые `@Serializable`-модели добавить в `requiredSerializers`** (`build.gradle.kts:217-238`)
+- [x] перезаписать Roborazzi-эталоны, если менялся вид экрана профиля (не потребовалось — см. ниже)
+- [x] написать тесты `ProfileViewModel`: успешное удаление разлогинивает; ошибка сети не разлогинивает; отвязка последнего способа заблокирована
+- [x] `./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — зелёные (включая `verifyReleaseShrinking`) перед Task 22
+
+**Как сделано (для следующих задач):**
+- `Me.linkedProviders: List<String> = emptyList()` — дефолт обязателен: в `ApiCache` и в DataStore сессии лежат профили, записанные ДО появления ключа, и без него разбор ронял бы весь кешированный профиль на первом холодном старте (тот же приём, что `decodeIfPresent` на iOS). Правила `Me.isLinked`/`Me.canUnlink` — чистые функции на модели, на них держится блокировка кнопки
+- `LoginProvider` (`Models.kt`) — единственное место со строками `telegram`/`google`/`apple`: тот же `id` едет и в `linkedProviders`, и в путь `/me/link/{provider}`
+- [decision] строка **Telegram показывается только когда он уже привязан** (паритет с iOS): привязка требует Telegram Login Widget, которого в приложении нет. **Apple на Android не показывается вовсе** — Sign in with Apple без веб-редиректа тут не работает, а отвязать его можно с iPhone; строка без действия бесполезна
+- [decision] тело привязки — существующий `GoogleLoginBody`, новой модели запроса не заводим: `/auth/google` и `/me/link/google` читают на сервере один и тот же `{"idToken": …}`. Новая `@Serializable`-модель ровно одна — `LinkedProvidersResponse`, она добавлена в `requiredSerializers` (R8-smoke теперь считает 22 сериализатора)
+- [decision] `PushTokenRegistrar.unregisterCurrent()` в `deleteAccount()` обёрнут в `runCatching`: отвязка токена best-effort по своему контракту, а сбой Firebase (не инициализирован, нет Play Services) не имеет права отменить удаление аккаунта — его требует Google Play. В существующем `logout()` этот вызов остался как был
+- [decision] `logout()` зовётся ТОЛЬКО после успешного `DELETE /me`. Локальные данные (кеш, outbox, аватары, `PendingJoinStore`) чистит существующий `OfflineDataCleaner` по переходу «токен был → токена нет» — второй копии чистки не заводим; при сетевой ошибке человек остаётся в живом аккаунте
+- [deviation] ➕ `identityErrorText` положен в `ui/components/HumanError.kt` рядом с `humanErrorText`, а не в `strings.xml`: тексты ошибок в этом проекте живут в коде (`HumanError.kt`, `LoginViewModel`), и вынос только этих трёх строк в ресурсы потребовал бы инжектить `Context` в один ViewModel и расколол бы конвенцию надвое. Все строки ЭКРАНА (секция, статусы, кнопки, футеры, оба подтверждения) — в `strings.xml`
+- [deviation] ➕ `SoftChip` получил параметр `enabled` (файла не было в списке): чип в роли действия «Отвязать» обязан гаснуть ДО запроса, а не молча ничего не делать. Для `enabled = true` вид не изменился — Roborazzi-эталоны не переписывались (снимков экрана профиля в проекте и нет)
+- [deviation] ➕ `Context.findActivity()` вынесен из `ui/auth/LoginScreen.kt` в `core/auth/ActivityContext.kt`: активити нужна и экрану входа, и секции «Способы входа», а копия разворачивания `ContextWrapper`'ов ни к чему
+- [decision] в тестах `MockWebServer` отвечает по ключу «МЕТОД /путь» через `Dispatcher`, а не общей очередью: `init` ViewModel уходит в `GET /me` параллельно действию теста и очередь отдавала бы профиль запросу привязки. Сам `GET /me` намеренно не обслуживается (404) — его поздний ответ перезаписывал бы `linkedProviders` уже после привязки, а `init` глотает сбой по своему контракту
+- ⚠️ вживую не проверялось по тем же причинам, что Tasks 18/20: Google-проект в статусе Testing, устройства/эмулятора с Play Services нет, а удаление аккаунта необратимо для реального профиля на дев-бэкенде. Проверены `testDebugUnitTest` (358 тестов, 0 падений; было 348), `assembleDebug` и `assembleRelease` вместе с `verifyReleaseShrinking`
 
 ### Task 22: Проверка приёмочных критериев
 

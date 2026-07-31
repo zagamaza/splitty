@@ -252,6 +252,9 @@ val verifyReleaseShrinking by tasks.registering {
             "com.zagir.splitty.core.model.NotifySettings",
             "com.zagir.splitty.core.model.CodeLoginBody",
             "com.zagir.splitty.core.model.GoogleLoginBody",
+            // Ответ /me/link/{provider}: без него секция «Способы входа»
+            // падала бы на разборе ответа ТОЛЬКО в релизной сборке.
+            "com.zagir.splitty.core.model.LinkedProvidersResponse",
             "com.zagir.splitty.core.model.RepaymentBody",
         )
         val missing = requiredSerializers.filterNot { "$it\$\$serializer" in survivors }

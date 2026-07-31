@@ -127,6 +127,23 @@
     <string name="profile_edit_name_title">Изменить имя</string>
     <string name="profile_name_empty">Имя не может быть пустым</string>
 
+    <!-- Профиль: способы входа и удаление аккаунта (паритет iOS AccountView) -->
+    <string name="profile_login_methods_section">Способы входа</string>
+    <string name="profile_login_method_linked">Привязан</string>
+    <string name="profile_login_method_not_linked">Не привязан</string>
+    <string name="profile_login_method_link">Привязать</string>
+    <string name="profile_login_method_unlink">Отвязать</string>
+    <string name="profile_login_methods_footer">Любым из привязанных способов можно войти в этот же аккаунт.</string>
+    <string name="profile_login_methods_footer_last">Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. Сначала привяжите другой.</string>
+    <string name="profile_unlink_confirm_title">Отвязать %1$s?</string>
+    <string name="profile_unlink_confirm_message">Войти в аккаунт этим способом больше не получится. Остальные привязанные способы продолжат работать.</string>
+    <string name="profile_notice_title">Внимание</string>
+    <string name="profile_notice_ok">Понятно</string>
+    <string name="profile_delete_account">Удалить аккаунт</string>
+    <string name="profile_delete_account_caption">Профиль удаляется безвозвратно, расходы и долги в группах остаются.</string>
+    <string name="profile_delete_confirm_title">Удалить аккаунт?</string>
+    <string name="profile_delete_confirm_message">Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.\n\nРасходы и долги в группах останутся: участники увидят «Удалённый пользователь» вместо вашего имени, а суммы и расчёты не изменятся.</string>
+
     <!-- Группы: список -->
     <string name="groups_title">Группы</string>
     <string name="groups_create_group">Создать группу</string>

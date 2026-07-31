@@ -11,6 +11,7 @@ import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.GoogleLoginBody
+import com.zagir.splitty.core.model.LinkedProvidersResponse
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.Operation
@@ -76,6 +77,35 @@ interface SplittyApi {
 
     @PATCH("api/v1/me")
     suspend fun updateMe(@Body body: UpdateMeBody): Me
+
+    // --- Способы входа (привязка/отвязка) ---
+
+    /**
+     * POST /me/link/google — привязать Google к ТЕКУЩЕМУ аккаунту (кто
+     * «текущий», решает Bearer-токен, а не тело запроса). Повтор с той же
+     * личностью — 200 (идемпотентно); 409 `identity_taken` — личность уже
+     * принадлежит другому профилю Splitty (слияние профилей вне объёма).
+     *
+     * Тело то же, что у входа, — [GoogleLoginBody]: и `/auth/google`, и
+     * `/me/link/google` читают на сервере один и тот же `{"idToken": …}`.
+     */
+    @POST("api/v1/me/link/google")
+    suspend fun linkGoogle(@Body body: GoogleLoginBody): LinkedProvidersResponse
+
+    /**
+     * DELETE /me/link/{provider} — отвязать способ входа.
+     * 409 `last_identity` — это последний способ войти, отвязывать нельзя.
+     * Ответ по telegram несёт `warning`, который клиент обязан показать.
+     */
+    @DELETE("api/v1/me/link/{provider}")
+    suspend fun unlinkProvider(@Path("provider") provider: String): LinkedProvidersResponse
+
+    /**
+     * DELETE /me — удаление аккаунта (требование и Apple Guideline 5.1.1(v),
+     * и Google Play). 204 без тела; 403 — демо-аккаунт ревьюеров.
+     */
+    @DELETE("api/v1/me")
+    suspend fun deleteAccount()
 
     // --- Комнаты (группы) ---
 

@@ -1,7 +1,12 @@
 package com.zagir.splitty.ui.profile
 
+import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.zagir.splitty.core.auth.GoogleIdTokenProvider
+import com.zagir.splitty.core.auth.GoogleSignInException
+import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
@@ -9,6 +14,7 @@ import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.SplittyRepository
 import com.zagir.splitty.push.PushTokenRegistrar
 import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.ui.components.identityErrorText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -25,11 +31,14 @@ import kotlinx.coroutines.launch
  * правки настроек PATCH /me, адрес сервера и выход.
  * Порт ios/Splitty/Features/Account/AccountView.swift (логика).
  */
+private const val TAG = "ProfileViewModel"
+
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val pushTokenRegistrar: PushTokenRegistrar,
+    private val googleIdTokenProvider: GoogleIdTokenProvider,
     outboxStore: OutboxStore,
 ) : ViewModel() {
 
@@ -68,6 +77,22 @@ class ProfileViewModel @Inject constructor(
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+    /**
+     * Предупреждение сервера (отвязка Telegram) — отдельный диалог, а не
+     * [errorMessage]: это не ошибка, но и не «просто получилось», и молча
+     * проглатывать его нельзя — там про потерю групп в боте.
+     */
+    private val _noticeMessage = MutableStateFlow<String?>(null)
+    val noticeMessage: StateFlow<String?> = _noticeMessage.asStateFlow()
+
+    /** Идёт привязка или отвязка способа входа — кнопки секции гаснут. */
+    private val _isIdentityBusy = MutableStateFlow(false)
+    val isIdentityBusy: StateFlow<Boolean> = _isIdentityBusy.asStateFlow()
+
+    /** Идёт удаление аккаунта — кнопка гаснет и показывает прогресс. */
+    private val _isDeleting = MutableStateFlow(false)
+    val isDeleting: StateFlow<Boolean> = _isDeleting.asStateFlow()
 
     /**
      * Сколько офлайн-операций ещё не отправлено: при > 0 подтверждение выхода
@@ -126,6 +151,98 @@ class ProfileViewModel @Inject constructor(
                 _isSaving.value = false
             }
         }
+    }
+
+    /**
+     * Привязка Google к текущему аккаунту: системный лист Credential Manager →
+     * id-токен → POST /me/link/google. Профиль в сессии обновляется ОТВЕТОМ
+     * сервера — `linkedProviders` приезжает оттуда, а не досочиняется здесь.
+     *
+     * [activityContext] — контекст активити: лист рисуется поверх неё.
+     * Отмена (провайдер вернул null) молчит: человек и так знает, что закрыл лист.
+     */
+    fun linkGoogle(activityContext: Context) {
+        if (_isIdentityBusy.value) return
+        _isIdentityBusy.value = true
+        viewModelScope.launch {
+            try {
+                val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
+                sessionStore.updateMe(repository.linkGoogle(idToken).user)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: GoogleSignInException) {
+                _errorMessage.value = e.message
+            } catch (e: Throwable) {
+                // Throwable, а не ApiException: updateMe пишет в DataStore и
+                // бросает IOException мимо обёртки репозитория — из
+                // viewModelScope он убивал бы процесс (см. onThemeSelected).
+                Log.e(TAG, "link google failed", e)
+                _errorMessage.value = identityErrorText(e)
+            } finally {
+                _isIdentityBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Отвязка способа входа: DELETE /me/link/{provider}. Экран не пускает сюда
+     * последний способ (кнопка гаснет), 409 `last_identity` — вторая линия.
+     */
+    fun unlink(provider: LoginProvider) {
+        if (_isIdentityBusy.value) return
+        _isIdentityBusy.value = true
+        viewModelScope.launch {
+            try {
+                val response = repository.unlinkProvider(provider)
+                sessionStore.updateMe(response.user)
+                response.warning?.takeIf { it.isNotBlank() }?.let { _noticeMessage.value = it }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.e(TAG, "unlink ${provider.id} failed", e)
+                _errorMessage.value = identityErrorText(e)
+            } finally {
+                _isIdentityBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Удаление аккаунта: DELETE /me и полный разлогин ТОЛЬКО при успехе.
+     *
+     * При сетевой ошибке аккаунт жив, и выбрасывать человека на экран входа
+     * значило бы соврать ему, что удаление прошло. Локальные данные (кеш,
+     * outbox, аватары, отложенное вступление по ссылке) стирает существующий
+     * [com.zagir.splitty.data.OfflineDataCleaner] по пропаже токена — второй
+     * копии чистки не заводим.
+     */
+    fun deleteAccount() {
+        if (_isDeleting.value) return
+        _isDeleting.value = true
+        viewModelScope.launch {
+            try {
+                // Отвязать FCM-токен, ПОКА JWT ещё валиден: после tombstone
+                // сервер отвергнет запрос, и токен устройства остался бы висеть.
+                // runCatching: отвязка best-effort по своему контракту, а сбой
+                // Firebase (не инициализирован, нет Play Services) не имеет
+                // права отменить удаление аккаунта — его требует Google Play.
+                runCatching { pushTokenRegistrar.unregisterCurrent() }
+                    .onFailure { Log.w(TAG, "unregister push token failed", it) }
+                repository.deleteAccount()
+                sessionStore.logout()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.e(TAG, "delete account failed", e)
+                _errorMessage.value = humanErrorText(e)
+            } finally {
+                _isDeleting.value = false
+            }
+        }
+    }
+
+    fun dismissNotice() {
+        _noticeMessage.value = null
     }
 
     /** Выход: чистит токен и профиль — AppRoot сам покажет LoginScreen. */
