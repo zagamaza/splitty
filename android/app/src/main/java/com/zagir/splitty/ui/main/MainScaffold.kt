@@ -30,6 +30,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -145,7 +146,11 @@ class MainScaffoldViewModel @Inject constructor(
  * Сверху — глобальный тонкий баннер «Офлайн…»/«Отправка…».
  */
 @Composable
-fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
+fun MainScaffold(
+    viewModel: MainScaffoldViewModel = hiltViewModel(),
+    openRoomId: String? = null,
+    onRoomOpened: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -153,6 +158,15 @@ fun MainScaffold(viewModel: MainScaffoldViewModel = hiltViewModel()) {
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val colors = Splitty.colors
     val haptics = rememberHaptics()
+
+    // Вступили в группу по ссылке-приглашению — открываем её.
+    LaunchedEffect(openRoomId) {
+        if (openRoomId == null) return@LaunchedEffect
+        navController.navigate(MainRoutes.room(openRoomId))
+        // Гасим намерение сразу: иначе оно доживёт до следующего пересоздания
+        // корня и комната откроется второй раз поверх первой.
+        onRoomOpened()
+    }
 
     fun switchTab(route: String) {
         navController.navigate(route) {

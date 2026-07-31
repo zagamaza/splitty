@@ -801,18 +801,33 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/AppRoot.kt`
 - Modify: `android/app/src/main/java/com/zagir/splitty/data/OfflineDataCleaner.kt`
 - Create: `android/app/src/test/java/com/zagir/splitty/PendingJoinTest.kt`
+- ➕ Modify: `android/app/src/main/java/com/zagir/splitty/ui/main/MainScaffold.kt` — `MainRoutes` приватны для этого файла, поэтому «открыть комнату» приходит снаружи значением (`openRoomId`), а не готовым маршрутом
 
-- [ ] **добавить `android:launchMode="singleTop"`** к `MainActivity` в манифесте: сейчас launchMode не задан (standard), поэтому переход по app link при живой Activity создал бы **второй экземпляр** и вызвал `onCreate`, а не `onNewIntent`
-- [ ] добавить intent-filter с `android:autoVerify="true"`: `VIEW` + `BROWSABLE` + `DEFAULT`, схема `https`, host — домен, `pathPrefix="/join"`
-- [ ] расширить `parseRoomCode` (`ui/groups/GroupsListViewModel.kt:~187`) на новый формат `/join/<roomId>`, сохранив поддержку `start=room<hex>` и голого кода; **это общий парсер, второй не заводить**
-- [ ] **зафиксировать сигнатуру перед правкой**: сейчас `parseRoomCode` возвращает non-null `String` (мусор → пустая строка), а тесты этой задачи требуют различать «не распознано». Выбрать одно: либо оставить `String` и проверять на пустоту, либо перевести на `String?` — во втором случае обязательно поправить **оба** существующих вызова: `GroupsListViewModel.kt:126` (`val roomId = parseRoomCode(codeInput)`) и `GroupsListScreen.kt:615` (`val canSubmit = parseRoomCode(code).isNotEmpty() && !isMutating`). Записать выбор комментарием
-- [ ] создать `PendingJoinStore` на DataStore рядом с `SessionStore`: `set`, `take`, `clear`
-- [ ] в `MainActivity` обработать `intent.data` в `onCreate` **и** `onNewIntent`
-- [ ] авторизован → join и переход в `MainRoutes.room(roomId)`; не авторизован → сохранить и показать `LoginScreen`
-- [ ] в `AppRoot` при появлении сессии забрать отложенный intent и выполнить join
-- [ ] **очищать `PendingJoinStore` при logout** — точка уже есть в `OfflineDataCleaner`
-- [ ] написать тесты: парсинг нового URL, старого t.me-формата, голого кода; посторонний URL → null; `take` очищает; повторный `take` → null
-- [ ] `./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleDebug` — зелёные перед Task 20
+- [x] **добавить `android:launchMode="singleTop"`** к `MainActivity` в манифесте: сейчас launchMode не задан (standard), поэтому переход по app link при живой Activity создал бы **второй экземпляр** и вызвал `onCreate`, а не `onNewIntent`
+- [x] добавить intent-filter с `android:autoVerify="true"`: `VIEW` + `BROWSABLE` + `DEFAULT`, схема `https`, host — домен, `pathPrefix="/join"`
+- [x] расширить `parseRoomCode` (`ui/groups/GroupsListViewModel.kt:~187`) на новый формат `/join/<roomId>`, сохранив поддержку `start=room<hex>` и голого кода; **это общий парсер, второй не заводить**
+- [x] **зафиксировать сигнатуру перед правкой**: сейчас `parseRoomCode` возвращает non-null `String` (мусор → пустая строка), а тесты этой задачи требуют различать «не распознано». Выбрать одно: либо оставить `String` и проверять на пустоту, либо перевести на `String?` — во втором случае обязательно поправить **оба** существующих вызова: `GroupsListViewModel.kt:126` (`val roomId = parseRoomCode(codeInput)`) и `GroupsListScreen.kt:615` (`val canSubmit = parseRoomCode(code).isNotEmpty() && !isMutating`). Записать выбор комментарием — выбран `String?`, оба вызова поправлены, решение записано в KDoc парсера
+- [x] создать `PendingJoinStore` на DataStore рядом с `SessionStore`: `set`, `take`, `clear`
+- [x] в `MainActivity` обработать `intent.data` в `onCreate` **и** `onNewIntent`
+- [x] авторизован → join и переход в `MainRoutes.room(roomId)`; не авторизован → сохранить и показать `LoginScreen` (см. [deviation] ниже: намерение всегда сохраняется, исполняет его `AppRoot`)
+- [x] в `AppRoot` при появлении сессии забрать отложенный intent и выполнить join
+- [x] **очищать `PendingJoinStore` при logout** — точка уже есть в `OfflineDataCleaner`
+- [x] написать тесты: парсинг нового URL, старого t.me-формата, голого кода; посторонний URL → null; `take` очищает; повторный `take` → null
+- [x] `./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleDebug` — зелёные перед Task 20 (348 тестов, из них 18 новых)
+
+**Как сделано (для следующих задач):**
+- `parseRoomCode` (`ui/groups/GroupsListViewModel.kt`) остался ЕДИНСТВЕННЫМ разборщиком и теперь понимает те же четыре формата, что iOS `RoomCodeParser`: app link `/join/<id>`, схема `splitty://join/<id>`, легаси `?start=room<id>` и `room<id>`, голый код. Маркер `/join/` покрывает и схему, и https одной строкой
+- [decision] сигнатура переведена на `String?`: пустая строка в роли «не распознано» требует помнить о ней на каждом вызове, а диплинку это различие нужно по существу. Оба вызова (`GroupsListViewModel.joinGroup`, `GroupsListScreen.JoinGroupSheet`) поправлены
+- [decision] код валидируется как **ровно 24 hex-символа** (mongo ObjectID) — паритет с iOS Task 17. Недобранный код гасит кнопку «Присоединиться» до запроса, мусор из внешней ссылки не превращается в 404. Диапазоны сравниваются по ASCII, а не через `Char.isDigit()`: последний считает цифрами и арабо-индийские (тест `non ascii digits are rejected`)
+- [decision] `PendingJoinStore` живёт в ТОМ ЖЕ DataStore, что `SessionStore` (файл `session.preferences_pb`), отдельного не заводим: одна запись-строка не стоит второго файла и второго провайда. Ключ `pending_join_room_id`; `take()` читает и удаляет в одной транзакции `edit` — иначе две проснувшиеся подписки отправили бы два запроса на вступление
+- [deviation] `MainActivity` НЕ делит поведение на «авторизован → join» / «гость → сохранить», как написано в пункте: он всегда только сохраняет намерение, а исполняет `AppRoot`. Иначе холодный старт по ссылке (интент приходит раньше, чем прочитана сессия и собран корень) требовал бы второй копии той же логики. Ровно то же решение принято на iOS в Task 17
+- [decision] разбор интента в `onCreate` — только при `savedInstanceState == null`: при повороте экрана система заново отдаёт тот же VIEW-интент, и без проверки вступление повторялось бы на каждом пересоздании Activity. В `onNewIntent` обязателен `setIntent(intent)`, иначе `getIntent()` продолжит отдавать интент запуска
+- [decision] в `AppRootViewModel` join запускает `combine(session, pendingJoin.pending)`, а не разовое чтение при появлении сессии: ссылка приходит и в живое приложение (`onNewIntent`), и корень обязан отреагировать без пересоздания
+- [decision] 401 на самом join-запросе **возвращает намерение обратно** в хранилище (как на iOS) и запоминает токен, на котором отвалилось (`unauthorizedToken`). Без второй половины получился бы плотный цикл 401-х: разлогин по 401 асинхронный, и сессия в момент возврата намерения ещё выглядит живой
+- [deviation] ➕ `MainScaffold` получил параметры `openRoomId`/`onRoomOpened` (файла не было в списке): `MainRoutes` приватны для `MainScaffold.kt`, а `NavController` создаётся внутри него — снаружи маршрут не собрать и не подать. Значение вместо маршрута оставляет приватность на месте
+- [deviation] ➕ добавлен второй intent-filter на схему `splitty://join/<roomId>` — в пункте его нет, но кнопка «Открыть в приложении» на странице `/join` (Task 14) использует именно её, и это единственный работающий канал диплинка **до** покупки домена: без AASA/assetlinks на реальном домене `autoVerify` не проходит и https-ссылка остаётся в браузере
+- [x] проверка app link через `adb`/`Digital Asset Links` (skipped — не автоматизируется): домен `splitty.app` не куплен, `assetlinks.json` на нём не лежит, устройства/эмулятора с Play Services нет. В манифесте host — плейсхолдер с `TODO`, он обязан совпасть с `PUBLIC_BASE_URL` бэкенда и `applinks:` в `ios/project.yml`
+- ⚠️ вживую диплинк не проверялся по той же причине. Проверены `testDebugUnitTest` (348 тестов, 0 падений), `assembleDebug` и то, что оба intent-filter и `launchMode=singleTop` доехали до merged manifest. `assembleRelease` не гоняли: новых `@Serializable`-моделей задача не добавила, список `requiredSerializers` не менялся
 
 ### Task 20: iOS — экраны «Способы входа» и «Удалить аккаунт»
 

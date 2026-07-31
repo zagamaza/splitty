@@ -123,8 +123,7 @@ class GroupsListViewModel @Inject constructor(
 
     /** POST /rooms/{id}/join по коду или ссылке-приглашению. */
     fun joinGroup(codeInput: String, onSuccess: () -> Unit) {
-        val roomId = parseRoomCode(codeInput)
-        if (roomId.isEmpty()) return
+        val roomId = parseRoomCode(codeInput) ?: return
         mutate(onSuccess) { repository.joinRoom(roomId) }
     }
 
@@ -180,19 +179,66 @@ class GroupsListViewModel @Inject constructor(
 }
 
 /**
- * Код группы из ввода: принимает «голый» hex-код, `room<id>` и целиком
- * ссылку-приглашение вида t.me/split_money_bot?start=room<id>
- * (порт iOS JoinGroupView.roomId).
+ * Длина кода группы: комнаты адресуются mongo ObjectID, а это ровно 24
+ * hex-символа (`primitive.ObjectIDFromHex` в `internal/rest/handlers.go`).
  */
-internal fun parseRoomCode(input: String): String {
-    var text = input.trim()
-    val marker = "start=room"
-    val markerIndex = text.indexOf(marker, ignoreCase = true)
-    text = when {
-        markerIndex >= 0 -> text.substring(markerIndex + marker.length)
-        text.startsWith("room", ignoreCase = true) -> text.substring(4)
-        else -> text
+internal const val ROOM_CODE_LENGTH = 24
+
+/**
+ * Маркеры, после которых в строке начинается код. Порядок важен: `start=room`
+ * проверяется первым, иначе ссылка бота, в имени которого встретился `/join/`,
+ * разобралась бы не с того места.
+ */
+private val ROOM_CODE_MARKERS = listOf("start=room", "/join/")
+
+/**
+ * Единственный разборщик приглашения в группу (порт iOS `RoomCodeParser`).
+ * Второго заводить нельзя: код приходит четырьмя дорогами, и правила у них общие.
+ *
+ * - universal link `https://<domain>/join/<roomId>` — страница приглашения
+ *   (`internal/rest/deeplink.go`);
+ * - кастомная схема `splitty://join/<roomId>` — кнопка «Открыть в приложении»
+ *   на той же странице (и единственный канал до покупки домена);
+ * - легаси-ссылка бота `https://t.me/<bot>?start=room<roomId>`, а также форма
+ *   `room<roomId>`, как её кладёт в буфер бот;
+ * - «голый» код, вставленный из буфера.
+ *
+ * Возвращает null, если кода нужного формата в строке нет.
+ *
+ * [decision] сигнатура переведена с non-null `String` («не распознано» = пустая
+ * строка) на `String?`: диплинку нужно ОТЛИЧАТЬ «не распознано» от «распознано»,
+ * а пустая строка в этой роли требует помнить о ней на каждом вызове. Оба
+ * существующих вызова (`joinGroup` выше и `canSubmit` в `GroupsListScreen`)
+ * поправлены здесь же.
+ *
+ * [decision] код валидируется как РОВНО 24 hex-символа, а не «любой hex-префикс»,
+ * как было раньше (и как это делает iOS после Task 17). Недобранный код теперь
+ * гасит кнопку «Присоединиться» до запроса, а мусорный путь из внешней ссылки
+ * не превращается в запрос к серверу, который тот всё равно отвергнет 404-м.
+ */
+internal fun parseRoomCode(input: String): String? {
+    val text = input.trim()
+    if (text.isEmpty()) return null
+    for (marker in ROOM_CODE_MARKERS) {
+        val index = text.indexOf(marker, ignoreCase = true)
+        if (index >= 0) return hexCode(text.substring(index + marker.length))
     }
-    // Обрезаем возможный «хвост» ссылки: id — hex-строка ObjectID.
-    return text.takeWhile { it.isDigit() || it.lowercaseChar() in 'a'..'f' }
+    // Форма «room<hex>» — только с начала строки: в середине это уже часть ссылки.
+    if (text.startsWith("room", ignoreCase = true)) return hexCode(text.substring(4))
+    return hexCode(text)
+}
+
+/**
+ * Берёт hex-префикс (обрезая «хвост» ссылки — слеш, `?utm=…`, `#`) и принимает
+ * его, только если это код целиком.
+ *
+ * Диапазоны сравниваются посимвольно по ASCII, а не через `Char.isDigit()`:
+ * последний считает цифрами и арабо-индийские (`٠`…`٩`), и такой «код» уехал бы
+ * на сервер мусором.
+ */
+private fun hexCode(tail: String): String? {
+    val hex = tail.takeWhile { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }
+    // ObjectID из Go всегда в нижнем регистре; приводим и вставленный вручную,
+    // чтобы один и тот же код не выглядел двумя разными.
+    return if (hex.length == ROOM_CODE_LENGTH) hex.lowercase() else null
 }

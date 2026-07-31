@@ -1,6 +1,7 @@
 package com.zagir.splitty.data
 
 import android.util.Log
+import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.di.ApplicationScope
 import javax.inject.Inject
@@ -29,6 +30,7 @@ class OfflineDataCleaner @Inject constructor(
     private val cache: ApiCache,
     private val outbox: OutboxStore,
     private val avatars: AvatarStore,
+    private val pendingJoin: PendingJoinStore,
     @ApplicationScope scope: CoroutineScope,
 ) {
     init {
@@ -87,6 +89,9 @@ class OfflineDataCleaner @Inject constructor(
         step("api-cache") { cache.clear() }
         step("outbox") { outbox.clear() }
         step("avatars") { avatars.clear() }
+        // Отложенное вступление по ссылке-приглашению: без чистки следующий
+        // человек, вошедший на этом устройстве, молча вступил бы в чужую группу.
+        step("pending-join") { pendingJoin.clear() }
         return ok
     }
 }

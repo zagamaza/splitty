@@ -27,13 +27,51 @@
 
         <!-- configChanges убран: Compose переживает пересоздание Activity через
              rememberSaveable/ViewModel, а ручной перехват мешал predictive back. -->
+        <!-- launchMode=singleTop обязателен для диплинков: по умолчанию (standard)
+             переход по ссылке при ЖИВОМ приложении создал бы ВТОРОЙ экземпляр
+             Activity и позвал onCreate вместо onNewIntent — в стеке оказались бы
+             два приложения, а состояние первого потерялось бы. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App link приглашения в группу: https://<domain>/join/<roomId>
+                 (страницу отдаёт бэкенд, internal/rest/deeplink.go).
+                 autoVerify=true — система сама скачивает /.well-known/assetlinks.json
+                 и, если package name и SHA-256 подписи сошлись, открывает ссылку
+                 сразу в приложении, без листа выбора браузера.
+                 TODO: домен splitty.app ещё НЕ куплен — это плейсхолдер, он обязан
+                 совпасть с PUBLIC_BASE_URL бэкенда и с applinks: в ios/project.yml.
+                 До покупки домена верификация не пройдёт, и диплинк работает только
+                 через схему splitty:// из фильтра ниже. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="splitty.app"
+                    android:pathPrefix="/join" />
+            </intent-filter>
+
+            <!-- Кастомная схема splitty://join/<roomId> — кнопка «Открыть в
+                 приложении» на странице /join (defaultAppScheme в deeplink.go).
+                 Отдельный фильтр: autoVerify относится только к https, схему
+                 верифицировать нечем. Это единственный работающий канал диплинка
+                 ДО покупки домена. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="splitty"
+                    android:host="join" />
             </intent-filter>
         </activity>
 

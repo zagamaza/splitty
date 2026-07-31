@@ -612,7 +612,7 @@ private fun CreateGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Un
 private fun JoinGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Unit) {
     val isMutating by viewModel.isMutating.collectAsStateWithLifecycle()
     var code by rememberSaveable { mutableStateOf("") }
-    val canSubmit = parseRoomCode(code).isNotEmpty() && !isMutating
+    val canSubmit = parseRoomCode(code) != null && !isMutating
     val submit = { if (canSubmit) viewModel.joinGroup(code, onSuccess = onDismiss) }
     val clipboard = LocalClipboardManager.current
     val colors = Splitty.colors
