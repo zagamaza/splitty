@@ -320,6 +320,61 @@ final class APIClient: OperationAPI {
         )
     }
 
+    // MARK: Способы входа (привязка/отвязка)
+
+    /// POST /api/v1/me/link/google — привязать Google к ТЕКУЩЕМУ аккаунту.
+    /// Кто «текущий», решает JWT, а не тело запроса.
+    ///
+    /// Повторная привязка того же аккаунта — 200 (идемпотентно);
+    /// 409 `identity_taken` — эта личность уже принадлежит другому профилю
+    /// Splitty (слияние профилей не поддерживается).
+    func linkGoogle(idToken: String) async throws -> LinkedProvidersResponse {
+        struct Body: Encodable {
+            let idToken: String
+        }
+        return try await request(
+            "POST", "/api/v1/me/link/google",
+            body: Body(idToken: idToken)
+        )
+    }
+
+    /// POST /api/v1/me/link/apple — привязать Apple ID к текущему аккаунту.
+    ///
+    /// `nonce` уходит СЫРЫМ (в токене лежит его SHA256) — тот же протокол, что
+    /// и при входе, см. `AppleNonce`. `authorizationCode` здесь не нужен: обмен
+    /// на refresh token ради отзыва делает вход, а привязка отвечает только за
+    /// личность.
+    func linkApple(idToken: String, nonce: String) async throws -> LinkedProvidersResponse {
+        struct Body: Encodable {
+            let idToken: String
+            let nonce: String
+        }
+        return try await request(
+            "POST", "/api/v1/me/link/apple",
+            body: Body(idToken: idToken, nonce: nonce)
+        )
+    }
+
+    /// DELETE /api/v1/me/link/{provider} — отвязать способ входа.
+    ///
+    /// 409 `last_identity` — это последний способ войти, отвязать нельзя.
+    /// Ответ по Telegram несёт `warning`, который клиент обязан показать.
+    func unlinkProvider(_ provider: LoginProvider) async throws -> LinkedProvidersResponse {
+        try await request("DELETE", "/api/v1/me/link/\(provider.rawValue)")
+    }
+
+    // MARK: Удаление аккаунта
+
+    /// DELETE /api/v1/me — удаление аккаунта (Apple Guideline 5.1.1(v)).
+    /// Ответ 204 без тела. Профиль и способы входа удаляются безвозвратно,
+    /// а расходы и долги в группах остаются: в снимках комнат имя заменяется
+    /// на «Удалённый пользователь», суммы и доли не меняются.
+    ///
+    /// 403 — демонстрационный аккаунт ревьюеров, его удалять запрещено.
+    func deleteAccount() async throws {
+        try await send("DELETE", "/api/v1/me")
+    }
+
     // MARK: Устройства (push-токены)
 
     /// POST /api/v1/me/devices — привязать FCM-токен этого устройства к аккаунту

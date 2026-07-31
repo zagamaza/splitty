@@ -129,10 +129,17 @@ final class SessionStore {
         return url
     }
 
+    /// Транспорт для всех создаваемых клиентов: в проде `.shared`, в тестах —
+    /// сессия с подставленным `URLProtocol`. Тот же шов, что у `APIClient`
+    /// (см. его `urlSession`): без него сценарии, живущие в SessionStore
+    /// (удаление аккаунта, привязка), тестировать нечем — клиент он создаёт
+    /// сам, и подменить его снаружи невозможно.
+    private let urlSession: URLSession
+
     /// Всегда актуальный API-клиент (с текущими token/baseURL).
     /// Любой ответ 401 сбрасывает сессию (токен чистится из Keychain).
     var api: APIClient {
-        let client = APIClient(baseURL: serverURL, token: token)
+        let client = APIClient(baseURL: serverURL, token: token, urlSession: urlSession)
         // Протухший токен — НЕ полный logout: очередь неотправленных офлайн-расходов
         // должна пережить переавторизацию, иначе фоновый GET с просроченным JWT
         // молча стирает то, что пользователь ввёл без сети.
@@ -163,7 +170,8 @@ final class SessionStore {
         }
     }
 
-    init() {
+    init(urlSession: URLSession = .shared) {
+        self.urlSession = urlSession
         // Прямое присваивание в init не дергает didSet — override из окружения
         // не затирает сохранённый пользователем адрес в UserDefaults.
         baseURLString = ProcessInfo.processInfo.environment["SPLITTY_BASE_URL"]
@@ -238,6 +246,51 @@ final class SessionStore {
         token = response.token
         me = response.user
         adoptOwner(response.user.id)
+    }
+
+    // MARK: - Способы входа
+
+    /// Привязка Google к текущему аккаунту: POST /me/link/google.
+    /// Профиль в сессии обновляется ответом сервера — `linkedProviders`
+    /// приезжает оттуда, а не досочиняется на клиенте.
+    /// 409 `identity_taken` — личность занята другим профилем Splitty.
+    @MainActor
+    func linkGoogle(idToken: String) async throws {
+        me = try await api.linkGoogle(idToken: idToken).user
+    }
+
+    /// Привязка Apple ID: POST /me/link/apple. Сырой nonce — как при входе
+    /// (в подписанном токене лежит его SHA256, сервер сверяет одно с другим).
+    @MainActor
+    func linkApple(idToken: String, nonce: String) async throws {
+        me = try await api.linkApple(idToken: idToken, nonce: nonce).user
+    }
+
+    /// Отвязка способа входа: DELETE /me/link/{provider}.
+    /// Возвращает предупреждение сервера (отвязка Telegram), которое экран
+    /// обязан показать — молча проглатывать его нельзя, там про потерю групп.
+    @MainActor
+    @discardableResult
+    func unlink(_ provider: LoginProvider) async throws -> String? {
+        let response = try await api.unlinkProvider(provider)
+        me = response.user
+        return response.warning
+    }
+
+    // MARK: - Удаление аккаунта
+
+    /// Удаление аккаунта: DELETE /me и полный `logout` при успехе.
+    ///
+    /// Разлогин делается ТОЛЬКО после успешного ответа: при сетевой ошибке
+    /// аккаунт жив, и выбрасывать человека на экран входа означало бы соврать
+    /// ему, что удаление прошло. Токен после tombstone всё равно не работает
+    /// (middleware отвергает удалённых), но локальные данные удалённого
+    /// аккаунта — кеш, outbox, отложенное вступление — обязаны исчезнуть
+    /// с устройства, и это делает `logout`.
+    @MainActor
+    func deleteAccount() async throws {
+        try await api.deleteAccount()
+        logout()
     }
 
     /// Выход: сброс токена/профиля и очистка офлайн-хранилищ (read-кеш

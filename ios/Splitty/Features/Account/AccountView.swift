@@ -1,15 +1,36 @@
+import AuthenticationServices
 import SwiftUI
 
 /// Вкладка «Профиль»: профиль-шапка с большим аватаром, секции настроек
-/// карточками, сервер и выход из аккаунта.
+/// карточками, способы входа, сервер, выход и удаление аккаунта.
 struct AccountView: View {
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @Environment(SessionStore.self) private var session
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var nameDraft = ""
     @State private var isEditNamePresented = false
     @State private var isLogoutConfirmPresented = false
     @State private var errorMessage: String?
+
+    /// Сообщение-предупреждение сервера (отвязка Telegram): не ошибка, но
+    /// показать обязаны — там про то, что бот заведёт отдельный профиль.
+    @State private var noticeMessage: String?
+
+    /// Способ входа, для которого запрошено подтверждение отвязки.
+    @State private var providerToUnlink: LoginProvider?
+
+    /// true — привязка/отвязка в полёте: кнопки секции блокируются, чтобы
+    /// два запроса не гонялись за один и тот же список способов входа.
+    @State private var isIdentityBusy = false
+
+    /// Сырой nonce текущей попытки привязки Apple: в системный запрос уходит
+    /// его SHA256, а на сервер — само значение (протокол см. `AppleNonce`).
+    @State private var appleRawNonce: String?
+
+    @State private var isDeleteConfirmPresented = false
+    /// true — DELETE /me в полёте: кнопка удаления заблокирована.
+    @State private var isDeleting = false
 
     // Локальная копия настройки: правки применяются через PATCH /me,
     // при ошибке откатываются к значениям из профиля.
@@ -23,12 +44,14 @@ struct AccountView: View {
                 VStack(spacing: 16) {
                     headerSection
                     settingsSection
+                    loginMethodsSection
                     // Адрес сервера — отладочная информация, пользователю в
                     // релизе не нужна (менять его всё равно можно только в DEBUG).
                     #if DEBUG
                     serverSection
                     #endif
                     logoutSection
+                    deleteAccountSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -66,6 +89,34 @@ struct AccountView: View {
             }
             Button("Отмена", role: .cancel) {}
         }
+        .confirmationDialog(
+            "Отвязать способ входа?",
+            isPresented: Binding(
+                get: { providerToUnlink != nil },
+                set: { if !$0 { providerToUnlink = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: providerToUnlink
+        ) { provider in
+            Button("Отвязать \(provider.title)", role: .destructive) {
+                unlink(provider)
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: { provider in
+            Text(unlinkConfirmMessage(provider))
+        }
+        .confirmationDialog(
+            "Удалить аккаунт?",
+            isPresented: $isDeleteConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Удалить аккаунт", role: .destructive) {
+                deleteAccount()
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text(Self.deleteConfirmMessage)
+        }
         .alert(
             "Ошибка",
             isPresented: Binding(
@@ -76,6 +127,17 @@ struct AccountView: View {
             Button("Ок", role: .cancel) {}
         } message: {
             Text(errorMessage ?? "")
+        }
+        .alert(
+            "Внимание",
+            isPresented: Binding(
+                get: { noticeMessage != nil },
+                set: { if !$0 { noticeMessage = nil } }
+            )
+        ) {
+            Button("Понятно", role: .cancel) {}
+        } message: {
+            Text(noticeMessage ?? "")
         }
     }
 
@@ -251,6 +313,110 @@ struct AccountView: View {
         .buttonStyle(.plain)
     }
 
+    // MARK: - Способы входа
+
+    /// Карточка «Способы входа»: по строке на провайдера — привязать/отвязать.
+    /// Источник истины — `me.linkedProviders` с сервера: локально список не
+    /// досочиняется, каждая мутация приходит ответом на запрос.
+    private var loginMethodsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Способы входа")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 4)
+            VStack(spacing: 0) {
+                ForEach(Array(visibleProviders.enumerated()), id: \.element) { index, provider in
+                    if index > 0 {
+                        rowDivider
+                    }
+                    providerRow(provider)
+                }
+            }
+            .surfaceCard(padding: 0)
+            Text(loginMethodsFooter)
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.horizontal, 4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Какие строки показывать.
+    ///
+    /// Google и Apple — всегда: их можно и привязать, и отвязать прямо здесь.
+    /// Telegram — ТОЛЬКО когда он уже привязан: привязка требует Telegram Login
+    /// Widget (подписанные ботом id/auth_date/hash), которого в приложении нет,
+    /// и рисовать неработающую кнопку «Привязать» значит обещать несуществующее.
+    private var visibleProviders: [LoginProvider] {
+        LoginProvider.allCases.filter { provider in
+            provider != .telegram || session.me?.isLinked(.telegram) == true
+        }
+    }
+
+    /// Подпись под карточкой. Когда способ входа остался один, объясняем,
+    /// почему его кнопка «Отвязать» неактивна — иначе она выглядит поломкой.
+    private var loginMethodsFooter: String {
+        let linked = session.me?.linkedProviders.count ?? 0
+        if linked <= 1 {
+            return "Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. "
+                + "Сначала привяжите другой."
+        }
+        return "Любым из привязанных способов можно войти в этот же аккаунт."
+    }
+
+    /// Строка способа входа: название, статус и действие справа.
+    @ViewBuilder
+    private func providerRow(_ provider: LoginProvider) -> some View {
+        let isLinked = session.me?.isLinked(provider) == true
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Label(provider.title, systemImage: provider.symbol)
+                    .scaledFont(size: 16)
+                    .foregroundStyle(Color.ink)
+                Text(isLinked ? "Привязан" : "Не привязан")
+                    .scaledFont(size: 12, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+            }
+            Spacer(minLength: 8)
+            if isLinked {
+                Button("Отвязать") {
+                    providerToUnlink = provider
+                }
+                .buttonStyle(.softChip)
+                // Кнопка гаснет ДО запроса: сервер ответил бы 409 last_identity,
+                // но узнавать о запрете из алерта после действия — плохо.
+                .disabled(session.me?.canUnlink(provider) != true || isIdentityBusy)
+            } else if provider == .apple {
+                appleLinkButton
+            } else {
+                Button("Привязать") {
+                    linkGoogle()
+                }
+                .buttonStyle(.softChip)
+                .disabled(isIdentityBusy)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    /// Привязка Apple ID — системная кнопка, а не своя вёрстка: собственный
+    /// логотип Apple в этой роли — прямой повод для отказа на ревью.
+    /// Компактная (по правому краю строки), поэтому `.continue`, а не `.signIn`.
+    private var appleLinkButton: some View {
+        SignInWithAppleButton(.continue) { request in
+            let rawNonce = AppleNonce.random()
+            appleRawNonce = rawNonce
+            request.requestedScopes = [.fullName, .email]
+            request.nonce = AppleNonce.sha256Hex(rawNonce)
+        } onCompletion: { result in
+            handleAppleLinkCompletion(result)
+        }
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .frame(width: 170, height: 38)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .disabled(isIdentityBusy)
+    }
+
     #if DEBUG
     /// Карточка «Сервер»: текущий base URL и версия приложения (read-only, мелко).
     private var serverSection: some View {
@@ -295,6 +461,40 @@ struct AccountView: View {
         .buttonStyle(.plain)
     }
 
+    /// Удаление аккаунта: последняя карточка экрана, деструктивный текст.
+    ///
+    /// Требование Apple Guideline 5.1.1(v): удаление обязано быть доступно
+    /// внутри приложения — вкладка «Профиль» → прокрутка вниз → подтверждение,
+    /// без переписки с поддержкой и без похода на сайт.
+    private var deleteAccountSection: some View {
+        VStack(spacing: 8) {
+            Button(role: .destructive) {
+                isDeleteConfirmPresented = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isDeleting {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Color.negative)
+                    }
+                    Text("Удалить аккаунт")
+                        .scaledFont(size: 16, weight: .semibold)
+                        .foregroundStyle(Color.negative)
+                }
+                .frame(maxWidth: .infinity)
+                .surfaceCard()
+            }
+            .buttonStyle(.plain)
+            .disabled(isDeleting)
+            Text("Профиль удаляется безвозвратно, расходы и долги в группах остаются.")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 4)
+        }
+    }
+
     /// Hairline-разделитель между строками внутри карточки.
     private var rowDivider: some View {
         Rectangle()
@@ -320,6 +520,122 @@ struct AccountView: View {
         Task { await save(displayName: trimmed) }
     }
 
+    // MARK: - Действия: способы входа
+
+    /// Текст подтверждения отвязки. Для Telegram он честно предупреждает
+    /// о том, что произойдёт дальше: вернуть привязку будет нельзя, а бот
+    /// заведёт отдельный профиль без групп (см. `telegramUnlinkWarning`
+    /// на сервере — тот же смысл, но там его читают уже ПОСЛЕ действия).
+    private func unlinkConfirmMessage(_ provider: LoginProvider) -> String {
+        switch provider {
+        case .telegram:
+            return "Войти через Telegram больше не получится, а бот при следующем сообщении "
+                + "заведёт отдельный профиль без ваших групп. Привязать этот Telegram обратно нельзя."
+        case .google, .apple:
+            return "Войти через \(provider.title) больше не получится. "
+                + "Остальные способы входа продолжат работать."
+        }
+    }
+
+    /// Привязка Google: системный лист → id-токен → POST /me/link/google.
+    /// Отмена обрабатывается тихо, как и на экране входа.
+    private func linkGoogle() {
+        isIdentityBusy = true
+        Task {
+            defer { isIdentityBusy = false }
+            do {
+                let idToken = try await GoogleSignInService.signIn()
+                try await session.linkGoogle(idToken: idToken)
+                Haptics.success()
+            } catch GoogleSignInError.cancelled {
+                return
+            } catch {
+                errorMessage = identityErrorText(error)
+            }
+        }
+    }
+
+    /// Разбор ответа системного листа Apple при ПРИВЯЗКЕ (не входе).
+    /// Отмена — не ошибка, алерта не показываем.
+    private func handleAppleLinkCompletion(_ result: Result<ASAuthorization, Error>) {
+        let rawNonce = appleRawNonce
+        appleRawNonce = nil
+
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let identityToken = credential.identityToken,
+                  let idToken = String(data: identityToken, encoding: .utf8),
+                  let rawNonce
+            else {
+                errorMessage = "Apple не вернул данные для привязки. Попробуйте ещё раз"
+                return
+            }
+            isIdentityBusy = true
+            Task {
+                defer { isIdentityBusy = false }
+                do {
+                    try await session.linkApple(idToken: idToken, nonce: rawNonce)
+                    Haptics.success()
+                } catch {
+                    errorMessage = identityErrorText(error)
+                }
+            }
+        case .failure(let error):
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                return
+            }
+            errorMessage = humanErrorText(error)
+        }
+    }
+
+    /// Отвязка способа входа. Предупреждение сервера (Telegram) показываем
+    /// отдельным алертом — это не ошибка, но и не «просто получилось».
+    private func unlink(_ provider: LoginProvider) {
+        isIdentityBusy = true
+        Task {
+            defer { isIdentityBusy = false }
+            do {
+                let warning = try await session.unlink(provider)
+                if let warning, !warning.isEmpty {
+                    noticeMessage = warning
+                } else {
+                    Haptics.success()
+                }
+            } catch {
+                errorMessage = identityErrorText(error)
+            }
+        }
+    }
+
+    // MARK: - Действия: удаление аккаунта
+
+    /// Текст подтверждения. Про сохранение расходов и долгов сказано прямо:
+    /// снимки участника остаются во всех группах (имя заменяется на
+    /// «Удалённый пользователь»), и обещать «удалим всё» было бы ложью.
+    static let deleteConfirmMessage =
+        "Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.\n\n"
+        + "Расходы и долги в группах останутся: участники увидят «Удалённый пользователь» "
+        + "вместо вашего имени, а суммы и расчёты не изменятся."
+
+    /// DELETE /me → полный logout (Keychain, офлайн-кеш, outbox, отложенное
+    /// вступление по ссылке) и возврат на экран входа делает `RootView`
+    /// по `isAuthenticated`. При ошибке — остаёмся в аккаунте.
+    private func deleteAccount() {
+        isDeleting = true
+        Task {
+            defer { isDeleting = false }
+            do {
+                // Отвязать FCM-токен ПОКА JWT валиден: после tombstone сервер
+                // отвергнет запрос, а токен устройства остался бы висеть.
+                await PushManager.shared.unregisterCurrentToken()
+                try await session.deleteAccount()
+            } catch {
+                errorMessage = humanErrorText(error)
+            }
+        }
+    }
+
     /// PATCH /me: обновляет профиль на сервере и в сессии;
     /// при ошибке показывает alert и откатывает локальные настройки.
     private func save(
@@ -338,6 +654,37 @@ struct AccountView: View {
             syncFromMe()
         }
     }
+}
+
+// MARK: - Тексты ошибок способов входа
+
+/// Человеческий текст ошибки привязки/отвязки способа входа.
+///
+/// Коды сервера (`identity_taken`, `last_identity`) пользователю не показываем:
+/// им нужно объяснение и следующий шаг, а не идентификатор ошибки. Собственный
+/// текст, а не серверный `message`, потому что решение «что делать дальше»
+/// зависит от экрана — здесь это «войдите через тот профиль» и «сначала
+/// привяжите другой способ».
+func identityErrorText(_ error: Error) -> String {
+    guard let apiError = error as? APIError,
+          case .server(let status, let code, _) = apiError
+    else {
+        return humanErrorText(error)
+    }
+    switch code {
+    case "identity_taken":
+        return "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+    case "last_identity":
+        return "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
+    default:
+        break
+    }
+    if status == 401 {
+        // 401 здесь — не протухшая сессия (её APIClient уже обработал), а отказ
+        // провайдера: подпись/nonce/срок токена не сошлись.
+        return "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+    }
+    return humanErrorText(error)
 }
 
 #Preview {

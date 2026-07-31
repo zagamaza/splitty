@@ -2,7 +2,10 @@ import Foundation
 
 // Codable DTO REST API — точно по контракту docs/API.md.
 // Деньги — целые рубли (Int); id комнат/операций — hex-строки ObjectID;
-// id пользователей — Telegram user id (Int).
+// id пользователей — НОМЕР ПОЛЬЗОВАТЕЛЯ SPLITTY (Int). Раньше он совпадал
+// с telegram user id, но с появлением входа через Google/Apple это больше
+// не так: telegram id живёт на сервере отдельным полем и наружу не отдаётся,
+// а у пользователей без Telegram номер начинается от 10¹².
 
 /// Пользователь.
 struct User: Codable, Identifiable, Hashable {
@@ -30,7 +33,74 @@ struct Me: Codable, Identifiable, Hashable {
     let username: String?
     let displayName: String
     let lang: String
+    /// Привязанные способы входа («telegram», «google», «apple») — сервер
+    /// отдаёт только ФАКТ привязки, сами идентификаторы личности наружу не
+    /// уходят. По этому списку экран «Профиль» рисует секцию «Способы входа»
+    /// и решает, какой способ отвязывать нельзя (последний).
+    var linkedProviders: [String] = []
     let notificationOn: Bool
+}
+
+// init(from:) в extension, чтобы сохранить memberwise-инициализатор.
+// linkedProviders декодируется мягко: ключ появился в API позже, и в офлайн-
+// кеше (OfflineStore) лежат профили, записанные БЕЗ него — строгий decode
+// уронил бы весь кешированный профиль на первом же холодном старте.
+extension Me {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        username = try c.decodeIfPresent(String.self, forKey: .username)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        lang = try c.decode(String.self, forKey: .lang)
+        linkedProviders = try c.decodeIfPresent([String].self, forKey: .linkedProviders) ?? []
+        notificationOn = try c.decode(Bool.self, forKey: .notificationOn)
+    }
+}
+
+/// Способ входа в аккаунт. `rawValue` — то же имя, что в `linkedProviders`
+/// и в пути `/api/v1/me/link/{provider}`: одна строка на клиент и сервер,
+/// дублировать её литералами по экранам нельзя.
+enum LoginProvider: String, CaseIterable, Identifiable, Hashable {
+    case telegram
+    case google
+    case apple
+
+    var id: String { rawValue }
+
+    /// Название для экрана «Способы входа».
+    var title: String {
+        switch self {
+        case .telegram: return "Telegram"
+        case .google: return "Google"
+        case .apple: return "Apple"
+        }
+    }
+
+    /// SF Symbol строки способа входа.
+    var symbol: String {
+        switch self {
+        case .telegram: return "paperplane"
+        case .google: return "g.circle"
+        case .apple: return "apple.logo"
+        }
+    }
+}
+
+extension Me {
+    /// Привязан ли способ входа к аккаунту.
+    func isLinked(_ provider: LoginProvider) -> Bool {
+        linkedProviders.contains(provider.rawValue)
+    }
+
+    /// Можно ли отвязать способ входа.
+    ///
+    /// Последний способ отвязывать нельзя: JWT живёт 90 дней, и аккаунт,
+    /// оставшийся без единого входа, станет недоступен навсегда. Сервер
+    /// отвечает на это `409 last_identity`, но кнопка обязана гаснуть ДО
+    /// запроса — иначе человек узнаёт о запрете из алерта после действия.
+    func canUnlink(_ provider: LoginProvider) -> Bool {
+        isLinked(provider) && linkedProviders.count > 1
+    }
 }
 
 /// Долг: `debtor` должен `lender`'у `sum`.
@@ -634,4 +704,14 @@ extension Statistics {
 struct AuthResponse: Codable {
     let token: String
     let user: Me
+}
+
+/// Ответ привязки/отвязки способа входа (`POST`/`DELETE /me/link/{provider}`).
+///
+/// `warning` приходит при отвязке Telegram: бот заведёт отдельный профиль,
+/// если человек снова ему напишет, и привязать этот Telegram обратно уже не
+/// получится. Сервер шлёт текст с `omitempty` — клиент обязан его показать.
+struct LinkedProvidersResponse: Codable {
+    let user: Me
+    let warning: String?
 }
