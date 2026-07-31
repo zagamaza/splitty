@@ -899,23 +899,38 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 
 **Автоматически проверяемое (агент обязан подтвердить прогоном тестов или кодом):**
 
-- [ ] есть тест: telegram-пользователь входит по коду и получает свои комнаты
-- [ ] есть тест: новый google-пользователь получает `_id ≥ 10¹²` и не имеет `telegram_id`
-- [ ] есть тест: telegram-уведомления НЕ уходят google-пользователю, push — уходит
-- [ ] есть тест: аватар пользователя без telegram отдаёт 404
-- [ ] есть тест: привязка занятой личности → 409 `identity_taken`
-- [ ] есть тест: после `DELETE /me` токен даёт 401 в том же тесте; долги пересчитываются идентично; личность освободилась; демо-аккаунт защищён 403
-- [ ] есть тест: повторный бэкфилл не трогает sentinel-пользователя, google-пользователей и tombstone
-- [ ] есть тест: документы `room` после `JoinToRoom` не содержат `email`, `google_sub`, `apple_sub`, `telegram_id`
-- [ ] есть тест-антирегрессия: у telegram-пользователя из снимка `userLink` содержит `tg://user?id=`
-- [ ] есть тест: пользователь с `_id ≥ 10¹²` и telegram-привязкой видит свои комнаты, долги и статистику в боте, а созданная им операция возврата долга содержит в `donor.id` номер Splitty
-- [ ] `grep -rn "getFrom(u" internal/bot/ | grep -v _test` — в остатке только объявление и явно прокомментированные исключения (см. Task 6)
-- [ ] есть тест: ошибка отзыва Apple-токена не мешает удалению аккаунта, а у пользователя без Apple revoke не вызывается
-- [ ] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...` — всё зелёное
-- [ ] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go vet ./...` — чисто
-- [ ] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — успешно
-- [ ] `cd ios && xcodebuild test …` — зелёное
-- [ ] перечислить в этом файле все задачи, помеченные `⚠️ заблокировано`, — они уходят в Post-Completion
+- [x] есть тест: telegram-пользователь входит по коду и получает свои комнаты — `TestAuthCodeTelegramUserSeesOwnRooms` (`internal/rest/auth_test.go`, **написан в этой задаче**)
+- [x] есть тест: новый google-пользователь получает `_id ≥ 10¹²` и не имеет `telegram_id` — `TestAuthGoogleCreatesUserWithSyntheticID` (`internal/rest/auth_test.go:358`)
+- [x] есть тест: telegram-уведомления НЕ уходят google-пользователю, push — уходит — `TestNotifyOperationCreated_NoTelegramGetsPushOnly` + `…_WithTelegramGetsBoth` (`internal/bot/notifier_no_telegram_test.go:43,78`)
+- [x] есть тест: аватар пользователя без telegram отдаёт 404 — `TestGetUserAvatarNoTelegram404` (`internal/rest/avatar_test.go:194`)
+- [x] есть тест: привязка занятой личности → 409 `identity_taken` — `TestLinkIdentityTaken` (`internal/rest/identity_test.go:174`)
+- [x] есть тест: после `DELETE /me` токен даёт 401 в том же тесте; долги пересчитываются идентично; личность освободилась; демо-аккаунт защищён 403 — `TestDeleteMeInvalidatesTokenImmediately`, `TestDeleteMeKeepsDebtsIdentical`, `TestDeleteMeTombstoneFreesIdentities`, `TestDeleteMeReviewAccountForbidden` (`internal/rest/delete_account_test.go:190,140,229,270`)
+- [x] есть тест: повторный бэкфилл не трогает sentinel-пользователя, google-пользователей и tombstone — `TestBackfillTelegramIDIdempotent` (sentinel, `internal/repository/migrate_test.go:103`) + `TestBackfillTelegramID` (google с синтетическим и «человеческим» `_id`, apple, tombstone — подтесты `untouched`, `:40`)
+- [x] есть тест: документы `room` после `JoinToRoom` не содержат `email`, `google_sub`, `apple_sub`, `telegram_id` — `TestRoomSnapshotsSanitized` (`internal/repository/user_identity_test.go:293`): читает сырой bson комнаты после `SaveRoom`/`JoinToRoom`/`CreateOperation`/`UpdateOperation` и рекурсивно проверяет `identityKeys` (шире критерия: ещё `apple_refresh_token`, `push_tokens`, `deleted_at`, `bank_details`)
+- [x] есть тест-антирегрессия: у telegram-пользователя из снимка `userLink` содержит `tg://user?id=` — `TestNotifyOperationCreated_MentionsStayClickableForSnapshotUser` (`internal/bot/notifier_no_telegram_test.go:150`)
+- [x] есть тест: пользователь с `_id ≥ 10¹²` и telegram-привязкой видит свои комнаты, долги и статистику в боте, а созданная им операция возврата долга содержит в `donor.id` номер Splitty — `internal/bot/canonical_id_test.go` (фикстура `canonicalUserID = 1_000_000_000_321`, `rawTelegramID = 987_654_321`): `TestAllRoomUsesCanonicalUserID`, `TestViewUserDebtsUsesCanonicalUserID`, `TestStatisticUsesCanonicalUserID`, `TestDebtRepaymentOperationDonorIsCanonical`
+- [x] `grep -rn "getFrom(u" internal/bot/ | grep -v _test` — в остатке только объявление и явно прокомментированные исключения (см. Task 6). **Прогнано:** ровно 2 строки — `bot.go:187` (объявление `func getFrom`) и `operation_screen.go:2184` (текст комментария, объясняющего, почему здесь `getFrom` НЕ используется). Ни одного живого вызова
+- [x] есть тест: ошибка отзыва Apple-токена не мешает удалению аккаунта, а у пользователя без Apple revoke не вызывается — `TestDeleteMeRevokesAppleTokens` (`internal/rest/delete_account_test.go:406`), 4 подтеста: обычный отзыв, `revokeErr` (204 + аккаунт помечен удалённым), пустой refresh (`revoked = nil`), `AppleTokens = nil`
+- [x] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...` — всё зелёное (`-count=1`, 11 пакетов ok). Интеграционные тесты репозитория **реально шли**, а не скипались: `-v ./internal/repository/...` → 56 PASS, 0 SKIP на живой mongo `splitty-app-mongo-1`
+- [x] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go vet ./...` — чисто, без вывода
+- [x] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — успешно: 358 тестов, 0 падений / 0 ошибок (сумма по 42 отчётам `test-results/testDebugUnitTest/*.xml`), `assembleRelease` + `verifyReleaseShrinking` прошли
+- [x] `cd ios && xcodebuild test …` — зелёное: `xcodegen generate` + `-only-testing:SplittyTests` на iPhone 17 Pro → **Executed 197 tests, with 0 failures**, `** TEST SUCCEEDED **`
+- [x] перечислить в этом файле все задачи, помеченные `⚠️ заблокировано`, — они уходят в Post-Completion (список ниже)
+
+**Задачи, не проверенные вживую (уходят в Post-Completion):**
+
+| Задача | Чем заблокирована |
+|---|---|
+| Task 15 (iOS Sign in with Apple) | нет capability **Sign in with Apple** для App ID `com.zagir.splitty` и нет `.p8`-ключа |
+| Task 16 (iOS вход через Google) | Google-проект `gen-lang-client-0912753294` в статусе **Testing** — войти могут только добавленные тестировщики |
+| Task 17 (iOS universal links) | **домен не куплен**: `applinks:splitty.app` — плейсхолдер с `TODO`, universal links не активируются |
+| Task 18 (Android вход через Google) | нет устройства/эмулятора с Play Services + тот же статус **Testing** |
+| Task 19 (Android app links) | тот же не купленный домен: `assetlinks.json` негде отдать, `pm verify-app-links` не прогнать |
+| Task 20 (iOS «Способы входа» / «Удалить аккаунт») | отсутствие Apple capability + `.p8`, статус Testing, а удаление аккаунта необратимо на дев-бэкенде |
+| Task 21 (Android «Способы входа» / «Удалить аккаунт») | то же, что Tasks 18/20 |
+| Task 14 (бэкенд диплинка) | код и тесты зелёные, но включение в проде ждёт домена и TLS (`PUBLIC_BASE_URL`) |
+
+Сводно блокеров четыре: **не купленный домен** (universal links / app links), **отсутствующая capability Sign in with Apple + `.p8`-ключ**, **Publishing status Google = Testing**, **вход на живом устройстве**.
 
 **Ручное — агент не может проверить, переносится в Post-Completion:**
 
@@ -925,6 +940,12 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Реальный вход через Google и Apple на устройствах (нужны настроенные консоли)
 - Диплинк на устройстве: у авторизованного открывает комнату, у неавторизованного проводит через вход
 - Сверка долгов на копии продовых данных до и после бэкфилла
+
+**Как сделано:**
+- [deviation] один критерий из шестнадцати существующими тестами закрыт НЕ был и написан здесь: `TestAuthCodeTelegramUserSeesOwnRooms`. `TestAuthCodeHappyPath` доходил только до `/me` и брал `testUser1` (`ID: 1`, без `telegram_id`) — то есть проверял вход по коду, но не «получает свои комнаты» и не на telegram-пользователе. Новый тест берёт `_id = 1_000_000_000_100` при `telegram_id = 555_666_777` (величины заведомо разные — иначе после Task 6 проверка ничего не значит), кладёт в базу свою и чужую комнаты и требует ровно одну в ответе `GET /rooms`
+- [decision] остальные пятнадцать критериев отмечены только после того, как конкретный тест найден по имени и файлу, прочитан и прогнан — не по «фича выглядит реализованной». Три критерия оказались покрыты не одним тестом, а комплектом, и это зафиксировано в строках выше (удаление аккаунта — четырьмя, бэкфилл — двумя, экраны бота — четырьмя)
+- [decision] прогон Go-тестов делался с `-count=1`: первый прогон отдал всё из кеша, а кеш обесценивает приёмку. Отдельно проверено, что интеграционные тесты репозитория не скипаются (56 PASS / 0 SKIP) — «зелёный» скип выглядит так же, как «зелёный» прогон
+- ⚠️ `SplittyUITests` не запускались: 4 теста в них (`DashboardShotsUITests`, `DemoFlowUITests`, `OfflineSmokeUITests` ×2) падают на чистой базе до этого плана — им нужен живой бэкенд и посеянные данные. Это предсуществующий пробел, а не регрессия задачи; в критерии Task 22 стоит `-only-testing:SplittyTests`
 
 ### Task 23: [Финал] Документация
 

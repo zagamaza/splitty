@@ -18,6 +18,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const testTgToken = "12345:test-telegram-token"
@@ -256,6 +257,66 @@ func TestAuthCodeHappyPath(t *testing.T) {
 	// код одноразовый: повторное использование отвергается
 	rec = doRequest(t, s, http.MethodPost, "/api/v1/auth/code", "", `{"code": "ABCD2345"}`)
 	assertErrorCode(t, rec, http.StatusUnauthorized, "invalid_code")
+}
+
+// TestAuthCodeTelegramUserSeesOwnRooms — приёмочный критерий Task 22:
+// telegram-пользователь входит по коду из бота и по выданному токену получает
+// ИМЕННО свои комнаты. TestAuthCodeHappyPath доходит только до /me, а здесь
+// важно, что `sub` токена — номер Splitty, по которому ищутся комнаты: после
+// Task 6 у telegram-пользователя `_id` и `telegram_id` уже разные величины, и
+// подстановка не того числа дала бы пустой список молча, без ошибки.
+func TestAuthCodeTelegramUserSeesOwnRooms(t *testing.T) {
+	tgID := 555_666_777
+	tgUser := api.User{
+		ID: 1_000_000_000_100, TelegramID: &tgID,
+		Username: "tg", DisplayName: "Телеграмщик", UserLang: "ru",
+	}
+
+	myRoom := &api.Room{
+		ID:         primitive.NewObjectID(),
+		Name:       "Моя комната",
+		Members:    &[]api.User{tgUser, testUser2},
+		Operations: &[]api.Operation{},
+		CreateAt:   time.Now(),
+	}
+	foreignRoom := &api.Room{
+		ID:         primitive.NewObjectID(),
+		Name:       "Чужая комната",
+		Members:    &[]api.User{testUser2, testUser3},
+		Operations: &[]api.Operation{},
+		CreateAt:   time.Now(),
+	}
+
+	codeRepo := newFakeLoginCodeRepo(validLoginCode("TGCODE12", tgUser.ID))
+	s := newTestServerWithLoginCodes(Config{}, newFakeUserRepo(tgUser, testUser2, testUser3),
+		newFakeRoomRepo(myRoom, foreignRoom), codeRepo)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/code", "", `{"code": "TGCODE12"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("auth/code status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var auth authResponseDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &auth); err != nil {
+		t.Fatalf("cannot parse auth response: %v", err)
+	}
+	if auth.User.ID != tgUser.ID {
+		t.Fatalf("auth вернул пользователя %d, want %d", auth.User.ID, tgUser.ID)
+	}
+
+	rec = doRequest(t, s, http.MethodGet, "/api/v1/rooms", auth.Token, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /rooms status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var rooms []roomSummaryDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &rooms); err != nil {
+		t.Fatalf("cannot parse rooms %q: %v", rec.Body.String(), err)
+	}
+	if len(rooms) != 1 {
+		t.Fatalf("получено %d комнат, want 1: %s", len(rooms), rec.Body.String())
+	}
+	if rooms[0].ID != myRoom.ID.Hex() {
+		t.Fatalf("отдана комната %q (%s), want %q", rooms[0].Name, rooms[0].ID, myRoom.ID.Hex())
+	}
 }
 
 func TestAuthCodeInvalid(t *testing.T) {
