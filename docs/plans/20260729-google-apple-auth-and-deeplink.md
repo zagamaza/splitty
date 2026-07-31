@@ -659,17 +659,28 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Create: `ios/Splitty/Core/AppleNonce.swift`
 - Create: `ios/SplittyTests/AppleNonceTests.swift`
 
-- [ ] в `ios/project.yml` добавить в `entitlements.properties`: `com.apple.developer.applesignin: [Default]`
-- [ ] создать `AppleNonce`: генерация криптостойкой случайной строки (`SecRandomCopyBytes`, алфавит из букв/цифр/`-._`) и её SHA256 в hex
-- [ ] `APIClient.loginWithApple(idToken:displayName:nonce:authorizationCode:)` → `POST /api/v1/auth/apple`; **сырой nonce уходит в теле, хеш — внутри токена** (проверка на сервере в Task 11)
-- [ ] **обязательно передавать `authorizationCode`** из `ASAuthorizationAppleIDCredential.authorizationCode` (это `Data`, декодировать в UTF-8 строку): сервер обменивает его на refresh token, без которого невозможен отзыв при удалении аккаунта — требование Apple 5.1.1(v), см. Tasks 11 и 13. Код одноразовый и живёт минуты, «добрать позже» нельзя
-- [ ] `SessionStore.loginWithApple(...)` по образцу `loginWithCode` (`SessionStore.swift:202`)
-- [ ] в `LoginView` добавить `SignInWithAppleButton` (`AuthenticationServices`) **над** карточкой «Вход через Telegram»; в `request.nonce` класть SHA256, сырой хранить для запроса
-- [ ] забрать `fullName` из `ASAuthorizationAppleIDCredential` в `displayName`; при повторном входе поле пустое — это нормально
-- [ ] `ASAuthorizationError.canceled` обрабатывать **тихо** — алерт показывать нельзя
-- [ ] **не менять** лейблы «Telegram ID»/«Имя»/«Войти» (`LoginView.swift:195-217`) — на них завязан `DemoFlowUITests`
-- [ ] написать тесты: nonce достаточной длины и из ожидаемого алфавита; два вызова дают разные значения; SHA256 детерминирован и совпадает с эталоном
-- [ ] `xcodegen generate && xcodebuild … build` — успешно перед Task 16
+- [x] в `ios/project.yml` добавить в `entitlements.properties`: `com.apple.developer.applesignin: [Default]`
+- [x] создать `AppleNonce`: генерация криптостойкой случайной строки (`SecRandomCopyBytes`, алфавит из букв/цифр/`-._`) и её SHA256 в hex
+- [x] `APIClient.loginWithApple(idToken:displayName:nonce:authorizationCode:)` → `POST /api/v1/auth/apple`; **сырой nonce уходит в теле, хеш — внутри токена** (проверка на сервере в Task 11)
+- [x] **обязательно передавать `authorizationCode`** из `ASAuthorizationAppleIDCredential.authorizationCode` (это `Data`, декодировать в UTF-8 строку): сервер обменивает его на refresh token, без которого невозможен отзыв при удалении аккаунта — требование Apple 5.1.1(v), см. Tasks 11 и 13. Код одноразовый и живёт минуты, «добрать позже» нельзя
+- [x] `SessionStore.loginWithApple(...)` по образцу `loginWithCode` (`SessionStore.swift:202`)
+- [x] в `LoginView` добавить `SignInWithAppleButton` (`AuthenticationServices`) **над** карточкой «Вход через Telegram»; в `request.nonce` класть SHA256, сырой хранить для запроса
+- [x] забрать `fullName` из `ASAuthorizationAppleIDCredential` в `displayName`; при повторном входе поле пустое — это нормально
+- [x] `ASAuthorizationError.canceled` обрабатывать **тихо** — алерт показывать нельзя
+- [x] **не менять** лейблы «Telegram ID»/«Имя»/«Войти» (`LoginView.swift:195-217`) — на них завязан `DemoFlowUITests`
+- [x] написать тесты: nonce достаточной длины и из ожидаемого алфавита; два вызова дают разные значения; SHA256 детерминирован и совпадает с эталоном
+- [x] `xcodegen generate && xcodebuild … build` — успешно перед Task 16
+
+**Как сделано (для следующих задач):**
+- `AppleNonce` (`ios/Splitty/Core/AppleNonce.swift`) — единственное место, где живёт протокол nonce; в шапке типа записаны все три шага (сырой → хеш в `request.nonce` → сырой в тело), чтобы следующий, кто добавит привязку Apple в Task 20, не собрал половину протокола заново
+- [decision] байты из `SecRandomCopyBytes` просеиваются с отсечкой `256 - 256 % 65 = 195`, а не берутся по модулю напрямую: 256 на 65 не делится, и наивный остаток дал бы первым 61 символам алфавита на ~25 % больше шансов. Стоимость — один лишний вызов раз в несколько попыток, выигрыш — честные ~192 бита вместо «почти столько же, но доказывать нечем»
+- [decision] отказ `SecRandomCopyBytes` — `fatalError`, а не откат на `Int.random`: непредсказуемость nonce и ЕСТЬ вся защита от повторного проигрывания чужого токена, тихая деградация здесь хуже падения
+- [decision] `displayName` собирается `PersonNameComponentsFormatter.localizedString(style: .default)`, а не склейкой `givenName + familyName`: порядок частей имени зависит от локали, а ручная склейка ещё и оставляет лишний пробел, когда Apple отдал только одну часть. Пустая строка при повторном входе штатна — сервер (Task 11, `fillAppleProfile`) пустое значение игнорирует
+- [decision] `appleRawNonce` обнуляется в `handleAppleCompletion` ПЕРВОЙ строкой, до разбора результата: значение одноразовое, и переиспользовать его на второй попытке входа нельзя даже случайно. Отсутствие сохранённого nonce трактуется как отказ входа, а не как «отправим без него» — иначе клиент сам бы обесценил серверную проверку
+- [decision] кнопка — системная `SignInWithAppleButton` со стилем по `colorScheme` (`.black` в светлой теме, `.white` в тёмной), своя вёрстка логотипа Apple не делалась: это прямой повод для отказа на ревью. Скругление 14 и высота 52 подогнаны под `.primaryPill` соседней карточки
+- [deviation] `authorizationCode` уходит пустой строкой, если Apple его не вернул, а не роняет вход: без кода теряется только возможность отзыва при удалении (сервер логирует Warn и продолжает), а отказ во входе из-за этого был бы несоразмерен. Обязательность параметра при этом сохранена на уровне сигнатуры — «забыть передать» нельзя
+- ⚠️ проверить вживую вход нельзя: capability Sign in with Apple в Apple Developer и `.p8` ключ ещё не заведены (см. Post-Completion). Проверены сборка, юнит-тесты и то, что dev-вход UI-тестов не задет
+- 4 падающих UI-теста (`DashboardShotsUITests`, `DemoFlowUITests`, `OfflineSmokeUITests`) — **предсуществующие**: тот же набор падений воспроизведён на стеше без изменений этой задачи. Они зависят от состояния локального бэкенда и seed-данных, к Apple-входу отношения не имеют
 
 ### Task 16: iOS — вход через Google
 

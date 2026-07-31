@@ -232,6 +232,43 @@ final class APIClient: OperationAPI {
         return try await request("POST", "/api/v1/auth/code", body: Body(code: code))
     }
 
+    /// Вход через Sign in with Apple: POST /auth/apple, без авторизационного
+    /// заголовка (клиент на экране входа создаётся с token == nil).
+    ///
+    /// - `nonce` уходит СЫРЫМ: в подписанном Apple id-токене лежит его SHA256,
+    ///   и сервер сверяет одно с другим (см. AppleNonce).
+    /// - `authorizationCode` одноразовый и живёт минуты. Сервер меняет его на
+    ///   refresh token, без которого невозможен отзыв доступа при удалении
+    ///   аккаунта (Apple Guideline 5.1.1(v)) — «добрать позже» его нельзя,
+    ///   поэтому параметр обязательный, а не опциональный.
+    /// - `displayName` Apple отдаёт только при ПЕРВОМ входе; дальше приходит
+    ///   пустая строка — это норма, сервер не затирает уже сохранённое имя.
+    ///
+    /// 401 — токен невалиден или nonce не совпал; 503 — вход через Apple
+    /// на сервере не сконфигурирован.
+    func loginWithApple(
+        idToken: String,
+        displayName: String,
+        nonce: String,
+        authorizationCode: String
+    ) async throws -> AuthResponse {
+        struct Body: Encodable {
+            let idToken: String
+            let displayName: String
+            let nonce: String
+            let authorizationCode: String
+        }
+        return try await request(
+            "POST", "/api/v1/auth/apple",
+            body: Body(
+                idToken: idToken,
+                displayName: displayName,
+                nonce: nonce,
+                authorizationCode: authorizationCode
+            )
+        )
+    }
+
     // MARK: Профиль
 
     func me() async throws -> Me {

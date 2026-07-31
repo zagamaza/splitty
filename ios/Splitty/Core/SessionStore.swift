@@ -206,6 +206,29 @@ final class SessionStore {
         adoptOwner(response.user.id)
     }
 
+    /// Вход через Sign in with Apple: POST /auth/apple, сохраняет токен
+    /// (Keychain) и профиль. Аргументы собирает LoginView из
+    /// `ASAuthorizationAppleIDCredential` — сырой nonce из `AppleNonce`
+    /// и одноразовый `authorizationCode` (см. APIClient.loginWithApple).
+    /// 401 — Apple-токен не прошёл проверку на сервере.
+    @MainActor
+    func loginWithApple(
+        idToken: String,
+        displayName: String,
+        nonce: String,
+        authorizationCode: String
+    ) async throws {
+        let response = try await api.loginWithApple(
+            idToken: idToken,
+            displayName: displayName,
+            nonce: nonce,
+            authorizationCode: authorizationCode
+        )
+        token = response.token
+        me = response.user
+        adoptOwner(response.user.id)
+    }
+
     /// Выход: сброс токена/профиля и очистка офлайн-хранилищ (read-кеш
     /// и outbox — чужие данные не должны пережить смену аккаунта).
     /// Подтверждение при непустом outbox — на экране «Профиль».

@@ -29,6 +29,12 @@ targets:
         # (TestFlight/App Store). Xcode раскрывает $(...) в entitlements при
         # подписи. Один и тот же .p8 в Firebase залит в обе строки (dev+prod).
         aps-environment: $(APS_ENVIRONMENT)
+        # Sign in with Apple (LoginView → POST /api/v1/auth/apple).
+        # Default — обычный вход по Apple ID. Capability обязана быть включена
+        # в Apple Developer для com.zagir.splitty, иначе подпись падает на
+        # «provisioning profile doesn't support Sign in with Apple».
+        com.apple.developer.applesignin:
+          - Default
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zagir.splitty

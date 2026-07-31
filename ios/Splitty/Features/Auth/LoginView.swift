@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import UIKit
 
@@ -25,16 +26,22 @@ enum LoginCode {
 // MARK: - Экран входа
 
 /// Экран входа: премиум-велком на нейтральном фоне — словомарка «Splitty»,
-/// основная карточка «Вход через Telegram» (одноразовый код из бота,
-/// POST /auth/code) и dev-вход через POST /auth/dev (на симуляторе раскрыт —
-/// от его полей зависят UI-тесты, на устройстве свёрнут в DisclosureGroup);
-/// настройка сервера — тихий DisclosureGroup внизу.
+/// кнопка Sign in with Apple, карточка «Вход через Telegram» (одноразовый код
+/// из бота, POST /auth/code) и dev-вход через POST /auth/dev (на симуляторе
+/// раскрыт — от его полей зависят UI-тесты, на устройстве свёрнут в
+/// DisclosureGroup); настройка сервера — тихий DisclosureGroup внизу.
 struct LoginView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var codeText = ""
     @State private var isLoggingIn = false
     @State private var errorMessage: String?
+
+    /// Сырой nonce текущей попытки входа через Apple: в системный запрос
+    /// уходит его SHA256, а на сервер — само значение. Живёт между колбэками
+    /// `onRequest` и `onCompletion`, поэтому и хранится состоянием экрана.
+    @State private var appleRawNonce: String?
 
     #if DEBUG
     @State private var telegramIdText = ""
@@ -65,6 +72,7 @@ struct LoginView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     logo
+                    appleLoginButton
                     telegramLoginCard
                     // Dev-вход и настройка сервера — только в DEBUG-сборках:
                     // в релизе это бэкдор мимо авторизации через Telegram.
@@ -110,6 +118,28 @@ struct LoginView: View {
         }
         .padding(.top, 72)
         .padding(.bottom, 12)
+    }
+
+    /// Sign in with Apple — НАД карточкой Telegram: Apple требует, чтобы её
+    /// кнопка была не менее заметной, чем остальные способы входа.
+    /// Системная кнопка, а не своя: собственная вёрстка логотипа и текста —
+    /// повод для отказа на ревью.
+    private var appleLoginButton: some View {
+        SignInWithAppleButton(.signIn) { request in
+            let rawNonce = AppleNonce.random()
+            appleRawNonce = rawNonce
+            request.requestedScopes = [.fullName, .email]
+            // В системный запрос уходит ХЕШ — именно он попадёт в подписанный
+            // Apple токен. Сырое значение остаётся здесь и уедет на сервер
+            // телом запроса, чтобы серверу было что с чем сверять.
+            request.nonce = AppleNonce.sha256Hex(rawNonce)
+        } onCompletion: { result in
+            handleAppleCompletion(result)
+        }
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .frame(height: 52)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .disabled(isLoggingIn)
     }
 
     /// Основной вход: одноразовый код из Telegram-бота → POST /auth/code.
@@ -274,6 +304,78 @@ struct LoginView: View {
                 try await session.loginWithCode(code)
             } catch let error as APIError where error.isUnauthorized {
                 errorMessage = "Неверный или просроченный код"
+            } catch {
+                errorMessage = humanErrorText(error)
+            }
+        }
+    }
+
+    /// Разбор ответа системного листа Apple.
+    ///
+    /// Отмена (`ASAuthorizationError.canceled`) — не ошибка: человек сам
+    /// закрыл лист, алерт на это был бы навязчивым.
+    private func handleAppleCompletion(_ result: Result<ASAuthorization, Error>) {
+        let rawNonce = appleRawNonce
+        appleRawNonce = nil
+
+        switch result {
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let identityToken = credential.identityToken,
+                  let idToken = String(data: identityToken, encoding: .utf8),
+                  let rawNonce
+            else {
+                errorMessage = "Apple не вернул данные для входа. Попробуйте ещё раз"
+                return
+            }
+            // authorizationCode одноразовый и живёт минуты — сервер меняет его
+            // на refresh token для отзыва доступа при удалении аккаунта
+            // (Apple Guideline 5.1.1(v)). Забрать его позже нельзя, поэтому
+            // отправляем сразу вместе с токеном.
+            let authorizationCode = credential.authorizationCode
+                .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+            loginWithApple(
+                idToken: idToken,
+                displayName: appleDisplayName(credential.fullName),
+                nonce: rawNonce,
+                authorizationCode: authorizationCode
+            )
+        case .failure(let error):
+            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
+                return
+            }
+            errorMessage = humanErrorText(error)
+        }
+    }
+
+    /// Имя из `ASAuthorizationAppleIDCredential.fullName`. Apple отдаёт его
+    /// ТОЛЬКО при первом входе — дальше приходит nil, и пустая строка тут
+    /// нормальна: сервер в этом случае не трогает уже сохранённое имя.
+    private func appleDisplayName(_ components: PersonNameComponents?) -> String {
+        guard let components else { return "" }
+        return PersonNameComponentsFormatter
+            .localizedString(from: components, style: .default)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func loginWithApple(
+        idToken: String,
+        displayName: String,
+        nonce: String,
+        authorizationCode: String
+    ) {
+        isLoggingIn = true
+        Task {
+            defer { isLoggingIn = false }
+            do {
+                try await session.loginWithApple(
+                    idToken: idToken,
+                    displayName: displayName,
+                    nonce: nonce,
+                    authorizationCode: authorizationCode
+                )
+            } catch let error as APIError where error.isUnauthorized {
+                errorMessage = "Apple не подтвердил вход. Попробуйте ещё раз"
             } catch {
                 errorMessage = humanErrorText(error)
             }
