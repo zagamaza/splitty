@@ -247,28 +247,41 @@ func checkTelegramHash(req telegramAuthRequest, tgToken string) bool {
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(strings.ToLower(req.Hash))) == 1
 }
 
-// handleAuthTelegram POST /api/v1/auth/telegram — вход через Telegram Login Widget
-func (s *Server) handleAuthTelegram(w http.ResponseWriter, r *http.Request) {
+// decodeTelegramAuth разбирает и проверяет данные Telegram Login Widget — общий
+// вход и для входа (handleAuthTelegram), и для привязки (linkTelegram): проверки
+// у них ровно одни и те же, а разъехавшись, они дали бы привязку слабее входа.
+//
+// Возвращает ok=false, когда ответ клиенту уже написан.
+func (s *Server) decodeTelegramAuth(w http.ResponseWriter, r *http.Request) (telegramAuthRequest, bool) {
+	var req telegramAuthRequest
 	if s.cfg.TgToken == "" {
 		writeError(w, http.StatusServiceUnavailable, "unavailable", "telegram-авторизация не сконфигурирована")
-		return
+		return req, false
 	}
-
-	var req telegramAuthRequest
 	if hErr := decodeJSON(r, &req); hErr != nil {
 		hErr.write(w)
-		return
+		return req, false
 	}
 	if req.Id == 0 || req.Hash == "" || req.AuthDate == 0 {
 		writeError(w, http.StatusBadRequest, "validation", "поля id, authDate и hash обязательны")
-		return
+		return req, false
 	}
 	if !checkTelegramHash(req, s.cfg.TgToken) {
 		writeError(w, http.StatusUnauthorized, "unauthorized", "неверная подпись telegram")
-		return
+		return req, false
 	}
+	// Подпись телеграма валидна вечно — единственная защита от replay это возраст
 	if time.Since(time.Unix(req.AuthDate, 0)) > maxAuthAge {
 		writeError(w, http.StatusUnauthorized, "unauthorized", "данные авторизации устарели")
+		return req, false
+	}
+	return req, true
+}
+
+// handleAuthTelegram POST /api/v1/auth/telegram — вход через Telegram Login Widget
+func (s *Server) handleAuthTelegram(w http.ResponseWriter, r *http.Request) {
+	req, ok := s.decodeTelegramAuth(w, r)
+	if !ok {
 		return
 	}
 
@@ -401,8 +414,12 @@ func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Апсерт здесь не нужен: пользователь только что прочитан, и записывать
+	// обратно ровно то же самое (finishAuth) значило бы лишний раз сходить в
+	// базу и рискнуть затереть поля, которых нет в собранном api.User.
+	// Остальные способы входа тоже отвечают через respondWithToken
 	authSucceeded = true
-	s.finishAuth(w, r, api.User{ID: user.ID, Username: user.Username, DisplayName: user.DisplayName})
+	s.respondWithToken(w, user)
 }
 
 type googleAuthRequest struct {
@@ -425,7 +442,7 @@ func (s *Server) handleAuthGoogle(w http.ResponseWriter, r *http.Request) {
 	// Ключ троттлинга с собственным префиксом: "ip:"+clientIP, как у /auth/code
 	// (см. handleAuthCode), означал бы общий бюджет — вход через Google выжигал
 	// бы попытки входа по коду с того же адреса и наоборот
-	if !s.authThrottle.allow("google:"+s.clientIP(r), oauthPerIPPerMin) {
+	if !s.authThrottle.allow("google:"+s.clientIP(r), oauthAttemptsPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -530,7 +547,7 @@ func (s *Server) resolveIdentityUser(ctx context.Context, provider string,
 //
 // Имени в ID-токене Apple нет: его отдают клиенту отдельным объектом и ТОЛЬКО
 // при первом входе, поэтому displayName приезжает полем запроса. Nonce клиент
-// присылает СЫРЫМ — в токене лежит его SHA256 (см. checkAppleNonce).
+// присылает СЫРЫМ — в токене лежит его SHA256 (см. checkHashedNonce).
 // authorizationCode нужен не входу, а удалению аккаунта: обменяв его на refresh
 // token сейчас, мы сможем отозвать токены Apple потом (Guideline 5.1.1(v))
 type appleAuthRequest struct {
@@ -550,7 +567,7 @@ func (s *Server) handleAuthApple(w http.ResponseWriter, r *http.Request) {
 	}
 	// Свой префикс ключа, как и у Google: общий с /auth/code бюджет означал бы,
 	// что один способ входа выжигает попытки другого с того же адреса
-	if !s.authThrottle.allow("apple:"+s.clientIP(r), oauthPerIPPerMin) {
+	if !s.authThrottle.allow("apple:"+s.clientIP(r), oauthAttemptsPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -579,7 +596,7 @@ func (s *Server) handleAuthApple(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "unauthorized", "не удалось проверить токен Apple")
 		return
 	}
-	if !checkAppleNonce(req.Nonce, claims.Nonce) {
+	if !checkHashedNonce(req.Nonce, claims.Nonce) {
 		log.Warn().Msg("apple id token nonce mismatch")
 		writeError(w, http.StatusUnauthorized, "unauthorized", "не удалось проверить токен Apple")
 		return
@@ -598,12 +615,14 @@ func (s *Server) handleAuthApple(w http.ResponseWriter, r *http.Request) {
 	s.respondWithToken(w, user)
 }
 
-// checkAppleNonce сверяет сырой nonce клиента с тем, что Apple положил в токен.
+// checkHashedNonce сверяет сырой nonce клиента с тем, что провайдер положил в
+// токен. Специфики Apple здесь нет: тем же способом проверяется nonce Google
+// при привязке (см. linkOIDC).
 //
-// Клиент генерирует случайный nonce, кладёт в запрос к Apple его SHA256 в hex и
+// Клиент генерирует случайный nonce, кладёт в запрос к провайдеру его SHA256 в hex и
 // присылает нам ОРИГИНАЛ — совпадение хешей доказывает, что токен выпущен по
 // запросу именно этого клиента, а не переигран. Сравнение constant-time
-func checkAppleNonce(rawNonce, tokenNonce string) bool {
+func checkHashedNonce(rawNonce, tokenNonce string) bool {
 	sum := sha256.Sum256([]byte(rawNonce))
 	expected := hex.EncodeToString(sum[:])
 	return subtle.ConstantTimeCompare([]byte(expected), []byte(strings.ToLower(strings.TrimSpace(tokenNonce)))) == 1
@@ -732,7 +751,10 @@ func (s *Server) handleAuthDev(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// finishAuth апсертит пользователя (сохраняя язык уже существующего) и отдаёт токен с профилем
+// finishAuth апсертит пользователя (сохраняя язык уже существующего) и отдаёт
+// токен с профилем. Нужен только тем способам входа, которые ДЕЙСТВИТЕЛЬНО
+// создают или обновляют документ (dev-вход): у остальных пользователь уже есть
+// в базе, и им хватает respondWithToken
 func (s *Server) finishAuth(w http.ResponseWriter, r *http.Request, u api.User) {
 	ctx := r.Context()
 
@@ -755,12 +777,5 @@ func (s *Server) finishAuth(w http.ResponseWriter, r *http.Request, u api.User) 
 		return
 	}
 
-	token, err := s.issueToken(user.ID)
-	if err != nil {
-		log.Error().Err(err).Msg("cannot issue token")
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось выпустить токен")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, authResponseDto{Token: token, User: toMeDto(user)})
+	s.respondWithToken(w, user)
 }

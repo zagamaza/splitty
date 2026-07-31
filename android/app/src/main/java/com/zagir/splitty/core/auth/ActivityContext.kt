@@ -3,6 +3,11 @@ package com.zagir.splitty.core.auth
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import com.zagir.splitty.R
 
 /**
  * Активити из дерева Compose-контекстов: `LocalContext` внутри диалога или
@@ -22,4 +27,41 @@ fun Context.findActivity(): Activity? {
         current = current.baseContext
     }
     return null
+}
+
+/**
+ * Активити для системного листа Credential Manager вместе с готовым текстом на
+ * случай её отсутствия — см. [rememberCredentialManagerHost].
+ */
+class CredentialManagerHost(
+    private val activity: Activity?,
+    private val noActivityMessage: String,
+) {
+    /**
+     * Зовёт [action] с активити; её нет — отдаёт человеческий текст в [onError].
+     *
+     * Тихий no-op недопустим на обоих экранах: на входе не работала бы
+     * единственная кнопка для человека без Telegram, в профиле — «Привязать»
+     * (в iOS этому соответствует `GoogleSignInError.noPresenter`).
+     */
+    fun launch(onError: (String) -> Unit, action: (Activity) -> Unit) {
+        if (activity != null) action(activity) else onError(noActivityMessage)
+    }
+}
+
+/**
+ * Хост системного листа для экрана: активити из дерева контекстов плюс строка
+ * ошибки, вычитанная ЗАРАНЕЕ — `stringResource` внутри лямбды-обработчика не
+ * вызвать (она не `@Composable`).
+ *
+ * Общий для экрана входа и профиля: у обоих Credential Manager рисует лист
+ * поверх активити, и application-контекст ему не подходит.
+ */
+@Composable
+fun rememberCredentialManagerHost(): CredentialManagerHost {
+    val context = LocalContext.current
+    val noActivityMessage = stringResource(R.string.google_sign_in_no_activity)
+    return remember(context, noActivityMessage) {
+        CredentialManagerHost(context.findActivity(), noActivityMessage)
+    }
 }

@@ -82,7 +82,7 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Error().Err(err).Msg("cannot find user for deletion")
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось получить пользователя")
+		writeError(w, http.StatusInternalServerError, errCodeInternal, "не удалось получить пользователя")
 		return
 	}
 
@@ -92,7 +92,7 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 	// (1) tombstone: аккаунт становится недоступен
 	if err := s.userRepo.SoftDeleteUser(ctx, userId); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot soft delete user")
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось удалить аккаунт")
+		writeError(w, http.StatusInternalServerError, errCodeInternal, "не удалось удалить аккаунт")
 		return
 	}
 

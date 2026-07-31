@@ -306,7 +306,10 @@ final class APIClient: OperationAPI {
     /// - `authorizationCode` одноразовый и живёт минуты. Сервер меняет его на
     ///   refresh token, без которого невозможен отзыв доступа при удалении
     ///   аккаунта (Apple Guideline 5.1.1(v)) — «добрать позже» его нельзя,
-    ///   поэтому параметр обязательный, а не опциональный.
+    ///   поэтому уходит сразу вместе с токеном. nil/пустой код (Apple его не
+    ///   вернул) не сериализуется и вход не отменяет — ровно та же форма
+    ///   запроса, что у `linkApple`: одно и то же поле не должно уезжать
+    ///   на сервер двумя разными способами.
     /// - `displayName` Apple отдаёт только при ПЕРВОМ входе; дальше приходит
     ///   пустая строка — это норма, сервер не затирает уже сохранённое имя.
     ///
@@ -316,21 +319,22 @@ final class APIClient: OperationAPI {
         idToken: String,
         displayName: String,
         nonce: String,
-        authorizationCode: String
+        authorizationCode: String?
     ) async throws -> AuthResponse {
         struct Body: Encodable {
             let idToken: String
             let displayName: String
             let nonce: String
-            let authorizationCode: String
+            let authorizationCode: String?
         }
+        let code = (authorizationCode?.isEmpty ?? true) ? nil : authorizationCode
         return try await request(
             "POST", "/api/v1/auth/apple",
             body: Body(
                 idToken: idToken,
                 displayName: displayName,
                 nonce: nonce,
-                authorizationCode: authorizationCode
+                authorizationCode: code
             )
         )
     }

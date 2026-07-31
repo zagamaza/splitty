@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/oidc"
@@ -139,7 +138,7 @@ func (s *Server) handleLinkIdentity(w http.ResponseWriter, r *http.Request) {
 	// адресу: сюда попадают только запросы с валидным токеном, и подделать
 	// ключ (в отличие от X-Forwarded-For) нельзя. Смысл тот же — каждая
 	// попытка это разбор JWT и, на промахе кеша ключей, поход к провайдеру
-	if !s.authThrottle.allow("link:"+strconv.Itoa(userIdFromCtx(r.Context())), oauthPerIPPerMin) {
+	if !s.authThrottle.allow("link:"+strconv.Itoa(userIdFromCtx(r.Context())), oauthAttemptsPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -186,7 +185,7 @@ func (s *Server) linkOIDC(w http.ResponseWriter, r *http.Request, provider strin
 	// и подделать его нельзя, поэтому «есть claim → сверяем» защищает от replay
 	// токена нашего же клиента (он всегда шлёт nonce), а токен, выпущенный без
 	// nonce вовсе, проверять просто нечем
-	if claims.Nonce != "" && !checkAppleNonce(req.Nonce, claims.Nonce) {
+	if claims.Nonce != "" && !checkHashedNonce(req.Nonce, claims.Nonce) {
 		log.Warn().Str("provider", provider).Msg("id token nonce mismatch on link")
 		writeProviderRejected(w, rejectMsg)
 		return
@@ -248,26 +247,8 @@ func (s *Server) saveAppleLink(ctx context.Context, userId int, email, refreshTo
 // входа через Telegram Login Widget: подпись плюс свежесть auth_date
 // (подпись телеграма валидна вечно, единственная защита от replay — возраст)
 func (s *Server) linkTelegram(w http.ResponseWriter, r *http.Request) {
-	if s.cfg.TgToken == "" {
-		writeError(w, http.StatusServiceUnavailable, "unavailable", "telegram-авторизация не сконфигурирована")
-		return
-	}
-
-	var req telegramAuthRequest
-	if hErr := decodeJSON(r, &req); hErr != nil {
-		hErr.write(w)
-		return
-	}
-	if req.Id == 0 || req.Hash == "" || req.AuthDate == 0 {
-		writeError(w, http.StatusBadRequest, "validation", "поля id, authDate и hash обязательны")
-		return
-	}
-	if !checkTelegramHash(req, s.cfg.TgToken) {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "неверная подпись telegram")
-		return
-	}
-	if time.Since(time.Unix(req.AuthDate, 0)) > maxAuthAge {
-		writeError(w, http.StatusUnauthorized, "unauthorized", "данные авторизации устарели")
+	req, ok := s.decodeTelegramAuth(w, r)
+	if !ok {
 		return
 	}
 

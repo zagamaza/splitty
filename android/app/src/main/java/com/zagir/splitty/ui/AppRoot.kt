@@ -26,6 +26,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -49,12 +50,12 @@ class AppRootViewModel @Inject constructor(
     private val _openRoomId = MutableStateFlow<String?>(null)
 
     /** Комната, в которую только что вступили по ссылке: её нужно открыть. */
-    val openRoomId: StateFlow<String?> = _openRoomId
+    val openRoomId: StateFlow<String?> = _openRoomId.asStateFlow()
 
     private val _joinError = MutableStateFlow<String?>(null)
 
     /** Человеческий текст ошибки вступления по ссылке. */
-    val joinError: StateFlow<String?> = _joinError
+    val joinError: StateFlow<String?> = _joinError.asStateFlow()
 
     /** Защита от повторного входа в [joinPending] на соседних эмиссиях. */
     private var isJoining = false

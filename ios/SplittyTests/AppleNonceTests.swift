@@ -7,19 +7,19 @@ import XCTest
 final class AppleNonceTests: XCTestCase {
     // MARK: random() — длина и кодировка
 
-    func testRandomIsHexOfFixedLength() {
+    func testRandomIsHexOfFixedLength() throws {
         // 32 байта = 64 hex-символа. Длина зафиксирована тестом, потому что
         // энтропия nonce — единственное, что защищает вход от повторного
         // использования чужого токена.
         XCTAssertGreaterThanOrEqual(AppleNonce.byteCount, 16)
-        XCTAssertEqual(AppleNonce.random().count, AppleNonce.byteCount * 2)
+        XCTAssertEqual(try AppleNonce.random().count, AppleNonce.byteCount * 2)
     }
 
-    func testRandomUsesLowercaseHexOnly() {
+    func testRandomUsesLowercaseHexOnly() throws {
         // Hex безопасен и в JSON-теле, и в JWT-claim, и в URL: экранирование
         // по пути до Apple и обратно ничего не поменяет.
         for _ in 0..<50 {
-            let nonce = AppleNonce.random()
+            let nonce = try AppleNonce.random()
             XCTAssertTrue(
                 nonce.allSatisfy { $0.isASCII && $0.isHexDigit && !$0.isUppercase },
                 "nonce содержит символ вне нижнего регистра hex: \(nonce)"
@@ -27,24 +27,24 @@ final class AppleNonceTests: XCTestCase {
         }
     }
 
-    func testRandomIsUnpredictable() {
+    func testRandomIsUnpredictable() throws {
         // Совпадение двух значений означало бы, что защита от повторного
         // использования чужого токена не работает вовсе.
-        XCTAssertNotEqual(AppleNonce.random(), AppleNonce.random())
+        XCTAssertNotEqual(try AppleNonce.random(), try AppleNonce.random())
 
         var seen = Set<String>()
         for _ in 0..<200 {
-            seen.insert(AppleNonce.random())
+            seen.insert(try AppleNonce.random())
         }
         XCTAssertEqual(seen.count, 200)
     }
 
-    func testRandomCoversHexDigitsBroadly() {
+    func testRandomCoversHexDigitsBroadly() throws {
         // Грубая проверка, что байты действительно случайны, а не вырождаются
         // в пару символов (например, при сломанном источнике случайности).
         var used = Set<Character>()
         for _ in 0..<100 {
-            used.formUnion(AppleNonce.random())
+            used.formUnion(try AppleNonce.random())
         }
         XCTAssertEqual(used.count, 16)
     }
@@ -64,16 +64,16 @@ final class AppleNonceTests: XCTestCase {
         )
     }
 
-    func testSha256HexIsDeterministic() {
-        let nonce = AppleNonce.random()
+    func testSha256HexIsDeterministic() throws {
+        let nonce = try AppleNonce.random()
         XCTAssertEqual(AppleNonce.sha256Hex(nonce), AppleNonce.sha256Hex(nonce))
         XCTAssertNotEqual(AppleNonce.sha256Hex(nonce), AppleNonce.sha256Hex(nonce + "x"))
     }
 
-    func testSha256HexIsLowercaseHexOfFixedLength() {
+    func testSha256HexIsLowercaseHexOfFixedLength() throws {
         // Сервер сравнивает строки побайтово (constant-time), поэтому регистр
         // и длина — часть контракта, а не косметика.
-        let hex = AppleNonce.sha256Hex(AppleNonce.random())
+        let hex = AppleNonce.sha256Hex(try AppleNonce.random())
         XCTAssertEqual(hex.count, 64)
         XCTAssertTrue(hex.allSatisfy { $0.isHexDigit && !$0.isUppercase })
     }

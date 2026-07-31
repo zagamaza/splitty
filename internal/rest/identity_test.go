@@ -577,7 +577,7 @@ func TestLinkIdentityThrottled(t *testing.T) {
 	s := newLinkServer(repo, "google-sub-link", "apple-sub-link")
 
 	body := fmt.Sprintf(`{"idToken": %q}`, testLinkGoogleToken)
-	for i := 0; i < oauthPerIPPerMin; i++ {
+	for i := 0; i < oauthAttemptsPerMin; i++ {
 		if rec := postLink(t, s, providerGoogle, mustToken(t, s, 42), body); rec.Code == http.StatusTooManyRequests {
 			t.Fatalf("попытка %d отбита раньше лимита", i)
 		}

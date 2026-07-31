@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -18,15 +19,6 @@ type capturePush struct{ users []int }
 
 func (c *capturePush) SendToUser(_ context.Context, user api.User, _ push.Notification) {
 	c.users = append(c.users, user.ID)
-}
-
-func containsID(ids []int, id int) bool {
-	for _, v := range ids {
-		if v == id {
-			return true
-		}
-	}
-	return false
 }
 
 // snapshot имитирует встроенный в комнату снимок: полей личности в нём нет
@@ -67,7 +59,7 @@ func TestNotifyOperationCreated_NoTelegramGetsPushOnly(t *testing.T) {
 	if len(tg.sent) != 0 {
 		t.Fatalf("у получателя нет telegram, но отправлено %d telegram-сообщений", len(tg.sent))
 	}
-	if !containsID(pushes.users, 3) {
+	if !slices.Contains(pushes.users, 3) {
 		t.Fatalf("push обязан уйти пользователю без telegram, ушло: %v", pushes.users)
 	}
 }
@@ -102,7 +94,7 @@ func TestNotifyOperationCreated_WithTelegramGetsBoth(t *testing.T) {
 	if len(tg.sent) != 1 {
 		t.Fatalf("ожидалось одно telegram-сообщение, отправлено %d", len(tg.sent))
 	}
-	if !containsID(pushes.users, 3) {
+	if !slices.Contains(pushes.users, 3) {
 		t.Fatalf("push тоже обязан уйти, ушло: %v", pushes.users)
 	}
 	if got := chatIDOf(t, tg); got != 1003 {

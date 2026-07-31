@@ -56,7 +56,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
-import com.zagir.splitty.core.auth.findActivity
+import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
@@ -73,11 +73,9 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var isDevExpanded by remember { mutableStateOf(false) }
     var isServerExpanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    val activity = remember(context) { context.findActivity() }
-    // Активити нет — системный лист Credential Manager показать не из чего.
-    // Текст готовим здесь: stringResource внутри лямбды-обработчика не вызвать.
-    val noActivityError = stringResource(R.string.google_sign_in_no_activity)
+    // Хост системного листа Credential Manager: активити плюс текст ошибки,
+    // если её нет (общий с профилем, см. core/auth/ActivityContext.kt).
+    val credentialHost = rememberCredentialManagerHost()
 
     Box(
         modifier = Modifier
@@ -100,15 +98,8 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
             GoogleSignInButton(
                 enabled = !state.isLoggingIn,
                 onClick = {
-                    // Credential Manager рисует системный лист поверх активити —
-                    // application-контекст ему не подходит. Тихий no-op при
-                    // activity == null недопустим: единственная кнопка входа для
-                    // человека без Telegram просто ничего не делала бы.
-                    val host = activity
-                    if (host != null) {
+                    credentialHost.launch(onError = viewModel::showError) { host ->
                         viewModel.loginWithGoogle(host)
-                    } else {
-                        viewModel.showError(noActivityError)
                     }
                 },
             )

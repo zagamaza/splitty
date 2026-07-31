@@ -36,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -49,7 +48,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
-import com.zagir.splitty.core.auth.findActivity
+import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
@@ -86,10 +85,9 @@ fun ProfileScreen(
     var isLogoutConfirmPresented by remember { mutableStateOf(false) }
     var isDeleteConfirmPresented by remember { mutableStateOf(false) }
     var providerToUnlink by remember { mutableStateOf<LoginProvider?>(null) }
-    // Credential Manager рисует системный лист поверх активити —
-    // application-контекст ему не подходит (см. core/auth/ActivityContext.kt).
-    val context = LocalContext.current
-    val activity = remember(context) { context.findActivity() }
+    // Хост системного листа Credential Manager: активити плюс текст ошибки,
+    // если её нет (общий с экраном входа, см. core/auth/ActivityContext.kt).
+    val credentialHost = rememberCredentialManagerHost()
 
     // Локальная копия настройки языка: применяется оптимистично, PATCH /me —
     // фоном; ключ по значению профиля возвращает драфт к серверному значению.
@@ -102,9 +100,6 @@ fun ProfileScreen(
     }
 
     val nameEmptyError = stringResource(R.string.profile_name_empty)
-    // Активити нет — системный лист Credential Manager показать не из чего.
-    // Текст готовим здесь: stringResource внутри лямбды-обработчика не вызвать.
-    val noActivityError = stringResource(R.string.google_sign_in_no_activity)
 
     Column(
         modifier = Modifier
@@ -145,12 +140,10 @@ fun ProfileScreen(
             LoginMethodsSection(
                 me = me,
                 enabled = !isIdentityBusy && !isDeleting,
-                // Тихий no-op при activity == null недопустим: тап по «Привязать»
-                // не делал ничего и выглядел поломкой приложения (в iOS этому
-                // соответствует GoogleSignInError.noPresenter).
                 onLink = {
-                    val host = activity
-                    if (host != null) viewModel.linkGoogle(host) else viewModel.showError(noActivityError)
+                    credentialHost.launch(onError = viewModel::showError) { host ->
+                        viewModel.linkGoogle(host)
+                    }
                 },
                 onUnlinkRequest = { providerToUnlink = it },
             )

@@ -18,6 +18,12 @@ import Security
 /// Отправить хеш вместо сырого значения — значит превратить проверку в
 /// самоподтверждение: перехваченный у другого клиента токен прошёл бы вход.
 enum AppleNonce {
+    /// Отказ системного источника случайности — единственный документированный
+    /// способ, которым `SecRandomCopyBytes` может не сработать.
+    struct RandomUnavailable: Error {
+        let status: OSStatus
+    }
+
     /// Размер сырого nonce: 32 случайных байта = 256 бит. Строкой он
     /// становится в hex, то есть 64 символа `0…9a…f`.
     static let byteCount = 32
@@ -29,15 +35,17 @@ enum AppleNonce {
     /// 256, требует отбраковки байтов ради равномерности. Hex делит нацело
     /// по построению, безопасен в JSON, в JWT-claim и в URL, и совпадает
     /// с кодировкой `sha256Hex(_:)` — тот же формат по обе стороны протокола.
-    static func random() -> String {
+    ///
+    /// Бросает вместо того, чтобы отдать предсказуемое значение или упасть:
+    /// непредсказуемость nonce и есть вся защита входа от повторного
+    /// использования чужого токена, но отказавший системный примитив — повод
+    /// показать человеку ошибку, а не уронить приложение (так же поступает
+    /// `KeychainStore`, см. `SessionStore`).
+    static func random() throws -> String {
         var bytes = [UInt8](repeating: 0, count: byteCount)
         let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         guard status == errSecSuccess else {
-            // Единственный документированный отказ — недоступность системного
-            // источника случайности. Отдать предсказуемое значение нельзя:
-            // непредсказуемость nonce и есть вся защита входа от повторного
-            // использования чужого токена.
-            fatalError("SecRandomCopyBytes завершился с ошибкой \(status)")
+            throw RandomUnavailable(status: status)
         }
         return bytes.map { String(format: "%02x", $0) }.joined()
     }

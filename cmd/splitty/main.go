@@ -294,17 +294,17 @@ func initAppleVerifier(cfg *config) oidc.Verifier {
 // когда-нибудь появится, потребует отдельного секрета)
 func initAppleTokens(cfg *config) oidc.AppleTokens {
 	if strings.TrimSpace(cfg.ApplePrivateKey) == "" {
-		log.Info().Msg("Apple token exchange disabled (APPLE_PRIVATE_KEY empty): токены Apple при удалении аккаунта отозвать будет нечем")
+		log.Info().Msg("Apple token exchange disabled (APPLE_PRIVATE_KEY empty): apple tokens cannot be revoked on account deletion")
 		return nil
 	}
 	clientIDs := nonEmptyValues(cfg.AppleClientIds)
 	if len(clientIDs) == 0 {
-		log.Warn().Msg("APPLE_PRIVATE_KEY задан без APPLE_CLIENT_IDS: обмен токенов Apple выключен")
+		log.Warn().Msg("Apple token exchange disabled: APPLE_PRIVATE_KEY set without APPLE_CLIENT_IDS")
 		return nil
 	}
 	client, err := oidc.NewAppleTokenClient(cfg.AppleTeamId, cfg.AppleKeyId, clientIDs[0], cfg.ApplePrivateKey)
 	if err != nil {
-		log.Warn().Err(err).Msg("cannot init apple token client, обмен authorizationCode выключен")
+		log.Warn().Err(err).Msg("cannot init apple token client: apple token exchange disabled")
 		return nil
 	}
 	log.Info().Msg("Apple token exchange enabled")

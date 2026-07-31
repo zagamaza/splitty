@@ -88,21 +88,15 @@ class PendingJoinStore @Inject constructor(
     }
 
     /**
-     * Забрать намерение и сразу очистить. Чтение и очистка — в ОДНОЙ транзакции
-     * [DataStore.edit] (она сериализуется): иначе две подписки, проснувшиеся на
-     * одной эмиссии, отправили бы два запроса на вступление.
+     * Забыть намерение: выход из аккаунта, исполненное вступление либо
+     * терминальный отказ сервера.
+     *
+     * Парного «забрать и сразу стереть» здесь НЕТ намеренно: намерение читается
+     * потоком [pending], а стирается только после ответа сервера. Пока чтение и
+     * очистка были одним действием, одна попытка вступить без сети сжигала
+     * приглашение навсегда — ссылку присылают в мессенджере один раз
+     * (см. `AppRoot.joinPending`).
      */
-    suspend fun take(): PendingJoin? {
-        var taken: PendingJoin? = null
-        dataStore.edit { prefs ->
-            taken = prefs[KEY_PENDING_JOIN]?.let { PendingJoin(it, prefs[KEY_PENDING_JOIN_OWNER]) }
-            prefs.remove(KEY_PENDING_JOIN)
-            prefs.remove(KEY_PENDING_JOIN_OWNER)
-        }
-        return taken
-    }
-
-    /** Забыть намерение (выход из аккаунта). */
     suspend fun clear() {
         dataStore.edit { prefs ->
             prefs.remove(KEY_PENDING_JOIN)

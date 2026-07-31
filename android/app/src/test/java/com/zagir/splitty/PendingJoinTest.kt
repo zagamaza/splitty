@@ -136,30 +136,22 @@ class PendingJoinTest {
     }
 
     @Test
-    fun `take returns nothing when no intent stored`() = runBlocking {
-        assertNull(PendingJoinStore(dataStore).take())
+    fun `pending flow is empty when no intent stored`() = runBlocking {
+        assertNull(PendingJoinStore(dataStore).pending.first())
     }
 
     @Test
-    fun `take returns intent and clears it`() = runBlocking {
-        val store = PendingJoinStore(dataStore)
-        store.set(code)
-
-        assertEquals(code, store.take()?.roomId)
-        // Повторный take пуст: вступление выполняется ровно один раз, иначе
-        // второй запрос ушёл бы уже от имени следующего вошедшего.
-        assertNull(store.take())
-    }
-
-    @Test
-    fun `pending flow reflects set and take`() = runBlocking {
+    fun `pending flow reflects set and clear`() = runBlocking {
+        // Намерение читается потоком и стирается ОТДЕЛЬНЫМ clear() — забирать
+        // его одним действием (read+remove) нельзя: попытка вступить без сети
+        // сожгла бы приглашение навсегда, см. AppRoot.joinPending.
         val store = PendingJoinStore(dataStore)
         assertNull(store.pending.first())
 
         store.set(code)
         assertEquals(code, store.pending.first()?.roomId)
 
-        store.take()
+        store.clear()
         assertNull(store.pending.first())
     }
 
@@ -170,7 +162,7 @@ class PendingJoinTest {
 
         store.clear()
 
-        assertNull(store.take())
+        assertNull(store.pending.first())
     }
 
     @Test
@@ -179,7 +171,7 @@ class PendingJoinTest {
         // процесс могут выгрузить. Намерение обязано пережить это.
         PendingJoinStore(dataStore).set(code)
 
-        assertEquals(code, PendingJoinStore(dataStore).take()?.roomId)
+        assertEquals(code, PendingJoinStore(dataStore).pending.first()?.roomId)
     }
 
     // MARK: - владелец намерения

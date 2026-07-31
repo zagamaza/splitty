@@ -876,8 +876,21 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 	return nil
 }
 
+// tombstoneExtraFields — что чистится при удалении аккаунта СВЕРХ списка PII
+// снимка (snapshotPIIFields).
+//
+// apple_refresh_token в снимок комнаты не попадает никогда, поэтому в
+// snapshotPIIFields его нет — но в документе пользователя это рабочий секрет
+// от личности Apple, и пережить удаление аккаунта он не должен. Сам отзыв
+// токенов делает REST-слой строго ДО этого вызова (см. handleDeleteMe)
+var tombstoneExtraFields = []string{"apple_refresh_token"}
+
 // SoftDeleteUser ставит tombstone: помечает документ удалённым, чистит PII и
 // освобождает личности.
+//
+// Список $unset собирается из snapshotPIIFields плюс tombstoneExtraFields, а не
+// пишется руками: новое PII-поле модели иначе пришлось бы добавлять в двух
+// местах, и, забыв одно, оно пережило бы удаление аккаунта.
 //
 // Документ НЕ удаляется намеренно. Во-первых, auth-middleware выдаёт 401 по
 // признаку deleted_at, а не по отсутствию документа — отличать «удалён» от
@@ -896,23 +909,20 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 // создавать документ из ничего он не должен — нет пользователя, значит
 // mongo.ErrNoDocuments
 func (r MongoUserRepository) SoftDeleteUser(ctx context.Context, userId int) error {
+	unset := bson.M{}
+	for _, field := range snapshotPIIFields {
+		unset[field] = ""
+	}
+	for _, field := range tombstoneExtraFields {
+		unset[field] = ""
+	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
 	update := bson.D{
 		{Key: "$set", Value: bson.M{
 			"deleted_at":   time.Now(),
 			"display_name": DeletedUserPlaceholder,
 		}},
-		{Key: "$unset", Value: bson.M{
-			"user_name":           "",
-			"email":               "",
-			"google_sub":          "",
-			"apple_sub":           "",
-			"telegram_id":         "",
-			"apple_refresh_token": "",
-			"push_tokens":         "",
-			"aliases":             "",
-			"bank_details":        "",
-		}},
+		{Key: "$unset", Value: unset},
 	}
 	res, err := r.col.UpdateOne(ctx, filter, update)
 	if err != nil {

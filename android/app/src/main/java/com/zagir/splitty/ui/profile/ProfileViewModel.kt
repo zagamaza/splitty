@@ -26,13 +26,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+private const val TAG = "ProfileViewModel"
+
 /**
  * VM вкладки «Профиль»: профиль из кэша сессии + актуализация GET /me,
  * правки настроек PATCH /me, адрес сервера и выход.
  * Порт ios/Splitty/Features/Account/AccountView.swift (логика).
  */
-private const val TAG = "ProfileViewModel"
-
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: SplittyRepository,
@@ -47,7 +47,6 @@ class ProfileViewModel @Inject constructor(
         .map { it?.me }
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.state.value?.me)
 
-    /** Текущий адрес сервера — для карточки «Сервер». */
     /** Тема приложения (system/light/dark) — строка «Тема» в настройках. */
     val theme: StateFlow<String> = sessionStore.state
         .map { it?.theme ?: SessionStore.THEME_SYSTEM }
@@ -68,6 +67,7 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    /** Текущий адрес сервера — для карточки «Сервер». */
     val baseUrl: StateFlow<String> = sessionStore.state
         .map { it?.baseUrl ?: SessionStore.DEFAULT_BASE_URL }
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.currentBaseUrl())

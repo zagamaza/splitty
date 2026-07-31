@@ -404,10 +404,9 @@ struct AccountView: View {
     /// Компактная (по правому краю строки), поэтому `.continue`, а не `.signIn`.
     private var appleLinkButton: some View {
         SignInWithAppleButton(.continue) { request in
-            let rawNonce = AppleNonce.random()
-            appleRawNonce = rawNonce
-            request.requestedScopes = [.fullName, .email]
-            request.nonce = AppleNonce.sha256Hex(rawNonce)
+            // Скоупы и ХЕШ nonce проставляет общий сервис: протокол Apple
+            // обязан совпадать со стороной входа (LoginView).
+            appleRawNonce = AppleSignInService.prepare(request)
         } onCompletion: { result in
             handleAppleLinkCompletion(result)
         }
@@ -561,42 +560,40 @@ struct AccountView: View {
         let rawNonce = appleRawNonce
         appleRawNonce = nil
 
-        switch result {
-        case .success(let authorization):
-            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
-                  let identityToken = credential.identityToken,
-                  let idToken = String(data: identityToken, encoding: .utf8),
-                  let rawNonce
-            else {
-                errorMessage = "Apple не вернул данные для привязки. Попробуйте ещё раз"
-                return
-            }
-            // authorizationCode одноразовый и живёт минуты — сервер меняет его
-            // на Apple refresh token, которым при удалении аккаунта зовётся
-            // auth/revoke (Guideline 5.1.1(v)). Без него у человека, вошедшего
-            // через Telegram/Google и привязавшего Apple здесь, отозвать доступ
-            // будет нечем: «добрать» код позже Apple не даёт.
-            let authorizationCode = credential.authorizationCode
-                .flatMap { String(data: $0, encoding: .utf8) }
-            isIdentityBusy = true
-            Task {
-                defer { isIdentityBusy = false }
-                do {
-                    try await session.linkApple(
-                        idToken: idToken,
-                        nonce: rawNonce,
-                        authorizationCode: authorizationCode
-                    )
-                    Haptics.success()
-                } catch {
-                    errorMessage = identityErrorText(error)
-                }
-            }
-        case .failure(let error):
-            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
-                return
-            }
+        let credential: AppleSignInService.Credential
+        do {
+            credential = try AppleSignInService.credential(from: result, rawNonce: rawNonce)
+        } catch AppleSignInError.cancelled {
+            return
+        } catch AppleSignInError.nonceUnavailable {
+            errorMessage = "Не удалось начать привязку Apple. Попробуйте ещё раз"
+            return
+        } catch AppleSignInError.missingCredential {
+            errorMessage = "Apple не вернул данные для привязки. Попробуйте ещё раз"
+            return
+        } catch {
             errorMessage = humanErrorText(error)
+            return
+        }
+
+        // authorizationCode одноразовый и живёт минуты — сервер меняет его
+        // на Apple refresh token, которым при удалении аккаунта зовётся
+        // auth/revoke (Guideline 5.1.1(v)). Без него у человека, вошедшего
+        // через Telegram/Google и привязавшего Apple здесь, отозвать доступ
+        // будет нечем: «добрать» код позже Apple не даёт.
+        isIdentityBusy = true
+        Task {
+            defer { isIdentityBusy = false }
+            do {
+                try await session.linkApple(
+                    idToken: credential.idToken,
+                    nonce: credential.rawNonce,
+                    authorizationCode: credential.authorizationCode
+                )
+                Haptics.success()
+            } catch {
+                errorMessage = identityErrorText(error)
+            }
         }
     }
 

@@ -549,7 +549,7 @@ func TestAuthGoogleValidation(t *testing.T) {
 func TestAuthGoogleThrottled(t *testing.T) {
 	s, _ := newGoogleServer(newFakeUserRepo(), "google-sub-1", "", "")
 
-	for i := 0; i < oauthPerIPPerMin; i++ {
+	for i := 0; i < oauthAttemptsPerMin; i++ {
 		if rec := postGoogle(t, s, "forged-token"); rec.Code != http.StatusUnauthorized {
 			t.Fatalf("попытка %d: status = %d, want 401", i, rec.Code)
 		}
@@ -847,7 +847,7 @@ func TestAuthAppleValidation(t *testing.T) {
 func TestAuthAppleThrottled(t *testing.T) {
 	s, _ := newAppleServer(newFakeUserRepo(), "apple-sub-1", "")
 
-	for i := 0; i < oauthPerIPPerMin; i++ {
+	for i := 0; i < oauthAttemptsPerMin; i++ {
 		if rec := postApple(t, s, "forged-token", "", testAppleNonce, ""); rec.Code != http.StatusUnauthorized {
 			t.Fatalf("попытка %d: status = %d, want 401", i, rec.Code)
 		}

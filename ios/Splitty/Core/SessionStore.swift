@@ -237,7 +237,7 @@ final class SessionStore {
 
     /// Вход через Sign in with Apple: POST /auth/apple, сохраняет токен
     /// (Keychain) и профиль. Аргументы собирает LoginView из
-    /// `ASAuthorizationAppleIDCredential` — сырой nonce из `AppleNonce`
+    /// `AppleSignInService.Credential` — сырой nonce из `AppleNonce`
     /// и одноразовый `authorizationCode` (см. APIClient.loginWithApple).
     /// 401 — Apple-токен не прошёл проверку на сервере.
     @MainActor
@@ -245,7 +245,7 @@ final class SessionStore {
         idToken: String,
         displayName: String,
         nonce: String,
-        authorizationCode: String
+        authorizationCode: String?
     ) async throws {
         let response = try await api.loginWithApple(
             idToken: idToken,

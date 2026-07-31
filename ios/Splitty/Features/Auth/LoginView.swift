@@ -127,13 +127,9 @@ struct LoginView: View {
     /// повод для отказа на ревью.
     private var appleLoginButton: some View {
         SignInWithAppleButton(.signIn) { request in
-            let rawNonce = AppleNonce.random()
-            appleRawNonce = rawNonce
-            request.requestedScopes = [.fullName, .email]
-            // В системный запрос уходит ХЕШ — именно он попадёт в подписанный
-            // Apple токен. Сырое значение остаётся здесь и уедет на сервер
-            // телом запроса, чтобы серверу было что с чем сверять.
-            request.nonce = AppleNonce.sha256Hex(rawNonce)
+            // Скоупы и ХЕШ nonce проставляет общий сервис: протокол Apple
+            // обязан совпадать со стороной привязки (AccountView).
+            appleRawNonce = AppleSignInService.prepare(request)
         } onCompletion: { result in
             handleAppleCompletion(result)
         }
@@ -369,51 +365,30 @@ struct LoginView: View {
         let rawNonce = appleRawNonce
         appleRawNonce = nil
 
-        switch result {
-        case .success(let authorization):
-            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
-                  let identityToken = credential.identityToken,
-                  let idToken = String(data: identityToken, encoding: .utf8),
-                  let rawNonce
-            else {
-                errorMessage = "Apple не вернул данные для входа. Попробуйте ещё раз"
-                return
-            }
-            // authorizationCode одноразовый и живёт минуты — сервер меняет его
-            // на refresh token для отзыва доступа при удалении аккаунта
-            // (Apple Guideline 5.1.1(v)). Забрать его позже нельзя, поэтому
-            // отправляем сразу вместе с токеном.
-            let authorizationCode = credential.authorizationCode
-                .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        do {
+            let credential = try AppleSignInService.credential(from: result, rawNonce: rawNonce)
             loginWithApple(
-                idToken: idToken,
-                displayName: appleDisplayName(credential.fullName),
-                nonce: rawNonce,
-                authorizationCode: authorizationCode
+                idToken: credential.idToken,
+                displayName: credential.displayName,
+                nonce: credential.rawNonce,
+                authorizationCode: credential.authorizationCode
             )
-        case .failure(let error):
-            if let authError = error as? ASAuthorizationError, authError.code == .canceled {
-                return
-            }
+        } catch AppleSignInError.cancelled {
+            return
+        } catch AppleSignInError.nonceUnavailable {
+            errorMessage = "Не удалось начать вход через Apple. Попробуйте ещё раз"
+        } catch AppleSignInError.missingCredential {
+            errorMessage = "Apple не вернул данные для входа. Попробуйте ещё раз"
+        } catch {
             errorMessage = humanErrorText(error)
         }
-    }
-
-    /// Имя из `ASAuthorizationAppleIDCredential.fullName`. Apple отдаёт его
-    /// ТОЛЬКО при первом входе — дальше приходит nil, и пустая строка тут
-    /// нормальна: сервер в этом случае не трогает уже сохранённое имя.
-    private func appleDisplayName(_ components: PersonNameComponents?) -> String {
-        guard let components else { return "" }
-        return PersonNameComponentsFormatter
-            .localizedString(from: components, style: .default)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func loginWithApple(
         idToken: String,
         displayName: String,
         nonce: String,
-        authorizationCode: String
+        authorizationCode: String?
     ) {
         isLoggingIn = true
         Task {

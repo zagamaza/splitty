@@ -386,7 +386,11 @@ func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider str
 
 // SoftDeleteUser как mongo-реализация: tombstone вместо удаления документа,
 // PII и личности вычищаются, display_name заменяется плейсхолдером.
-// Идемпотентен — повторный вызов пишет то же самое
+// Идемпотентен — повторный вызов пишет то же самое.
+//
+// Список полей обязан совпадать с $unset настоящего репозитория
+// (repository.snapshotPIIFields + tombstoneExtraFields): новое PII-поле модели
+// добавляется в оба места, иначе тесты удаления аккаунта его не заметят
 func (f *fakeUserRepo) SoftDeleteUser(_ context.Context, userId int) error {
 	if f.softDeleteErr != nil {
 		return f.softDeleteErr
