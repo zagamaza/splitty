@@ -247,6 +247,10 @@ final class SessionStore {
     func logout() {
         expireSession()
         ownerUserId = nil
+        // Отложенное вступление по ссылке — тоже чужое: без этой строки
+        // следующий вошедший на устройстве человек молча оказался бы
+        // в группе предыдущего.
+        PendingJoin.shared.clear()
         // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
         Task { [cache] in await cache.removeAll() }
         outbox.clear()

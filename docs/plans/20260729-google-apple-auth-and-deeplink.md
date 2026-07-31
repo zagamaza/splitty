@@ -722,18 +722,33 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Create: `ios/Splitty/Core/RoomCodeParser.swift`
 - Create: `ios/Splitty/Core/PendingJoin.swift`
 - Create: `ios/SplittyTests/RoomCodeParserTests.swift`
+- ➕ Modify: `ios/Splitty/Core/SessionStore.swift` — `PendingJoin.shared.clear()` в `logout`
 
-- [ ] **вынести парсер**: логика на `JoinGroupView.swift:22-34` — приватное свойство внутри View, переиспользовать нельзя. Создать `enum RoomCodeParser { static func roomId(from:) -> String? }`, перевести `JoinGroupView` на него
-- [ ] парсер обязан принимать **оба** формата: старый `t.me/<bot>?start=room<hex>` и новый `https://<domain>/join/<roomId>`, плюс голый hex
-- [ ] добавить в `entitlements.properties` `com.apple.developer.associated-domains: [applinks:<domain>]` (плейсхолдер + `TODO`)
-- [ ] создать `PendingJoin` — хранение roomId в `UserDefaults`: `set`, `take` (читает и очищает), `clear`
-- [ ] в `SplittyApp` обработать `onContinueUserActivity(NSUserActivityTypeBrowsingWeb)` и `onOpenURL`
-- [ ] авторизован → выполнить join и открыть комнату; не авторизован → сохранить в `PendingJoin` и показать вход
-- [ ] в `RootView` на переходе `isAuthenticated` false → true забрать `PendingJoin.take()` и выполнить join
-- [ ] ошибки join по диплинку показывать человеческим текстом (комната удалена / нет доступа)
-- [ ] **очищать `PendingJoin` при logout** (`SessionStore.swift:213`) — иначе следующий пользователь на устройстве вступит в чужую группу
-- [ ] написать тесты парсера: новый URL; старый t.me-формат; голый hex; посторонний URL → nil; мусор → nil. И тесты `PendingJoin`: `take()` очищает; повторный `take()` → nil; `logout` очищает
-- [ ] `xcodebuild test` — зелёные перед Task 18
+- [x] **вынести парсер**: логика на `JoinGroupView.swift:22-34` — приватное свойство внутри View, переиспользовать нельзя. Создать `enum RoomCodeParser { static func roomId(from:) -> String? }`, перевести `JoinGroupView` на него
+- [x] парсер обязан принимать **оба** формата: старый `t.me/<bot>?start=room<hex>` и новый `https://<domain>/join/<roomId>`, плюс голый hex
+- [x] добавить в `entitlements.properties` `com.apple.developer.associated-domains: [applinks:<domain>]` (плейсхолдер + `TODO`)
+- [x] создать `PendingJoin` — хранение roomId в `UserDefaults`: `set`, `take` (читает и очищает), `clear`
+- [x] в `SplittyApp` обработать `onContinueUserActivity(NSUserActivityTypeBrowsingWeb)` и `onOpenURL`
+- [x] авторизован → выполнить join и открыть комнату; не авторизован → сохранить в `PendingJoin` и показать вход
+- [x] в `RootView` на переходе `isAuthenticated` false → true забрать `PendingJoin.take()` и выполнить join
+- [x] ошибки join по диплинку показывать человеческим текстом (комната удалена / нет доступа)
+- [x] **очищать `PendingJoin` при logout** (`SessionStore.swift:213`) — иначе следующий пользователь на устройстве вступит в чужую группу
+- [x] написать тесты парсера: новый URL; старый t.me-формат; голый hex; посторонний URL → nil; мусор → nil. И тесты `PendingJoin`: `take()` очищает; повторный `take()` → nil; `logout` очищает
+- [x] `xcodebuild test` — зелёные перед Task 18 (183 теста `SplittyTests`, из них 24 новых)
+
+**Как сделано (для следующих задач):**
+- `RoomCodeParser` (`ios/Splitty/Core/RoomCodeParser.swift`) — единственный разборщик кода в приложении. Четыре формата: universal link `/join/<id>`, кастомная схема `splitty://join/<id>`, легаси `?start=room<id>` и голый код. Маркеры `start=room` и `/join/` покрывают и схему, и https одной строкой: `splitty://join/<id>` содержит `/join/` ровно так же, как и https-ссылка
+- [decision] код валидируется как **ровно 24 hex-символа** (mongo ObjectID), а не «непустой hex-префикс», как было в `JoinGroupView`. Недобранный код теперь даёт «Не похоже на код или ссылку группы» до запроса, а не 404 после. Диплинку это нужнее, чем экрану: ссылка приходит извне, и мусорный путь не должен превращаться в запрос
+- [decision] свой ASCII-предикат вместо `Character.isHexDigit`: последний считает hex-цифрами полноширинные формы (`０`…`Ｆ`), и такой «код» уехал бы на сервер мусором (`testRejectsNonAsciiHexDigits`)
+- [decision] `PendingJoin` — `@Observable`-класс с `shared` и подменяемым `UserDefaults`, а не статические функции: `RootView` обязан реагировать на появление намерения (`onChange(of: PendingJoin.shared.roomId)`), а с чистым UserDefaults-хранилищем реакции нет. `shared` вместо environment — ставит намерение `SplittyApp`, исполняет `RootView`, чистит `SessionStore.logout`, и тянуть объект через всю иерархию ради трёх точек дороже
+- [decision] ветку диплинка дописали в **тот же** `onOpenURL`, что и `GIDSignIn.handle` (Task 16 это прямо требовал): второй `onOpenURL` не добавляется, а побеждает. Google-обработчик идёт первым и при `true` возвращает управление — его ссылки в парсер не попадают
+- [deviation] `SplittyApp` НЕ делит поведение на «авторизован → join» / «гость → сохранить», как написано в пункте: он всегда только сохраняет намерение, а исполняет его `RootView`. Иначе холодный старт по ссылке (namely: `onOpenURL` приходит раньше, чем появляется корень) требовал бы третьей копии той же логики. `RootView` дренирует намерение по трём событиям: `.task` (холодный старт), `onChange(roomId)` (ссылка на живом приложении), `onChange(isAuthenticated)` (вернулись со входа)
+- [decision] 401 на самом join-запросе **возвращает намерение обратно** в `PendingJoin` вместо алерта: `APIClient` в этот момент уже сбросил сессию и нас перекинуло на вход, и «Требуется вход» поверх экрана входа сказал бы очевидное — а после переавторизации вступление доедет само
+- [deviation] ➕ `CFBundleURLTypes` дополнен схемой `splitty` — в пункте её нет, но без регистрации схемы кнопка «Открыть в приложении» со страницы `/join` (Task 14, `splitty://join/<roomId>`) не открывает приложение вовсе. И это единственный работающий канал диплинка **до** покупки домена: universal links без AASA не активируются
+- [deviation] комната после вступления открывается `fullScreenCover` поверх табов (`GroupDetailView` в своём `NavigationStack` + «Готово»), а не пушем во вкладке «Группы». Пуш потребовал бы `NavigationPath` в `GroupsListView` и переключения таба из `MainTabView` — обоих файлов нет в Files задачи, а `NavigationLink(destination:)` в `GroupsListView` пришлось бы переводить на value-based, чтобы не разъехаться с `path`. Модалка даёт то же «открыть комнату» без хирургии по навигации
+- [decision] `joinLinkErrorText` живёт рядом с `PendingJoin` и разбирает только 404/403 (комната удалена / нет доступа), всё остальное отдаёт в общий `humanErrorText` — второй словарь сетевых ошибок не заводим
+- ⚠️ проверить вживую диплинк нельзя: домена нет (`applinks:splitty.app` — плейсхолдер с `TODO`), поэтому universal links не активируются, а кастомную схему без устройства/симулятора с установленным приложением и открытой страницей `/join` не пройти. Проверены сборка и 183 юнит-теста
+- 4 падающих UI-теста (`DashboardShotsUITests`, `DemoFlowUITests`, `OfflineSmokeUITests`) — предсуществующие, зависят от локального бэкенда (см. Task 15)
 
 ### Task 18: Android — вход через Google (Credential Manager)
 

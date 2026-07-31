@@ -45,6 +45,19 @@ targets:
         # «provisioning profile doesn't support Sign in with Apple».
         com.apple.developer.applesignin:
           - Default
+        # Universal links: страница приглашения https://<domain>/join/<roomId>
+        # (internal/rest/deeplink.go). iOS скачивает с домена
+        # /.well-known/apple-app-site-association и только после этого начинает
+        # уводить ссылки в приложение.
+        #
+        # TODO: домен ещё НЕ куплен (см. Post-Completion в
+        # docs/plans/20260729-google-apple-auth-and-deeplink.md) — splitty.app
+        # здесь плейсхолдер. Пока он не резолвится, universal links просто не
+        # работают: ссылка открывается в браузере, а кнопка «Открыть
+        # в приложении» (схема splitty://, CFBundleURLTypes ниже) работает
+        # уже сейчас. Заменить на реальный домен вместе с PUBLIC_BASE_URL.
+        com.apple.developer.associated-domains:
+          - applinks:splitty.app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zagir.splitty
@@ -88,6 +101,15 @@ targets:
             CFBundleURLName: com.zagir.splitty.google
             CFBundleURLSchemes:
               - com.googleusercontent.apps.327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o
+          # Кнопка «Открыть в приложении» на странице приглашения ведёт на
+          # splitty://join/<roomId> (APP_SCHEME, internal/rest/deeplink.go:43).
+          # Схема нужна ровно потому, что тап по ссылке НА ТОТ ЖЕ домен iOS
+          # в приложение не уводит — браузер остаётся в браузере. И она
+          # единственное, что работает до покупки домена под universal links.
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.zagir.splitty.deeplink
+            CFBundleURLSchemes:
+              - splitty
         # Разрешения для AI-добавления расхода (голос + фото чека).
         NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом
         NSSpeechRecognitionUsageDescription: Распознавание речи показывает текст надиктовки прямо во время записи

@@ -36,6 +36,16 @@
 				<string>com.googleusercontent.apps.327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.zagir.splitty.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>splitty</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>12</string>

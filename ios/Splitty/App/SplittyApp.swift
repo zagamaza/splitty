@@ -54,14 +54,39 @@ struct SplittyApp: App {
                 .onChange(of: session.isAuthenticated) {
                     PushManager.shared.authStateChanged()
                 }
-                // Возврат из входа через Google. Основной путь (лист
-                // ASWebAuthenticationSession) отдаёт результат сам, минуя эту
-                // строку, но альтернативные — редирект через Safari и через
-                // приложение Google Device Policy — приходят именно сюда.
-                // Без handle такой вход завершается «ничем».
+                // ЕДИНСТВЕННЫЙ onOpenURL сцены: второй такой модификатор не
+                // «добавляется», а побеждает — один из обработчиков перестал бы
+                // получать ссылки вовсе. Поэтому новые схемы дописываются сюда.
                 .onOpenURL { url in
-                    _ = GIDSignIn.sharedInstance.handle(url)
+                    // Возврат из входа через Google. Основной путь (лист
+                    // ASWebAuthenticationSession) отдаёт результат сам, минуя
+                    // эту строку, но альтернативные — редирект через Safari и
+                    // через приложение Google Device Policy — приходят именно
+                    // сюда. Без handle такой вход завершается «ничем».
+                    if GIDSignIn.sharedInstance.handle(url) {
+                        return
+                    }
+                    // Кнопка «Открыть в приложении» на странице приглашения:
+                    // splitty://join/<roomId> (см. internal/rest/deeplink.go).
+                    handleJoinLink(url)
+                }
+                // Universal link https://<domain>/join/<roomId> — тап по самой
+                // ссылке в мессенджере. Приходит отдельным каналом (NSUserActivity),
+                // onOpenURL его НЕ видит.
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                    guard let url = activity.webpageURL else { return }
+                    handleJoinLink(url)
                 }
         }
+    }
+
+    /// Ссылка-приглашение: намерение только запоминается, исполняет его
+    /// `RootView`. Так одна и та же дорога работает и для авторизованного
+    /// (RootView заберёт намерение сразу), и для гостя (заберёт после входа),
+    /// и для холодного старта, когда ссылка приходит раньше, чем появляется
+    /// хоть один экран.
+    private func handleJoinLink(_ url: URL) {
+        guard let roomId = RoomCodeParser.roomId(from: url) else { return }
+        PendingJoin.shared.set(roomId)
     }
 }

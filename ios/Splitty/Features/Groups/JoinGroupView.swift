@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 /// Присоединение к группе по коду приглашения (roomId).
-/// Принимает и «голый» код, и ссылку вида t.me/…?start=room<id>.
+/// Принимает «голый» код и любую ссылку-приглашение — разбор в `RoomCodeParser`.
 struct JoinGroupView: View {
     private let onJoined: () -> Void
 
@@ -22,15 +22,10 @@ struct JoinGroupView: View {
     }
 
     /// Код группы, извлечённый из введённого текста (код или ссылка-приглашение).
+    /// Разбор — в `RoomCodeParser`: те же правила применяет обработчик диплинка,
+    /// и второй копии этих правил в проекте быть не должно.
     private var roomId: String {
-        var text = code.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let range = text.range(of: "start=room") {
-            text = String(text[range.upperBound...])
-        } else if text.lowercased().hasPrefix("room") {
-            text = String(text.dropFirst(4))
-        }
-        // Обрезаем возможный «хвост» ссылки.
-        return String(text.prefix { $0.isHexDigit })
+        RoomCodeParser.roomId(from: code) ?? ""
     }
 
     var body: some View {
