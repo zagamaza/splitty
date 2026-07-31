@@ -162,7 +162,10 @@ fun MainScaffold(
     // Вступили в группу по ссылке-приглашению — открываем её.
     LaunchedEffect(openRoomId) {
         if (openRoomId == null) return@LaunchedEffect
-        navController.navigate(MainRoutes.room(openRoomId))
+        // launchSingleTop: повторный диплинк в ту же группу (onNewIntent при
+        // живом приложении) иначе клал бы в стек второй, третий… одинаковых
+        // экрана группы — и «назад» пришлось бы жать столько же раз.
+        navController.navigate(MainRoutes.room(openRoomId)) { launchSingleTop = true }
         // Гасим намерение сразу: иначе оно доживёт до следующего пересоздания
         // корня и комната откроется второй раз поверх первой.
         onRoomOpened()

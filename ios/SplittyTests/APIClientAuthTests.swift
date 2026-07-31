@@ -15,6 +15,11 @@ final class StubURLProtocol: URLProtocol {
     /// Тело запроса отдельно: `URLProtocol` затирает `httpBody` потоком,
     /// поэтому его снимают до подмены (см. `canonicalRequest`).
     nonisolated(unsafe) static var lastBody: Data?
+    /// Задержка ответа на конкретный запрос, секунды (nil — ответить сразу).
+    /// Нужна тестам на ГОНКУ двух запросов: без неё быстрый ответ приходит
+    /// раньше, чем тест успевает отправить второй запрос, и проверяемое
+    /// перекрытие просто не воспроизводится.
+    nonisolated(unsafe) static var responseDelay: ((URLRequest) -> TimeInterval?)?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
 
@@ -28,15 +33,25 @@ final class StubURLProtocol: URLProtocol {
     override func startLoading() {
         Self.lastRequest = request
         let (status, body) = Self.handler?(request) ?? (200, Data())
-        let response = HTTPURLResponse(
-            url: request.url!,
-            statusCode: status,
-            httpVersion: "HTTP/1.1",
-            headerFields: ["Content-Type": "application/json"]
-        )!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: body)
-        client?.urlProtocolDidFinishLoading(self)
+        let finish = { [weak self] in
+            guard let self else { return }
+            let response = HTTPURLResponse(
+                url: self.request.url!,
+                statusCode: status,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            self.client?.urlProtocol(self, didLoad: body)
+            self.client?.urlProtocolDidFinishLoading(self)
+        }
+        // Отвечаем отложенно (и не блокируя поток загрузки), только если тест
+        // об этом попросил: иначе второй запрос не успел бы уйти в полёт.
+        if let delay = Self.responseDelay?(request), delay > 0 {
+            DispatchQueue.global().asyncAfter(deadline: .now() + delay, execute: finish)
+        } else {
+            finish()
+        }
     }
 
     override func stopLoading() {}
@@ -65,6 +80,7 @@ final class APIClientAuthTests: XCTestCase {
         StubURLProtocol.handler = nil
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
+        StubURLProtocol.responseDelay = nil
 
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -80,6 +96,7 @@ final class APIClientAuthTests: XCTestCase {
         StubURLProtocol.handler = nil
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
+        StubURLProtocol.responseDelay = nil
         super.tearDown()
     }
 

@@ -96,9 +96,10 @@ func (v *providerVerifier) Verify(ctx context.Context, idToken string) (*Claims,
 		jwt.WithIssuedAt(),
 		jwt.WithLeeway(clockLeeway),
 	}
-	if len(v.issuers) == 1 {
-		opts = append(opts, jwt.WithIssuer(v.issuers[0]))
-	}
+	// jwt.WithIssuer здесь намеренно НЕ используется: он принимает ровно одно
+	// значение, а у Google их два. Проверка ниже (slices.Contains) строго
+	// сильнее и покрывает оба случая — дублировать её для однозначных
+	// провайдеров незачем
 
 	claims := &Claims{}
 	if _, err := jwt.ParseWithClaims(idToken, claims, v.jwks.keyfunc(ctx), opts...); err != nil {

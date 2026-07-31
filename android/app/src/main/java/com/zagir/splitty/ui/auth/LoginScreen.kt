@@ -75,6 +75,9 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     var isServerExpanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
+    // Активити нет — системный лист Credential Manager показать не из чего.
+    // Текст готовим здесь: stringResource внутри лямбды-обработчика не вызвать.
+    val noActivityError = stringResource(R.string.google_sign_in_no_activity)
 
     Box(
         modifier = Modifier
@@ -98,8 +101,15 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 enabled = !state.isLoggingIn,
                 onClick = {
                     // Credential Manager рисует системный лист поверх активити —
-                    // application-контекст ему не подходит.
-                    activity?.let(viewModel::loginWithGoogle)
+                    // application-контекст ему не подходит. Тихий no-op при
+                    // activity == null недопустим: единственная кнопка входа для
+                    // человека без Telegram просто ничего не делала бы.
+                    val host = activity
+                    if (host != null) {
+                        viewModel.loginWithGoogle(host)
+                    } else {
+                        viewModel.showError(noActivityError)
+                    }
                 },
             )
             TelegramLoginCard(

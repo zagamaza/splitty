@@ -2,6 +2,7 @@ package com.zagir.splitty.data
 
 import android.util.Log
 import com.zagir.splitty.core.session.PendingJoinStore
+import com.zagir.splitty.core.session.SessionEndReason
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.di.ApplicationScope
 import javax.inject.Inject
@@ -17,6 +18,10 @@ private const val TAG = "OfflineDataCleaner"
  * стирает офлайн-кеш GET-ответов и outbox — данные аккаунта не должны
  * пережить сессию. Создаётся при старте (инжектится в MainActivity).
  *
+ * Единственное исключение — отложенное вступление по ссылке-приглашению: оно
+ * переживает ПРОТУХШУЮ сессию (401), потому что человек вернётся тем же
+ * аккаунтом. См. [SessionEndReason].
+ *
  * Второй триггер — СМЕНА аккаунта: если id профиля изменился, а перехода
  * «был → нет» мы не увидели (нерасшифровываемый шифротокен держит
  * hasStoredToken=true вечно), данные предыдущего пользователя иначе
@@ -26,7 +31,7 @@ private const val TAG = "OfflineDataCleaner"
  */
 @Singleton
 class OfflineDataCleaner @Inject constructor(
-    sessionStore: SessionStore,
+    private val sessionStore: SessionStore,
     private val cache: ApiCache,
     private val outbox: OutboxStore,
     private val avatars: AvatarStore,
@@ -56,7 +61,16 @@ class OfflineDataCleaner @Inject constructor(
                     hasToken && userId != null && lastUserId != null && userId != lastUserId
 
                 if ((hadToken && !hasToken) || switchedAccount) {
-                    if (clearAll()) {
+                    // Протухшая сессия (401) — НЕ выход: человек вернётся тем же
+                    // аккаунтом, и отложенное вступление по ссылке обязано дожить
+                    // до переавторизации. Без этой развилки 401 прямо во время
+                    // вступления гонялся с `AppRoot`, который кладёт намерение
+                    // обратно, и чистка почти всегда выигрывала — приглашение
+                    // терялось молча. Смена аккаунта — всегда чистка: намерение
+                    // принадлежит предыдущему владельцу устройства.
+                    val keepPendingJoin = !switchedAccount &&
+                        sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
+                    if (clearAll(clearPendingJoin = !keepPendingJoin)) {
                         hadToken = hasToken
                         lastUserId = userId
                     }
@@ -76,9 +90,12 @@ class OfflineDataCleaner @Inject constructor(
      * Стирает офлайн-данные аккаунта. Каждая чистка изолирована: без runCatching
      * ошибка записи в одной из них вылетала из collect и НАВСЕГДА убивала
      * подписку — все последующие разлогины переставали чистить что-либо.
-     * true — все три прошли успешно.
+     * true — все прошли успешно.
+     *
+     * [clearPendingJoin] — стирать ли отложенное вступление по ссылке; при
+     * протухшей сессии оно обязано выжить (см. вызов выше).
      */
-    private suspend fun clearAll(): Boolean {
+    private suspend fun clearAll(clearPendingJoin: Boolean = true): Boolean {
         var ok = true
         suspend fun step(name: String, block: suspend () -> Unit) {
             runCatching { block() }.onFailure {
@@ -91,7 +108,9 @@ class OfflineDataCleaner @Inject constructor(
         step("avatars") { avatars.clear() }
         // Отложенное вступление по ссылке-приглашению: без чистки следующий
         // человек, вошедший на этом устройстве, молча вступил бы в чужую группу.
-        step("pending-join") { pendingJoin.clear() }
+        if (clearPendingJoin) {
+            step("pending-join") { pendingJoin.clear() }
+        }
         return ok
     }
 }

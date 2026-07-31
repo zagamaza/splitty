@@ -18,6 +18,7 @@ import com.zagir.splitty.push.PushTokenRegistrar
 import com.zagir.splitty.ui.components.identityErrorText
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -263,6 +264,11 @@ class ProfileAccountTest {
 
         assertNull(vm.errorMessage.value)
         assertEquals(1, provider.calls)
+        // Главное в этом тесте — что запроса привязки НЕ БЫЛО: без проверки
+        // он проходил бы и при отправке пустого id-токена на сервер. Считаем
+        // не requestCount (в него попадает GET /me из init VM), а сами пути.
+        assertEquals("/api/v1/me", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+        assertNull(server.takeRequest(500, TimeUnit.MILLISECONDS))
     }
 
     @Test

@@ -69,11 +69,16 @@ app/src/main/java/com/zagir/splitty/
 ├── SplittyApp.kt, MainActivity.kt      # Hilt-Application, единственная Activity
 ├── core/
 │   ├── UiState.kt                      # Loading / Content / Error
+│   ├── auth/                           # Credential Manager (Google id-токен),
+│   │                                   # Context.findActivity()
 │   ├── model/                          # DTO по docs/API.md + тела запросов
 │   ├── money/Money.kt                  # money(), shares(), aggregateByCurrency()
 │   ├── network/                        # Retrofit API, интерцепторы, ApiException,
 │   │                                   # NetworkMonitor (StateFlow isOnline)
-│   └── session/SessionStore.kt         # DataStore: токен, baseUrl, dataVersion
+│   └── session/
+│       ├── SessionStore.kt             # DataStore: токен, baseUrl, dataVersion
+│       ├── TokenCipher.kt              # AES-GCM поверх Keystore
+│       └── PendingJoinStore.kt         # отложенное вступление по ссылке
 ├── data/
 │   ├── SplittyRepository.kt            # единая точка сети для ViewModel
 │   ├── ApiCache.kt                     # офлайн-кеш GET (filesDir/cache-api)
@@ -120,7 +125,9 @@ app/src/main/java/com/zagir/splitty/
   с русским `message` (показывать как есть). После каждой успешной мутации —
   `SessionStore.noteDataChanged()`; экраны-списки подписываются на
   `SessionStore.dataVersion` и перезагружаются.
-- 401 любого запроса — глобальный разлогин (уже сделан в `AuthInterceptor`).
+- 401 любого запроса — глобальный разлогин (уже сделан в `AuthInterceptor`);
+  это `SessionEndReason.EXPIRED` — «сессия протухла», а не «человек вышел»
+  (разница важна `OfflineDataCleaner`, см. «Вход и аккаунт»).
 - Экраны: `ViewModel` + `StateFlow<UiState<T>>`, секции — `SurfaceCard`
   на фоне `Splitty.colors.bg`.
 
@@ -156,9 +163,83 @@ Cleartext HTTP разрешён **только в debug**: конфиги раз
 `src/release/res/xml/network_security_config.xml` (release cleartext
 запрещает, боевой сервер обязан быть на HTTPS).
 
-Вход: код из Telegram-бота `@split_money_bot` (команда `/login`, код —
-8 символов) либо dev-вход (`POST /auth/dev`, только в debug и при
-`API_DEV_AUTH=true` на сервере).
+## Вход и аккаунт
+
+Три способа попасть в аккаунт:
+
+- **Google** (`POST /auth/google`) — системный лист выбора аккаунта через
+  **Credential Manager** (`core/auth/GoogleIdTokenProvider.kt`, единственное
+  место, где живёт SDK; наружу отдаётся голый id-токен). Кнопка — первой на
+  экране входа: для человека без Telegram это единственный путь внутрь.
+  Листу нужен контекст **активити** — `Context.findActivity()`
+  (`core/auth/ActivityContext.kt`); если её не нашли, экран показывает ошибку,
+  а не молчит.
+- **Код из Telegram-бота** `@split_money_bot` (команда `/login`, код —
+  8 символов, `POST /auth/code`).
+- **dev-вход** (`POST /auth/dev`) — только в debug и при `API_DEV_AUTH=true`
+  на сервере.
+
+`BuildConfig.GOOGLE_SERVER_CLIENT_ID` (задан в `app/build.gradle.kts`) — это
+**WEB**-клиент проекта Google Cloud, а не Android-клиент. Именно он попадает в
+`aud` выданного id-токена и сверяется бэкендом (`GOOGLE_CLIENT_IDS`).
+Android-клиенты (Play App Signing и локальный debug-keystore) в код не
+попадают вовсе: Google сопоставляет приложение сам по package name + SHA-1
+сертификата подписи. Отсюда типовая ошибка «вход работает в debug и падает в
+release» — расходятся отпечатки подписи в Google Cloud, а не этот id.
+
+### Способы входа и удаление аккаунта (вкладка «Профиль»)
+
+- Секция **«Способы входа»** — по строке на провайдера, источник истины —
+  `me.linkedProviders` **с сервера** (список не досочиняется на клиенте: каждая
+  мутация приходит ответом `POST/DELETE /me/link/{provider}`). Google можно
+  привязать и отвязать; Telegram показывается только уже привязанным (привязка
+  требует Telegram Login Widget, которого в приложении нет); Apple на Android
+  не показывается вовсе.
+- Кнопка «Отвязать» гаснет **до** запроса, когда способ входа последний
+  (сервер ответил бы `409 last_identity`, но узнавать о запрете из алерта
+  после действия — плохо).
+- Отвязка **Telegram необратима** (бот на следующее сообщение заведёт второй,
+  пустой профиль; обратно привязать нельзя), поэтому у неё СВОЙ текст
+  подтверждения, а серверный `warning` показывается отдельным диалогом
+  «Внимание» — это не ошибка.
+- Ошибки привязки переводит `identityErrorText` (`ui/components/HumanError.kt`):
+  `identity_taken`, `last_identity`, `provider_rejected` (400 — сервер не принял
+  id-токен провайдера; разлогина не вызывает, в отличие от 401).
+- **«Удалить аккаунт»** — последним пунктом экрана (требование Apple Guideline
+  5.1.1(v) и Google Play): `DELETE /me`, разлогин ТОЛЬКО при успехе — при
+  сетевой ошибке аккаунт жив, и выбрасывать человека на экран входа значило бы
+  соврать ему. FCM-токен отвязывается ДО удаления, пока JWT валиден.
+- Разлогин по 401 (`AuthInterceptor`) — это **протухшая сессия**, а не выход:
+  `SessionEndReason.EXPIRED`. `OfflineDataCleaner` в этом случае НЕ стирает
+  отложенное вступление по ссылке (человек вернётся тем же аккаунтом);
+  явный выход (`LOGOUT`) стирает всё.
+
+## Ссылки-приглашения (диплинки)
+
+- Форматы: app link `https://<domain>/join/<roomId>` (страницу отдаёт бэкенд,
+  `internal/rest/deeplink.go`), кастомная схема `splitty://join/<roomId>`,
+  легаси-ссылка бота `t.me/split_money_bot?start=room<roomId>` и голый код.
+  Все четыре разбирает один парсер — `parseRoomCode` (`ui/groups/GroupsListViewModel.kt`).
+- **Домен `splitty.app` в манифесте — плейсхолдер, он ещё не куплен.**
+  До покупки `autoVerify` не пройдёт (нужен `/.well-known/assetlinks.json` с
+  SHA-256 подписи), и реально работает только схема `splitty://`. Домен обязан
+  совпасть с `PUBLIC_BASE_URL` бэкенда и с `applinks:` в `ios/project.yml`.
+- **`android:launchMode="singleTop"`** обязателен: при `standard` переход по
+  ссылке в ЖИВОЕ приложение создал бы второй экземпляр `MainActivity` и позвал
+  `onCreate` вместо `onNewIntent` — два приложения в стеке, состояние первого
+  потеряно.
+- `MainActivity` намерение только **запоминает** (`PendingJoinStore`,
+  DataStore — переживает выгрузку процесса; запись идёт в application-скоуп,
+  не в `lifecycleScope`), интент помечается израсходованным (`setIntent` с
+  очищенной `data` + пропуск `FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY`), иначе
+  запуск из лаунчера повторно открывал бы ту же группу.
+- Исполняет вступление `AppRootViewModel` (`ui/AppRoot.kt`): гость сначала
+  видит экран входа, вступление доезжает само после входа. Намерение стирается
+  ТОЛЬКО при успехе или терминальном отказе (404/403) — оффлайн и 5xx его не
+  сжигают, а 401 оставляет его до переавторизации.
+- Ссылку для «Поделиться» даёт сервер полем `inviteUrl` в
+  `GET /rooms/{roomId}`; пока публичный домен не настроен, поле пустое и экран
+  приглашения откатывается на легаси-ссылку бота.
 
 ## Состояние
 

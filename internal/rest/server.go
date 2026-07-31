@@ -98,9 +98,11 @@ type Config struct {
 	// публикации, поэтому это отдельная настройка, а не производная от bundle
 	// id. Пусто — кнопка App Store не рисуется
 	IosStoreUrl string
-	// AppScheme — кастомная схема кнопки «Открыть в приложении»
-	// (<scheme>://join/<roomId>). Пусто — defaultAppScheme
-	AppScheme string
+	// TrustedProxies — сколько обратных прокси стоит перед сервером. 0 (дефолт)
+	// означает «прямые соединения»: X-Forwarded-For не читается вовсе, лимиты
+	// считаются по RemoteAddr. Ненулевое значение включает разбор заголовка с
+	// хвоста — подробности и обоснование в clientIP
+	TrustedProxies int
 }
 
 // Server REST API сервер со всеми зависимостями.

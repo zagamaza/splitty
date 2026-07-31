@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -212,7 +213,7 @@ func TestLinkIdentityErrors(t *testing.T) {
 		{"apple не сконфигурирован", empty, providerApple, `{"idToken": "x"}`, http.StatusServiceUnavailable, "unavailable"},
 		{"telegram не сконфигурирован", empty, providerTelegram, `{"id": 1, "authDate": 1, "hash": "x"}`, http.StatusServiceUnavailable, "unavailable"},
 		{"пустой idToken", configured, providerGoogle, `{"idToken": "  "}`, http.StatusBadRequest, "validation"},
-		{"чужой idToken", configured, providerGoogle, `{"idToken": "forged"}`, http.StatusUnauthorized, "unauthorized"},
+		{"чужой idToken", configured, providerGoogle, `{"idToken": "forged"}`, http.StatusBadRequest, "provider_rejected"},
 		{"неизвестный провайдер", configured, "vkontakte", `{"idToken": "x"}`, http.StatusNotFound, "not_found"},
 		{"telegram без обязательных полей", configured, providerTelegram, `{"id": 1}`, http.StatusBadRequest, "validation"},
 		{"telegram с неверной подписью", configured, providerTelegram, `{"id": 1, "authDate": 1, "hash": "deadbeef"}`, http.StatusUnauthorized, "unauthorized"},
@@ -247,7 +248,9 @@ func TestLinkAppleNonceMismatch(t *testing.T) {
 	s := newTestServer(Config{AppleVerifier: v}, repo, newFakeRoomRepo())
 
 	rec := postLink(t, s, providerApple, mustToken(t, s, 42), fmt.Sprintf(`{"idToken": %q, "nonce": "чужой"}`, testLinkAppleToken))
-	assertErrorCode(t, rec, http.StatusUnauthorized, "unauthorized")
+	// 400, а не 401: отвергнут токен ПРОВАЙДЕРА, сессия Splitty жива
+	// (см. writeProviderRejected)
+	assertErrorCode(t, rec, http.StatusBadRequest, "provider_rejected")
 	if repo.users[42].AppleSub != "" {
 		t.Fatal("apple_sub записан при несовпадении nonce")
 	}
@@ -418,4 +421,113 @@ func TestLinkRaceWithAccountDeletion(t *testing.T) {
 	if auth.User.ID == 42 {
 		t.Fatal("вход завёл токен на tombstone, ожидался новый пользователь")
 	}
+}
+
+// --- ревью: привязка Apple обязана забрать authorizationCode ---
+
+// Код одноразовый и живёт минуты: не обменяв его ЗДЕСЬ, мы навсегда лишаемся
+// возможности отозвать токены Apple при удалении аккаунта (Guideline 5.1.1(v)).
+// Именно этот сценарий — человек завёлся через Telegram/Google и привязал Apple
+// с экрана «Способы входа» — и проверяет ревью Apple
+func TestLinkAppleExchangesAuthorizationCode(t *testing.T) {
+	repo := newFakeUserRepo(linkUser(42))
+	tokens := &fakeAppleTokens{refreshToken: "apple-refresh-from-link"}
+	s := newTestServer(Config{
+		AppleVerifier: newFakeVerifier().with(testLinkAppleToken, "apple-sub-link", "apple@privaterelay.appleid.com", ""),
+		AppleTokens:   tokens,
+	}, repo, newFakeRoomRepo())
+
+	rec := postLink(t, s, providerApple, mustToken(t, s, 42),
+		fmt.Sprintf(`{"idToken": %q, "authorizationCode": "one-shot-code"}`, testLinkAppleToken))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	if len(tokens.codes) != 1 || tokens.codes[0] != "one-shot-code" {
+		t.Fatalf("authorizationCode не обменян: codes = %v", tokens.codes)
+	}
+	if got := repo.users[42].AppleRefreshToken; got != "apple-refresh-from-link" {
+		t.Fatalf("apple_refresh_token = %q, want %q — отзывать при удалении будет нечего",
+			got, "apple-refresh-from-link")
+	}
+	// email из токена дописывается в пустое поле, имя привязка не трогает
+	if repo.users[42].Email != "apple@privaterelay.appleid.com" {
+		t.Errorf("email = %q, ожидался адрес из токена", repo.users[42].Email)
+	}
+	if repo.users[42].DisplayName != "Загир" {
+		t.Errorf("display_name = %q: привязка переименовала пользователя", repo.users[42].DisplayName)
+	}
+}
+
+// Обмен кода — best-effort: недоступный Apple не должен ломать саму привязку
+func TestLinkAppleSurvivesExchangeFailure(t *testing.T) {
+	repo := newFakeUserRepo(linkUser(42))
+	tokens := &fakeAppleTokens{err: errors.New("apple недоступен")}
+	s := newTestServer(Config{
+		AppleVerifier: newFakeVerifier().with(testLinkAppleToken, "apple-sub-link", "", ""),
+		AppleTokens:   tokens,
+	}, repo, newFakeRoomRepo())
+
+	rec := postLink(t, s, providerApple, mustToken(t, s, 42),
+		fmt.Sprintf(`{"idToken": %q, "authorizationCode": "one-shot-code"}`, testLinkAppleToken))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200: сбой обмена не повод отказать в привязке", rec.Code)
+	}
+	if repo.users[42].AppleSub != "apple-sub-link" {
+		t.Fatal("apple_sub не записан")
+	}
+}
+
+// Отвязка Apple: токены отзываются ДО чистки, а сам refresh token не остаётся
+// в базе — это живой секрет от личности, которой у пользователя больше нет
+func TestUnlinkAppleRevokesAndClearsRefreshToken(t *testing.T) {
+	user := withTelegram(api.User{ID: 42, DisplayName: "Загир"}, 42)
+	user.AppleSub = "apple-sub-link"
+	user.AppleRefreshToken = "apple-refresh-stored"
+	repo := newFakeUserRepo(user)
+	tokens := &fakeAppleTokens{}
+	s := newTestServer(Config{TgToken: testTgToken, AppleTokens: tokens}, repo, newFakeRoomRepo())
+
+	rec := deleteLink(t, s, providerApple, mustToken(t, s, 42))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	if len(tokens.revoked) != 1 || tokens.revoked[0] != "apple-refresh-stored" {
+		t.Fatalf("RevokeToken не вызван с сохранённым токеном: revoked = %v", tokens.revoked)
+	}
+	if repo.users[42].AppleRefreshToken != "" {
+		t.Fatalf("apple_refresh_token остался в базе после отвязки: %q", repo.users[42].AppleRefreshToken)
+	}
+}
+
+// Привязка троттлится по пользователю: каждая попытка — разбор JWT и, на
+// промахе кеша ключей, поход к провайдеру. Ключ не по адресу — здесь уже есть
+// проверенный токен, и подделать его (в отличие от X-Forwarded-For) нельзя
+func TestLinkIdentityThrottled(t *testing.T) {
+	repo := newFakeUserRepo(linkUser(42), linkUser(43))
+	s := newLinkServer(repo, "google-sub-link", "apple-sub-link")
+
+	body := fmt.Sprintf(`{"idToken": %q}`, testLinkGoogleToken)
+	for i := 0; i < oauthPerIPPerMin; i++ {
+		if rec := postLink(t, s, providerGoogle, mustToken(t, s, 42), body); rec.Code == http.StatusTooManyRequests {
+			t.Fatalf("попытка %d отбита раньше лимита", i)
+		}
+	}
+	if rec := postLink(t, s, providerGoogle, mustToken(t, s, 42), body); rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("после лимита ожидался 429, got %d", rec.Code)
+	}
+	// сосед по серверу не задет: ключ по пользователю, а не общий
+	if rec := postLink(t, s, providerGoogle, mustToken(t, s, 43), body); rec.Code == http.StatusTooManyRequests {
+		t.Fatal("лимит одного пользователя выжег привязку другому")
+	}
+}
+
+// writeLinks не может перечитать пользователя — 500, а не тихий успех
+func TestLinkWriteLinksReadFailure(t *testing.T) {
+	repo := newFakeUserRepo(linkUser(42))
+	s := newLinkServer(repo, "google-sub-link", "apple-sub-link")
+	token := mustToken(t, s, 42)
+	repo.findErr = errors.New("mongo недоступна")
+
+	rec := postLink(t, s, providerGoogle, token, fmt.Sprintf(`{"idToken": %q}`, testLinkGoogleToken))
+	assertErrorCode(t, rec, http.StatusInternalServerError, "internal")
 }

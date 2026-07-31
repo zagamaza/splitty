@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -159,8 +160,18 @@ func TestViewRoomChecksMembershipByCanonicalID(t *testing.T) {
 	if len(resp.Chattable) != 1 {
 		t.Fatalf("экран комнаты не отрисован: %+v", resp)
 	}
-	msg, ok := resp.Chattable[0].(tgbotapi.MessageConfig)
-	if ok && msg.Text == I18n(upd.User, "msg_not_be_in_rooms") {
+	// Утверждение положительное: раньше здесь стояло `if ok && text == …`, а на
+	// правильном пути ok == false — тест не проверял ничего, кроме «отрисовано
+	// одно сообщение». Экран комнаты приходит EditMessageTextConfig (это ответ
+	// на callback), и в нём обязано быть название комнаты
+	edit, ok := resp.Chattable[0].(tgbotapi.EditMessageTextConfig)
+	if !ok {
+		t.Fatalf("экран комнаты пришёл типом %T, ожидался EditMessageTextConfig: %+v", resp.Chattable[0], resp)
+	}
+	if !strings.Contains(edit.Text, "Тусa") {
+		t.Fatalf("в экране нет названия комнаты: %q", edit.Text)
+	}
+	if edit.Text == I18n(upd.User, "msg_not_be_in_rooms") {
 		t.Fatal("участнику показано «вы не участник» — проверка идёт по сырому telegram id")
 	}
 }

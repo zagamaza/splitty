@@ -11,6 +11,7 @@ import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -76,6 +77,12 @@ class LoginViewModel @Inject constructor(
     fun onDevUsernameChange(value: String) = _state.update { it.copy(devUsername = value) }
     fun dismissError() = _state.update { it.copy(errorMessage = null) }
 
+    /**
+     * Локальная (не сетевая) ошибка экрана в тот же алерт — сейчас это
+     * единственный случай «нет активити для системного листа Google».
+     */
+    fun showError(message: String) = _state.update { it.copy(errorMessage = message) }
+
     /** Изменение адреса сервера: сразу персистится (действует на следующие запросы). */
     fun onBaseUrlChange(value: String) {
         _state.update { it.copy(baseUrl = value) }
@@ -101,6 +108,12 @@ class LoginViewModel @Inject constructor(
                 val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
                 val response = repository.loginWithGoogle(idToken)
                 sessionStore.signIn(response.token, response.user)
+            } catch (e: CancellationException) {
+                // Обязательно ДО общего catch (e: Exception): CancellationException
+                // наследует IllegalStateException и попадала в него, превращая
+                // штатную отмену (успешный вход снёс экран вместе с его scope)
+                // в алерт «Не удалось сохранить сессию» — а сессия сохранена.
+                throw e
             } catch (e: GoogleSignInException) {
                 _state.update { it.copy(errorMessage = e.message) }
             } catch (e: ApiException) {
@@ -132,6 +145,8 @@ class LoginViewModel @Inject constructor(
             try {
                 val response = repository.loginWithCode(code)
                 sessionStore.signIn(response.token, response.user)
+            } catch (e: CancellationException) {
+                throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
                 val message = if (e.isUnauthorized) {
                     "Неверный или просроченный код"
@@ -172,6 +187,8 @@ class LoginViewModel @Inject constructor(
             try {
                 val response = repository.loginDev(userId, name, username)
                 sessionStore.signIn(response.token, response.user)
+            } catch (e: CancellationException) {
+                throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
                 _state.update { it.copy(errorMessage = e.message) }
             } catch (e: Exception) {

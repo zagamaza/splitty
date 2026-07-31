@@ -120,7 +120,11 @@ REST-эндпоинты `POST /api/v1/auth/google` и `POST /api/v1/auth/apple` 
   серверный (Web) client id; **Android-клиенты сюда не идут** — Credential Manager выпускает
   токен с `aud` серверного client id, а android-клиенты нужны Google только для сверки
   package + подписи
-* `APPLE_CLIENT_IDS` (`""`) – bundle id приложения и/или Services ID, разделитель `:`
+* `APPLE_CLIENT_IDS` (`""`) – bundle id приложения и/или Services ID, разделитель `:`.
+  **Порядок значим: первым обязан идти bundle id.** `clientIDs[0]` подставляется в `client_secret`
+  при обмене `authorizationCode` и отзыве токенов (`initAppleTokens`), поэтому Services ID на
+  первом месте молча ломает и обмен, и отзыв. Пустой список выключает и обмен: `initAppleTokens`
+  возвращает `nil`, даже если `.p8` задан
 * `APPLE_TEAM_ID`, `APPLE_KEY_ID` (`""`) – Team ID и Key ID ключа Sign in with Apple
 * `APPLE_PRIVATE_KEY` (`""`) – **содержимое** файла `.p8` (не путь). Нужен для обмена
   `authorizationCode` и для отзыва токенов (`POST https://appleid.apple.com/auth/revoke`) при
@@ -129,7 +133,8 @@ REST-эндпоинты `POST /api/v1/auth/google` и `POST /api/v1/auth/apple` 
 
 > ⚠️ **`.p8`-ключ Apple и его содержимое в git не коммитятся — никогда.** Ни сам файл, ни
 > `APPLE_PRIVATE_KEY` в docker-compose, ни «временно, чтобы проверить». Ключ живёт только в `.env`
-> на сервере (`/home/splitit/app/`), как `TG_TOKEN` и `API_JWT_SECRET`. Ключ выдаётся Apple
+> на сервере (каталог деплоя — `REMOTE_DIR` в `Makefile`, по умолчанию `/root/splitty`), как
+> `TG_TOKEN` и `API_JWT_SECRET`. Ключ выдаётся Apple
 > **один раз** — скачанный `.p8` хранится в приватном месте вне репозитория; при компрометации
 > его отзывают в Apple Developer Portal → Keys и выпускают новый.
 
@@ -140,8 +145,9 @@ REST-эндпоинты `POST /api/v1/auth/google` и `POST /api/v1/auth/apple` 
 браузер человека, у которого аккаунта ещё может не быть).
 
 * `PUBLIC_BASE_URL` (`""`) – https-адрес сервера и **общий выключатель**: пусто → все три маршрута
-  отдают `404`. Домен на момент написания ещё не куплен, поэтому бэкенд катится с пустым значением
-  и включается одной переменной
+  отдают `404`, а поле `inviteUrl` в `GET /rooms/{id}` не приезжает и клиенты показывают старую
+  ссылку через бота. Домен на момент написания ещё не куплен, поэтому бэкенд катится с пустым
+  значением
 * `IOS_APP_ID` (`""`) – `<TeamID>.<bundle id>`, например `K8922Y6R3M.com.zagir.splitty`
 * `ANDROID_PACKAGE` (`""`) – имя пакета, например `com.zagir.splitty`
 * `ANDROID_CERT_SHA256` (`""`) – SHA-256 отпечатки подписи для `assetlinks.json`.
@@ -149,7 +155,18 @@ REST-эндпоинты `POST /api/v1/auth/google` и `POST /api/v1/auth/apple` 
   (`E6:8C:8C:…`). Отпечатков может быть несколько: Play App Signing и локальный debug-ключ
 * `IOS_STORE_URL` (`""`) – карточка в App Store для страницы приглашения (ссылка на Google Play
   собирается из `ANDROID_PACKAGE`)
-* `APP_SCHEME` (`splitty`) – схема кнопки «Открыть в приложении»: `<scheme>://join/<roomId>`
+
+Схема кнопки «Открыть в приложении» (`splitty://join/<roomId>`) настройкой **не является**: она
+вшита в `ios/project.yml` и `AndroidManifest.xml`, и поменять её деплоем нельзя.
+
+> ⚠️ **Включение домена — это не одна переменная.** `PUBLIC_BASE_URL` включает только серверную
+> половину. Чтобы диплинк реально заработал, тот же домен прописывается ещё в трёх местах, и оба
+> клиента пересобираются:
+> 1. `android:host` в `android/app/src/main/AndroidManifest.xml` (intent-filter с `autoVerify`);
+> 2. `applinks:<домен>` в `ios/project.yml`;
+> 3. `applinks:<домен>` в `ios/Splitty/Splitty.entitlements`.
+>
+> Плюс в Apple Developer Portal включается capability Associated Domains.
 
 `apple-app-site-association` обязан отдаваться по HTTPS **без редиректов** и с
 `Content-Type: application/json` — iOS молча отвергает и то, и другое, а диагностики почти нет.

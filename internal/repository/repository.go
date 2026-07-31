@@ -651,6 +651,14 @@ var snapshotPIIFields = []string{
 	"push_tokens", "aliases", "bank_details",
 }
 
+// anonymizeTarget — один путь до снимка пользователя внутри документа room:
+// чем отбирать документы, куда спускаться и какие элементы массивов трогать
+type anonymizeTarget struct {
+	filter       bson.M
+	path         string
+	arrayFilters []interface{}
+}
+
 // anonymizeTargets — пути до снимков пользователя внутри документа room.
 //
 // ⚠️ Почему четыре независимых UpdateMany, а не один с общими arrayFilters.
@@ -663,16 +671,8 @@ var snapshotPIIFields = []string{
 // легаси-документ в базе превратил бы DELETE /me в 500 для всех.
 // Защита двойная: аррай-фильтр {$type: "array"} не даёт спуститься в null, а
 // разбиение на независимые запросы не даёт одному пути уронить остальные
-func anonymizeTargets(userId int) []struct {
-	filter       bson.M
-	path         string
-	arrayFilters []interface{}
-} {
-	return []struct {
-		filter       bson.M
-		path         string
-		arrayFilters []interface{}
-	}{
+func anonymizeTargets(userId int) []anonymizeTarget {
+	return []anonymizeTarget{
 		{
 			// участники комнаты
 			filter:       bson.M{"users": bson.M{"$elemMatch": bson.M{"_id": userId}}},
@@ -842,6 +842,17 @@ func (r MongoUserRepository) SetIdentity(ctx context.Context, userId int, provid
 	return nil
 }
 
+// identityExtraFields — что ещё вычищается ВМЕСТЕ с личностью провайдера.
+//
+// apple_refresh_token принадлежит РОВНО той личности Apple, которую отвязывают.
+// Оставить его — значит держать в базе рабочий секрет от личности, которой у
+// пользователя больше нет, и при будущем DELETE /me отозвать токены уже
+// отвязанного аккаунта. Сам отзыв делает REST-слой строго ДО этого вызова
+// (см. handleUnlinkIdentity → revokeAppleTokens)
+var identityExtraFields = map[string][]string{
+	IdentityApple: {"apple_refresh_token"},
+}
+
 // ClearIdentity отвязывает способ входа: $unset, а не запись пустого значения —
 // unique sparse индекс не должен видеть ни null, ни "". Фильтр и отсутствие
 // upsert — по той же причине, что в SetIdentity
@@ -850,8 +861,12 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 	if !ok {
 		return errors.Errorf("неизвестный способ входа: %q", provider)
 	}
+	unset := bson.M{field: ""}
+	for _, extra := range identityExtraFields[provider] {
+		unset[extra] = ""
+	}
 	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
-	res, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$unset", Value: bson.M{field: ""}}})
+	res, err := r.col.UpdateOne(ctx, filter, bson.D{{Key: "$unset", Value: unset}})
 	if err != nil {
 		return err
 	}

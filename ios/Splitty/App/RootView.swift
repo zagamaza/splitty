@@ -67,26 +67,43 @@ struct RootView: View {
     ///
     /// Гостя не трогаем: намерение лежит в `PendingJoin` до входа — иначе
     /// запрос ушёл бы без токена, получил 401 и приглашение было бы потеряно.
+    ///
+    /// Намерение здесь только ЧИТАЕТСЯ, а стирается по результату запроса.
+    /// Забрать его заранее (`take()`) значило бы терять приглашение на любом
+    /// временном сбое: человек открыл ссылку в метро, увидел «нет соединения»
+    /// — и второго шанса у него уже нет, ссылку надо просить заново.
+    /// Повторный вход в эту функцию, пока запрос в полёте, отсекает `isJoining`.
     @MainActor
     private func joinPendingRoom() {
         guard session.isAuthenticated, !isJoining else { return }
-        guard let roomId = PendingJoin.shared.take() else { return }
+        guard let roomId = PendingJoin.shared.roomId else { return }
         isJoining = true
         Task { @MainActor in
             defer { isJoining = false }
             do {
                 _ = try await session.api.joinRoom(id: roomId)
+                // Вступили — намерение исполнено. Чистим до показа комнаты,
+                // иначе следующий триггер (`.task` при возврате на корень)
+                // отправил бы второй такой же запрос.
+                PendingJoin.shared.clear()
                 // Единая инвалидация: список групп перечитается по dataVersion.
                 session.noteDataChanged()
                 Haptics.success()
                 joinedRoom = JoinedRoom(id: roomId)
             } catch let error as APIError where error.isUnauthorized {
                 // Токен протух ровно на этом запросе: APIClient уже сбросил
-                // сессию и нас перекинуло на вход. Возвращаем намерение —
+                // сессию и нас перекинуло на вход. Намерение НЕ трогаем —
                 // после переавторизации оно исполнится само, а алерт
                 // «Требуется вход» поверх экрана входа сказал бы очевидное.
-                PendingJoin.shared.set(roomId)
+                // (Если войдёт другой аккаунт, намерение выбросит `adoptOwner`.)
             } catch {
+                // Комнаты нет или доступ закрыт — повторять нечего, намерение
+                // стираем, чтобы оно не всплывало алертом на каждом старте.
+                // Всё остальное (нет сети, 5xx) — временное: намерение остаётся
+                // и исполнится при следующем запуске или возврате на корень.
+                if (error as? APIError)?.isTerminalJoinFailure == true {
+                    PendingJoin.shared.clear()
+                }
                 joinError = joinLinkErrorText(error)
             }
         }

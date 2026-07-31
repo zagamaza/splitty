@@ -1,12 +1,15 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/service"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -311,36 +314,77 @@ func TestJoinPageWithoutStoreLinks(t *testing.T) {
 	}
 }
 
-// Схема диплинка настраиваемая, но подставляется в href в обход экранирования
-// (иначе html/template вырезает незнакомую схему) — поэтому кривое значение из
-// окружения обязано откатываться к дефолту, а не уезжать в страницу
+// Схема диплинка — константа пакета (она вшита в оба клиента, настройкой быть
+// не может), но подставляется в href в обход экранирования html/template.
+// Страж на то, что в href не уезжает ничего, кроме схемы и hex-id комнаты
 func TestJoinPageScheme(t *testing.T) {
-	tests := []struct {
-		name   string
-		scheme string
-		want   string
-	}{
-		{name: "по умолчанию", scheme: "", want: "splitty"},
-		{name: "из конфига", scheme: "splittydev", want: "splittydev"},
-		{name: "с цифрой и дефисом", scheme: "splitty-2", want: "splitty-2"},
-		{name: "пробел и кавычка", scheme: `x" onclick="alert(1)`, want: "splitty"},
-		{name: "javascript-инъекция", scheme: "javascript:alert(1)//", want: "splitty"},
-		{name: "начинается с цифры", scheme: "1splitty", want: "splitty"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			room := &api.Room{ID: primitive.NewObjectID(), Name: "Поездка"}
-			cfg := deeplinkConfig()
-			cfg.AppScheme = tt.scheme
-			s := newTestServer(cfg, newFakeUserRepo(), newFakeRoomRepo(room))
+	room := &api.Room{ID: primitive.NewObjectID(), Name: `Поездка" onclick="alert(1)`}
+	s := newTestServer(deeplinkConfig(), newFakeUserRepo(), newFakeRoomRepo(room))
 
-			body := doRequest(t, s, http.MethodGet, "/join/"+room.ID.Hex(), "", "").Body.String()
-			if !strings.Contains(body, `href="`+tt.want+"://join/"+room.ID.Hex()+`"`) {
-				t.Errorf("ожидалась схема %q, страница: %s", tt.want, body)
-			}
-			if strings.Contains(body, "onclick") || strings.Contains(body, "javascript:") {
-				t.Errorf("значение APP_SCHEME уехало в страницу как есть: %s", body)
-			}
-		})
+	body := doRequest(t, s, http.MethodGet, "/join/"+room.ID.Hex(), "", "").Body.String()
+	if !strings.Contains(body, `href="splitty://join/`+room.ID.Hex()+`"`) {
+		t.Errorf("кнопка «Открыть в приложении» собрана неверно, страница: %s", body)
+	}
+	if strings.Contains(body, `onclick="alert`) || strings.Contains(body, "javascript:") {
+		t.Errorf("название комнаты уехало в страницу неэкранированным: %s", body)
+	}
+}
+
+// brokenRoomRepo — база отвечает ошибкой, а не «не найдено»
+type brokenRoomRepo struct {
+	*fakeRoomRepo
+}
+
+func (r *brokenRoomRepo) FindById(context.Context, string) (*api.Room, error) {
+	return nil, errors.New("mongo недоступна")
+}
+
+// Ошибка базы обязана давать ОТДЕЛЬНУЮ страницу 500, а не ложное «приглашение
+// не найдено»: человек с валидной ссылкой не должен решить, что она протухла,
+// и идти просить новую
+func TestJoinPageRepoFailure(t *testing.T) {
+	room := &api.Room{ID: primitive.NewObjectID(), Name: "Поездка"}
+	rooms := &brokenRoomRepo{newFakeRoomRepo(room)}
+	s := NewServer(deeplinkConfig(), newFakeUserRepo(), rooms, newFakeLoginCodeRepo(),
+		service.NewRoomService(rooms), service.NewOperationService(rooms), newFakeUserIDAllocator())
+
+	rec := doRequest(t, s, http.MethodGet, "/join/"+room.ID.Hex(), "", "")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Что-то пошло не так") {
+		t.Errorf("ожидалась страница ошибки, получено: %s", body)
+	}
+	if strings.Contains(body, "Приглашение не найдено") || strings.Contains(body, room.Name) {
+		t.Errorf("ошибка базы выглядит как «ссылка протухла»: %s", body)
+	}
+}
+
+// Ссылку-приглашение производит СЕРВЕР: без этого поля вся диплинк-фича
+// осталась бы без единого источника ссылок вида /join/<id>
+func TestRoomDetailInviteUrl(t *testing.T) {
+	room := newTestRoom()
+	cfg := deeplinkConfig()
+	s := newTestServer(cfg, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/rooms/"+room.ID.Hex(), mustToken(t, s, testUser1.ID), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+	var detail roomDetailDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("cannot parse room detail: %v", err)
+	}
+	if want := "https://splitty.example/join/" + room.ID.Hex(); detail.InviteUrl != want {
+		t.Fatalf("inviteUrl = %q, want %q", detail.InviteUrl, want)
+	}
+
+	// домен ещё не куплен — поля нет вовсе, клиент откатывается на ссылку бота
+	cfg.PublicBaseUrl = ""
+	off := newTestServer(cfg, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	rec = doRequest(t, off, http.MethodGet, "/api/v1/rooms/"+room.ID.Hex(), mustToken(t, off, testUser1.ID), "")
+	if strings.Contains(rec.Body.String(), "inviteUrl") {
+		t.Fatalf("inviteUrl отдан без PUBLIC_BASE_URL: %s", rec.Body.String())
 	}
 }

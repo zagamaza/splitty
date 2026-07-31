@@ -278,8 +278,8 @@ fun GroupDetailScreen(
 }
 
 /**
- * Шит приглашения: главное действие — поделиться ссылкой (друг открывает
- * бота и вступает в один тап), код — вторичный способ (тап копирует).
+ * Шит приглашения: главное действие — поделиться ссылкой (друг открывает её и
+ * вступает в один тап), код — вторичный способ (тап копирует).
  * Порт iOS InviteGroupView.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -290,7 +290,14 @@ private fun InviteBottomSheet(room: RoomDetail, onDismiss: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     val haptics = rememberHaptics()
     var copied by remember { mutableStateOf(false) }
-    val inviteLink = "https://t.me/split_money_bot?start=room${room.id}"
+    // Ссылка с сервера — единственная, которую понимает app link приложения
+    // (`https://<domain>/join/<roomId>`, см. AndroidManifest): получатель
+    // попадает сразу в группу, а без установленного приложения — на страницу
+    // /join. Пока публичный домен у бэкенда не настроен, поля нет, и остаётся
+    // легаси-ссылка бота: она работает всегда, но уводит в Telegram — поэтому
+    // именно фолбэк, а не основной вариант.
+    val inviteLink = room.inviteUrl?.takeIf { it.isNotBlank() }
+        ?: "https://t.me/split_money_bot?start=room${room.id}"
     val inviteMessage = stringResource(R.string.group_invite_message, room.name, inviteLink, room.id)
 
     ModalBottomSheet(

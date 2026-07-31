@@ -123,24 +123,26 @@ final class PendingJoinTests: XCTestCase {
         super.tearDown()
     }
 
-    func testSetThenTakeReturnsRoomId() {
+    func testSetStoresRoomId() {
         let pending = PendingJoin(defaults: defaults)
         pending.set("68a1b2c3d4e5f60718293a4b")
         XCTAssertEqual(pending.roomId, "68a1b2c3d4e5f60718293a4b")
-        XCTAssertEqual(pending.take(), "68a1b2c3d4e5f60718293a4b")
     }
 
-    func testTakeClearsIntent() {
+    func testIntentSurvivesReadingIt() {
+        // Чтение намерение НЕ расходует: `RootView` читает его перед запросом,
+        // а стирает по результату — иначе временный сбой сети («нет
+        // соединения») уносил бы приглашение навсегда.
         let pending = PendingJoin(defaults: defaults)
         pending.set("68a1b2c3d4e5f60718293a4b")
-        _ = pending.take()
-        // Второй take — уже nil: вступление выполняется ровно один раз.
-        XCTAssertNil(pending.roomId)
-        XCTAssertNil(pending.take())
+        XCTAssertEqual(pending.roomId, "68a1b2c3d4e5f60718293a4b")
+        XCTAssertEqual(pending.roomId, "68a1b2c3d4e5f60718293a4b")
     }
 
-    func testTakeOnEmptyIsNil() {
-        XCTAssertNil(PendingJoin(defaults: defaults).take())
+    func testClearOnEmptyIsHarmless() {
+        let pending = PendingJoin(defaults: defaults)
+        pending.clear()
+        XCTAssertNil(pending.roomId)
     }
 
     func testIntentSurvivesRestart() {
@@ -164,6 +166,27 @@ final class PendingJoinTests: XCTestCase {
         PendingJoin.shared.set("68a1b2c3d4e5f60718293a4b")
         SessionStore().logout()
         XCTAssertNil(PendingJoin.shared.roomId)
+    }
+}
+
+/// Исход попытки вступления: что стоит повторять, а что нет (PendingJoin.swift).
+/// От этого зависит, переживёт ли приглашение неудачу — см.
+/// `RootView.joinPendingRoom`.
+final class TerminalJoinFailureTests: XCTestCase {
+    func testMissingOrForbiddenRoomIsTerminal() {
+        // Комнаты нет или доступ закрыт — повторять нечего, намерение стираем.
+        XCTAssertTrue(APIError.server(status: 404, code: "not_found", message: "").isTerminalJoinFailure)
+        XCTAssertTrue(APIError.server(status: 403, code: "forbidden", message: "").isTerminalJoinFailure)
+    }
+
+    func testTransientFailuresKeepIntent() {
+        // Нет сети и 5xx — временное: приглашение обязано пережить сбой,
+        // иначе открытая в метро ссылка теряется навсегда.
+        XCTAssertFalse(APIError.transport(URLError(.notConnectedToInternet)).isTerminalJoinFailure)
+        XCTAssertFalse(APIError.server(status: 500, code: "internal", message: "").isTerminalJoinFailure)
+        XCTAssertFalse(APIError.server(status: 503, code: "", message: "").isTerminalJoinFailure)
+        // 401 — тоже не терминальный: человек переавторизуется и дойдёт.
+        XCTAssertFalse(APIError.server(status: 401, code: "unauthorized", message: "").isTerminalJoinFailure)
     }
 }
 

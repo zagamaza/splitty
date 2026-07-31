@@ -11,6 +11,12 @@
     <!-- Логин -->
     <string name="login_tagline">Делите расходы с друзьями</string>
     <string name="login_google_button">Войти через Google</string>
+    <!-- Credential Manager рисует системный лист поверх активити, и без неё
+         показывать нечего (findActivity вернул null — экран внутри чужого
+         ContextWrapper). Ситуация почти недостижима, но МОЛЧАТЬ о ней нельзя:
+         без текста тап по кнопке входа просто ничего не делал. Порт iOS
+         GoogleSignInError.noPresenter. -->
+    <string name="google_sign_in_no_activity">Не удалось открыть окно входа Google. Попробуйте ещё раз</string>
     <string name="login_telegram_section">Вход через Telegram</string>
     <string name="login_telegram_hint">Нажмите «Открыть бота» — он сразу пришлёт код для входа</string>
     <string name="login_open_bot">Открыть бота</string>
@@ -137,6 +143,13 @@
     <string name="profile_login_methods_footer_last">Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. Сначала привяжите другой.</string>
     <string name="profile_unlink_confirm_title">Отвязать %1$s?</string>
     <string name="profile_unlink_confirm_message">Войти в аккаунт этим способом больше не получится. Остальные привязанные способы продолжат работать.</string>
+    <!-- Отвязка Telegram НЕОБРАТИМА (internal/rest/identity.go, telegramUnlinkWarning):
+         бот на первое же следующее сообщение заведёт второй, пустой профиль, а
+         привязать этот Telegram обратно уже нельзя — сервер ответит 409
+         identity_taken. Общий текст выше об этом молчит, а серверное
+         предупреждение приходит уже ПОСЛЕ действия — поздно. Паритет с iOS,
+         где последствие названо до нажатия. -->
+    <string name="profile_unlink_confirm_message_telegram">Войти в аккаунт через Telegram больше не получится, и привязать этот Telegram обратно уже не выйдет: если вы снова напишете боту, он заведёт отдельный новый профиль без ваших групп.\n\nОстальные привязанные способы входа продолжат работать.</string>
     <string name="profile_notice_title">Внимание</string>
     <string name="profile_notice_ok">Понятно</string>
     <string name="profile_delete_account">Удалить аккаунт</string>
@@ -168,7 +181,11 @@
     <string name="groups_join_short">Присоединиться</string>
     <string name="groups_join_placeholder">Ссылка или код</string>
     <string name="groups_join_paste">Вставить</string>
-    <string name="groups_join_hint">Вставьте код из приглашения или целиком ссылку вида t.me/split_money_bot?start=room…</string>
+    <!-- Форматов ссылки два: новая splitty.app/join/… (её отдаёт сервер полем
+         inviteUrl) и легаси-ссылка бота. Парсер (parseRoomCode) понимает оба и
+         голый код, и подсказка обязана называть оба — иначе человек со свежей
+         ссылкой решит, что вставлять её сюда нельзя. -->
+    <string name="groups_join_hint">Вставьте код из приглашения или ссылку целиком — подойдёт и splitty.app/join/…, и t.me/split_money_bot?start=room…</string>
     <string name="groups_join_button">Присоединиться</string>
     <plurals name="groups_member_count">
         <item quantity="one">%d участник</item>

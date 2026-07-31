@@ -173,6 +173,13 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 
 	for i := skip; i < skip+size && i < len(*ops); i++ {
 		op := (*ops)[i]
+		// Погашение долга всегда адресное, получатель ровно один — но пустой
+		// recipients_with_sum (архаичный документ, битая запись) уронил бы
+		// индексацию паникой. Её ловит handlePanic, то есть экран не падает, а
+		// молча пустеет — пропустить такую строку честнее
+		if len(op.RecipientsWithSum) == 0 {
+			continue
+		}
 		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", cu.link(op.Donor), moneySpace(op.Sum, room.Currency), cu.link(&(op.RecipientsWithSum)[0].User)+"\n\n")
 	}
 

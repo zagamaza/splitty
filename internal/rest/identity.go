@@ -3,6 +3,8 @@ package rest
 import (
 	"context"
 	"net/http"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -54,10 +56,19 @@ const telegramUnlinkWarning = "Telegram отвязан. Если вы снова
 // linkRequest — тело POST /me/link/{google|apple}.
 //
 // Nonce присылает только Apple-клиент (сырым, как и при входе): в токене лежит
-// его SHA256. Для Google поле не используется — Google-клиент шлёт один idToken
+// его SHA256. Для Google поле не используется — Google-клиент шлёт один idToken.
+//
+// AuthorizationCode — тоже только Apple и ровно по той же причине, что и у
+// /auth/apple (см. appleAuthRequest): код одноразовый, живёт минуты и другого
+// шанса получить его НЕТ. Без него у человека, который завёлся через
+// Telegram/Google и привязал Apple здесь, окажется apple_sub без
+// apple_refresh_token — и удаление аккаунта не сможет отозвать токены Apple
+// (Guideline 5.1.1(v)). Именно эта группа пользователей и есть смысл экрана
+// «Способы входа», и именно её проверяет ревью Apple
 type linkRequest struct {
-	IdToken string `json:"idToken"`
-	Nonce   string `json:"nonce"`
+	IdToken           string `json:"idToken"`
+	Nonce             string `json:"nonce"`
+	AuthorizationCode string `json:"authorizationCode"`
 }
 
 // linkResponseDto — ответ /me/link/*: актуальный профиль (с linkedProviders) и
@@ -86,6 +97,15 @@ func linkedProviders(u *api.User) []string {
 // handleLinkIdentity POST /api/v1/me/link/{provider} — привязка способа входа
 // к ТЕКУЩЕМУ аккаунту (кто текущий — решает токен, а не тело запроса)
 func (s *Server) handleLinkIdentity(w http.ResponseWriter, r *http.Request) {
+	// Лимит тот же, что у /auth/google|apple, но ключ по ПОЛЬЗОВАТЕЛЮ, а не по
+	// адресу: сюда попадают только запросы с валидным токеном, и подделать
+	// ключ (в отличие от X-Forwarded-For) нельзя. Смысл тот же — каждая
+	// попытка это разбор JWT и, на промахе кеша ключей, поход к провайдеру
+	if !s.authThrottle.allow("link:"+strconv.Itoa(userIdFromCtx(r.Context())), oauthPerIPPerMin) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
+		return
+	}
+
 	switch provider := r.PathValue("provider"); provider {
 	case providerGoogle:
 		s.linkOIDC(w, r, providerGoogle, s.cfg.GoogleVerifier, "вход через Google не сконфигурирован", "не удалось проверить токен Google")
@@ -121,7 +141,7 @@ func (s *Server) linkOIDC(w http.ResponseWriter, r *http.Request, provider strin
 	if err != nil {
 		// Причину наружу не отдаём — см. handleAuthGoogle
 		log.Warn().Err(err).Str("provider", provider).Msg("id token rejected on link")
-		writeError(w, http.StatusUnauthorized, "unauthorized", rejectMsg)
+		writeProviderRejected(w, rejectMsg)
 		return
 	}
 	// Nonce проверяем, КОГДА ОН ЕСТЬ В ТОКЕНЕ: его значение подписано провайдером
@@ -130,16 +150,60 @@ func (s *Server) linkOIDC(w http.ResponseWriter, r *http.Request, provider strin
 	// nonce вовсе, проверять просто нечем
 	if claims.Nonce != "" && !checkAppleNonce(req.Nonce, claims.Nonce) {
 		log.Warn().Str("provider", provider).Msg("id token nonce mismatch on link")
-		writeError(w, http.StatusUnauthorized, "unauthorized", rejectMsg)
+		writeProviderRejected(w, rejectMsg)
 		return
 	}
 
-	s.linkIdentity(w, r, provider, claims.Subject, func(ctx context.Context) (*api.User, error) {
+	ok := s.linkIdentity(w, r, provider, claims.Subject, func(ctx context.Context) (*api.User, error) {
 		if provider == providerGoogle {
 			return s.userRepo.FindByGoogleSub(ctx, claims.Subject)
 		}
 		return s.userRepo.FindByAppleSub(ctx, claims.Subject)
 	})
+	if !ok {
+		return
+	}
+
+	ctx := r.Context()
+	userId := userIdFromCtx(ctx)
+	if provider == providerApple {
+		// Обмен строго ПОСЛЕ успешной привязки: на 409 (личность занята) код
+		// тратить незачем, а после привязки он обязан быть обменян — иначе
+		// отзывать при удалении аккаунта будет нечего (см. linkRequest)
+		s.saveAppleLink(ctx, userId, claims.Email, s.exchangeAppleCode(ctx, req.AuthorizationCode))
+	}
+	s.writeLinks(ctx, w, userId, "")
+}
+
+// writeProviderRejected — ответ на ОТВЕРГНУТЫЙ ТОКЕН ПРОВАЙДЕРА.
+//
+// Статус намеренно 400, а не 401: 401 на всём остальном API означает «сессия
+// Splitty мертва», и оба клиента по нему разлогинивают человека и чистят
+// локальные данные (Android вместе с очередью неотправленных расходов). Токен
+// Google/Apple же отвергается по совершенно бытовым причинам — разъехавшиеся
+// часы, протухший токен, ещё не прописанный в GOOGLE_CLIENT_IDS aud, — и
+// выкидывать из живой сессии за это нельзя. Код provider_rejected клиенты
+// показывают текстом и остаются залогиненными
+func writeProviderRejected(w http.ResponseWriter, message string) {
+	writeError(w, http.StatusBadRequest, "provider_rejected", message)
+}
+
+// saveAppleLink дописывает то, что приезжает вместе с привязкой Apple: email из
+// токена (только в пустое поле — переименовывать и переадресовывать человека
+// провайдер права не имеет, см. fillAppleProfile) и свежий refresh token.
+//
+// Best-effort: привязка уже состоялась, и откатывать её из-за неудавшегося
+// дозаполнения профиля нельзя
+func (s *Server) saveAppleLink(ctx context.Context, userId int, email, refreshToken string) {
+	if strings.TrimSpace(email) == "" && refreshToken == "" {
+		return
+	}
+	user, err := s.userRepo.FindById(ctx, userId)
+	if err != nil {
+		log.Warn().Err(err).Int("userId", userId).Msg("не удалось перечитать пользователя после привязки Apple")
+		return
+	}
+	s.fillAppleProfile(ctx, user, email, "", refreshToken)
 }
 
 // linkTelegram POST /api/v1/me/link/telegram — тело и проверки те же, что у
@@ -172,15 +236,23 @@ func (s *Server) linkTelegram(w http.ResponseWriter, r *http.Request) {
 	// Профиль (username/display_name) здесь намеренно не обновляем: привязка
 	// отвечает за личность, а имя подтянет первый же апдейт бота
 	// (UpsertTelegramUser) — так у привязки ровно один эффект
-	s.linkIdentity(w, r, providerTelegram, req.Id, func(ctx context.Context) (*api.User, error) {
+	if s.linkIdentity(w, r, providerTelegram, req.Id, func(ctx context.Context) (*api.User, error) {
 		return s.userRepo.FindByTelegramID(ctx, req.Id)
-	})
+	}) {
+		s.writeLinks(r.Context(), w, userIdFromCtx(r.Context()), "")
+	}
 }
 
 // linkIdentity — общий хвост привязки: владелец личности уже проверен провайдером,
-// осталось решить конфликт и записать. owner ищет живого владельца этой личности
+// осталось решить конфликт и записать. owner ищет живого владельца этой личности.
+//
+// Возвращает true, если личность теперь принадлежит текущему пользователю
+// (включая идемпотентный повтор). Успешный ответ НЕ пишет: у Apple между
+// привязкой и ответом есть ещё один шаг (обмен authorizationCode), а
+// перечитывать пользователя до него бессмысленно. Ответ на любую неудачу пишет
+// сам и возвращает false
 func (s *Server) linkIdentity(w http.ResponseWriter, r *http.Request, provider string, value interface{},
-	owner func(context.Context) (*api.User, error)) {
+	owner func(context.Context) (*api.User, error)) bool {
 	ctx := r.Context()
 	userId := userIdFromCtx(ctx)
 
@@ -189,15 +261,14 @@ func (s *Server) linkIdentity(w http.ResponseWriter, r *http.Request, provider s
 	case err == nil && existing.ID == userId:
 		// Идемпотентность: та же личность уже привязана к этому же аккаунту.
 		// Повтор запроса (ретрай клиента, второе нажатие) — не ошибка
-		s.writeLinks(ctx, w, userId, "")
-		return
+		return true
 	case err == nil:
 		writeError(w, http.StatusConflict, "identity_taken", identityTakenMessage)
-		return
+		return false
 	case err != mongo.ErrNoDocuments:
 		log.Error().Err(err).Str("provider", provider).Msg("cannot find identity owner")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось проверить способ входа")
-		return
+		return false
 	}
 
 	if err := s.userRepo.SetIdentity(ctx, userId, provider, value); err != nil {
@@ -214,9 +285,9 @@ func (s *Server) linkIdentity(w http.ResponseWriter, r *http.Request, provider s
 			log.Error().Err(err).Str("provider", provider).Msg("cannot set identity")
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось привязать способ входа")
 		}
-		return
+		return false
 	}
-	s.writeLinks(ctx, w, userId, "")
+	return true
 }
 
 // handleUnlinkIdentity DELETE /api/v1/me/link/{provider} — отвязка способа входа
@@ -235,7 +306,7 @@ func (s *Server) handleUnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	linked := linkedProviders(user)
-	if !containsProvider(linked, provider) {
+	if !slices.Contains(linked, provider) {
 		// Идемпотентность, симметрично привязке: отвязывать нечего
 		writeJSON(w, http.StatusOK, linkResponseDto{User: toMeDto(user)})
 		return
@@ -246,6 +317,16 @@ func (s *Server) handleUnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "last_identity",
 			"Нельзя отвязать единственный способ входа. Сначала добавьте другой.")
 		return
+	}
+
+	// Отзыв токенов Apple — строго ДО ClearIdentity: тот вместе с apple_sub
+	// вычищает и apple_refresh_token, после него отзывать уже нечем. Логика та
+	// же, что при удалении аккаунта (см. revokeAppleTokens), и по той же
+	// причине: держать у себя рабочий refresh token от личности, которой у
+	// пользователя больше нет, — и лишний секрет, и повод отозвать при будущем
+	// DELETE /me токен уже отвязанной личности
+	if provider == providerApple {
+		s.revokeAppleTokens(ctx, user)
 	}
 
 	if err := s.userRepo.ClearIdentity(ctx, user.ID, provider); err != nil {
@@ -284,12 +365,9 @@ func (s *Server) clearChatState(ctx context.Context, u *api.User) {
 	if s.chatStates == nil {
 		return
 	}
-	ids := []int{u.ID}
-	if u.HasTelegram() && *u.TelegramID != u.ID {
-		// состояния сохранялись и по сырому telegram id (исторические пути бота)
-		ids = append(ids, *u.TelegramID)
-	}
-	for _, id := range ids {
+	// Набор идентификаторов тот же, что при удалении аккаунта: состояния
+	// сохранялись и по каноническому _id, и по сырому telegram id
+	for _, id := range chatStateIDs(u) {
 		if err := s.chatStates.DeleteByUserId(ctx, id); err != nil {
 			log.Warn().Err(err).Int("userId", id).Msg("не удалось очистить chat_state после отвязки telegram")
 		}
@@ -305,13 +383,4 @@ func (s *Server) writeLinks(ctx context.Context, w http.ResponseWriter, userId i
 		return
 	}
 	writeJSON(w, http.StatusOK, linkResponseDto{User: toMeDto(user), Warning: warning})
-}
-
-func containsProvider(providers []string, provider string) bool {
-	for _, p := range providers {
-		if p == provider {
-			return true
-		}
-	}
-	return false
 }

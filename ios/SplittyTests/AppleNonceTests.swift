@@ -5,29 +5,24 @@ import XCTest
 /// Nonce для Sign in with Apple (AppleNonce.swift): генерация сырого значения
 /// и его SHA256-hex. Чистая логика — без сети и без ASAuthorization.
 final class AppleNonceTests: XCTestCase {
-    // MARK: random(length:) — длина и алфавит
+    // MARK: random() — длина и кодировка
 
-    func testRandomHasRequestedLength() {
-        XCTAssertEqual(AppleNonce.random().count, AppleNonce.defaultLength)
-        XCTAssertEqual(AppleNonce.random(length: 1).count, 1)
-        XCTAssertEqual(AppleNonce.random(length: 64).count, 64)
+    func testRandomIsHexOfFixedLength() {
+        // 32 байта = 64 hex-символа. Длина зафиксирована тестом, потому что
+        // энтропия nonce — единственное, что защищает вход от повторного
+        // использования чужого токена.
+        XCTAssertGreaterThanOrEqual(AppleNonce.byteCount, 16)
+        XCTAssertEqual(AppleNonce.random().count, AppleNonce.byteCount * 2)
     }
 
-    func testDefaultLengthIsEnoughEntropy() {
-        // 32 символа алфавита из 65 — около 192 бит. Меньше 16 символов
-        // делало бы перебор осмысленным, поэтому длина зафиксирована тестом.
-        XCTAssertGreaterThanOrEqual(AppleNonce.defaultLength, 32)
-    }
-
-    func testRandomUsesExpectedAlphabet() {
-        // Алфавит — буквы, цифры и `-._`: всё безопасно в JSON, JWT и URL.
-        XCTAssertEqual(AppleNonce.alphabet.count, 65)
-        let allowed = Set(AppleNonce.alphabet)
+    func testRandomUsesLowercaseHexOnly() {
+        // Hex безопасен и в JSON-теле, и в JWT-claim, и в URL: экранирование
+        // по пути до Apple и обратно ничего не поменяет.
         for _ in 0..<50 {
             let nonce = AppleNonce.random()
             XCTAssertTrue(
-                nonce.allSatisfy { allowed.contains($0) },
-                "nonce содержит символ вне алфавита: \(nonce)"
+                nonce.allSatisfy { $0.isASCII && $0.isHexDigit && !$0.isUppercase },
+                "nonce содержит символ вне нижнего регистра hex: \(nonce)"
             )
         }
     }
@@ -44,14 +39,14 @@ final class AppleNonceTests: XCTestCase {
         XCTAssertEqual(seen.count, 200)
     }
 
-    func testRandomCoversAlphabetBroadly() {
-        // Грубая проверка, что байты раскладываются по алфавиту, а не
-        // вырождаются в пару символов (например, при сломанной выборке).
+    func testRandomCoversHexDigitsBroadly() {
+        // Грубая проверка, что байты действительно случайны, а не вырождаются
+        // в пару символов (например, при сломанном источнике случайности).
         var used = Set<Character>()
         for _ in 0..<100 {
             used.formUnion(AppleNonce.random())
         }
-        XCTAssertGreaterThan(used.count, 50)
+        XCTAssertEqual(used.count, 16)
     }
 
     // MARK: sha256Hex(_:) — то, что уходит в request.nonce

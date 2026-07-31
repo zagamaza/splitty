@@ -18,9 +18,25 @@ struct InviteGroupView: View {
         self.room = room
     }
 
-    /// Ссылка-приглашение, совместимая с deep-link бота.
     private var inviteLink: String {
-        "https://t.me/split_money_bot?start=room\(room.id)"
+        Self.inviteLink(for: room)
+    }
+
+    /// Ссылка-приглашение.
+    ///
+    /// Основная форма — `inviteUrl` с сервера (`https://<домен>/join/<id>`):
+    /// страница вступления уводит в приложение по universal link, а тем, у кого
+    /// его нет, показывает кнопки установки. Раздаёт такие ссылки только этот
+    /// экран — без него у всей ветки диплинков (страница, схема `splitty://`,
+    /// `RoomCodeParser`) просто нет входной точки.
+    ///
+    /// Пусто — публичный домен на сервере ещё не настроен; тогда легаси-ссылка
+    /// бота: она работает и сейчас, а `RoomCodeParser` понимает оба формата.
+    static func inviteLink(for room: RoomDetail) -> String {
+        if let inviteUrl = room.inviteUrl, !inviteUrl.isEmpty {
+            return inviteUrl
+        }
+        return "https://t.me/split_money_bot?start=room\(room.id)"
     }
 
     /// Текст для системного share — ссылка плюс код на случай, если ссылку

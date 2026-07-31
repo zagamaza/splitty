@@ -145,7 +145,23 @@ func (s *Server) buildRoomDetail(room *api.Room, userId int) *roomDetailDto {
 		Debts:            toDebtDtos(debts),
 		DebtsUnavailable: !ok,
 		Operations:       toOperationDtos(ops),
+		InviteUrl:        s.inviteURL(room.ID.Hex()),
 	}
+}
+
+// inviteURL — ссылка-приглашение в группу для кнопки «Пригласить».
+//
+// Собирается ЗДЕСЬ, а не на клиентах: базовый домен знает только сервер, и
+// именно он решает, включён ли диплинк. Пусто, пока PUBLIC_BASE_URL не задан
+// (домен не куплен) — клиенты в этом случае откатываются на старую ссылку через
+// telegram-бота. Без этого поля вся диплинк-фича осталась бы без единого
+// производителя ссылок: /join, оба .well-known и обработчики в клиентах умеют
+// только ПРИНИМАТЬ такую ссылку
+func (s *Server) inviteURL(roomId string) string {
+	if s.cfg.PublicBaseUrl == "" {
+		return ""
+	}
+	return strings.TrimSuffix(s.cfg.PublicBaseUrl, "/") + "/join/" + roomId
 }
 
 // Профиль

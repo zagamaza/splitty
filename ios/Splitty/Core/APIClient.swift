@@ -22,6 +22,17 @@ enum APIError: LocalizedError {
         return false
     }
 
+    /// true для 403 — сервер осознанно отказал живому аккаунту (например,
+    /// удаление демонстрационного профиля ревьюеров). В отличие от 5xx и
+    /// сетевых сбоев, здесь точно известно, что на сервере ничего не
+    /// изменилось, — см. `SessionStore.deleteAccount`.
+    var isForbidden: Bool {
+        if case .server(let status, _, _) = self {
+            return status == 403
+        }
+        return false
+    }
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
@@ -327,7 +338,10 @@ final class APIClient: OperationAPI {
     ///
     /// Повторная привязка того же аккаунта — 200 (идемпотентно);
     /// 409 `identity_taken` — эта личность уже принадлежит другому профилю
-    /// Splitty (слияние профилей не поддерживается).
+    /// Splitty (слияние профилей не поддерживается);
+    /// 400 `provider_rejected` — id-токен Google не прошёл проверку. Отказ
+    /// ПРОВАЙДЕРА сервер отдаёт именно 400, чтобы 401 отсюда однозначно
+    /// означал мёртвую сессию Splitty и приводил к выходу (см. `perform`).
     func linkGoogle(idToken: String) async throws -> LinkedProvidersResponse {
         struct Body: Encodable {
             let idToken: String
@@ -341,17 +355,35 @@ final class APIClient: OperationAPI {
     /// POST /api/v1/me/link/apple — привязать Apple ID к текущему аккаунту.
     ///
     /// `nonce` уходит СЫРЫМ (в токене лежит его SHA256) — тот же протокол, что
-    /// и при входе, см. `AppleNonce`. `authorizationCode` здесь не нужен: обмен
-    /// на refresh token ради отзыва делает вход, а привязка отвечает только за
-    /// личность.
-    func linkApple(idToken: String, nonce: String) async throws -> LinkedProvidersResponse {
+    /// и при входе, см. `AppleNonce`.
+    ///
+    /// `authorizationCode` обязателен здесь ровно по той же причине, что и при
+    /// входе: сервер меняет его на Apple refresh token, без которого при
+    /// удалении аккаунта нечем звать `auth/revoke` (Apple Guideline 5.1.1(v)).
+    /// Пользователь, заведённый через Telegram/Google и привязавший Apple
+    /// позже, иначе получал бы `apple_sub` без refresh token — и Splitty
+    /// навсегда остался бы в его «Настройки → Apple ID → Вход с Apple».
+    /// Код одноразовый и живёт минуты, «добрать позже» его нельзя.
+    ///
+    /// nil/пустой код (Apple не вернул `authorizationCode`) не сериализуется:
+    /// поле на сервере опциональное, привязка личности пройдёт и без него.
+    ///
+    /// 400 `provider_rejected` — токен Apple не прошёл проверку или не сошёлся
+    /// nonce; 401 отсюда означает мёртвую сессию Splitty, а не отказ Apple.
+    func linkApple(
+        idToken: String,
+        nonce: String,
+        authorizationCode: String?
+    ) async throws -> LinkedProvidersResponse {
         struct Body: Encodable {
             let idToken: String
             let nonce: String
+            let authorizationCode: String?
         }
+        let code = (authorizationCode?.isEmpty ?? true) ? nil : authorizationCode
         return try await request(
             "POST", "/api/v1/me/link/apple",
-            body: Body(idToken: idToken, nonce: nonce)
+            body: Body(idToken: idToken, nonce: nonce, authorizationCode: code)
         )
     }
 

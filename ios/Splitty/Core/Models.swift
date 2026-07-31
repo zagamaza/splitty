@@ -552,6 +552,14 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     let operations: [Operation]
     /// Долги группы неисчислимы — см. `RoomSummary.debtsUnavailable`.
     var debtsUnavailable: Bool = false
+    /// Готовая ссылка-приглашение `https://<домен>/join/<roomId>` на страницу
+    /// вступления (`internal/rest/deeplink.go`). Собирает её сервер: публичный
+    /// домен знает только он, а клиент, склеивающий адрес сам, разошёлся бы
+    /// с бэкендом на первой же смене домена.
+    ///
+    /// nil/пусто — публичный домен на сервере ещё не настроен; экран
+    /// приглашения тогда откатывается на легаси-ссылку бота (`InviteGroupView`).
+    var inviteUrl: String?
 }
 
 extension RoomDetail {
@@ -569,6 +577,9 @@ extension RoomDetail {
         debts = try c.decode([Debt].self, forKey: .debts)
         operations = try c.decode([Operation].self, forKey: .operations)
         debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
+        // Поля может не быть вовсе: и в ответах старого сервера, и в комнатах,
+        // лежащих в офлайн-кеше с прошлой версии приложения.
+        inviteUrl = try c.decodeIfPresent(String.self, forKey: .inviteUrl)
     }
 }
 

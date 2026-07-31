@@ -535,6 +535,46 @@ func TestSetAndClearIdentity(t *testing.T) {
 	}
 }
 
+// TestClearAppleIdentityDropsRefreshToken — вместе с apple_sub уходит и
+// apple_refresh_token. Оставить его — значит держать в базе рабочий секрет от
+// личности, которой у пользователя больше нет, и при будущем DELETE /me
+// отозвать токены уже отвязанного аккаунта
+func TestClearAppleIdentityDropsRefreshToken(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	seedUsers(t, db, api.User{ID: 1_000_000_000_030, DisplayName: "Загир",
+		AppleSub: "apple-sub", AppleRefreshToken: "apple-refresh"})
+
+	if err := repo.ClearIdentity(ctx, 1_000_000_000_030, IdentityApple); err != nil {
+		t.Fatalf("ClearIdentity упал: %v", err)
+	}
+	var raw bson.M
+	if err := db.Collection("user").FindOne(ctx, bson.M{"_id": 1_000_000_000_030}).Decode(&raw); err != nil {
+		t.Fatalf("cannot read user: %v", err)
+	}
+	for _, field := range []string{"apple_sub", "apple_refresh_token"} {
+		if _, ok := raw[field]; ok {
+			t.Errorf("поле %s осталось в документе после отвязки apple: %v", field, raw[field])
+		}
+	}
+
+	// у других провайдеров ничего лишнего не чистится
+	seedUsers(t, db, api.User{ID: 1_000_000_000_031, DisplayName: "Алмаз",
+		GoogleSub: "google-sub", AppleSub: "apple-sub-2", AppleRefreshToken: "keep-me"})
+	if err := repo.ClearIdentity(ctx, 1_000_000_000_031, IdentityGoogle); err != nil {
+		t.Fatalf("ClearIdentity(google) упал: %v", err)
+	}
+	u, err := repo.FindById(ctx, 1_000_000_000_031)
+	if err != nil {
+		t.Fatalf("FindById: %v", err)
+	}
+	if u.AppleRefreshToken != "keep-me" {
+		t.Errorf("отвязка google унесла apple_refresh_token: %q", u.AppleRefreshToken)
+	}
+}
+
 // TestSetIdentityTaken — личность, занятая другим документом, отвергается
 // unique-индексом, а не переезжает молча
 func TestSetIdentityTaken(t *testing.T) {

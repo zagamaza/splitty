@@ -14,12 +14,12 @@ import androidx.core.content.ContextCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.CompositionLocalProvider
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.AvatarStore
 import com.zagir.splitty.data.OfflineDataCleaner
+import com.zagir.splitty.di.ApplicationScope
 import com.zagir.splitty.ui.components.LocalAvatarStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.ui.AppRoot
@@ -27,6 +27,7 @@ import com.zagir.splitty.ui.groups.parseRoomCode
 import com.zagir.splitty.ui.theme.SplittyTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 private const val TAG = "MainActivity"
@@ -49,6 +50,15 @@ class MainActivity : ComponentActivity() {
 
     /** Отложенное вступление в группу по ссылке-приглашению (исполняет AppRoot). */
     @Inject lateinit var pendingJoinStore: PendingJoinStore
+
+    /**
+     * Скоуп приложения для записи диплинка: на `lifecycleScope` запись в
+     * DataStore отменялась вместе с активити. Ровно этот путь и рвётся чаще
+     * всего — по ссылке приложение стартует и почти сразу уходит в системный
+     * лист входа, а слабое устройство может нас за это время убить; отменённая
+     * корутина уносила приглашение до диска.
+     */
+    @Inject @ApplicationScope lateinit var appScope: CoroutineScope
 
     // Разрешение на пуши (Android 13+); отказ не критичен — токен всё равно
     // регистрируется, просто система не покажет баннер.
@@ -107,9 +117,24 @@ class MainActivity : ComponentActivity() {
      * Гость увидит экран входа, и вступление доедет само сразу после входа.
      */
     private fun handleDeepLink(intent: Intent?) {
-        val data = intent?.data ?: return
+        if (intent == null) return
+        // Перезапуск из «недавних»/лаунчера: система отдаёт ТОТ ЖЕ интент,
+        // которым таск был создан. Без этой проверки человек, однажды пришедший
+        // по ссылке, при каждом возврате в приложение снова вступал бы в ту же
+        // группу и снова проваливался в неё с любого экрана.
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+        val data = intent.data ?: return
+        // Помечаем интент израсходованным ДО разбора: если состояние активити
+        // выбросят (savedInstanceState == null), система при следующем запуске
+        // из лаунчера отдаст базовый VIEW-интент таска повторно. setIntent
+        // обязателен — getIntent() иначе продолжит отдавать ссылку.
+        intent.data = null
+        setIntent(intent)
         val roomId = parseRoomCode(data.toString()) ?: return
-        lifecycleScope.launch {
+        // Скоуп приложения, а не lifecycleScope: уничтожение активити (поворот,
+        // уход в системный лист входа, отстрел процесса) отменяло запись, и
+        // приглашение терялось между «тапнул по ссылке» и «диск ответил».
+        appScope.launch {
             // Отдельная ссылка не стоит падения приложения: единственное
             // последствие сбоя записи — вступление придётся начать заново.
             runCatching { pendingJoinStore.set(roomId) }

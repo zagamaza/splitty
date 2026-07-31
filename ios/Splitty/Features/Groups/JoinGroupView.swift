@@ -65,7 +65,11 @@ struct JoinGroupView: View {
                             .foregroundStyle(Color.negative)
                             .padding(.horizontal, 4)
                     }
-                    Text("Вставьте код из приглашения или целиком ссылку вида t.me/split_money_bot?start=room…")
+                    // Форматов ссылки два (страница приглашения и легаси-ссылка
+                    // бота), и подсказка обязана называть оба: человек вставляет
+                    // то, что ему прислали, и не должен гадать, «та» ли это ссылка.
+                    Text("Вставьте код из приглашения или ссылку целиком — и вида "
+                        + "splitty.app/join/…, и t.me/split_money_bot?start=room…")
                         .font(.caption)
                         .foregroundStyle(Color.inkSecondary)
                         .padding(.horizontal, 4)

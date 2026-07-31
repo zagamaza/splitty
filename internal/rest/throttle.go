@@ -33,13 +33,23 @@ const (
 	oauthPerIPPerMin = 20
 )
 
+// sweepEvery — как часто выметаются протухшие окна.
+//
+// Раньше карта обходилась целиком на КАЖДЫЙ новый ключ под общим мьютексом:
+// при потоке разовых ключей это O(N) на запрос на замке, который делят
+// /auth/code, /auth/google, /auth/apple, /me/link/* и /join. Раз в минуту
+// достаточно — окно всё равно живёт минуту, и между уборками карта не может
+// вырасти больше, чем прошло запросов за эту минуту
+const sweepEvery = time.Minute
+
 // throttle — минутные окна счётчиков попыток в памяти процесса.
 // Хватает одного инстанса: сервер запускается в единственном экземпляре,
 // а распределённый лимит уже есть у AI-парсинга (service.RateLimiter)
 type throttle struct {
-	mu      sync.Mutex
-	windows map[string]*throttleWindow
-	now     func() time.Time // подменяется в тестах
+	mu        sync.Mutex
+	windows   map[string]*throttleWindow
+	nextSweep time.Time
+	now       func() time.Time // подменяется в тестах
 }
 
 type throttleWindow struct {
@@ -59,17 +69,25 @@ func (t *throttle) allow(key string, limit int) bool {
 	now := t.now()
 	w := t.windows[key]
 	if w == nil || now.After(w.resetAt) {
-		// заодно выметаем протухшие окна: карта не растёт от разовых адресов
-		for k, v := range t.windows {
-			if now.After(v.resetAt) {
-				delete(t.windows, k)
-			}
-		}
+		t.sweep(now)
 		w = &throttleWindow{resetAt: now.Add(time.Minute)}
 		t.windows[key] = w
 	}
 	w.count++
 	return w.count <= limit
+}
+
+// sweep выметает протухшие окна, но не чаще sweepEvery. Вызывается под мьютексом
+func (t *throttle) sweep(now time.Time) {
+	if now.Before(t.nextSweep) {
+		return
+	}
+	t.nextSweep = now.Add(sweepEvery)
+	for k, v := range t.windows {
+		if now.After(v.resetAt) {
+			delete(t.windows, k)
+		}
+	}
 }
 
 // release возвращает в окно одну ранее занятую единицу (счётчик не уходит
@@ -84,13 +102,30 @@ func (t *throttle) release(key string) {
 	}
 }
 
-// clientIP — адрес клиента для лимитов. За прокси реальный адрес приходит
-// в X-Forwarded-For; заголовок подделываем, поэтому per-IP окно дополнено
-// глобальным счётчиком неудач (см. authCodeFailuresPerMin)
-func clientIP(r *http.Request) string {
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		if first := strings.TrimSpace(strings.Split(fwd, ",")[0]); first != "" {
-			return first
+// clientIP — адрес клиента для лимитов.
+//
+// ⚠️ X-Forwarded-For НЕ ЧИТАЕТСЯ, пока не задан TRUSTED_PROXY_COUNT. Заголовок
+// пишет кто угодно, и раньше первый его элемент брался безусловно — то есть
+// любой per-IP лимит обходился случайным заголовком на каждый запрос. Для
+// /auth/code это компенсировал глобальный счётчик неудач, а вот /join такого
+// счётчика не имеет: страница приглашения — оракул существования комнаты по
+// ObjectID, и «60 в минуту» для перебирающего означало отсутствие лимита.
+//
+// Как считается адрес при прокси: обратный прокси ДОПИСЫВАЕТ реальный адрес в
+// КОНЕЦ списка (nginx $proxy_add_x_forwarded_for), поэтому доверять можно
+// только хвосту — ровно tp последних элементов принадлежат нашим прокси, а
+// нужный нам адрес стоит перед ними. Всё, что левее, пишет клиент, и оно
+// игнорируется. Список короче ожидаемого (запрос пришёл в обход прокси) —
+// откат к RemoteAddr
+func clientIP(r *http.Request, trustedProxies int) string {
+	if trustedProxies > 0 {
+		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+			parts := strings.Split(fwd, ",")
+			if i := len(parts) - trustedProxies; i >= 0 && i < len(parts) {
+				if ip := strings.TrimSpace(parts[i]); ip != "" {
+					return ip
+				}
+			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -98,4 +133,9 @@ func clientIP(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
+}
+
+// clientIP — адрес клиента с учётом настроенного числа доверенных прокси
+func (s *Server) clientIP(r *http.Request) string {
+	return clientIP(r, s.cfg.TrustedProxies)
 }

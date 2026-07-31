@@ -106,7 +106,16 @@ class ProfileViewModel @Inject constructor(
         // Актуализация профиля при открытии вкладки; ошибка тиха — показываем кэш.
         viewModelScope.launch {
             try {
-                sessionStore.updateMe(repository.me().value)
+                val fetched = repository.me()
+                // ТОЛЬКО свежий ответ сети: офлайн-кеш `me` мог быть записан
+                // старой версией приложения, и тогда `linkedProviders` в нём
+                // разбирается в emptyList(). Записав такой профиль в сессию, мы
+                // бы стёрли реальные способы входа: секция показала бы «Google
+                // не привязан» и запретила отвязку — до следующего успешного
+                // GET /me, которого офлайн не будет.
+                if (!fetched.fromCache) {
+                    sessionStore.updateMe(fetched.value)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Throwable) {

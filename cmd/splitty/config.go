@@ -65,13 +65,24 @@ type config struct {
 	// Отпечатков может быть несколько: Play App Signing и локальный debug-ключ.
 	// IosStoreUrl — карточка в App Store (её числовой id появляется только
 	// после первой публикации, вывести его из bundle id нельзя).
-	// AppScheme — схема кнопки «Открыть в приложении»: <scheme>://join/<roomId>
+	//
+	// Схема кнопки «Открыть в приложении» настройкой НЕ является: splitty://
+	// вшита в ios/project.yml и AndroidManifest.xml, поменять её деплоем нельзя
+	// (см. appScheme в internal/rest/deeplink.go)
 	PublicBaseUrl     string   `env:"PUBLIC_BASE_URL" envDefault:""`
 	IosAppId          string   `env:"IOS_APP_ID" envDefault:""`
 	AndroidPackage    string   `env:"ANDROID_PACKAGE" envDefault:""`
 	AndroidCertSha256 []string `env:"ANDROID_CERT_SHA256" envSeparator:"," envDefault:""`
 	IosStoreUrl       string   `env:"IOS_STORE_URL" envDefault:""`
-	AppScheme         string   `env:"APP_SCHEME" envDefault:"splitty"`
+
+	// TrustedProxyCount — сколько обратных прокси стоит ПЕРЕД сервером.
+	//
+	// 0 (дефолт, текущий деплой — контейнер публикует порт напрямую) означает
+	// «X-Forwarded-For не читать вовсе»: заголовок пишет кто угодно, и пока он
+	// принимался безоговорочно, любой per-IP лимит обходился случайным
+	// значением на каждый запрос. Поставить 1 нужно ровно тогда, когда перед
+	// сервером появится TLS-терминатор (он же появится вместе с PUBLIC_BASE_URL)
+	TrustedProxyCount int `env:"TRUSTED_PROXY_COUNT" envDefault:"0"`
 
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.

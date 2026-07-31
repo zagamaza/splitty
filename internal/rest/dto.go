@@ -132,6 +132,10 @@ type roomDetailDto struct {
 	// (операции, участники, траты) отдаётся как обычно
 	DebtsUnavailable bool           `json:"debtsUnavailable,omitempty"`
 	Operations       []operationDto `json:"operations"`
+	// InviteUrl — ссылка-приглашение вида https://<домен>/join/<roomId>.
+	// Отсутствует, пока не задан PUBLIC_BASE_URL: клиент тогда показывает
+	// старую ссылку через telegram-бота (см. Server.inviteURL)
+	InviteUrl string `json:"inviteUrl,omitempty"`
 }
 
 type friendRoomBalanceDto struct {

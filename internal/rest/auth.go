@@ -332,7 +332,7 @@ func (s *Server) writeInvalidCode(w http.ResponseWriter, budgetOK bool) {
 func (s *Server) handleAuthCode(w http.ResponseWriter, r *http.Request) {
 	// Первым идёт per-IP окно: это единственный лимит, который вправе отбить
 	// запрос до проверки кода. Он адресный — шумный клиент режет только себя
-	if !s.authThrottle.allow("ip:"+clientIP(r), authCodePerIPPerMin) {
+	if !s.authThrottle.allow("ip:"+s.clientIP(r), authCodePerIPPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -425,7 +425,7 @@ func (s *Server) handleAuthGoogle(w http.ResponseWriter, r *http.Request) {
 	// Ключ троттлинга с собственным префиксом: "ip:"+clientIP, как у /auth/code
 	// (см. handleAuthCode), означал бы общий бюджет — вход через Google выжигал
 	// бы попытки входа по коду с того же адреса и наоборот
-	if !s.authThrottle.allow("google:"+clientIP(r), oauthPerIPPerMin) {
+	if !s.authThrottle.allow("google:"+s.clientIP(r), oauthPerIPPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -465,16 +465,45 @@ func (s *Server) handleAuthGoogle(w http.ResponseWriter, r *http.Request) {
 // Apple выдаёт relay-адрес, и доверять ей как идентификатору нельзя. Привязка
 // google-личности к существующему аккаунту — только явная (см. /me/link/*)
 func (s *Server) resolveGoogleUser(ctx context.Context, claims *oidc.Claims) (*api.User, error) {
+	return s.resolveIdentityUser(ctx, "google",
+		func(ctx context.Context) (*api.User, error) { return s.userRepo.FindByGoogleSub(ctx, claims.Subject) },
+		func(id int) api.User {
+			return api.User{
+				ID:          id,
+				GoogleSub:   claims.Subject,
+				Email:       claims.Email,
+				DisplayName: strings.TrimSpace(claims.Name),
+			}
+		},
+		nil)
+}
+
+// resolveIdentityUser — общий резолв «найти по личности провайдера или завести
+// нового». Один на Google и Apple: логика не очевидная и переписывать её дважды
+// значит однажды поправить только одну копию.
+//
+//   - find ищет живого владельца личности;
+//   - build собирает документ нового пользователя по выданному номеру;
+//   - onFound (может быть nil) дозаполняет НАЙДЕННОГО — Apple отдаёт email, имя
+//     и свежий refresh token, которые надо дописать существующему профилю.
+//
+// ⚠️ Поиск по личности идёт первым шагом КАЖДОЙ итерации, а не только первой:
+// duplicate key здесь означает гонку двух первых входов одного человека (номер
+// из аллокатора атомарен и сам по себе не конфликтует), поэтому проигравший
+// обязан подобрать документ, созданный победителем. Слепой retry «взять новый
+// номер и вставить снова» упёрся бы в unique-индекс по google_sub/apple_sub все
+// три раза и отдал клиенту 500
+func (s *Server) resolveIdentityUser(ctx context.Context, provider string,
+	find func(context.Context) (*api.User, error), build func(id int) api.User,
+	onFound func(context.Context, *api.User) *api.User) (*api.User, error) {
+
 	var lastErr error
 	for attempt := 0; attempt < identityAuthAttempts; attempt++ {
-		// Поиск по личности идёт первым шагом КАЖДОЙ итерации, а не только
-		// первой: duplicate key здесь означает гонку двух первых входов одного
-		// человека (номер из аллокатора атомарен и сам по себе не конфликтует),
-		// поэтому проигравший обязан подобрать документ, созданный победителем.
-		// Слепой retry «взять новый номер и вставить снова» упёрся бы в
-		// unique-индекс по google_sub все три раза и отдал клиенту 500
-		existing, err := s.userRepo.FindByGoogleSub(ctx, claims.Subject)
+		existing, err := find(ctx)
 		if err == nil {
+			if onFound != nil {
+				return onFound(ctx, existing), nil
+			}
 			return existing, nil
 		}
 		if err != mongo.ErrNoDocuments {
@@ -485,12 +514,7 @@ func (s *Server) resolveGoogleUser(ctx context.Context, claims *oidc.Claims) (*a
 		if err != nil {
 			return nil, err
 		}
-		err = s.userRepo.CreateIdentityUser(ctx, api.User{
-			ID:          id,
-			GoogleSub:   claims.Subject,
-			Email:       claims.Email,
-			DisplayName: strings.TrimSpace(claims.Name),
-		})
+		err = s.userRepo.CreateIdentityUser(ctx, build(id))
 		if err == nil {
 			return s.userRepo.FindById(ctx, id)
 		}
@@ -499,7 +523,7 @@ func (s *Server) resolveGoogleUser(ctx context.Context, claims *oidc.Claims) (*a
 		}
 		lastErr = err
 	}
-	return nil, errors.Wrapf(lastErr, "не удалось создать google-пользователя за %d попыток", identityAuthAttempts)
+	return nil, errors.Wrapf(lastErr, "не удалось создать пользователя %s за %d попыток", provider, identityAuthAttempts)
 }
 
 // appleAuthRequest — тело POST /auth/apple.
@@ -526,7 +550,7 @@ func (s *Server) handleAuthApple(w http.ResponseWriter, r *http.Request) {
 	}
 	// Свой префикс ключа, как и у Google: общий с /auth/code бюджет означал бы,
 	// что один способ входа выжигает попытки другого с того же адреса
-	if !s.authThrottle.allow("apple:"+clientIP(r), oauthPerIPPerMin) {
+	if !s.authThrottle.allow("apple:"+s.clientIP(r), oauthPerIPPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много попыток, попробуйте позже")
 		return
 	}
@@ -612,41 +636,22 @@ func (s *Server) exchangeAppleCode(ctx context.Context, code string) string {
 // доходят, но принадлежит он паре «человек + приложение» и идентификатором быть
 // не может (см. также resolveGoogleUser)
 func (s *Server) resolveAppleUser(ctx context.Context, claims *oidc.Claims, displayName, refreshToken string) (*api.User, error) {
-	var lastErr error
-	for attempt := 0; attempt < identityAuthAttempts; attempt++ {
-		// Поиск по личности — первым шагом КАЖДОЙ итерации: duplicate key здесь
-		// означает гонку двух первых входов одного человека, и проигравший
-		// обязан подобрать документ победителя (подробнее — в resolveGoogleUser)
-		existing, err := s.userRepo.FindByAppleSub(ctx, claims.Subject)
-		if err == nil {
-			return s.fillAppleProfile(ctx, existing, claims.Email, displayName, refreshToken), nil
-		}
-		if err != mongo.ErrNoDocuments {
-			return nil, err
-		}
-
-		id, err := s.userIDs.NextUserID(ctx)
-		if err != nil {
-			return nil, err
-		}
-		err = s.userRepo.CreateIdentityUser(ctx, api.User{
-			ID:       id,
-			AppleSub: claims.Subject,
-			// email и имя Apple присылает только сейчас, при первом входе —
-			// другого шанса их сохранить не будет
-			Email:             strings.TrimSpace(claims.Email),
-			DisplayName:       strings.TrimSpace(displayName),
-			AppleRefreshToken: refreshToken,
+	return s.resolveIdentityUser(ctx, "apple",
+		func(ctx context.Context) (*api.User, error) { return s.userRepo.FindByAppleSub(ctx, claims.Subject) },
+		func(id int) api.User {
+			return api.User{
+				ID:       id,
+				AppleSub: claims.Subject,
+				// email и имя Apple присылает только сейчас, при первом входе —
+				// другого шанса их сохранить не будет
+				Email:             strings.TrimSpace(claims.Email),
+				DisplayName:       strings.TrimSpace(displayName),
+				AppleRefreshToken: refreshToken,
+			}
+		},
+		func(ctx context.Context, u *api.User) *api.User {
+			return s.fillAppleProfile(ctx, u, claims.Email, displayName, refreshToken)
 		})
-		if err == nil {
-			return s.userRepo.FindById(ctx, id)
-		}
-		if !repository.IsDuplicateKey(err) {
-			return nil, err
-		}
-		lastErr = err
-	}
-	return nil, errors.Wrapf(lastErr, "не удалось создать apple-пользователя за %d попыток", identityAuthAttempts)
 }
 
 // fillAppleProfile дозаполняет профиль существующего пользователя.

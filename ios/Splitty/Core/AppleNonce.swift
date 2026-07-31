@@ -18,45 +18,28 @@ import Security
 /// Отправить хеш вместо сырого значения — значит превратить проверку в
 /// самоподтверждение: перехваченный у другого клиента токен прошёл бы вход.
 enum AppleNonce {
-    /// Алфавит сырого nonce: буквы, цифры и `-._`. Всё это безопасно
-    /// одновременно в JSON-теле, в JWT-claim и в URL — экранирование по пути
-    /// от клиента до Apple и обратно ничего не поменяет.
-    static let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._")
+    /// Размер сырого nonce: 32 случайных байта = 256 бит. Строкой он
+    /// становится в hex, то есть 64 символа `0…9a…f`.
+    static let byteCount = 32
 
-    /// Длина по умолчанию: 32 символа алфавита из 65 — около 192 бит энтропии.
-    static let defaultLength = 32
-
-    /// Криптостойкий сырой nonce из `alphabet`.
+    /// Криптостойкий сырой nonce — hex от `byteCount` случайных байт.
     ///
-    /// Байты берутся у `SecRandomCopyBytes`; «хвост» диапазона отбрасывается,
-    /// чтобы взятие остатка не перекосило распределение в пользу первых
-    /// символов алфавита (256 на 65 нацело не делится).
-    static func random(length: Int = defaultLength) -> String {
-        precondition(length > 0, "длина nonce должна быть положительной")
-
-        let size = alphabet.count
-        let limit = 256 - (256 % size)
-
-        var result = ""
-        result.reserveCapacity(length)
-        var buffer = [UInt8](repeating: 0, count: length)
-
-        while result.count < length {
-            let status = SecRandomCopyBytes(kSecRandomDefault, buffer.count, &buffer)
-            guard status == errSecSuccess else {
-                // Единственный документированный отказ — недоступность
-                // системного источника случайности. Отдать предсказуемое
-                // значение нельзя: непредсказуемость nonce и есть вся защита
-                // входа от повторного использования чужого токена.
-                fatalError("SecRandomCopyBytes завершился с ошибкой \(status)")
-            }
-            for byte in buffer where result.count < length {
-                guard Int(byte) < limit else { continue }
-                result.append(alphabet[Int(byte) % size])
-            }
+    /// Hex, а не «алфавит из букв и цифр»: от строки здесь нужна ровно одна
+    /// вещь — непредсказуемость, а любой алфавит, размер которого не делит
+    /// 256, требует отбраковки байтов ради равномерности. Hex делит нацело
+    /// по построению, безопасен в JSON, в JWT-claim и в URL, и совпадает
+    /// с кодировкой `sha256Hex(_:)` — тот же формат по обе стороны протокола.
+    static func random() -> String {
+        var bytes = [UInt8](repeating: 0, count: byteCount)
+        let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+        guard status == errSecSuccess else {
+            // Единственный документированный отказ — недоступность системного
+            // источника случайности. Отдать предсказуемое значение нельзя:
+            // непредсказуемость nonce и есть вся защита входа от повторного
+            // использования чужого токена.
+            fatalError("SecRandomCopyBytes завершился с ошибкой \(status)")
         }
-
-        return result
+        return bytes.map { String(format: "%02x", $0) }.joined()
     }
 
     /// SHA256 от UTF-8 представления строки, в нижнем регистре hex —

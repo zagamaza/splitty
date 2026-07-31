@@ -6,6 +6,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -132,7 +133,14 @@ func (s *Server) revokeAppleTokens(ctx context.Context, u *api.User) {
 //
 // Каждый шаг идемпотентен (DeleteMany по user_id), поэтому повторный DELETE /me
 // безопасно доводит чистку до конца. Ошибка возвращается вызывающему: 500
-// говорит клиенту повторить, а не делает вид, что всё убрано
+// говорит клиенту повторить, а не делает вид, что всё убрано.
+//
+// ⚠️ Не подключённая коллекция — тоже ОШИБКА, а не «пропускаем». Раньше nil
+// молча пропускался, и потерянный вызов SetPushOutbox (или SetBugReports)
+// означал бы 204 с оставшимися в базе именами, текстами жалоб и отрендеренными
+// пушами — молчаливый провал ровно того требования, ради которого этот файл
+// написан. Все три подключаются в main.go безусловно, так что nil здесь может
+// означать только ошибку проводки, и узнать о ней надо громко
 func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 	if err := s.loginCodeRepo.DeleteByUserId(ctx, u.ID); err != nil {
 		return err
@@ -143,15 +151,16 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 	// класть чистку до tombstone нельзя, а хранить telegram id где-то ещё ради
 	// маловероятного ретрая дороже, чем сам остаток
 	for _, cleaner := range []struct {
+		name string
 		repo userDataCleaner
 		ids  []int
 	}{
-		{repo: s.chatStates, ids: chatStateIDs(u)},
-		{repo: s.bugReports, ids: []int{u.ID}},
-		{repo: s.pushOutbox, ids: []int{u.ID}},
+		{name: "chat_state", repo: s.chatStates, ids: chatStateIDs(u)},
+		{name: "bug_report", repo: s.bugReports, ids: []int{u.ID}},
+		{name: "push_outbox", repo: s.pushOutbox, ids: []int{u.ID}},
 	} {
 		if cleaner.repo == nil {
-			continue
+			return errors.Errorf("коллекция %s не подключена: PII удалённого пользователя осталась бы в базе", cleaner.name)
 		}
 		for _, id := range cleaner.ids {
 			if err := cleaner.repo.DeleteByUserId(ctx, id); err != nil {

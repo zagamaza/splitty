@@ -571,11 +571,22 @@ struct AccountView: View {
                 errorMessage = "Apple не вернул данные для привязки. Попробуйте ещё раз"
                 return
             }
+            // authorizationCode одноразовый и живёт минуты — сервер меняет его
+            // на Apple refresh token, которым при удалении аккаунта зовётся
+            // auth/revoke (Guideline 5.1.1(v)). Без него у человека, вошедшего
+            // через Telegram/Google и привязавшего Apple здесь, отозвать доступ
+            // будет нечем: «добрать» код позже Apple не даёт.
+            let authorizationCode = credential.authorizationCode
+                .flatMap { String(data: $0, encoding: .utf8) }
             isIdentityBusy = true
             Task {
                 defer { isIdentityBusy = false }
                 do {
-                    try await session.linkApple(idToken: idToken, nonce: rawNonce)
+                    try await session.linkApple(
+                        idToken: idToken,
+                        nonce: rawNonce,
+                        authorizationCode: authorizationCode
+                    )
                     Haptics.success()
                 } catch {
                     errorMessage = identityErrorText(error)
@@ -620,18 +631,24 @@ struct AccountView: View {
 
     /// DELETE /me → полный logout (Keychain, офлайн-кеш, outbox, отложенное
     /// вступление по ссылке) и возврат на экран входа делает `RootView`
-    /// по `isAuthenticated`. При ошибке — остаёмся в аккаунте.
+    /// по `isAuthenticated`. В аккаунте остаёмся только при 403 (демо-профиль
+    /// ревьюеров) — остальные сбои чистят устройство, см. `deleteAccount`.
     private func deleteAccount() {
         isDeleting = true
         Task {
             defer { isDeleting = false }
+            // Отвязать FCM-токен ПОКА JWT валиден: после tombstone сервер
+            // отвергнет запрос, а токен устройства остался бы висеть.
+            await PushManager.shared.unregisterCurrentToken()
             do {
-                // Отвязать FCM-токен ПОКА JWT валиден: после tombstone сервер
-                // отвергнет запрос, а токен устройства остался бы висеть.
-                await PushManager.shared.unregisterCurrentToken()
                 try await session.deleteAccount()
             } catch {
-                errorMessage = humanErrorText(error)
+                // Удаление не состоялось, а токен устройства мы уже отвязали.
+                // Регистрируем обратно: иначе человек остаётся в живом аккаунте
+                // (403 — демо-профиль) вообще без пушей, и вернуть их могло бы
+                // только следующее переключение входа или холодный старт.
+                PushManager.shared.registerCurrentToken()
+                errorMessage = deleteAccountErrorText(error)
             }
         }
     }
@@ -676,15 +693,40 @@ func identityErrorText(_ error: Error) -> String {
         return "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
     case "last_identity":
         return "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
+    case "provider_rejected":
+        // Отказ ПРОВАЙДЕРА (подпись, nonce, срок id-токена) сервер отдаёт
+        // 400 с этим кодом — именно чтобы его нельзя было спутать с мёртвой
+        // сессией Splitty и чтобы клиент не выкидывал человека на экран входа
+        // из-за одной неудачной привязки.
+        return "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
     default:
         break
     }
     if status == 401 {
-        // 401 здесь — не протухшая сессия (её APIClient уже обработал), а отказ
-        // провайдера: подпись/nonce/срок токена не сошлись.
-        return "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+        // С контрактом «отказ провайдера = 400 provider_rejected» 401 отсюда
+        // означает ровно одно: сессия Splitty мертва. Сброс уже сделал
+        // APIClient (`onUnauthorized`), нам остаётся объяснить, что произошло.
+        return "Сессия истекла. Войдите ещё раз"
     }
     return humanErrorText(error)
+}
+
+// MARK: - Текст ошибки удаления аккаунта
+
+/// Человеческий текст неудавшегося удаления аккаунта.
+///
+/// Случаи принципиально разные. 403 — демонстрационный аккаунт ревьюеров:
+/// аккаунт жив, сессия цела, и говорить надо именно это. Любой другой сбой
+/// неоднозначен: сервер ставит tombstone раньше, чем доделывает остальные
+/// шаги, так что аккаунт мог быть удалён, а мог и нет — локальные данные
+/// в этом случае с устройства уже стёрты (`SessionStore.deleteAccount`),
+/// и человеку нужно сказать, что делать дальше, а не «Ошибка сервера (500)».
+func deleteAccountErrorText(_ error: Error) -> String {
+    if let apiError = error as? APIError, apiError.isForbidden {
+        return apiError.errorDescription ?? "Этот аккаунт удалить нельзя"
+    }
+    return "Не удалось подтвердить удаление аккаунта. Данные с устройства удалены. "
+        + "Если аккаунт остался, войдите снова и повторите удаление"
 }
 
 #Preview {

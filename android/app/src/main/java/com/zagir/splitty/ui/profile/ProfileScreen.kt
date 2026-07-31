@@ -102,6 +102,9 @@ fun ProfileScreen(
     }
 
     val nameEmptyError = stringResource(R.string.profile_name_empty)
+    // Активити нет — системный лист Credential Manager показать не из чего.
+    // Текст готовим здесь: stringResource внутри лямбды-обработчика не вызвать.
+    val noActivityError = stringResource(R.string.google_sign_in_no_activity)
 
     Column(
         modifier = Modifier
@@ -142,7 +145,13 @@ fun ProfileScreen(
             LoginMethodsSection(
                 me = me,
                 enabled = !isIdentityBusy && !isDeleting,
-                onLink = { activity?.let(viewModel::linkGoogle) },
+                // Тихий no-op при activity == null недопустим: тап по «Привязать»
+                // не делал ничего и выглядел поломкой приложения (в iOS этому
+                // соответствует GoogleSignInError.noPresenter).
+                onLink = {
+                    val host = activity
+                    if (host != null) viewModel.linkGoogle(host) else viewModel.showError(noActivityError)
+                },
                 onUnlinkRequest = { providerToUnlink = it },
             )
             // Адрес сервера — отладочная информация, в релизе пользователю не
@@ -241,7 +250,20 @@ fun ProfileScreen(
             title = {
                 Text(stringResource(R.string.profile_unlink_confirm_title, provider.title))
             },
-            text = { Text(stringResource(R.string.profile_unlink_confirm_message)) },
+            // Текст последствия — ПО ПРОВАЙДЕРУ: отвязка Telegram необратима
+            // (бот заведёт второй профиль, обратно привязать нельзя), и общая
+            // формулировка «остальные способы продолжат работать» тут врёт
+            // умолчанием. Серверный warning приходит уже после действия.
+            text = {
+                Text(
+                    stringResource(
+                        when (provider) {
+                            LoginProvider.TELEGRAM -> R.string.profile_unlink_confirm_message_telegram
+                            else -> R.string.profile_unlink_confirm_message
+                        }
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

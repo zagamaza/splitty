@@ -45,13 +45,19 @@ func newTestServerWithLoginCodes(cfg Config, userRepo *fakeUserRepo, roomRepo *f
 
 // newTestRoom комната с участниками 1 и 2 и ЛЕГАСИ-операцией эпохи master-2021
 // (recipients без recipients_with_sum, без status): 1 заплатил 100 за обоих →
-// сервер синтезирует доли [50, 50], долг 2 → 1 равен 50
+// сервер синтезирует доли [50, 50], долг 2 → 1 равен 50.
+//
+// ⚠️ Донор — КОПИЯ testUser1, а не указатель на пакетную переменную (как в
+// deleteTestRoom и по той же причине): AnonymizeUser правит снимок на месте,
+// и общий указатель переименовал бы testUser1 для всех последующих тестов
+// пакета — порядкозависимые падения на ровном месте
 func newTestRoom() *api.Room {
+	donor := testUser1
 	operation := api.Operation{
 		ID:          primitive.NewObjectID(),
 		Description: "Ужин",
 		Sum:         100,
-		Donor:       &testUser1,
+		Donor:       &donor,
 		Recipients:  &[]api.User{testUser1, testUser2},
 		CreateAt:    time.Now(),
 	}

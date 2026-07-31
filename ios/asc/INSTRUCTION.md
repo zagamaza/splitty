@@ -153,12 +153,17 @@ python3 asc.py attach-build <BUILD_VERSION>   # напр. 6
   аккаунт **из самого приложения**, а не «напишите в поддержку». В Splitty это последняя карточка
   вкладки **Профиль** (`ios/Splitty/Features/Account/AccountView.swift`, `deleteAccountSection`):
   прокрутка вниз → «Удалить аккаунт» → подтверждение → `DELETE /api/v1/me`. Там же, выше по
-  экрану, карточка **«Способы входа»** (`loginMethodsSection`) — привязка и отвязка Google/Apple/Telegram.
+  экрану, карточка **«Способы входа»** (`loginMethodsSection`) — привязка и отвязка Google и Apple.
+  Telegram там **только отвязывается**, и строка появляется, лишь когда он уже привязан: привязка
+  требует Telegram Login Widget (подписанные ботом `id`/`auth_date`/`hash`), которого в приложении
+  нет, — рисовать неработающую кнопку «Привязать» значит обещать несуществующее.
 - **Отзыв токенов при удалении — часть 5.1.1(v).** Для аккаунтов, созданных через Apple, недостаточно
   удалить свои данные: нужно отозвать выданные токены, иначе приложение так и останется висеть в
   **Настройки → Apple ID → Вход с Apple**. Бэкенд делает это сам:
-  - при входе клиент присылает `authorizationCode`, сервер меняет его на refresh token
-    (`POST https://appleid.apple.com/auth/token`) и хранит в профиле;
+  - клиент присылает `authorizationCode` и при ВХОДЕ, и при ПРИВЯЗКЕ Apple к существующему
+    аккаунту (`POST /api/v1/me/link/apple`), сервер меняет его на refresh token
+    (`POST https://appleid.apple.com/auth/token`) и хранит в профиле. Привязка без кода оставила
+    бы `apple_sub` без refresh token — и отзывать при удалении было бы нечем;
   - при `DELETE /api/v1/me` сервер первым шагом зовёт
     **`POST https://appleid.apple.com/auth/revoke`** — строго до tombstone, потому что тот
     вычищает сам токен.
@@ -229,5 +234,5 @@ Integrations и перевыпустить сертификаты.
 То же и **строже** — про `.p8`-ключ Sign in with Apple (`APPLE_PRIVATE_KEY`): им подписывается
 client_secret к token-эндпоинтам Apple. Ни файл, ни его содержимое **не коммитятся в git** — ни в
 `docker-compose.yml`, ни «временно, чтобы проверить». Ключ живёт только в `.env` на сервере
-(`/home/splitit/app/`), как `TG_TOKEN` и `API_JWT_SECRET`. Apple отдаёт файл один раз; при
+(`$REMOTE_DIR`, по умолчанию `/root/splitty` — см. `Makefile`), как `TG_TOKEN` и `API_JWT_SECRET`. Apple отдаёт файл один раз; при
 компрометации — Developer Portal → Keys → Revoke и выпуск нового.

@@ -70,14 +70,45 @@ func TestThrottleEvictsExpired(t *testing.T) {
 }
 
 func TestClientIP(t *testing.T) {
-	r, _ := http.NewRequest("POST", "/", nil)
-	r.RemoteAddr = "10.0.0.5:53124"
-	if got := clientIP(r); got != "10.0.0.5" {
-		t.Errorf("RemoteAddr: got %q", got)
+	tests := []struct {
+		name           string
+		fwd            string
+		trustedProxies int
+		want           string
+	}{
+		{name: "без заголовка", trustedProxies: 0, want: "10.0.0.5"},
+		{
+			// главное свойство: без TRUSTED_PROXY_COUNT заголовок не читается
+			// вовсе, иначе любой per-IP лимит обходится случайным значением
+			name: "заголовок не читается без доверенных прокси",
+			fwd:  "203.0.113.7, 198.51.100.9", trustedProxies: 0, want: "10.0.0.5",
+		},
+		{
+			// один прокси дописал реальный адрес в конец — берём его, а не то,
+			// что клиент написал сам
+			name: "подделка клиента отбрасывается",
+			fwd:  "1.2.3.4, 203.0.113.7", trustedProxies: 1, want: "203.0.113.7",
+		},
+		{name: "клиент ничего не писал", fwd: "203.0.113.7", trustedProxies: 1, want: "203.0.113.7"},
+		{name: "два прокси", fwd: "1.2.3.4, 203.0.113.7, 10.0.0.1", trustedProxies: 2, want: "203.0.113.7"},
+		{
+			// запрос пришёл в обход прокси: элементов меньше, чем ожидалось —
+			// доверять нечему, откат к RemoteAddr
+			name: "список короче ожидаемого",
+			fwd:  "203.0.113.7", trustedProxies: 2, want: "10.0.0.5",
+		},
 	}
-	r.Header.Set("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
-	if got := clientIP(r); got != "203.0.113.7" {
-		t.Errorf("X-Forwarded-For: got %q", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r, _ := http.NewRequest("POST", "/", nil)
+			r.RemoteAddr = "10.0.0.5:53124"
+			if tt.fwd != "" {
+				r.Header.Set("X-Forwarded-For", tt.fwd)
+			}
+			if got := clientIP(r, tt.trustedProxies); got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -103,7 +134,7 @@ func TestAuthCodePerIPRejectRefundsGlobalBudget(t *testing.T) {
 
 	attempt := func(ip string) int {
 		req := httptest.NewRequest("POST", "/api/v1/auth/code", strings.NewReader(`{"code":"WRONGCODE"}`))
-		req.Header.Set("X-Forwarded-For", ip)
+		req.RemoteAddr = ip + ":40000"
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
 		return rec.Code
@@ -123,14 +154,15 @@ func TestAuthCodePerIPRejectRefundsGlobalBudget(t *testing.T) {
 	}
 }
 
-// подделка X-Forwarded-For обходит окно на адрес, но упирается в общий бюджет неудач
+// перебор с РАЗНЫХ адресов (ботнет, мобильный NAT) обходит окно на адрес,
+// но упирается в общий бюджет неудач
 func TestAuthCodeGlobalFailureBudget(t *testing.T) {
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
 	h := s.Handler()
 
 	attempt := func(ip string) int {
 		req := httptest.NewRequest("POST", "/api/v1/auth/code", strings.NewReader(`{"code":"WRONGCODE"}`))
-		req.Header.Set("X-Forwarded-For", ip)
+		req.RemoteAddr = ip + ":40000"
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
 		return rec.Code
@@ -144,13 +176,13 @@ func TestAuthCodeGlobalFailureBudget(t *testing.T) {
 		}
 	}
 	if !blocked {
-		t.Fatal("общий бюджет неудач должен отсекать перебор со сменой X-Forwarded-For")
+		t.Fatal("общий бюджет неудач должен отсекать перебор со сменой адреса")
 	}
 }
 
 // Исчерпанный общий бюджет не должен класть авторизацию целиком: он режет
 // только НЕУДАЧНЫЕ попытки. Иначе один аноним, льющий мусорные коды со
-// сменой X-Forwarded-For, ~2 запросами в секунду закрывал бы вход всем
+// сменой адреса, ~2 запросами в секунду закрывал бы вход всем
 func TestAuthCodeGlobalBudgetDoesNotRejectValidCode(t *testing.T) {
 	const reviewCode = "REVIEWCODE1234567890"
 	s := newTestServer(Config{ReviewLoginCode: reviewCode, ReviewUserId: testUser1.ID},
@@ -159,15 +191,15 @@ func TestAuthCodeGlobalBudgetDoesNotRejectValidCode(t *testing.T) {
 
 	attempt := func(ip, code string) int {
 		req := httptest.NewRequest("POST", "/api/v1/auth/code", strings.NewReader(`{"code":"`+code+`"}`))
-		req.Header.Set("X-Forwarded-For", ip)
+		req.RemoteAddr = ip + ":40000"
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
 		return rec.Code
 	}
 
-	// выжигаем общий бюджет мусорными кодами с разных подделанных адресов
+	// выжигаем общий бюджет мусорными кодами с разных адресов
 	for i := 0; i < authCodeFailuresPerMin*2; i++ {
-		attempt(fmt.Sprintf("198.51.100.%d.%d", i/256, i%256), "WRONGCODE")
+		attempt(fmt.Sprintf("198.51.%d.%d", i/256, i%256), "WRONGCODE")
 	}
 	// мусор после исчерпания бюджета отбивается
 	if got := attempt("198.51.100.250", "WRONGCODE"); got != http.StatusTooManyRequests {
@@ -179,7 +211,7 @@ func TestAuthCodeGlobalBudgetDoesNotRejectValidCode(t *testing.T) {
 	}
 }
 
-// Залп параллельных запросов с уникальными X-Forwarded-For не проскакивает
+// Залп параллельных запросов с уникальных адресов не проскакивает
 // мимо общего бюджета: попытка занимается тем же инкрементом, что и проверяет
 func TestAuthCodeGlobalBudgetUnderConcurrency(t *testing.T) {
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
@@ -193,7 +225,7 @@ func TestAuthCodeGlobalBudgetUnderConcurrency(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			req := httptest.NewRequest("POST", "/api/v1/auth/code", strings.NewReader(`{"code":"WRONGCODE"}`))
-			req.Header.Set("X-Forwarded-For", fmt.Sprintf("198.51.100.%d.%d", i/256, i%256))
+			req.RemoteAddr = fmt.Sprintf("198.51.100.%d:%d", i%256, 40000+i)
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, req)
 			if rec.Code != http.StatusTooManyRequests {

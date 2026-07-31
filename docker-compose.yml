@@ -26,6 +26,31 @@ services:
       # .gitignore). Отсутствует/битый — сервер стартует, пуши просто выключены
       # (NewWorker → log.Warn, не fatal).
       - FIREBASE_CREDENTIALS_FILE=/app/firebase-service-account.json
+      # ⚠️ Всё, что ниже, ОБЯЗАНО быть перечислено здесь поимённо. compose
+      # пробрасывает в контейнер только названные переменные — переменная,
+      # лежащая в .env на сервере, но не упомянутая в этом списке, до процесса
+      # НЕ ДОЕДЕТ (TG_TOKEN и API_JWT_SECRET работают именно потому, что они
+      # здесь есть). Пустое значение везде означает «способ выключен».
+      #
+      # Ревью App Store: многоразовый код входа и id демо-аккаунта.
+      - REVIEW_LOGIN_CODE
+      - REVIEW_USER_ID
+      # Вход через Google/Apple. APPLE_PRIVATE_KEY — СОДЕРЖИМОЕ .p8 (многострочное,
+      # в .env кавычится), нужен обмену authorizationCode и отзыву токенов.
+      - GOOGLE_CLIENT_IDS
+      - APPLE_CLIENT_IDS
+      - APPLE_TEAM_ID
+      - APPLE_KEY_ID
+      - APPLE_PRIVATE_KEY
+      # Диплинк-вход в группу. PUBLIC_BASE_URL — выключатель всей фичи.
+      - PUBLIC_BASE_URL
+      - IOS_APP_ID
+      - ANDROID_PACKAGE
+      - ANDROID_CERT_SHA256
+      - IOS_STORE_URL
+      # Сколько обратных прокси стоит перед сервером. 0 — прямые соединения
+      # (текущий деплой): X-Forwarded-For не читается, лимиты по RemoteAddr.
+      - TRUSTED_PROXY_COUNT
     volumes:
       # Секрет кладётся рядом с docker-compose.yml на хосте и монтируется ro.
       - ./firebase-service-account.json:/app/firebase-service-account.json:ro

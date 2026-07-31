@@ -12,8 +12,11 @@ package rest
 //   - страница отдаёт ТОЛЬКО название группы и код приглашения. Ни участников,
 //     ни сумм, ни операций: ссылку пересылают в чаты, и всякий, кому она попала,
 //     увидит ровно то, что видит адресат;
-//   - несуществующая комната и комната, к которой у смотрящего нет отношения,
-//     неразличимы — обе дают нейтральное «Приглашение не найдено»;
+//   - ⚠️ смотрящего здесь НЕТ и проверки членства тоже: знание ObjectID комнаты
+//     И ЕСТЬ приглашение. Страница отдаёт название любому, кто держит валидный
+//     id, и это осознанно — иначе ссылка не работала бы для приглашаемого,
+//     которого в комнате по определению ещё нет. Неразличимы только
+//     несуществующая комната и мусорный id: оба дают нейтральное 404;
 //   - название комнаты — пользовательский ввод, поэтому страница собирается
 //     html/template (контекстное экранирование), а не конкатенацией строк;
 //   - свой префикс троттлинга "join:": страница ходит в mongo на каждый вызов и
@@ -37,10 +40,17 @@ const (
 	// целая офисная или домовая сеть, куда ссылку и переслали
 	joinPerIPPerMin = 60
 
-	// defaultAppScheme — кастомная схема кнопки «Открыть в приложении».
+	// appScheme — кастомная схема кнопки «Открыть в приложении».
 	// Universal link на самого себя тут не годится: тап по ссылке НА ТОТ ЖЕ
-	// домен iOS в приложение не уводит, он остаётся в браузере
-	defaultAppScheme = "splitty"
+	// домен iOS в приложение не уводит, он остаётся в браузере.
+	//
+	// Константа, а не настройка: схема вшита в ios/project.yml и в
+	// AndroidManifest.xml, поэтому никакой деплой не может её изменить, не
+	// выпустив новые бинарники клиентов. Пока это была переменная окружения,
+	// подстановка в href в обход экранирования (template.URL ниже) требовала
+	// просеивать значение по алфавиту схем RFC 3986 — двадцать строк защиты
+	// вокруг константы времени компиляции
+	appScheme = "splitty"
 
 	// playStorePrefix — карточка приложения в Google Play собирается из package
 	// name, отдельной настройки для неё не нужно
@@ -108,7 +118,7 @@ func (s *Server) handleJoinPage(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")
 		return
 	}
-	if !s.authThrottle.allow("join:"+clientIP(r), joinPerIPPerMin) {
+	if !s.authThrottle.allow("join:"+s.clientIP(r), joinPerIPPerMin) {
 		writeError(w, http.StatusTooManyRequests, "rate_limited", "слишком много запросов, попробуйте позже")
 		return
 	}
@@ -116,7 +126,7 @@ func (s *Server) handleJoinPage(w http.ResponseWriter, r *http.Request) {
 	roomId := r.PathValue("roomId")
 	// Проверка формата ДО похода в базу: мусорный путь не должен стоить запроса
 	if _, err := primitive.ObjectIDFromHex(roomId); err != nil {
-		s.writeJoinPage(w, http.StatusNotFound, joinPageData{})
+		s.writeJoinPage(w, http.StatusNotFound, joinPageData{State: joinNotFound})
 		return
 	}
 
@@ -125,49 +135,26 @@ func (s *Server) handleJoinPage(w http.ResponseWriter, r *http.Request) {
 		if err == mongo.ErrNoDocuments {
 			// нейтральный ответ: «нет такой комнаты» и «эта комната не для вас»
 			// обязаны выглядеть одинаково
-			s.writeJoinPage(w, http.StatusNotFound, joinPageData{})
+			s.writeJoinPage(w, http.StatusNotFound, joinPageData{State: joinNotFound})
 			return
 		}
 		log.Error().Err(err).Msgf("cannot find room for join page: %s", roomId)
-		s.writeJoinPage(w, http.StatusInternalServerError, joinPageData{Failed: true})
+		s.writeJoinPage(w, http.StatusInternalServerError, joinPageData{State: joinFailed})
 		return
 	}
 
 	s.writeJoinPage(w, http.StatusOK, joinPageData{
-		Found:    true,
+		State:    joinFound,
 		RoomName: room.Name,
 		RoomCode: roomId,
 		// template.URL, потому что html/template не знает нашу схему и заменяет
 		// href на #ZgotmplZ. Обходить экранирование безопасно ровно потому, что
-		// в строке нет ни байта пользовательского ввода: схема просеяна
-		// appScheme(), а roomId уже признан валидным ObjectID (только hex)
-		OpenURL:         template.URL(s.appScheme() + "://join/" + roomId),
+		// в строке нет ни байта пользовательского ввода: схема — константа
+		// пакета, а roomId уже признан валидным ObjectID (только hex)
+		OpenURL:         template.URL(appScheme + "://join/" + roomId),
 		IosStoreURL:     s.cfg.IosStoreUrl,
 		AndroidStoreURL: s.playStoreURL(),
 	})
-}
-
-// appScheme — схема кастомного диплинка приложения.
-//
-// Значение просеивается по алфавиту схем из RFC 3986: оно приезжает из
-// окружения и подставляется в href в обход экранирования (см. template.URL
-// выше), поэтому «настройка кривая» не должна превращаться в инъекцию.
-// Всё неожиданное — молча заменяется дефолтом
-func (s *Server) appScheme() string {
-	scheme := s.cfg.AppScheme
-	if scheme == "" {
-		return defaultAppScheme
-	}
-	for i, c := range scheme {
-		switch {
-		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z':
-		case i > 0 && (c >= '0' && c <= '9' || c == '+' || c == '-' || c == '.'):
-		default:
-			log.Warn().Msgf("APP_SCHEME %q не похож на схему url, используется %q", scheme, defaultAppScheme)
-			return defaultAppScheme
-		}
-	}
-	return scheme
 }
 
 // playStoreURL — карточка в Google Play, собранная из package name; пусто, если
@@ -179,15 +166,22 @@ func (s *Server) playStoreURL() string {
 	return playStorePrefix + s.cfg.AndroidPackage
 }
 
+// Исходы страницы приглашения. Одно поле-состояние, а не два независимых bool:
+// исходов ровно три, а пара флагов давала бы четыре представимых комбинации
+const (
+	joinNotFound = "" // нулевое значение: «приглашение не найдено» — самый безопасный дефолт
+	joinFound    = "found"
+	joinFailed   = "failed"
+)
+
 // joinPageData — данные шаблона страницы приглашения. RoomName приходит от
 // пользователя, поэтому подстановка только через html/template
 type joinPageData struct {
-	Found    bool
-	Failed   bool
+	State    string
 	RoomName string
 	RoomCode string
 	// OpenURL — template.URL: схема кастомная, и html/template иначе вырезает
-	// её как небезопасную. Собирается только из просеянной схемы и hex-id
+	// её как небезопасную. Собирается только из константной схемы и hex-id
 	OpenURL         template.URL
 	IosStoreURL     string
 	AndroidStoreURL string
@@ -227,7 +221,7 @@ var joinPageTemplate = template.Must(template.New("join").Parse(`<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>{{if .Found}}Приглашение в группу — Splitty{{else}}Приглашение не найдено — Splitty{{end}}</title>
+<title>{{if eq .State "found"}}Приглашение в группу — Splitty{{else if eq .State "failed"}}Что-то пошло не так — Splitty{{else}}Приглашение не найдено — Splitty{{end}}</title>
 <style>
 :root { color-scheme: light dark; }
 * { box-sizing: border-box; }
@@ -259,7 +253,7 @@ button, .btn {
 </head>
 <body>
 <main class="card">
-{{if .Found}}
+{{if eq .State "found"}}
   <h1>{{.RoomName}}</h1>
   <p class="muted">Вас приглашают в группу в Splitty</p>
   <div class="code">
@@ -292,7 +286,7 @@ button, .btn {
     });
   })();
   </script>
-{{else if .Failed}}
+{{else if eq .State "failed"}}
   <h1>Что-то пошло не так</h1>
   <p class="muted">Попробуйте открыть ссылку ещё раз чуть позже.</p>
 {{else}}

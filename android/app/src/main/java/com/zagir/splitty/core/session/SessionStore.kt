@@ -59,6 +59,24 @@ data class Session(
 }
 
 /**
+ * Почему пропал токен. Для самого [SessionStore] разницы нет — он в обоих
+ * случаях стирает одно и то же, — но она принципиальна для
+ * [com.zagir.splitty.data.OfflineDataCleaner].
+ *
+ * [EXPIRED] — сессия протухла (401 из любого запроса, см.
+ * [com.zagir.splitty.core.network.AuthInterceptor]). Человек войдёт ТЕМ ЖЕ
+ * аккаунтом, и отложенное вступление по ссылке-приглашению обязано это
+ * пережить: `AppRoot` при 401 оставляет намерение в хранилище именно затем,
+ * чтобы вступление доехало после переавторизации, а чистка стирала бы его
+ * следом — приглашение терялось молча и навсегда (порт поведения iOS
+ * `expireSession`, который `PendingJoin` не трогает).
+ *
+ * [LOGOUT] — человек нажал «Выйти» (или удалил аккаунт). Здесь чистим всё:
+ * следующий владелец устройства не должен молча вступить в чужую группу.
+ */
+enum class SessionEndReason { LOGOUT, EXPIRED }
+
+/**
  * Хранилище сессии: токен, адрес сервера и кэш профиля в Jetpack DataStore;
  * наружу — StateFlow. Плюс [dataVersion] — «версия данных», растёт после
  * каждой успешной мутации (аналог iOS SessionStore.dataVersion): экраны-списки
@@ -215,8 +233,23 @@ class SessionStore @Inject constructor(
     /** Текущий токен — для OkHttp-интерцептора (синхронно). */
     fun currentToken(): String? = state.value?.token
 
+    private val _lastSessionEndReason = MutableStateFlow<SessionEndReason?>(null)
+
+    /**
+     * Причина последнего исчезновения токена; null — сессию ещё не завершали.
+     *
+     * Читается подписчиком [state] в тот момент, когда он УВИДЕЛ переход
+     * «токен был → токена нет». Это корректно, потому что флаг ставится строго
+     * ДО записи в DataStore: к моменту эмиссии он уже опубликован
+     * (`StateFlow.value` — volatile-запись), и гонки «увидели пропажу токена,
+     * но ещё не увидели причину» быть не может.
+     */
+    val lastSessionEndReason: StateFlow<SessionEndReason?> = _lastSessionEndReason
+
     /** Успешный вход: сохранить токен (зашифрованным) и профиль. */
     suspend fun signIn(token: String, me: Me) {
+        // Новая сессия — старая причина завершения больше ни о чём не говорит.
+        _lastSessionEndReason.value = null
         // Keystore на части прошивок бросает ProviderException/KeyStoreException —
         // ровно поэтому migrateTokenIfNeeded обёрнут в runCatching. Здесь падение
         // было фатальным: сервер уже принял одноразовый код, а приложение
@@ -262,11 +295,21 @@ class SessionStore @Inject constructor(
     }
 
     /**
-     * Выход: чистит токен (оба формата), профиль и ключ Keystore; адрес сервера
-     * сохраняется. Офлайн-кеш/outbox чистит [com.zagir.splitty.data.OfflineDataCleaner]
-     * по переходу «токен был → токена нет».
+     * ЯВНЫЙ выход пользователя: чистит токен (оба формата), профиль и ключ
+     * Keystore; адрес сервера сохраняется. Офлайн-кеш/outbox чистит
+     * [com.zagir.splitty.data.OfflineDataCleaner] по переходу «токен был →
+     * токена нет».
      */
-    suspend fun logout() {
+    suspend fun logout() = endSession(SessionEndReason.LOGOUT)
+
+    /**
+     * Общая часть выхода и протухания сессии: разница только в [reason],
+     * который читает [com.zagir.splitty.data.OfflineDataCleaner].
+     */
+    private suspend fun endSession(reason: SessionEndReason) {
+        // Причину публикуем ДО записи: подписчик увидит пропажу токена уже
+        // после неё (см. [lastSessionEndReason]).
+        _lastSessionEndReason.value = reason
         dataStore.edit { prefs ->
             prefs.remove(KEY_TOKEN_ENC)
             prefs.remove(KEY_TOKEN)
@@ -278,8 +321,11 @@ class SessionStore @Inject constructor(
     /**
      * Глобальный разлогин по 401 из ЛЮБОГО запроса (зовёт [com.zagir.splitty.core.network.AuthInterceptor]
      * с потока OkHttp — поэтому fire-and-forget в application-scope).
+     *
+     * Это НЕ выход: сессия протухла, человек вернётся тем же аккаунтом —
+     * см. [SessionEndReason.EXPIRED].
      */
     fun notifyUnauthorized() {
-        scope.launch { logout() }
+        scope.launch { endSession(SessionEndReason.EXPIRED) }
     }
 }

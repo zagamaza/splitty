@@ -979,3 +979,94 @@ func TestAuthAppleDuplicateKeyPicksUpWinner(t *testing.T) {
 		t.Errorf("в базе %d пользователей, ожидался 1", len(base.users))
 	}
 }
+
+// --- ревью: решения accountAlive в auth-middleware ---
+
+// Ошибка чтения базы НЕ пропускает запрос. Это осознанный fail-closed: без него
+// лежащая (или отвечающая ошибками) mongo превращается в обход инвалидации
+// токена — удалённый аккаунт продолжал бы работать, пока база нездорова
+func TestAuthMiddlewareFailsClosedOnRepoError(t *testing.T) {
+	repo := newFakeUserRepo(testUser1)
+	s := newTestServer(Config{}, repo, newFakeRoomRepo())
+	token := mustToken(t, s, testUser1.ID)
+
+	repo.findErr = errors.New("mongo недоступна")
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/me", token, "")
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (fail-closed), body: %s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec, http.StatusInternalServerError, "internal")
+
+	// вердикт «недоступно» кешироваться не должен: как только база ожила,
+	// запрос обязан проходить без ожидания accountTTL
+	repo.findErr = nil
+	if rec := doRequest(t, s, http.MethodGet, "/api/v1/me", token, ""); rec.Code != http.StatusOK {
+		t.Fatalf("после восстановления базы: status = %d, want 200", rec.Code)
+	}
+}
+
+// Валидный JWT пользователя, документа которого нет (база восстановлена из
+// старого дампа, документ вычищен руками) — 401, а не 500 и не тихий пропуск
+func TestAuthMiddlewareUnknownUser(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(), newFakeRoomRepo())
+	assertErrorCode(t, doRequest(t, s, http.MethodGet, "/api/v1/me", mustToken(t, s, 777), ""),
+		http.StatusUnauthorized, "unauthorized")
+}
+
+// Аллокатор номеров не выдал номер — 500, а не пользователь с нулевым _id
+func TestAuthGoogleAllocatorFailure(t *testing.T) {
+	repo := newFakeRoomRepo()
+	userRepo := newFakeUserRepo()
+	alloc := newFakeUserIDAllocator()
+	alloc.err = errors.New("sequence недоступна")
+	v := newFakeVerifier().with(testGoogleToken, "google-sub-1", "user@example.com", "Загир")
+	s := NewServer(Config{JwtSecret: "test-secret", GoogleVerifier: v}, userRepo, repo, newFakeLoginCodeRepo(),
+		service.NewRoomService(repo), service.NewOperationService(repo), alloc)
+
+	assertErrorCode(t, postGoogle(t, s, testGoogleToken), http.StatusInternalServerError, "internal")
+	if len(userRepo.users) != 0 {
+		t.Fatalf("создан пользователь без номера: %v", userRepo.users)
+	}
+}
+
+// alwaysRacingUserRepo проигрывает гонку КАЖДЫЙ раз: победитель, документ
+// которого можно было бы подобрать, так и не появляется. Такое возможно только
+// при рассинхронизации индексов, но retry-цикл обязан завершиться ошибкой, а не
+// крутиться вечно и не отдать (nil, nil)
+type alwaysRacingUserRepo struct {
+	*fakeUserRepo
+	creates int
+}
+
+func (r *alwaysRacingUserRepo) CreateIdentityUser(context.Context, api.User) error {
+	r.creates++
+	return errDuplicateKey
+}
+
+func TestAuthGoogleRetriesExhausted(t *testing.T) {
+	roomRepo := newFakeRoomRepo()
+	repo := &alwaysRacingUserRepo{fakeUserRepo: newFakeUserRepo()}
+	v := newFakeVerifier().with(testGoogleToken, "google-sub-1", "user@example.com", "Загир")
+	s := NewServer(Config{JwtSecret: "test-secret", GoogleVerifier: v}, repo, roomRepo, newFakeLoginCodeRepo(),
+		service.NewRoomService(roomRepo), service.NewOperationService(roomRepo), newFakeUserIDAllocator())
+
+	assertErrorCode(t, postGoogle(t, s, testGoogleToken), http.StatusInternalServerError, "internal")
+	if repo.creates != identityAuthAttempts {
+		t.Fatalf("попыток вставки %d, ожидалось %d", repo.creates, identityAuthAttempts)
+	}
+}
+
+func TestAuthAppleRetriesExhausted(t *testing.T) {
+	roomRepo := newFakeRoomRepo()
+	repo := &alwaysRacingUserRepo{fakeUserRepo: newFakeUserRepo()}
+	v := newFakeVerifier().with(testAppleToken, "apple-sub-1", "", "").withNonce(testAppleToken, appleNonceHash(testAppleNonce))
+	s := NewServer(Config{JwtSecret: "test-secret", AppleVerifier: v}, repo, roomRepo, newFakeLoginCodeRepo(),
+		service.NewRoomService(roomRepo), service.NewOperationService(roomRepo), newFakeUserIDAllocator())
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/auth/apple", "",
+		fmt.Sprintf(`{"idToken": %q, "nonce": %q}`, testAppleToken, testAppleNonce))
+	assertErrorCode(t, rec, http.StatusInternalServerError, "internal")
+	if repo.creates != identityAuthAttempts {
+		t.Fatalf("попыток вставки %d, ожидалось %d", repo.creates, identityAuthAttempts)
+	}
+}

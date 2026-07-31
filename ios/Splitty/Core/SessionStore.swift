@@ -200,6 +200,14 @@ final class SessionStore {
         ownerUserId = userId
         if let previous, previous != userId {
             Task { [cache] in await cache.removeAll() }
+            // Отложенное вступление по ссылке — такие же чужие данные, как кеш.
+            // `logout()` его чистит, но сюда приходят и без явного выхода:
+            // сессия протухла (`expireSession` намерение СОХРАНЯЕТ, и правильно
+            // делает — тот же человек переавторизуется и дойдёт до группы),
+            // а вошёл на устройстве уже другой аккаунт. Без этой строки он
+            // молча вступил бы в группу предыдущего — тем более что `RootView`
+            // возвращает намерение в хранилище при 401.
+            PendingJoin.shared.clear()
         }
         outbox.keepOwned(by: userId, inheritingOrphans: previous == nil || previous == userId)
     }
@@ -250,6 +258,13 @@ final class SessionStore {
 
     // MARK: - Способы входа
 
+    /// Номер поколения списка способов входа: растёт после каждой успешной
+    /// привязки/отвязки. Нужен `refreshMe`, чтобы отличить «свежий /me» от
+    /// ответа, ушедшего в полёт ДО привязки: такой ответ несёт устаревший
+    /// `linkedProviders` и, придя вторым, стирал бы только что привязанный
+    /// способ из UI (Android закрыл это же место в задаче 21).
+    private(set) var identityRevision = 0
+
     /// Привязка Google к текущему аккаунту: POST /me/link/google.
     /// Профиль в сессии обновляется ответом сервера — `linkedProviders`
     /// приезжает оттуда, а не досочиняется на клиенте.
@@ -257,13 +272,23 @@ final class SessionStore {
     @MainActor
     func linkGoogle(idToken: String) async throws {
         me = try await api.linkGoogle(idToken: idToken).user
+        identityRevision += 1
     }
 
     /// Привязка Apple ID: POST /me/link/apple. Сырой nonce — как при входе
     /// (в подписанном токене лежит его SHA256, сервер сверяет одно с другим).
+    ///
+    /// `authorizationCode` тянется сюда из системного листа привязки и уходит
+    /// на сервер: без него у аккаунта появится `apple_sub` без refresh token,
+    /// и отозвать доступ при удалении будет нечем (Guideline 5.1.1(v)).
     @MainActor
-    func linkApple(idToken: String, nonce: String) async throws {
-        me = try await api.linkApple(idToken: idToken, nonce: nonce).user
+    func linkApple(idToken: String, nonce: String, authorizationCode: String?) async throws {
+        me = try await api.linkApple(
+            idToken: idToken,
+            nonce: nonce,
+            authorizationCode: authorizationCode
+        ).user
+        identityRevision += 1
     }
 
     /// Отвязка способа входа: DELETE /me/link/{provider}.
@@ -274,22 +299,39 @@ final class SessionStore {
     func unlink(_ provider: LoginProvider) async throws -> String? {
         let response = try await api.unlinkProvider(provider)
         me = response.user
+        identityRevision += 1
         return response.warning
     }
 
     // MARK: - Удаление аккаунта
 
-    /// Удаление аккаунта: DELETE /me и полный `logout` при успехе.
+    /// Удаление аккаунта: DELETE /me и полный `logout`.
     ///
-    /// Разлогин делается ТОЛЬКО после успешного ответа: при сетевой ошибке
-    /// аккаунт жив, и выбрасывать человека на экран входа означало бы соврать
-    /// ему, что удаление прошло. Токен после tombstone всё равно не работает
-    /// (middleware отвергает удалённых), но локальные данные удалённого
-    /// аккаунта — кеш, outbox, отложенное вступление — обязаны исчезнуть
-    /// с устройства, и это делает `logout`.
+    /// Локальную очистку делаем при успехе И при любом сбое, кроме 403.
+    /// Причина в том, что «ошибка удаления» на клиенте неотличима от
+    /// «удаление прошло, а ответ потерялся»: сервер ставит tombstone раньше,
+    /// чем доделывает остальные шаги, и на 500 после него честно пишет
+    /// «повторите запрос» — вот только повторить нельзя, middleware уже
+    /// отвергает этот токен. Оставь мы сессию — следующий же запрос получил
+    /// бы 401 и `expireSession`, который кеш и outbox СОХРАНЯЕТ, и группы
+    /// с профилем удалённого аккаунта остались бы лежать на устройстве.
+    ///
+    /// Исключение ровно одно: 403 — отказ удалять демонстрационный аккаунт
+    /// ревьюеров. Тут сервер точно ничего не сделал, аккаунт жив, и выкидывать
+    /// человека на экран входа не за что.
+    ///
+    /// Ошибка пробрасывается в обоих случаях — экран обязан сказать, что
+    /// удаление не подтвердилось (текст — `deleteAccountErrorText`).
     @MainActor
     func deleteAccount() async throws {
-        try await api.deleteAccount()
+        do {
+            try await api.deleteAccount()
+        } catch let error as APIError where error.isForbidden {
+            throw error
+        } catch {
+            logout()
+            throw error
+        }
         logout()
     }
 
@@ -326,17 +368,28 @@ final class SessionStore {
     @MainActor
     func refreshMe() async {
         guard isAuthenticated else { return }
+        // Поколение способов входа на момент старта запроса: экран «Профиль»
+        // запускает refreshMe в `.task`, и пользователь успевает нажать
+        // «Привязать» до того, как ответ придёт (см. `identityRevision`).
+        let revision = identityRevision
         do {
             let result = try await repo.me { [weak self] cached in
-                // Кеш мгновенно, но только если профиля ещё нет в памяти.
-                if self?.me == nil {
+                // Кеш мгновенно, но только если профиля ещё нет в памяти
+                // и никто не успел привязать способ входа: кешированный
+                // профиль заведомо старее ответа на привязку.
+                if self?.me == nil, self?.identityRevision == revision {
                     self?.me = cached
                 }
             }
-            me = result.value
             // Токен мог остаться от установки без сохранённого владельца —
             // подхватываем его, чтобы namespace кеша и outbox были привязаны.
+            // Делаем это в любом случае: id пользователя привязка не меняет.
             adoptOwner(result.value.id)
+            // Пока /me летел, привязка/отвязка уже обновила профиль ответом
+            // сервера. Этот ответ старее — перезаписав им `me`, мы стёрли бы
+            // только что привязанный способ входа из карточки.
+            guard revision == identityRevision else { return }
+            me = result.value
         } catch let error as APIError where error.isUnauthorized {
             // Именно expireSession, а НЕ logout: refreshMe зовётся на каждом
             // старте и на «Профиле», и полная очистка стирала бы outbox —

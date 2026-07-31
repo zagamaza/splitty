@@ -366,6 +366,16 @@ func TestDeleteByUserIdCleansSideCollections(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seed push_outbox: %v", err)
 	}
+	// chat_state держит СВОБОДНЫЙ ТЕКСТ расхода (CallbackData.ExternalData) и
+	// стал нагруженным сразу в двух потоках — DELETE /me и отвязка telegram, —
+	// поэтому проверяется против живой mongo наравне с остальными
+	if _, err := db.Collection("chat_state").InsertMany(ctx, []interface{}{
+		bson.M{"user_id": anonTargetID, "callback_data": bson.M{"external_data": "Ужин с Машей 1500"}},
+		bson.M{"user_id": anonTargetID, "callback_data": bson.M{"external_data": "Такси 300"}},
+		bson.M{"user_id": anonOtherID, "callback_data": bson.M{"external_data": "чужое состояние"}},
+	}); err != nil {
+		t.Fatalf("seed chat_state: %v", err)
+	}
 
 	if err := NewBugReportRepository(db).DeleteByUserId(ctx, anonTargetID); err != nil {
 		t.Fatalf("bug_report DeleteByUserId: %v", err)
@@ -376,8 +386,11 @@ func TestDeleteByUserIdCleansSideCollections(t *testing.T) {
 	if err := NewPushOutboxRepository(db).DeleteByUserId(ctx, anonTargetID); err != nil {
 		t.Fatalf("push_outbox DeleteByUserId: %v", err)
 	}
+	if err := NewChatStateRepository(db).DeleteByUserId(ctx, anonTargetID); err != nil {
+		t.Fatalf("chat_state DeleteByUserId: %v", err)
+	}
 
-	for _, col := range []string{"bug_report", "login_code", "push_outbox"} {
+	for _, col := range []string{"bug_report", "login_code", "push_outbox", "chat_state"} {
 		mine, err := db.Collection(col).CountDocuments(ctx, bson.M{"user_id": anonTargetID})
 		if err != nil {
 			t.Fatalf("count %s: %v", col, err)

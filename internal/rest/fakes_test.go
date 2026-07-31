@@ -151,6 +151,11 @@ type fakeUserRepo struct {
 	// alloc — собственный аллокатор номеров: настоящий MongoUserRepository тоже
 	// владеет им сам, потому что UpsertTelegramUser вызывается из графа бота
 	alloc *fakeUserIDAllocator
+	// findErr имитирует НЕДОСТУПНУЮ базу (не ErrNoDocuments, а транспортную
+	// ошибку). Без этого шва невозможно проверить главное решение
+	// accountAlive: ошибка чтения обязана давать 500, а не пропускать запрос —
+	// иначе лежащая mongo превращается в обход инвалидации токена
+	findErr error
 }
 
 func newFakeUserRepo(users ...api.User) *fakeUserRepo {
@@ -365,6 +370,9 @@ func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider str
 		u.GoogleSub = ""
 	case repository.IdentityApple:
 		u.AppleSub = ""
+		// как MongoUserRepository.ClearIdentity: refresh token принадлежит
+		// отвязываемой личности и уходит вместе с ней (identityExtraFields)
+		u.AppleRefreshToken = ""
 	default:
 		return errors.New("неизвестный способ входа")
 	}
@@ -452,6 +460,9 @@ func (f *fakeUserRepo) SetCountInPage(_ context.Context, userId int, count int) 
 }
 
 func (f *fakeUserRepo) FindById(_ context.Context, id int) (*api.User, error) {
+	if f.findErr != nil {
+		return nil, f.findErr
+	}
 	u, ok := f.users[id]
 	if !ok {
 		return nil, mongo.ErrNoDocuments
