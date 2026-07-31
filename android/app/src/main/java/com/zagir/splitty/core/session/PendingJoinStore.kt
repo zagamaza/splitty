@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,6 +12,17 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+
+/**
+ * Отложенное намерение вступить в группу: код комнаты плюс id владельца.
+ *
+ * [ownerId] — тот, кто был в аккаунте, когда пришла ссылка; null — ссылку
+ * открыл гость, и намерение достанется первому же вошедшему (ровно это и есть
+ * сценарий приглашения). Хранить владельца обязательно: без него намерение
+ * переживает протухшую сессию и достаётся ДРУГОМУ аккаунту — см.
+ * [PendingJoinStore.reconcileOwner].
+ */
+data class PendingJoin(val roomId: String, val ownerId: Long?)
 
 /**
  * Отложенное намерение вступить в группу: код из диплинка, который ещё не
@@ -23,9 +35,9 @@ import kotlinx.coroutines.flow.map
  * намерение здесь — значит показать человеку, пришедшему по приглашению, пустой
  * список групп без единого объяснения.
  *
- * Хранится только код комнаты — публичный идентификатор из ссылки, которую и
- * так переслали в мессенджере; ничего от личности пользователя тут нет. Тем не
- * менее намерение обязано умирать вместе с сессией — чистит его
+ * Хранится код комнаты — публичный идентификатор из ссылки, которую и так
+ * переслали в мессенджере, — и id владельца намерения. Намерение обязано
+ * умирать вместе с ЧУЖОЙ сессией: чистит его
  * [com.zagir.splitty.data.OfflineDataCleaner], иначе следующий человек на этом
  * устройстве молча вступил бы в чужую группу.
  */
@@ -35,24 +47,44 @@ class PendingJoinStore @Inject constructor(
 ) {
     companion object {
         private val KEY_PENDING_JOIN = stringPreferencesKey("pending_join_room_id")
+
+        /**
+         * Владелец намерения. Персистентный, а не поле в памяти: между
+         * протуханием сессии и следующим входом процесс успевает умереть
+         * (тап по ссылке уводит в системный лист входа), и любой in-memory
+         * признак «кто был до этого» к моменту входа уже потерян.
+         */
+        private val KEY_PENDING_JOIN_OWNER = longPreferencesKey("pending_join_owner_id")
     }
 
     /**
-     * Код комнаты, ожидающий вступления; null — ждать нечего.
+     * Намерение, ожидающее исполнения; null — ждать нечего.
      *
      * Поток, а не разовое чтение: ссылка приходит и в ЖИВОЕ приложение
      * (`onNewIntent`), и корень обязан отреагировать на неё, не пересоздаваясь.
      * Сбой чтения DataStore отдаём как «намерения нет»: висящий диплинк — не
      * та причина, по которой стоит ронять корень приложения.
      */
-    val pending: Flow<String?> = dataStore.data
+    val pending: Flow<PendingJoin?> = dataStore.data
         .catch { emit(emptyPreferences()) }
-        .map { it[KEY_PENDING_JOIN] }
+        .map { prefs ->
+            prefs[KEY_PENDING_JOIN]?.let { PendingJoin(it, prefs[KEY_PENDING_JOIN_OWNER]) }
+        }
         .distinctUntilChanged()
 
-    /** Запомнить намерение (пришла ссылка). */
-    suspend fun set(roomId: String) {
-        dataStore.edit { it[KEY_PENDING_JOIN] = roomId }
+    /**
+     * Запомнить намерение (пришла ссылка). [ownerId] — id вошедшего сейчас
+     * пользователя; null, если ссылку открыл гость.
+     */
+    suspend fun set(roomId: String, ownerId: Long? = null) {
+        dataStore.edit { prefs ->
+            prefs[KEY_PENDING_JOIN] = roomId
+            if (ownerId != null) {
+                prefs[KEY_PENDING_JOIN_OWNER] = ownerId
+            } else {
+                prefs.remove(KEY_PENDING_JOIN_OWNER)
+            }
+        }
     }
 
     /**
@@ -60,17 +92,49 @@ class PendingJoinStore @Inject constructor(
      * [DataStore.edit] (она сериализуется): иначе две подписки, проснувшиеся на
      * одной эмиссии, отправили бы два запроса на вступление.
      */
-    suspend fun take(): String? {
-        var taken: String? = null
+    suspend fun take(): PendingJoin? {
+        var taken: PendingJoin? = null
         dataStore.edit { prefs ->
-            taken = prefs[KEY_PENDING_JOIN]
+            taken = prefs[KEY_PENDING_JOIN]?.let { PendingJoin(it, prefs[KEY_PENDING_JOIN_OWNER]) }
             prefs.remove(KEY_PENDING_JOIN)
+            prefs.remove(KEY_PENDING_JOIN_OWNER)
         }
         return taken
     }
 
     /** Забыть намерение (выход из аккаунта). */
     suspend fun clear() {
-        dataStore.edit { it.remove(KEY_PENDING_JOIN) }
+        dataStore.edit { prefs ->
+            prefs.remove(KEY_PENDING_JOIN)
+            prefs.remove(KEY_PENDING_JOIN_OWNER)
+        }
+    }
+
+    /**
+     * Свести намерение с вошедшим пользователем — порт iOS `adoptOwner`.
+     *
+     * Владельца ещё нет (ссылку открыл гость) — намерение достаётся [userId]:
+     * это и есть штатный путь приглашения «ссылка → экран входа → вступление».
+     * Владелец ДРУГОЙ — намерение выбрасывается: сессия предыдущего человека
+     * могла протухнуть (её чистка приглашение намеренно СОХРАНЯЕТ, см.
+     * [SessionEndReason.EXPIRED]), а вошёл на устройстве уже кто-то другой —
+     * и без этой проверки он молча вступил бы в чужую приватную группу.
+     *
+     * Проверка и запись — в одной транзакции [DataStore.edit]; лишней записи на
+     * диск при совпадении владельца не будет: DataStore не пишет файл, когда
+     * содержимое не изменилось.
+     */
+    suspend fun reconcileOwner(userId: Long) {
+        dataStore.edit { prefs ->
+            if (prefs[KEY_PENDING_JOIN] == null) return@edit
+            when (prefs[KEY_PENDING_JOIN_OWNER]) {
+                userId -> {} // намерение уже наше
+                null -> prefs[KEY_PENDING_JOIN_OWNER] = userId
+                else -> {
+                    prefs.remove(KEY_PENDING_JOIN)
+                    prefs.remove(KEY_PENDING_JOIN_OWNER)
+                }
+            }
+        }
     }
 }

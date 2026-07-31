@@ -194,6 +194,76 @@ func TestLinkIdentityTaken(t *testing.T) {
 	}
 }
 
+// ВТОРАЯ личность того же провайдера — 409 identity_already_linked, а не тихая
+// перезамена первой.
+//
+// Для Apple это прямо Guideline 5.1.1(v): перезапись отцепила бы прежний
+// apple_sub БЕЗ auth/revoke (Splitty навсегда остался бы в списке «Вход через
+// Apple» того Apple ID) и затёрла бы его refresh token — отзывать потом нечем.
+// Кнопку «Привязать» у привязанного провайдера прячут оба клиента, но это UI,
+// а не защита
+func TestLinkIdentityAlreadyLinked(t *testing.T) {
+	tests := []struct {
+		name     string
+		provider string
+		user     api.User
+		body     string
+		check    func(t *testing.T, u *api.User)
+	}{
+		{
+			name:     "google",
+			provider: providerGoogle,
+			user:     api.User{ID: 42, DisplayName: "Загир", GoogleSub: "old-google-sub"},
+			body:     fmt.Sprintf(`{"idToken": %q}`, testLinkGoogleToken),
+			check: func(t *testing.T, u *api.User) {
+				if u.GoogleSub != "old-google-sub" {
+					t.Fatalf("google_sub = %q, привязка подменила прежнюю личность", u.GoogleSub)
+				}
+			},
+		},
+		{
+			name: "apple",
+			user: api.User{
+				ID: 42, DisplayName: "Загир",
+				AppleSub: "old-apple-sub", AppleRefreshToken: "old-refresh",
+			},
+			provider: providerApple,
+			body:     fmt.Sprintf(`{"idToken": %q}`, testLinkAppleToken),
+			check: func(t *testing.T, u *api.User) {
+				if u.AppleSub != "old-apple-sub" {
+					t.Fatalf("apple_sub = %q, привязка подменила прежнюю личность", u.AppleSub)
+				}
+				// Токен прежней личности обязан остаться: им её отзывают при
+				// отвязке и удалении аккаунта
+				if u.AppleRefreshToken != "old-refresh" {
+					t.Fatalf("apple_refresh_token = %q, want old-refresh", u.AppleRefreshToken)
+				}
+			},
+		},
+		{
+			name:     "telegram",
+			provider: providerTelegram,
+			user:     withTelegram(api.User{ID: 42, DisplayName: "Загир"}, 111),
+			body:     telegramLinkBody(304898122, time.Now().Unix()),
+			check: func(t *testing.T, u *api.User) {
+				if u.TelegramID == nil || *u.TelegramID != 111 {
+					t.Fatalf("telegram_id = %v, привязка подменила прежнюю личность", u.TelegramID)
+				}
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newFakeUserRepo(tc.user)
+			s := newLinkServer(repo, "google-sub-link", "apple-sub-link")
+
+			rec := postLink(t, s, tc.provider, mustToken(t, s, 42), tc.body)
+			assertErrorCode(t, rec, http.StatusConflict, "identity_already_linked")
+			tc.check(t, repo.users[42])
+		})
+	}
+}
+
 // Ошибки запроса: невыключенный провайдер, пустой токен, отвергнутый токен,
 // несуществующий провайдер
 func TestLinkIdentityErrors(t *testing.T) {

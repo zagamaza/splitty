@@ -79,21 +79,41 @@ class AppRootViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(sessionStore.state, pendingJoinStore.pending) { session, roomId ->
-                session?.token to roomId
+            combine(sessionStore.state, pendingJoinStore.pending) { session, pending ->
+                Triple(session?.token, session?.me?.id, pending)
             }
                 // Сессия эмитит на ЛЮБУЮ запись в DataStore (обновление профиля,
-                // смена темы), а нам интересна только пара «токен + намерение».
-                // Без этого фильтра неудачное вступление (см. joinPending: при
-                // ошибке намерение остаётся) повторялось бы на каждой посторонней
-                // записи — с алертом об ошибке каждый раз.
+                // смена темы), а нам интересна только тройка «токен + владелец +
+                // намерение». Без этого фильтра неудачное вступление (см.
+                // joinPending: при ошибке намерение остаётся) повторялось бы на
+                // каждой посторонней записи — с алертом об ошибке каждый раз.
                 .distinctUntilChanged()
-                .collect { (token, roomId) ->
-                    if (token != null && roomId != null &&
-                        token != unauthorizedToken && roomId != joinedRoomId
-                    ) {
-                        joinPending(token, roomId)
+                .collect { (token, userId, pending) ->
+                    val roomId = pending?.roomId
+                    if (token == null || roomId == null || token == unauthorizedToken) {
+                        return@collect
                     }
+                    // Намерение ЧУЖОЕ: ссылку открыл предыдущий владелец
+                    // устройства, его сессия протухла (чистка приглашение при
+                    // этом намеренно сохраняет), а вошёл уже другой человек.
+                    // Без этой проверки он молча вступал бы в чужую приватную
+                    // группу — и его туда ещё и уносило бы навигацией.
+                    // Сравниваем, только когда обе стороны известны: userId ==
+                    // null — это нечитаемый профиль, а не другой аккаунт.
+                    val owner = pending.ownerId
+                    if (owner != null && userId != null && owner != userId) return@collect
+                    if (roomId == joinedRoomId) {
+                        // Ту же ссылку открыли повторно. Запрос не нужен (в
+                        // группе уже состоим), но намерение обязано быть
+                        // стёрто, а комната — открыта: иначе тап по ссылке
+                        // выглядит как «ничего не произошло», а забытое на
+                        // диске намерение проваливает в эту группу на каждом
+                        // следующем холодном старте.
+                        runCatching { pendingJoinStore.clear() }
+                        _openRoomId.value = roomId
+                        return@collect
+                    }
+                    joinPending(token, roomId)
                 }
         }
     }

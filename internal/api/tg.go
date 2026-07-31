@@ -123,6 +123,12 @@ type User struct {
 	// code при входе. Нужен, чтобы при удалении аккаунта отозвать токены через
 	// POST https://appleid.apple.com/auth/revoke (Apple Guideline 5.1.1(v)).
 	AppleRefreshToken string `json:"-" bson:"apple_refresh_token,omitempty"`
+	// DevAuth — аккаунт заведён через POST /auth/dev (режим разработки).
+	// Единственный смысл поля — отличить такой аккаунт от ИСТОРИЧЕСКОГО
+	// telegram-пользователя: у обоих маленький _id и ни одного поля личности,
+	// то есть по содержимому документа они неразличимы, а бэкфилл telegram_id
+	// (repository.BackfillTelegramID) обязан трогать только вторых.
+	DevAuth bool `json:"-" bson:"dev_auth,omitempty"`
 }
 
 // HasTelegram — привязан ли к аккаунту telegram. Только для таких пользователей
@@ -156,6 +162,7 @@ func (u User) Snapshot() User {
 	u.Notify = nil
 	u.Aliases = nil
 	u.BankDetails = ""
+	u.DevAuth = false
 	return u
 }
 

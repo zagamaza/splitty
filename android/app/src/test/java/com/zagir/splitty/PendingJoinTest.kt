@@ -3,6 +3,7 @@ package com.zagir.splitty
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
+import com.zagir.splitty.core.session.PendingJoin
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.ui.groups.parseRoomCode
 import java.io.File
@@ -144,7 +145,7 @@ class PendingJoinTest {
         val store = PendingJoinStore(dataStore)
         store.set(code)
 
-        assertEquals(code, store.take())
+        assertEquals(code, store.take()?.roomId)
         // Повторный take пуст: вступление выполняется ровно один раз, иначе
         // второй запрос ушёл бы уже от имени следующего вошедшего.
         assertNull(store.take())
@@ -156,7 +157,7 @@ class PendingJoinTest {
         assertNull(store.pending.first())
 
         store.set(code)
-        assertEquals(code, store.pending.first())
+        assertEquals(code, store.pending.first()?.roomId)
 
         store.take()
         assertNull(store.pending.first())
@@ -178,6 +179,75 @@ class PendingJoinTest {
         // процесс могут выгрузить. Намерение обязано пережить это.
         PendingJoinStore(dataStore).set(code)
 
-        assertEquals(code, PendingJoinStore(dataStore).take())
+        assertEquals(code, PendingJoinStore(dataStore).take()?.roomId)
+    }
+
+    // MARK: - владелец намерения
+
+    @Test
+    fun `owner is stored with the intent and survives recreation`() = runBlocking {
+        // Владельца обязательно писать на ДИСК: между протуханием сессии и
+        // следующим входом процесс успевает умереть (вход уводит в системный
+        // лист), и признак в памяти к этому моменту уже потерян.
+        PendingJoinStore(dataStore).set(code, ownerId = 42)
+
+        assertEquals(42L, PendingJoinStore(dataStore).pending.first()?.ownerId)
+    }
+
+    @Test
+    fun `guest intent is adopted by the first signed in user`() = runBlocking {
+        // Штатный путь приглашения: ссылку открыл гость, вступление доезжает
+        // сразу после входа — намерение становится его.
+        val store = PendingJoinStore(dataStore)
+        store.set(code, ownerId = null)
+
+        store.reconcileOwner(7)
+
+        assertEquals(PendingJoin(code, 7), store.pending.first())
+    }
+
+    @Test
+    fun `own intent survives reconcile`() = runBlocking {
+        val store = PendingJoinStore(dataStore)
+        store.set(code, ownerId = 7)
+
+        store.reconcileOwner(7)
+
+        assertEquals(PendingJoin(code, 7), store.pending.first())
+    }
+
+    @Test
+    fun `intent of another account is dropped`() = runBlocking {
+        // Главный сценарий утечки: сессия A протухла (её чистка приглашение
+        // намеренно сохраняет), а вошёл на устройстве уже B. Без этой проверки
+        // B молча вступал бы в приватную группу A.
+        val store = PendingJoinStore(dataStore)
+        store.set(code, ownerId = 1)
+
+        store.reconcileOwner(2)
+
+        assertNull(store.pending.first())
+    }
+
+    @Test
+    fun `reconcile does nothing when there is no intent`() = runBlocking {
+        val store = PendingJoinStore(dataStore)
+
+        store.reconcileOwner(5)
+
+        assertNull(store.pending.first())
+    }
+
+    @Test
+    fun `clear forgets the owner too`() = runBlocking {
+        // Иначе следующее намерение того же устройства унаследовало бы
+        // владельца от предыдущего.
+        val store = PendingJoinStore(dataStore)
+        store.set(code, ownerId = 1)
+        store.clear()
+
+        store.set(code)
+
+        assertNull(store.pending.first()?.ownerId)
     }
 }

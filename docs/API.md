@@ -54,8 +54,8 @@ REST API поверх существующих сервисов (`internal/servi
 - Ошибки: HTTP-код + тело `{"error": {"code": "<snake_case>", "message": "<человекочитаемо>"}}`.
   Коды: `400 validation`, `401 unauthorized`, `403 forbidden`, `404 not_found`, `409 conflict`, `413 too_large`, `500 internal`;
   у `POST /auth/code` дополнительно `401 invalid_code`; у внешних способов входа —
-  `429 rate_limited` и `503 unavailable`; у `/me/link/*` — `409 identity_taken`, `409 last_identity`
-  и `400 provider_rejected`.
+  `429 rate_limited` и `503 unavailable`; у `/me/link/*` — `409 identity_taken`,
+  `409 identity_already_linked`, `409 last_identity` и `400 provider_rejected`.
 - **`429 rate_limited` отдаёт не только внешний вход.** Троттлятся: `POST /auth/code` (10 попыток
   на адрес в минуту + общий бюджет неудач 100/мин на весь сервер), `POST /auth/{google|apple}`
   (20 на адрес в минуту, свой ключ у каждого), `POST /me/link/*` (20 в минуту **на пользователя**)
@@ -323,7 +323,12 @@ REST API поверх существующих сервисов (`internal/servi
   `429 rate_limited` при более чем 20 попытках в минуту на пользователя;
   `401 unauthorized` при неверной подписи telegram, протухшем `authDate` или если аккаунт удалён
   параллельным `DELETE /me`;
-  **`409 identity_taken`** если эта личность уже принадлежит другому профилю Splitty.
+  **`409 identity_taken`** если эта личность уже принадлежит другому профилю Splitty;
+  **`409 identity_already_linked`** если у текущего аккаунта этот провайдер уже занят ДРУГОЙ
+  личностью — второй аккаунт того же провайдера не привязывается, сначала нужно отвязать
+  текущий. Молчаливая замена запрещена: для Apple она отцепила бы прежний `apple_sub` без
+  `auth/revoke` (Guideline 5.1.1(v)) и затёрла бы его `apple_refresh_token`, для Google —
+  тихо отобрала бы у человека первый способ входа вместо обещанного второго.
 - `DELETE /api/v1/me/link/{provider}` → `200` + `{"user": Me, "warning"?: "…"}` — отвязка.
   Идемпотентна (отвязывать нечего — тот же `200`). **`409 last_identity`**, если это последний
   способ входа: аккаунт остался бы недоступен навсегда после протухания 90-дневного токена.

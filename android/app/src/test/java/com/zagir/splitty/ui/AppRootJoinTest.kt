@@ -130,10 +130,20 @@ class AppRootJoinTest {
     private fun viewModel() = AppRootViewModel(session, pendingJoin, repository)
 
     /** Вход: без токена вступление не начинается вовсе. */
-    private suspend fun signIn(token: String = "jwt-token") {
-        session.signIn(token, ME)
+    private suspend fun signIn(token: String = "jwt-token", me: Me = ME) {
+        session.signIn(token, me)
         withTimeout(5_000) { session.state.first { it?.token == token } }
     }
+
+    /** Чистильщик офлайн-данных поверх тех же хранилищ, что и у VM. */
+    private fun cleaner() = OfflineDataCleaner(
+        session,
+        ApiCache(cacheDir, SplittyJson),
+        OutboxStore(File(cacheDir, "outbox.json"), SplittyJson),
+        AvatarStore(repository, scope),
+        pendingJoin,
+        scope,
+    )
 
     @Test
     fun `authenticated pending join consumes the intent and opens the room`() = runBlocking {
@@ -163,7 +173,7 @@ class AppRootJoinTest {
         // Ни запроса, ни открытой комнаты — намерение просто ждёт.
         assertNull(server.takeRequest(500, TimeUnit.MILLISECONDS))
         assertNull(vm.openRoomId.value)
-        assertEquals(ROOM_ID, pendingJoin.pending.first())
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
 
         // Вошли — вступление доезжает само, без повторного открытия ссылки.
         signIn()
@@ -186,7 +196,7 @@ class AppRootJoinTest {
 
         assertNotNull(withTimeout(5_000) { vm.joinError.first { it != null } })
         assertNull(vm.openRoomId.value)
-        assertEquals(ROOM_ID, pendingJoin.pending.first())
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
 
         vm.dismissJoinError()
         assertNull(vm.joinError.value)
@@ -246,7 +256,7 @@ class AppRootJoinTest {
 
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
         // Намерение на месте: после переавторизации вступление доедет само.
-        assertEquals(ROOM_ID, pendingJoin.pending.first())
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
         // Алерта нет: человека и так выбрасывает на экран входа, «Требуется
         // вход» поверх него сказало бы очевидное.
         assertNull(vm.joinError.value)
@@ -270,7 +280,7 @@ class AppRootJoinTest {
         val vm = viewModel()
 
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
-        assertEquals(ROOM_ID, pendingJoin.pending.first())
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
 
         // Переавторизация: НОВЫЙ токен снимает блокировку unauthorizedToken.
         signIn(token = "fresh-token")
@@ -315,19 +325,70 @@ class AppRootJoinTest {
     }
 
     @Test
+    fun `reopening the same link opens the room without a second join`() = runBlocking {
+        // Повторный тап по той же ссылке. Запрос не нужен — в группе уже
+        // состоим, — но раньше не происходило ВООБЩЕ ничего: ни навигации, ни
+        // очистки, и забытое намерение проваливало в эту группу на каждом
+        // следующем холодном старте.
+        respond("POST /api/v1/rooms/$ROOM_ID/join", MockResponse().setBody(ROOM_JSON))
+        signIn()
+        pendingJoin.set(ROOM_ID)
+
+        val vm = viewModel()
+        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+        vm.onRoomOpened()
+        withTimeout(5_000) { pendingJoin.pending.first { it == null } }
+
+        pendingJoin.set(ROOM_ID)
+
+        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        // Второго запроса на вступление нет.
+        assertNull(server.takeRequest(500, TimeUnit.MILLISECONDS))
+    }
+
+    @Test
+    fun `invite of a previous account is dropped when someone else signs in`() = runBlocking {
+        // Утечка между аккаунтами. Сессия A протухла (её чистка приглашение
+        // намеренно СОХРАНЯЕТ), процесс умер — вход уводит в системный лист, —
+        // а на устройстве вошёл уже B. Единственное, что отличает «вернулся
+        // тот же» от «пришёл другой» после смерти процесса, — записанный на
+        // диск владелец намерения: без него B молча вступал бы в приватную
+        // группу A, и его туда ещё и уносило бы навигацией.
+        pendingJoin.set(ROOM_ID, ownerId = ME.id)
+
+        // Новый процесс: чистильщик и корень создаются с нуля, память пуста.
+        assertNotNull(cleaner())
+        val vm = viewModel()
+        signIn(token = "other-token", me = OTHER)
+
+        // Ни одного запроса на вступление.
+        assertNull(server.takeRequest(1, TimeUnit.SECONDS))
+        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(vm.openRoomId.value)
+    }
+
+    @Test
+    fun `guest invite is adopted by the account that signs in`() = runBlocking {
+        // Обратная сторона проверки владельца: ссылку открыл гость (владельца
+        // нет), и вступление обязано доехать сразу после входа.
+        respond("POST /api/v1/rooms/$ROOM_ID/join", MockResponse().setBody(ROOM_JSON))
+        pendingJoin.set(ROOM_ID)
+        assertNotNull(cleaner())
+
+        val vm = viewModel()
+        signIn()
+
+        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+    }
+
+    @Test
     fun `cleaner keeps the invite on expiry and drops it on explicit logout`() = runBlocking {
         // Сквозной сценарий A3/B5. Раньше 401 прямо во время вступления
         // гарантированно убивал приглашение: AppRoot возвращал намерение, а
         // OfflineDataCleaner тут же стирал его вместе с остальными данными.
-        val cleaner = OfflineDataCleaner(
-            session,
-            ApiCache(cacheDir, SplittyJson),
-            OutboxStore(File(cacheDir, "outbox.json"), SplittyJson),
-            AvatarStore(repository, scope),
-            pendingJoin,
-            scope,
-        )
-        assertNotNull(cleaner)
+        assertNotNull(cleaner())
         signIn()
         pendingJoin.set(ROOM_ID)
         withTimeout(5_000) { session.state.first { it?.token != null } }
@@ -338,7 +399,7 @@ class AppRootJoinTest {
         // Даём чистке отработать: она асинхронная, и «не стёрла» без паузы
         // означало бы лишь «не успела».
         delay(500)
-        assertEquals(ROOM_ID, pendingJoin.pending.first())
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
 
         // Явный выход — данные предыдущего владельца устройства стираются все.
         signIn()
@@ -393,6 +454,10 @@ class AppRootJoinTest {
     private companion object {
         const val ROOM_ID = "507f1f77bcf86cd799439011"
         val ME = Me(id = 1, username = "zagir", displayName = "Загир")
+
+        /** Другой человек на том же устройстве. */
+        val OTHER = Me(id = 2, username = "other", displayName = "Другой")
+
         val ROOM_JSON = """
             {"id":"$ROOM_ID","name":"Стамбул","createdAt":"2026-01-01T00:00:00Z",
             "currency":"RUB","totalSpent":0,"mySpent":0,"myBalance":0}

@@ -20,6 +20,10 @@ final class StubURLProtocol: URLProtocol {
     /// раньше, чем тест успевает отправить второй запрос, и проверяемое
     /// перекрытие просто не воспроизводится.
     nonisolated(unsafe) static var responseDelay: ((URLRequest) -> TimeInterval?)?
+    /// Транспортный сбой ВМЕСТО ответа (nil — отвечать как обычно). Нужен
+    /// тестам, для которых принципиально, что запрос до сервера не дошёл:
+    /// 5xx для них — принципиально другой случай (сервер запрос обработал).
+    nonisolated(unsafe) static var failure: ((URLRequest) -> Error?)?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
 
@@ -32,6 +36,10 @@ final class StubURLProtocol: URLProtocol {
 
     override func startLoading() {
         Self.lastRequest = request
+        if let error = Self.failure?(request) {
+            client?.urlProtocol(self, didFailWithError: error)
+            return
+        }
         let (status, body) = Self.handler?(request) ?? (200, Data())
         let finish = { [weak self] in
             guard let self else { return }

@@ -20,7 +20,10 @@ private const val TAG = "OfflineDataCleaner"
  *
  * Единственное исключение — отложенное вступление по ссылке-приглашению: оно
  * переживает ПРОТУХШУЮ сессию (401), потому что человек вернётся тем же
- * аккаунтом. См. [SessionEndReason].
+ * аккаунтом. См. [SessionEndReason]. Что вернётся ИМЕННО ТОТ ЖЕ, проверяется по
+ * персистентному владельцу намерения ([PendingJoinStore.reconcileOwner]): любой
+ * признак в памяти теряется вместе с процессом, а между протуханием сессии и
+ * следующим входом процесс умирает штатно (вход уводит в системный лист).
  *
  * Второй триггер — СМЕНА аккаунта: если id профиля изменился, а перехода
  * «был → нет» мы не увидели (нерасшифровываемый шифротокен держит
@@ -42,6 +45,11 @@ class OfflineDataCleaner @Inject constructor(
         scope.launch {
             var hadToken = false
             var lastUserId: Long? = null
+            // Кому уже сводили отложенное вступление в этом процессе. Нужен,
+            // чтобы не дёргать транзакцию DataStore на каждой эмиссии сессии:
+            // владелец намерения меняется только при входе, а на холодном
+            // старте первая же эмиссия сведёт его заново.
+            var reconciledUserId: Long? = null
             sessionStore.state.collect { session ->
                 if (session == null) return@collect // DataStore ещё читается
                 // Сбой чтения DataStore отдаёт пустую сессию-заглушку, неотличимую
@@ -72,7 +80,13 @@ class OfflineDataCleaner @Inject constructor(
                         sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
                     if (clearAll(clearPendingJoin = !keepPendingJoin)) {
                         hadToken = hasToken
-                        lastUserId = userId
+                        // Известного владельца НЕ затираем null-ом: у протухшей
+                        // сессии профиль вычищен вместе с токеном (endSession
+                        // убирает KEY_ME), и присваивание отдавало lastUserId в
+                        // null — после чего вход ДРУГИМ аккаунтом переставал
+                        // считаться сменой, и сохранённое приглашение уезжало
+                        // чужому человеку.
+                        if (userId != null) lastUserId = userId
                     }
                     // Хотя бы одна чистка не удалась — переход НЕ считаем
                     // обработанным: hadToken/lastUserId остаются прежними, и
@@ -81,7 +95,19 @@ class OfflineDataCleaner @Inject constructor(
                     return@collect
                 }
                 hadToken = hasToken
-                if (userId != null) lastUserId = userId
+                if (userId != null) {
+                    lastUserId = userId
+                    // Отложенное вступление привязываем к вошедшему (или
+                    // выбрасываем чужое) — единственная защита, переживающая
+                    // смерть процесса между протуханием сессии и входом.
+                    if (reconciledUserId != userId) {
+                        val ok = runCatching { pendingJoin.reconcileOwner(userId) }
+                            .onFailure { Log.e(TAG, "не удалось свести приглашение с владельцем", it) }
+                            .isSuccess
+                        // Только при успехе: иначе повторим на следующей эмиссии.
+                        if (ok) reconciledUserId = userId
+                    }
+                }
             }
         }
     }

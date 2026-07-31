@@ -15,6 +15,7 @@ final class AccountLinksTests: XCTestCase {
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
         StubURLProtocol.responseDelay = nil
+        StubURLProtocol.failure = nil
 
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -33,6 +34,7 @@ final class AccountLinksTests: XCTestCase {
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
         StubURLProtocol.responseDelay = nil
+        StubURLProtocol.failure = nil
         super.tearDown()
     }
 
@@ -329,9 +331,52 @@ final class AccountLinksTests: XCTestCase {
         XCTAssertNil(PendingJoin.shared.roomId)
     }
 
-    /// 403 — единственное исключение: сервер осознанно отказался удалять
-    /// демонстрационный аккаунт ревьюеров. Он жив, сессия цела, и выкидывать
-    /// человека на экран входа не за что.
+    /// Офлайн: запрос до сервера НЕ ДОШЁЛ вовсе. Сомнения «удалилось или нет»
+    /// здесь не существует — аккаунт заведомо жив, — а `logout()` стирает
+    /// outbox и кеш. «Удалить аккаунт», нажатое в метро, уносило очередь
+    /// неотправленных расходов навсегда и выкидывало из живой сессии.
+    @MainActor
+    func testDeleteAccountOfflineKeepsSessionAndOutbox() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+        PendingJoin.shared.set("0123456789abcdef01234567")
+        session.outbox.add(
+            roomId: "room-1",
+            payload: OutboxPayload(
+                description: "Кофе",
+                sum: 300,
+                donorId: 77,
+                recipientIds: [77],
+                recipientSums: nil
+            )
+        )
+
+        StubURLProtocol.failure = { _ in URLError(.notConnectedToInternet) }
+
+        do {
+            try await session.deleteAccount()
+            XCTFail("ожидали ошибку удаления")
+        } catch {
+            // Текст обязан быть про связь: обещать «данные с устройства
+            // удалены» здесь — прямая ложь, они на месте.
+            let text = deleteAccountErrorText(error)
+            XCTAssertFalse(text.contains("Данные с устройства удалены"), text)
+            XCTAssertTrue(text.lowercased().contains("соединени"), text)
+        }
+
+        XCTAssertTrue(session.isAuthenticated)
+        XCTAssertNotNil(session.me)
+        XCTAssertNotNil(KeychainStore.read(key: "splitty.apiToken"))
+        XCTAssertEqual(session.outbox.entries(roomId: "room-1").count, 1)
+        XCTAssertNotNil(PendingJoin.shared.roomId)
+
+        StubURLProtocol.failure = nil
+        session.logout()
+    }
+
+    /// 403 — единственное исключение среди ОТВЕТОВ сервера: он осознанно
+    /// отказался удалять демонстрационный аккаунт ревьюеров. Тот жив, сессия
+    /// цела, и выкидывать человека на экран входа не за что.
     @MainActor
     func testDeleteAccountForbiddenKeepsSession() async throws {
         let session = SessionStore(urlSession: stubSession)

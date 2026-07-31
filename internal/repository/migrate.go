@@ -39,7 +39,16 @@ const backfillTelegramIDMarker = "backfill_telegram_id"
 //     вернуть его — значит слать уведомления удалённому аккаунту и заблокировать
 //     unique-индексом повторную регистрацию того же telegram-аккаунта;
 //     - _id < firstSyntheticUserID — синтетические номера telegram id не были
-//     никогда.
+//     никогда;
+//     - dev_auth нет — аккаунт заведён не через POST /auth/dev. Dev-аккаунт по
+//     содержимому документа неотличим от исторического telegram-пользователя
+//     (маленький _id, ни одного поля личности), и без этого условия ему
+//     проставился бы telegram_id, которого у него нет и не было: нотифаер полез
+//     бы слать в несуществующий чат, а /users/{id}/avatar — в Telegram API за
+//     чужим user id. Раньше от этого спасал пропуск всей миграции при
+//     API_DEV_AUTH=true — привязка миграции данных к флагу АВТОРИЗАЦИИ, из-за
+//     которой маркер не записывался вовсе, а первый же старт с выключенным
+//     флагом мог упасть на duplicate key и увести сервер в crash-loop.
 //
 // Возвращает число обновлённых документов.
 func BackfillTelegramID(ctx context.Context, db *mongo.Database) (int64, error) {
@@ -62,6 +71,7 @@ func BackfillTelegramID(ctx context.Context, db *mongo.Database) (int64, error) 
 		{Key: "apple_sub", Value: bson.D{{Key: "$exists", Value: false}}},
 		{Key: "deleted_at", Value: bson.D{{Key: "$exists", Value: false}}},
 		{Key: "_id", Value: bson.D{{Key: "$lt", Value: firstSyntheticUserID}}},
+		{Key: "dev_auth", Value: bson.D{{Key: "$exists", Value: false}}},
 	}
 
 	// агрегационный pipeline-update: только он умеет присвоить полю значение

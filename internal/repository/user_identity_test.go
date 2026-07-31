@@ -236,6 +236,45 @@ func TestUpsertUserKeepsIdentityFields(t *testing.T) {
 	}
 }
 
+// TestUpsertUserMarksDevAccount — dev-вход помечает документ на диске.
+//
+// Метка нужна бэкфиллу telegram_id: по содержимому dev-аккаунт (маленький _id,
+// ни одного поля личности) неотличим от ИСТОРИЧЕСКОГО telegram-пользователя,
+// и раньше ради этого пропускали всю миграцию при API_DEV_AUTH=true —
+// см. BackfillTelegramID
+func TestUpsertUserMarksDevAccount(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+
+	if _, err := repo.UpsertUser(ctx, api.User{ID: 42, DisplayName: "Dev", DevAuth: true}); err != nil {
+		t.Fatalf("UpsertUser упал: %v", err)
+	}
+
+	var doc bson.M
+	if err := db.Collection("user").FindOne(ctx, bson.M{"_id": 42}).Decode(&doc); err != nil {
+		t.Fatalf("пользователь не найден: %v", err)
+	}
+	if doc["dev_auth"] != true {
+		t.Fatalf("dev_auth = %v, want true", doc["dev_auth"])
+	}
+
+	// Обычный апсерт (апдейт бота, /auth/code) метку НЕ ставит — иначе бэкфилл
+	// перестал бы видеть исторических telegram-пользователей
+	if _, err := repo.UpsertUser(ctx, api.User{ID: 43, DisplayName: "Обычный"}); err != nil {
+		t.Fatalf("UpsertUser упал: %v", err)
+	}
+	// Отдельная переменная: Decode в непустую bson.M ДОПИСЫВАЕТ ключи,
+	// а не заменяет карту целиком
+	var plain bson.M
+	if err := db.Collection("user").FindOne(ctx, bson.M{"_id": 43}).Decode(&plain); err != nil {
+		t.Fatalf("пользователь не найден: %v", err)
+	}
+	if _, ok := plain["dev_auth"]; ok {
+		t.Fatalf("dev_auth появился у обычного пользователя: %+v", plain)
+	}
+}
+
 // identityKeys — поля, которых во встроенных снимках комнаты быть не должно
 // никогда (см. api.User.Snapshot)
 var identityKeys = []string{"telegram_id", "google_sub", "apple_sub", "email", "apple_refresh_token", "push_tokens", "deleted_at", "bank_details"}

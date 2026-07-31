@@ -57,6 +57,10 @@ func TestBackfillTelegramID(t *testing.T) {
 		api.User{ID: 555, Username: "dead", DisplayName: "Deleted", DeletedAt: &deletedAt},
 		// синтетический номер без всякой личности — тоже не telegram
 		api.User{ID: 1_000_000_000_002, Username: "synth", DisplayName: "Synthetic"},
+		// dev-аккаунт (POST /auth/dev): по содержимому документа неотличим от
+		// исторического telegram-пользователя, отсекается только по dev_auth.
+		// Раньше ради него пропускали ВСЮ миграцию при API_DEV_AUTH=true
+		api.User{ID: 666, Username: "dev", DisplayName: "Dev", DevAuth: true},
 	)
 
 	modified, err := BackfillTelegramID(ctx, db)
@@ -84,6 +88,7 @@ func TestBackfillTelegramID(t *testing.T) {
 		{"apple", 444},
 		{"tombstone", 555},
 		{"синтетический _id без личности", 1_000_000_000_002},
+		{"dev-аккаунт", 666},
 	}
 	for _, tc := range untouched {
 		t.Run(tc.name, func(t *testing.T) {

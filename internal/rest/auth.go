@@ -720,7 +720,16 @@ func (s *Server) handleAuthDev(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.finishAuth(w, r, api.User{ID: req.UserId, Username: req.Username, DisplayName: req.DisplayName})
+	// DevAuth помечает документ на диске: по содержимому dev-аккаунт неотличим
+	// от ИСТОРИЧЕСКОГО telegram-пользователя (маленький _id, ни одного поля
+	// личности), а бэкфилл telegram_id обязан трогать только вторых —
+	// см. repository.BackfillTelegramID
+	s.finishAuth(w, r, api.User{
+		ID:          req.UserId,
+		Username:    req.Username,
+		DisplayName: req.DisplayName,
+		DevAuth:     true,
+	})
 }
 
 // finishAuth апсертит пользователя (сохраняя язык уже существующего) и отдаёт токен с профилем

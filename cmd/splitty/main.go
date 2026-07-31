@@ -194,17 +194,16 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// проставленных telegram_id не может ни отправить telegram-уведомление, ни
 	// найти существующего пользователя по telegram-личности
 	//
-	// ⚠️ При API_DEV_AUTH=true бэкфилл НЕ выполняется. POST /auth/dev заводит
-	// пользователей с произвольным маленьким _id и без единого поля личности —
-	// то есть ровно по фильтру бэкфилла, — и такому аккаунту проставился бы
-	// telegram_id, которого у него нет и не было: нотифаер полез бы слать в
-	// несуществующий чат, а /users/{id}/avatar — в Telegram API за чужим
-	// user id. Отличить dev-аккаунт от исторического telegram-аккаунта по
-	// содержимому документа нельзя, а вот сама dev-инсталляция известна: там
-	// исторических данных нет и бэкфиллу нечего делать
-	if cfg.ApiDevAuth {
-		log.Info().Msg("backfill telegram_id skipped (API_DEV_AUTH=true): dev users have no telegram identity")
-	} else if _, err := repository.BackfillTelegramID(ctx, db); err != nil {
+	// Выполняется ВСЕГДА и ни с какими флагами не связан. Раньше бэкфилл
+	// пропускался при API_DEV_AUTH=true (dev-аккаунты попадают ровно по его
+	// фильтру), но привязка МИГРАЦИИ ДАННЫХ к флагу АВТОРИЗАЦИИ означала, что
+	// маркер миграции не записывался вовсе: на инсталляции с историческими
+	// telegram-пользователями бот успевал завести им вторые, пустые профили, а
+	// первый же старт с выключенным флагом падал на duplicate key — и уходил в
+	// crash-loop, из которого нет выхода без правки базы руками. Dev-аккаунты
+	// теперь отсекаются по собственному признаку (dev_auth), а не по режиму
+	// инсталляции — см. repository.BackfillTelegramID
+	if _, err := repository.BackfillTelegramID(ctx, db); err != nil {
 		cleanup()
 		return nil, nil, nil, errors.Wrap(err, "cannot backfill telegram_id")
 	}

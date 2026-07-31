@@ -33,6 +33,25 @@ enum APIError: LocalizedError {
         return false
     }
 
+    /// true — сервер запрос ПОЛУЧИЛ и ответил (валидным телом или мусором,
+    /// который не разобрался). false — запрос до сервера не дошёл вовсе (нет
+    /// сети, таймаут, DNS, битый baseURL), и на той стороне заведомо ничего
+    /// не изменилось.
+    ///
+    /// Отличать обязательно там, где неудача ведёт к УНИЧТОЖЕНИЮ локальных
+    /// данных: `SessionStore.deleteAccount` стирает outbox и кеш, потому что
+    /// «удаление прошло, а ответ потерялся» с клиента неотличимо от ошибки, —
+    /// но офлайн такого сомнения нет, аккаунт заведомо жив, а очередь
+    /// неотправленных расходов пропала бы навсегда.
+    var isServerResponse: Bool {
+        switch self {
+        case .server, .decoding:
+            return true
+        case .invalidURL, .transport:
+            return false
+        }
+    }
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:

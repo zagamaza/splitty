@@ -32,6 +32,20 @@ const (
 // комнатам и операциям, поэтому «перенести данные» — отдельная большая задача
 const identityTakenMessage = "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него."
 
+// identityAlreadyLinkedMessage — текст 409 при попытке привязать ВТОРУЮ
+// личность того же провайдера.
+//
+// Молча перезаписывать первую нельзя. Для Apple это прямо про Guideline
+// 5.1.1(v): перезапись отцепляет прежний apple_sub БЕЗ вызова auth/revoke,
+// и Splitty навсегда остаётся в списке «Вход через Apple» того Apple ID, у
+// которого доступа к аккаунту больше нет; заодно затирается его
+// apple_refresh_token — отзывать потом нечем. Для Google эффект тише, но
+// не лучше: человек думает, что ДОБАВИЛ второй способ входа, а на самом деле
+// потерял первый. Оба клиента прячут кнопку «Привязать» у привязанного
+// провайдера, но это UI, а не защита: сюда ходят и по прямому запросу
+const identityAlreadyLinkedMessage = "К аккаунту уже привязан другой аккаунт этого способа входа. " +
+	"Сначала отвяжите текущий."
+
 // telegramUnlinkWarning — предупреждение, которое клиент обязан показать после
 // отвязки telegram.
 //
@@ -92,6 +106,30 @@ func linkedProviders(u *api.User) []string {
 		providers = append(providers, providerApple)
 	}
 	return providers
+}
+
+// linkedIdentityValue — личность провайдера, УЖЕ привязанная к пользователю.
+// Второй результат false — привязки этого провайдера у него нет.
+//
+// Типы возвращаемых значений обязаны совпадать с теми, что приезжают в
+// linkIdentity (int у telegram, string у google/apple): сравнение идёт через
+// interface{}, и int64 против int дал бы «не равно» на одинаковых числах
+func linkedIdentityValue(u *api.User, provider string) (interface{}, bool) {
+	switch provider {
+	case providerTelegram:
+		if u.HasTelegram() {
+			return *u.TelegramID, true
+		}
+	case providerGoogle:
+		if u.GoogleSub != "" {
+			return u.GoogleSub, true
+		}
+	case providerApple:
+		if u.AppleSub != "" {
+			return u.AppleSub, true
+		}
+	}
+	return nil, false
 }
 
 // handleLinkIdentity POST /api/v1/me/link/{provider} — привязка способа входа
@@ -268,6 +306,21 @@ func (s *Server) linkIdentity(w http.ResponseWriter, r *http.Request, provider s
 	case err != mongo.ErrNoDocuments:
 		log.Error().Err(err).Str("provider", provider).Msg("cannot find identity owner")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось проверить способ входа")
+		return false
+	}
+
+	// Личность свободна, но у ТЕКУЩЕГО аккаунта этот провайдер уже занят другим
+	// значением: SetIdentity молча перезаписал бы его (см.
+	// identityAlreadyLinkedMessage). Проверка именно здесь, а не раньше:
+	// идемпотентный повтор выше уже отсеян, а «личность занята чужим профилем»
+	// (identity_taken) — более точный ответ, чем этот
+	me, hErr := s.currentUser(ctx)
+	if hErr != nil {
+		hErr.write(w)
+		return false
+	}
+	if linked, ok := linkedIdentityValue(me, provider); ok && linked != value {
+		writeError(w, http.StatusConflict, "identity_already_linked", identityAlreadyLinkedMessage)
 		return false
 	}
 

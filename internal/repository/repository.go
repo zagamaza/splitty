@@ -1212,7 +1212,15 @@ func (r MongoUserRepository) RemovePushToken(ctx context.Context, userId int, to
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.User, error) {
 	opts := options.Update().SetUpsert(true)
 	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: u.ID}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"_id": u.ID, "user_lang": u.UserLang, "display_name": u.DisplayName, "user_name": u.Username}}}
+	set := bson.M{"_id": u.ID, "user_lang": u.UserLang, "display_name": u.DisplayName, "user_name": u.Username}
+	// Только взводим, никогда не снимаем: снять его может лишь тот же аккаунт,
+	// пришедший обычным путём, а этого пути у dev-пользователя нет. Флаг нужен
+	// бэкфиллу telegram_id, чтобы не принять dev-аккаунт за исторического
+	// telegram-пользователя (см. api.User.DevAuth)
+	if u.DevAuth {
+		set["dev_auth"] = true
+	}
+	update := bson.D{{Key: "$set", Value: set}}
 	_, err := r.col.UpdateOne(ctx, f, update, opts)
 	if err != nil {
 		return nil, err
