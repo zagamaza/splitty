@@ -167,7 +167,11 @@ final class APIClient: OperationAPI {
     /// (никакой тихой подмены дефолтным адресом).
     private let baseURL: URL?
     private let token: String?
-    private let urlSession: URLSession = .shared
+    /// Шов для тестов: в проде всегда `.shared`, в тестах — сессия с
+    /// подставленным `URLProtocol`. Через `URLProtocol.registerClass`
+    /// перехватить `.shared` нельзя надёжно (общая конфигурация переживает
+    /// тест и течёт в соседние), поэтому транспорт передаётся явно.
+    private let urlSession: URLSession
     private let decoder: JSONDecoder
     private let encoder = JSONEncoder()
 
@@ -175,9 +179,10 @@ final class APIClient: OperationAPI {
     /// SessionStore сбрасывает сессию (см. `SessionStore.api`).
     var onUnauthorized: (() -> Void)?
 
-    init(baseURL: URL?, token: String?) {
+    init(baseURL: URL?, token: String?, urlSession: URLSession = .shared) {
         self.baseURL = baseURL
         self.token = token
+        self.urlSession = urlSession
         let decoder = JSONDecoder()
         // Бэкенд шлёт даты в RFC3339 («2026-07-05T12:00:00Z»),
         // возможно с долями секунды — поддерживаем оба варианта.
@@ -230,6 +235,24 @@ final class APIClient: OperationAPI {
             let code: String
         }
         return try await request("POST", "/api/v1/auth/code", body: Body(code: code))
+    }
+
+    /// Вход через Google: POST /auth/google, тело `{"idToken": "…"}`, без
+    /// авторизационного заголовка (клиент на экране входа создаётся с
+    /// token == nil).
+    ///
+    /// Токен — тот самый `idToken` из `GIDGoogleUser.idToken`, подписанный
+    /// Google. Ничего больше слать не нужно: имя и почта лежат внутри токена,
+    /// и сервер берёт их оттуда, а не из тела запроса — иначе клиент мог бы
+    /// представиться кем угодно.
+    ///
+    /// 401 — токен не прошёл проверку (подпись, `aud`, срок); 503 — вход через
+    /// Google на сервере не сконфигурирован (пустой `GOOGLE_CLIENT_IDS`).
+    func loginWithGoogle(idToken: String) async throws -> AuthResponse {
+        struct Body: Encodable {
+            let idToken: String
+        }
+        return try await request("POST", "/api/v1/auth/google", body: Body(idToken: idToken))
     }
 
     /// Вход через Sign in with Apple: POST /auth/apple, без авторизационного

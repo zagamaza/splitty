@@ -689,15 +689,28 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `ios/Splitty/Core/APIClient.swift`
 - Modify: `ios/Splitty/Core/SessionStore.swift`
 - Modify: `ios/Splitty/Features/Auth/LoginView.swift`
+- ➕ Create: `ios/Splitty/Core/GoogleSignInService.swift` — обёртка над `GIDSignIn` (лист → id-токен), чтобы SDK не растекался по вьюхе
+- ➕ Create: `ios/SplittyTests/APIClientAuthTests.swift` — подставной транспорт (`StubURLProtocol`) + тесты `loginWithGoogle`/`loginWithApple`
+- ➕ Modify: `ios/Splitty/App/SplittyApp.swift` — `GIDSignIn.sharedInstance.handle(url)` в `onOpenURL`
 
-- [ ] добавить в `ios/project.yml` в `packages:` `GoogleSignIn` (`https://github.com/google/GoogleSignIn-iOS`, from 8.0.0), подключить продукт к таргету
-- [ ] **если SPM не резолвится из-за отсутствия сети** — пометить задачу `⚠️ заблокировано: нет сети` в этом файле, закоммитить остальной код и перейти к Task 17
-- [ ] добавить в `info.properties` `CFBundleURLTypes` с reversed client id (плейсхолдер + `TODO`, значение из Post-Completion)
-- [ ] `APIClient.loginWithGoogle(idToken:)` → `POST /api/v1/auth/google`, метод в `SessionStore`
-- [ ] кнопка «Войти через Google» в `LoginView` **под** кнопкой Apple (Apple первой — требование визуального паритета), оформление существующими `.softChip`/`.primaryPill`
-- [ ] отмену обрабатывать тихо
-- [ ] написать/обновить тесты `SplittyTests` на новые методы `APIClient` (успех и 401) через существующую подмену транспорта
-- [ ] `xcodebuild test` — зелёные перед Task 17
+- [x] добавить в `ios/project.yml` в `packages:` `GoogleSignIn` (`https://github.com/google/GoogleSignIn-iOS`, from 8.0.0), подключить продукт к таргету
+- [x] **если SPM не резолвится из-за отсутствия сети** — не понадобилось: резолв прошёл штатно (`GoogleSignIn 8.0.0`, `AppAuth 1.7.6`, `GTMAppAuth 4.1.1`, `GTMSessionFetcher 3.5.0`), конфликта с графом Firebase 11.15 нет
+- [x] добавить в `info.properties` `CFBundleURLTypes` с reversed client id (плейсхолдер + `TODO`, значение из Post-Completion) — **плейсхолдер не понадобился**, вписано реальное значение
+- [x] `APIClient.loginWithGoogle(idToken:)` → `POST /api/v1/auth/google`, метод в `SessionStore`
+- [x] кнопка «Войти через Google» в `LoginView` **под** кнопкой Apple (Apple первой — требование визуального паритета), оформление существующими `.softChip`/`.primaryPill`
+- [x] отмену обрабатывать тихо
+- [x] написать/обновить тесты `SplittyTests` на новые методы `APIClient` (успех и 401) через существующую подмену транспорта
+- [x] `xcodebuild test` — зелёные перед Task 17
+
+**Как сделано (для следующих задач):**
+- `GoogleSignInService` (`ios/Splitty/Core/GoogleSignInService.swift`) — единственное место, где живёт `GIDSignIn`. Отдаёт наружу голый id-токен и свой `GoogleSignInError`; `LoginView` про SDK ничего не знает. Task 20 (привязка Google к аккаунту) должен переиспользовать `signIn()`, а не звать SDK заново
+- [decision] client id задан ТОЛЬКО через `GIDClientID` в Info.plist, а не `GIDSignIn.sharedInstance.configuration` в коде: SDK читает ключ сам (`GIDSignIn.m:1177`), и второй способ задать то же значение — это второе место, где оно разойдётся. Рядом в `CFBundleURLTypes` лежит reversed-схема — вычисляемая из того же id, держать их врозь нельзя
+- [decision] серверный (Web) client id в приложение НЕ кладётся: `serverAuthCode` нам не нужен (обмен кода — только у Apple, ради отзыва при удалении), а `aud` бэкенд сверяет сам по `GOOGLE_CLIENT_IDS`. Лишний id в бандле — лишняя строка, которая при ротации протухнет незаметно
+- [deviation] кнопка Google оформлена нейтрально (подложка `Color.surface` + hairline, геометрия один в один с кнопкой Apple: высота 52, радиус 14), а не `.primaryPill`, как написано в пункте. `.primaryPill` — акцентная заливка во всю ширину и высотой 54: она была бы ЗАМЕТНЕЕ кнопки Apple, то есть ровно то, что запрещает Apple 4.8. Логотип G не рисуем — по той же причине, что и логотип Apple в Task 15
+- [deviation] ➕ `APIClient.init` получил параметр `urlSession: URLSession = .shared`. Пункт про «существующую подмену транспорта» опирался на то, чего в проекте нет: `urlSession` был захардкожен в `.shared`, и комментарий в `ItemDraftTests.swift:401` прямо фиксировал «реальный APIClient подставить нельзя». Перехват через `URLProtocol.registerClass` глобален и переживает тест, поэтому шов сделан явным параметром — прод-путь (`.shared`) не изменился
+- [deviation] ➕ `GIDSignIn.sharedInstance.handle(url)` добавлен в `onOpenURL` (`SplittyApp.swift`), хотя файла не было в списке. Основной путь (`ASWebAuthenticationSession`) отдаёт результат мимо этого колбэка, но редирект через Safari и через приложение Google Device Policy приходят именно сюда, и без `handle` такой вход завершается ничем. **Task 17 добавляет свою обработку в ТОТ ЖЕ `onOpenURL`** — там нужно дописать ветку, а не заводить второй модификатор
+- ⚠️ проверить вживую вход нельзя: Publishing status проекта Google = Testing (см. Post-Completion), войти могут только добавленные тестировщики. Проверены сборка, 159 юнит-тестов и то, что дев-вход UI-тестов не задет
+- 4 падающих UI-теста (`DashboardShotsUITests`, `DemoFlowUITests`, `OfflineSmokeUITests`) — предсуществующие, зависят от локального бэкенда; к этой задаче отношения не имеют (см. Task 15)
 
 ### Task 17: iOS — universal links и отложенный join-intent
 

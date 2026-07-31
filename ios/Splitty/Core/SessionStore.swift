@@ -206,6 +206,17 @@ final class SessionStore {
         adoptOwner(response.user.id)
     }
 
+    /// Вход через Google: POST /auth/google, сохраняет токен (Keychain)
+    /// и профиль. `idToken` берётся из `GIDGoogleUser.idToken` (см.
+    /// GoogleSignInService). 401 — токен не прошёл проверку на сервере.
+    @MainActor
+    func loginWithGoogle(idToken: String) async throws {
+        let response = try await api.loginWithGoogle(idToken: idToken)
+        token = response.token
+        me = response.user
+        adoptOwner(response.user.id)
+    }
+
     /// Вход через Sign in with Apple: POST /auth/apple, сохраняет токен
     /// (Keychain) и профиль. Аргументы собирает LoginView из
     /// `ASAuthorizationAppleIDCredential` — сырой nonce из `AppleNonce`

@@ -1,3 +1,4 @@
+import GoogleSignIn
 import SwiftUI
 
 /// Выбор темы приложения (настройка на экране «Профиль», UserDefaults).
@@ -52,6 +53,14 @@ struct SplittyApp: App {
                 // делается ЯВНО в AccountView до logout (там JWT ещё валиден).
                 .onChange(of: session.isAuthenticated) {
                     PushManager.shared.authStateChanged()
+                }
+                // Возврат из входа через Google. Основной путь (лист
+                // ASWebAuthenticationSession) отдаёт результат сам, минуя эту
+                // строку, но альтернативные — редирект через Safari и через
+                // приложение Google Device Policy — приходят именно сюда.
+                // Без handle такой вход завершается «ничем».
+                .onOpenURL { url in
+                    _ = GIDSignIn.sharedInstance.handle(url)
                 }
         }
     }

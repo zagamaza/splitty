@@ -73,6 +73,7 @@ struct LoginView: View {
                 VStack(spacing: 20) {
                     logo
                     appleLoginButton
+                    googleLoginButton
                     telegramLoginCard
                     // Dev-вход и настройка сервера — только в DEBUG-сборках:
                     // в релизе это бэкдор мимо авторизации через Telegram.
@@ -139,6 +140,33 @@ struct LoginView: View {
         .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
         .frame(height: 52)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .disabled(isLoggingIn)
+    }
+
+    /// Вход через Google — СТРОГО под кнопкой Apple: Apple требует, чтобы её
+    /// способ входа был не менее заметен, чем сторонние.
+    ///
+    /// Оформление нейтральное (подложка + hairline, геометрия один в один с
+    /// кнопкой Apple), а не `.primaryPill`: акцентная заливка сделала бы
+    /// Google заметнее Apple, то есть ровно то, что запрещено. Логотип G не
+    /// рисуем — своя вёрстка чужого логотипа хуже, чем её отсутствие.
+    private var googleLoginButton: some View {
+        Button {
+            loginWithGoogle()
+        } label: {
+            Text("Войти через Google")
+                .scaledFont(size: 17, weight: .semibold)
+                .foregroundStyle(Color.ink)
+                .frame(maxWidth: .infinity, minHeight: 52)
+        }
+        .background(
+            Color.surface,
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.hairline, lineWidth: 1)
+        }
         .disabled(isLoggingIn)
     }
 
@@ -304,6 +332,29 @@ struct LoginView: View {
                 try await session.loginWithCode(code)
             } catch let error as APIError where error.isUnauthorized {
                 errorMessage = "Неверный или просроченный код"
+            } catch {
+                errorMessage = humanErrorText(error)
+            }
+        }
+    }
+
+    /// Вход через Google: системный лист → id-токен → POST /auth/google.
+    ///
+    /// Отмена обрабатывается ТИХО, как и у Apple: человек сам закрыл лист,
+    /// алерт на это был бы навязчивым. Проверка идёт по `isCancellation`, а не
+    /// по типу ошибки — SDK возвращает `NSError` домена Google, и до нашего
+    /// `GoogleSignInError.cancelled` он превращается только внутри сервиса.
+    private func loginWithGoogle() {
+        isLoggingIn = true
+        Task {
+            defer { isLoggingIn = false }
+            do {
+                let idToken = try await GoogleSignInService.signIn()
+                try await session.loginWithGoogle(idToken: idToken)
+            } catch GoogleSignInError.cancelled {
+                return
+            } catch let error as APIError where error.isUnauthorized {
+                errorMessage = "Google не подтвердил вход. Попробуйте ещё раз"
             } catch {
                 errorMessage = humanErrorText(error)
             }

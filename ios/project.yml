@@ -11,6 +11,12 @@ packages:
   Firebase:
     url: https://github.com/firebase/firebase-ios-sdk.git
     from: "11.0.0"
+  # Вход через Google (LoginView → POST /api/v1/auth/google). SDK нужен ровно
+  # ради одной вещи — получить подписанный Google id-токен; дальше работает наш
+  # бэкенд, который сам сверяет подпись по JWKS (internal/oidc).
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: "8.0.0"
 targets:
   Splitty:
     type: application
@@ -21,6 +27,10 @@ targets:
       # Только Messaging: тянет FirebaseCore транзитивно, без Analytics и пр.
       - package: Firebase
         product: FirebaseMessaging
+      # Только GoogleSignIn: GoogleSignInSwift не берём — кнопка своя,
+      # в оформлении экрана входа (.primaryPill/.softChip).
+      - package: GoogleSignIn
+        product: GoogleSignIn
     entitlements:
       path: Splitty/Splitty.entitlements
       properties:
@@ -62,6 +72,22 @@ targets:
         CFBundleVersion: "12"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
+        # Вход через Google. GIDClientID читается самим SDK, если
+        # GIDSignIn.sharedInstance.configuration не задан кодом — держим
+        # значение здесь, чтобы client id жил в одном месте с URL-схемой.
+        # Это ПУБЛИЧНЫЙ идентификатор клиента, а не секрет: он всё равно
+        # уезжает в каждый запрос авторизации и лежит внутри бандла.
+        # Серверный (Web) client id приложению не нужен — бэкенд сверяет aud
+        # сам по своему GOOGLE_CLIENT_IDS.
+        GIDClientID: 327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o.apps.googleusercontent.com
+        # Redirect-схема Google = client id задом наперёд. Без неё
+        # ASWebAuthenticationSession не сможет вернуть управление в приложение
+        # и вход завершится «отменой» без единого сообщения.
+        CFBundleURLTypes:
+          - CFBundleTypeRole: Editor
+            CFBundleURLName: com.zagir.splitty.google
+            CFBundleURLSchemes:
+              - com.googleusercontent.apps.327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o
         # Разрешения для AI-добавления расхода (голос + фото чека).
         NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом
         NSSpeechRecognitionUsageDescription: Распознавание речи показывает текст надиктовки прямо во время записи
