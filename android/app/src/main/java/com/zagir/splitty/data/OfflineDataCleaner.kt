@@ -25,6 +25,12 @@ private const val TAG = "OfflineDataCleaner"
  * признак в памяти теряется вместе с процессом, а между протуханием сессии и
  * следующим входом процесс умирает штатно (вход уводит в системный лист).
  *
+ * Приглашение переживает и СМЕНУ аккаунта — но только своё: там оно не
+ * стирается скопом, а сводится с вошедшим ([PendingJoinStore.reconcileOwner]).
+ * Слепая чистка убивала приглашение самого гостя, потому что известный владелец
+ * (`lastUserId`) переживает явный выход, и «A вышел → гость B открыл ссылку →
+ * B вошёл» ничем не отличалось от прихода чужого человека.
+ *
  * Второй триггер — СМЕНА аккаунта: если id профиля изменился, а перехода
  * «был → нет» мы не увидели (нерасшифровываемый шифротокен держит
  * hasStoredToken=true вечно), данные предыдущего пользователя иначе
@@ -50,6 +56,16 @@ class OfflineDataCleaner @Inject constructor(
             // владелец намерения меняется только при входе, а на холодном
             // старте первая же эмиссия сведёт его заново.
             var reconciledUserId: Long? = null
+            // Свести отложенное вступление с вошедшим: чужое (владелец другой)
+            // выбрасывается, ничьё (ссылку открыл гость) достаётся ему.
+            suspend fun reconcileJoinOwner(userId: Long) {
+                if (reconciledUserId == userId) return
+                val ok = runCatching { pendingJoin.reconcileOwner(userId) }
+                    .onFailure { Log.e(TAG, "не удалось свести приглашение с владельцем", it) }
+                    .isSuccess
+                // Только при успехе: иначе повторим на следующей эмиссии.
+                if (ok) reconciledUserId = userId
+            }
             sessionStore.state.collect { session ->
                 if (session == null) return@collect // DataStore ещё читается
                 // Сбой чтения DataStore отдаёт пустую сессию-заглушку, неотличимую
@@ -74,9 +90,17 @@ class OfflineDataCleaner @Inject constructor(
                     // до переавторизации. Без этой развилки 401 прямо во время
                     // вступления гонялся с `AppRoot`, который кладёт намерение
                     // обратно, и чистка почти всегда выигрывала — приглашение
-                    // терялось молча. Смена аккаунта — всегда чистка: намерение
-                    // принадлежит предыдущему владельцу устройства.
-                    val keepPendingJoin = !switchedAccount &&
+                    // терялось молча.
+                    //
+                    // Смена аккаунта намерение тоже НЕ стирает: право на него
+                    // решает персистентный владелец (reconcileJoinOwner ниже),
+                    // а не сам факт смены. Слепая чистка тут убивала СВОЁ
+                    // приглашение гостя: lastUserId переживает явный выход
+                    // (профиль вычищен вместе с токеном, и затирать известного
+                    // владельца null-ом нельзя — см. ниже), поэтому «A вышел →
+                    // гость B открыл ссылку → B вошёл» выглядело сменой
+                    // аккаунта, и приглашение самого B удалялось.
+                    val keepPendingJoin = switchedAccount ||
                         sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
                     if (clearAll(clearPendingJoin = !keepPendingJoin)) {
                         hadToken = hasToken
@@ -86,7 +110,14 @@ class OfflineDataCleaner @Inject constructor(
                         // null — после чего вход ДРУГИМ аккаунтом переставал
                         // считаться сменой, и сохранённое приглашение уезжало
                         // чужому человеку.
-                        if (userId != null) lastUserId = userId
+                        if (userId != null) {
+                            lastUserId = userId
+                            // Единственная ветка, где userId != null, — смена
+                            // аккаунта: чужое намерение (владелец — предыдущий
+                            // человек) выбрасывается на той же эмиссии,
+                            // ничьё достаётся вошедшему.
+                            reconcileJoinOwner(userId)
+                        }
                     }
                     // Хотя бы одна чистка не удалась — переход НЕ считаем
                     // обработанным: hadToken/lastUserId остаются прежними, и
@@ -100,13 +131,7 @@ class OfflineDataCleaner @Inject constructor(
                     // Отложенное вступление привязываем к вошедшему (или
                     // выбрасываем чужое) — единственная защита, переживающая
                     // смерть процесса между протуханием сессии и входом.
-                    if (reconciledUserId != userId) {
-                        val ok = runCatching { pendingJoin.reconcileOwner(userId) }
-                            .onFailure { Log.e(TAG, "не удалось свести приглашение с владельцем", it) }
-                            .isSuccess
-                        // Только при успехе: иначе повторим на следующей эмиссии.
-                        if (ok) reconciledUserId = userId
-                    }
+                    reconcileJoinOwner(userId)
                 }
             }
         }

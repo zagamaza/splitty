@@ -303,6 +303,32 @@ func TestDeleteMeIsRepeatable(t *testing.T) {
 	}
 }
 
+// ⚠️ Сбой ДО tombstone обязан отличаться кодом от сбоя ПОСЛЕ. Снаружи это два
+// одинаковых 500, но последствия у клиента противоположные: здесь аккаунт ЖИВ и
+// не тронут, и клиент обязан сохранить сессию вместе с очередью неотправленных
+// офлайн-расходов (iOS стирал их на любом 500 — транзиентный сбой mongo уносил
+// очередь при целом аккаунте). Одинаковые коды делали это неразличимым
+func TestDeleteMePreTombstoneFailureKeepsAccountAlive(t *testing.T) {
+	d := newDeleteSetup(t, Config{})
+	d.users.softDeleteErr = errors.New("mongo недоступен")
+
+	assertErrorCode(t, d.deleteMe(t, deletedUserID),
+		http.StatusInternalServerError, errCodeInternal)
+
+	if d.users.users[deletedUserID].IsDeleted() {
+		t.Error("аккаунт помечен удалённым, хотя tombstone упал")
+	}
+	if len(d.rooms.anonymized) != 0 {
+		t.Errorf("анонимизация отработала до tombstone: %v", d.rooms.anonymized)
+	}
+
+	// Аккаунт остался пригодным: тот же токен продолжает работать
+	token := mustToken(t, d.s, deletedUserID)
+	if rec := doRequest(t, d.s, http.MethodGet, "/api/v1/me", token, ""); rec.Code != http.StatusOK {
+		t.Fatalf("GET /me после несостоявшегося удаления: status = %d, want 200", rec.Code)
+	}
+}
+
 // ⚠️ Тест порядка шагов. Сбой анонимизации обязан застать аккаунт УЖЕ
 // недоступным. Обратный порядок (анонимизация → tombstone) оставил бы живой
 // аккаунт с затёртым во всех комнатах именем — необратимо, снимки из
@@ -312,10 +338,11 @@ func TestDeleteMePartialFailureLeavesAccountUnusable(t *testing.T) {
 	token := mustToken(t, d.s, deletedUserID)
 	d.rooms.anonymizeErr = errors.New("mongo недоступен")
 
+	// Код обязан отличаться от «internal»: по нему клиент понимает, что
+	// tombstone УЖЕ стоит, и обязан сохранить токен — повторить удаление больше
+	// нечем (войти заново в удалённый аккаунт нельзя, личности вычищены)
 	rec := doRequest(t, d.s, http.MethodDelete, "/api/v1/me", token, "")
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("DELETE /me при сбое анонимизации: status = %d, want 500", rec.Code)
-	}
+	assertErrorCode(t, rec, http.StatusInternalServerError, errCodePurgeIncomplete)
 
 	// аккаунт уже недоступен, а НЕ «жив, но с затёртым именем»
 	if !d.users.users[deletedUserID].IsDeleted() {
@@ -388,9 +415,8 @@ func TestDeleteMePurgeFailureReportsError(t *testing.T) {
 	d := newDeleteSetup(t, Config{})
 	d.bugReports.err = errors.New("mongo недоступен")
 
-	if rec := d.deleteMe(t, deletedUserID); rec.Code != http.StatusInternalServerError {
-		t.Fatalf("DELETE /me при сбое чистки: status = %d, want 500", rec.Code)
-	}
+	assertErrorCode(t, d.deleteMe(t, deletedUserID),
+		http.StatusInternalServerError, errCodePurgeIncomplete)
 	if !d.users.users[deletedUserID].IsDeleted() {
 		t.Error("аккаунт остался живым при сбое на последнем шаге")
 	}

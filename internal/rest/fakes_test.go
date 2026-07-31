@@ -156,6 +156,11 @@ type fakeUserRepo struct {
 	// accountAlive: ошибка чтения обязана давать 500, а не пропускать запрос —
 	// иначе лежащая mongo превращается в обход инвалидации токена
 	findErr error
+	// softDeleteErr имитирует падение НА САМОМ tombstone. Нужен, чтобы отличить
+	// сбой ДО него (аккаунт цел — клиент обязан сохранить сессию и очередь
+	// офлайн-расходов) от сбоя ПОСЛЕ (аккаунт удалён, чистка не доделана):
+	// снаружи это два одинаковых 500, различает их только код ошибки
+	softDeleteErr error
 }
 
 func newFakeUserRepo(users ...api.User) *fakeUserRepo {
@@ -383,6 +388,9 @@ func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider str
 // PII и личности вычищаются, display_name заменяется плейсхолдером.
 // Идемпотентен — повторный вызов пишет то же самое
 func (f *fakeUserRepo) SoftDeleteUser(_ context.Context, userId int) error {
+	if f.softDeleteErr != nil {
+		return f.softDeleteErr
+	}
 	u, ok := f.users[userId]
 	if !ok {
 		return mongo.ErrNoDocuments

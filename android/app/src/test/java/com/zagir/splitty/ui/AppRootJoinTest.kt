@@ -370,6 +370,70 @@ class AppRootJoinTest {
     }
 
     @Test
+    fun `foreign invite is dropped on an in-process account switch`() = runBlocking {
+        // Та же утечка, но процесс НЕ умирал: сессия A протухла (приглашение
+        // при этом намеренно сохраняется), и в том же процессе вошёл B. Сюда
+        // приходит ветка «смена аккаунта», и раз она больше не стирает
+        // намерение скопом, чужое обязано выбрасываться сведением владельца.
+        assertNotNull(cleaner())
+        signIn()
+        withTimeout(5_000) { session.state.first { it?.token != null } }
+        pendingJoin.set(ROOM_ID, ownerId = ME.id)
+
+        session.notifyUnauthorized()
+        withTimeout(5_000) { session.state.first { it?.hasStoredToken == false } }
+        delay(500)
+        // Протухшая сессия приглашение сохраняет — иначе проверять было бы нечего.
+        assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
+
+        val vm = viewModel()
+        signIn(token = "other-token", me = OTHER)
+
+        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(server.takeRequest(1, TimeUnit.SECONDS))
+        assertNull(vm.openRoomId.value)
+    }
+
+    @Test
+    fun `guest invite survives a logout of the previous account`() = runBlocking {
+        // Обратная сторона той же монеты, и здесь ломалось молча. Явный выход
+        // намерение чистит, но владельца устройства НЕ забывает: `lastUserId`
+        // переживает logout намеренно (профиль вычищен вместе с токеном, и
+        // затирать известного владельца null-ом нельзя). Из-за этого приход
+        // СЛЕДУЮЩЕГО человека выглядел сменой аккаунта — и слепая чистка на
+        // смене убивала приглашение, которое этот человек только что открыл сам.
+        respond("POST /api/v1/rooms/$ROOM_ID/join", MockResponse().setBody(ROOM_JSON))
+        assertNotNull(cleaner())
+
+        // A поработал и вышел. Намерения тут нет — важно лишь то, что
+        // чистильщик запомнил A как предыдущего владельца устройства.
+        signIn()
+        withTimeout(5_000) { session.state.first { it?.token != null } }
+        session.logout()
+        withTimeout(5_000) { session.state.first { it?.hasStoredToken == false } }
+        // Чистка асинхронная: без паузы «приглашение выжило» означало бы лишь
+        // «чистильщик не успел до него добраться».
+        delay(500)
+
+        // Ссылку открыл ГОСТЬ: живой сессии нет, владельца у намерения тоже
+        // (MainActivity берёт его из сессии — см. handleDeepLink).
+        pendingJoin.set(ROOM_ID)
+        signIn(token = "other-token", me = OTHER)
+
+        // Чистильщик проверяется БЕЗ корня: иначе тест выигрывал бы гонкой —
+        // запрос на вступление уходит быстрее, чем чистка добирается до диска,
+        // и «вступление доехало» ничего не доказывало бы. Приглашение обязано
+        // не просто выжить, а достаться вошедшему.
+        val adopted = withTimeout(5_000) { pendingJoin.pending.first { it?.ownerId == OTHER.id } }
+        assertEquals(ROOM_ID, adopted?.roomId)
+
+        // И оно исполняется: корень поднимается уже после сведения владельца.
+        val vm = viewModel()
+        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+    }
+
+    @Test
     fun `guest invite is adopted by the account that signs in`() = runBlocking {
         // Обратная сторона проверки владельца: ссылку открыл гость (владельца
         // нет), и вступление обязано доехать сразу после входа.

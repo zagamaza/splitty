@@ -304,16 +304,26 @@ final class AccountLinksTests: XCTestCase {
         XCTAssertNil(PendingJoin.shared.roomId)
     }
 
-    /// 500 приходит уже ПОСЛЕ tombstone (сервер ставит его первым шагом),
-    /// и повторить запрос нельзя — middleware отвергает этот токен. Поэтому
-    /// устройство чистится так же, как при успехе: иначе следующий 401 привёл
-    /// бы к `expireSession`, который кеш и outbox СОХРАНЯЕТ, и группы вместе
-    /// с профилем удалённого аккаунта остались бы лежать на диске.
+    /// 500 с кодом `internal` — сбой ДО tombstone (сервер ставит его первым
+    /// шагом и с этого момента отвечает `purge_incomplete`). Аккаунт цел и
+    /// нетронут, поэтому и трогать на устройстве нечего: раньше любой 500
+    /// гнал `logout()`, и транзиентный сбой mongo уносил очередь
+    /// неотправленных офлайн-расходов навсегда — при живом аккаунте.
     @MainActor
-    func testDeleteAccountServerFailureStillClearsDevice() async throws {
+    func testDeleteAccountPreTombstoneFailureKeepsSessionAndOutbox() async throws {
         let session = SessionStore(urlSession: stubSession)
         try await login(session)
         PendingJoin.shared.set("0123456789abcdef01234567")
+        session.outbox.add(
+            roomId: "room-1",
+            payload: OutboxPayload(
+                description: "Кофе",
+                sum: 300,
+                donorId: 77,
+                recipientIds: [77],
+                recipientSums: nil
+            )
+        )
 
         StubURLProtocol.handler = { _ in (500, Data(#"{"error":{"code":"internal","message":"сбой"}}"#.utf8)) }
 
@@ -321,14 +331,54 @@ final class AccountLinksTests: XCTestCase {
             try await session.deleteAccount()
             XCTFail("ожидали ошибку удаления")
         } catch {
-            // Ошибку всё равно пробрасываем: экран обязан сказать, что
-            // удаление не подтвердилось.
+            // Текст не смеет обещать «данные с устройства удалены»: они на месте.
+            let text = deleteAccountErrorText(error)
+            XCTAssertFalse(text.contains("Данные с устройства удалены"), text)
         }
 
+        XCTAssertTrue(session.isAuthenticated)
+        XCTAssertNotNil(session.me)
+        XCTAssertNotNil(KeychainStore.read(key: "splitty.apiToken"))
+        XCTAssertEqual(session.outbox.entries(roomId: "room-1").count, 1)
+
+        session.logout()
+    }
+
+    /// 500 с кодом `purge_incomplete` — сбой ПОСЛЕ tombstone: аккаунт удалён,
+    /// но его PII осталась в снимках комнат и побочных коллекциях. Доделать
+    /// чистку может только повторный DELETE /me — маршрут висит на
+    /// `authDeleted` ровно ради этого, и повторить его может ТОЛЬКО этот
+    /// токен: `SoftDeleteUser` уже вычистил telegram_id/google_sub/apple_sub,
+    /// так что войти заново нельзя. Выбросив токен (а раньше клиент делал
+    /// именно это), мы навсегда закрывали единственный путь довести удаление
+    /// до конца — то есть проваливали 5.1.1(v)/GDPR.
+    @MainActor
+    func testDeleteAccountPurgeIncompleteKeepsTokenForRetry() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"purge_incomplete","message":"аккаунт удалён, но очистка данных не завершена: повторите запрос"}}"#.utf8))
+        }
+
+        do {
+            try await session.deleteAccount()
+            XCTFail("ожидали ошибку удаления")
+        } catch {
+            // Совет обязан быть выполнимым: «повторите», а не «войдите снова».
+            let text = deleteAccountErrorText(error)
+            XCTAssertTrue(text.lowercased().contains("ещё раз"), text)
+            XCTAssertFalse(text.lowercased().contains("войдите"), text)
+        }
+
+        XCTAssertTrue(session.isAuthenticated)
+        XCTAssertNotNil(KeychainStore.read(key: "splitty.apiToken"))
+
+        // Повтор действительно возможен: тем же токеном, из той же сессии.
+        StubURLProtocol.handler = { _ in (204, Data()) }
+        try await session.deleteAccount()
         XCTAssertFalse(session.isAuthenticated)
-        XCTAssertNil(session.me)
         XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
-        XCTAssertNil(PendingJoin.shared.roomId)
     }
 
     /// Офлайн: запрос до сервера НЕ ДОШЁЛ вовсе. Сомнения «удалилось или нет»
@@ -399,12 +449,23 @@ final class AccountLinksTests: XCTestCase {
         session.logout()
     }
 
-    /// Текст неудавшегося удаления объясняет, что данные с устройства стёрты:
-    /// «Ошибка сервера (500)» человеку в этот момент не говорит ничего.
-    func testDeleteAccountErrorTextExplainsLocalWipe() {
-        let text = deleteAccountErrorText(APIError.server(status: 500, code: "internal", message: "сбой"))
-        XCTAssertTrue(text.contains("Данные с устройства удалены"), text)
-        XCTAssertFalse(text.contains("500"), text)
+    /// Текст неудавшегося удаления говорит, что делать дальше: «Ошибка сервера
+    /// (500)» человеку в этот момент не говорит ничего. И ни одна ветка больше
+    /// не смеет обещать «данные с устройства удалены» — сессия при любой
+    /// ошибке остаётся живой.
+    func testDeleteAccountErrorTextTellsWhatToDoNext() {
+        let preTombstone = deleteAccountErrorText(
+            APIError.server(status: 500, code: "internal", message: "сбой")
+        )
+        XCTAssertFalse(preTombstone.contains("Данные с устройства удалены"), preTombstone)
+        XCTAssertFalse(preTombstone.contains("500"), preTombstone)
+        XCTAssertTrue(preTombstone.lowercased().contains("на месте"), preTombstone)
+
+        let postTombstone = deleteAccountErrorText(
+            APIError.server(status: 500, code: "purge_incomplete", message: "не завершена")
+        )
+        XCTAssertFalse(postTombstone.contains("Данные с устройства удалены"), postTombstone)
+        XCTAssertTrue(postTombstone.lowercased().contains("ещё раз"), postTombstone)
     }
 
     // MARK: - SessionStore: привязка и параллельный /me
@@ -470,18 +531,20 @@ final class AccountLinksTests: XCTestCase {
         session.logout()
     }
 
-    // MARK: - SessionStore: смена аккаунта выбрасывает чужое намерение
+    // MARK: - SessionStore: намерение решается своим владельцем, а не сменой аккаунта
 
     /// `expireSession` намерение сохраняет намеренно (тот же человек
     /// переавторизуется и дойдёт до группы), но если на устройстве вошёл
     /// ДРУГОЙ аккаунт — приглашение принадлежало предыдущему, и исполнять
     /// его от чужого имени нельзя.
     @MainActor
-    func testAccountSwitchDropsPendingJoin() async throws {
+    func testForeignPendingJoinDroppedOnSignIn() async throws {
         let session = SessionStore(urlSession: stubSession)
         try await login(session)
 
-        PendingJoin.shared.set("0123456789abcdef01234567")
+        // Ссылку открыл A, будучи в аккаунте: владелец записан (так делает
+        // `SplittyApp.handleJoinLink`).
+        PendingJoin.shared.set("0123456789abcdef01234567", ownerId: 77)
         session.expireSession()
         // Сессия протухла, но намерение ждёт — так и задумано.
         XCTAssertEqual(PendingJoin.shared.roomId, "0123456789abcdef01234567")
@@ -497,6 +560,59 @@ final class AccountLinksTests: XCTestCase {
         XCTAssertNil(PendingJoin.shared.roomId, "чужое приглашение пережило смену аккаунта")
 
         session.logout()
+    }
+
+    /// Обратная сторона той же проверки, и ломалось тут молча. Ссылку открыл
+    /// ГОСТЬ — владельца у намерения нет, и оно обязано достаться первому же
+    /// вошедшему: это и есть путь приглашения. Раньше `adoptOwner` стирал
+    /// намерение на ЛЮБОЙ смене `ownerUserId`, а `expireSession` оставляет
+    /// id прошлого аккаунта — поэтому «A разлогинило по 401 → гость B открыл
+    /// ссылку → B вошёл» выглядело сменой владельца, и приглашение самого B
+    /// удалялось детерминированно: `adoptOwner` отрабатывает синхронно внутри
+    /// `loginWith*`, до того как SwiftUI доставит `.onChange(of:
+    /// session.isAuthenticated)`, так что `RootView` не находил уже ничего.
+    @MainActor
+    func testGuestPendingJoinSurvivesSignInAfterExpiry() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        // Сессия A протухла: ownerUserId остаётся равным 77.
+        session.expireSession()
+        // Ссылку открыл гость: живой сессии нет, владельца у намерения тоже.
+        PendingJoin.shared.set("0123456789abcdef01234567")
+
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"token":"jwt-888","user":{"id":88,"username":null,"displayName":"Пётр","lang":"ru",
+             "linkedProviders":["google"],"notificationOn":true}}
+            """#.utf8))
+        }
+        try await session.loginWithCode("EFGH6789")
+
+        XCTAssertEqual(
+            PendingJoin.shared.roomId,
+            "0123456789abcdef01234567",
+            "своё приглашение гостя не пережило вход"
+        )
+        // И оно теперь принадлежит вошедшему: следующая смена аккаунта его уже
+        // выбросит, а `RootView` пропустит к вступлению.
+        XCTAssertEqual(PendingJoin.shared.ownerUserId, 88)
+
+        session.logout()
+    }
+
+    /// Явный выход намерение стирает целиком — в отличие от протухшей сессии.
+    /// Следующий человек на устройстве не должен даже узнать, что оно было.
+    @MainActor
+    func testLogoutClearsPendingJoinEntirely() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+        PendingJoin.shared.set("0123456789abcdef01234567", ownerId: 77)
+
+        session.logout()
+
+        XCTAssertNil(PendingJoin.shared.roomId)
+        XCTAssertNil(PendingJoin.shared.ownerUserId)
     }
 
     // MARK: - Вспомогательное

@@ -77,6 +77,15 @@ struct RootView: View {
     private func joinPendingRoom() {
         guard session.isAuthenticated, !isJoining else { return }
         guard let roomId = PendingJoin.shared.roomId else { return }
+        // Намерение ЧУЖОЕ: ссылку открыл предыдущий владелец устройства, его
+        // сессия протухла (`expireSession` намерение намеренно сохраняет), а
+        // вошёл уже другой человек. Обычно такое выбрасывает `adoptOwner` на
+        // входе, но проверка не должна зависеть от того, успел ли он: без неё
+        // человека молча уносило бы в чужую приватную группу. Сравниваем,
+        // только когда обе стороны известны.
+        if let owner = PendingJoin.shared.ownerUserId, let me = session.me?.id, owner != me {
+            return
+        }
         isJoining = true
         Task { @MainActor in
             defer { isJoining = false }
@@ -95,7 +104,8 @@ struct RootView: View {
                 // сессию и нас перекинуло на вход. Намерение НЕ трогаем —
                 // после переавторизации оно исполнится само, а алерт
                 // «Требуется вход» поверх экрана входа сказал бы очевидное.
-                // (Если войдёт другой аккаунт, намерение выбросит `adoptOwner`.)
+                // (Если войдёт другой аккаунт, чужое намерение выбросит
+                // сведение владельца — `PendingJoin.reconcileOwner`.)
             } catch {
                 // Комнаты нет или доступ закрыт — повторять нечего, намерение
                 // стираем, чтобы оно не всплывало алертом на каждом старте.

@@ -34,6 +34,26 @@ import (
 // повторным DELETE /me (маршрут висит на authDeleted, см. server.go). Состояние
 // между шагами безопасно — аккаунт уже недоступен, в комнатах пока видно старое
 // имя.
+//
+// ⚠️ КОД ОШИБКИ РАЗЛИЧАЕТ «ДО» И «ПОСЛЕ» tombstone — на нём держится поведение
+// клиента, и одинаковые коды тут стоили бы человеку данных:
+//
+//   - errCodeInternal — сбой ДО tombstone (шаги 0-1): аккаунт ЖИВ, ничего не
+//     произошло. Клиент обязан оставить сессию и очередь неотправленных
+//     расходов на месте (iOS раньше стирал их на любом 500: транзиентный сбой
+//     mongo уносил офлайн-очередь при целом аккаунте);
+//   - errCodePurgeIncomplete — сбой ПОСЛЕ tombstone (шаги 3-4): аккаунт уже
+//     удалён, но PII осталась. Клиент обязан СОХРАНИТЬ токен: только им и можно
+//     повторить запрос (authDeleted пускает удалённых, а войти заново нельзя —
+//     SoftDeleteUser вычистил все личности). Выбросив токен, клиент навсегда
+//     закрывает единственный путь доделать чистку.
+const (
+	errCodeInternal        = "internal"
+	errCodePurgeIncomplete = "purge_incomplete"
+)
+
+// purgeIncompleteMessage — текст для клиента при сбое после tombstone.
+const purgeIncompleteMessage = "аккаунт удалён, но очистка данных не завершена: повторите запрос"
 
 // handleDeleteMe DELETE /api/v1/me — удаление аккаунта: tombstone, чистка PII,
 // анонимизация снимков. Долги и суммы сохраняются: их id, значения и доли не
@@ -82,14 +102,14 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 	// (3) анонимизация встроенных снимков
 	if err := s.roomRepo.AnonymizeUser(ctx, userId, repository.DeletedUserPlaceholder); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot anonymize user snapshots")
-		writeError(w, http.StatusInternalServerError, "internal", "аккаунт удалён, но очистка данных не завершена: повторите запрос")
+		writeError(w, http.StatusInternalServerError, errCodePurgeIncomplete, purgeIncompleteMessage)
 		return
 	}
 
 	// (4) побочные коллекции с PII
 	if err := s.purgeUserData(ctx, user); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot purge user data")
-		writeError(w, http.StatusInternalServerError, "internal", "аккаунт удалён, но очистка данных не завершена: повторите запрос")
+		writeError(w, http.StatusInternalServerError, errCodePurgeIncomplete, purgeIncompleteMessage)
 		return
 	}
 

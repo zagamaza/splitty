@@ -87,6 +87,10 @@ struct SplittyApp: App {
     /// хоть один экран.
     private func handleJoinLink(_ url: URL) {
         guard let roomId = RoomCodeParser.roomId(from: url) else { return }
-        PendingJoin.shared.set(roomId)
+        // Владелец намерения — тот, кто в аккаунте ПРЯМО СЕЙЧАС (nil у гостя:
+        // намерение достанется первому вошедшему, это и есть путь приглашения).
+        // Записывается здесь, а не при входе: только в этот момент ещё
+        // известно, чья ссылка. См. `PendingJoin.reconcileOwner`.
+        PendingJoin.shared.set(roomId, ownerId: session.me?.id)
     }
 }

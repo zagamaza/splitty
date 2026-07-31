@@ -158,6 +158,50 @@ final class PendingJoinTests: XCTestCase {
         XCTAssertNil(PendingJoin(defaults: defaults).roomId)
     }
 
+    func testOwnerSurvivesRestart() {
+        // Владелец намерения обязан пережить смерть процесса ровно так же, как
+        // и сам код комнаты: между протуханием сессии и следующим входом нас
+        // штатно выгружают, и признак «кто тут был» в памяти уже потерян.
+        PendingJoin(defaults: defaults).set("68a1b2c3d4e5f60718293a4b", ownerId: 7)
+        XCTAssertEqual(PendingJoin(defaults: defaults).ownerUserId, 7)
+    }
+
+    func testReconcileAdoptsGuestIntent() {
+        // Ссылку открыл гость — намерение достаётся первому вошедшему: это и
+        // есть штатный путь приглашения.
+        let pending = PendingJoin(defaults: defaults)
+        pending.set("68a1b2c3d4e5f60718293a4b")
+        pending.reconcileOwner(7)
+        XCTAssertEqual(pending.roomId, "68a1b2c3d4e5f60718293a4b")
+        XCTAssertEqual(pending.ownerUserId, 7)
+    }
+
+    func testReconcileKeepsOwnIntent() {
+        let pending = PendingJoin(defaults: defaults)
+        pending.set("68a1b2c3d4e5f60718293a4b", ownerId: 7)
+        pending.reconcileOwner(7)
+        XCTAssertEqual(pending.roomId, "68a1b2c3d4e5f60718293a4b")
+    }
+
+    func testReconcileDropsForeignIntent() {
+        // Приглашение предыдущего владельца устройства: без этой ветки новый
+        // человек молча вступал бы в чужую приватную группу.
+        let pending = PendingJoin(defaults: defaults)
+        pending.set("68a1b2c3d4e5f60718293a4b", ownerId: 7)
+        pending.reconcileOwner(8)
+        XCTAssertNil(pending.roomId)
+        XCTAssertNil(pending.ownerUserId)
+    }
+
+    func testReconcileOnEmptyDoesNotCreateOwner() {
+        // Намерения нет — сводить нечего, и «владелец без намерения» на диске
+        // потом ошибочно считался бы чужим для следующей ссылки.
+        let pending = PendingJoin(defaults: defaults)
+        pending.reconcileOwner(7)
+        XCTAssertNil(pending.roomId)
+        XCTAssertNil(pending.ownerUserId)
+    }
+
     @MainActor
     func testLogoutClearsSharedIntent() {
         // Иначе следующий вошедший на устройстве человек молча вступил бы
