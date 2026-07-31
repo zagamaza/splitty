@@ -88,6 +88,43 @@ func TestAppleClientIdsFiltering(t *testing.T) {
 	}
 }
 
+// Отпечаток сертификата САМ состоит из байтов через двоеточие, поэтому
+// привычный для проекта envSeparator ":" разорвал бы его на 32 куска и
+// assetlinks.json уехал бы негодным. Разделитель здесь — запятая
+func TestAndroidCertSha256Separator(t *testing.T) {
+	const play = "E6:8C:8C:AF:20:18:20:2B:E3:93:BF:BE:AE:B9:DA:E6:AB:E7:BD:AE:AA:39:D2:20:9D:24:E4:75:B4:ED:E7:D0"
+	const debug = "8B:F8:FC:55:7B:4B:14:79:7C:93:7C:9A:2D:A6:7F:2D:4E:49:D1:E6:00:11:22:33:44:55:66:77:88:99:AA:BB"
+
+	tests := []struct {
+		name string
+		env  string
+		want []string
+	}{
+		{name: "не задано", env: "", want: nil},
+		{name: "один отпечаток", env: play, want: []string{play}},
+		{name: "release и debug", env: play + "," + debug, want: []string{play, debug}},
+		{name: "пробелы вокруг", env: " " + play + " , " + debug + " ", want: []string{play, debug}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("ANDROID_CERT_SHA256", tt.env)
+			cfg, err := initConfig()
+			if err != nil {
+				t.Fatalf("initConfig: %v", err)
+			}
+			got := nonEmptyValues(cfg.AndroidCertSha256)
+			if len(got) != len(tt.want) {
+				t.Fatalf("fingerprints = %q, want %q", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("fingerprints = %q, want %q", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 // Локальная разработка не обязана иметь ключ .p8: пустой APPLE_PRIVATE_KEY
 // выключает обмен, а вход через Apple продолжает работать
 func TestAppleTokensDisabledWithoutPrivateKey(t *testing.T) {

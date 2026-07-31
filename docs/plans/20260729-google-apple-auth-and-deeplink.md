@@ -622,19 +622,32 @@ Middleware `auth` не ходит в базу, а `currentUser` вызывает
 - Modify: `internal/rest/server.go`
 - Modify: `cmd/splitty/config.go`
 - Modify: `cmd/splitty/main.go`
+- ➕ Modify: `cmd/splitty/config_test.go` — тест разделителя `ANDROID_CERT_SHA256`
 
-- [ ] добавить в конфиг: `PublicBaseUrl` (`env:"PUBLIC_BASE_URL"`), `IosAppId` (`env:"IOS_APP_ID"`, формат `K8922Y6R3M.com.zagir.splitty`), `AndroidPackage` (`env:"ANDROID_PACKAGE"`), `AndroidCertSha256` (`env:"ANDROID_CERT_SHA256"`)
-- [ ] `GET /.well-known/apple-app-site-association`: JSON с `applinks.details[].appIDs=[IosAppId]` и `components` для пути `/join/*`; **`Content-Type: application/json`, без редиректов** — иначе iOS файл не примет
-- [ ] `GET /.well-known/assetlinks.json`: `relation: ["delegate_permission/common.handle_all_urls"]`, `target.package_name`, `sha256_cert_fingerprints`
-- [ ] `GET /join/{roomId}` — HTML без авторизации: **только** название группы, код моноширинно, кнопка «Скопировать», кнопка «Открыть в приложении» и ссылки на сторы. Лендинг не делать
-- [ ] **не раскрывать приватное**: никаких участников, сумм, операций. Несуществующая комната → нейтральная «Приглашение не найдено», без различия «нет комнаты»/«нет доступа»
-- [ ] экранировать имя комнаты (пользовательский ввод) при вставке в HTML
-- [ ] **per-IP троттлинг** через `s.authThrottle.allow("join:"+clientIP(r), …)` со **своим** лимитом — публичный эндпоинт ходит в mongo на каждый вызов и служит оракулом существования комнаты по ObjectID. Префикс `join:` обязателен: страницу открывают браузеры по расшаренной ссылке, за NAT — толпой, и общий с `/auth/code` ключ выжигал бы людям вход по коду
-- [ ] заголовки `X-Robots-Tag: noindex` и `Cache-Control: no-store` на `/join`
-- [ ] при пустом `PublicBaseUrl` все три роута отдают `404`
-- [ ] роуты регистрировать **без** `s.auth` — они публичные по определению
-- [ ] написать тесты: AASA содержит корректный appID и path и отдаётся с `application/json`; assetlinks содержит package и отпечаток; `/join/<id>` рендерит код; **`<script>` в имени комнаты экранируется**; несуществующая комната → нейтральная страница; выключенная фича → 404 на всех трёх; троттлинг срабатывает
-- [ ] `go test ./internal/...` — зелёные перед Task 15
+- [x] добавить в конфиг: `PublicBaseUrl` (`env:"PUBLIC_BASE_URL"`), `IosAppId` (`env:"IOS_APP_ID"`, формат `K8922Y6R3M.com.zagir.splitty`), `AndroidPackage` (`env:"ANDROID_PACKAGE"`), `AndroidCertSha256` (`env:"ANDROID_CERT_SHA256"`)
+- [x] `GET /.well-known/apple-app-site-association`: JSON с `applinks.details[].appIDs=[IosAppId]` и `components` для пути `/join/*`; **`Content-Type: application/json`, без редиректов** — иначе iOS файл не примет
+- [x] `GET /.well-known/assetlinks.json`: `relation: ["delegate_permission/common.handle_all_urls"]`, `target.package_name`, `sha256_cert_fingerprints`
+- [x] `GET /join/{roomId}` — HTML без авторизации: **только** название группы, код моноширинно, кнопка «Скопировать», кнопка «Открыть в приложении» и ссылки на сторы. Лендинг не делать
+- [x] **не раскрывать приватное**: никаких участников, сумм, операций. Несуществующая комната → нейтральная «Приглашение не найдено», без различия «нет комнаты»/«нет доступа»
+- [x] экранировать имя комнаты (пользовательский ввод) при вставке в HTML
+- [x] **per-IP троттлинг** через `s.authThrottle.allow("join:"+clientIP(r), …)` со **своим** лимитом — публичный эндпоинт ходит в mongo на каждый вызов и служит оракулом существования комнаты по ObjectID. Префикс `join:` обязателен: страницу открывают браузеры по расшаренной ссылке, за NAT — толпой, и общий с `/auth/code` ключ выжигал бы людям вход по коду
+- [x] заголовки `X-Robots-Tag: noindex` и `Cache-Control: no-store` на `/join`
+- [x] при пустом `PublicBaseUrl` все три роута отдают `404`
+- [x] роуты регистрировать **без** `s.auth` — они публичные по определению
+- [x] написать тесты: AASA содержит корректный appID и path и отдаётся с `application/json`; assetlinks содержит package и отпечаток; `/join/<id>` рендерит код; **`<script>` в имени комнаты экранируется**; несуществующая комната → нейтральная страница; выключенная фича → 404 на всех трёх; троттлинг срабатывает
+- [x] `go test ./internal/...` — зелёные перед Task 15
+
+**Как сделано (для следующих задач):**
+- страница собирается `html/template` — экранирование контекстное и «забыть» его нельзя, в отличие от ручной склейки строк. Тест `TestJoinPageEscapesRoomName` требует и отсутствия сырого `<script>alert(1)`, и наличия экранированной формы
+- [decision] `joinPerIPPerMin = 60` — своё окно, втрое выше кодового: перебирать здесь нечего (знание ObjectID комнаты и ЕСТЬ приглашение), а за адресом сидит целая сеть, куда ссылку переслали. Тест `TestJoinPageThrottled` проверяет, что после исчерпания бюджета `/join` вход по коду с того же адреса всё ещё отвечает `invalid_code`, а не `rate_limited`
+- [decision] нейтральность доведена до «побайтово одинаковых страниц»: несуществующая комната и мусорный (не-hex) id дают ОДИН И ТОТ ЖЕ ответ 404, это зафиксировано сравнением тел в `TestJoinPageUnknownRoomIsNeutral`. Формат id проверяется ДО похода в mongo — мусорный путь не должен стоить запроса
+- [decision] AASA отдаётся только когда задан и `PUBLIC_BASE_URL`, и `IOS_APP_ID` (assetlinks — плюс package и хотя бы один отпечаток): файл с пустым appID хуже отсутствия файла, iOS кеширует негодную ассоциацию домена и диагностики у разработчика почти нет
+- [deviation] ➕ `AndroidCertSha256` — `[]string` с **`envSeparator:","`, а не привычным для проекта `":"`**: сам отпечаток состоит из байтов через двоеточие (`E6:8C:8C:…`), и `":"` разорвал бы его на 32 куска. Срез, а не строка, потому что отпечатков штатно два — Play App Signing и локальный debug-ключ, иначе app links не верифицируются в отладочной сборке. Проверяется `TestAndroidCertSha256Separator`
+- [deviation] ➕ добавлены две настройки, которых в плане не было: `IOS_STORE_URL` (карточка App Store требует числовой id, а он появляется только после первой публикации — вывести его из bundle id нельзя; пусто → кнопка не рисуется) и `APP_SCHEME` (кнопка «Открыть в приложении»). Ссылка на Google Play производная от `ANDROID_PACKAGE` и своей настройки не требует
+- [decision] «Открыть в приложении» ведёт на **кастомную схему** `splitty://join/<roomId>`, а не на тот же universal link: тап по ссылке НА ТОТ ЖЕ домен iOS в приложение не уводит, он остаётся в браузере. Схема — то, что Tasks 17/19 ловят через `onOpenURL` / intent-filter
+- [decision] `OpenURL` — `template.URL`, иначе `html/template` не знает схему и подменяет href на `#ZgotmplZ`. Обход экранирования компенсирован просеиванием `APP_SCHEME` по алфавиту схем RFC 3986 с молчаливым откатом к дефолту: значение приезжает из окружения, а `roomId` к моменту подстановки уже признан валидным hex. `TestJoinPageScheme` проверяет, что `javascript:alert(1)//` и `x" onclick="…` в страницу не уезжают
+- [decision] пустой `PUBLIC_BASE_URL` логируется на старте отдельной строкой: «выключено» — штатное состояние до покупки домена, и оно должно быть видно в логе, а не выясняться по 404
+- ошибка mongo (не `ErrNoDocuments`) даёт отдельную страницу «Что-то пошло не так» с 500: говорить «приглашение не найдено» при сбое базы — врать пользователю, который потом не станет пробовать снова
 
 ### Task 15: iOS — Sign in with Apple
 

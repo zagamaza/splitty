@@ -50,6 +50,29 @@ type config struct {
 	AppleKeyId      string `env:"APPLE_KEY_ID" envDefault:""`
 	ApplePrivateKey string `env:"APPLE_PRIVATE_KEY" envDefault:""`
 
+	// Диплинк-вход в группу: associated files (.well-known) + публичная
+	// страница приглашения /join/{roomId}.
+	//
+	// PublicBaseUrl — https-адрес, на котором стоит сервер; он же выключатель
+	// всей фичи: пусто — все три маршрута отдают 404. Домен на момент написания
+	// ещё не куплен, поэтому бэкенд катится с пустым значением и включается
+	// одной переменной, когда домен появится.
+	// IosAppId — <TeamID>.<bundle id>, например K8922Y6R3M.com.zagir.splitty.
+	// AndroidPackage — имя пакета, например com.zagir.splitty.
+	// AndroidCertSha256 — SHA-256 отпечатки подписи для assetlinks.json.
+	// ВНИМАНИЕ: разделитель здесь ",", а не привычный ":" — сам отпечаток
+	// состоит из байтов через двоеточие (E6:8C:8C:…), и ":" разорвал бы его.
+	// Отпечатков может быть несколько: Play App Signing и локальный debug-ключ.
+	// IosStoreUrl — карточка в App Store (её числовой id появляется только
+	// после первой публикации, вывести его из bundle id нельзя).
+	// AppScheme — схема кнопки «Открыть в приложении»: <scheme>://join/<roomId>
+	PublicBaseUrl     string   `env:"PUBLIC_BASE_URL" envDefault:""`
+	IosAppId          string   `env:"IOS_APP_ID" envDefault:""`
+	AndroidPackage    string   `env:"ANDROID_PACKAGE" envDefault:""`
+	AndroidCertSha256 []string `env:"ANDROID_CERT_SHA256" envSeparator:"," envDefault:""`
+	IosStoreUrl       string   `env:"IOS_STORE_URL" envDefault:""`
+	AppScheme         string   `env:"APP_SCHEME" envDefault:"splitty"`
+
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
 	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`

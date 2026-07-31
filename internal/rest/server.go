@@ -75,6 +75,32 @@ type Config struct {
 	// ключ .p8 не задан: вход работает как обычно, обмен и отзыв просто не
 	// делаются, чтобы локальная разработка не требовала ключа Apple
 	AppleTokens oidc.AppleTokens
+
+	// PublicBaseUrl — публичный https-адрес, по которому раздаются associated
+	// files и страница приглашения (например "https://splitty.app").
+	// Пусто — домен ещё не куплен: /join и оба .well-known отдают 404, так что
+	// диплинк безопасно выкатывается ДО появления домена (см. deeplink.go)
+	PublicBaseUrl string
+	// IosAppId — <TeamID>.<bundle id>, например "K8922Y6R3M.com.zagir.splitty".
+	// Пусто — apple-app-site-association отдаёт 404: пустой appID в файле хуже
+	// отсутствия файла, iOS закеширует негодный ассоциированный домен
+	IosAppId string
+	// AndroidPackage — имя пакета приложения, например "com.zagir.splitty".
+	// Используется и в assetlinks.json, и в ссылке на карточку Google Play
+	AndroidPackage string
+	// AndroidCertSha256 — SHA-256 отпечатки сертификатов подписи для
+	// assetlinks.json. Их может быть несколько: Play App Signing и локальный
+	// debug-ключ, иначе app links не верифицируются в отладочной сборке.
+	// Пусто — assetlinks.json отдаёт 404
+	AndroidCertSha256 []string
+	// IosStoreUrl — карточка приложения в App Store для страницы приглашения.
+	// Ссылка требует числовой id, который появляется только после первой
+	// публикации, поэтому это отдельная настройка, а не производная от bundle
+	// id. Пусто — кнопка App Store не рисуется
+	IosStoreUrl string
+	// AppScheme — кастомная схема кнопки «Открыть в приложении»
+	// (<scheme>://join/<roomId>). Пусто — defaultAppScheme
+	AppScheme string
 }
 
 // Server REST API сервер со всеми зависимостями.
@@ -230,6 +256,14 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)
 	mux.HandleFunc("POST /api/v1/auth/apple", s.handleAuthApple)
 	mux.HandleFunc("POST /api/v1/auth/dev", s.handleAuthDev)
+
+	// Диплинк-вход в группу. ПУБЛИЧНЫЕ маршруты, намеренно без s.auth:
+	// .well-known читают iOS и Android без всякой авторизации, а /join
+	// открывает браузер человека, у которого аккаунта ещё может не быть.
+	// Пустой PublicBaseUrl выключает все три (404) — см. deeplink.go
+	mux.HandleFunc("GET /.well-known/apple-app-site-association", s.handleAppleAppSiteAssociation)
+	mux.HandleFunc("GET /.well-known/assetlinks.json", s.handleAssetLinks)
+	mux.HandleFunc("GET /join/{roomId}", s.handleJoinPage)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))

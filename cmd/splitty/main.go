@@ -141,6 +141,23 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		GoogleVerifier:  initGoogleVerifier(cfg),
 		AppleVerifier:   initAppleVerifier(cfg),
 		AppleTokens:     initAppleTokens(cfg),
+		// Диплинк-вход в группу. Пустой PUBLIC_BASE_URL — фича выключена (404
+		// на всех трёх маршрутах), и это штатное состояние до покупки домена.
+		// Отпечатки фильтруются от пустых элементов по той же причине, что и
+		// client id: envDefault:"" со сплитом даёт [""], а не пустой срез, и
+		// assetlinks.json уехал бы с пустой строкой в списке отпечатков —
+		// Android признал бы такой файл негодным
+		PublicBaseUrl:     cfg.PublicBaseUrl,
+		IosAppId:          cfg.IosAppId,
+		AndroidPackage:    cfg.AndroidPackage,
+		AndroidCertSha256: nonEmptyValues(cfg.AndroidCertSha256),
+		IosStoreUrl:       cfg.IosStoreUrl,
+		AppScheme:         cfg.AppScheme,
+	}
+	if cfg.PublicBaseUrl == "" {
+		log.Info().Msg("deep links disabled (PUBLIC_BASE_URL empty): /join and .well-known return 404")
+	} else {
+		log.Info().Msgf("deep links enabled on %s", cfg.PublicBaseUrl)
 	}
 	server := rest.NewServer(restCfg, userRepository, roomRepository, loginCodeRepository, roomService, operationService, sequenceRepository)
 
