@@ -772,6 +772,12 @@ func (s *Server) finishAuth(w http.ResponseWriter, r *http.Request, u api.User) 
 
 	user, err := s.userRepo.UpsertUser(ctx, u)
 	if err != nil {
+		// аккаунт удалён: воскрешать его входом нельзя — dev-вход по тому же
+		// номеру иначе вернул бы на tombstone имя и username
+		if errors.Is(err, repository.ErrUserDeleted) {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "аккаунт удалён")
+			return
+		}
 		log.Error().Err(err).Msg("cannot upsert user")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить пользователя")
 		return

@@ -172,12 +172,19 @@ func newFakeUserRepo(users ...api.User) *fakeUserRepo {
 	return repo
 }
 
+// UpsertUser как mongo-реализация: пишет только в ЖИВОЙ документ, создаёт
+// отсутствующего, а на tombstone отвечает repository.ErrUserDeleted (upsert'а в
+// настоящем репозитории больше нет — иначе PATCH /me, впущенный за миг до
+// DELETE /me, вернул бы имя и username на удалённый аккаунт)
 func (f *fakeUserRepo) UpsertUser(_ context.Context, u api.User) (*api.User, error) {
 	existing, ok := f.users[u.ID]
-	if !ok {
+	switch {
+	case !ok:
 		user := u
 		f.users[u.ID] = &user
-	} else {
+	case existing.IsDeleted():
+		return nil, repository.ErrUserDeleted
+	default:
 		// как в mongo-реализации: $set только _id, user_lang, display_name, user_name
 		existing.UserLang = u.UserLang
 		existing.DisplayName = u.DisplayName
@@ -435,8 +442,18 @@ func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.
 	return nil, mongo.ErrNoDocuments
 }
 
+// liveUser — как MongoUserRepository.updateLiveUser: настройки профиля пишутся
+// только в живой документ. Удалённый — тихий no-op, upsert'а нет
+func (f *fakeUserRepo) liveUser(userId int) (*api.User, bool) {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return nil, false
+	}
+	return u, true
+}
+
 func (f *fakeUserRepo) SetNotifySettings(_ context.Context, userId int, s api.NotifySettings) error {
-	if u, ok := f.users[userId]; ok {
+	if u, ok := f.liveUser(userId); ok {
 		settings := s
 		u.Notify = &settings
 	}
@@ -444,28 +461,28 @@ func (f *fakeUserRepo) SetNotifySettings(_ context.Context, userId int, s api.No
 }
 
 func (f *fakeUserRepo) SetUserLang(_ context.Context, userId int, lang string) error {
-	if u, ok := f.users[userId]; ok {
+	if u, ok := f.liveUser(userId); ok {
 		u.SelectedLang = lang
 	}
 	return nil
 }
 
 func (f *fakeUserRepo) SetNotificationUser(_ context.Context, userId int, notification bool) error {
-	if u, ok := f.users[userId]; ok {
+	if u, ok := f.liveUser(userId); ok {
 		u.NotificationOn = &notification
 	}
 	return nil
 }
 
 func (f *fakeUserRepo) SetUserBankDetails(_ context.Context, userId int, bankDetails string) error {
-	if u, ok := f.users[userId]; ok {
+	if u, ok := f.liveUser(userId); ok {
 		u.BankDetails = bankDetails
 	}
 	return nil
 }
 
 func (f *fakeUserRepo) SetCountInPage(_ context.Context, userId int, count int) error {
-	if u, ok := f.users[userId]; ok {
+	if u, ok := f.liveUser(userId); ok {
 		u.CountInPage = count
 	}
 	return nil
@@ -493,8 +510,10 @@ func (f *fakeUserRepo) FindByIds(_ context.Context, ids []int) ([]api.User, erro
 	return out, nil
 }
 
+// AddPushToken как mongo-реализация: push_tokens входит в snapshotPIIFields,
+// поэтому токен на tombstone не сядет — mongo.ErrNoDocuments
 func (f *fakeUserRepo) AddPushToken(_ context.Context, userId int, token api.PushToken) error {
-	u, ok := f.users[userId]
+	u, ok := f.liveUser(userId)
 	if !ok {
 		return mongo.ErrNoDocuments
 	}
@@ -523,8 +542,10 @@ func (f *fakeUserRepo) RemovePushToken(_ context.Context, userId int, token stri
 	return nil
 }
 
+// AddAlias как mongo-реализация: aliases входит в snapshotPIIFields, и чужой
+// запрос не должен возвращать прозвище удалённого человека на его tombstone
 func (f *fakeUserRepo) AddAlias(_ context.Context, userId int, alias string) error {
-	u, ok := f.users[userId]
+	u, ok := f.liveUser(userId)
 	if !ok {
 		return mongo.ErrNoDocuments
 	}

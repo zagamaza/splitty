@@ -1,11 +1,13 @@
 package rest
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // deviceRequest — регистрация/снятие FCM-токена устройства.
@@ -38,6 +40,12 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.userRepo.AddPushToken(ctx, user.ID, api.PushToken{Token: req.Token, Platform: req.Platform}); err != nil {
+		// репозиторий пишет только в живой документ: аккаунт удалили, пока
+		// запрос шёл, — токен на tombstone не сядет, отвечаем как middleware
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			writeError(w, http.StatusUnauthorized, "unauthorized", "аккаунт удалён")
+			return
+		}
 		log.Error().Err(err).Int("user", user.ID).Msg("cannot add push token")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось зарегистрировать устройство")
 		return

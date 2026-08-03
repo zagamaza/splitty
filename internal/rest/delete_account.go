@@ -18,19 +18,28 @@ import (
 //
 //	(0) отзыв токенов Apple — строго ДО tombstone: SoftDeleteUser делает
 //	    $unset apple_refresh_token, и после него отзывать уже нечем;
-//	(1) SoftDeleteUser — tombstone: с этого момента аккаунт недоступен;
-//	(2) чистка кеша auth-middleware — иначе токен живёт ещё accountTTL;
-//	(3) анонимизация встроенных снимков в комнатах;
-//	(4) чистка побочных коллекций с PII;
-//	(5) 204.
+//	(1) чистка chat_state — тоже строго ДО tombstone: часть состояний бота
+//	    сохранена под СЫРЫМ telegram id, а SoftDeleteUser вычищает telegram_id,
+//	    и повторному вызову этот id взять было бы уже неоткуда (chatStateIDs);
+//	(2) SoftDeleteUser — tombstone: с этого момента аккаунт недоступен;
+//	(3) чистка кеша auth-middleware — иначе токен живёт ещё accountTTL;
+//	(4) анонимизация встроенных снимков в комнатах;
+//	(5) чистка побочных коллекций с PII;
+//	(6) 204.
 //
-// Обратный порядок (3) → (1) недопустим: если анонимизация пройдёт, а tombstone
+// Обратный порядок (4) → (2) недопустим: если анонимизация пройдёт, а tombstone
 // упадёт (транзиентная ошибка mongo, отмена контекста), аккаунт останется ЖИВЫМ
 // с затёртым во всех комнатах именем. Снимки из канонического документа не
 // перестраиваются — это необратимая порча живого аккаунта, а не «повторный
 // вызов доделает».
 //
-// Шаги (3)-(4) повторяемы: запрос, упавший после (1), доводится до конца любым
+// Шаг (1), наоборот, ДО tombstone безопасен: chat_state — это незавершённый
+// диалог с ботом, а не данные аккаунта. Упавший на нём запрос оставляет аккаунт
+// живым (errCodeInternal), и человек теряет разве что недописанный расход —
+// цена, несопоставимая с НАВСЕГДА застрявшим в базе телом его расходов, если
+// сырой telegram id потерять вместе с tombstone.
+//
+// Шаги (4)-(5) повторяемы: запрос, упавший после (2), доводится до конца любым
 // повторным DELETE /me (маршрут висит на authDeleted, см. server.go). Состояние
 // между шагами безопасно — аккаунт уже недоступен, в комнатах пока видно старое
 // имя.
@@ -38,11 +47,11 @@ import (
 // ⚠️ КОД ОШИБКИ РАЗЛИЧАЕТ «ДО» И «ПОСЛЕ» tombstone — на нём держится поведение
 // клиента, и одинаковые коды тут стоили бы человеку данных:
 //
-//   - errCodeInternal — сбой ДО tombstone (шаги 0-1): аккаунт ЖИВ, ничего не
-//     произошло. Клиент обязан оставить сессию и очередь неотправленных
-//     расходов на месте (iOS раньше стирал их на любом 500: транзиентный сбой
-//     mongo уносил офлайн-очередь при целом аккаунте);
-//   - errCodePurgeIncomplete — сбой ПОСЛЕ tombstone (шаги 3-4): аккаунт уже
+//   - errCodeInternal — сбой ДО tombstone (шаги 0-2): аккаунт ЖИВ, ничего
+//     необратимого не произошло. Клиент обязан оставить сессию и очередь
+//     неотправленных расходов на месте (iOS раньше стирал их на любом 500:
+//     транзиентный сбой mongo уносил офлайн-очередь при целом аккаунте);
+//   - errCodePurgeIncomplete — сбой ПОСЛЕ tombstone (шаги 4-5): аккаунт уже
 //     удалён, но PII осталась. Клиент обязан СОХРАНИТЬ токен: только им и можно
 //     повторить запрос (authDeleted пускает удалённых, а войти заново нельзя —
 //     SoftDeleteUser вычистил все личности). Выбросив токен, клиент навсегда
@@ -86,27 +95,34 @@ func (s *Server) handleDeleteMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// (0) отзыв токенов Apple — best-effort, но строго до шага 1
+	// (0) отзыв токенов Apple — best-effort, но строго до шага 2
 	s.revokeAppleTokens(ctx, user)
 
-	// (1) tombstone: аккаунт становится недоступен
+	// (1) chat_state — пока из документа виден сырой telegram id
+	if err := s.purgeChatStates(ctx, chatStateIDs(user)); err != nil {
+		log.Error().Err(err).Int("userId", userId).Msg("cannot purge chat states")
+		writeError(w, http.StatusInternalServerError, errCodeInternal, "не удалось удалить аккаунт")
+		return
+	}
+
+	// (2) tombstone: аккаунт становится недоступен
 	if err := s.userRepo.SoftDeleteUser(ctx, userId); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot soft delete user")
 		writeError(w, http.StatusInternalServerError, errCodeInternal, "не удалось удалить аккаунт")
 		return
 	}
 
-	// (2) инвалидация токена: сам этот запрос прогрел кеш вердиктом «жив»
+	// (3) инвалидация токена: сам этот запрос прогрел кеш вердиктом «жив»
 	s.accounts.forget(userId)
 
-	// (3) анонимизация встроенных снимков
+	// (4) анонимизация встроенных снимков
 	if err := s.roomRepo.AnonymizeUser(ctx, userId, repository.DeletedUserPlaceholder); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot anonymize user snapshots")
 		writeError(w, http.StatusInternalServerError, errCodePurgeIncomplete, purgeIncompleteMessage)
 		return
 	}
 
-	// (4) побочные коллекции с PII
+	// (5) побочные коллекции с PII
 	if err := s.purgeUserData(ctx, user); err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot purge user data")
 		writeError(w, http.StatusInternalServerError, errCodePurgeIncomplete, purgeIncompleteMessage)
@@ -165,17 +181,18 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 	if err := s.loginCodeRepo.DeleteByUserId(ctx, u.ID); err != nil {
 		return err
 	}
-	// Состояния бота сохранялись и по каноническому _id, и по сырому telegram id
-	// (исторические пути). На ПОВТОРНОМ вызове telegram_id уже вычищен шагом 1,
-	// поэтому по сырому id чистит только первый проход — это осознанный остаток:
-	// класть чистку до tombstone нельзя, а хранить telegram id где-то ещё ради
-	// маловероятного ретрая дороже, чем сам остаток
+	// chat_state здесь чистится ПОВТОРНО и только по каноническому _id: основную
+	// работу сделал шаг (1) до tombstone, а этот проход добирает состояние,
+	// которое бот успел записать между шагами (1) и (2), пока аккаунт был жив.
+	// Сырой telegram id тут уже не нужен: под ним лежат только исторические
+	// документы, новых после шага (1) не появляется — весь текущий код бота
+	// кладёт в chat_state.user_id канонический номер (см. api.ChatState.UserId)
 	for _, cleaner := range []struct {
 		name string
 		repo userDataCleaner
 		ids  []int
 	}{
-		{name: "chat_state", repo: s.chatStates, ids: chatStateIDs(u)},
+		{name: "chat_state", repo: s.chatStates, ids: []int{u.ID}},
 		{name: "bug_report", repo: s.bugReports, ids: []int{u.ID}},
 		{name: "push_outbox", repo: s.pushOutbox, ids: []int{u.ID}},
 	} {
@@ -191,7 +208,29 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 	return nil
 }
 
-// chatStateIDs — идентификаторы, под которыми могли сохраняться состояния бота
+// purgeChatStates удаляет состояния бота по всем переданным id.
+//
+// Вызывается ДО tombstone (шаг 1) — ради этого у него отдельная функция, а не
+// строчка в purgeUserData: CallbackData.ExternalData хранит свободный текст
+// расхода, то есть настоящий PII, а часть таких записей лежит под СЫРЫМ
+// telegram id. SoftDeleteUser вычищает telegram_id первым же действием, и после
+// него повторный DELETE /me видит в документе только канонический _id —
+// telegram-ключ был бы потерян навсегда вместе с текстами расходов
+func (s *Server) purgeChatStates(ctx context.Context, ids []int) error {
+	if s.chatStates == nil {
+		return errors.New("коллекция chat_state не подключена: PII удалённого пользователя осталась бы в базе")
+	}
+	for _, id := range ids {
+		if err := s.chatStates.DeleteByUserId(ctx, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// chatStateIDs — идентификаторы, под которыми могли сохраняться состояния бота.
+// Сырой telegram id виден ТОЛЬКО в живом документе: tombstone его уже не
+// содержит, поэтому звать это надо строго до SoftDeleteUser
 func chatStateIDs(u *api.User) []int {
 	ids := []int{u.ID}
 	if u.HasTelegram() && *u.TelegramID != u.ID {

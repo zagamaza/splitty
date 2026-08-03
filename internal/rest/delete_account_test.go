@@ -409,6 +409,52 @@ func TestDeleteMePurgesSideCollections(t *testing.T) {
 	}
 }
 
+// ⚠️ Регрессия: chat_state, сохранённый под СЫРЫМ telegram id, не должен
+// застревать в базе навсегда, если удаление упало ПОСЛЕ tombstone.
+//
+// chat_state.external_data хранит свободный текст расхода — настоящий PII, а
+// часть записей лежит под telegram id (chatStateIDs). SoftDeleteUser вычищает
+// telegram_id первым же действием, поэтому повторный DELETE /me видит в
+// документе только канонический _id: пока чистка стояла ПОСЛЕ tombstone,
+// первый же сбой на анонимизации оставлял telegram-ключ недостижимым, и повтор
+// уже ничем не мог помочь. Отсюда шаг (1) — chat_state чистится ДО tombstone
+func TestDeleteMePurgesTelegramChatStatesBeforeTombstone(t *testing.T) {
+	d := newDeleteSetup(t, Config{})
+	// сбой на шаге (4): аккаунт уже удалён, PII в комнатах ещё нет
+	d.rooms.anonymizeErr = errors.New("mongo недоступен")
+
+	assertErrorCode(t, d.deleteMe(t, deletedUserID),
+		http.StatusInternalServerError, errCodePurgeIncomplete)
+
+	for _, id := range []int{deletedUserID, deletedTgID} {
+		if !containsInt(d.chatStates.deleted, id) {
+			t.Fatalf("после сбоя chat_state не почищен по id %d (почищено %v): "+
+				"telegram-ключ потерян вместе с tombstone", id, d.chatStates.deleted)
+		}
+	}
+
+	// повтор доводит удаление до конца; telegram id из документа уже пропал,
+	// поэтому второй проход чистит только канонический _id — и этого достаточно
+	before := len(d.chatStates.deleted)
+	if rec := d.deleteMe(t, deletedUserID); rec.Code != http.StatusNoContent {
+		t.Fatalf("повторный DELETE /me: status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+	for _, id := range d.chatStates.deleted[before:] {
+		if id != deletedUserID {
+			t.Errorf("повтор почистил chat_state по неожиданному id %d", id)
+		}
+	}
+}
+
+func containsInt(ids []int, want int) bool {
+	for _, id := range ids {
+		if id == want {
+			return true
+		}
+	}
+	return false
+}
+
 // Сбой чистки побочных коллекций — 500, а не тихое «удалили»: клиент обязан
 // повторить, а не думать, что PII убрана
 func TestDeleteMePurgeFailureReportsError(t *testing.T) {

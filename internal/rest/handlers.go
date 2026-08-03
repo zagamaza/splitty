@@ -18,6 +18,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -58,7 +59,18 @@ func decodeJSON(r *http.Request, dst interface{}) *httpError {
 	return nil
 }
 
-// currentUser возвращает профиль текущего пользователя из репозитория
+// currentUser возвращает профиль текущего пользователя из репозитория.
+//
+// ⚠️ Проверка tombstone здесь ОБЯЗАТЕЛЬНА, хотя удалённых отсекает и
+// auth-middleware. Middleware держит вердикт «жив» в кеше до accountTTL, и
+// запрос, впущенный за миг до DELETE /me, доходит сюда с уже удалённым
+// аккаунтом — а отсюда идут все мутаторы профиля (PATCH /me, /me/devices,
+// /me/notifications, /me/link/*). Репозиторий такую запись всё равно отвергнет
+// (см. updateLiveUser), но отвечать на неё 200 нельзя: клиент решил бы, что
+// сохранил данные в аккаунт, которого уже нет.
+//
+// DELETE /me сюда не ходит (у него свой FindById), поэтому повторяемость
+// удаления эта проверка не ломает
 func (s *Server) currentUser(ctx context.Context) (*api.User, *httpError) {
 	user, err := s.userRepo.FindById(ctx, userIdFromCtx(ctx))
 	if err != nil {
@@ -67,6 +79,9 @@ func (s *Server) currentUser(ctx context.Context) (*api.User, *httpError) {
 		}
 		log.Error().Err(err).Msg("cannot find user")
 		return nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить пользователя"}
+	}
+	if user.IsDeleted() {
+		return nil, &httpError{http.StatusUnauthorized, "unauthorized", "аккаунт удалён"}
 	}
 	return user, nil
 }
@@ -218,6 +233,14 @@ func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
 	if req.DisplayName != nil {
 		user.DisplayName = strings.TrimSpace(*req.DisplayName)
 		if _, err := s.userRepo.UpsertUser(ctx, *user); err != nil {
+			// DELETE /me мог пройти уже ПОСЛЕ проверки в currentUser — между
+			// чтением профиля и этой записью. Репозиторий такую запись
+			// отвергает (updateLiveUser), отвечаем так же, как ответил бы
+			// middleware секундой позже
+			if errors.Is(err, repository.ErrUserDeleted) {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "аккаунт удалён")
+				return
+			}
 			log.Error().Err(err).Msg("cannot update user")
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось обновить профиль")
 			return

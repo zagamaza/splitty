@@ -892,13 +892,12 @@ var tombstoneExtraFields = []string{"apple_refresh_token"}
 // пишется руками: новое PII-поле модели иначе пришлось бы добавлять в двух
 // местах, и, забыв одно, оно пережило бы удаление аккаунта.
 //
-// Документ НЕ удаляется намеренно. Во-первых, auth-middleware выдаёт 401 по
-// признаку deleted_at, а не по отсутствию документа — отличать «удалён» от
-// «никогда не существовал» нужно, чтобы старый токен не проходил. Во-вторых,
-// пять методов репозитория работают через upsert по _id (SetUserLang,
-// SetCountInPage, SetNotifySettings, SetNotificationUser, SetUserBankDetails):
-// после DeleteOne первый же запрос со старым токеном воскресил бы пользователя
-// пустым документом.
+// Документ НЕ удаляется намеренно: auth-middleware выдаёт 401 по признаку
+// deleted_at, а не по отсутствию документа — отличать «удалён» от «никогда не
+// существовал» нужно, чтобы старый токен не проходил. Отсюда зеркальное
+// требование к записи: раз документ остаётся, ЛЮБОЙ мутатор профиля обязан
+// фильтровать его по deleted_at (см. updateLiveUser), иначе запрос со старым
+// токеном вернёт на tombstone только что вычищенную PII.
 //
 // Личности ($unset telegram_id/google_sub/apple_sub) освобождаются, чтобы
 // человек мог зарегистрироваться заново тем же Google/Apple/Telegram: unique
@@ -1002,7 +1001,17 @@ func (r MongoUserRepository) UpsertTelegramUser(ctx context.Context, tgID int, u
 		// telegram_id, получила E11000 уже по unique-индексу и потеряла апдейт
 		existing, err := r.FindByTelegramID(ctx, tgID)
 		if err == nil {
-			return r.refreshTelegramProfile(ctx, existing, username, displayName, userLang)
+			refreshed, refreshErr := r.refreshTelegramProfile(ctx, existing, username, displayName, userLang)
+			if refreshErr == nil {
+				return refreshed, nil
+			}
+			if refreshErr != mongo.ErrNoDocuments {
+				return nil, refreshErr
+			}
+			// пользователя удалили между поиском и записью: tombstone освободил
+			// telegram_id, и следующая итерация заведёт человеку новый аккаунт
+			lastErr = refreshErr
+			continue
 		}
 		if err != mongo.ErrNoDocuments {
 			return nil, err
@@ -1059,6 +1068,15 @@ func (r MongoUserRepository) idOccupied(ctx context.Context, id int) (bool, erro
 //     имени не должен затирать имя, известное боту;
 //   - user_lang — только когда в базе пусто. Заполненный язык принадлежит
 //     пользователю (он мог выбрать его руками), апдейты бота его не трогают
+//
+// ⚠️ Запись идёт через updateLiveUser (фильтр по deleted_at), а не по одному
+// _id. Гонка, ради которой это критично: апдейт из Telegram нашёл живого
+// пользователя, параллельно прошёл DELETE /me, вычистил user_name/display_name
+// и поставил tombstone — и запись по одному _id вернула бы на tombstone
+// НАСТОЯЩЕЕ ИМЯ И USERNAME человека уже после чистки PII.
+// Не совпало — mongo.ErrNoDocuments: вызывающий (UpsertTelegramUser) на этом
+// сигнале уходит на следующую итерацию и заводит человеку новый аккаунт.
+// По той же причине перечитывание идёт по живому документу
 func (r MongoUserRepository) refreshTelegramProfile(ctx context.Context, u *api.User, username, displayName, userLang string) (*api.User, error) {
 	set := bson.M{}
 	if username != u.Username {
@@ -1073,11 +1091,14 @@ func (r MongoUserRepository) refreshTelegramProfile(ctx context.Context, u *api.
 	if len(set) == 0 {
 		return u, nil
 	}
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: u.ID}}}}
-	if _, err := r.col.UpdateOne(ctx, f, bson.D{{Key: "$set", Value: set}}); err != nil {
+	updated, err := r.updateLiveUser(ctx, u.ID, bson.D{{Key: "$set", Value: set}})
+	if err != nil {
 		return nil, err
 	}
-	return r.FindById(ctx, u.ID)
+	if !updated {
+		return nil, mongo.ErrNoDocuments
+	}
+	return r.findOne(ctx, append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: u.ID}}}}, notDeleted...))
 }
 
 // IsDuplicateKey — ошибка уникального индекса (E11000). В драйвере 1.4.4 нет
@@ -1173,15 +1194,19 @@ func (r MongoUserRepository) FindByIds(ctx context.Context, ids []int) ([]api.Us
 
 // AddAlias добавляет прозвище пользователю ($addToSet — без дублей). Алиас
 // нормализуется вызывающим кодом (trim/lower).
+//
+// Только по живому документу: aliases входит в snapshotPIIFields и вычищается
+// при удалении аккаунта, а писать сюда может ЛЮБОЙ участник общей комнаты
+// (POST /users/{id}/aliases) — то есть чужой запрос дописал бы прозвище
+// удалённого человека обратно на его tombstone
 func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias string) error {
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	update := bson.D{{Key: "$addToSet", Value: bson.M{"aliases": alias}}}
-	res, err := r.col.UpdateOne(ctx, f, update)
+	updated, err := r.updateLiveUser(ctx, userId, bson.D{{Key: "$addToSet", Value: bson.M{"aliases": alias}}})
 	if err != nil {
 		return err
 	}
-	// целевого пользователя нет — не молчаливый no-op, а явная ошибка (404 в хендлере)
-	if res.MatchedCount == 0 {
+	// целевого пользователя нет (или он удалён) — не молчаливый no-op, а явная
+	// ошибка: хендлер обязан ответить 404, а не 204 «сохранили»
+	if !updated {
 		return mongo.ErrNoDocuments
 	}
 	return nil
@@ -1190,16 +1215,19 @@ func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias str
 // AddPushToken регистрирует FCM-токен устройства (идемпотентно): сначала убираем
 // прежнюю запись с тем же token (мог сменить платформу/пользователя), затем
 // добавляем. Дубли токенов недопустимы — один токен = одно устройство.
+//
+// Обе записи — по живому документу: push_tokens входит в snapshotPIIFields, и
+// токен, дописанный на tombstone, вернул бы удалённому аккаунту адрес доставки
+// пушей
 func (r MongoUserRepository) AddPushToken(ctx context.Context, userId int, token api.PushToken) error {
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	if _, err := r.col.UpdateOne(ctx, f, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token.Token}}}); err != nil {
+	if _, err := r.updateLiveUser(ctx, userId, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token.Token}}}); err != nil {
 		return err
 	}
-	res, err := r.col.UpdateOne(ctx, f, bson.M{"$push": bson.M{"push_tokens": token}})
+	updated, err := r.updateLiveUser(ctx, userId, bson.M{"$push": bson.M{"push_tokens": token}})
 	if err != nil {
 		return err
 	}
-	if res.MatchedCount == 0 {
+	if !updated {
 		return mongo.ErrNoDocuments
 	}
 	return nil
@@ -1207,6 +1235,11 @@ func (r MongoUserRepository) AddPushToken(ctx context.Context, userId int, token
 
 // RemovePushToken убирает токен (logout или отбраковка FCM). Отсутствие токена —
 // не ошибка (idempotent): 404 только если самого пользователя нет.
+//
+// Фильтра notDeleted здесь намеренно НЕТ: это единственная запись в user,
+// которая только УБИРАЕТ данные. Отбраковка мёртвого токена приходит из
+// воркера пушей уже после удаления аккаунта, и отказать ей — значит оставить
+// токен в базе ровно в том случае, ради которого метод и нужен
 func (r MongoUserRepository) RemovePushToken(ctx context.Context, userId int, token string) error {
 	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
 	res, err := r.col.UpdateOne(ctx, f, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token}}})
@@ -1219,9 +1252,47 @@ func (r MongoUserRepository) RemovePushToken(ctx context.Context, userId int, to
 	return nil
 }
 
+// ErrUserDeleted — запись отвергнута, потому что аккаунт удалён (tombstone).
+// Отличается от mongo.ErrNoDocuments намеренно: «пользователя никогда не было»
+// и «пользователь удалён, воскрешать его нельзя» — разные ответы клиенту
+var ErrUserDeleted = errors.New("пользователь удалён")
+
+// updateLiveUser — единственная точка записи в профиль ЖИВОГО пользователя:
+// фильтр {_id, deleted_at: {$exists:false}}, никакого upsert. Возвращает false,
+// если документа нет или он — tombstone.
+//
+// ⚠️ Инвариант удаления аккаунта (Task 13): tombstone НИКОГДА не получает PII
+// обратно. Любой новый мутатор профиля обязан идти через этот метод, а не
+// писать UpdateOne по одному _id: запрос, впущенный auth-middleware за миг до
+// DELETE /me, иначе дописал бы имя, username, язык, настройки уведомлений или
+// банковские реквизиты на уже удалённый аккаунт
+func (r MongoUserRepository) updateLiveUser(ctx context.Context, userId int, update interface{}) (bool, error) {
+	filter := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
+	res, err := r.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return false, err
+	}
+	return res.MatchedCount > 0, nil
+}
+
+// UpsertUser создаёт или обновляет профиль ЖИВОГО пользователя.
+//
+// ⚠️ options.SetUpsert здесь БОЛЬШЕ НЕТ, хотя метод так и называется. Причина —
+// tombstone: фильтр `{_id: X}` с upsert записал бы display_name и user_name
+// прямо на удалённый аккаунт (PATCH /me, впущенный middleware за миг до
+// DELETE /me), а `{_id: X, deleted_at: {$exists:false}}` с upsert был бы ещё
+// хуже — фильтр не совпал бы с tombstone и mongo попыталась бы ВСТАВИТЬ второй
+// документ с тем же _id, то есть отдала duplicate key вместо отказа.
+//
+// Поэтому создание разведено с обновлением явно:
+//  1. UpdateOne по живому документу — обычный путь (PATCH /me, повторный
+//     dev-вход);
+//  2. ничего не совпало → InsertOne: пользователя либо нет вовсе (первый
+//     dev-вход, единственный оставшийся создающий вызов), либо он удалён;
+//  3. duplicate key на вставке → документ есть, но живым не нашёлся: либо гонка
+//     двух одновременных первых входов (перепроверяем шагом 1), либо
+//     tombstone → ErrUserDeleted
 func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.User, error) {
-	opts := options.Update().SetUpsert(true)
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: u.ID}}}}
 	set := bson.M{"_id": u.ID, "user_lang": u.UserLang, "display_name": u.DisplayName, "user_name": u.Username}
 	// Только взводим, никогда не снимаем: снять его может лишь тот же аккаунт,
 	// пришедший обычным путём, а этого пути у dev-пользователя нет. Флаг нужен
@@ -1231,39 +1302,52 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.U
 		set["dev_auth"] = true
 	}
 	update := bson.D{{Key: "$set", Value: set}}
-	_, err := r.col.UpdateOne(ctx, f, update, opts)
+
+	updated, err := r.updateLiveUser(ctx, u.ID, update)
 	if err != nil {
 		return nil, err
+	}
+	if !updated {
+		if _, err = r.col.InsertOne(ctx, set); err != nil {
+			if !IsDuplicateKey(err) {
+				return nil, err
+			}
+			if updated, err = r.updateLiveUser(ctx, u.ID, update); err != nil {
+				return nil, err
+			}
+			if !updated {
+				return nil, ErrUserDeleted
+			}
+		}
 	}
 	return r.FindById(ctx, u.ID)
 }
 
+// setLiveUserField — общий путь настроек профиля: $set по живому документу.
+//
+// Upsert'а здесь больше нет (был сразу у пяти методов). Он не только воскрешал
+// бы удалённого пользователя, но и заводил документ на любой незнакомый id — а
+// все вызывающие работают с уже существующим пользователем (бот резолвит его
+// через UpsertTelegramUser, REST — через currentUser).
+//
+// Удалённый пользователь — тихий no-op, а не ошибка: настройки tombstone менять
+// некому и незачем, а 500 в ответ на гонку с собственным DELETE /me
+// пользователю ничего не объясняет
+func (r MongoUserRepository) setLiveUserField(ctx context.Context, userId int, field string, value interface{}) error {
+	_, err := r.updateLiveUser(ctx, userId, bson.D{{Key: "$set", Value: bson.M{field: value}}})
+	return err
+}
+
 func (r MongoUserRepository) SetUserLang(ctx context.Context, userId int, lang string) error {
-	opts := options.Update().SetUpsert(true)
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"selected_lang": lang}}}
-	_, err := r.col.UpdateOne(ctx, f, update, opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.setLiveUserField(ctx, userId, "selected_lang", lang)
 }
 
 func (r MongoUserRepository) SetCountInPage(ctx context.Context, userId int, count int) error {
-	opts := options.Update().SetUpsert(true)
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"count_in_page": count}}}
-	_, err := r.col.UpdateOne(ctx, f, update, opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.setLiveUserField(ctx, userId, "count_in_page", count)
 }
 
 func (r MongoUserRepository) SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error {
-	filter := bson.D{{Key: "_id", Value: userId}}
-	update := bson.D{{Key: "$set", Value: bson.M{"notify": s}}}
-	_, err := r.col.UpdateOne(ctx, filter, update)
+	err := r.setLiveUserField(ctx, userId, "notify", s)
 	if err != nil {
 		log.Error().Err(err).Msg("set notify settings failed")
 	}
@@ -1271,25 +1355,13 @@ func (r MongoUserRepository) SetNotifySettings(ctx context.Context, userId int, 
 }
 
 func (r MongoUserRepository) SetNotificationUser(ctx context.Context, userId int, notification bool) error {
-	opts := options.Update().SetUpsert(true)
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"notification_on": notification}}}
-	_, err := r.col.UpdateOne(ctx, f, update, opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.setLiveUserField(ctx, userId, "notification_on", notification)
 }
 
+// SetUserBankDetails — bank_details входит в snapshotPIIFields, то есть удаление
+// аккаунта его вычищает. Запись строго по живому документу
 func (r MongoUserRepository) SetUserBankDetails(ctx context.Context, userId int, bankDerails string) error {
-	opts := options.Update().SetUpsert(true)
-	f := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"bank_details": bankDerails}}}
-	_, err := r.col.UpdateOne(ctx, f, update, opts)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.setLiveUserField(ctx, userId, "bank_details", bankDerails)
 }
 
 func (csr MongoChatStateRepository) Save(ctx context.Context, cs *api.ChatState) error {
