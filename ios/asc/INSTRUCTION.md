@@ -131,18 +131,48 @@ python3 asc.py attach-build <BUILD_VERSION>   # напр. 6
 
 ### Что включить в консолях
 
+**Кто может это сделать.** Достаточно роли **Admin** в команде `K8922Y6R3M` — Admin видит
+Keys и Identifiers, включает capability и выпускает ключи. Account Holder нужен только для
+состава команды и финансов, здесь он не требуется. Учётка обязана быть **членом команды**:
+Apple ID, не состоящий в программе, получит на `/account/resources/identifiers/list`
+«Access Unavailable», и никакие права тут не помогут — проверять надо именно тот Apple ID,
+на который пришло приглашение, а не любой свой.
+
 1. **Apple Developer Portal → Identifiers → App ID `com.zagir.splitty`** (Team `K8922Y6R3M`):
-   включить capability **Sign in with Apple**. Без неё Apple не выпустит ID-токен, а `xcodebuild`
-   не подпишет билд с соответствующим entitlement.
-2. **Apple Developer Portal → Keys**: создать ключ с включённым **Sign in with Apple** и скачать
-   `.p8`. **Файл отдаётся ровно один раз**, повторно скачать его нельзя — потерял, значит выпускай
+   включить capability **Sign in with Apple** → Save. Без неё Apple не выпустит ID-токен, а
+   `xcodebuild` не подпишет билд с соответствующим entitlement.
+   **⚠️ Порядок важен: capability включается ДО следующей сборки.** Профиль перевыпускать
+   руками не нужно — сборка идёт через cloud signing (`-allowProvisioningUpdates` + ASC API,
+   см. «Про сертификаты подписи» выше), и `xcodebuild` подтянет обновлённый профиль сам. Но
+   если собрать раньше, чем включена capability, подпись упадёт на
+   «provisioning profile doesn't support Sign in with Apple» (этот случай описан и в
+   комментарии `ios/project.yml`).
+2. **Apple Developer Portal → Keys**: `+` → имя (напр. `Splitty SignIn`) → отметить
+   **Sign in with Apple** → рядом **Configure** → Primary App ID `com.zagir.splitty` → Save →
+   Continue → Register → **Download**.
+   **Файл отдаётся ровно один раз**, повторно скачать его нельзя — потерял, значит выпускай
    новый и отзывай старый.
-   - Team ID → `APPLE_TEAM_ID`;
-   - Key ID → `APPLE_KEY_ID`;
-   - **содержимое** `.p8` (не путь к файлу) → `APPLE_PRIVATE_KEY`;
+   - Team ID (`Membership details`, вверху справа) → `APPLE_TEAM_ID` = `K8922Y6R3M`;
+   - Key ID (10 символов, на странице ключа) → `APPLE_KEY_ID`;
+   - **содержимое** `AuthKey_XXXX.p8` целиком, вместе со строками
+     `-----BEGIN PRIVATE KEY-----` / `-----END PRIVATE KEY-----` (не путь к файлу) →
+     `APPLE_PRIVATE_KEY`. Годится и однострочная форма с экранированными `\n` — парсер их
+     нормализует;
    - bundle id `com.zagir.splitty` → `APPLE_CLIENT_IDS`.
-3. Переменные едут в `.env` на сервере. **`.p8` и его содержимое в git не коммитятся** — см.
+   **⚠️ `APPLE_CLIENT_IDS` разделяется двоеточием, и порядок значим.** `client_secret` для
+   `auth/token` и `auth/revoke` подписывается на **первый** элемент списка
+   (`cmd/splitty/main.go`, `clientIDs[0]`). Пока значение одно — неважно; если когда-нибудь
+   добавится Services ID для веба, **bundle id обязан остаться первым**, иначе отзыв токенов
+   при удалении аккаунта молча перестанет работать — то самое требование 5.1.1(v), ради
+   которого ключ и заводится.
+3. Переменные едут в `.env` на сервере (проброс в контейнер уже прописан в
+   `docker-compose.yml`). **`.p8` и его содержимое в git не коммитятся** — см.
    раздел «⚠️ Безопасность» ниже, правило то же, что для ключей ASC.
+
+**Со стороны проекта всё готово:** entitlement `com.apple.developer.applesignin: [Default]`
+уже лежит в `ios/project.yml` и `ios/Splitty/Splitty.entitlements`, править ничего не нужно.
+Пустой `APPLE_PRIVATE_KEY` не ломает сборку и не ломает вход — выключается только обмен
+`authorizationCode`, то есть отзыв токенов при удалении аккаунта.
 
 ### Требования App Store, из-за которых это всё делается
 
