@@ -50,6 +50,21 @@ struct RootView: View {
         // Холодный старт: и ссылка, и отложенное с прошлого раза намерение
         // уже лежат в PendingJoin к моменту появления корня.
         .task { joinPendingRoom() }
+        // Незавершённая после tombstone чистка (`purge_incomplete`): доводим
+        // её сами. Полагаться на то, что человек нажмёт «Удалить аккаунт» ещё
+        // раз, нельзя — он волен уйти на другую вкладку или закрыть
+        // приложение, а фонового реконсилятора на сервере нет, и его PII (имя
+        // в снимках комнат, chat_state, bug_report, push_outbox) осталась бы
+        // в базе навсегда. Флаг персистентный, так что холодный старт — тоже
+        // попытка повтора. См. `SessionStore.finishPendingPurge`.
+        .task { await session.finishPendingPurge() }
+        // Флаг поднялся при живом корне (человек только что нажал «Удалить»):
+        // повторяем сразу, не дожидаясь следующего запуска.
+        .onChange(of: session.isPurgePending) { _, isPending in
+            if isPending {
+                Task { await session.finishPendingPurge() }
+            }
+        }
         .fullScreenCover(item: $joinedRoom) { room in
             NavigationStack {
                 GroupDetailView(roomId: room.id)

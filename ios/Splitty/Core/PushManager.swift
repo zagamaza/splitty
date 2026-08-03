@@ -15,9 +15,24 @@ import FirebaseMessaging
 /// логика надёжной регистрации (login → register, refresh → re-register,
 /// logout → unregister, ретрай при старте) с дедупом уже отправленного токена.
 ///
+/// Привязка/отвязка push-токена устройства — шов для тестов экранов.
+///
+/// Нужен ровно затем, чтобы сценарий удаления аккаунта проверялся НА УРОВНЕ
+/// ЭКРАНА: сам `PushManager` тащит за собой Firebase (делегат `Messaging`,
+/// APNs), в юнит-тестах не поднимается и молча ничего не делает — а именно
+/// его вызов и уничтожал токен повтора (`DELETE /me/devices` висит на `s.auth`
+/// и на tombstone отвечает 401). Без шва тест «повтор не ходит в /me/devices»
+/// проходил бы и на сломанном коде.
+protocol PushTokenBinding: AnyObject {
+    /// Отвязать токен на бэкенде (`DELETE /me/devices`), пока JWT валиден.
+    func unregisterCurrentToken() async
+    /// Зарегистрировать текущий токен заново (`POST /me/devices`).
+    func registerCurrentToken()
+}
+
 /// Singleton, т.к. должен быть делегатом Messaging/UNUserNotificationCenter,
 /// которые живут дольше любого SwiftUI-view. Сессию пробрасывает `SplittyApp`.
-final class PushManager: NSObject {
+final class PushManager: NSObject, PushTokenBinding {
     static let shared = PushManager()
 
     /// Сессия для доступа к `api` (актуальные baseURL/token) и статусу входа.

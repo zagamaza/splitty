@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.zagir.splitty.BuildConfig
@@ -54,6 +55,25 @@ data class Session(
      * OfflineDataCleaner необратимо стирал очередь неотправленных расходов.
      */
     val readFailed: Boolean = false,
+    /**
+     * true — `DELETE /me` упал ПОСЛЕ tombstone (`purge_incomplete`): аккаунт
+     * удалён, но его PII (имя в снимках комнат, chat_state, bug_report,
+     * push_outbox) осталась в базе. Доделать чистку может ТОЛЬКО повторный
+     * `DELETE /me` этим же токеном — маршрут висит на `authDeleted` ровно ради
+     * повтора, а войти заново нельзя: `SoftDeleteUser` вычистил все личности.
+     *
+     * Флаг персистится РЯДОМ С ТОКЕНОМ, потому что удержать токен на время
+     * повтора локальной переменной экрана невозможно: аккаунт уже tombstone, и
+     * КАЖДЫЙ следующий запрос к любому другому маршруту (все на `s.auth`)
+     * отвечает 401 — отвязка push-токена, обновление профиля, открытие группы.
+     * Без флага первый же такой 401 звал [SessionStore.notifyUnauthorized], тот
+     * стирал токен, и единственный ключ к маршруту, который сервер держит
+     * открытым, уничтожался самим клиентом — вместе с шансом когда-либо
+     * доделать удаление (5.1.1(v)/GDPR). Пока флаг стоит,
+     * [SessionEndReason.EXPIRED] токен НЕ трогает, а корень
+     * (`AppRootViewModel`) сам повторяет `DELETE /me` до 204.
+     */
+    val purgePending: Boolean = false,
 ) {
     val isAuthenticated: Boolean get() = token != null
 }
@@ -118,6 +138,9 @@ class SessionStore @Inject constructor(
         private val KEY_ME = stringPreferencesKey("me_json")
         private val KEY_THEME = stringPreferencesKey("theme")
 
+        /** Незавершённая после tombstone чистка — см. [Session.purgePending]. */
+        private val KEY_PURGE_PENDING = booleanPreferencesKey("purge_pending")
+
         /** Повторы чтения DataStore при транзиентной ошибке ввода-вывода. */
         private const val RETRY_DELAY_MS = 200L
 
@@ -174,6 +197,10 @@ class SessionStore @Inject constructor(
                     runCatching { SplittyJson.decodeFromString(Me.serializer(), raw) }.getOrNull()
                 },
                 theme = prefs[KEY_THEME] ?: THEME_SYSTEM,
+                // Переживает перезапуск процесса намеренно: «человек закрыл
+                // приложение вместо повтора» иначе навсегда оставлял бы его
+                // PII в базе — фонового реконсилятора на сервере нет.
+                purgePending = prefs[KEY_PURGE_PENDING] == true,
             )
         }
         .stateIn(scope, SharingStarted.Eagerly, null)
@@ -233,6 +260,21 @@ class SessionStore @Inject constructor(
     /** Текущий токен — для OkHttp-интерцептора (синхронно). */
     fun currentToken(): String? = state.value?.token
 
+    /**
+     * Чистка после tombstone не доведена до конца — см. [Session.purgePending].
+     * Синхронно: читается из [endSession], который зовёт [notifyUnauthorized]
+     * с потока OkHttp.
+     */
+    fun isPurgePending(): Boolean = state.value?.purgePending == true
+
+    /**
+     * Отметить, что `DELETE /me` упал после tombstone. С этого момента 401 от
+     * любого маршрута НЕ стирает токен: им и только им доделывается чистка.
+     */
+    suspend fun markPurgePending() {
+        dataStore.edit { prefs -> prefs[KEY_PURGE_PENDING] = true }
+    }
+
     private val _lastSessionEndReason = MutableStateFlow<SessionEndReason?>(null)
 
     /**
@@ -274,6 +316,10 @@ class SessionStore @Inject constructor(
                 prefs.remove(KEY_TOKEN_ENC)
             }
             prefs[KEY_ME] = SplittyJson.encodeToString(Me.serializer(), me)
+            // Новый вход — чужая незавершённая чистка к нему отношения не
+            // имеет: оставшийся флаг гасил бы разлогин по 401 у живого
+            // аккаунта, то есть ровно ту защиту, ради которой он и заведён.
+            prefs.remove(KEY_PURGE_PENDING)
         }
     }
 
@@ -307,6 +353,16 @@ class SessionStore @Inject constructor(
      * который читает [com.zagir.splitty.data.OfflineDataCleaner].
      */
     private suspend fun endSession(reason: SessionEndReason) {
+        // Незавершённая после tombstone чистка — единственное исключение.
+        // Аккаунт удалён, поэтому 401 отвечает КАЖДЫЙ маршрут на `s.auth`
+        // (отвязка push-токена, обновление профиля, открытие группы), и
+        // обычное протухание уничтожило бы токен, которым только и можно
+        // доделать удаление: войти заново нельзя, личности вычищены. Держим
+        // токен до подтверждённого 204 — повторяет `AppRootViewModel`.
+        //
+        // ЯВНЫЙ выход ([SessionEndReason.LOGOUT]) исключением не является: его
+        // делает сам человек, и им же завершается успешное удаление.
+        if (reason == SessionEndReason.EXPIRED && isPurgePending()) return
         // Причину публикуем ДО записи: подписчик увидит пропажу токена уже
         // после неё (см. [lastSessionEndReason]).
         _lastSessionEndReason.value = reason
@@ -314,6 +370,10 @@ class SessionStore @Inject constructor(
             prefs.remove(KEY_TOKEN_ENC)
             prefs.remove(KEY_TOKEN)
             prefs.remove(KEY_ME)
+            // Повторять больше нечего: либо чистка подтверждена 204, либо
+            // человек вышел сам. Флаг обязан уйти вместе с токеном — иначе
+            // следующая сессия унаследовала бы чужую защиту от 401.
+            prefs.remove(KEY_PURGE_PENDING)
         }
         tokenCipher.clearKey()
     }

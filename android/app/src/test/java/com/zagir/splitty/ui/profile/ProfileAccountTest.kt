@@ -7,6 +7,7 @@ import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.ApiException
+import com.zagir.splitty.core.network.AuthInterceptor
 import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
 import com.zagir.splitty.core.session.SessionStore
@@ -31,12 +32,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -83,11 +86,39 @@ class ProfileAccountTest {
         }
     }
 
+    /**
+     * Подменная отвязка push-токена: считает вызовы вместо похода в Firebase.
+     * Настоящий регистратор в JVM-тесте падает на `FirebaseMessaging` и не
+     * шлёт ничего — без дублёра «повтор не отвязывал токен» было бы неотличимо
+     * от «отвязывал, но запрос всё равно не ушёл», и тест проходил бы на
+     * сломанном коде.
+     */
+    private class SpyRegistrar(
+        repository: SplittyRepository,
+        session: SessionStore,
+        scope: CoroutineScope,
+    ) : PushTokenRegistrar(repository, session, scope) {
+        @Volatile
+        var unregisterCalls = 0
+
+        override fun unregisterCurrent() {
+            unregisterCalls++
+        }
+    }
+
     private val server = MockWebServer()
     private lateinit var cacheDir: File
     private lateinit var sessionDir: File
     private lateinit var scope: CoroutineScope
     private lateinit var session: SessionStore
+    private lateinit var registrar: SpyRegistrar
+
+    /**
+     * Все запросы, реально дошедшие до сервера: «МЕТОД /путь» и заголовок
+     * Authorization. Проверять надо и отсутствие лишнего запроса, и то, что
+     * повтор удаления ушёл ИМЕННО с токеном.
+     */
+    private val seenRequests = mutableListOf<Pair<String, String?>>()
 
     /**
      * Ответы по ПУТИ, а не общей очередью: `init` ViewModel уходит в GET /me
@@ -108,6 +139,9 @@ class ProfileAccountTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val path = request.path.orEmpty()
                 val key = "${request.method} $path"
+                synchronized(seenRequests) {
+                    seenRequests.add(key to request.getHeader("Authorization"))
+                }
                 val queued = synchronized(responses) { responses[key]?.removeFirstOrNull() }
                 // Незаказанное падает 404: «ответ не тому запросу» обязан быть
                 // виден как ошибка теста, а не тихо разойтись по assert'ам.
@@ -143,8 +177,19 @@ class ProfileAccountTest {
         me: Me = ME,
     ): ProfileViewModel = runBlocking {
         val json = SplittyJson
+        val dataStore = PreferenceDataStoreFactory.create(scope = scope) {
+            File(sessionDir, "session.preferences_pb")
+        }
+        session = SessionStore(dataStore, FakeTokenCipher(), scope)
+        session.signIn("jwt-token", me)
+        withTimeout(5_000) { session.state.first { it?.token != null } }
+        // НАСТОЯЩИЙ AuthInterceptor, а не голый Retrofit: именно он вешает
+        // Authorization и делает глобальный разлогин на 401 — обе половины
+        // сценария удаления аккаунта живут в нём, и подменять его фейком
+        // значило бы выбросить из теста ровно то, что ломалось.
         val retrofit = Retrofit.Builder()
             .baseUrl(server.url("/"))
+            .client(OkHttpClient.Builder().addInterceptor(AuthInterceptor(session)).build())
             .addConverterFactory(
                 json.asConverterFactory("application/json; charset=utf-8".toMediaType()),
             )
@@ -155,16 +200,11 @@ class ProfileAccountTest {
             json,
             ApiCache(cacheDir, json),
         )
-        val dataStore = PreferenceDataStoreFactory.create(scope = scope) {
-            File(sessionDir, "session.preferences_pb")
-        }
-        session = SessionStore(dataStore, FakeTokenCipher(), scope)
-        session.signIn("jwt-token", me)
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        registrar = SpyRegistrar(repository, session, scope)
         ProfileViewModel(
             repository = repository,
             sessionStore = session,
-            pushTokenRegistrar = PushTokenRegistrar(repository, session, scope),
+            pushTokenRegistrar = registrar,
             googleIdTokenProvider = provider,
             outboxStore = OutboxStore(File(cacheDir, "outbox.json"), json),
         )
@@ -205,6 +245,109 @@ class ProfileAccountTest {
         assertNotNull(vm.errorMessage.value)
         assertEquals("jwt-token", session.state.value?.token)
         assertNotNull(session.state.value?.me)
+        // И флага повтора тут быть не должно: tombstone не поставлен, повторять
+        // нечего, а обычное протухание сессии обязано разлогинивать как раньше.
+        assertFalse(session.isPurgePending())
+    }
+
+    /**
+     * Повтор удаления после `purge_incomplete` больше не уничтожает свой
+     * собственный токен.
+     *
+     * Сбой ПОСЛЕ tombstone оставляет аккаунт удалённым, а его PII — в базе.
+     * Доделать чистку может только повторный `DELETE /me` тем же токеном
+     * (маршрут на `authDeleted`), войти заново нельзя — личности вычищены.
+     * Но экран безусловно звал отвязку push-токена ПЕРЕД удалением: на повторе
+     * `DELETE /me/devices` (маршрут на `s.auth`) получал на tombstone 401,
+     * [AuthInterceptor] звал разлогин, и токен пропадал ДО того, как уходил сам
+     * повтор. Тот летел без Authorization, получал 401 — и единственный путь
+     * доделать удаление закрывался навсегда (5.1.1(v)/GDPR).
+     */
+    @Test
+    fun `retry after purge incomplete keeps the token and skips device unregister`() = runBlocking {
+        respond(
+            "DELETE /api/v1/me",
+            MockResponse().setResponseCode(500).setBody(PURGE_INCOMPLETE_JSON),
+        )
+        val vm = viewModel()
+
+        vm.deleteAccount()
+        withTimeout(5_000) { vm.isDeleting.first { !it } }
+
+        assertNotNull(vm.errorMessage.value)
+        // Аккаунт был ЖИВ до этого нажатия — отвязка токена устройства законна.
+        assertEquals(1, registrar.unregisterCalls)
+        val pending = withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        assertEquals("jwt-token", pending?.token)
+
+        // Второе нажатие «Удалить аккаунт» — тот самый повтор. Алерт «повторите»
+        // человек перед этим закрывает, как и на живом экране.
+        vm.dismissError()
+        synchronized(seenRequests) { seenRequests.clear() }
+        respond("DELETE /api/v1/me", MockResponse().setResponseCode(204))
+        vm.deleteAccount()
+        withTimeout(5_000) { vm.isDeleting.first { !it } }
+
+        val requests = synchronized(seenRequests) { seenRequests.toList() }
+        // Главное: повтор НЕ ходил в /me/devices. Именно этот запрос и сносил
+        // токен, которым повтор только и мог быть выполнен.
+        assertEquals(1, registrar.unregisterCalls, "повтор не смеет отвязывать push-токен")
+        assertTrue(
+            requests.none { it.first.contains("/me/devices") },
+            "повтор ушёл в /me/devices: $requests",
+        )
+        // И ушёл ИМЕННО с токеном — без него сервер ответил бы 401.
+        assertTrue(
+            requests.any { it.first == "DELETE /api/v1/me" && it.second == "Bearer jwt-token" },
+            "повтор ушёл без Authorization: $requests",
+        )
+        // Дошёл до 204: сессия закрыта по-настоящему, флаг снят.
+        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        assertNull(ended?.me)
+        assertFalse(ended?.purgePending ?: true)
+        assertNull(vm.errorMessage.value)
+    }
+
+    /**
+     * Пока чистка не доделана, 401 от ЛЮБОГО другого маршрута не смеет стирать
+     * токен. Это вторая половина той же дыры: чтобы её открыть, повтор нажимать
+     * не обязательно — аккаунт уже tombstone, и 401 отвечает каждый маршрут на
+     * `s.auth` (обновление профиля, открытие группы, отвязка push-токена).
+     */
+    @Test
+    fun `unauthorized while purge pending keeps the token`() = runBlocking {
+        respond(
+            "DELETE /api/v1/me",
+            MockResponse().setResponseCode(500).setBody(PURGE_INCOMPLETE_JSON),
+        )
+        val vm = viewModel()
+        vm.deleteAccount()
+        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+
+        // Ровно то, что делает AuthInterceptor на 401 любого запроса.
+        session.notifyUnauthorized()
+        delay(300)
+
+        assertEquals("jwt-token", session.state.value?.token, "401 стёр токен повтора")
+        assertTrue(session.isPurgePending())
+    }
+
+    /**
+     * Обратная сторона: БЕЗ флага незавершённой чистки протухшая сессия обязана
+     * разлогинивать, как и раньше. Иначе «защита токена» превратилась бы в
+     * «приложение с мёртвым токеном никогда не показывает экран входа».
+     */
+    @Test
+    fun `unauthorized without purge pending still ends the session`() = runBlocking {
+        val vm = viewModel()
+        assertFalse(session.isPurgePending())
+        assertNotNull(vm)
+
+        session.notifyUnauthorized()
+
+        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        assertNull(ended?.token)
     }
 
     @Test
@@ -368,6 +511,9 @@ class ProfileAccountTest {
         """.trimIndent()
         val SERVER_ERROR_JSON = """
             {"error":{"code":"internal","message":"не удалось удалить аккаунт"}}
+        """.trimIndent()
+        val PURGE_INCOMPLETE_JSON = """
+            {"error":{"code":"purge_incomplete","message":"аккаунт удалён, но очистка данных не завершена: повторите запрос"}}
         """.trimIndent()
         val NOT_FOUND_JSON = """
             {"error":{"code":"not_found","message":"нет ответа для этого пути в тесте"}}

@@ -224,25 +224,47 @@ class ProfileViewModel @Inject constructor(
      * outbox, аватары, отложенное вступление по ссылке) стирает существующий
      * [com.zagir.splitty.data.OfflineDataCleaner] по пропаже токена — второй
      * копии чистки не заводим.
+     *
+     * ПОВТОР после `purge_incomplete` отличается ровно одним: отвязки
+     * push-токена в нём НЕТ. Аккаунт уже tombstone, `DELETE /me/devices` висит
+     * на обычном `s.auth` и отвечает 401, а [com.zagir.splitty.core.network.AuthInterceptor]
+     * на этот 401 звал разлогин — токен, которым только и можно доделать
+     * чистку, исчезал ровно перед повторным запросом. Повтор уходил без
+     * Authorization, а войти заново нельзя: `SoftDeleteUser` вычистил все
+     * личности, и PII человека оставалась в базе навсегда (5.1.1(v)/GDPR).
+     * См. [com.zagir.splitty.core.session.Session.purgePending].
      */
     fun deleteAccount() {
         if (_isDeleting.value) return
         _isDeleting.value = true
         viewModelScope.launch {
+            // Аккаунта уже нет (прошлая попытка упала после tombstone):
+            // отвязывать push-токен нечему и НЕЛЬЗЯ.
+            val isRetryAfterTombstone = sessionStore.isPurgePending()
             try {
-                // Отвязать FCM-токен, ПОКА JWT ещё валиден: после tombstone
-                // сервер отвергнет запрос, и токен устройства остался бы висеть.
-                // runCatching: отвязка best-effort по своему контракту, а сбой
-                // Firebase (не инициализирован, нет Play Services) не имеет
-                // права отменить удаление аккаунта — его требует Google Play.
-                runCatching { pushTokenRegistrar.unregisterCurrent() }
-                    .onFailure { Log.w(TAG, "unregister push token failed", it) }
+                if (!isRetryAfterTombstone) {
+                    // Отвязать FCM-токен, ПОКА JWT ещё валиден: после tombstone
+                    // сервер отвергнет запрос, и токен устройства остался бы висеть.
+                    // runCatching: отвязка best-effort по своему контракту, а сбой
+                    // Firebase (не инициализирован, нет Play Services) не имеет
+                    // права отменить удаление аккаунта — его требует Google Play.
+                    runCatching { pushTokenRegistrar.unregisterCurrent() }
+                        .onFailure { Log.w(TAG, "unregister push token failed", it) }
+                }
                 repository.deleteAccount()
+                // 204: чистка доведена до конца. logout снимает и флаг повтора.
                 sessionStore.logout()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 Log.e(TAG, "delete account failed", e)
+                // Сбой ПОСЛЕ tombstone: поднимаем флаг ДО показа ошибки. С этого
+                // момента ни один 401 не смеет стереть токен повтора, а корень
+                // (AppRootViewModel) сам доведёт чистку до 204.
+                if ((e as? ApiException)?.isPurgeIncomplete == true) {
+                    runCatching { sessionStore.markPurgePending() }
+                        .onFailure { Log.e(TAG, "не удалось отметить незавершённую чистку", it) }
+                }
                 _errorMessage.value = humanErrorText(e)
             } finally {
                 _isDeleting.value = false

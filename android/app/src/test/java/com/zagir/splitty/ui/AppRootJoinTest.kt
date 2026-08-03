@@ -145,6 +145,80 @@ class AppRootJoinTest {
         scope,
     )
 
+    /**
+     * Незавершённая после tombstone чистка доводится КОРНЕМ, без участия
+     * человека.
+     *
+     * Экран «Профиль» показывает «повторите», но нажимать никто не обязан:
+     * человек волен уйти на другой экран или закрыть приложение. Фонового
+     * реконсилятора на сервере нет — доделать чистку может ТОЛЬКО повторный
+     * `DELETE /me` этим же токеном (маршрут на `authDeleted`), а войти заново
+     * нельзя, личности вычищены. Без повтора из корня его PII (имя в снимках
+     * комнат, chat_state, bug_report, push_outbox) осталась бы в базе навсегда.
+     */
+    @Test
+    fun `root finishes the pending purge on next launch`() = runBlocking {
+        signIn()
+        // Прошлый запуск: DELETE /me упал после tombstone, флаг лёг на диск.
+        session.markPurgePending()
+        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        respond("DELETE /api/v1/me", MockResponse().setResponseCode(204))
+
+        viewModel()
+
+        // 204 — чистка доведена: сессия закрыта, флаг снят.
+        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        assertNull(ended?.token)
+        assertEquals(false, ended?.purgePending)
+        assertEquals("/api/v1/me", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+    }
+
+    /**
+     * Сервер снова не смог доделать чистку: токен и флаг обязаны остаться —
+     * повтор случится на следующем запуске. Разлогинить тут значило бы выбросить
+     * единственный ключ к маршруту, который сервер держит открытым.
+     */
+    @Test
+    fun `root keeps the token when the purge retry fails again`() = runBlocking {
+        signIn()
+        session.markPurgePending()
+        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        respond(
+            "DELETE /api/v1/me",
+            MockResponse().setResponseCode(500).setBody(PURGE_INCOMPLETE_JSON),
+        )
+
+        viewModel()
+
+        assertEquals("/api/v1/me", server.takeRequest(5, TimeUnit.SECONDS)?.path)
+        delay(300)
+        assertEquals("jwt-token", session.state.value?.token)
+        assertEquals(true, session.state.value?.purgePending)
+    }
+
+    /**
+     * 401 на самом повторе — единственный терминальный исход: `authDeleted`
+     * пускает удалённых, и раз отказал он, токен мёртв по-настоящему. Повторять
+     * нечем, поэтому сессия закрывается — иначе на устройстве навсегда осталась
+     * бы зомби-сессия, которую ничто не выгоняет на экран входа.
+     */
+    @Test
+    fun `root gives up on the purge retry after unauthorized`() = runBlocking {
+        signIn()
+        session.markPurgePending()
+        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        respond(
+            "DELETE /api/v1/me",
+            MockResponse().setResponseCode(401).setBody(UNAUTHORIZED_JSON),
+        )
+
+        viewModel()
+
+        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        assertNull(ended?.token)
+        assertEquals(false, ended?.purgePending)
+    }
+
     @Test
     fun `authenticated pending join consumes the intent and opens the room`() = runBlocking {
         respond("POST /api/v1/rooms/$ROOM_ID/join", MockResponse().setBody(ROOM_JSON))
@@ -530,5 +604,7 @@ class AppRootJoinTest {
         val FORBIDDEN_JSON = """{"error":{"code":"forbidden","message":"Нет доступа"}}"""
         val UNAUTHORIZED_JSON = """{"error":{"code":"unauthorized","message":"Требуется вход"}}"""
         val UNAVAILABLE_JSON = """{"error":{"code":"unavailable","message":"Сервер занят"}}"""
+        val PURGE_INCOMPLETE_JSON =
+            """{"error":{"code":"purge_incomplete","message":"очистка не завершена"}}"""
     }
 }

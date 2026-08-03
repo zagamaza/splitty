@@ -28,6 +28,7 @@ final class SessionStore {
     private static let baseURLKey = "splitty.baseURL"
     private static let tokenKey = "splitty.apiToken"
     private static let userIdKey = "splitty.userId"
+    private static let purgePendingKey = "splitty.purgePending"
 
     /// Профиль текущего пользователя (nil до первого refreshMe/login).
     var me: Me?
@@ -73,6 +74,37 @@ final class SessionStore {
     /// false — токен живёт только в памяти: Keychain отказал в записи и сессия
     /// не переживёт перезапуск приложения.
     private(set) var tokenPersisted = true
+
+    /// true — `DELETE /me` упал ПОСЛЕ tombstone (`purge_incomplete`): аккаунт
+    /// удалён, но его PII осталась в базе, и доделать чистку может только
+    /// повторный `DELETE /me` ЭТИМ ЖЕ токеном (маршрут висит на `authDeleted`,
+    /// войти заново нельзя — личности вычищены).
+    ///
+    /// Флаг персистится РЯДОМ С ТОКЕНОМ и живёт до подтверждённого 204 ровно
+    /// потому, что удержать токен на время повтора одной локальной переменной
+    /// экрана невозможно. Аккаунт уже tombstone, и КАЖДЫЙ следующий запрос к
+    /// любому другому маршруту (все висят на `s.auth`) отвечает 401 —
+    /// переключение вкладки, `refreshMe` на «Профиле», открытие группы. Без
+    /// флага первый же такой 401 звал `expireSession`, тот стирал токен из
+    /// Keychain, и единственный ключ к маршруту, который сервер держит
+    /// открытым ради повтора, уничтожался самим клиентом — вместе с шансом
+    /// когда-либо доделать удаление (5.1.1(v)/GDPR). Поэтому пока флаг стоит:
+    /// `expireSession` токен НЕ трогает, а корень (`RootView`) сам повторяет
+    /// `DELETE /me` до 204.
+    private(set) var isPurgePending: Bool {
+        didSet {
+            if isPurgePending {
+                UserDefaults.standard.set(true, forKey: Self.purgePendingKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.purgePendingKey)
+            }
+        }
+    }
+
+    /// Повтор чистки уже в полёте — второй запускать нельзя: корень зовёт
+    /// `finishPendingPurge` и по появлению флага, и по `.task`, а экран
+    /// «Профиль» в это же время может нажать кнопку.
+    private var isPurgeRetryInFlight = false
 
     var isAuthenticated: Bool { token != nil }
 
@@ -179,6 +211,9 @@ final class SessionStore {
             ?? Self.defaultBaseURL
         token = KeychainStore.read(key: Self.tokenKey)
         ownerUserId = UserDefaults.standard.object(forKey: Self.userIdKey) as? Int
+        // Незавершённая чистка переживает перезапуск: без этого «человек убил
+        // приложение вместо повтора» навсегда оставлял его PII в базе.
+        isPurgePending = UserDefaults.standard.bool(forKey: Self.purgePendingKey)
     }
 
     /// Вход для разработки: POST /auth/dev, сохраняет токен и профиль.
@@ -335,8 +370,50 @@ final class SessionStore {
     /// подтвердилось, и что делать дальше (текст — `deleteAccountErrorText`).
     @MainActor
     func deleteAccount() async throws {
-        try await api.deleteAccount()
+        do {
+            try await api.deleteAccount()
+        } catch {
+            // Сбой ПОСЛЕ tombstone: поднимаем флаг ДО того, как ошибка уйдёт
+            // наверх. С этого момента ни один 401 (а их теперь будет отдавать
+            // каждый маршрут — аккаунт удалён) не имеет права стереть токен:
+            // им и только им доделывается чистка. См. `isPurgePending`.
+            if (error as? APIError)?.isPurgeIncomplete == true {
+                isPurgePending = true
+            }
+            throw error
+        }
+        // 204: чистка доведена до конца — флаг снимаем ДО `logout`, иначе он
+        // же и не дал бы токену исчезнуть.
         logout()
+    }
+
+    /// Доводит до конца чистку, начатую упавшим после tombstone `DELETE /me`.
+    ///
+    /// Зовёт корень (`RootView`) — и на старте, и по появлению флага. Одного
+    /// повтора «по кнопке» на экране «Профиль» мало: человек, увидевший
+    /// «повторите», волен вместо этого уйти на другую вкладку или убить
+    /// приложение, а его данные так и остались бы в базе — без фонового
+    /// реконсилятора на сервере доделать чистку больше некому.
+    ///
+    /// 401 здесь — единственный терминальный исход: `authDeleted` пускает
+    /// удалённых, и раз он отказал, токен мёртв по-настоящему (или аккаунт уже
+    /// вычищен целиком). Повторять нечем — снимаем флаг и выходим по-честному,
+    /// иначе сессия-зомби осталась бы на устройстве навсегда. Всё остальное
+    /// (снова `purge_incomplete`, 5xx, нет сети) — временно: флаг остаётся,
+    /// повтор случится на следующем запуске.
+    @MainActor
+    func finishPendingPurge() async {
+        guard isPurgePending, isAuthenticated, !isPurgeRetryInFlight else { return }
+        isPurgeRetryInFlight = true
+        defer { isPurgeRetryInFlight = false }
+        do {
+            try await api.deleteAccount()
+            logout()
+        } catch let error as APIError where error.isUnauthorized {
+            logout()
+        } catch {
+            // Повторим позже — токен и флаг на месте.
+        }
     }
 
     /// Выход: сброс токена/профиля и очистка офлайн-хранилищ (read-кеш
@@ -344,6 +421,10 @@ final class SessionStore {
     /// Подтверждение при непустом outbox — на экране «Профиль».
     @MainActor
     func logout() {
+        // Снять ДО `expireSession`: пока флаг стоит, тот намеренно бережёт
+        // токен, и выход не состоялся бы вовсе. Явный выход (и подтверждённый
+        // 204) — единственные места, где чистку больше повторять не нужно.
+        isPurgePending = false
         expireSession()
         ownerUserId = nil
         // Отложенное вступление по ссылке — тоже чужое: без этой строки
@@ -361,6 +442,13 @@ final class SessionStore {
     /// Полную очистку делает только явный `logout()`.
     @MainActor
     func expireSession() {
+        // Незавершённая чистка после tombstone — единственное исключение.
+        // Аккаунт удалён, поэтому 401 отвечает КАЖДЫЙ маршрут на `s.auth`
+        // (вкладка «Группы», `refreshMe`, отвязка push-токена), и обычный
+        // сброс уничтожил бы токен, которым только и можно доделать удаление:
+        // войти заново нельзя, личности вычищены. Токен держим до 204 —
+        // повторяет `finishPendingPurge`. См. `isPurgePending`.
+        guard !isPurgePending else { return }
         token = nil
         me = nil
         avatars.removeAll()

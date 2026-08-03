@@ -635,24 +635,7 @@ struct AccountView: View {
         isDeleting = true
         Task {
             defer { isDeleting = false }
-            // Отвязать FCM-токен ПОКА JWT валиден: после tombstone сервер
-            // отвергнет запрос, а токен устройства остался бы висеть.
-            await PushManager.shared.unregisterCurrentToken()
-            do {
-                try await session.deleteAccount()
-            } catch {
-                // Аккаунт остался жив, а токен устройства мы уже отвязали.
-                // Регистрируем обратно: иначе человек сидит в живой сессии
-                // вообще без пушей, и вернуть их могло бы только следующее
-                // переключение входа или холодный старт. Исключение —
-                // `purge_incomplete`: там аккаунт УЖЕ удалён, регистрировать
-                // на tombstone нечего (сервер ответит 401), а сессия оставлена
-                // только чтобы доделать чистку повторным запросом.
-                if (error as? APIError)?.isPurgeIncomplete != true {
-                    PushManager.shared.registerCurrentToken()
-                }
-                errorMessage = deleteAccountErrorText(error)
-            }
+            errorMessage = await runAccountDeletion(session: session, push: PushManager.shared)
         }
     }
 
@@ -717,6 +700,45 @@ func identityErrorText(_ error: Error) -> String {
         return "Сессия истекла. Войдите ещё раз"
     }
     return humanErrorText(error)
+}
+
+// MARK: - Сценарий удаления аккаунта
+
+/// Полный сценарий кнопки «Удалить аккаунт»: отвязка push-токена, `DELETE /me`
+/// и разбор исхода. Возвращает текст ошибки для алерта либо nil при успехе.
+///
+/// Вынесен из `AccountView` НЕ ради красоты: инвариант «повтор после
+/// `purge_incomplete` сохраняет токен» держится в `SessionStore` и проверялся
+/// там же, а ломался ровно на этом слое — экран звал отвязку push-токена ДО
+/// удаления, и на втором нажатии она била в `DELETE /me/devices` (маршрут на
+/// `s.auth`), получала на tombstone 401, `onUnauthorized` звал `expireSession`,
+/// и токен повтора исчезал из Keychain НАВСЕГДА. Теперь сценарий целиком
+/// покрыт тестом (`AccountLinksTests`).
+///
+/// Порядок и условия:
+///  - отвязка push-токена — только пока аккаунт ЖИВ. На tombstone она
+///    бессмысленна (сервер её отвергнет) и разрушительна (см. выше);
+///  - обратная регистрация — только если аккаунт пережил неудачу. Иначе
+///    человек остался бы в живой сессии вообще без пушей до следующего входа.
+///    После `purge_incomplete` регистрировать нечего: аккаунта уже нет.
+@MainActor
+func runAccountDeletion(session: SessionStore, push: PushTokenBinding) async -> String? {
+    // Повтор после tombstone: аккаунта уже нет, отвязывать нечего и НЕЛЬЗЯ.
+    let isRetryAfterTombstone = session.isPurgePending
+    if !isRetryAfterTombstone {
+        // Отвязать FCM-токен ПОКА JWT валиден: после tombstone сервер
+        // отвергнет запрос, а токен устройства остался бы висеть.
+        await push.unregisterCurrentToken()
+    }
+    do {
+        try await session.deleteAccount()
+        return nil
+    } catch {
+        if !isRetryAfterTombstone, (error as? APIError)?.isPurgeIncomplete != true {
+            push.registerCurrentToken()
+        }
+        return deleteAccountErrorText(error)
+    }
 }
 
 // MARK: - Текст ошибки удаления аккаунта

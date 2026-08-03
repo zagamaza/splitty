@@ -21,9 +21,15 @@ import javax.inject.Singleton
  *
  * lastRegistered гасит лишние сетевые вызовы (токен FCM меняется редко). Ошибки
  * не роняют вход/старт — доставка пушей best-effort.
+ *
+ * `open` (класс и [unregisterCurrent]) — шов для тестов экрана «Профиль»:
+ * настоящая отвязка идёт через `FirebaseMessaging.getInstance()`, который в
+ * JVM-тестах не поднимается и молча падает. Без подменяемой отвязки проверка
+ * «повтор удаления НЕ ходит в `DELETE /me/devices`» проходила бы и на сломанном
+ * коде — запроса там нет по совершенно другой причине.
  */
 @Singleton
-class PushTokenRegistrar @Inject constructor(
+open class PushTokenRegistrar @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     @ApplicationScope private val scope: CoroutineScope,
@@ -52,7 +58,7 @@ class PushTokenRegistrar @Inject constructor(
     }
 
     /** Отвязать токен ПЕРЕД logout (пока JWT ещё валиден). */
-    fun unregisterCurrent() {
+    open fun unregisterCurrent() {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
             lastRegistered = null
             if (!token.isNullOrEmpty()) {

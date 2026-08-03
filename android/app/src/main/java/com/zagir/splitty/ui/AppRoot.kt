@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
@@ -116,6 +117,53 @@ class AppRootViewModel @Inject constructor(
                     }
                     joinPending(token, roomId)
                 }
+        }
+
+        // Незавершённая после tombstone чистка (`purge_incomplete`): доводим её
+        // сами. Полагаться на то, что человек нажмёт «Удалить аккаунт» ещё раз,
+        // нельзя — он волен уйти на другой экран или закрыть приложение, а
+        // фонового реконсилятора на сервере нет, и его PII (имя в снимках
+        // комнат, chat_state, bug_report, push_outbox) осталась бы в базе
+        // навсегда. Флаг персистентный, поэтому холодный старт — тоже попытка
+        // повтора. См. [com.zagir.splitty.core.session.Session.purgePending].
+        viewModelScope.launch {
+            sessionStore.state
+                .map { it?.purgePending == true && it.token != null }
+                .distinctUntilChanged()
+                .collect { pending -> if (pending) finishPendingPurge() }
+        }
+    }
+
+    /** Повтор чистки уже в полёте — второй запускать нельзя. */
+    private var isFinishingPurge = false
+
+    /**
+     * Доводит до конца чистку, начатую упавшим после tombstone `DELETE /me`.
+     *
+     * 401 — единственный терминальный исход: `authDeleted` пускает удалённых, и
+     * раз отказал он, токен мёртв по-настоящему (или аккаунт уже вычищен
+     * целиком). Повторять нечем, поэтому выходим по-честному — иначе на
+     * устройстве навсегда осталась бы зомби-сессия, которую ничто не выгоняет
+     * на экран входа. Всё остальное (снова `purge_incomplete`, 5xx, нет сети)
+     * временно: флаг и токен на месте, повтор случится на следующем запуске.
+     */
+    private suspend fun finishPendingPurge() {
+        if (isFinishingPurge) return
+        isFinishingPurge = true
+        try {
+            repository.deleteAccount()
+            sessionStore.logout()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // Throwable, а не ApiException: любое другое исключение вылетало бы
+            // из collect и НАВСЕГДА убивало подписку (тот же фикс, что в
+            // joinPending).
+            if ((e as? ApiException)?.isUnauthorized == true) {
+                runCatching { sessionStore.logout() }
+            }
+        } finally {
+            isFinishingPurge = false
         }
     }
 

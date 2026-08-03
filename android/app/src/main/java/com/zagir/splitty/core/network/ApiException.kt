@@ -20,10 +20,23 @@ class ApiException(
     /** true для 401 — сессию нужно сбросить (глобальный разлогин делает [AuthInterceptor]). */
     val isUnauthorized: Boolean get() = status == 401
 
+    /**
+     * true — `DELETE /me` упал уже ПОСЛЕ tombstone: аккаунт удалён, а чистка
+     * его данных не завершена. От обычного `internal` (сбой ДО tombstone,
+     * аккаунт цел и нетронут) отличается только кодом, и различие критично:
+     * доделать чистку может лишь повторный запрос ЭТИМ ЖЕ токеном — маршрут
+     * висит на `authDeleted` ровно ради повтора, а войти заново нельзя,
+     * личности вычищены. См. [com.zagir.splitty.core.session.Session.purgePending].
+     */
+    val isPurgeIncomplete: Boolean get() = code == CODE_PURGE_INCOMPLETE
+
     companion object {
         const val CODE_TRANSPORT = "transport"
         const val CODE_DECODING = "decoding"
         const val CODE_INVALID_URL = "invalid_url"
+
+        /** Сбой чистки ПОСЛЕ tombstone — см. [isPurgeIncomplete]. */
+        const val CODE_PURGE_INCOMPLETE = "purge_incomplete"
 
         fun fallbackMessage(status: Int, code: String): String = when (code) {
             "validation" -> "Некорректные данные"

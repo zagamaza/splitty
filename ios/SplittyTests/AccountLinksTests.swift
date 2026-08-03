@@ -11,6 +11,9 @@ final class AccountLinksTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        // Флаг незавершённой чистки персистентный (UserDefaults): без сброса он
+        // протекал бы из теста в тест, и «токен сохранился» проходило бы даром.
+        UserDefaults.standard.removeObject(forKey: "splitty.purgePending")
         StubURLProtocol.handler = nil
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
@@ -28,6 +31,7 @@ final class AccountLinksTests: XCTestCase {
     }
 
     override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: "splitty.purgePending")
         client = nil
         stubSession = nil
         StubURLProtocol.handler = nil
@@ -381,6 +385,233 @@ final class AccountLinksTests: XCTestCase {
         XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
     }
 
+    // MARK: - Удаление аккаунта: сценарий ЭКРАНА, а не только хранилища
+
+    /// Повтор удаления после `purge_incomplete` больше не уничтожает свой
+    /// собственный токен.
+    ///
+    /// Инвариант «токен переживает `purge_incomplete`» держится в
+    /// `SessionStore` и проверен тестом выше — но ломался ЭТАЖОМ ВЫШЕ, в
+    /// сценарии экрана: тот безусловно звал отвязку push-токена ПЕРЕД
+    /// удалением. На повторном нажатии аккаунт уже tombstone, а
+    /// `DELETE /me/devices` висит на обычном `s.auth` — приходил 401,
+    /// `onUnauthorized` звал `expireSession`, и токен исчезал из Keychain
+    /// РАНЬШЕ, чем уходил повторный `DELETE /me`. Повтор летел без
+    /// Authorization, получал 401, человека выбрасывало на экран входа — а
+    /// войти он уже не мог (`SoftDeleteUser` вычистил все личности). Его PII
+    /// оставалась в базе навсегда, то есть проваливалось ровно то требование
+    /// 5.1.1(v)/GDPR, ради которого удаление и написано.
+    @MainActor
+    func testScreenRetryAfterPurgeIncompleteKeepsTokenAndSkipsDeviceUnregister() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+        let push = SpyPushBinding()
+
+        // Все пути, которые реально ушли в сеть: «запроса не было» иначе не
+        // отличить от «запрос был, но его ответ проигнорировали».
+        let paths = PathRecorder()
+        StubURLProtocol.handler = { request in
+            paths.record(request)
+            return (500, Data(#"{"error":{"code":"purge_incomplete","message":"чистка не завершена"}}"#.utf8))
+        }
+
+        let firstError = await runAccountDeletion(session: session, push: push)
+        XCTAssertNotNil(firstError)
+        // Аккаунт был ЖИВ до этого нажатия — отвязка токена устройства законна.
+        XCTAssertEqual(push.unregisterCalls, 1)
+        // А обратной регистрации быть не должно: аккаунта уже нет.
+        XCTAssertEqual(push.registerCalls, 0)
+        XCTAssertTrue(session.isPurgePending)
+        XCTAssertTrue(session.isAuthenticated)
+
+        // Второе нажатие «Удалить аккаунт» — тот самый повтор.
+        paths.reset()
+        StubURLProtocol.handler = { request in
+            paths.record(request)
+            return (204, Data())
+        }
+        let secondError = await runAccountDeletion(session: session, push: push)
+
+        XCTAssertNil(secondError)
+        // Главное: повтор НЕ ходил в /me/devices. Именно этот запрос и сносил
+        // токен, которым повтор только и мог быть выполнен.
+        XCTAssertEqual(push.unregisterCalls, 1, "повтор не смеет отвязывать push-токен")
+        XCTAssertFalse(
+            paths.paths.contains { $0.contains("/me/devices") },
+            "повтор ушёл в /me/devices: \(paths.paths)"
+        )
+        // Повтор ушёл ИМЕННО с токеном — без него сервер ответил бы 401.
+        XCTAssertEqual(paths.authorizations, ["Bearer jwt-777"])
+        XCTAssertEqual(paths.paths, ["/api/v1/me"])
+        // И дошёл до 204: сессия закрыта по-настоящему, флаг снят.
+        XCTAssertFalse(session.isAuthenticated)
+        XCTAssertFalse(session.isPurgePending)
+        XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
+        XCTAssertFalse(UserDefaults.standard.bool(forKey: "splitty.purgePending"))
+    }
+
+    /// Пока чистка не доделана, 401 от ЛЮБОГО другого маршрута не смеет
+    /// стирать токен. Это вторая половина той же дыры: чтобы её открыть,
+    /// повтор нажимать не обязательно — аккаунт уже tombstone, и 401 отвечает
+    /// каждый маршрут на `s.auth` (переключение вкладки, `refreshMe` на
+    /// «Профиле», открытие группы). Первый же такой ответ уносил единственный
+    /// ключ к `authDeleted`-маршруту.
+    @MainActor
+    func testUnauthorizedWhilePurgePendingKeepsToken() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"purge_incomplete","message":"чистка не завершена"}}"#.utf8))
+        }
+        try? await session.deleteAccount()
+        XCTAssertTrue(session.isPurgePending)
+
+        // Ровно тот запрос, который делала отвязка push-токена, — и любой
+        // другой запрос удалённого аккаунта ведёт себя так же.
+        StubURLProtocol.handler = { _ in
+            (401, Data(#"{"error":{"code":"unauthorized","message":"нет доступа"}}"#.utf8))
+        }
+        try? await session.api.unregisterDevice(token: "fcm-token")
+        // `onUnauthorized` асинхронный (Task на MainActor) — даём ему пройти.
+        await settleMainActor()
+
+        XCTAssertTrue(session.isAuthenticated, "401 стёр токен незавершённой чистки")
+        XCTAssertEqual(KeychainStore.read(key: "splitty.apiToken"), "jwt-777")
+
+        session.logout()
+    }
+
+    /// Обратная сторона: БЕЗ флага незавершённой чистки протухшая сессия
+    /// обязана разлогинивать, как и раньше. Иначе «защита токена» превратилась
+    /// бы в «приложение с мёртвым токеном никогда не показывает экран входа».
+    @MainActor
+    func testUnauthorizedWithoutPurgePendingStillLogsOut() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+        XCTAssertFalse(session.isPurgePending)
+
+        StubURLProtocol.handler = { _ in
+            (401, Data(#"{"error":{"code":"unauthorized","message":"нет доступа"}}"#.utf8))
+        }
+        try? await session.api.unregisterDevice(token: "fcm-token")
+        await settleMainActor()
+
+        XCTAssertFalse(session.isAuthenticated)
+        XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
+    }
+
+    /// Человек НЕ нажал «повторить», а просто ушёл с экрана или закрыл
+    /// приложение. Флаг персистентный, поэтому корень (`RootView.task`) на
+    /// следующем запуске доводит чистку сам: фонового реконсилятора на сервере
+    /// нет, и без этого PII оставалась бы в базе навсегда.
+    @MainActor
+    func testRootFinishesPendingPurgeOnNextLaunch() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"purge_incomplete","message":"чистка не завершена"}}"#.utf8))
+        }
+        try? await session.deleteAccount()
+        XCTAssertTrue(UserDefaults.standard.bool(forKey: "splitty.purgePending"))
+
+        // Новый запуск приложения: и токен (Keychain), и флаг (UserDefaults)
+        // поднимаются из хранилищ.
+        let relaunched = SessionStore(urlSession: stubSession)
+        XCTAssertTrue(relaunched.isAuthenticated)
+        XCTAssertTrue(relaunched.isPurgePending)
+
+        let paths = PathRecorder()
+        StubURLProtocol.handler = { request in
+            paths.record(request)
+            return (204, Data())
+        }
+        await relaunched.finishPendingPurge()
+
+        XCTAssertEqual(paths.paths, ["/api/v1/me"])
+        XCTAssertEqual(paths.authorizations, ["Bearer jwt-777"])
+        XCTAssertFalse(relaunched.isAuthenticated)
+        XCTAssertFalse(relaunched.isPurgePending)
+        XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
+    }
+
+    /// 401 на самом повторе — единственный терминальный исход: `authDeleted`
+    /// пускает удалённых, и раз отказал он, токен мёртв по-настоящему.
+    /// Повторять нечем, поэтому флаг снимается и сессия закрывается — иначе на
+    /// устройстве навсегда осталась бы зомби-сессия, которую ничто не выгоняет
+    /// на экран входа.
+    @MainActor
+    func testFinishPendingPurgeGivesUpOnUnauthorized() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"purge_incomplete","message":"чистка не завершена"}}"#.utf8))
+        }
+        try? await session.deleteAccount()
+        XCTAssertTrue(session.isPurgePending)
+
+        StubURLProtocol.handler = { _ in
+            (401, Data(#"{"error":{"code":"unauthorized","message":"нет доступа"}}"#.utf8))
+        }
+        await session.finishPendingPurge()
+        await settleMainActor()
+
+        XCTAssertFalse(session.isAuthenticated)
+        XCTAssertFalse(session.isPurgePending)
+        XCTAssertNil(KeychainStore.read(key: "splitty.apiToken"))
+    }
+
+    /// Транспортный сбой на повторе не смеет ни закрывать сессию, ни снимать
+    /// флаг: запрос до сервера не дошёл, чистка по-прежнему не доделана.
+    @MainActor
+    func testFinishPendingPurgeKeepsFlagOnTransportFailure() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"purge_incomplete","message":"чистка не завершена"}}"#.utf8))
+        }
+        try? await session.deleteAccount()
+
+        StubURLProtocol.handler = nil
+        StubURLProtocol.failure = { _ in URLError(.notConnectedToInternet) }
+        await session.finishPendingPurge()
+
+        XCTAssertTrue(session.isAuthenticated)
+        XCTAssertTrue(session.isPurgePending)
+        XCTAssertEqual(KeychainStore.read(key: "splitty.apiToken"), "jwt-777")
+
+        StubURLProtocol.failure = nil
+        session.logout()
+    }
+
+    /// Сбой ДО tombstone (`internal`) флаг НЕ поднимает: аккаунт жив, повторять
+    /// нечего, и защита токена от 401 здесь была бы вредной — обычное
+    /// протухание сессии обязано разлогинивать. Плюс отвязанный push-токен
+    /// регистрируется обратно: человек остаётся в живой сессии, и без этого он
+    /// молча сидел бы без пушей до следующего входа.
+    @MainActor
+    func testScreenPreTombstoneFailureRestoresPushAndLeavesNoPendingFlag() async throws {
+        let session = SessionStore(urlSession: stubSession)
+        try await login(session)
+        let push = SpyPushBinding()
+
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"internal","message":"сбой"}}"#.utf8))
+        }
+        let error = await runAccountDeletion(session: session, push: push)
+
+        XCTAssertNotNil(error)
+        XCTAssertEqual(push.unregisterCalls, 1)
+        XCTAssertEqual(push.registerCalls, 1, "аккаунт жив — пуши обязаны вернуться")
+        XCTAssertFalse(session.isPurgePending)
+        XCTAssertTrue(session.isAuthenticated)
+
+        session.logout()
+    }
+
     /// Офлайн: запрос до сервера НЕ ДОШЁЛ вовсе. Сомнения «удалилось или нет»
     /// здесь не существует — аккаунт заведомо жив, — а `logout()` стирает
     /// outbox и кеш. «Удалить аккаунт», нажатое в метро, уносило очередь
@@ -628,6 +859,17 @@ final class AccountLinksTests: XCTestCase {
         )
     }
 
+    /// Даёт отработать `Task { @MainActor … }`, поставленному в очередь из
+    /// `APIClient.onUnauthorized`: без этого проверка «токен на месте» проходила
+    /// бы просто потому, что сброс ещё не успел случиться.
+    @MainActor
+    private func settleMainActor() async {
+        for _ in 0..<10 {
+            await Task.yield()
+        }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+    }
+
     /// Логин через подставной транспорт: даёт живой токен в Keychain и профиль.
     @MainActor
     private func login(_ session: SessionStore) async throws {
@@ -639,5 +881,55 @@ final class AccountLinksTests: XCTestCase {
         }
         try await session.loginWithCode("ABCD2345")
         XCTAssertTrue(session.isAuthenticated)
+    }
+}
+
+// MARK: - Дублёры для сценария экрана
+
+/// Подставная привязка push-токена: считает вызовы вместо похода в Firebase.
+/// Настоящий `PushManager` в юнит-тестах молчит (нет Firebase и FCM-токена),
+/// поэтому без дублёра «отвязка не вызывалась» было бы неотличимо от
+/// «вызывалась, но ничего не сделала» — и тест проходил бы на сломанном коде.
+final class SpyPushBinding: PushTokenBinding {
+    private(set) var unregisterCalls = 0
+    private(set) var registerCalls = 0
+
+    func unregisterCurrentToken() async {
+        unregisterCalls += 1
+    }
+
+    func registerCurrentToken() {
+        registerCalls += 1
+    }
+}
+
+/// Запоминает ВСЕ ушедшие в сеть запросы: путь и заголовок Authorization.
+/// `StubURLProtocol.lastRequest` хранит только последний, а проверять надо
+/// именно отсутствие лишнего запроса и наличие токена в повторе.
+final class PathRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedPaths: [String] = []
+    private var storedAuthorizations: [String] = []
+
+    var paths: [String] {
+        lock.withLock { storedPaths }
+    }
+
+    var authorizations: [String] {
+        lock.withLock { storedAuthorizations }
+    }
+
+    func record(_ request: URLRequest) {
+        lock.withLock {
+            storedPaths.append(request.url?.path ?? "")
+            storedAuthorizations.append(request.value(forHTTPHeaderField: "Authorization") ?? "")
+        }
+    }
+
+    func reset() {
+        lock.withLock {
+            storedPaths.removeAll()
+            storedAuthorizations.removeAll()
+        }
     }
 }
