@@ -181,11 +181,20 @@ func (s *Server) linkOIDC(w http.ResponseWriter, r *http.Request, provider strin
 		writeProviderRejected(w, rejectMsg)
 		return
 	}
-	// Nonce проверяем, КОГДА ОН ЕСТЬ В ТОКЕНЕ: его значение подписано провайдером
-	// и подделать его нельзя, поэтому «есть claim → сверяем» защищает от replay
-	// токена нашего же клиента (он всегда шлёт nonce), а токен, выпущенный без
-	// nonce вовсе, проверять просто нечем
-	if claims.Nonce != "" && !checkHashedNonce(req.Nonce, claims.Nonce) {
+	// ⚠️ Nonce сверяем ТОЛЬКО для Apple. Наш протокол генерирует nonce на
+	// клиенте лишь в Apple-потоке (AppleNonce → request.nonce, сырое значение
+	// в теле запроса), поэтому сравнивать есть с чем только там.
+	//
+	// Для Google клиент nonce не передаёт и передать не может: GoogleSignIn SDK
+	// подставляет СВОЙ nonce внутрь id-токена и наружу его не отдаёт. Прежнее
+	// условие «есть claim → сверяем» на этом и ломалось: claims.Nonce непустой
+	// (от SDK), req.Nonce пустой всегда → mismatch → 400 на КАЖДОЙ попытке
+	// привязать Google. Вскрылось в проде на первой же реальной привязке.
+	//
+	// Строгость «у Apple nonce обязателен» здесь намеренно НЕ вводится: на
+	// /auth/apple он и так обязателен (400 без него), а менять семантику
+	// привязки заодно с починкой Google — расширять правку сверх дефекта.
+	if provider == providerApple && claims.Nonce != "" && !checkHashedNonce(req.Nonce, claims.Nonce) {
 		log.Warn().Str("provider", provider).Msg("id token nonce mismatch on link")
 		writeProviderRejected(w, rejectMsg)
 		return

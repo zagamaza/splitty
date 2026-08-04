@@ -331,6 +331,27 @@ func TestLinkAppleNonceMismatch(t *testing.T) {
 	}
 }
 
+// ⚠️ Регрессия, вскрытая в проде на первой же реальной привязке: GoogleSignIn
+// SDK кладёт СВОЙ nonce в id-токен, а наш клиент для Google nonce не передаёт
+// и не может — SDK его наружу не отдаёт. Пока проверка шла по «есть claim →
+// сверяем», привязка Google возвращала 400 ВСЕГДА. Сверять nonce осмысленно
+// только там, где его генерирует наш клиент, то есть у Apple
+func TestLinkGoogleIgnoresProviderNonce(t *testing.T) {
+	repo := newFakeUserRepo(linkUser(42))
+	v := newFakeVerifier().with(testLinkGoogleToken, "google-sub-link", "", "").
+		withNonce(testLinkGoogleToken, "nonce-от-google-sdk")
+	s := newTestServer(Config{GoogleVerifier: v}, repo, newFakeRoomRepo())
+
+	// клиент nonce не прислал — как и в реальном iOS-потоке
+	rec := postLink(t, s, providerGoogle, mustToken(t, s, 42), fmt.Sprintf(`{"idToken": %q}`, testLinkGoogleToken))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (nonce провайдера нам сверять не с чем), body: %s", rec.Code, rec.Body.String())
+	}
+	if repo.users[42].GoogleSub != "google-sub-link" {
+		t.Fatalf("google_sub = %q, привязка не записана", repo.users[42].GoogleSub)
+	}
+}
+
 // Отвязка при двух способах входа — успех; списки способов в ответе актуальны
 func TestUnlinkIdentitySuccess(t *testing.T) {
 	repo := newFakeUserRepo(withTelegram(api.User{ID: 42, GoogleSub: "google-sub-link"}, 42))
