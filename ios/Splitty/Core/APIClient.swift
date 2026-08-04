@@ -291,6 +291,35 @@ final class APIClient: OperationAPI {
     ///
     /// 401 — токен не прошёл проверку (подпись, `aud`, срок); 503 — вход через
     /// Google на сервере не сконфигурирован (пустой `GOOGLE_CLIENT_IDS`).
+    /// Вход через Telegram Login Widget: POST /auth/telegram.
+    ///
+    /// Поля идут ровно как их подписал Telegram — сервер пересобирает из них
+    /// data-check-string и сверяет `hash`. Любая правка значения по дороге
+    /// (обрезка, перекодировка) ломает подпись, поэтому передаём как есть.
+    func loginWithTelegram(_ payload: TelegramWebAuth.Payload) async throws -> AuthResponse {
+        struct Body: Encodable {
+            let id: Int
+            let firstName: String?
+            let lastName: String?
+            let username: String?
+            let photoUrl: String?
+            let authDate: Int64
+            let hash: String
+        }
+        return try await request(
+            "POST", "/api/v1/auth/telegram",
+            body: Body(
+                id: payload.id,
+                firstName: payload.firstName,
+                lastName: payload.lastName,
+                username: payload.username,
+                photoUrl: payload.photoUrl,
+                authDate: payload.authDate,
+                hash: payload.hash
+            )
+        )
+    }
+
     func loginWithGoogle(idToken: String) async throws -> AuthResponse {
         struct Body: Encodable {
             let idToken: String

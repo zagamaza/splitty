@@ -266,6 +266,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /.well-known/apple-app-site-association", s.handleAppleAppSiteAssociation)
 	mux.HandleFunc("GET /.well-known/assetlinks.json", s.handleAssetLinks)
 	mux.HandleFunc("GET /join/{roomId}", s.handleJoinPage)
+	// Вход через Telegram Login Widget для нативных клиентов: /tg-auth уводит
+	// на oauth.telegram.org с нашим origin, /tg-callback возвращает результат
+	// в приложение через splitty:// (см. tg_callback.go). Оба публичные:
+	// человек здесь ещё не авторизован — он только пытается войти
+	mux.HandleFunc("GET /tg-auth", s.handleTelegramAuthStart)
+	mux.HandleFunc("GET /tg-callback", s.handleTelegramCallback)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))

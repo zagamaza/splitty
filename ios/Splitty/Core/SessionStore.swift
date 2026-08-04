@@ -262,6 +262,16 @@ final class SessionStore {
     /// Вход через Google: POST /auth/google, сохраняет токен (Keychain)
     /// и профиль. `idToken` берётся из `GIDGoogleUser.idToken` (см.
     /// GoogleSignInService). 401 — токен не прошёл проверку на сервере.
+    /// Вход через Telegram Login Widget (веб-поток, без ухода в Telegram):
+    /// POST /auth/telegram, дальше как у остальных способов.
+    @MainActor
+    func loginWithTelegram(_ payload: TelegramWebAuth.Payload) async throws {
+        let response = try await api.loginWithTelegram(payload)
+        token = response.token
+        me = response.user
+        adoptOwner(response.user.id)
+    }
+
     @MainActor
     func loginWithGoogle(idToken: String) async throws {
         let response = try await api.loginWithGoogle(idToken: idToken)

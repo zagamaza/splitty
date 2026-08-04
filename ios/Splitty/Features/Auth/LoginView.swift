@@ -74,6 +74,7 @@ struct LoginView: View {
                     logo
                     appleLoginButton
                     googleLoginButton
+                    telegramWebLoginButton
                     telegramLoginCard
                     // Dev-вход и настройка сервера — только в DEBUG-сборках:
                     // в релизе это бэкдор мимо авторизации через Telegram.
@@ -139,29 +140,71 @@ struct LoginView: View {
         .disabled(isLoggingIn)
     }
 
+    /// Вход через Telegram веб-виджетом: без ухода в приложение Telegram и
+    /// без ручного ввода кода. Открывает ASWebAuthenticationSession на
+    /// <baseURL>/tg-auth — ссылку на oauth.telegram.org собирает СЕРВЕР, ему
+    /// одному известны и bot_id, и домен, привязанный к боту.
+    ///
+    /// Фирменный синий — это цвет чужого бренда, а не наш акцент: кнопка
+    /// узнаётся как «телеграмная», но по весу не спорит с Apple (та же
+    /// геометрия, что у Apple и Google).
+    private var telegramWebLoginButton: some View {
+        Button {
+            loginWithTelegramWidget()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "paperplane.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                Text("Войти через Telegram")
+                    .scaledFont(size: 17, weight: .semibold)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 52)
+        }
+        .background(
+            Color.telegramBlue,
+            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+        )
+        .disabled(isLoggingIn)
+    }
+
     /// Вход через Google — СТРОГО под кнопкой Apple: Apple требует, чтобы её
     /// способ входа был не менее заметен, чем сторонние.
     ///
-    /// Оформление нейтральное (подложка + hairline, геометрия один в один с
-    /// кнопкой Apple), а не `.primaryPill`: акцентная заливка сделала бы
-    /// Google заметнее Apple, то есть ровно то, что запрещено. Логотип G не
-    /// рисуем — своя вёрстка чужого логотипа хуже, чем её отсутствие.
+    /// Оформление — по Google Identity Branding Guidelines, а не по нашим
+    /// токенам: у Google жёстко заданы фон, цвет рамки, цвет текста и наличие
+    /// цветного знака «G». Знак взят ОФИЦИАЛЬНЫЙ — `google@1..3x.png` из
+    /// ресурсов GoogleSignIn SDK, скопированные в Assets как `GoogleG`.
+    /// Перерисовывать чужой логотип руками нельзя, отсутствие его — тоже
+    /// нарушение гайдлайна.
+    ///
+    /// Геометрия (высота 52, радиус 14) повторяет кнопку Apple: по 4.8 Apple
+    /// не должна выглядеть второстепенной, поэтому размеры совпадают, а
+    /// акцентной заливки у Google нет.
     private var googleLoginButton: some View {
         Button {
             loginWithGoogle()
         } label: {
-            Text("Войти через Google")
-                .scaledFont(size: 17, weight: .semibold)
-                .foregroundStyle(Color.ink)
-                .frame(maxWidth: .infinity, minHeight: 52)
+            HStack(spacing: 12) {
+                Image("GoogleG")
+                    .resizable()
+                    // renderingMode(.original) обязателен: иначе SwiftUI
+                    // перекрасит четырёхцветный знак в tint кнопки
+                    .renderingMode(.original)
+                    .frame(width: 20, height: 20)
+                Text("Войти через Google")
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(Color.googleLabel)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
         }
         .background(
-            Color.surface,
+            Color.googleSurface,
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 1)
+                .strokeBorder(Color.googleBorder, lineWidth: 1)
         }
         .disabled(isLoggingIn)
     }
@@ -328,6 +371,28 @@ struct LoginView: View {
                 try await session.loginWithCode(code)
             } catch let error as APIError where error.isUnauthorized {
                 errorMessage = "Неверный или просроченный код"
+            } catch {
+                errorMessage = humanErrorText(error)
+            }
+        }
+    }
+
+    /// Веб-вход через Telegram: сессия → payload виджета → POST /auth/telegram.
+    /// Отмену глотаем молча, как у Apple и Google.
+    private func loginWithTelegramWidget() {
+        isLoggingIn = true
+        Task {
+            defer { isLoggingIn = false }
+            do {
+                let payload = try await TelegramWebAuth.authenticate(
+                    baseURL: session.baseURLString,
+                    presenter: nil
+                )
+                try await session.loginWithTelegram(payload)
+            } catch TelegramWebAuth.Failure.cancelled {
+                // человек закрыл окно — это не ошибка
+            } catch TelegramWebAuth.Failure.badResponse {
+                errorMessage = "Telegram не подтвердил вход. Попробуйте ещё раз"
             } catch {
                 errorMessage = humanErrorText(error)
             }
