@@ -2,6 +2,7 @@ package com.zagir.splitty.ui.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +56,7 @@ import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.User
+import com.zagir.splitty.ui.auth.EmailLoginForm
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
@@ -85,6 +89,7 @@ fun ProfileScreen(
     var isLogoutConfirmPresented by remember { mutableStateOf(false) }
     var isDeleteConfirmPresented by remember { mutableStateOf(false) }
     var providerToUnlink by remember { mutableStateOf<LoginProvider?>(null) }
+    var isPasswordDialogPresented by remember { mutableStateOf(false) }
     // Хост системного листа Credential Manager: активити плюс текст ошибки,
     // если её нет (общий с экраном входа, см. core/auth/ActivityContext.kt).
     val credentialHost = rememberCredentialManagerHost()
@@ -146,6 +151,7 @@ fun ProfileScreen(
                     }
                 },
                 onUnlinkRequest = { providerToUnlink = it },
+                onPasswordRequest = { isPasswordDialogPresented = true },
             )
             // Адрес сервера — отладочная информация, в релизе пользователю не
             // нужна (менять его всё равно можно только в DEBUG на экране входа).
@@ -233,6 +239,19 @@ fun ProfileScreen(
                     Text(stringResource(R.string.common_cancel))
                 }
             },
+        )
+    }
+
+    if (isPasswordDialogPresented) {
+        PasswordDialog(
+            hasPassword = me?.isLinked(LoginProvider.PASSWORD) == true,
+            loginEmail = me?.loginEmail.orEmpty(),
+            enabled = !isIdentityBusy,
+            onDismiss = { isPasswordDialogPresented = false },
+            onSave = { current, new ->
+                viewModel.setPassword(current, new) { isPasswordDialogPresented = false }
+            },
+            onReset = { viewModel.unlink(LoginProvider.PASSWORD) },
         )
     }
 
@@ -349,16 +368,25 @@ private fun LoginMethodsSection(
     enabled: Boolean,
     onLink: () -> Unit,
     onUnlinkRequest: (LoginProvider) -> Unit,
+    onPasswordRequest: () -> Unit,
 ) {
     if (me == null) return
     // Google — всегда: его можно и привязать, и отвязать прямо здесь.
     // Telegram — ТОЛЬКО когда уже привязан: привязка требует Telegram Login
     // Widget (подписанные ботом id/auth_date/hash), которого в приложении нет,
     // и кнопка «Привязать» рядом с ним обещала бы несуществующее.
+    // Пароль — только когда у аккаунта есть адрес входа: завести его после
+    // регистрации через Google/Telegram нечем.
     // Apple на Android не показываем вовсе: Sign in with Apple здесь без
     // веб-редиректа не работает, а отвязать его можно с iPhone.
-    val providers = listOf(LoginProvider.GOOGLE, LoginProvider.TELEGRAM)
-        .filter { it != LoginProvider.TELEGRAM || me.isLinked(it) }
+    val providers = listOf(LoginProvider.GOOGLE, LoginProvider.TELEGRAM, LoginProvider.PASSWORD)
+        .filter {
+            when (it) {
+                LoginProvider.TELEGRAM -> me.isLinked(it)
+                LoginProvider.PASSWORD -> !me.loginEmail.isNullOrEmpty()
+                else -> true
+            }
+        }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(
             text = stringResource(R.string.profile_login_methods_section),
@@ -380,8 +408,10 @@ private fun LoginMethodsSection(
                     // действия — плохо.
                     canUnlink = me.canUnlink(provider),
                     enabled = enabled,
+                    loginEmail = me.loginEmail,
                     onLink = onLink,
                     onUnlinkRequest = { onUnlinkRequest(provider) },
+                    onPasswordRequest = onPasswordRequest,
                 )
             }
         }
@@ -407,8 +437,10 @@ private fun LoginMethodRow(
     isLinked: Boolean,
     canUnlink: Boolean,
     enabled: Boolean,
+    loginEmail: String?,
     onLink: () -> Unit,
     onUnlinkRequest: () -> Unit,
+    onPasswordRequest: () -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -424,17 +456,29 @@ private fun LoginMethodRow(
                 color = Splitty.colors.ink,
             )
             Text(
-                text = if (isLinked) {
-                    stringResource(R.string.profile_login_method_linked)
-                } else {
-                    stringResource(R.string.profile_login_method_not_linked)
+                // У пароля вместо «привязан» — сам адрес: он у аккаунта один,
+                // и помнить его человек должен.
+                text = when {
+                    provider == LoginProvider.PASSWORD && isLinked -> loginEmail.orEmpty()
+                    provider == LoginProvider.PASSWORD ->
+                        stringResource(R.string.profile_password_not_set, loginEmail.orEmpty())
+                    isLinked -> stringResource(R.string.profile_login_method_linked)
+                    else -> stringResource(R.string.profile_login_method_not_linked)
                 },
                 modifier = Modifier.padding(top = 2.dp),
                 fontSize = 12.sp,
                 color = Splitty.colors.inkSecondary,
             )
         }
-        if (isLinked) {
+        if (provider == LoginProvider.PASSWORD) {
+            SoftChip(
+                text = stringResource(
+                    if (isLinked) R.string.profile_password_change else R.string.profile_password_set
+                ),
+                onClick = onPasswordRequest,
+                enabled = enabled,
+            )
+        } else if (isLinked) {
             SoftChip(
                 text = stringResource(R.string.profile_login_method_unlink),
                 onClick = onUnlinkRequest,
@@ -837,6 +881,140 @@ private fun LogoutSection(onClick: () -> Unit) {
             textAlign = TextAlign.Center,
         )
     }
+}
+
+/**
+ * Задать или сменить пароль (POST /me/password). Текущий пароль спрашиваем,
+ * только если он есть; забывшему остаётся «Не помню текущий» — пароль
+ * отвязывается (адрес входа остаётся за аккаунтом) и задаётся заново.
+ * Писем мы не шлём, другого пути восстановления нет.
+ */
+@Composable
+private fun PasswordDialog(
+    hasPassword: Boolean,
+    loginEmail: String,
+    enabled: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (current: String?, new: String) -> Unit,
+    onReset: () -> Unit,
+) {
+    var current by remember { mutableStateOf("") }
+    var new by remember { mutableStateOf("") }
+    var repeat by remember { mutableStateOf("") }
+    var isResetConfirmPresented by remember { mutableStateOf(false) }
+
+    val isValid = EmailLoginForm.isValidPassword(new) && new == repeat &&
+        (!hasPassword || current.isNotEmpty())
+    val hint = when {
+        new.isNotEmpty() && !EmailLoginForm.isValidPassword(new) ->
+            stringResource(R.string.login_password_length_hint)
+        repeat.isNotEmpty() && repeat != new -> stringResource(R.string.profile_password_mismatch)
+        else -> null
+    }
+
+    if (isResetConfirmPresented) {
+        AlertDialog(
+            onDismissRequest = { isResetConfirmPresented = false },
+            title = { Text(stringResource(R.string.profile_password_reset_title)) },
+            text = { Text(stringResource(R.string.profile_password_reset_message, loginEmail)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isResetConfirmPresented = false
+                        current = ""
+                        onReset()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_password_reset_confirm),
+                        color = Splitty.colors.negative,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isResetConfirmPresented = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+        return
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(
+                    if (hasPassword) R.string.profile_password_change_title
+                    else R.string.profile_password_title
+                )
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (hasPassword) {
+                    PasswordField(
+                        value = current,
+                        onValueChange = { current = it },
+                        label = stringResource(R.string.profile_password_current),
+                    )
+                    Text(
+                        text = stringResource(R.string.profile_password_forgot),
+                        modifier = Modifier.clickable(
+                            enabled = enabled,
+                            onClick = { isResetConfirmPresented = true },
+                        ),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Splitty.colors.accent,
+                    )
+                }
+                PasswordField(
+                    value = new,
+                    onValueChange = { new = it },
+                    label = stringResource(R.string.profile_password_new),
+                )
+                PasswordField(
+                    value = repeat,
+                    onValueChange = { repeat = it },
+                    label = stringResource(R.string.profile_password_repeat),
+                )
+                hint?.let {
+                    Text(text = it, fontSize = 13.sp, color = Splitty.colors.inkSecondary)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSave(if (hasPassword) current else null, new) },
+                enabled = isValid && enabled,
+            ) {
+                Text(stringResource(R.string.profile_password_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = enabled) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun PasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        label = { Text(label) },
+        visualTransformation = PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+    )
 }
 
 /** Hairline-разделитель между строками внутри карточки. */

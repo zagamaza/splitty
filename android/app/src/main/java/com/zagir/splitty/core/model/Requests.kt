@@ -18,6 +18,28 @@ data class CodeLoginBody(val code: String)
 @Serializable
 data class GoogleLoginBody(val idToken: String)
 
+/** POST /auth/register — регистрация по email и паролю. */
+@Serializable
+data class RegisterBody(
+    val email: String,
+    val password: String,
+    val displayName: String,
+)
+
+/** POST /auth/login — вход по email и паролю. */
+@Serializable
+data class PasswordLoginBody(val email: String, val password: String)
+
+/**
+ * POST /me/password. [currentPassword] опускается (explicitNulls = false),
+ * когда пароля ещё не было: пустая строка означала бы «текущий не сошёлся».
+ */
+@Serializable
+data class SetPasswordBody(
+    val currentPassword: String? = null,
+    val newPassword: String,
+)
+
 /** POST/DELETE /me/devices — FCM-токен устройства для native-пушей. */
 @Serializable
 data class DeviceBody(val token: String, val platform: String = "android")

@@ -21,10 +21,13 @@ import com.zagir.splitty.core.model.OperationBody
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.ParseDraft
 import com.zagir.splitty.core.model.ParseResponse
+import com.zagir.splitty.core.model.PasswordLoginBody
+import com.zagir.splitty.core.model.RegisterBody
 import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SetCurrencyBody
+import com.zagir.splitty.core.model.SetPasswordBody
 import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
 import com.zagir.splitty.core.network.ApiException
@@ -88,6 +91,14 @@ class SplittyRepository @Inject constructor(
     suspend fun loginWithGoogle(idToken: String): AuthResponse =
         call { api.loginWithGoogle(GoogleLoginBody(idToken)) }
 
+    /** Регистрация по email и паролю; 409 `email_taken` — адрес занят. */
+    suspend fun register(email: String, password: String, displayName: String): AuthResponse =
+        call { api.register(RegisterBody(email = email, password = password, displayName = displayName)) }
+
+    /** Вход по email и паролю; 401 `invalid_credentials` на любую неудачу. */
+    suspend fun loginWithPassword(email: String, password: String): AuthResponse =
+        call { api.loginWithPassword(PasswordLoginBody(email = email, password = password)) }
+
     // --- Профиль ---
 
     suspend fun me(): Fetched<Me> =
@@ -106,6 +117,10 @@ class SplittyRepository @Inject constructor(
     /** Привязать Google к текущему аккаунту; ответ — профиль с новым списком. */
     suspend fun linkGoogle(idToken: String): LinkedProvidersResponse =
         call { api.linkGoogle(GoogleLoginBody(idToken)) }
+
+    /** Задать или сменить пароль; [current] нужен, только если пароль уже был. */
+    suspend fun setPassword(current: String?, new: String): LinkedProvidersResponse =
+        call { api.setPassword(SetPasswordBody(currentPassword = current, newPassword = new)) }
 
     /** Отвязать способ входа; ответ несёт профиль и (для telegram) warning. */
     suspend fun unlinkProvider(provider: LoginProvider): LinkedProvidersResponse =

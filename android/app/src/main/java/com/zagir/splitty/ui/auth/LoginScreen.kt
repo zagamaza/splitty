@@ -50,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -102,6 +104,11 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                         viewModel.loginWithGoogle(host)
                     }
                 },
+            )
+            OrDivider()
+            EmailLoginCard(
+                state = state,
+                viewModel = viewModel,
             )
             TelegramLoginCard(
                 code = state.code,
@@ -199,6 +206,119 @@ private fun GoogleSignInButton(
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = if (enabled) colors.ink else colors.inkSecondary,
+        )
+    }
+}
+
+@Composable
+private fun OrDivider() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(Splitty.colors.hairline),
+        )
+        Text(
+            text = stringResource(R.string.login_or),
+            fontSize = 13.sp,
+            color = Splitty.colors.inkSecondary,
+        )
+        Box(
+            Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(Splitty.colors.hairline),
+        )
+    }
+}
+
+/**
+ * Вход и регистрация по email с паролем — для тех, у кого нет ни Google, ни
+ * Telegram. Та же карточка переключается в регистрацию: добавляется поле имени.
+ */
+@Composable
+private fun EmailLoginCard(
+    state: LoginUiState,
+    viewModel: LoginViewModel,
+) {
+    SurfaceCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        padding = 20.dp,
+    ) {
+        SectionHeader(
+            stringResource(
+                if (state.isRegistering) R.string.login_register_section else R.string.login_email_section
+            )
+        )
+        Spacer(Modifier.height(12.dp))
+        if (state.isRegistering) {
+            LoginField(
+                value = state.registerName,
+                onValueChange = viewModel::onRegisterNameChange,
+                placeholder = stringResource(R.string.login_name_placeholder),
+            )
+            Spacer(Modifier.height(12.dp))
+        }
+        LoginField(
+            value = state.email,
+            onValueChange = viewModel::onEmailChange,
+            placeholder = stringResource(R.string.login_email_placeholder),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+            ),
+        )
+        Spacer(Modifier.height(12.dp))
+        LoginField(
+            value = state.password,
+            onValueChange = viewModel::onPasswordChange,
+            placeholder = stringResource(R.string.login_password_placeholder),
+            isPassword = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+                imeAction = ImeAction.Go,
+            ),
+            keyboardActions = KeyboardActions(onGo = { viewModel.submitEmailForm() }),
+        )
+        if (state.isRegistering && state.password.isNotEmpty() &&
+            !EmailLoginForm.isValidPassword(state.password)
+        ) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.login_password_length_hint),
+                fontSize = 13.sp,
+                color = Splitty.colors.inkSecondary,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        PrimaryPillButton(
+            text = stringResource(
+                if (state.isRegistering) R.string.login_register_button else R.string.login_email_button
+            ),
+            onClick = viewModel::submitEmailForm,
+            enabled = state.isEmailFormValid && !state.isLoggingIn,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = stringResource(
+                if (state.isRegistering) R.string.login_switch_to_login else R.string.login_switch_to_register
+            ),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Medium,
+            color = Splitty.colors.accent,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !state.isLoggingIn, onClick = viewModel::toggleRegistering),
         )
     }
 }
@@ -412,6 +532,7 @@ private fun LoginField(
     placeholder: String,
     modifier: Modifier = Modifier,
     monospaced: Boolean = false,
+    isPassword: Boolean = false,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
@@ -433,6 +554,7 @@ private fun LoginField(
         ),
         singleLine = true,
         cursorBrush = SolidColor(colors.accent),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         decorationBox = { innerTextField ->

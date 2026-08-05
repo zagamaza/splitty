@@ -35,9 +35,41 @@ object LoginCode {
     fun isValid(raw: String): Boolean = normalize(raw).length >= MIN_LENGTH
 }
 
+/**
+ * Проверки формы «email + пароль». Точный разбор адреса — за сервером
+ * (`mail.ParseAddress`), здесь только чтобы не слать заведомый мусор.
+ */
+object EmailLoginForm {
+    /** Минимум сервера (`minPasswordLen` в password_auth.go). */
+    const val MIN_PASSWORD_LENGTH = 8
+
+    /** bcrypt молча отбрасывает всё после 72 байт — длинные пароли совпадали
+     *  бы по общему префиксу, поэтому дальше не пускаем. */
+    const val MAX_PASSWORD_BYTES = 72
+
+    fun normalizeEmail(raw: String): String = raw.trim().lowercase()
+
+    fun isValidEmail(raw: String): Boolean {
+        val parts = normalizeEmail(raw).split("@")
+        if (parts.size != 2 || parts[0].isEmpty()) return false
+        val domain = parts[1]
+        return domain.length >= 3 && domain.contains(".") &&
+            !domain.startsWith(".") && !domain.endsWith(".")
+    }
+
+    fun isValidPassword(password: String): Boolean =
+        password.length >= MIN_PASSWORD_LENGTH &&
+            password.toByteArray().size <= MAX_PASSWORD_BYTES
+}
+
 /** Состояние экрана входа. */
 data class LoginUiState(
     val code: String = "",
+    val email: String = "",
+    val password: String = "",
+    val registerName: String = "",
+    /** Та же форма работает и на вход, и на регистрацию. */
+    val isRegistering: Boolean = false,
     val devTelegramId: String = "",
     val devDisplayName: String = "",
     val devUsername: String = "",
@@ -50,6 +82,16 @@ data class LoginUiState(
     val isDevFormValid: Boolean
         get() = (devTelegramId.trim().toLongOrNull() ?: 0L) > 0L &&
             devDisplayName.trim().isNotEmpty()
+
+    /** Для входа длина пароля не проверяется: он мог быть задан до правил. */
+    val isEmailFormValid: Boolean
+        get() = if (isRegistering) {
+            EmailLoginForm.isValidEmail(email) &&
+                EmailLoginForm.isValidPassword(password) &&
+                registerName.trim().isNotEmpty()
+        } else {
+            EmailLoginForm.isValidEmail(email) && password.isNotEmpty()
+        }
 }
 
 /**
@@ -72,6 +114,10 @@ class LoginViewModel @Inject constructor(
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
 
     fun onCodeChange(value: String) = _state.update { it.copy(code = value) }
+    fun onEmailChange(value: String) = _state.update { it.copy(email = value) }
+    fun onPasswordChange(value: String) = _state.update { it.copy(password = value) }
+    fun onRegisterNameChange(value: String) = _state.update { it.copy(registerName = value) }
+    fun toggleRegistering() = _state.update { it.copy(isRegistering = !it.isRegistering) }
     fun onDevTelegramIdChange(value: String) = _state.update { it.copy(devTelegramId = value) }
     fun onDevDisplayNameChange(value: String) = _state.update { it.copy(devDisplayName = value) }
     fun onDevUsernameChange(value: String) = _state.update { it.copy(devUsername = value) }
@@ -160,6 +206,42 @@ class LoginViewModel @Inject constructor(
                 // viewModelScope (обработчик стоит только на @ApplicationScope),
                 // роняя процесс прямо на экране входа.
                 Log.e(TAG, "login by code failed", e)
+                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
+            } finally {
+                _state.update { it.copy(isLoggingIn = false) }
+            }
+        }
+    }
+
+    /**
+     * Вход или регистрация по email — POST /auth/login или /auth/register.
+     * Текст ошибки берём с сервера: он намеренно отвечает одинаково на неверный
+     * пароль и незнакомый адрес, а на занятый адрес — понятным 409.
+     */
+    fun submitEmailForm() {
+        val current = _state.value
+        if (!current.isEmailFormValid || current.isLoggingIn) return
+        val email = EmailLoginForm.normalizeEmail(current.email)
+        val password = current.password
+        val name = current.registerName.trim()
+        val registering = current.isRegistering
+
+        _state.update { it.copy(isLoggingIn = true) }
+        viewModelScope.launch {
+            try {
+                val response = if (registering) {
+                    repository.register(email, password, name)
+                } else {
+                    repository.loginWithPassword(email, password)
+                }
+                sessionStore.signIn(response.token, response.user)
+                _state.update { it.copy(password = "") }
+            } catch (e: CancellationException) {
+                throw e // см. комментарий в loginWithGoogle
+            } catch (e: ApiException) {
+                _state.update { it.copy(errorMessage = e.message) }
+            } catch (e: Exception) {
+                Log.e(TAG, "password login failed", e)
                 _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }

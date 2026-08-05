@@ -194,6 +194,29 @@ class ProfileViewModel @Inject constructor(
     }
 
     /**
+     * Задать или сменить пароль: POST /me/password. [current] нужен, только
+     * если пароль уже был; 403 `invalid_password` — не сошёлся.
+     * [onSuccess] закрывает диалог, и только после ответа сервера.
+     */
+    fun setPassword(current: String?, new: String, onSuccess: () -> Unit) {
+        if (_isIdentityBusy.value) return
+        _isIdentityBusy.value = true
+        viewModelScope.launch {
+            try {
+                sessionStore.updateMe(repository.setPassword(current, new).user)
+                onSuccess()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.e(TAG, "set password failed", e)
+                _errorMessage.value = identityErrorText(e)
+            } finally {
+                _isIdentityBusy.value = false
+            }
+        }
+    }
+
+    /**
      * Отвязка способа входа: DELETE /me/link/{provider}. Экран не пускает сюда
      * последний способ (кнопка гаснет), 409 `last_identity` — вторая линия.
      */

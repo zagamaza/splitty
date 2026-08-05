@@ -84,6 +84,12 @@ data class Me(
      */
     val linkedProviders: List<String> = emptyList(),
     val notificationOn: Boolean = true,
+    /**
+     * Адрес входа по паролю, если он у аккаунта есть. Остаётся за аккаунтом и
+     * после отвязки пароля — по нему профиль понимает, что пароль можно задать
+     * заново. У профиля без адреса задавать пароль негде: завести адрес нечем.
+     */
+    val loginEmail: String? = null,
 ) {
     /** Привязан ли способ входа к аккаунту. */
     fun isLinked(provider: LoginProvider): Boolean = provider.id in linkedProviders
@@ -113,6 +119,7 @@ enum class LoginProvider(val id: String, val title: String) {
     TELEGRAM("telegram", "Telegram"),
     GOOGLE("google", "Google"),
     APPLE("apple", "Apple"),
+    PASSWORD("password", "Email и пароль"),
 }
 
 /**

@@ -16,10 +16,13 @@ import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.OperationBody
+import com.zagir.splitty.core.model.PasswordLoginBody
+import com.zagir.splitty.core.model.RegisterBody
 import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SetCurrencyBody
+import com.zagir.splitty.core.model.SetPasswordBody
 import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
 import okhttp3.ResponseBody
@@ -53,6 +56,18 @@ interface SplittyApi {
     /** Вход через Google: id-токен от Credential Manager (Task 18). */
     @POST("api/v1/auth/google")
     suspend fun loginWithGoogle(@Body body: GoogleLoginBody): AuthResponse
+
+    /** Регистрация по email и паролю; 409 `email_taken` — адрес занят. */
+    @POST("api/v1/auth/register")
+    suspend fun register(@Body body: RegisterBody): AuthResponse
+
+    /**
+     * Вход по email и паролю. 401 `invalid_credentials` одинаков для неверного
+     * пароля и незнакомого адреса — сервер намеренно не даёт проверить, есть ли
+     * такая регистрация.
+     */
+    @POST("api/v1/auth/login")
+    suspend fun loginWithPassword(@Body body: PasswordLoginBody): AuthResponse
 
     // --- Профиль ---
 
@@ -91,6 +106,14 @@ interface SplittyApi {
      */
     @POST("api/v1/me/link/google")
     suspend fun linkGoogle(@Body body: GoogleLoginBody): LinkedProvidersResponse
+
+    /**
+     * POST /me/password — задать или сменить пароль. Текущий обязателен, только
+     * если он уже есть; 403 `invalid_password` — не сошёлся (не 401: сессия
+     * жива, и разлогинивать по нему нельзя).
+     */
+    @POST("api/v1/me/password")
+    suspend fun setPassword(@Body body: SetPasswordBody): LinkedProvidersResponse
 
     /**
      * DELETE /me/link/{provider} — отвязать способ входа.

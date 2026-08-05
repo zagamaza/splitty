@@ -127,11 +127,15 @@ REST API поверх существующих сервисов (`internal/servi
 // id — номер Splitty (не telegram id, см. «Общие правила»)
 // linkedProviders — привязанные способы входа в стабильном порядке
 //   ("telegram", "google", "apple", "password"); всегда массив, не null. Наружу
-//   отдаётся ТОЛЬКО факт привязки: сами sub/telegram id и адрес входа остаются
-//   в базе. "password" появляется, только когда войти паролем реально можно
-//   (есть и адрес входа, и хеш)
+//   отдаётся ТОЛЬКО факт привязки: сами sub и telegram id остаются в базе.
+//   "password" появляется, только когда войти паролем реально можно (есть и
+//   адрес входа, и хеш)
+// loginEmail — адрес входа по паролю; поля нет, если адреса у аккаунта нет.
+//   Остаётся и после отвязки пароля: по нему клиент показывает, что пароль
+//   можно задать заново. Уходит только ВЛАДЕЛЬЦУ (/me, /auth/*, /me/link/*)
 {"id": 123, "username": "zagir", "displayName": "Загир", "lang": "ru",
- "linkedProviders": ["telegram", "google"], "notificationOn": true}
+ "linkedProviders": ["telegram", "google"], "notificationOn": true,
+ "loginEmail": "user@example.com"}
 
 // Debt — debtor должен lender'у sum
 {"debtor": User, "lender": User, "sum": 500}
