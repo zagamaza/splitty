@@ -10,19 +10,16 @@ final class SessionStore {
     /// `SPLITTY_BASE_URL`; переменная имеет приоритет над UserDefaults,
     /// чтобы прогоны были детерминированы.
     ///
-    /// В release — только https: каждый запрос несёт `Authorization: Bearer`
-    /// с 90-дневным JWT, по plaintext это перехват сессии в любой публичной
-    /// сети. Android закрыл это же место (`SessionStore.DEFAULT_BASE_URL`
-    /// + network_security_config), iOS повторяет инвариант.
+    /// Бэкенд живёт на https://splitor.zagirnur.dev (Caddy + Let's Encrypt),
+    /// поэтому обе конфигурации ходят на один и тот же TLS-адрес. Каждый запрос
+    /// несёт `Authorization: Bearer` с 90-дневным JWT — по plaintext это
+    /// перехват сессии в любой публичной сети, так что release схему http вообще
+    /// не принимает (см. `serverURL`). Android держит тот же инвариант
+    /// (`SessionStore.DEFAULT_BASE_URL` + network_security_config).
     #if DEBUG
-    static let defaultBaseURL = "http://138.124.18.189:18002"
+    static let defaultBaseURL = "https://splitor.zagirnur.dev"
     #else
-    // ВРЕМЕННО (сборка «для друзей», internal TestFlight): TLS-домена на бэкенд
-    // нет (api.splitty.app не резолвится), поэтому release тоже ходит на дев-
-    // сервер по голому HTTP-IP. Cleartext разрешён через NSAllowsArbitraryLoads.
-    // Android держит тот же временный инвариант. TODO: вернуть
-    // https://api.splitty.app (и https-guard в serverURL), когда поднимется TLS.
-    static let defaultBaseURL = "http://138.124.18.189:18002"
+    static let defaultBaseURL = "https://splitor.zagirnur.dev"
     #endif
 
     private static let baseURLKey = "splitty.baseURL"
@@ -154,10 +151,16 @@ final class SessionStore {
         else {
             return nil
         }
-        // ВРЕМЕННО release тоже допускает http: дев-бэкенд по голому IP (нет TLS-
-        // домена, сборка для друзей). Вернуть на release-only `https`, когда
-        // поднимется api.splitty.app (см. defaultBaseURL выше).
+        // Debug допускает http — локальный бэкенд на 127.0.0.1 и прогоны
+        // UI-тестов с `SPLITTY_BASE_URL`. Release принимает только https:
+        // бэкенд на splitor.zagirnur.dev под TLS, и никакой plaintext-адрес
+        // (из UserDefaults или окружения) не должен утащить Bearer-токен
+        // в открытую сеть.
+        #if DEBUG
         guard scheme == "http" || scheme == "https" else { return nil }
+        #else
+        guard scheme == "https" else { return nil }
+        #endif
         return url
     }
 

@@ -50,14 +50,12 @@ targets:
         # /.well-known/apple-app-site-association и только после этого начинает
         # уводить ссылки в приложение.
         #
-        # TODO: домен ещё НЕ куплен (см. Post-Completion в
-        # docs/plans/20260729-google-apple-auth-and-deeplink.md) — splitty.app
-        # здесь плейсхолдер. Пока он не резолвится, universal links просто не
-        # работают: ссылка открывается в браузере, а кнопка «Открыть
-        # в приложении» (схема splitty://, CFBundleURLTypes ниже) работает
-        # уже сейчас. Заменить на реальный домен вместе с PUBLIC_BASE_URL.
+        # Домен боевой: splitor.zagirnur.dev (Caddy + Let's Encrypt), тот же,
+        # что PUBLIC_BASE_URL бэкенда и host в android/AndroidManifest.xml.
+        # AASA отдаётся по /.well-known/apple-app-site-association как
+        # application/json, без редиректов — иначе iOS его не примет.
         com.apple.developer.associated-domains:
-          - applinks:splitty.app
+          - applinks:splitor.zagirnur.dev
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zagir.splitty
@@ -104,8 +102,8 @@ targets:
           # Кнопка «Открыть в приложении» на странице приглашения ведёт на
           # splitty://join/<roomId> (APP_SCHEME, internal/rest/deeplink.go:43).
           # Схема нужна ровно потому, что тап по ссылке НА ТОТ ЖЕ домен iOS
-          # в приложение не уводит — браузер остаётся в браузере. И она
-          # единственное, что работает до покупки домена под universal links.
+          # в приложение не уводит — браузер остаётся в браузере. Живёт рядом
+          # с universal links (applinks: выше), а не вместо них.
           - CFBundleTypeRole: Editor
             CFBundleURLName: com.zagir.splitty.deeplink
             CFBundleURLSchemes:
@@ -115,21 +113,10 @@ targets:
         NSSpeechRecognitionUsageDescription: Распознавание речи показывает текст надиктовки прямо во время записи
         NSCameraUsageDescription: Камера нужна, чтобы сфотографировать чек
         NSPhotoLibraryUsageDescription: Доступ к фото нужен, чтобы выбрать фото чека
-        NSAppTransportSecurity:
-          # Сервер доступен по http://IP:порт — исключения ATS по IP не работают,
-          # поэтому для dev-сборки разрешаем произвольные HTTP-загрузки.
-          # ВАЖНО: только этот ключ — при наличии более специфичных ключей
-          # (NSAllowsLocalNetworking и т.п.) iOS игнорирует NSAllowsArbitraryLoads.
-          #
-          # Этот ключ НЕ является защитой release-сборки и не должен ею считаться:
-          # каждый запрос несёт Authorization: Bearer с 90-дневным JWT, и по
-          # plaintext это перехват сессии. Границу держит код —
-          # SessionStore.defaultBaseURL в release равен https://api.splitty.app,
-          # а serverURL отвергает схему http (см. #if DEBUG там же), так что до
-          # незашифрованного запроса дело не доходит. Android держит тот же
-          # инвариант через network_security_config + SecurityConfigTest.
-          # TODO: когда dev-бэкенд переедет на домен с TLS — снять ключ совсем.
-          NSAllowsArbitraryLoads: true
+        # NSAppTransportSecurity здесь НЕТ намеренно: бэкенд на
+        # https://splitor.zagirnur.dev, послаблений ATS не требуется. Не
+        # возвращать NSAllowsArbitraryLoads — каждый запрос несёт
+        # Authorization: Bearer с 90-дневным JWT.
   SplittyTests:
     type: bundle.unit-test
     platform: iOS

@@ -46,25 +46,24 @@
                  autoVerify=true — система сама скачивает /.well-known/assetlinks.json
                  и, если package name и SHA-256 подписи сошлись, открывает ссылку
                  сразу в приложении, без листа выбора браузера.
-                 TODO: домен splitty.app ещё НЕ куплен — это плейсхолдер, он обязан
-                 совпасть с PUBLIC_BASE_URL бэкенда и с applinks: в ios/project.yml.
-                 До покупки домена верификация не пройдёт, и диплинк работает только
-                 через схему splitty:// из фильтра ниже. -->
+                 Хост обязан совпадать с PUBLIC_BASE_URL бэкенда и с applinks:
+                 в ios/project.yml — сейчас это splitor.zagirnur.dev. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="splitty.app"
+                    android:host="splitor.zagirnur.dev"
                     android:pathPrefix="/join" />
             </intent-filter>
 
             <!-- Кастомная схема splitty://join/<roomId> — кнопка «Открыть в
                  приложении» на странице /join (defaultAppScheme в deeplink.go).
                  Отдельный фильтр: autoVerify относится только к https, схему
-                 верифицировать нечем. Это единственный работающий канал диплинка
-                 ДО покупки домена. -->
+                 верифицировать нечем. Работает рядом с app link выше, а не
+                 вместо него: тап по ссылке НА ТОТ ЖЕ домен из браузера
+                 в приложение не уводит. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

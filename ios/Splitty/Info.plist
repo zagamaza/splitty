@@ -53,11 +53,6 @@
 	<string>327021108128-v1psnu3utn5govgn3n30h2omhvb21t1o.apps.googleusercontent.com</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>Камера нужна, чтобы сфотографировать чек</string>
 	<key>NSMicrophoneUsageDescription</key>

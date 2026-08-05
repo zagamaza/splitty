@@ -153,15 +153,16 @@ app/src/main/java/com/zagir/splitty/
 
 ## Сервер
 
-Адрес по умолчанию зависит от варианта (`SessionStore.DEFAULT_BASE_URL`):
-в debug — дев-сервер по HTTP, в release — HTTPS-плейсхолдер прод-домена.
-Поле «Сервер» на экране входа доступно только в debug (для локального
-бэкенда на эмуляторе — `http://10.0.2.2:7171`).
+Адрес по умолчанию — `https://splitor.zagirnur.dev` в обоих вариантах
+(`SessionStore.DEFAULT_BASE_URL`). Поле «Сервер» на экране входа доступно
+только в debug (для локального бэкенда на эмуляторе — `http://10.0.2.2:7171`).
 
 Cleartext HTTP разрешён **только в debug**: конфиги разные по вариантам —
 `src/debug/res/xml/network_security_config.xml` и
-`src/release/res/xml/network_security_config.xml` (release cleartext
-запрещает, боевой сервер обязан быть на HTTPS).
+`src/release/res/xml/network_security_config.xml` (release запрещает cleartext
+глобально и без исключений — боевой сервер под TLS). Инвариант стережёт
+`SecurityConfigTest`; сохранённый от debug-сборки `http://`-адрес в release
+подменяется дефолтом (`usableBaseUrl`).
 
 ## Вход и аккаунт
 
@@ -227,10 +228,11 @@ release» — расходятся отпечатки подписи в Google C
   `internal/rest/deeplink.go`), кастомная схема `splitty://join/<roomId>`,
   легаси-ссылка бота `t.me/split_money_bot?start=room<roomId>` и голый код.
   Все четыре разбирает один парсер — `parseRoomCode` (`ui/groups/GroupsListViewModel.kt`).
-- **Домен `splitty.app` в манифесте — плейсхолдер, он ещё не куплен.**
-  До покупки `autoVerify` не пройдёт (нужен `/.well-known/assetlinks.json` с
-  SHA-256 подписи), и реально работает только схема `splitty://`. Домен обязан
-  совпасть с `PUBLIC_BASE_URL` бэкенда и с `applinks:` в `ios/project.yml`.
+- **Домен в манифесте — `splitor.zagirnur.dev`** (боевой, Caddy + Let's Encrypt).
+  Для `autoVerify` домен обязан отдавать `/.well-known/assetlinks.json` с SHA-256
+  подписи и совпадать с `PUBLIC_BASE_URL` бэкенда и с `applinks:` в
+  `ios/project.yml`. Схема `splitty://` остаётся рядом: тап по ссылке на тот же
+  домен из браузера в приложение не уводит.
 - **`android:launchMode="singleTop"`** обязателен: при `standard` переход по
   ссылке в ЖИВОЕ приложение создал бы второй экземпляр `MainActivity` и позвал
   `onCreate` вместо `onNewIntent` — два приложения в стеке, состояние первого

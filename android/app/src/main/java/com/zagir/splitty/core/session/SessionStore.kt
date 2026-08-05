@@ -112,18 +112,14 @@ class SessionStore @Inject constructor(
         private const val TAG = "SessionStore"
 
         /**
-         * Сервер по умолчанию. В release — HTTPS-плейсхолдер прод-домена
-         * (боевой сервер к релизу обязан быть на HTTPS; cleartext из релиза
-         * убран, см. network_security_config release-варианта). В debug —
-         * дев-сервер по голому HTTP-IP (cleartext разрешён только в debug).
-         * Пользователь может переопределить адрес на экране входа.
+         * Сервер по умолчанию — боевой бэкенд под TLS (Caddy + Let's Encrypt).
+         * Cleartext из release-варианта убран целиком (см.
+         * src/release/res/xml/network_security_config.xml), инвариант стережёт
+         * SecurityConfigTest. Пользователь может переопределить адрес на экране
+         * входа — схему проверяет [usableBaseUrl].
          */
-        // ВРЕМЕННО (сборка «для друзей», internal-трек): пока нет https-домена на
-        // бэкенд, release тоже ходит на дев-сервер по голому HTTP-IP. Cleartext для
-        // него точечно разрешён в network_security_config (release-вариант). Вернуть
-        // https://api.splitty.app, когда поднимется TLS-домен (см. [usableBaseUrl]).
         val DEFAULT_BASE_URL: String
-            get() = "http://138.124.18.189:18002"
+            get() = "https://splitor.zagirnur.dev"
 
         const val THEME_SYSTEM = "system"
         const val THEME_LIGHT = "light"

@@ -42,8 +42,8 @@ SwiftUI-клиент (iOS 17+) для Splitty с UX в стиле Splitwise. Р�
 - **URL-схема `splitty://`** (`CFBundleURLTypes` в `project.yml`) — по ней работает
   кнопка «Открыть в приложении» на странице приглашения `https://<домен>/join/<roomId>`
   (`internal/rest/deeplink.go`). Схема нужна потому, что тап по ссылке на ТОТ ЖЕ
-  домен iOS в приложение не уводит; и она единственное, что работает, пока домен
-  под universal links не куплен. Проверка на симуляторе:
+  домен iOS в приложение не уводит — схема живёт рядом с universal links
+  (`applinks:splitor.zagirnur.dev`), а не вместо них. Проверка на симуляторе:
 
   ```bash
   xcrun simctl openurl booted splitty://join/<roomId>

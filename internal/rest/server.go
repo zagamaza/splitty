@@ -77,9 +77,9 @@ type Config struct {
 	AppleTokens oidc.AppleTokens
 
 	// PublicBaseUrl — публичный https-адрес, по которому раздаются associated
-	// files и страница приглашения (например "https://splitty.app").
-	// Пусто — домен ещё не куплен: /join и оба .well-known отдают 404, так что
-	// диплинк безопасно выкатывается ДО появления домена (см. deeplink.go)
+	// files и страница приглашения (в проде "https://splitor.zagirnur.dev").
+	// Пусто — домен не настроен: /join и оба .well-known отдают 404, так что
+	// диплинк безопасно выкатывается и без домена (см. deeplink.go)
 	PublicBaseUrl string
 	// IosAppId — <TeamID>.<bundle id>, например "K8922Y6R3M.com.zagir.splitty".
 	// Пусто — apple-app-site-association отдаёт 404: пустой appID в файле хуже

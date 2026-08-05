@@ -156,8 +156,8 @@ REST-эндпоинты `POST /api/v1/auth/google` и `POST /api/v1/auth/apple` 
 
 * `PUBLIC_BASE_URL` (`""`) – https-адрес сервера и **общий выключатель**: пусто → все три маршрута
   отдают `404`, а поле `inviteUrl` в `GET /rooms/{id}` не приезжает и клиенты показывают старую
-  ссылку через бота. Домен на момент написания ещё не куплен, поэтому бэкенд катится с пустым
-  значением
+  ссылку через бота. Боевое значение — `https://splitor.zagirnur.dev` (тот же домен зашит
+  в обоих клиентах, см. врезку ниже)
 * `IOS_APP_ID` (`""`) – `<TeamID>.<bundle id>`, например `K8922Y6R3M.com.zagir.splitty`
 * `ANDROID_PACKAGE` (`""`) – имя пакета, например `com.zagir.splitty`
 * `ANDROID_CERT_SHA256` (`""`) – SHA-256 отпечатки подписи для `assetlinks.json`.
