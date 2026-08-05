@@ -8,15 +8,13 @@ final class DemoFlowUITests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = true
-        app = XCUIApplication()
-        // Прогон против локального бэкенда независимо от прод-дефолта приложения.
-        app.launchEnvironment["SPLITTY_BASE_URL"] = "http://127.0.0.1:7171"
+        app = makeApp()
         app.launch()
     }
 
     func testDemoFlow() throws {
         shot("00-запуск")
-        loginIfNeeded()
+        loginIfNeeded(app)
 
         // --- Группы ---
         tapTab("Группы")
@@ -29,9 +27,8 @@ final class DemoFlowUITests: XCTestCase {
         sleepShort()
         shot("02-группа-стамбул")
 
-        // --- Добавление расхода (FAB внутри группы) ---
-        if let fab = rightmostHittableButton(labeled: "Добавить расход") {
-            fab.tap()
+        // --- Добавление расхода (FAB внутри группы → «Ввести вручную») ---
+        if openManualExpenseForm(app) {
             let descField = app.textFields["Описание"]
             if descField.waitForExistence(timeout: 5) {
                 descField.tap()
@@ -41,7 +38,7 @@ final class DemoFlowUITests: XCTestCase {
                     sumField.tap()
                     sumField.typeText("600")
                 }
-                dismissKeyboard()
+                dismissKeyboard(app)
                 shot("03-новый-расход")
                 let save = app.buttons["Сохранить"]
                 if save.waitForExistence(timeout: 3), save.isEnabled {
@@ -134,51 +131,10 @@ final class DemoFlowUITests: XCTestCase {
 
     // MARK: - Хелперы
 
-    private func loginIfNeeded() {
-        let idField = app.textFields["Telegram ID"]
-        guard idField.waitForExistence(timeout: 5) else { return } // уже залогинены
-
-        idField.tap()
-        idField.typeText("100")
-
-        let nameField = app.textFields["Имя"]
-        nameField.tap()
-        nameField.typeText("Загир")
-
-        dismissKeyboard()
-        shot("00-логин-заполнен")
-
-        let loginButton = app.buttons["Войти"]
-        XCTAssertTrue(loginButton.isEnabled, "Кнопка «Войти» неактивна")
-        loginButton.tap()
-
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "Не дождались таб-бара после логина")
-    }
-
     private func tapTab(_ name: String) {
         let tab = app.tabBars.buttons[name]
         if tab.waitForExistence(timeout: 5) {
             tab.tap()
-        }
-    }
-
-    /// Среди всех hittable-кнопок с данным label выбирает самую правую (FAB, а не центральную кнопку таб-бара).
-    private func rightmostHittableButton(labeled label: String) -> XCUIElement? {
-        let matches = app.buttons.matching(NSPredicate(format: "label == %@", label))
-        var best: XCUIElement?
-        for i in 0..<matches.count {
-            let e = matches.element(boundBy: i)
-            guard e.exists, e.isHittable else { continue }
-            if best == nil || e.frame.maxX > best!.frame.maxX { best = e }
-        }
-        return best
-    }
-
-    private func dismissKeyboard() {
-        if app.keyboards.count > 0 {
-            app.toolbars.buttons["Готово"].exists
-                ? app.toolbars.buttons["Готово"].tap()
-                : app.swipeDown()
         }
     }
 
@@ -215,9 +171,6 @@ final class DemoFlowUITests: XCTestCase {
     }
 
     private func shot(_ name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        shot(app, name)
     }
 }

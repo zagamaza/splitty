@@ -435,7 +435,9 @@ struct LoginView: View {
     }
 
     /// Поля dev-входа и CTA — общие для симулятора и устройства.
-    /// Лейблы «Telegram ID»/«Имя»/«Войти» фиксированы: их ждёт DemoFlowUITests.
+    /// Лейблы «Telegram ID»/«Имя» фиксированы: их ищет DemoFlowUITests.
+    /// У кнопки лейбл «Войти» НЕ уникален (такой же в карточке входа по email),
+    /// поэтому тесты берут её по `devLoginSubmit` — не переименовывать.
     private var devLoginFields: some View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Telegram ID", text: $telegramIdText)
@@ -456,6 +458,7 @@ struct LoginView: View {
                 Text("Войти")
             }
             .buttonStyle(.primaryPill)
+            .accessibilityIdentifier("devLoginSubmit")
             .disabled(!isDevFormValid || isLoggingIn)
             .padding(.top, 4)
         }

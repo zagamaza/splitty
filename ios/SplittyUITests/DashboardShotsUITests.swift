@@ -3,10 +3,11 @@ import XCTest
 /// Скриншоты дашборда «Итоги» с прокруткой (для визуальной проверки).
 final class DashboardShotsUITests: XCTestCase {
     func testDashboardScroll() throws {
-        let app = XCUIApplication()
-        // Прогон против локального бэкенда независимо от прод-дефолта приложения.
-        app.launchEnvironment["SPLITTY_BASE_URL"] = "http://127.0.0.1:7171"
+        let app = makeApp()
         app.launch()
+        // Свой логин обязателен: класс запускается на чистой установке и по
+        // алфавиту раньше DemoFlowUITests — сессии от него тут не бывает.
+        loginIfNeeded(app)
 
         let tab = app.tabBars.buttons["Группы"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10))

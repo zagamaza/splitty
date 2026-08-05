@@ -1,19 +1,40 @@
 import XCTest
 
-/// Сквозная проверка офлайн-режима. Тесты запускаются ПО ОДНОМУ,
-/// оркестрация снаружи (бэкенд останавливает/запускает раннер):
-/// 1. DemoFlowUITests (бэкенд запущен) — логин + прогрев кеша.
+/// Сквозная проверка офлайн-режима. Тесты запускаются ПО ОДНОМУ
+/// (`-only-testing:SplittyUITests/OfflineSmokeUITests/<тест>`), оркестрация
+/// снаружи — раннер останавливает и запускает бэкенд между ними:
+/// 1. testOnlineWarmup (бэкенд запущен) — логин + прогрев кеша.
 /// 2. testOfflineCacheAndQueue (бэкенд ОСТАНОВЛЕН) — кеш виден, расход в outbox.
 /// 3. testAfterSync (бэкенд снова запущен) — запись синхронизировалась.
+///
+/// ВАЖНО: бэкенду нужен ФИКСИРОВАННЫЙ `API_JWT_SECRET`. При пустом секрете
+/// (а `.env` по умолчанию пуст) `API_DEV_AUTH=true` генерирует случайный
+/// эфемерный секрет на каждый старт — шаг 3 поднимает бэкенд уже с другим
+/// секретом, выданный на шаге 1 токен получает 401, сессия истекает, и
+/// «нет сессии» выглядит как провал офлайна, хотя офлайн ни при чём.
 final class OfflineSmokeUITests: XCTestCase {
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        app = XCUIApplication()
-        // Прогон против локального бэкенда независимо от прод-дефолта приложения.
-        app.launchEnvironment["SPLITTY_BASE_URL"] = "http://127.0.0.1:7171"
+        app = makeApp()
         app.launch()
+    }
+
+    /// Шаг 1: логин и прогрев кеша, пока бэкенд ещё доступен.
+    /// Отдельным тестом, а не «сначала прогоните DemoFlowUITests»: классы
+    /// запускаются по одному, и зависимость от чужого прогона молча ломалась.
+    func testOnlineWarmup() throws {
+        loginIfNeeded(app)
+
+        let tab = app.tabBars.buttons["Группы"]
+        XCTAssertTrue(tab.waitForExistence(timeout: 10))
+        tab.tap()
+        XCTAssertTrue(app.staticTexts["Поездка в Стамбул"].waitForExistence(timeout: 10),
+                      "Группа из seed-данных не появилась — прогревать нечего")
+        app.staticTexts["Поездка в Стамбул"].tap()
+        XCTAssertTrue(app.buttons["Балансы"].waitForExistence(timeout: 10), "Экран группы не открылся")
+        shot("офлайн-00-прогрев")
     }
 
     /// Бэкенд недоступен: данные из кеша, баннер офлайна, расход — в очередь.
@@ -31,16 +52,8 @@ final class OfflineSmokeUITests: XCTestCase {
         app.staticTexts["Поездка в Стамбул"].tap()
         XCTAssertTrue(app.buttons["Балансы"].waitForExistence(timeout: 10), "Экран группы не открылся из кеша")
 
-        // Добавляем расход офлайн.
-        let fab = app.buttons.matching(NSPredicate(format: "label == %@", "Добавить расход"))
-        var fabButton: XCUIElement?
-        for i in 0..<fab.count {
-            let e = fab.element(boundBy: i)
-            if e.exists, e.isHittable, fabButton == nil || e.frame.maxX > fabButton!.frame.maxX {
-                fabButton = e
-            }
-        }
-        fabButton?.tap()
+        // Добавляем расход офлайн (FAB → «Ввести вручную»).
+        XCTAssertTrue(openManualExpenseForm(app), "Не нашли кнопку добавления расхода в группе")
         let descField = app.textFields["Описание"]
         XCTAssertTrue(descField.waitForExistence(timeout: 5))
         descField.tap()
@@ -94,9 +107,6 @@ final class OfflineSmokeUITests: XCTestCase {
     }
 
     private func shot(_ name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
+        shot(app, name)
     }
 }
