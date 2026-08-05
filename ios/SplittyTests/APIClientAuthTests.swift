@@ -211,4 +211,179 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertEqual(json["displayName"] as? String, "Пётр")
         XCTAssertEqual(json["authorizationCode"] as? String, "auth-code")
     }
+
+    // MARK: register / login по email и паролю
+
+    func testRegisterSendsFieldsAndParsesResponse() async throws {
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"token":"jwt-pwd","user":{"id":1000000000003,"username":null,
+             "displayName":"Ольга","lang":"ru","notificationOn":true,
+             "linkedProviders":["password"],"loginEmail":"olga@example.com"}}
+            """#.utf8))
+        }
+
+        let response = try await client.register(
+            email: "olga@example.com",
+            password: "secret123",
+            displayName: "Ольга"
+        )
+
+        XCTAssertEqual(response.token, "jwt-pwd")
+        XCTAssertEqual(response.user.loginEmail, "olga@example.com")
+        XCTAssertTrue(response.user.isLinked(.password))
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.path, "/api/v1/auth/register")
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["email"] as? String, "olga@example.com")
+        XCTAssertEqual(json["password"] as? String, "secret123")
+        XCTAssertEqual(json["displayName"] as? String, "Ольга")
+    }
+
+    func testRegisterEmailTaken() async {
+        StubURLProtocol.handler = { _ in
+            (409, Data(#"{"error":{"code":"email_taken","message":"этот email уже зарегистрирован"}}"#.utf8))
+        }
+
+        do {
+            _ = try await client.register(email: "taken@example.com", password: "secret123", displayName: "Оля")
+            XCTFail("ожидали APIError.server(409)")
+        } catch let error as APIError {
+            // 409 не должен читаться как мёртвая сессия — иначе экран входа
+            // выкинул бы человека вместо подсказки «адрес занят».
+            XCTAssertFalse(error.isUnauthorized)
+            XCTAssertEqual(error.errorDescription, "этот email уже зарегистрирован")
+        } catch {
+            XCTFail("ожидали APIError, получили \(error)")
+        }
+    }
+
+    func testLoginWithPasswordSendsCredentials() async throws {
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"token":"jwt-pwd-2","user":{"id":1000000000004,"username":null,
+             "displayName":"Ольга","lang":"ru","notificationOn":true}}
+            """#.utf8))
+        }
+
+        let response = try await client.loginWithPassword(email: "olga@example.com", password: "secret123")
+
+        XCTAssertEqual(response.token, "jwt-pwd-2")
+        // Профиль без loginEmail (старый ответ сервера) декодируется как раньше
+        XCTAssertNil(response.user.loginEmail)
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.url?.path, "/api/v1/auth/login")
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["email"] as? String, "olga@example.com")
+        XCTAssertEqual(json["password"] as? String, "secret123")
+    }
+
+    func testLoginWithPasswordInvalidCredentials() async {
+        StubURLProtocol.handler = { _ in
+            (401, Data(#"{"error":{"code":"invalid_credentials","message":"неверный email или пароль"}}"#.utf8))
+        }
+
+        do {
+            _ = try await client.loginWithPassword(email: "olga@example.com", password: "wrong")
+            XCTFail("ожидали APIError.server(401)")
+        } catch let error as APIError {
+            XCTAssertTrue(error.isUnauthorized)
+            XCTAssertEqual(error.errorDescription, "неверный email или пароль")
+        } catch {
+            XCTFail("ожидали APIError, получили \(error)")
+        }
+    }
+
+    // MARK: setPassword
+
+    func testSetPasswordOmitsCurrentWhenAbsent() async throws {
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"user":{"id":1000000000005,"username":null,"displayName":"Ольга",
+             "lang":"ru","notificationOn":true,"linkedProviders":["google","password"],
+             "loginEmail":"olga@example.com"}}
+            """#.utf8))
+        }
+
+        let response = try await client.setPassword(current: nil, new: "secret123")
+
+        XCTAssertTrue(response.user.isLinked(.password))
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.url?.path, "/api/v1/me/password")
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        // Пустой currentPassword сервер счёл бы попыткой сменить пароль
+        // с неверным текущим и ответил 403 — поля не должно быть вовсе.
+        XCTAssertNil(json["currentPassword"])
+        XCTAssertEqual(json["newPassword"] as? String, "secret123")
+    }
+
+    func testSetPasswordSendsCurrentWhenPresent() async throws {
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"user":{"id":1000000000006,"username":null,"displayName":"Ольга",
+             "lang":"ru","notificationOn":true,"linkedProviders":["password"],
+             "loginEmail":"olga@example.com"}}
+            """#.utf8))
+        }
+
+        _ = try await client.setPassword(current: "old-secret", new: "new-secret")
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        XCTAssertEqual(json["currentPassword"] as? String, "old-secret")
+        XCTAssertEqual(json["newPassword"] as? String, "new-secret")
+    }
+}
+
+/// Валидация формы «email + пароль» на экране входа.
+final class EmailLoginFormTests: XCTestCase {
+    func testEmailNormalization() {
+        XCTAssertEqual(EmailLoginForm.normalizeEmail("  Olga@Example.COM \n"), "olga@example.com")
+    }
+
+    func testEmailValidation() {
+        XCTAssertTrue(EmailLoginForm.isValidEmail("olga@example.com"))
+        XCTAssertTrue(EmailLoginForm.isValidEmail(" Olga@Example.com "))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("olga"))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("@example.com"))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("olga@example"))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("olga@@example.com"))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("olga@.com"))
+        XCTAssertFalse(EmailLoginForm.isValidEmail("olga@example."))
+    }
+
+    func testPasswordValidation() {
+        XCTAssertFalse(EmailLoginForm.isValidPassword("short12"))
+        XCTAssertTrue(EmailLoginForm.isValidPassword("secret123"))
+        // bcrypt молча отбрасывает всё после 72 байт — такие пароли совпадали
+        // бы по общему префиксу, поэтому длинные не пропускаем
+        XCTAssertFalse(EmailLoginForm.isValidPassword(String(repeating: "a", count: 73)))
+        XCTAssertFalse(EmailLoginForm.isValidPassword(String(repeating: "я", count: 40)))
+    }
+
+    func testFormReadiness() {
+        // Для входа длина не проверяется: пароль мог быть задан до правил
+        XCTAssertTrue(EmailLoginForm.canLogin(email: "olga@example.com", password: "x"))
+        XCTAssertFalse(EmailLoginForm.canLogin(email: "olga", password: "secret123"))
+        XCTAssertFalse(EmailLoginForm.canLogin(email: "olga@example.com", password: ""))
+
+        XCTAssertTrue(EmailLoginForm.canRegister(email: "olga@example.com", password: "secret123", name: "Оля"))
+        XCTAssertFalse(EmailLoginForm.canRegister(email: "olga@example.com", password: "secret123", name: "  "))
+        XCTAssertFalse(EmailLoginForm.canRegister(email: "olga@example.com", password: "short12", name: "Оля"))
+    }
 }

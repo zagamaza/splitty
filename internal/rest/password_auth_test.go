@@ -77,12 +77,17 @@ func TestRegisterCreatesAccount(t *testing.T) {
 	if stored.Email != "" {
 		t.Fatalf("адрес входа записан в api.User.Email: %q", stored.Email)
 	}
-	// ни пароль, ни хеш, ни адрес входа наружу не отдаются
+	// ни пароль, ни его хеш наружу не отдаются
 	body := rec.Body.String()
-	for _, secret := range []string{"secret123", stored.PasswordHash, "new@example.com"} {
+	for _, secret := range []string{"secret123", stored.PasswordHash} {
 		if strings.Contains(body, secret) {
 			t.Fatalf("ответ содержит %q: %s", secret, body)
 		}
+	}
+	// адрес входа — часть профиля ВЛАДЕЛЬЦА (ответ уходит только ему): по нему
+	// клиент понимает, что пароль есть кому задать заново, см. meDto.LoginEmail
+	if resp.User.LoginEmail != "new@example.com" {
+		t.Fatalf("loginEmail в ответе = %q", resp.User.LoginEmail)
 	}
 }
 

@@ -327,6 +327,46 @@ final class APIClient: OperationAPI {
         return try await request("POST", "/api/v1/auth/google", body: Body(idToken: idToken))
     }
 
+    /// POST /api/v1/auth/register — регистрация по email и паролю.
+    /// 409 `email_taken` — адрес занят; 400 `validation` — короткий пароль
+    /// или невалидный email.
+    func register(email: String, password: String, displayName: String) async throws -> AuthResponse {
+        struct Body: Encodable {
+            let email: String
+            let password: String
+            let displayName: String
+        }
+        return try await request(
+            "POST", "/api/v1/auth/register",
+            body: Body(email: email, password: password, displayName: displayName)
+        )
+    }
+
+    /// POST /api/v1/auth/login — вход по email и паролю.
+    /// 401 `invalid_credentials` одинаков для неверного пароля и незнакомого
+    /// адреса: сервер намеренно не даёт проверить, зарегистрирован ли email.
+    func loginWithPassword(email: String, password: String) async throws -> AuthResponse {
+        struct Body: Encodable {
+            let email: String
+            let password: String
+        }
+        return try await request("POST", "/api/v1/auth/login", body: Body(email: email, password: password))
+    }
+
+    /// POST /api/v1/me/password — задать или сменить пароль.
+    /// `current` опускается, когда пароля ещё не было.
+    /// 403 `invalid_password` — не сошёлся текущий пароль (не 401: сессия жива).
+    func setPassword(current: String?, new: String) async throws -> LinkedProvidersResponse {
+        struct Body: Encodable {
+            let currentPassword: String?
+            let newPassword: String
+        }
+        return try await request(
+            "POST", "/api/v1/me/password",
+            body: Body(currentPassword: current?.isEmpty == false ? current : nil, newPassword: new)
+        )
+    }
+
     /// Вход через Sign in with Apple: POST /auth/apple, без авторизационного
     /// заголовка (клиент на экране входа создаётся с token == nil).
     ///

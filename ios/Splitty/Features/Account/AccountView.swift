@@ -20,6 +20,8 @@ struct AccountView: View {
     /// Способ входа, для которого запрошено подтверждение отвязки.
     @State private var providerToUnlink: LoginProvider?
 
+    @State private var isPasswordSheetPresented = false
+
     /// true — привязка/отвязка в полёте: кнопки секции блокируются, чтобы
     /// два запроса не гонялись за один и тот же список способов входа.
     @State private var isIdentityBusy = false
@@ -67,6 +69,10 @@ struct AccountView: View {
         }
         .onChange(of: session.me) {
             syncFromMe()
+        }
+        .sheet(isPresented: $isPasswordSheetPresented) {
+            ChangePasswordSheet(hasPassword: session.me?.isLinked(.password) == true)
+                .environment(session)
         }
         .alert("Изменить имя", isPresented: $isEditNamePresented) {
             TextField("Имя", text: $nameDraft)
@@ -346,9 +352,15 @@ struct AccountView: View {
     /// Telegram — ТОЛЬКО когда он уже привязан: привязка требует Telegram Login
     /// Widget (подписанные ботом id/auth_date/hash), которого в приложении нет,
     /// и рисовать неработающую кнопку «Привязать» значит обещать несуществующее.
+    /// Пароль — только когда у аккаунта есть адрес входа: завести его после
+    /// регистрации через Google/Apple/Telegram нечем.
     private var visibleProviders: [LoginProvider] {
         LoginProvider.allCases.filter { provider in
-            provider != .telegram || session.me?.isLinked(.telegram) == true
+            switch provider {
+            case .telegram: return session.me?.isLinked(.telegram) == true
+            case .password: return session.me?.loginEmail?.isEmpty == false
+            default: return true
+            }
         }
     }
 
@@ -372,12 +384,18 @@ struct AccountView: View {
                 Label(provider.title, systemImage: provider.symbol)
                     .scaledFont(size: 16)
                     .foregroundStyle(Color.ink)
-                Text(isLinked ? "Привязан" : "Не привязан")
+                Text(providerStatus(provider, isLinked: isLinked))
                     .scaledFont(size: 12, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 8)
-            if isLinked {
+            if provider == .password {
+                Button(isLinked ? "Изменить" : "Задать") {
+                    isPasswordSheetPresented = true
+                }
+                .buttonStyle(.softChip)
+                .disabled(isIdentityBusy)
+            } else if isLinked {
                 Button("Отвязать") {
                     providerToUnlink = provider
                 }
@@ -397,6 +415,16 @@ struct AccountView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+
+    /// Подпись под названием способа. У пароля вместо «привязан» — сам адрес:
+    /// он у аккаунта один и меняться не умеет, а помнить его человек должен.
+    private func providerStatus(_ provider: LoginProvider, isLinked: Bool) -> String {
+        guard provider == .password else {
+            return isLinked ? "Привязан" : "Не привязан"
+        }
+        let email = session.me?.loginEmail ?? ""
+        return isLinked ? email : "\(email) · пароль не задан"
     }
 
     /// Привязка Apple ID — системная кнопка, а не своя вёрстка: собственный
@@ -530,6 +558,10 @@ struct AccountView: View {
         case .telegram:
             return "Войти через Telegram больше не получится, а бот при следующем сообщении "
                 + "заведёт отдельный профиль без ваших групп. Привязать этот Telegram обратно нельзя."
+        case .password:
+            // Сюда не приходит: у строки пароля кнопка «Изменить», а сброс
+            // подтверждается в самом листе (ChangePasswordSheet)
+            return "Войти по паролю больше не получится. Адрес останется за аккаунтом."
         case .google, .apple:
             return "Войти через \(provider.title) больше не получится. "
                 + "Остальные способы входа продолжат работать."
@@ -684,6 +716,8 @@ func identityErrorText(_ error: Error) -> String {
         return "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий"
     case "last_identity":
         return "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
+    case "invalid_password":
+        return "Неверный текущий пароль"
     case "provider_rejected":
         // Отказ ПРОВАЙДЕРА (подпись, nonce, срок id-токена) сервер отдаёт
         // 400 с этим кодом — именно чтобы его нельзя было спутать с мёртвой

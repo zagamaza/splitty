@@ -306,6 +306,26 @@ final class SessionStore {
         adoptOwner(response.user.id)
     }
 
+    /// Регистрация по email и паролю: POST /auth/register.
+    /// 409 `email_taken` — адрес уже занят.
+    @MainActor
+    func register(email: String, password: String, displayName: String) async throws {
+        let response = try await api.register(email: email, password: password, displayName: displayName)
+        token = response.token
+        me = response.user
+        adoptOwner(response.user.id)
+    }
+
+    /// Вход по email и паролю: POST /auth/login.
+    /// 401 — неверная пара; какая именно половина не сошлась, сервер не говорит.
+    @MainActor
+    func loginWithPassword(email: String, password: String) async throws {
+        let response = try await api.loginWithPassword(email: email, password: password)
+        token = response.token
+        me = response.user
+        adoptOwner(response.user.id)
+    }
+
     // MARK: - Способы входа
 
     /// Номер поколения списка способов входа: растёт после каждой успешной
@@ -338,6 +358,14 @@ final class SessionStore {
             nonce: nonce,
             authorizationCode: authorizationCode
         ).user
+        identityRevision += 1
+    }
+
+    /// Пароль: POST /me/password. `current` нужен, только если пароль уже был.
+    /// 403 `invalid_password` — текущий пароль не сошёлся.
+    @MainActor
+    func setPassword(current: String?, new: String) async throws {
+        me = try await api.setPassword(current: current, new: new).user
         identityRevision += 1
     }
 

@@ -23,13 +23,48 @@ enum LoginCode {
     }
 }
 
+// MARK: - Вход по email и паролю
+
+/// Проверки формы email + пароль. Чистая логика — покрыта юнит-тестами
+/// (EmailLoginFormTests); сервер проверяет то же самое ещё раз.
+enum EmailLoginForm {
+    /// Минимум сервера (`minPasswordLen` в password_auth.go).
+    static let minPasswordLength = 8
+
+    static func normalizeEmail(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    /// Грубая проверка формы адреса: точный разбор — за сервером
+    /// (`mail.ParseAddress`), здесь только чтобы не слать заведомый мусор.
+    static func isValidEmail(_ raw: String) -> Bool {
+        let email = normalizeEmail(raw)
+        let parts = email.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty else { return false }
+        let domain = parts[1]
+        return domain.count >= 3 && domain.contains(".") && !domain.hasPrefix(".") && !domain.hasSuffix(".")
+    }
+
+    static func isValidPassword(_ password: String) -> Bool {
+        password.count >= minPasswordLength && password.utf8.count <= 72
+    }
+
+    static func canLogin(email: String, password: String) -> Bool {
+        isValidEmail(email) && !password.isEmpty
+    }
+
+    static func canRegister(email: String, password: String, name: String) -> Bool {
+        isValidEmail(email)
+            && isValidPassword(password)
+            && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}
+
 // MARK: - Экран входа
 
-/// Экран входа: премиум-велком на нейтральном фоне — словомарка «Splitty»,
-/// кнопка Sign in with Apple, карточка «Вход через Telegram» (одноразовый код
-/// из бота, POST /auth/code) и dev-вход через POST /auth/dev (на симуляторе
-/// раскрыт — от его полей зависят UI-тесты, на устройстве свёрнут в
-/// DisclosureGroup); настройка сервера — тихий DisclosureGroup внизу.
+/// Экран входа: Apple, Google, Telegram, форма email + пароль, свёрнутый вход
+/// по коду из бота. Ниже — только в DEBUG — dev-вход (на симуляторе раскрыт,
+/// от его полей зависят UI-тесты) и настройка адреса сервера.
 struct LoginView: View {
     @Environment(SessionStore.self) private var session
     @Environment(\.colorScheme) private var colorScheme
@@ -39,6 +74,13 @@ struct LoginView: View {
     @State private var errorMessage: String?
     /// Свёрнут по умолчанию: экран входа — это три кнопки, код нужен меньшинству
     @State private var isCodeLoginExpanded = false
+
+    @State private var email = ""
+    @State private var password = ""
+    @State private var registerName = ""
+    /// Та же карточка работает и на вход, и на регистрацию: отличается полем
+    /// «Имя» и текстом кнопки.
+    @State private var isRegistering = false
 
     /// Сырой nonce текущей попытки входа через Apple: в системный запрос
     /// уходит его SHA256, а на сервер — само значение. Живёт между колбэками
@@ -77,6 +119,8 @@ struct LoginView: View {
                     appleLoginButton
                     googleLoginButton
                     telegramWebLoginButton
+                    orDivider
+                    emailPasswordCard
                     // Не убирать: через это поле входит ревьюер App Store
                     // (REVIEW_LOGIN_CODE в /auth/code), и это единственный вход,
                     // не зависящий от нашего домена
@@ -195,6 +239,104 @@ struct LoginView: View {
                 .strokeBorder(Color.googleBorder, lineWidth: 1)
         }
         .disabled(isLoggingIn)
+    }
+
+    private var orDivider: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Color.hairline).frame(height: 1)
+            Text("или")
+                .scaledFont(size: 13, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+            Rectangle().fill(Color.hairline).frame(height: 1)
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Вход и регистрация по email с паролем — для тех, у кого нет ни Apple ID,
+    /// ни Google, ни Telegram. Под соцкнопками: по Guideline 4.8 кнопка Apple
+    /// не должна выглядеть менее заметной.
+    private var emailPasswordCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isRegistering ? "Регистрация" : "Вход по email")
+                .sectionHeaderStyle()
+
+            if isRegistering {
+                TextField("Имя", text: $registerName)
+                    .textContentType(.name)
+                    .modifier(LoginFieldStyle())
+            }
+
+            TextField("Email", text: $email)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .modifier(LoginFieldStyle())
+
+            SecureField("Пароль", text: $password)
+                // .newPassword подсказывает Связке ключей сгенерировать пароль
+                .textContentType(isRegistering ? .newPassword : .password)
+                .modifier(LoginFieldStyle())
+                .submitLabel(.go)
+                .onSubmit { submitEmailForm() }
+
+            if isRegistering, !password.isEmpty, !EmailLoginForm.isValidPassword(password) {
+                Text("Пароль — не короче \(EmailLoginForm.minPasswordLength) символов")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+            }
+
+            Button {
+                submitEmailForm()
+            } label: {
+                Text(isRegistering ? "Зарегистрироваться" : "Войти")
+            }
+            .buttonStyle(.primaryPill)
+            .disabled(!isEmailFormValid || isLoggingIn)
+            .padding(.top, 4)
+
+            Button {
+                isRegistering.toggle()
+            } label: {
+                Text(isRegistering ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться")
+                    .scaledFont(size: 15, weight: .medium)
+                    .foregroundStyle(Color.accent)
+            }
+            .frame(maxWidth: .infinity)
+            .disabled(isLoggingIn)
+        }
+        .surfaceCard(padding: 20)
+    }
+
+    private var isEmailFormValid: Bool {
+        isRegistering
+            ? EmailLoginForm.canRegister(email: email, password: password, name: registerName)
+            : EmailLoginForm.canLogin(email: email, password: password)
+    }
+
+    /// Вход или регистрация по email — POST /auth/login или /auth/register.
+    /// Сообщения об ошибках берём с сервера: он намеренно отвечает одинаково
+    /// на неверный пароль и незнакомый адрес.
+    private func submitEmailForm() {
+        guard isEmailFormValid, !isLoggingIn else { return }
+        let mail = EmailLoginForm.normalizeEmail(email)
+        let name = registerName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let registering = isRegistering
+
+        isLoggingIn = true
+        Task {
+            defer { isLoggingIn = false }
+            do {
+                if registering {
+                    try await session.register(email: mail, password: password, displayName: name)
+                } else {
+                    try await session.loginWithPassword(email: mail, password: password)
+                }
+                password = ""
+            } catch {
+                errorMessage = humanErrorText(error)
+            }
+        }
     }
 
     /// Основной вход: одноразовый код из Telegram-бота → POST /auth/code.

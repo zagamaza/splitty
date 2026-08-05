@@ -39,6 +39,10 @@ struct Me: Codable, Identifiable, Hashable {
     /// и решает, какой способ отвязывать нельзя (последний).
     var linkedProviders: [String] = []
     let notificationOn: Bool
+    /// Адрес входа по паролю, если он у аккаунта есть. Остаётся за аккаунтом и
+    /// после отвязки пароля — по нему профиль понимает, что пароль можно
+    /// задать заново.
+    var loginEmail: String?
 }
 
 // init(from:) в extension, чтобы сохранить memberwise-инициализатор.
@@ -54,6 +58,7 @@ extension Me {
         lang = try c.decode(String.self, forKey: .lang)
         linkedProviders = try c.decodeIfPresent([String].self, forKey: .linkedProviders) ?? []
         notificationOn = try c.decode(Bool.self, forKey: .notificationOn)
+        loginEmail = try c.decodeIfPresent(String.self, forKey: .loginEmail)
     }
 }
 
@@ -64,6 +69,7 @@ enum LoginProvider: String, CaseIterable, Identifiable, Hashable {
     case telegram
     case google
     case apple
+    case password
 
     var id: String { rawValue }
 
@@ -73,6 +79,7 @@ enum LoginProvider: String, CaseIterable, Identifiable, Hashable {
         case .telegram: return "Telegram"
         case .google: return "Google"
         case .apple: return "Apple"
+        case .password: return "Email и пароль"
         }
     }
 
@@ -82,6 +89,7 @@ enum LoginProvider: String, CaseIterable, Identifiable, Hashable {
         case .telegram: return "paperplane"
         case .google: return "g.circle"
         case .apple: return "apple.logo"
+        case .password: return "key"
         }
     }
 }

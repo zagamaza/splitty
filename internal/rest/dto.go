@@ -40,11 +40,15 @@ type meDto struct {
 	DisplayName string `json:"displayName"`
 	Lang        string `json:"lang"`
 	// LinkedProviders — привязанные способы входа ("telegram", "google",
-	// "apple"): по ним клиент рисует экран «Способы входа» и понимает, какой
-	// отвязать нельзя (последний). Наружу отдаётся только ФАКТ привязки —
-	// сами идентификаторы личности остаются в базе
+	// "apple", "password"): по ним клиент рисует экран «Способы входа» и
+	// понимает, какой отвязать нельзя (последний). Наружу отдаётся только ФАКТ
+	// привязки — сами идентификаторы личности остаются в базе
 	LinkedProviders []string `json:"linkedProviders"`
 	NotificationOn  bool     `json:"notificationOn"`
+	// LoginEmail — адрес входа по паролю. Остаётся за аккаунтом и после отвязки
+	// пароля: по нему клиент понимает, что пароль можно задать заново. Профилю
+	// без адреса задавать пароль некуда — завести адрес нечем, почту мы не шлём
+	LoginEmail string `json:"loginEmail,omitempty"`
 }
 
 type fileDto struct {
@@ -244,6 +248,7 @@ func toMeDto(u *api.User) meDto {
 		Lang:            api.DefineLang(u),
 		LinkedProviders: linkedProviders(u),
 		NotificationOn:  u.NotificationOn == nil || *u.NotificationOn,
+		LoginEmail:      u.LoginEmail,
 	}
 }
 
