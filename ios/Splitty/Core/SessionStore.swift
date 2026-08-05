@@ -223,9 +223,22 @@ final class SessionStore {
     @MainActor
     func loginDev(userId: Int, displayName: String, username: String?) async throws {
         let response = try await api.devLogin(userId: userId, displayName: displayName, username: username)
+        adoptSession(response)
+    }
+
+    /// Общий хвост всех способов входа: токен, профиль в памяти, владелец
+    /// локальных данных и профиль В КЕШЕ. Кеш обязателен: `refreshMe` (только
+    /// он писал ключ `me`) на старте после входа уже не зовётся, и человек,
+    /// потерявший сеть до следующего запуска, получал «Профиль не загружен»
+    /// на экране группы — кешированные комнаты есть, а `me` нет.
+    @MainActor
+    private func adoptSession(_ response: AuthResponse) {
         token = response.token
         me = response.user
         adoptOwner(response.user.id)
+        // Строго ПОСЛЕ adoptOwner: ключ кеша префиксован владельцем.
+        let repo = repo
+        Task { await repo.cacheMe(response.user) }
     }
 
     /// Привязывает локальные данные ко вошедшему пользователю. Если вошёл
@@ -257,9 +270,7 @@ final class SessionStore {
     @MainActor
     func loginWithCode(_ code: String) async throws {
         let response = try await api.loginWithCode(code)
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     /// Вход через Google: POST /auth/google, сохраняет токен (Keychain)
@@ -270,17 +281,13 @@ final class SessionStore {
     @MainActor
     func loginWithTelegram(_ payload: TelegramWebAuth.Payload) async throws {
         let response = try await api.loginWithTelegram(payload)
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     @MainActor
     func loginWithGoogle(idToken: String) async throws {
         let response = try await api.loginWithGoogle(idToken: idToken)
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     /// Вход через Sign in with Apple: POST /auth/apple, сохраняет токен
@@ -301,9 +308,7 @@ final class SessionStore {
             nonce: nonce,
             authorizationCode: authorizationCode
         )
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     /// Регистрация по email и паролю: POST /auth/register.
@@ -311,9 +316,7 @@ final class SessionStore {
     @MainActor
     func register(email: String, password: String, displayName: String) async throws {
         let response = try await api.register(email: email, password: password, displayName: displayName)
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     /// Вход по email и паролю: POST /auth/login.
@@ -321,9 +324,7 @@ final class SessionStore {
     @MainActor
     func loginWithPassword(email: String, password: String) async throws {
         let response = try await api.loginWithPassword(email: email, password: password)
-        token = response.token
-        me = response.user
-        adoptOwner(response.user.id)
+        adoptSession(response)
     }
 
     // MARK: - Способы входа
