@@ -115,6 +115,13 @@ type User struct {
 	// Email — best-effort, НЕ идентификатор: Apple отдаёт relay-адрес и только
 	// при первом входе, почта меняется. Аккаунты по email не склеиваются.
 	Email string `json:"-" bson:"email,omitempty"`
+	// LoginEmail — адрес входа по паролю, отдельное поле от Email именно потому,
+	// что Email идентификатором не является и unique-индекс на нём сломал бы
+	// вход тому, чей адрес совпал. Хранится нормализованным
+	// (repository.NormalizeLoginEmail), unique sparse в mongo.
+	LoginEmail string `json:"-" bson:"login_email,omitempty"`
+	// PasswordHash — bcrypt пароля. Наружу не отдаётся никогда.
+	PasswordHash string `json:"-" bson:"password_hash,omitempty"`
 	// DeletedAt — tombstone: аккаунт удалён. Документ остаётся (иначе upsert-методы
 	// репозитория воскресили бы его, а выданный JWT продолжал бы работать),
 	// но PII вычищена, а поля личности освобождены под повторную регистрацию.
@@ -156,6 +163,8 @@ func (u User) Snapshot() User {
 	u.GoogleSub = ""
 	u.AppleSub = ""
 	u.Email = ""
+	u.LoginEmail = ""
+	u.PasswordHash = ""
 	u.AppleRefreshToken = ""
 	u.DeletedAt = nil
 	u.PushTokens = nil

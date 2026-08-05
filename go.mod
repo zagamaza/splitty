@@ -16,6 +16,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
 	go.mongodb.org/mongo-driver v1.4.4
+	golang.org/x/crypto v0.21.0
 	golang.org/x/text v0.14.0
 	google.golang.org/api v0.170.0
 )
@@ -58,7 +59,6 @@ require (
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
-	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect

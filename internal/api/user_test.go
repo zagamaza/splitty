@@ -187,7 +187,8 @@ func TestUserBsonOmitsEmptyIdentityFields(t *testing.T) {
 	if err := bson.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("bson.Unmarshal: %v", err)
 	}
-	for _, key := range []string{"telegram_id", "google_sub", "apple_sub", "email", "deleted_at", "apple_refresh_token"} {
+	for _, key := range []string{"telegram_id", "google_sub", "apple_sub", "email", "login_email",
+		"password_hash", "deleted_at", "apple_refresh_token"} {
 		if _, ok := doc[key]; ok {
 			t.Errorf("пустое поле %s попало в документ: %v", key, doc)
 		}

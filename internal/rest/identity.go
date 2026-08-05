@@ -24,6 +24,7 @@ const (
 	providerTelegram = repository.IdentityTelegram
 	providerGoogle   = repository.IdentityGoogle
 	providerApple    = repository.IdentityApple
+	providerPassword = repository.IdentityPassword
 )
 
 // identityTakenMessage — текст 409 при попытке привязать чужую личность.
@@ -94,7 +95,7 @@ type linkResponseDto struct {
 // linkedProviders — привязанные способы входа в стабильном порядке.
 // Пустой срез, а не nil: в json обязан быть [], а не null
 func linkedProviders(u *api.User) []string {
-	providers := make([]string, 0, 3)
+	providers := make([]string, 0, 4)
 	if u.HasTelegram() {
 		providers = append(providers, providerTelegram)
 	}
@@ -103,6 +104,9 @@ func linkedProviders(u *api.User) []string {
 	}
 	if u.AppleSub != "" {
 		providers = append(providers, providerApple)
+	}
+	if hasPasswordLogin(u) {
+		providers = append(providers, providerPassword)
 	}
 	return providers
 }

@@ -44,6 +44,13 @@ type UserRepository interface {
 	FindByTelegramID(ctx context.Context, tgID int) (*api.User, error)
 	FindByGoogleSub(ctx context.Context, sub string) (*api.User, error)
 	FindByAppleSub(ctx context.Context, sub string) (*api.User, error)
+	// FindByLoginEmail ищет по адресу входа с паролем (login_email, не email).
+	// Адрес нормализуется внутри — вызывающему нормализовать не нужно
+	FindByLoginEmail(ctx context.Context, email string) (*api.User, error)
+	// SetPasswordHash пишет bcrypt-хеш пароля живому пользователю. Пара
+	// login_email+password_hash пишется целиком при регистрации вставкой
+	// (CreateIdentityUser), поэтому отдельного писателя пары нет
+	SetPasswordHash(ctx context.Context, userId int, hash string) error
 	// UpdateAppleProfile дописывает то, что приходит из потока Sign in with
 	// Apple: email и имя (Apple отдаёт их ТОЛЬКО при первом входе) и refresh
 	// token для последующего отзыва при удалении аккаунта. Пустые значения
@@ -647,7 +654,7 @@ const DeletedUserPlaceholder = "Удалённый пользователь"
 // (см. Snapshot и sanitizeUsers): там telegram_id/google_sub/apple_sub/email и
 // push-токены лежат прямо в room, и удаление аккаунта обязано их оттуда убрать
 var snapshotPIIFields = []string{
-	"user_name", "email", "google_sub", "apple_sub", "telegram_id",
+	"user_name", "email", "login_email", "google_sub", "apple_sub", "telegram_id",
 	"push_tokens", "aliases", "bank_details",
 }
 
@@ -760,6 +767,32 @@ func (r MongoUserRepository) FindByAppleSub(ctx context.Context, sub string) (*a
 	return r.findOne(ctx, append(bson.D{{Key: "apple_sub", Value: bson.D{{Key: "$eq", Value: sub}}}}, notDeleted...))
 }
 
+// NormalizeLoginEmail — канонический вид адреса входа: trim и нижний регистр.
+// Единственная точка нормализации на весь проект: запись и поиск обязаны
+// приводить адрес одинаково, иначе A@B.com и a@b.com разъедутся в разные аккаунты
+func NormalizeLoginEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// FindByLoginEmail ищет живого пользователя по адресу входа с паролем
+func (r MongoUserRepository) FindByLoginEmail(ctx context.Context, email string) (*api.User, error) {
+	normalized := NormalizeLoginEmail(email)
+	return r.findOne(ctx, append(bson.D{{Key: "login_email", Value: bson.D{{Key: "$eq", Value: normalized}}}}, notDeleted...))
+}
+
+// SetPasswordHash записывает хеш пароля. Через updateLiveUser (как все мутаторы
+// профиля): tombstone не должен получить обратно рабочий способ входа
+func (r MongoUserRepository) SetPasswordHash(ctx context.Context, userId int, hash string) error {
+	updated, err := r.updateLiveUser(ctx, userId, bson.D{{Key: "$set", Value: bson.M{"password_hash": hash}}})
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
 // UpdateAppleProfile дописывает данные из потока Sign in with Apple.
 //
 // Пустые аргументы пропускаются: Apple отдаёт email и имя только при ПЕРВОМ
@@ -796,15 +829,22 @@ const (
 	IdentityTelegram = "telegram"
 	IdentityGoogle   = "google"
 	IdentityApple    = "apple"
+	IdentityPassword = "password"
 )
 
 // identityFields — поле документа, хранящее личность провайдера. Значения
 // совпадают с полями api.User (telegram_id, google_sub, apple_sub), по которым
-// построены unique sparse индексы (см. EnsureIndexes)
+// построены unique sparse индексы (см. EnsureIndexes).
+//
+// У пароля «личность» — это password_hash, а НЕ login_email: отвязка обязана
+// убрать способ входа, но оставить адрес за аккаунтом. Иначе восстановление
+// (войти другим способом и задать новый пароль из профиля) вернуло бы человеку
+// пароль без почты, то есть бесполезный
 var identityFields = map[string]string{
 	IdentityTelegram: "telegram_id",
 	IdentityGoogle:   "google_sub",
 	IdentityApple:    "apple_sub",
+	IdentityPassword: "password_hash",
 }
 
 // IsKnownIdentityProvider — поддерживается ли такой способ входа
@@ -882,8 +922,12 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 // apple_refresh_token в снимок комнаты не попадает никогда, поэтому в
 // snapshotPIIFields его нет — но в документе пользователя это рабочий секрет
 // от личности Apple, и пережить удаление аккаунта он не должен. Сам отзыв
-// токенов делает REST-слой строго ДО этого вызова (см. handleDeleteMe)
-var tombstoneExtraFields = []string{"apple_refresh_token"}
+// токенов делает REST-слой строго ДО этого вызова (см. handleDeleteMe).
+//
+// password_hash — по той же причине: секрет, в снимки комнат не попадающий.
+// Вместе с login_email (он в snapshotPIIFields) это освобождает адрес под
+// повторную регистрацию: unique sparse индекс отсутствующего поля не видит
+var tombstoneExtraFields = []string{"apple_refresh_token", "password_hash"}
 
 // SoftDeleteUser ставит tombstone: помечает документ удалённым, чистит PII и
 // освобождает личности.
@@ -1153,6 +1197,10 @@ func (r MongoUserRepository) EnsureIndexes(ctx context.Context) error {
 		{
 			Keys:    bson.D{{Key: "apple_sub", Value: ascParameter}},
 			Options: options.Index().SetUnique(true).SetSparse(true).SetName("uniq_apple_sub"),
+		},
+		{
+			Keys:    bson.D{{Key: "login_email", Value: ascParameter}},
+			Options: options.Index().SetUnique(true).SetSparse(true).SetName("uniq_login_email"),
 		},
 	})
 	return err

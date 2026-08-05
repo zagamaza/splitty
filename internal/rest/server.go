@@ -258,6 +258,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/v1/auth/google", s.handleAuthGoogle)
 	mux.HandleFunc("POST /api/v1/auth/apple", s.handleAuthApple)
 	mux.HandleFunc("POST /api/v1/auth/dev", s.handleAuthDev)
+	mux.HandleFunc("POST /api/v1/auth/register", s.handleAuthRegister)
+	mux.HandleFunc("POST /api/v1/auth/login", s.handleAuthPassword)
 
 	// Диплинк-вход в группу. ПУБЛИЧНЫЕ маршруты, намеренно без s.auth:
 	// .well-known читают iOS и Android без всякой авторизации, а /join
@@ -283,6 +285,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
 	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))
 	mux.Handle("DELETE /api/v1/me/devices", s.auth(s.handleUnregisterDevice))
+	mux.Handle("POST /api/v1/me/password", s.auth(s.handleSetPassword))
 	mux.Handle("POST /api/v1/me/link/{provider}", s.auth(s.handleLinkIdentity))
 	mux.Handle("DELETE /api/v1/me/link/{provider}", s.auth(s.handleUnlinkIdentity))
 

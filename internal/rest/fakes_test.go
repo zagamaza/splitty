@@ -210,6 +210,9 @@ func (f *fakeUserRepo) CreateIdentityUser(_ context.Context, u api.User) error {
 		if u.AppleSub != "" && existing.AppleSub == u.AppleSub {
 			return errDuplicateKey
 		}
+		if u.LoginEmail != "" && existing.LoginEmail == u.LoginEmail {
+			return errDuplicateKey
+		}
 	}
 	user := u
 	f.users[u.ID] = &user
@@ -280,6 +283,22 @@ func (f *fakeUserRepo) FindByGoogleSub(_ context.Context, sub string) (*api.User
 
 func (f *fakeUserRepo) FindByAppleSub(_ context.Context, sub string) (*api.User, error) {
 	return f.findLive(func(u *api.User) bool { return u.AppleSub != "" && u.AppleSub == sub })
+}
+
+// FindByLoginEmail как mongo-реализация: адрес нормализуется внутри репозитория
+func (f *fakeUserRepo) FindByLoginEmail(_ context.Context, email string) (*api.User, error) {
+	normalized := repository.NormalizeLoginEmail(email)
+	return f.findLive(func(u *api.User) bool { return u.LoginEmail != "" && u.LoginEmail == normalized })
+}
+
+// SetPasswordHash как mongo-реализация: только живой документ, без upsert
+func (f *fakeUserRepo) SetPasswordHash(_ context.Context, userId int, hash string) error {
+	u, ok := f.liveUser(userId)
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	u.PasswordHash = hash
+	return nil
 }
 
 // findLive — поиск по личности: удалённые (tombstone) не находятся, как и в
@@ -385,6 +404,9 @@ func (f *fakeUserRepo) ClearIdentity(_ context.Context, userId int, provider str
 		// как MongoUserRepository.ClearIdentity: refresh token принадлежит
 		// отвязываемой личности и уходит вместе с ней (identityExtraFields)
 		u.AppleRefreshToken = ""
+	case repository.IdentityPassword:
+		// как identityFields: у пароля личность — хеш, адрес остаётся за аккаунтом
+		u.PasswordHash = ""
 	default:
 		return errors.New("неизвестный способ входа")
 	}
@@ -411,6 +433,8 @@ func (f *fakeUserRepo) SoftDeleteUser(_ context.Context, userId int) error {
 	u.DisplayName = repository.DeletedUserPlaceholder
 	u.Username = ""
 	u.Email = ""
+	u.LoginEmail = ""
+	u.PasswordHash = ""
 	u.GoogleSub = ""
 	u.AppleSub = ""
 	u.TelegramID = nil
