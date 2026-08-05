@@ -236,7 +236,7 @@ struct LoginView: View {
 
     private var telegramLoginCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Вход через Telegram")
+            Text("Вход по коду")
                 .sectionHeaderStyle()
 
             HStack(alignment: .top, spacing: 10) {
@@ -244,7 +244,12 @@ struct LoginView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.accent)
                     .padding(.top, 2)
-                Text("Нажмите «Открыть бота» — он сразу пришлёт код для входа")
+                // ⚠️ Формулировка важна для ревью App Store: ревьюеру выдают
+                // готовый постоянный код (REVIEW_LOGIN_CODE, см. auth.go), и
+                // прежний текст «нажмите Открыть бота» читался так, будто
+                // Telegram обязателен. Вставить код в поле — самодостаточный
+                // путь, бот лишь один из способов его получить.
+                Text("Вставьте код в поле ниже. Нет кода — получите его в боте.")
                     .scaledFont(size: 15)
                     .foregroundStyle(Color.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -259,7 +264,7 @@ struct LoginView: View {
             }
             .buttonStyle(.softChip)
 
-            TextField("Код из Telegram", text: $codeText)
+            TextField("Код входа", text: $codeText)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .scaledFont(size: 17, weight: .semibold, design: .monospaced)
@@ -269,7 +274,9 @@ struct LoginView: View {
 
             // Пока код короче минимума, объясняем, почему кнопка неактивна.
             if !LoginCode.isValid(codeText) {
-                Text("Код из бота — 8 символов")
+                // «не менее 8», а не «ровно 8»: бот выдаёт 8 символов, а
+                // постоянный код для проверки приложения — длиннее
+                Text("Введите код — не короче 8 символов")
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
