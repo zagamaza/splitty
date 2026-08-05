@@ -37,6 +37,8 @@ struct LoginView: View {
     @State private var codeText = ""
     @State private var isLoggingIn = false
     @State private var errorMessage: String?
+    /// Свёрнут по умолчанию: экран входа — это три кнопки, код нужен меньшинству
+    @State private var isCodeLoginExpanded = false
 
     /// Сырой nonce текущей попытки входа через Apple: в системный запрос
     /// уходит его SHA256, а на сервер — само значение. Живёт между колбэками
@@ -75,7 +77,13 @@ struct LoginView: View {
                     appleLoginButton
                     googleLoginButton
                     telegramWebLoginButton
-                    telegramLoginCard
+                    // Вход по коду — ВНИЗУ и свёрнутым, но в ЛЮБОЙ сборке.
+                    // Убрать его нельзя: через это же поле входит ревьюер App
+                    // Store (REVIEW_LOGIN_CODE проверяется внутри /auth/code,
+                    // см. auth.go), и это единственный путь входа, не зависящий
+                    // от нашего домена, — если отвалится сертификат или
+                    // привязка домена к боту, войти будет больше нечем.
+                    codeLoginDisclosure
                     // Dev-вход и настройка сервера — только в DEBUG-сборках:
                     // в релизе это бэкдор мимо авторизации через Telegram.
                     #if DEBUG
@@ -210,6 +218,22 @@ struct LoginView: View {
     }
 
     /// Основной вход: одноразовый код из Telegram-бота → POST /auth/code.
+    /// Свёрнутый вход по коду из бота. Заголовок честный: это не
+    /// «вход для разработки», а рабочий способ, которым пользуются все, кто
+    /// пришёл в Splitty через бота.
+    private var codeLoginDisclosure: some View {
+        DisclosureGroup(isExpanded: $isCodeLoginExpanded) {
+            telegramLoginCard
+                .padding(.top, 12)
+        } label: {
+            Text("Вход по коду из бота")
+                .scaledFont(size: 15, weight: .medium)
+                .foregroundStyle(Color.inkSecondary)
+        }
+        .tint(Color.inkSecondary)
+        .padding(.horizontal, 4)
+    }
+
     private var telegramLoginCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Вход через Telegram")
