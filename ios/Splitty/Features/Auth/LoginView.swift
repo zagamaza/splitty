@@ -77,12 +77,9 @@ struct LoginView: View {
                     appleLoginButton
                     googleLoginButton
                     telegramWebLoginButton
-                    // Вход по коду — ВНИЗУ и свёрнутым, но в ЛЮБОЙ сборке.
-                    // Убрать его нельзя: через это же поле входит ревьюер App
-                    // Store (REVIEW_LOGIN_CODE проверяется внутри /auth/code,
-                    // см. auth.go), и это единственный путь входа, не зависящий
-                    // от нашего домена, — если отвалится сертификат или
-                    // привязка домена к боту, войти будет больше нечем.
+                    // Не убирать: через это поле входит ревьюер App Store
+                    // (REVIEW_LOGIN_CODE в /auth/code), и это единственный вход,
+                    // не зависящий от нашего домена
                     codeLoginDisclosure
                     // Dev-вход и настройка сервера — только в DEBUG-сборках:
                     // в релизе это бэкдор мимо авторизации через Telegram.
@@ -148,14 +145,8 @@ struct LoginView: View {
         .disabled(isLoggingIn)
     }
 
-    /// Вход через Telegram веб-виджетом: без ухода в приложение Telegram и
-    /// без ручного ввода кода. Открывает ASWebAuthenticationSession на
-    /// <baseURL>/tg-auth — ссылку на oauth.telegram.org собирает СЕРВЕР, ему
-    /// одному известны и bot_id, и домен, привязанный к боту.
-    ///
-    /// Фирменный синий — это цвет чужого бренда, а не наш акцент: кнопка
-    /// узнаётся как «телеграмная», но по весу не спорит с Apple (та же
-    /// геометрия, что у Apple и Google).
+    /// Вход через веб-виджет Telegram: ASWebAuthenticationSession на
+    /// <baseURL>/tg-auth, ссылку на oauth.telegram.org собирает сервер.
     private var telegramWebLoginButton: some View {
         Button {
             loginWithTelegramWidget()
@@ -176,19 +167,9 @@ struct LoginView: View {
         .disabled(isLoggingIn)
     }
 
-    /// Вход через Google — СТРОГО под кнопкой Apple: Apple требует, чтобы её
-    /// способ входа был не менее заметен, чем сторонние.
-    ///
-    /// Оформление — по Google Identity Branding Guidelines, а не по нашим
-    /// токенам: у Google жёстко заданы фон, цвет рамки, цвет текста и наличие
-    /// цветного знака «G». Знак взят ОФИЦИАЛЬНЫЙ — `google@1..3x.png` из
-    /// ресурсов GoogleSignIn SDK, скопированные в Assets как `GoogleG`.
-    /// Перерисовывать чужой логотип руками нельзя, отсутствие его — тоже
-    /// нарушение гайдлайна.
-    ///
-    /// Геометрия (высота 52, радиус 14) повторяет кнопку Apple: по 4.8 Apple
-    /// не должна выглядеть второстепенной, поэтому размеры совпадают, а
-    /// акцентной заливки у Google нет.
+    /// Оформление по Google Identity Branding Guidelines: официальный знак из
+    /// ресурсов SDK, заданные Google цвета. Геометрия — как у кнопки Apple:
+    /// по 4.8 она не должна выглядеть второстепенной.
     private var googleLoginButton: some View {
         Button {
             loginWithGoogle()
@@ -196,8 +177,7 @@ struct LoginView: View {
             HStack(spacing: 12) {
                 Image("GoogleG")
                     .resizable()
-                    // renderingMode(.original) обязателен: иначе SwiftUI
-                    // перекрасит четырёхцветный знак в tint кнопки
+                    // иначе SwiftUI перекрасит четырёхцветный знак в tint
                     .renderingMode(.original)
                     .frame(width: 20, height: 20)
                 Text("Войти через Google")
@@ -218,9 +198,8 @@ struct LoginView: View {
     }
 
     /// Основной вход: одноразовый код из Telegram-бота → POST /auth/code.
-    /// Свёрнутый вход по коду из бота. Заголовок честный: это не
-    /// «вход для разработки», а рабочий способ, которым пользуются все, кто
-    /// пришёл в Splitty через бота.
+    /// Свёрнутый вход по коду: не «для разработки», а рабочий путь для всех,
+    /// кто пришёл через бота.
     private var codeLoginDisclosure: some View {
         DisclosureGroup(isExpanded: $isCodeLoginExpanded) {
             telegramLoginCard
@@ -244,11 +223,7 @@ struct LoginView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.accent)
                     .padding(.top, 2)
-                // ⚠️ Формулировка важна для ревью App Store: ревьюеру выдают
-                // готовый постоянный код (REVIEW_LOGIN_CODE, см. auth.go), и
-                // прежний текст «нажмите Открыть бота» читался так, будто
-                // Telegram обязателен. Вставить код в поле — самодостаточный
-                // путь, бот лишь один из способов его получить.
+                // Ревьюеру App Store выдают готовый код, Telegram ему не нужен
                 Text("Вставьте код в поле ниже. Нет кода — получите его в боте.")
                     .scaledFont(size: 15)
                     .foregroundStyle(Color.inkSecondary)
@@ -274,8 +249,7 @@ struct LoginView: View {
 
             // Пока код короче минимума, объясняем, почему кнопка неактивна.
             if !LoginCode.isValid(codeText) {
-                // «не менее 8», а не «ровно 8»: бот выдаёт 8 символов, а
-                // постоянный код для проверки приложения — длиннее
+                // не «ровно 8»: код для проверки приложения длиннее
                 Text("Введите код — не короче 8 символов")
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)

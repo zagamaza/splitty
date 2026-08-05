@@ -58,14 +58,10 @@ extension Color {
     static let receiptPaper = Color(light: 0xFDFCF9, dark: 0x1B2129)
     /// Нажатое состояние акцента (тёмный изумруд): pressed CTA, градиенты.
     static let accentPressed = Color(light: 0x0B7C56, dark: 0x2BB985)
-    /// Фирменный синий Telegram для кнопки веб-входа. Как и у Google, это
-    /// не токен нашей темы, а цвет чужого бренда — одинаковый в обеих темах.
+    /// Цвет бренда Telegram — не токен темы, одинаков в обеих.
     static let telegramBlue = Color(light: 0x2AABEE, dark: 0x2AABEE)
 
-    /// Цвета кнопки «Войти через Google». ⚠️ Это НЕ токены нашей темы, а
-    /// значения из Google Identity Branding Guidelines: фон, рамка и цвет
-    /// подписи заданы Google жёстко, для light и dark вариантов свои. Менять
-    /// их «под дизайн» нельзя — это условие использования логотипа.
+    /// Цвета кнопки Google заданы их гайдлайнами — менять нельзя.
     static let googleSurface = Color(light: 0xFFFFFF, dark: 0x131314)
     static let googleBorder = Color(light: 0x747775, dark: 0x8E918F)
     static let googleLabel = Color(light: 0x1F1F1F, dark: 0xE3E3E3)

@@ -9,34 +9,12 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Возврат Telegram Login Widget в нативное приложение.
-//
-// Поток целиком (клиент — ios/Splitty/Core/TelegramWebAuth.swift):
-//
-//	1. приложение открывает ASWebAuthenticationSession на
-//	   https://oauth.telegram.org/auth?bot_id=…&origin=<PUBLIC_BASE_URL>
-//	   &return_to=<PUBLIC_BASE_URL>/tg-callback?native=1
-//	2. человек подтверждает вход, Telegram редиректит на эту страницу и
-//	   кладёт подписанный payload в tgAuthResult (query ИЛИ fragment)
-//	3. страница уводит браузер в splitty://tg-callback?tgAuthResult=…
-//	4. сессия ловит кастомную схему, приложение декодирует base64 и шлёт
-//	   поля в POST /api/v1/auth/telegram — там подпись и свежесть проверяются
-//	   как у обычного виджета (checkTelegramHash, auth.go)
-//
-// ⚠️ Страница сознательно НЕ разбирает payload и ничего не проверяет: подпись
-// валидирует бэкенд на /auth/telegram, у которого есть TG_TOKEN. Здесь только
-// перекладывание значения из одного транспорта в другой.
-//
-// ⚠️ origin и домен бота обязаны совпадать: Telegram отдаёт виджет только на
-// домен, привязанный к боту через BotFather /setdomain. Без этого шага
-// oauth.telegram.org ответит «Bot domain invalid» ещё до нашей страницы.
+// Вход через Telegram Login Widget для нативных клиентов:
+// /tg-auth → oauth.telegram.org → /tg-callback → splitty://tg-callback → POST /auth/telegram.
+// Подпись payload проверяет /auth/telegram (checkTelegramHash), здесь её не трогаем.
 
-// tgCallbackTemplate — самодостаточная страница без внешних ресурсов.
-//
-// Fragment (#tgAuthResult=…) браузер на сервер не отправляет, поэтому забрать
-// его можно только скриптом на клиенте — отсюда JS, а не серверный редирект.
-// Ссылка-фолбэк нужна, когда автоматический переход заблокирован (в некоторых
-// браузерах location.replace в кастомную схему без жеста пользователя молчит).
+// Fragment (#tgAuthResult=…) на сервер не приходит, поэтому значение забирает скрипт.
+// Ссылка-фолбэк — на случай, когда переход в кастомную схему без жеста заблокирован.
 var tgCallbackTemplate = template.Must(template.New("tgcb").Parse(`<!doctype html>
 <html lang="ru"><head>
 <meta charset="utf-8">
@@ -74,9 +52,6 @@ var tgCallbackTemplate = template.Must(template.New("tgcb").Parse(`<!doctype htm
 </script>
 </body></html>`))
 
-// handleTelegramCallback — страница возврата из Telegram Login Widget.
-// Выключена вместе с остальным диплинк-блоком, пока PUBLIC_BASE_URL пуст:
-// без домена Telegram сюда всё равно не приведёт.
 func (s *Server) handleTelegramCallback(w http.ResponseWriter, r *http.Request) {
 	if s.cfg.PublicBaseUrl == "" {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")
@@ -84,26 +59,18 @@ func (s *Server) handleTelegramCallback(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("X-Robots-Tag", "noindex")
-	// payload одноразовый и подписан на конкретный auth_date — кешировать нечего
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	// Схема — константа приложения, не пользовательский ввод: template.URL
-	// здесь не нужен, значение уходит в JS-строку через {{.Scheme}}
 	if err := tgCallbackTemplate.Execute(w, struct{ Scheme string }{Scheme: appScheme}); err != nil {
-		// заголовки уже ушли — только лог, менять статус поздно
 		log.Error().Err(err).Msg("cannot render tg-callback page")
 	}
 }
 
-// handleTelegramAuthStart — вход в виджет: 302 на oauth.telegram.org.
+// handleTelegramAuthStart — 302 на виджет Telegram.
 //
-// ⚠️ Ссылку собирает СЕРВЕР, а не клиент, и это не педантизм. Telegram сверяет
-// origin с доменом, привязанным к боту, а bot_id обязан принадлежать тому же
-// TG_TOKEN, которым потом проверяется подпись. Клиент не знает ни того, ни
-// другого: его baseURL может указывать на http-IP или на локальный сервер, и
-// собранный им origin не совпал бы с доменом бота. Поэтому приложение просто
-// открывает <PUBLIC_BASE_URL>/tg-auth и ни о чём не думает.
+// Ссылку собирает сервер, а не клиент: Telegram сверяет origin с доменом бота, а
+// baseURL клиента может указывать куда угодно.
 func (s *Server) handleTelegramAuthStart(w http.ResponseWriter, r *http.Request) {
 	base := strings.TrimRight(s.cfg.PublicBaseUrl, "/")
 	botID := telegramBotID(s.cfg.TgToken)
@@ -123,9 +90,7 @@ func (s *Server) handleTelegramAuthStart(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "https://oauth.telegram.org/auth?"+q.Encode(), http.StatusFound)
 }
 
-// telegramBotID достаёт числовой id бота из токена вида "<id>:<secret>".
-// Сам id не секрет (он же в ссылке t.me), секретна только часть после
-// двоеточия — её мы наружу не отдаём никогда.
+// telegramBotID — числовой id из токена "<id>:<secret>"; сам id не секрет.
 func telegramBotID(token string) string {
 	id, _, ok := strings.Cut(token, ":")
 	if !ok || id == "" {
