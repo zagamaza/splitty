@@ -40,6 +40,9 @@ tidy: ## go mod tidy
 run: ## запустить локально (нужен .env в корне)
 	$(GOENV) $(GO) run ./cmd/splitty
 
+seed: ## демо-данные для UI-прогонов (бэкенд с API_DEV_AUTH=true уже поднят)
+	python3 scripts/seed-local.py
+
 docker-build: ## локальная сборка docker-образа (проверка Dockerfile)
 	docker build -t splitty .
 

@@ -12,28 +12,67 @@ extension XCTestCase {
         return app
     }
 
-    /// Dev-вход под seed-пользователем, если сессии ещё нет.
-    /// Кнопку берём по `devLoginSubmit`: лейбл «Войти» есть и у карточки
-    /// входа по email, и запрос по нему падает на «multiple matches».
-    func loginIfNeeded(_ app: XCUIApplication, userId: String = "100", name: String = "Загир") {
-        let idField = app.textFields["Telegram ID"]
-        guard idField.waitForExistence(timeout: 5) else { return } // уже залогинены
+    /// Учётка протагониста прогонов. Та же пара зашита в scripts/seed-local.py,
+    /// который её и заводит вместе с демо-группами — меняете здесь, меняйте там.
+    static let seedEmail = "ui-tests@splitty.test"
+    static let seedPassword = "20260806"
 
-        idField.tap()
-        idField.typeText(userId)
+    /// Вход по email и паролю, если сессии ещё нет. Другого пути у теста нет:
+    /// dev-вход с экрана убран, а Apple/Google/Telegram требуют внешних
+    /// сервисов и системных листов.
+    ///
+    /// Попыток три, и решает исход, а не содержимое полей: `typeText` иногда
+    /// теряет символы, а проверить это у пароля нечем — `SecureField` отдаёт в
+    /// accessibility постоянную маску из пяти точек независимо от длины. Так что
+    /// признак успеха один — таб-бар; алерт «неверный email или пароль» означает
+    /// «набралось не то», и пара набирается заново.
+    func loginIfNeeded(
+        _ app: XCUIApplication,
+        email: String = XCTestCase.seedEmail,
+        password: String = XCTestCase.seedPassword
+    ) {
+        let emailField = app.textFields["Email"]
+        guard emailField.waitForExistence(timeout: 5) else { return } // уже залогинены
 
-        let nameField = app.textFields["Имя"]
-        nameField.tap()
-        nameField.typeText(name)
+        let passwordField = app.secureTextFields["Пароль"]
+        XCTAssertTrue(passwordField.waitForExistence(timeout: 5), "Поле пароля не найдено")
 
-        dismissKeyboard(app)
+        for attempt in 1...3 {
+            clear(emailField, app: app)
+            type(email, into: emailField, app: app)
+            clear(passwordField, app: app)
+            type(password, into: passwordField, app: app)
+            dismissKeyboard(app)
 
-        let loginButton = app.buttons["devLoginSubmit"]
-        XCTAssertTrue(loginButton.waitForExistence(timeout: 5), "Кнопка dev-входа не найдена")
-        XCTAssertTrue(loginButton.isEnabled, "Кнопка dev-входа неактивна")
-        loginButton.tap()
+            // Лейбл «Войти» уникален: код-вход и dev-вход с экрана убраны.
+            let loginButton = app.buttons["Войти"]
+            XCTAssertTrue(loginButton.waitForExistence(timeout: 5), "Кнопка «Войти» не найдена")
+            XCTAssertTrue(loginButton.isEnabled, "Кнопка «Войти» неактивна — форма считает пару невалидной")
+            loginButton.tap()
 
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 15), "Не дождались таб-бара после логина")
+            if app.tabBars.firstMatch.waitForExistence(timeout: 15) { return }
+
+            let alertOk = app.alerts.buttons["Ок"]
+            guard alertOk.waitForExistence(timeout: 3) else {
+                XCTFail("Ни таб-бара, ни алерта после входа — сервер молчит?")
+                return
+            }
+            alertOk.tap()
+            XCTAssertNotEqual(
+                attempt, 3,
+                "Три раза «неверный email или пароль» — прогнан ли scripts/seed-local.py?"
+            )
+        }
+    }
+
+    /// Опустошает поле: ставит курсор и жмёт backspace с запасом.
+    /// Длину `SecureField` узнать нельзя (постоянная маска), поэтому бьём
+    /// по верхней границе — лишние нажатия по пустому полю безвредны.
+    func clear(_ field: XCUIElement, app: XCUIApplication, maxLength: Int = 40) {
+        guard (field.value as? String)?.isEmpty == false else { return }
+        field.tap()
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 5)
+        field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: maxLength))
     }
 
     /// Открывает форму расхода из экрана группы. FAB ведёт на AI-экран
@@ -50,6 +89,20 @@ extension XCTestCase {
             manual.tap()
         }
         return true
+    }
+
+    /// Набирает текст в поле, дождавшись клавиатуры.
+    ///
+    /// Ждать обязательно: `typeText` сразу после `tap()` теряет символы, пока
+    /// клавиатура выезжает, а у пароля это всплывает уже ответом сервера — 401
+    /// на обрезанной паре выглядит как «неверная учётка», хотя учётка верная.
+    func type(_ text: String, into field: XCUIElement, app: XCUIApplication) {
+        field.tap()
+        XCTAssertTrue(
+            app.keyboards.firstMatch.waitForExistence(timeout: 5),
+            "Клавиатура не появилась — печатать некуда"
+        )
+        field.typeText(text)
     }
 
     /// Среди всех hittable-кнопок с данным label выбирает самую правую
