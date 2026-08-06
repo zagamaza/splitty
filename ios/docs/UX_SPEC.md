@@ -493,18 +493,19 @@ magnitude-графики (месяцы, дни, дни недели) — еди�
 
 ### Логин (LoginView)
 - Нейтральный премиум-экран: словомарка «Splitty», подзаголовок «Делите расходы с друзьями».
-- Основная секция «Вход через Telegram» (surface-карточка): инструкция
-  «Откройте @split_money_bot и отправьте команду /login — бот пришлёт код»;
-  поле «Код из Telegram» (капс `.characters`, без автокоррекции, monospaced);
-  кнопка «Войти по коду» (primary pill), активна при ≥ 6 значимых символов
-  (`LoginCode.isValid`; пробелы игнорируются, регистр приводится к верхнему) →
-  `POST /auth/code` c телом `{"code":"ABCD2345"}`. На 401 `invalid_code`
-  (неверный/просроченный/использованный код) — алерт «Неверный или просроченный код».
-- Блок «Вход для разработки» (dev): поля «Telegram ID» (число) и «Имя», username опционально;
-  кнопка «Войти» → `POST /auth/dev`. На симуляторе всегда раскрыт — UI-тест DemoFlowUITests
-  зависит от лейблов «Telegram ID»/«Имя»/«Войти»; на устройстве свёрнут в DisclosureGroup
-  (`#if targetEnvironment(simulator)` задаёт начальное состояние).
-- Поле «Сервер» (advanced, свёрнуто DisclosureGroup): base URL, по умолчанию `http://127.0.0.1:7171`.
+- Ровно четыре способа входа, сверху вниз: Sign in with Apple (системная кнопка), Google
+  (официальный знак), Telegram (веб-виджет через `/tg-auth`), затем разделитель «или» и
+  карточка «Вход по email» — поля Email и Пароль, кнопка «Войти» → `POST /auth/login`.
+  Та же карточка переключается в «Регистрация» (добавляется поле «Имя») → `POST /auth/register`.
+  Apple выше остальных по Guideline 4.8: её кнопка не должна выглядеть менее заметной.
+- Ошибки входа по паролю берутся с сервера: он намеренно отвечает одинаково на неверный
+  пароль и незнакомый адрес («неверный email или пароль»).
+- Больше на экране ничего нет. Вход по коду из бота и dev-вход убраны: код был нужен ревьюеру
+  App Store, теперь ревьюер входит демо-аккаунтом по email (см. `ios/asc/INSTRUCTION.md`),
+  а dev-вход заменён учёткой из `scripts/seed-local.py` — под ней логинятся и UI-тесты.
+- Поле «Сервер» — только DEBUG и только после **пяти тапов по логотипу**: это отладочный
+  тумблер, а не настройка. В релизе его нет вовсе — там поле было бы способом увести
+  Bearer-токен на чужой адрес.
 
 ## Архитектурный контракт (обязателен для всех агентов)
 
@@ -562,8 +563,8 @@ ios/
 final class APIClient {
     init(baseURL: URL?, token: String?)   // nil — невалидный адрес: каждый запрос бросит APIError.invalidURL
     var onUnauthorized: (() -> Void)?     // вызывается при любом 401 (SessionStore делает logout)
-    func devLogin(userId: Int, displayName: String, username: String?) async throws -> AuthResponse
-    func loginWithCode(_ code: String) async throws -> AuthResponse   // POST /auth/code; 401 invalid_code
+    func register(email: String, password: String, displayName: String) async throws -> AuthResponse
+    func loginWithPassword(email: String, password: String) async throws -> AuthResponse  // 401 — пара не сошлась
     func me() async throws -> Me
     func updateMe(displayName: String?, lang: String?, notificationOn: Bool?) async throws -> Me
     func rooms(archived: Bool) async throws -> [RoomSummary]
@@ -603,8 +604,8 @@ final class APIClient {
     var dataVersion: Int { get }      // версия данных, растёт после каждой мутации
     func noteDataChanged()            // bump dataVersion (звать после успешной мутации)
     func syncOutbox() async           // FIFO-синк outbox; успех хотя бы одной → noteDataChanged()
-    func loginDev(userId: Int, displayName: String, username: String?) async throws
-    func loginWithCode(_ code: String) async throws   // одноразовый код из Telegram-бота
+    func register(email: String, password: String, displayName: String) async throws
+    func loginWithPassword(email: String, password: String) async throws
     func logout()                     // @MainActor; чистит токен, кеш и outbox
     func refreshMe() async            // через repo.me: офлайн-старт берёт профиль из кеша
 }

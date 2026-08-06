@@ -219,13 +219,6 @@ final class SessionStore {
         isPurgePending = UserDefaults.standard.bool(forKey: Self.purgePendingKey)
     }
 
-    /// Вход для разработки: POST /auth/dev, сохраняет токен и профиль.
-    @MainActor
-    func loginDev(userId: Int, displayName: String, username: String?) async throws {
-        let response = try await api.devLogin(userId: userId, displayName: displayName, username: username)
-        adoptSession(response)
-    }
-
     /// Общий хвост всех способов входа: токен, профиль в памяти, владелец
     /// локальных данных и профиль В КЕШЕ. Кеш обязателен: `refreshMe` (только
     /// он писал ключ `me`) на старте после входа уже не зовётся, и человек,
@@ -263,14 +256,6 @@ final class SessionStore {
         // session.isAuthenticated)`, так что `RootView` уже не находил ничего.
         PendingJoin.shared.reconcileOwner(userId)
         outbox.keepOwned(by: userId, inheritingOrphans: previous == nil || previous == userId)
-    }
-
-    /// Вход по одноразовому коду из Telegram-бота: POST /auth/code,
-    /// сохраняет токен (Keychain) и профиль. 401 — неверный/просроченный код.
-    @MainActor
-    func loginWithCode(_ code: String) async throws {
-        let response = try await api.loginWithCode(code)
-        adoptSession(response)
     }
 
     /// Вход через Google: POST /auth/google, сохраняет токен (Keychain)

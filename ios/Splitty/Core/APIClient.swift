@@ -257,29 +257,6 @@ final class APIClient: OperationAPI {
 
     // MARK: Auth
 
-    func devLogin(userId: Int, displayName: String, username: String?) async throws -> AuthResponse {
-        struct Body: Encodable {
-            let userId: Int
-            let displayName: String
-            let username: String?
-        }
-        return try await request(
-            "POST", "/api/v1/auth/dev",
-            body: Body(userId: userId, displayName: displayName, username: username)
-        )
-    }
-
-    /// Вход по одноразовому коду из Telegram-бота (@split_money_bot):
-    /// POST /auth/code, тело `{"code": "ABCD2345"}`, без авторизационного
-    /// заголовка (клиент на экране входа создаётся с token == nil).
-    /// 401 `invalid_code` — код неверный, просроченный или уже использованный.
-    func loginWithCode(_ code: String) async throws -> AuthResponse {
-        struct Body: Encodable {
-            let code: String
-        }
-        return try await request("POST", "/api/v1/auth/code", body: Body(code: code))
-    }
-
     /// Вход через Google: POST /auth/google, тело `{"idToken": "…"}`, без
     /// авторизационного заголовка (клиент на экране входа создаётся с
     /// token == nil).

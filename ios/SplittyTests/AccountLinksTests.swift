@@ -786,7 +786,7 @@ final class AccountLinksTests: XCTestCase {
              "linkedProviders":["google"],"notificationOn":true}}
             """#.utf8))
         }
-        try await session.loginWithCode("EFGH6789")
+        try await session.loginWithPassword(email: "petr@splitty.test", password: "Passw0rd!")
 
         XCTAssertNil(PendingJoin.shared.roomId, "чужое приглашение пережило смену аккаунта")
 
@@ -818,7 +818,7 @@ final class AccountLinksTests: XCTestCase {
              "linkedProviders":["google"],"notificationOn":true}}
             """#.utf8))
         }
-        try await session.loginWithCode("EFGH6789")
+        try await session.loginWithPassword(email: "petr@splitty.test", password: "Passw0rd!")
 
         XCTAssertEqual(
             PendingJoin.shared.roomId,
@@ -879,7 +879,7 @@ final class AccountLinksTests: XCTestCase {
              "linkedProviders":["google"],"notificationOn":true}}
             """#.utf8))
         }
-        try await session.loginWithCode("ABCD2345")
+        try await session.loginWithPassword(email: "anya@splitty.test", password: "Passw0rd!")
         XCTAssertTrue(session.isAuthenticated)
     }
 }
