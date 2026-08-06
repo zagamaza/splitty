@@ -72,6 +72,19 @@
                     android:scheme="splitty"
                     android:host="join" />
             </intent-filter>
+
+            <!-- Возврат из Telegram Login Widget: splitty://tg-callback?tgAuthResult=…
+                 Страницу-перекладчик отдаёт бэкенд (internal/rest/tg_callback.go),
+                 payload разбирает core/auth/TelegramWebAuth. Отдельным фильтром от
+                 join: у них разный host и разный смысл. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="splitty"
+                    android:host="tg-callback" />
+            </intent-filter>
         </activity>
 
         <!-- content-Uri для файла камеры (TakePicture): без внешних прав хранилища. -->

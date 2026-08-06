@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
 import com.zagir.splitty.core.auth.GoogleSignInException
 import com.zagir.splitty.core.network.ApiException
+import com.zagir.splitty.core.auth.TelegramAuthBus
+import com.zagir.splitty.core.model.TelegramLoginBody
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,23 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-/**
- * Одноразовый код входа из Telegram-бота: нормализация и валидация.
- * Чистая логика — покрыта юнит-тестами (порт iOS LoginCode).
- */
-object LoginCode {
-    /** Кнопка «Войти по коду» активна от 8 символов — бот генерирует ровно
-     *  8 (internal/bot loginCodeLen); раньше валидатор пропускал уже с 6. */
-    const val MIN_LENGTH = 8
-
-    /** Убирает пробельные символы (вставка из чата) и приводит к верхнему регистру. */
-    fun normalize(raw: String): String =
-        raw.filterNot { it.isWhitespace() }.uppercase()
-
-    /** true, когда нормализованный код достаточно длинный, чтобы отправлять. */
-    fun isValid(raw: String): Boolean = normalize(raw).length >= MIN_LENGTH
-}
 
 /**
  * Проверки формы «email + пароль». Точный разбор адреса — за сервером
@@ -64,25 +49,16 @@ object EmailLoginForm {
 
 /** Состояние экрана входа. */
 data class LoginUiState(
-    val code: String = "",
     val email: String = "",
     val password: String = "",
     val registerName: String = "",
     /** Та же форма работает и на вход, и на регистрацию. */
     val isRegistering: Boolean = false,
-    val devTelegramId: String = "",
-    val devDisplayName: String = "",
-    val devUsername: String = "",
     val baseUrl: String = "",
     val isLoggingIn: Boolean = false,
     /** null — алерта нет; иначе показывается диалог «Ошибка». */
     val errorMessage: String? = null,
 ) {
-    val isCodeValid: Boolean get() = LoginCode.isValid(code)
-    val isDevFormValid: Boolean
-        get() = (devTelegramId.trim().toLongOrNull() ?: 0L) > 0L &&
-            devDisplayName.trim().isNotEmpty()
-
     /** Для входа длина пароля не проверяется: он мог быть задан до правил. */
     val isEmailFormValid: Boolean
         get() = if (isRegistering) {
@@ -95,9 +71,9 @@ data class LoginUiState(
 }
 
 /**
- * Вход: POST /auth/google (Credential Manager), POST /auth/code (код из
- * Telegram) и POST /auth/dev (dev-режим); поле «Сервер» персистится в
- * SessionStore на каждое изменение.
+ * Вход: POST /auth/google (Credential Manager), POST /auth/register и
+ * POST /auth/login (email + пароль), POST /auth/code (код из Telegram);
+ * поле «Сервер» персистится в SessionStore на каждое изменение.
  */
 private const val TAG = "LoginViewModel"
 
@@ -106,21 +82,21 @@ class LoginViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val googleIdTokenProvider: GoogleIdTokenProvider,
+    private val telegramAuthBus: TelegramAuthBus,
 ) : ViewModel() {
+
+    /** Результаты входа через Telegram — их приносит MainActivity по deep link. */
+    val telegramPayloads = telegramAuthBus.payloads
 
     private val _state = MutableStateFlow(
         LoginUiState(baseUrl = sessionStore.currentBaseUrl())
     )
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
 
-    fun onCodeChange(value: String) = _state.update { it.copy(code = value) }
     fun onEmailChange(value: String) = _state.update { it.copy(email = value) }
     fun onPasswordChange(value: String) = _state.update { it.copy(password = value) }
     fun onRegisterNameChange(value: String) = _state.update { it.copy(registerName = value) }
     fun toggleRegistering() = _state.update { it.copy(isRegistering = !it.isRegistering) }
-    fun onDevTelegramIdChange(value: String) = _state.update { it.copy(devTelegramId = value) }
-    fun onDevDisplayNameChange(value: String) = _state.update { it.copy(devDisplayName = value) }
-    fun onDevUsernameChange(value: String) = _state.update { it.copy(devUsername = value) }
     fun dismissError() = _state.update { it.copy(errorMessage = null) }
 
     /**
@@ -172,7 +148,7 @@ class LoginViewModel @Inject constructor(
                 }
                 _state.update { it.copy(errorMessage = message) }
             } catch (e: Exception) {
-                // См. комментарий в loginWithCode: signIn пишет в
+                // См. комментарий в loginWithTelegram: signIn пишет в
                 // DataStore/Keystore мимо ApiException-обёртки.
                 Log.e(TAG, "google login failed", e)
                 _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
@@ -182,20 +158,26 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    /** Вход по коду из бота; 401 (invalid_code) — человеческое сообщение. */
-    fun loginWithCode() {
-        val code = LoginCode.normalize(_state.value.code)
-        if (code.length < LoginCode.MIN_LENGTH || _state.value.isLoggingIn) return
+    /**
+     * Вход через Telegram Login Widget: payload из `splitty://tg-callback`
+     * (см. core/auth/TelegramWebAuth) обменивается на сессию — POST /auth/telegram.
+     * 401 — подпись не сошлась: чинить это человеку нечем, кроме «попробуйте ещё раз».
+     */
+    fun loginWithTelegram(payload: TelegramLoginBody) {
+        // Забираем payload из шины сразу: иначе он переиграется на следующей
+        // подписке (пересоздание активити) и вход уйдёт вторым запросом.
+        telegramAuthBus.consume()
+        if (_state.value.isLoggingIn) return
         _state.update { it.copy(isLoggingIn = true) }
         viewModelScope.launch {
             try {
-                val response = repository.loginWithCode(code)
+                val response = repository.loginWithTelegram(payload)
                 sessionStore.signIn(response.token, response.user)
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
                 val message = if (e.isUnauthorized) {
-                    "Неверный или просроченный код"
+                    "Telegram не подтвердил вход. Попробуйте ещё раз"
                 } else {
                     e.message
                 }
@@ -205,7 +187,7 @@ class LoginViewModel @Inject constructor(
                 // IOException не оборачивается в ApiException и раньше улетал из
                 // viewModelScope (обработчик стоит только на @ApplicationScope),
                 // роняя процесс прямо на экране входа.
-                Log.e(TAG, "login by code failed", e)
+                Log.e(TAG, "telegram login failed", e)
                 _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
@@ -242,39 +224,6 @@ class LoginViewModel @Inject constructor(
                 _state.update { it.copy(errorMessage = e.message) }
             } catch (e: Exception) {
                 Log.e(TAG, "password login failed", e)
-                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
-            } finally {
-                _state.update { it.copy(isLoggingIn = false) }
-            }
-        }
-    }
-
-    /** Dev-вход (только при API_DEV_AUTH=true на сервере). */
-    fun loginDev() {
-        val current = _state.value
-        val userId = current.devTelegramId.trim().toLongOrNull()
-        if (userId == null || userId <= 0) {
-            _state.update { it.copy(errorMessage = "Введите числовой Telegram ID") }
-            return
-        }
-        val name = current.devDisplayName.trim()
-        if (name.isEmpty()) {
-            _state.update { it.copy(errorMessage = "Введите имя") }
-            return
-        }
-        if (current.isLoggingIn) return
-        val username = current.devUsername.trim().ifEmpty { null }
-        _state.update { it.copy(isLoggingIn = true) }
-        viewModelScope.launch {
-            try {
-                val response = repository.loginDev(userId, name, username)
-                sessionStore.signIn(response.token, response.user)
-            } catch (e: CancellationException) {
-                throw e // см. комментарий в loginWithGoogle
-            } catch (e: ApiException) {
-                _state.update { it.copy(errorMessage = e.message) }
-            } catch (e: Exception) {
-                Log.e(TAG, "dev login failed", e)
                 _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }

@@ -3,14 +3,13 @@ package com.zagir.splitty.core.network
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.AuthResponse
-import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.DeviceBody
 import com.zagir.splitty.core.model.CreateRoomBody
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
-import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.GoogleLoginBody
+import com.zagir.splitty.core.model.TelegramLoginBody
 import com.zagir.splitty.core.model.LinkedProvidersResponse
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.NotifySettings
@@ -47,11 +46,9 @@ interface SplittyApi {
 
     // --- Auth (без Bearer-заголовка) ---
 
-    @POST("api/v1/auth/code")
-    suspend fun loginWithCode(@Body body: CodeLoginBody): AuthResponse
-
-    @POST("api/v1/auth/dev")
-    suspend fun loginDev(@Body body: DevLoginBody): AuthResponse
+    /** Вход через Telegram Login Widget (веб-поток, без ухода в Telegram). */
+    @POST("api/v1/auth/telegram")
+    suspend fun loginWithTelegram(@Body body: TelegramLoginBody): AuthResponse
 
     /** Вход через Google: id-токен от Credential Manager (Task 18). */
     @POST("api/v1/auth/google")

@@ -153,6 +153,10 @@ dependencies {
     implementation(libs.firebase.messaging)
 
     implementation(libs.androidx.core.ktx)
+    // Custom Tabs: вход через Telegram Login Widget открывается в них,
+    // а не в отдельном браузере — cookie общие с Chrome, и уже вошедшему
+    // в Telegram не логиниться заново (аналог iOS ASWebAuthenticationSession).
+    implementation(libs.androidx.browser)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

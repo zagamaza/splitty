@@ -8,6 +8,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,12 +36,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -58,6 +63,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
+import androidx.browser.customtabs.CustomTabsIntent
+import com.zagir.splitty.core.auth.TelegramWebAuth
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
@@ -66,18 +73,25 @@ import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
- * Экран входа — полный паритет iOS LoginView: словомарка «Splitty», карточка
- * «Вход через Telegram» (код из @split_money_bot по /login → POST /auth/code),
- * свёрнутый «Вход для разработки» (POST /auth/dev) и тихая настройка «Сервер».
+ * Экран входа — паритет iOS LoginView: словомарка «Splitty», Google, форма
+ * email + пароль и карточка входа по коду из @split_money_bot. Настройка
+ * «Сервер» спрятана за жестом по логотипу (только DEBUG).
  */
 @Composable
 fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var isDevExpanded by remember { mutableStateOf(false) }
-    var isServerExpanded by remember { mutableStateOf(false) }
+    // Поле «Сервер» — инструмент разработки, а не настройка приложения: на
+    // экране его нет, находит только тот, кто знает жест (паритет iOS).
+    var logoTapCount by remember { mutableIntStateOf(0) }
+    val isServerRevealed = logoTapCount >= SERVER_REVEAL_TAPS
     // Хост системного листа Credential Manager: активити плюс текст ошибки,
     // если её нет (общий с профилем, см. core/auth/ActivityContext.kt).
     val credentialHost = rememberCredentialManagerHost()
+    // Возврат из Custom Tabs приходит интентом в активити, а не сюда:
+    // MainActivity кладёт payload в шину, экран его и забирает.
+    LaunchedEffect(Unit) {
+        viewModel.telegramPayloads.collect(viewModel::loginWithTelegram)
+    }
 
     Box(
         modifier = Modifier
@@ -93,7 +107,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Logo()
+            Logo(onTap = { if (BuildConfig.DEBUG && !isServerRevealed) logoTapCount++ })
             // Вход через Google — над блоком входа по коду: для человека без
             // Telegram это единственный путь внутрь, и он не должен искать его
             // под инструкцией про бота.
@@ -105,31 +119,21 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                     }
                 },
             )
+            TelegramLoginButton(
+                baseUrl = state.baseUrl,
+                enabled = !state.isLoggingIn,
+                onError = viewModel::showError,
+            )
             OrDivider()
             EmailLoginCard(
                 state = state,
                 viewModel = viewModel,
             )
-            TelegramLoginCard(
-                code = state.code,
-                isValid = state.isCodeValid,
-                isLoggingIn = state.isLoggingIn,
-                onCodeChange = viewModel::onCodeChange,
-                onSubmit = viewModel::loginWithCode,
-            )
-            // Dev-вход и настройка сервера — только в DEBUG-сборках: в релизе
-            // это бэкдор мимо авторизации через Telegram (паритет iOS #if DEBUG).
-            if (BuildConfig.DEBUG) {
-                DevLoginCard(
-                    state = state,
-                    isExpanded = isDevExpanded,
-                    onToggle = { isDevExpanded = !isDevExpanded },
-                    viewModel = viewModel,
-                )
-                ServerDisclosure(
+            // Только в DEBUG и только после жеста: в релизе поле «Сервер» —
+            // способ увести Bearer-токен на чужой адрес (паритет iOS).
+            if (BuildConfig.DEBUG && isServerRevealed) {
+                ServerField(
                     baseUrl = state.baseUrl,
-                    isExpanded = isServerExpanded,
-                    onToggle = { isServerExpanded = !isServerExpanded },
                     onBaseUrlChange = viewModel::onBaseUrlChange,
                 )
             }
@@ -154,12 +158,24 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     }
 }
 
-/** Крупная словомарка: изумрудный логотип и тихий подзаголовок. */
+/** Тапов по логотипу, открывающих поле «Сервер» (только DEBUG). */
+private const val SERVER_REVEAL_TAPS = 5
+
+/**
+ * Крупная словомарка: изумрудный логотип и тихий подзаголовок.
+ * В DEBUG он же — тайная дверь к полю «Сервер» (см. SERVER_REVEAL_TAPS).
+ */
 @Composable
-private fun Logo() {
+private fun Logo(onTap: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // Без индикации: жест служебный, подсвечивать его нечего.
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onTap,
+            )
             .padding(top = 72.dp, bottom = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -323,201 +339,99 @@ private fun EmailLoginCard(
     }
 }
 
-/** Основной вход: одноразовый код из Telegram-бота → POST /auth/code. */
+/**
+ * Вход через Telegram Login Widget: `<baseUrl>/tg-auth` в Custom Tabs, оттуда
+ * oauth.telegram.org и возврат в приложение по `splitty://tg-callback`
+ * (см. core/auth/TelegramWebAuth, internal/rest/tg_callback.go).
+ *
+ * Кнопка, а не карточка с кодом: код надо было идти получать в бота, а виджет
+ * логинит на месте — и уже вошедшему в Telegram в браузере не логиниться заново
+ * (Custom Tabs делят cookie с Chrome, аналог iOS ASWebAuthenticationSession).
+ */
 @Composable
-private fun TelegramLoginCard(
-    code: String,
-    isValid: Boolean,
-    isLoggingIn: Boolean,
-    onCodeChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-) {
+private fun TelegramLoginButton(baseUrl: String, enabled: Boolean, onError: (String) -> Unit) {
     val context = LocalContext.current
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
-        SectionHeader(stringResource(R.string.login_telegram_section))
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(TelegramBlue)
+            .clickable(enabled = enabled) { openTelegramWidget(context, baseUrl, onError) },
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = null,
-                tint = Splitty.colors.accent,
-                modifier = Modifier
-                    .padding(top = 2.dp)
-                    .size(16.dp),
+                tint = Color.White,
+                modifier = Modifier.size(20.dp),
             )
             Text(
-                text = stringResource(R.string.login_telegram_hint),
-                fontSize = 15.sp,
-                color = Splitty.colors.inkSecondary,
+                text = stringResource(R.string.login_telegram_button),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
             )
         }
-        Spacer(Modifier.height(12.dp))
-        // Прямой переход в бота: инструкция без кнопки заставляла руками
-        // искать бота в Telegram (паритет iOS «Открыть бота»).
-        SoftChip(
-            text = stringResource(R.string.login_open_bot),
-            onClick = { openLoginBot(context) },
-        )
-        Spacer(Modifier.height(12.dp))
-        LoginField(
-            value = code,
-            onValueChange = onCodeChange,
-            placeholder = stringResource(R.string.login_code_placeholder),
-            monospaced = true,
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.Characters,
-                autoCorrectEnabled = false,
-                imeAction = ImeAction.Go,
-            ),
-            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-        )
-        // Пока код короче минимума, объясняем, почему кнопка неактивна.
-        if (!isValid) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.login_code_length_hint),
-                fontSize = 13.sp,
-                color = Splitty.colors.inkSecondary,
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        PrimaryPillButton(
-            text = stringResource(R.string.login_code_button),
-            onClick = onSubmit,
-            enabled = isValid && !isLoggingIn,
-        )
+    }
+}
+
+/** Фирменный синий Telegram — вне палитры темы: это чужой бренд. */
+private val TelegramBlue = Color(0xFF2AABEE)
+
+/**
+ * Открывает страницу входа в Custom Tabs. Отдельного фолбэка не нужно:
+ * без поддержки Custom Tabs библиотека сама уходит в обычный браузер.
+ * ActivityNotFoundException остаётся возможен на устройстве вообще без
+ * браузера — там честнее сказать об этом, чем молча ничего не сделать.
+ */
+private fun openTelegramWidget(context: Context, baseUrl: String, onError: (String) -> Unit) {
+    val url = TelegramWebAuth.startUrl(baseUrl)
+    try {
+        CustomTabsIntent.Builder()
+            .setShowTitle(false)
+            .build()
+            .launchUrl(context, Uri.parse(url))
+    } catch (_: ActivityNotFoundException) {
+        onError("Не нашли браузер, чтобы открыть вход через Telegram")
     }
 }
 
 /**
- * Открывает Telegram-бота сразу с командой входа: `start=login` — бот понимает
- * «/start login» как /login и присылает код одним тапом. Пробуем deeplink в
- * приложение Telegram, при ActivityNotFoundException — https-фолбэк на t.me.
+ * Адрес сервера. Заголовка-раскрывашки нет намеренно: поле появляется только
+ * после жеста по логотипу и живёт до перезапуска экрана — это отладочный
+ * тумблер, а не настройка, которую ищут глазами.
  */
-private fun openLoginBot(context: Context) {
-    val appIntent = Intent(
-        Intent.ACTION_VIEW,
-        Uri.parse("tg://resolve?domain=split_money_bot&start=login"),
-    )
-    try {
-        context.startActivity(appIntent)
-    } catch (_: ActivityNotFoundException) {
-        val webIntent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://t.me/split_money_bot?start=login"),
-        )
-        context.startActivity(webIntent)
-    }
-}
-
-/** Свёрнутый dev-вход: Telegram ID / Имя / Username / «Войти» (POST /auth/dev). */
 @Composable
-private fun DevLoginCard(
-    state: LoginUiState,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
-    viewModel: LoginViewModel,
-) {
-    SurfaceCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        padding = 20.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            SectionHeader(stringResource(R.string.login_dev_section))
-            Spacer(Modifier.weight(1f))
-            Icon(
-                imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription = null,
-                tint = Splitty.colors.inkSecondary,
-            )
-        }
-        if (isExpanded) {
-            Spacer(Modifier.height(12.dp))
-            LoginField(
-                value = state.devTelegramId,
-                onValueChange = viewModel::onDevTelegramIdChange,
-                placeholder = stringResource(R.string.login_dev_telegram_id),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            )
-            Spacer(Modifier.height(12.dp))
-            LoginField(
-                value = state.devDisplayName,
-                onValueChange = viewModel::onDevDisplayNameChange,
-                placeholder = stringResource(R.string.login_dev_name),
-            )
-            Spacer(Modifier.height(12.dp))
-            LoginField(
-                value = state.devUsername,
-                onValueChange = viewModel::onDevUsernameChange,
-                placeholder = stringResource(R.string.login_dev_username),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrectEnabled = false,
-                ),
-            )
-            Spacer(Modifier.height(16.dp))
-            PrimaryPillButton(
-                text = stringResource(R.string.login_dev_button),
-                onClick = viewModel::loginDev,
-                enabled = state.isDevFormValid && !state.isLoggingIn,
-            )
-        }
-    }
-}
-
-/** Тихая свёрнутая настройка адреса сервера внизу экрана. */
-@Composable
-private fun ServerDisclosure(
+private fun ServerField(
     baseUrl: String,
-    isExpanded: Boolean,
-    onToggle: () -> Unit,
     onBaseUrlChange: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize()
             .padding(horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.login_server_section),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = Splitty.colors.inkSecondary,
-            )
-            Spacer(Modifier.weight(1f))
-            Icon(
-                imageVector = if (isExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                contentDescription = null,
-                tint = Splitty.colors.inkSecondary,
-            )
-        }
-        if (isExpanded) {
-            Spacer(Modifier.height(8.dp))
-            LoginField(
-                value = baseUrl,
-                onValueChange = onBaseUrlChange,
-                placeholder = stringResource(R.string.login_server_placeholder),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    capitalization = KeyboardCapitalization.None,
-                    autoCorrectEnabled = false,
-                ),
-            )
-        }
+        Text(
+            text = stringResource(R.string.login_server_section),
+            fontSize = 13.sp,
+            color = Splitty.colors.inkSecondary,
+        )
+        LoginField(
+            value = baseUrl,
+            onValueChange = onBaseUrlChange,
+            placeholder = stringResource(R.string.login_server_placeholder),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Uri,
+                capitalization = KeyboardCapitalization.None,
+                autoCorrectEnabled = false,
+            ),
+        )
     }
 }
 

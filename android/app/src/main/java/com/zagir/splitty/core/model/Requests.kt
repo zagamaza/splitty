@@ -6,10 +6,6 @@ import kotlinx.serialization.Serializable
 // (SplittyJson: explicitNulls = false) — режим деления операции сервер
 // определяет по наличию ровно одного из полей recipientIds/recipientSums.
 
-/** POST /auth/code. */
-@Serializable
-data class CodeLoginBody(val code: String)
-
 /**
  * POST /auth/google — id-токен из Credential Manager. Сервер сам проверяет
  * подпись по JWKS Google и сверяет `aud` со списком GOOGLE_CLIENT_IDS,
@@ -40,17 +36,25 @@ data class SetPasswordBody(
     val newPassword: String,
 )
 
+/**
+ * POST /auth/telegram — payload Telegram Login Widget КАК ЕГО ПОДПИСАЛ Telegram.
+ * Сервер пересобирает из полей data-check-string и сверяет `hash`, поэтому
+ * значения передаются без правок: любая обрезка или перекодировка ломает подпись.
+ */
+@Serializable
+data class TelegramLoginBody(
+    val id: Long,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val username: String? = null,
+    val photoUrl: String? = null,
+    val authDate: Long,
+    val hash: String,
+)
+
 /** POST/DELETE /me/devices — FCM-токен устройства для native-пушей. */
 @Serializable
 data class DeviceBody(val token: String, val platform: String = "android")
-
-/** POST /auth/dev (только при API_DEV_AUTH=true на сервере). */
-@Serializable
-data class DevLoginBody(
-    val userId: Long,
-    val displayName: String,
-    val username: String? = null,
-)
 
 /** PATCH /me — только изменяемые поля. */
 @Serializable

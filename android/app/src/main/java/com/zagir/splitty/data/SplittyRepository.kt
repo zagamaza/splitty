@@ -5,14 +5,13 @@ import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.DeviceBody
 import com.zagir.splitty.core.model.AuthResponse
-import com.zagir.splitty.core.model.CodeLoginBody
 import com.zagir.splitty.core.model.CreateRoomBody
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
-import com.zagir.splitty.core.model.DevLoginBody
 import com.zagir.splitty.core.model.ExpenseSplit
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.GoogleLoginBody
+import com.zagir.splitty.core.model.TelegramLoginBody
 import com.zagir.splitty.core.model.LinkedProvidersResponse
 import com.zagir.splitty.core.model.LoginProvider
 import com.zagir.splitty.core.model.Me
@@ -81,11 +80,9 @@ class SplittyRepository @Inject constructor(
 
     // --- Auth ---
 
-    suspend fun loginWithCode(code: String): AuthResponse =
-        call { api.loginWithCode(CodeLoginBody(code)) }
-
-    suspend fun loginDev(userId: Long, displayName: String, username: String?): AuthResponse =
-        call { api.loginDev(DevLoginBody(userId = userId, displayName = displayName, username = username)) }
+    /** Вход через Telegram: payload виджета обменивается на сессию. */
+    suspend fun loginWithTelegram(payload: TelegramLoginBody): AuthResponse =
+        call { api.loginWithTelegram(payload) }
 
     /** Вход через Google: id-токен из Credential Manager обменивается на сессию. */
     suspend fun loginWithGoogle(idToken: String): AuthResponse =

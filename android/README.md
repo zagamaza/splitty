@@ -175,10 +175,22 @@ Cleartext HTTP разрешён **только в debug**: конфиги раз
   Листу нужен контекст **активити** — `Context.findActivity()`
   (`core/auth/ActivityContext.kt`); если её не нашли, экран показывает ошибку,
   а не молчит.
-- **Код из Telegram-бота** `@split_money_bot` (команда `/login`, код —
-  8 символов, `POST /auth/code`).
-- **dev-вход** (`POST /auth/dev`) — только в debug и при `API_DEV_AUTH=true`
-  на сервере.
+- **Telegram** (`POST /auth/telegram`) — Login Widget в вебе, без ухода в
+  приложение Telegram: `<baseUrl>/tg-auth` открывается в **Custom Tabs**
+  (cookie общие с Chrome, уже вошедшему не логиниться заново), оттуда
+  oauth.telegram.org и возврат по `splitty://tg-callback`. Payload разбирает
+  `core/auth/TelegramWebAuth`, до экрана входа его доносит `TelegramAuthBus`:
+  интент приходит в активити, а обменивать payload на сессию должен ViewModel.
+  Подпись `hash` проверяет сервер — ключа бота у клиента нет.
+- **Email и пароль** (`POST /auth/register`, `POST /auth/login`).
+
+Вход по коду из бота и dev-вход (`POST /auth/dev`) с экрана убраны — паритет
+с iOS. Демо-данные для прогонов теперь заводит `scripts/seed-local.py` из корня
+репозитория (`make seed`), он же создаёт учётку с паролем.
+
+Поле **«Сервер»** осталось только в debug и только после **пяти тапов по
+логотипу**: это отладочный тумблер, а не настройка. В release его нет вовсе —
+там оно было бы способом увести Bearer-токен на чужой адрес.
 
 `BuildConfig.GOOGLE_SERVER_CLIENT_ID` (задан в `app/build.gradle.kts`) — это
 **WEB**-клиент проекта Google Cloud, а не Android-клиент. Именно он попадает в

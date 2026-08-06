@@ -17,13 +17,6 @@
          без текста тап по кнопке входа просто ничего не делал. Порт iOS
          GoogleSignInError.noPresenter. -->
     <string name="google_sign_in_no_activity">Не удалось открыть окно входа Google. Попробуйте ещё раз</string>
-    <string name="login_telegram_section">Вход через Telegram</string>
-    <string name="login_telegram_hint">Нажмите «Открыть бота» — он сразу пришлёт код для входа</string>
-    <string name="login_open_bot">Открыть бота</string>
-    <string name="login_code_placeholder">Код из Telegram</string>
-    <string name="login_code_length_hint">Код из бота — 8 символов</string>
-    <string name="login_code_button">Войти по коду</string>
-    <string name="login_code_invalid">Неверный или просроченный код</string>
     <string name="login_or">или</string>
     <string name="login_email_section">Вход по email</string>
     <string name="login_register_section">Регистрация</string>
@@ -35,13 +28,7 @@
     <string name="login_register_button">Зарегистрироваться</string>
     <string name="login_switch_to_register">Нет аккаунта? Зарегистрироваться</string>
     <string name="login_switch_to_login">Уже есть аккаунт? Войти</string>
-    <string name="login_dev_section">Вход для разработки</string>
-    <string name="login_dev_telegram_id">Telegram ID</string>
-    <string name="login_dev_name">Имя</string>
-    <string name="login_dev_username">Username (необязательно)</string>
-    <string name="login_dev_button">Войти</string>
-    <string name="login_dev_id_error">Введите числовой Telegram ID</string>
-    <string name="login_dev_name_error">Введите имя</string>
+    <string name="login_telegram_button">Войти через Telegram</string>
     <string name="login_server_section">Сервер</string>
     <string name="login_server_placeholder">https://splitor.zagirnur.dev</string>
 

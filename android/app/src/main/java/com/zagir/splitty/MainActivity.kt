@@ -15,6 +15,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.CompositionLocalProvider
+import com.zagir.splitty.core.auth.TelegramAuthBus
+import com.zagir.splitty.core.auth.TelegramWebAuth
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.AvatarStore
@@ -50,6 +52,7 @@ class MainActivity : ComponentActivity() {
 
     /** Отложенное вступление в группу по ссылке-приглашению (исполняет AppRoot). */
     @Inject lateinit var pendingJoinStore: PendingJoinStore
+    @Inject lateinit var telegramAuthBus: TelegramAuthBus
 
     /**
      * Скоуп приложения для записи диплинка: на `lifecycleScope` запись в
@@ -130,6 +133,14 @@ class MainActivity : ComponentActivity() {
         // обязателен — getIntent() иначе продолжит отдавать ссылку.
         intent.data = null
         setIntent(intent)
+
+        // Возврат из Telegram Login Widget: не приглашение, а результат входа —
+        // отдаём экрану входа и выходим (см. TelegramWebAuth, tg_callback.go).
+        if (TelegramWebAuth.isCallback(data)) {
+            TelegramWebAuth.decode(data)?.let(telegramAuthBus::post)
+            return
+        }
+
         val roomId = parseRoomCode(data.toString()) ?: return
         // Скоуп приложения, а не lifecycleScope: уничтожение активити (поворот,
         // уход в системный лист входа, отстрел процесса) отменяло запись, и
