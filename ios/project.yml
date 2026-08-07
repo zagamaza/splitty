@@ -80,7 +80,7 @@ targets:
         CFBundleLocalizations: [ru]
         CFBundleDisplayName: Splitty
         CFBundleShortVersionString: "1.4"
-        CFBundleVersion: "12"
+        CFBundleVersion: "13"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         # Вход через Google. GIDClientID читается самим SDK, если
