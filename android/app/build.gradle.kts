@@ -254,8 +254,10 @@ val verifyReleaseShrinking by tasks.registering {
             "com.zagir.splitty.core.model.ParseDraft",
             "com.zagir.splitty.core.model.ParseResponse",
             "com.zagir.splitty.core.model.NotifySettings",
-            "com.zagir.splitty.core.model.CodeLoginBody",
             "com.zagir.splitty.core.model.GoogleLoginBody",
+            // Вход через Telegram Login Widget: payload подписан Telegram, и
+            // выброшенный сериализатор ломал бы разбор ТОЛЬКО в релизе.
+            "com.zagir.splitty.core.model.TelegramLoginBody",
             // Ответ /me/link/{provider}: без него секция «Способы входа»
             // падала бы на разборе ответа ТОЛЬКО в релизной сборке.
             "com.zagir.splitty.core.model.LinkedProvidersResponse",
