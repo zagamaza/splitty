@@ -32,11 +32,26 @@ class TelegramWebAuthTest {
     """.trimIndent()
 
     @Test
-    fun `callback узнаётся по схеме и хосту`() {
+    fun `callback узнаётся в обеих формах — схема и app link`() {
         assertTrue(TelegramWebAuth.isCallback(Uri.parse("splitty://tg-callback?tgAuthResult=x")))
-        // Приглашение в группу ходит по той же схеме — его трогать нельзя.
+        // App link: Android перехватывает https-ссылку сам, страница не грузится.
+        assertTrue(TelegramWebAuth.isCallback(Uri.parse("https://splitor.zagirnur.dev/tg-callback?native=1")))
+        // Приглашение в группу ходит по тем же схеме и домену — его трогать нельзя.
         assertFalse(TelegramWebAuth.isCallback(Uri.parse("splitty://join/65a0000000000000000000ff")))
-        assertFalse(TelegramWebAuth.isCallback(Uri.parse("https://splitor.zagirnur.dev/tg-callback")))
+        assertFalse(TelegramWebAuth.isCallback(Uri.parse("https://splitor.zagirnur.dev/join/65a0000000000000000000ff")))
+    }
+
+    /**
+     * Через app link результат приезжает во FRAGMENT: его кладёт туда сам
+     * Telegram, а на сервер фрагмент не уходит вовсе — там его подхватывал JS.
+     * Раз страницы теперь нет, читать фрагмент обязано приложение.
+     */
+    @Test
+    fun `app link с результатом во фрагменте разбирается`() {
+        val encoded = encode(payloadJson)
+        val uri = Uri.parse("https://splitor.zagirnur.dev/tg-callback?native=1#tgAuthResult=$encoded")
+
+        assertEquals(147181773L, TelegramWebAuth.decode(uri)?.id)
     }
 
     @Test
@@ -68,6 +83,24 @@ class TelegramWebAuthTest {
         assertNull(TelegramWebAuth.decode(Uri.parse("splitty://tg-callback?tgAuthResult=не-base64")))
         // Валидный base64, но не тот JSON — обязательных полей нет.
         assertNull(TelegramWebAuth.decode(Uri.parse("splitty://tg-callback?tgAuthResult=${encode("{}")}")))
+    }
+
+    /**
+     * Какой алфавит base64 придёт от Telegram — не наше дело, и опираться на
+     * догадку нельзя: раньше здесь стоял голый URL_SAFE, и payload со
+     * стандартным алфавитом ронял декодер. Вход умирал МОЛЧА — человек
+     * оставался на экране входа без единого намёка. Терпим оба, как iOS.
+     */
+    @Test
+    fun `payload читается и в обычном base64, и в base64url, и без padding`() {
+        val standard = Base64.encodeToString(payloadJson.toByteArray(), Base64.NO_WRAP)
+        val urlSafe = standard.replace('+', '-').replace('/', '_')
+        val noPadding = urlSafe.trimEnd('=')
+
+        for (variant in listOf(standard, urlSafe, noPadding)) {
+            val uri = Uri.parse("splitty://tg-callback?tgAuthResult=" + Uri.encode(variant))
+            assertEquals("не разобрали вариант «${variant.takeLast(6)}»", 147181773L, TelegramWebAuth.decode(uri)?.id)
+        }
     }
 
     @Test

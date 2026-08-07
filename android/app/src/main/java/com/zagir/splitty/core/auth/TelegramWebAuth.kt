@@ -2,6 +2,7 @@ package com.zagir.splitty.core.auth
 
 import android.net.Uri
 import android.util.Base64
+import android.util.Log
 import com.zagir.splitty.core.model.TelegramLoginBody
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -23,10 +24,15 @@ object TelegramWebAuth {
     /** Совпадает с `appScheme` на сервере и схемой в AndroidManifest. */
     const val CALLBACK_SCHEME = "splitty"
 
-    /** Хост callback-а: `splitty://tg-callback`. */
+    /** Хост callback-а кастомной схемы: `splitty://tg-callback`. */
     const val CALLBACK_HOST = "tg-callback"
 
+    /** Путь callback-а на домене: `https://<домен>/tg-callback` (app link). */
+    const val CALLBACK_PATH = "/tg-callback"
+
     private const val RESULT_PARAM = "tgAuthResult"
+
+    private const val TAG = "TelegramWebAuth"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -42,9 +48,20 @@ object TelegramWebAuth {
         val hash: String,
     )
 
-    /** true — этот Uri пришёл из Telegram-входа, а не из приглашения в группу. */
-    fun isCallback(uri: Uri): Boolean =
-        uri.scheme == CALLBACK_SCHEME && uri.host == CALLBACK_HOST
+    /**
+     * true — этот Uri пришёл из Telegram-входа, а не из приглашения в группу.
+     *
+     * Форм две, и обе рабочие. `https://<домен>/tg-callback` — app link:
+     * Android перехватывает ссылку сам, страница-перекладчик даже не грузится.
+     * `splitty://tg-callback` — запасной путь для случаев, когда верификация
+     * домена не прошла (debug-подпись) и ссылку открыл браузер: тогда до
+     * приложения доводит JS на странице.
+     */
+    fun isCallback(uri: Uri): Boolean = when (uri.scheme) {
+        CALLBACK_SCHEME -> uri.host == CALLBACK_HOST
+        "https" -> uri.path == CALLBACK_PATH
+        else -> false
+    }
 
     /** Адрес, который открывается в Custom Tabs. */
     fun startUrl(baseUrl: String): String = baseUrl.trimEnd('/') + "/tg-auth"
@@ -62,15 +79,18 @@ object TelegramWebAuth {
                 // Fragment — те же key=value через «&», Uri его не разбирает.
                 Uri.parse("?$fragment").getQueryParameter(RESULT_PARAM)
             }
-        if (encoded.isNullOrEmpty()) return null
+        if (encoded.isNullOrEmpty()) {
+            Log.w(TAG, "callback без tgAuthResult: $uri")
+            return null
+        }
 
         val payload = try {
-            // base64url: «-»/«_» вместо «+»/«/», хвостовые «=» опущены.
-            val bytes = Base64.decode(encoded, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-            json.decodeFromString<WidgetPayload>(bytes.decodeToString())
-        } catch (_: Exception) {
+            json.decodeFromString<WidgetPayload>(decodeBase64(encoded).decodeToString())
+        } catch (e: Exception) {
             // Битый base64, не тот JSON, обрезанная строка — для вызывающего
             // это один и тот же случай «Telegram не подтвердил вход».
+            // В лог пишем ДЛИНУ и начало, но не весь payload: в нём подпись входа.
+            Log.w(TAG, "не разобрали tgAuthResult (len=${encoded.length}, начало=${encoded.take(12)}…)", e)
             return null
         }
 
@@ -83,5 +103,21 @@ object TelegramWebAuth {
             authDate = payload.authDate,
             hash = payload.hash,
         )
+    }
+
+    /**
+     * Декодирует и base64url, и обычный base64.
+     *
+     * Какой именно алфавит пришлёт Telegram — не наше дело: в URL результат
+     * попадает через `encodeURIComponent`, и «+» доезжает целым. Раньше здесь
+     * стоял голый `Base64.URL_SAFE`, и payload со стандартным алфавитом ронял
+     * декодер — вход умирал молча, оставляя человека на экране входа.
+     * iOS терпим к обоим (`Data(base64URLEncoded:)`), теперь и Android.
+     */
+    private fun decodeBase64(raw: String): ByteArray {
+        val normalized = raw.replace('-', '+').replace('_', '/')
+        // Хвостовые «=» Telegram может и опустить — дополняем сами.
+        val padded = normalized.padEnd(normalized.length + (4 - normalized.length % 4) % 4, '=')
+        return Base64.decode(padded, Base64.DEFAULT)
     }
 }

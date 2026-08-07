@@ -178,8 +178,14 @@ Cleartext HTTP разрешён **только в debug**: конфиги раз
 - **Telegram** (`POST /auth/telegram`) — Login Widget в вебе, без ухода в
   приложение Telegram: `<baseUrl>/tg-auth` открывается в **Custom Tabs**
   (cookie общие с Chrome, уже вошедшему не логиниться заново), оттуда
-  oauth.telegram.org и возврат по `splitty://tg-callback`. Payload разбирает
-  `core/auth/TelegramWebAuth`, до экрана входа его доносит `TelegramAuthBus`:
+  oauth.telegram.org и возврат. Возврат ловится ДВУМЯ путями: основной —
+  app link `https://<домен>/tg-callback` (Android перехватывает ссылку сам,
+  страница-перекладчик не грузится вовсе), запасной — кастомная схема
+  `splitty://tg-callback`, куда доводит JS на странице. App link работает
+  только там, где прошла верификация домена по `assetlinks.json`, то есть на
+  release-подписи; у debug отпечаток другой, и система падает на схему.
+  Payload разбирает `core/auth/TelegramWebAuth`, до экрана входа его доносит
+  `TelegramAuthBus`:
   интент приходит в активити, а обменивать payload на сессию должен ViewModel.
   Подпись `hash` проверяет сервер — ключа бота у клиента нет.
 - **Email и пароль** (`POST /auth/register`, `POST /auth/login`).

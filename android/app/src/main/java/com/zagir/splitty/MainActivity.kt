@@ -137,7 +137,8 @@ class MainActivity : ComponentActivity() {
         // Возврат из Telegram Login Widget: не приглашение, а результат входа —
         // отдаём экрану входа и выходим (см. TelegramWebAuth, tg_callback.go).
         if (TelegramWebAuth.isCallback(data)) {
-            TelegramWebAuth.decode(data)?.let(telegramAuthBus::post)
+            val payload = TelegramWebAuth.decode(data)
+            if (payload != null) telegramAuthBus.post(payload) else telegramAuthBus.postFailure()
             return
         }
 

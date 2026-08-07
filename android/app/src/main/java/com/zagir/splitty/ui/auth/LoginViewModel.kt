@@ -163,10 +163,18 @@ class LoginViewModel @Inject constructor(
      * (см. core/auth/TelegramWebAuth) обменивается на сессию — POST /auth/telegram.
      * 401 — подпись не сошлась: чинить это человеку нечем, кроме «попробуйте ещё раз».
      */
-    fun loginWithTelegram(payload: TelegramLoginBody) {
-        // Забираем payload из шины сразу: иначе он переиграется на следующей
-        // подписке (пересоздание активити) и вход уйдёт вторым запросом.
+    /** Результат из шины: успех — меняем на сессию, провал разбора — говорим вслух. */
+    fun onTelegramResult(result: Result<TelegramLoginBody>) {
         telegramAuthBus.consume()
+        result.fold(
+            onSuccess = ::loginWithTelegram,
+            onFailure = {
+                _state.update { it.copy(errorMessage = "Telegram не подтвердил вход. Попробуйте ещё раз") }
+            },
+        )
+    }
+
+    fun loginWithTelegram(payload: TelegramLoginBody) {
         if (_state.value.isLoggingIn) return
         _state.update { it.copy(isLoggingIn = true) }
         viewModelScope.launch {

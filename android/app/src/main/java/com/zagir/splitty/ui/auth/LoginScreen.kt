@@ -90,7 +90,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     // Возврат из Custom Tabs приходит интентом в активити, а не сюда:
     // MainActivity кладёт payload в шину, экран его и забирает.
     LaunchedEffect(Unit) {
-        viewModel.telegramPayloads.collect(viewModel::loginWithTelegram)
+        viewModel.telegramPayloads.collect(viewModel::onTelegramResult)
     }
 
     Box(

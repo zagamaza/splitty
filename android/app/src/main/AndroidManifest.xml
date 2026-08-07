@@ -56,6 +56,13 @@
                     android:scheme="https"
                     android:host="splitor.zagirnur.dev"
                     android:pathPrefix="/join" />
+                <!-- Возврат из Telegram Login Widget тем же app link: Android
+                     перехватывает https-ссылку САМ, минуя страницу-перекладчик
+                     и её JS. Кастомная схема ниже остаётся запасным путём —
+                     app link работает только там, где верификация домена
+                     прошла (release-подпись из assetlinks.json; у debug
+                     отпечаток другой, и система вернётся к схеме). -->
+                <data android:path="/tg-callback" />
             </intent-filter>
 
             <!-- Кастомная схема splitty://join/<roomId> — кнопка «Открыть в

@@ -20,11 +20,20 @@ import javax.inject.Singleton
  */
 @Singleton
 class TelegramAuthBus @Inject constructor() {
-    private val _payloads = MutableSharedFlow<TelegramLoginBody>(replay = 1)
-    val payloads: SharedFlow<TelegramLoginBody> = _payloads.asSharedFlow()
+    private val _payloads = MutableSharedFlow<Result<TelegramLoginBody>>(replay = 1)
+    val payloads: SharedFlow<Result<TelegramLoginBody>> = _payloads.asSharedFlow()
 
     fun post(payload: TelegramLoginBody) {
-        _payloads.tryEmit(payload)
+        _payloads.tryEmit(Result.success(payload))
+    }
+
+    /**
+     * Callback пришёл, но разобрать его не вышло. Раньше это молча выбрасывалось,
+     * и человек оставался на экране входа без единого намёка — самый дорогой в
+     * отладке вид поломки.
+     */
+    fun postFailure() {
+        _payloads.tryEmit(Result.failure(IllegalArgumentException("нечитаемый ответ Telegram")))
     }
 
     /** Payload израсходован — иначе он переиграется при следующей подписке. */
