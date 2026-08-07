@@ -50,8 +50,23 @@ Compose, и визуальную регрессию. Рендер прибит �
 - **Подпись**: `keystore.properties` в корне `android/` (в .gitignore) —
   `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. Без файла
   release собирается неподписанным.
-- **Firebase App Distribution**: `firebase.properties` в корне `android/`
-  (в .gitignore) — `appId`, `groups` (по умолчанию `testers`),
+- **Google Play (основной канал раздачи)** — Gradle Play Publisher, всё по
+  токену, браузер не нужен:
+
+  ```bash
+  make android-publish              # internal testing
+  make android-publish PLAY_TRACK=alpha
+  ```
+
+  Ключ — `android/play-sa.json` (service account Play Developer API, в
+  .gitignore; переопределяется `-PPLAY_SA=<path>`). В Play Console у этого
+  сервис-аккаунта выданы права **Release apps to testing tracks** и
+  **Manage testing tracks** на `com.zagir.splitty`; для выката в production
+  придётся дополнительно включить **Release to production**.
+  Заметки к релизу — `app/src/main/play/release-notes/<locale>/default.txt`.
+  Каждая заливка требует нового `versionCode` в `app/build.gradle.kts`.
+- **Firebase App Distribution** (запасной канал): `firebase.properties` в корне
+  `android/` (в .gitignore) — `appId`, `groups` (по умолчанию `testers`),
   `serviceCredentialsFile` (путь к service-account json). Раздача:
 
   ```bash

@@ -63,6 +63,10 @@ export ASC_P8=~/.appstoreconnect/private_keys/AuthKey_$ASC_KEY.p8
 cd /path/to/splitty/ios
 ```
 
+Шаги 2–5 целиком делает `make ios-publish` из корня репозитория (xcodegen →
+archive → export → altool, всё по API-ключу). Ниже — что происходит внутри и
+что чинить, если упало.
+
 ### 1. Поднять номер сборки
 
 Номер обязан строго расти и быть уникальным, иначе ASC отклонит («build already exists»).

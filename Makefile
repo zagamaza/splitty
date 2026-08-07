@@ -14,13 +14,23 @@ SSH_HOST    ?= root@138.124.18.189
 REMOTE_DIR  ?= /root/splitty                # каталог с docker-compose.yml на сервере (поправь под свой)
 FIREBASE_SA := firebase-service-account.json
 
+# --- Раздача сборок тестерам ---
+# Оба стора грузятся по токену, без браузера. Ключи лежат вне git:
+#   Android — android/play-sa.json (service account Play Developer API),
+#   iOS     — ~/.appstoreconnect/private_keys/AuthKey_<KID>.p8.
+ASC_KEY     ?= T6PMYHX4T7
+ASC_ISSUER  ?= a30d44ef-0dc4-4c01-bb7b-7235968f61f8
+ASC_P8      ?= $(HOME)/.appstoreconnect/private_keys/AuthKey_$(ASC_KEY).p8
+PLAY_TRACK  ?= internal
+
 .DEFAULT_GOAL := help
 
-.PHONY: help wire build test vet tidy run docker-build push-secret deploy logs
+.PHONY: help wire build test vet tidy run docker-build push-secret deploy logs \
+        android-publish ios-publish
 
 help: ## список целей
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-13s\033[0m %s\n", $$1, $$2}'
+	  awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 wire: ## сгенерировать wire_gen.go (DI бота)
 	wire gen ./cmd/splitty
@@ -57,3 +67,24 @@ deploy: ## сервер: git pull + пересборка контейнера (s
 
 logs: ## логи контейнера на сервере (follow)
 	ssh $(SSH_HOST) 'cd $(REMOTE_DIR) && docker-compose logs -f --tail=100 telegram-bot'
+
+android-publish: ## Android → Google Play (PLAY_TRACK=internal по умолчанию)
+	cd android && ./gradlew :app:publishReleaseBundle --track $(PLAY_TRACK)
+
+ios-publish: ## iOS → TestFlight (архив, экспорт, загрузка)
+	cd ios && rm -rf build/Splitty.xcarchive build/export && \
+	  xcodegen generate && \
+	  xcodebuild -project Splitty.xcodeproj -scheme Splitty -configuration Release \
+	    -archivePath build/Splitty.xcarchive -destination 'generic/platform=iOS' \
+	    -allowProvisioningUpdates \
+	    -authenticationKeyPath "$(ASC_P8)" \
+	    -authenticationKeyID "$(ASC_KEY)" \
+	    -authenticationKeyIssuerID "$(ASC_ISSUER)" archive && \
+	  xcodebuild -exportArchive -archivePath build/Splitty.xcarchive \
+	    -exportOptionsPlist ExportOptions.plist -exportPath build/export \
+	    -allowProvisioningUpdates \
+	    -authenticationKeyPath "$(ASC_P8)" \
+	    -authenticationKeyID "$(ASC_KEY)" \
+	    -authenticationKeyIssuerID "$(ASC_ISSUER)" && \
+	  xcrun altool --upload-app -f build/export/Splitty.ipa -t ios \
+	    --apiKey "$(ASC_KEY)" --apiIssuer "$(ASC_ISSUER)"

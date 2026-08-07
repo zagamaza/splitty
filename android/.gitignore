@@ -12,3 +12,5 @@ keystore/
 keystore.properties
 
 firebase.properties
+# Service-account ключ Play Developer API (заливка в треки) — секрет
+play-sa.json
