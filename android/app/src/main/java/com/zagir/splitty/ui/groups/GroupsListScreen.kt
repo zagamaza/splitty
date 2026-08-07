@@ -54,6 +54,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -64,6 +69,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
@@ -124,6 +130,9 @@ private fun GroupsListContent(
     // Большой заголовок «Группы» схлопывается в инлайн-тайтл при скролле,
     // кнопки остаются (порт iOS large-title navigation).
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // Голосовой ярлык не зависит от того, видна ли подпись: TalkBack обязан
+    // называть кнопку одинаково, иначе она «меняется» на слух при скролле.
+    val joinLabel = stringResource(R.string.groups_join_by_code)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -139,24 +148,46 @@ private fun GroupsListContent(
                 },
                 // Голая иконка не читалась — теперь обведённая кнопка
                 // «Присоединиться» (порт iOS `.topBarLeading`).
+                //
+                // По мере схлопывания заголовка подпись сжимается и гаснет: в
+                // инлайн-баре рядом встаёт сам заголовок «Группы», и две
+                // надписи начинают тесниться. `collapsedFraction` даёт готовый
+                // прогресс 0…1 кадр в кадр со скроллом — своей анимации не
+                // нужно, иначе подпись прыгала бы вместо того, чтобы ехать.
                 navigationIcon = {
+                    val collapse = scrollBehavior.state.collapsedFraction
                     OutlinedButton(
                         onClick = { isJoinPresented = true },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         border = BorderStroke(1.dp, colors.accent),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.accent),
-                        modifier = Modifier.padding(start = 8.dp),
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .semantics { contentDescription = joinLabel },
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Login,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp),
                         )
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(4.dp * (1f - collapse)))
                         Text(
                             text = stringResource(R.string.groups_join_short),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            modifier = Modifier
+                                .alpha(1f - collapse)
+                                // clipToBounds ВЫШЕ layout: обрезаем по уже
+                                // ужатой ширине, иначе текст вылезал бы за неё.
+                                .clipToBounds()
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    val width = (placeable.width * (1f - collapse))
+                                        .roundToInt()
+                                        .coerceAtLeast(0)
+                                    layout(width, placeable.height) { placeable.place(0, 0) }
+                                },
                         )
                     }
                 },
