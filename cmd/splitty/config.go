@@ -23,9 +23,15 @@ type config struct {
 	// случайный эфемерный секрет (см. resolveJwtSecret в main.go)
 	ApiJwtSecret string `env:"API_JWT_SECRET" envDefault:""`
 	ApiDevAuth   bool   `env:"API_DEV_AUTH" envDefault:"false"`
-	// Многоразовый код входа для ревьюеров App Store + id демо-аккаунта
+	// Многоразовый код входа для ревьюеров App Store + id демо-аккаунта.
+	//
+	// int64, а не int: caarlos0/env v6 разбирает поле типа int через
+	// ParseInt с bitSize 32 независимо от разрядности платформы, и номер
+	// аккаунта из аллокатора (например 1000000000004) роняет старт с
+	// «value out of range». Номера пользователей сами по себе int (api.User.ID),
+	// поэтому на выходе значение приводится обратно — см. main.go.
 	ReviewLoginCode string `env:"REVIEW_LOGIN_CODE" envDefault:""`
-	ReviewUserId    int    `env:"REVIEW_USER_ID" envDefault:"0"`
+	ReviewUserId    int64  `env:"REVIEW_USER_ID" envDefault:"0"`
 
 	// GoogleClientIds — OAuth client id приложений (iOS, Android, web), которым
 	// Google выпускает ID-токены; любой из них принимается как aud. Разделитель

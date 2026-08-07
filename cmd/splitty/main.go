@@ -137,7 +137,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		DevAuth:         cfg.ApiDevAuth,
 		TgToken:         cfg.TgToken,
 		ReviewLoginCode: cfg.ReviewLoginCode,
-		ReviewUserId:    cfg.ReviewUserId,
+		ReviewUserId:    int(cfg.ReviewUserId),
 		GoogleVerifier:  initGoogleVerifier(cfg),
 		AppleVerifier:   initAppleVerifier(cfg),
 		AppleTokens:     initAppleTokens(cfg),

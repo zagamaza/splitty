@@ -188,3 +188,20 @@ func TestAppleTokensEnabledWithValidKey(t *testing.T) {
 		t.Error("обмен токенов не собран при полном наборе настроек")
 	}
 }
+
+// Номер демо-аккаунта не помещался в 32 бита, и прод падал в краш-луп с
+// «value out of range»: caarlos0/env v6 разбирает поле типа int через ParseInt
+// с bitSize 32 независимо от разрядности платформы. Аллокатор выдаёт номера
+// вида 1000000000004 — заметно больше MaxInt32, так что поле обязано быть int64.
+func TestReviewUserIdFitsAllocatorNumbers(t *testing.T) {
+	const allocated = 1000000000004 // реальный номер демо-аккаунта ревью
+
+	t.Setenv("REVIEW_USER_ID", "1000000000004")
+	cfg, err := initConfig()
+	if err != nil {
+		t.Fatalf("initConfig с большим REVIEW_USER_ID: %v", err)
+	}
+	if cfg.ReviewUserId != allocated {
+		t.Fatalf("ReviewUserId = %d, ожидалось %d", cfg.ReviewUserId, allocated)
+	}
+}
