@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Общие -->
+    <string name="common_error_title">Fehler</string>
+    <string name="common_ok">OK</string>
+    <string name="common_logout">Abmelden</string>
+    <string name="common_todo">Bildschirm in Arbeit</string>
+
+    <!-- Логин -->
+    <string name="login_tagline">Teile Ausgaben mit Freunden</string>
+    <string name="login_google_button">Mit Google anmelden</string>
+    <string name="google_sign_in_no_activity">Das Google-Anmeldefenster ließ sich nicht öffnen. Bitte versuche es erneut</string>
+    <string name="login_email_disclosure_prefix">Oder</string>
+    <string name="login_email_disclosure_action">mit E-Mail anmelden</string>
+    <string name="login_email_section">Mit E-Mail anmelden</string>
+    <string name="login_register_section">Registrieren</string>
+    <string name="login_email_placeholder">E-Mail</string>
+    <string name="login_password_placeholder">Passwort</string>
+    <string name="login_name_placeholder">Name</string>
+    <string name="login_password_length_hint">Das Passwort muss mindestens 8 Zeichen haben</string>
+    <string name="login_email_button">Anmelden</string>
+    <string name="login_register_button">Registrieren</string>
+    <string name="login_switch_to_register">Noch kein Konto? Registrieren</string>
+    <string name="login_switch_to_login">Schon ein Konto? Anmelden</string>
+    <string name="login_telegram_button">Mit Telegram anmelden</string>
+    <string name="login_server_section">Server</string>
+
+    <!-- Табы -->
+    <string name="tab_friends">Freunde</string>
+    <string name="tab_groups">Gruppen</string>
+    <string name="tab_add">Ausgabe hinzufügen</string>
+    <string name="tab_activity">Aktivität</string>
+    <string name="tab_account">Profil</string>
+
+    <!-- Заглушки -->
+    <string name="placeholder_friends">Hier erscheinen die Salden mit deinen Freunden</string>
+    <string name="placeholder_groups">Hier erscheinen deine Gruppen</string>
+    <string name="placeholder_activity">Hier erscheint deine Aktivität</string>
+    <string name="placeholder_account">Hier erscheint dein Profil</string>
+    <string name="placeholder_add_expense">Hier erscheint das Ausgabenformular</string>
+
+    <!-- Общие (экраны) -->
+    <string name="common_retry">Erneut versuchen</string>
+    <string name="common_load_failed">Konnte nicht geladen werden</string>
+    <string name="common_back">Zurück</string>
+    <string name="common_cancel">Abbrechen</string>
+    <string name="common_save">Speichern</string>
+
+    <!-- Друзья -->
+    <string name="friends_total_balance">Gesamtsaldo</string>
+    <string name="friends_you_are_owed">Du bekommst</string>
+    <string name="friends_you_owe">Du schuldest</string>
+    <string name="friends_all_settled">Alles ausgeglichen</string>
+    <string name="friends_owes_you_short">schuldet dir</string>
+    <string name="friends_you_owe_short">du schuldest</string>
+    <string name="friends_settlement">ausgeglichen</string>
+    <string name="friends_empty_title">Noch keine Freunde</string>
+    <string name="friends_empty_description">Freunde erscheinen, sobald ihr eine Gruppe mit Ausgaben teilt</string>
+    <string name="friend_owed_caption">Schuldet dir</string>
+    <string name="friend_settled_caption">Ihr seid quitt</string>
+    <string name="friend_groups_section">Nach Gruppe</string>
+    <string name="friend_no_group_debts">Keine Schulden in einer Gruppe</string>
+    <string name="friend_room_owed_you">schuldet dir</string>
+    <string name="friend_settle_up">Begleichen</string>
+    <string name="friend_settle_room_picker_title">In welcher Gruppe möchtest du begleichen?</string>
+    <string name="friends_create_group">Gruppe erstellen</string>
+
+    <!-- Активность -->
+    <string name="activity_mine_only">Nur meine</string>
+    <string name="activity_mine_only_empty_title">Nichts mit dir</string>
+    <string name="activity_mine_only_empty_description">Hier erscheinen Vorgänge, die du bezahlt hast oder an denen du beteiligt warst</string>
+    <string name="activity_empty_title">Noch keine Aktivität</string>
+    <string name="activity_empty_description">Hier erscheinen Ausgaben und Zahlungen deiner Gruppen</string>
+    <string name="activity_added">hat „%1$s“ hinzugefügt</string>
+    <string name="activity_paid">hat bezahlt</string>
+    <string name="activity_paid_you">hat dir bezahlt</string>
+    <string name="activity_in_group">in „%1$s“</string>
+    <string name="activity_recipient_fallback">einem Mitglied</string>
+    <string name="activity_you_lent">Du hast ausgelegt</string>
+    <string name="activity_you_owe">Du schuldest</string>
+    <string name="activity_you_paid">Du hast bezahlt</string>
+    <string name="activity_you_received">Du hast erhalten</string>
+    <string name="activity_not_involved">Du bist nicht beteiligt</string>
+    <string name="activity_settled">ausgeglichen</string>
+    <string name="activity_show_all">Alle anzeigen</string>
+    <string name="activity_filter_on">an</string>
+    <string name="activity_filter_off">aus</string>
+
+    <!-- Относительное время -->
+    <string name="time_just_now">gerade eben</string>
+    <string name="time_minutes_ago">vor %1$d Min.</string>
+    <string name="time_hours_ago">vor %1$d Std.</string>
+    <string name="time_days_ago">vor %1$d T.</string>
+    <string name="time_weeks_ago">vor %1$d Wo.</string>
+    <string name="time_months_ago">vor %1$d Mon.</string>
+    <plurals name="time_years_ago">
+        <item quantity="one">vor %1$d Jahr</item>
+        <item quantity="other">vor %1$d Jahren</item>
+    </plurals>
+
+    <!-- Профиль -->
+    <string name="profile_id">ID: %1$d</string>
+    <string name="profile_settings_section">Einstellungen</string>
+    <string name="profile_name">Name</string>
+    <string name="notifications_title">Mitteilungen</string>
+    <string name="notifications_operations">Vorgänge</string>
+    <string name="notifications_operations_footer">Jemand hat in deiner Gruppe eine Ausgabe hinzugefügt oder geändert</string>
+    <string name="notifications_debts">Schulden</string>
+    <string name="notifications_debts_footer">Jemand hat dir Geld zurückgezahlt</string>
+    <string name="notifications_channel_push">App</string>
+    <string name="profile_theme">Design</string>
+    <string name="profile_theme_system">Systemeinstellung</string>
+    <string name="profile_theme_light">Hell</string>
+    <string name="profile_theme_dark">Dunkel</string>
+    <string name="profile_language">Sprache</string>
+    <string name="profile_language_caption">Sprache der Nachrichten des Telegram-Bots</string>
+    <string name="profile_server_section">Server</string>
+    <string name="profile_logout_confirm">Vom Konto abmelden?</string>
+    <string name="profile_edit_name_title">Namen ändern</string>
+    <string name="profile_name_empty">Der Name darf nicht leer sein</string>
+
+    <!-- Профиль: способы входа и удаление аккаунта -->
+    <string name="profile_login_methods_section">Anmeldemethoden</string>
+    <string name="profile_login_method_linked">Verknüpft</string>
+    <string name="profile_login_method_not_linked">Nicht verknüpft</string>
+    <string name="profile_login_method_link">Verknüpfen</string>
+    <string name="profile_login_method_unlink">Trennen</string>
+    <string name="profile_login_methods_footer">Mit jeder verknüpften Methode landest du im selben Konto.</string>
+    <string name="profile_login_methods_footer_last">Die letzte Anmeldemethode lässt sich nicht trennen — ohne sie kämst du nicht mehr ins Konto. Verknüpfe zuerst eine andere.</string>
+    <string name="profile_password_set">Festlegen</string>
+    <string name="profile_password_change">Ändern</string>
+    <string name="profile_password_not_set">%1$s · kein Passwort gesetzt</string>
+    <string name="profile_password_title">Passwort</string>
+    <string name="profile_password_change_title">Passwort ändern</string>
+    <string name="profile_password_current">Aktuelles Passwort</string>
+    <string name="profile_password_new">Neues Passwort</string>
+    <string name="profile_password_repeat">Neues Passwort wiederholen</string>
+    <string name="profile_password_mismatch">Die Passwörter stimmen nicht überein</string>
+    <string name="profile_password_forgot">Ich erinnere mich nicht</string>
+    <string name="profile_password_reset_title">Passwort zurücksetzen?</string>
+    <string name="profile_password_reset_message">Das alte Passwort funktioniert dann nicht mehr. Über %1$s kommst du weiterhin hinein, bis du ein neues festlegst.</string>
+    <string name="profile_password_reset_confirm">Zurücksetzen</string>
+    <string name="profile_password_save">Speichern</string>
+    <string name="profile_password_invalid_current">Das aktuelle Passwort stimmt nicht</string>
+    <string name="profile_unlink_confirm_title">%1$s trennen?</string>
+    <string name="profile_unlink_confirm_message">Auf diesem Weg kommst du dann nicht mehr ins Konto. Die anderen verknüpften Methoden funktionieren weiter.</string>
+    <string name="profile_unlink_confirm_message_telegram">Du kannst dich dann nicht mehr über Telegram anmelden, und dieses Telegram lässt sich auch nicht wieder verknüpfen: Schreibst du dem Bot erneut, legt er ein separates neues Profil ohne deine Gruppen an.\n\nDie anderen verknüpften Anmeldemethoden funktionieren weiter.</string>
+    <string name="profile_notice_title">Achtung</string>
+    <string name="profile_notice_ok">Verstanden</string>
+    <string name="profile_delete_account">Konto löschen</string>
+    <string name="profile_delete_account_caption">Dein Profil wird endgültig gelöscht; Ausgaben und Schulden bleiben in den Gruppen.</string>
+    <string name="profile_delete_confirm_title">Konto löschen?</string>
+    <string name="profile_delete_confirm_message">Profil, Name und Anmeldemethoden werden endgültig gelöscht — das Konto lässt sich nicht wiederherstellen.\n\nAusgaben und Schulden bleiben in den Gruppen: Mitglieder sehen statt deines Namens „Gelöschter Nutzer“, die Beträge ändern sich nicht.</string>
+
+    <!-- Группы: список -->
+    <string name="groups_title">Gruppen</string>
+    <string name="groups_create_group">Gruppe erstellen</string>
+    <string name="groups_join_by_code">Mit Code beitreten</string>
+    <string name="groups_more">Mehr</string>
+    <string name="groups_total_balance">Gesamtsaldo</string>
+    <string name="groups_all_settled">Alles ausgeglichen</string>
+    <string name="groups_row_owed">du bekommst</string>
+    <string name="groups_row_owes">du schuldest</string>
+    <string name="groups_row_settled">ausgeglichen</string>
+    <string name="groups_archive">Archiv</string>
+    <string name="groups_archive_empty_title">Das Archiv ist leer</string>
+    <string name="groups_archive_empty_subtitle">Hier erscheinen archivierte Gruppen</string>
+    <string name="groups_unarchive">Aus dem Archiv holen</string>
+    <string name="groups_empty_title">Noch keine Gruppen</string>
+    <string name="groups_empty_subtitle">Erstelle eine Gruppe oder tritt einer mit einem Einladungscode bei</string>
+    <string name="groups_create_title">Neue Gruppe</string>
+    <string name="groups_create_placeholder">Name</string>
+    <string name="groups_create_hint">Zum Beispiel: „Reise nach Istanbul“ oder „WG“.</string>
+    <string name="groups_create_button">Erstellen</string>
+    <string name="groups_join_title">Beitreten</string>
+    <string name="groups_join_short">Beitreten</string>
+    <string name="groups_join_placeholder">Link oder Code</string>
+    <string name="groups_join_paste">Einfügen</string>
+    <string name="groups_join_hint">Füge den Code aus der Einladung oder den ganzen Link ein — splitor.zagirnur.dev/join/… und t.me/split_money_bot?start=room… funktionieren beide</string>
+    <string name="groups_join_button">Beitreten</string>
+    <plurals name="groups_member_count">
+        <item quantity="one">%d Mitglied</item>
+        <item quantity="other">%d Mitglieder</item>
+    </plurals>
+
+    <!-- Группы: экран группы -->
+    <string name="group_fallback_title">Gruppe</string>
+    <string name="group_profile_missing">Dein Profil konnte nicht geladen werden</string>
+    <string name="group_archived_badge">Gruppe ist archiviert</string>
+    <string name="group_you_are_owed">Du bekommst</string>
+    <string name="group_you_owe">Du schuldest</string>
+    <string name="group_no_debts">Keine Schulden</string>
+    <string name="group_members_settled">Alle sind quitt</string>
+    <string name="groups_row_debts_unavailable">Schulden nicht berechnet</string>
+    <string name="group_debts_unavailable_title">Schulden nicht berechnet</string>
+    <string name="group_debts_unavailable_subtitle">Die Daten dieser Gruppe stammen aus einer alten Version, deshalb gehen die Salden nicht auf. Vorgänge und Auswertungen funktionieren weiterhin.</string>
+    <string name="group_card_pending_badge">Es gibt nicht gesendete Vorgänge</string>
+    <string name="group_settle_offline">Keine Verbindung. Begleichen geht nur online</string>
+    <string name="group_you_owe_name">Du schuldest %1$s</string>
+    <string name="group_chip_settle">Schuld begleichen</string>
+    <string name="group_chip_balances">Salden</string>
+    <string name="group_chip_totals">Auswertung</string>
+    <string name="group_fab_expense">Ausgabe</string>
+    <string name="group_add_expense">Ausgabe hinzufügen</string>
+    <string name="group_settings">Gruppeneinstellungen</string>
+    <string name="group_empty_ops_title">Noch keine Ausgaben</string>
+    <string name="group_empty_ops_subtitle">Füge die erste Ausgabe hinzu — sie erscheint in dieser Liste</string>
+    <string name="group_op_fallback">Ausgabe</string>
+    <string name="group_op_you_paid_sum">Du hast %1$s bezahlt</string>
+    <string name="group_op_paid_sum">%1$s hat %2$s bezahlt</string>
+    <string name="group_op_lent">du hast ausgelegt</string>
+    <string name="group_op_owe">du schuldest</string>
+    <string name="group_op_settled">ausgeglichen</string>
+    <string name="group_op_not_involved">nicht beteiligt</string>
+    <string name="group_repay_you_paid">Du hast %1$s bezahlt</string>
+    <string name="group_repay_paid_you">%1$s hat dir bezahlt</string>
+    <string name="group_repay_paid">%1$s hat %2$s bezahlt</string>
+
+    <!-- Группы: балансы -->
+    <string name="group_balances_title">Salden</string>
+    <string name="group_debt_you_owe">Du schuldest %1$s</string>
+    <string name="group_debt_owes_you">%1$s schuldet dir</string>
+    <string name="group_debt_pair">%1$s schuldet — %2$s</string>
+    <string name="group_debt_settle">Begleichen</string>
+
+    <!-- Группы: настройки -->
+    <string name="group_settings_members">Mitglieder</string>
+    <string name="group_settings_member_you">%1$s (du)</string>
+    <string name="group_settings_currency">Währung</string>
+    <string name="group_settings_currency_footer">Alle Beträge der Gruppe werden in ihrer Währung angezeigt: Ausgaben, Schulden und Auswertungen.</string>
+    <string name="group_settings_invite">In die Gruppe einladen</string>
+    <string name="group_settings_members_invite">Einladen</string>
+    <string name="group_settings_code">Gruppencode</string>
+    <string name="group_settings_invite_footer">Teile den Link oder den Code — damit tritt deine Freundin oder dein Freund über „Beitreten“ bei.</string>
+    <string name="invite_sheet_title">In die Gruppe einladen</string>
+    <string name="invite_share_link">Link teilen</string>
+    <string name="invite_banner_title">Du bist allein in der Gruppe</string>
+    <string name="invite_banner_subtitle">Lade Freunde ein, um Ausgaben zu teilen</string>
+    <string name="invite_banner_action">Einladen</string>
+    <string name="group_settings_archive">Archivieren</string>
+    <string name="group_settings_unarchive">Aus dem Archiv holen</string>
+    <string name="group_settings_archive_footer">Das Archiv blendet die Gruppe nur bei dir aus. Vorgänge und Schulden bleiben erhalten.</string>
+    <string name="group_currency_change_title">Währung auf %1$s ändern?</string>
+    <string name="group_currency_change_confirm">Auf %1$s ändern</string>
+    <string name="group_currency_change_message">Beträge werden nicht umgerechnet — es ändert sich nur das Symbol, für alle in der Gruppe</string>
+    <string name="group_invite_message">Tritt der Gruppe „%1$s“ auf Splitty bei: %2$s\nGruppencode: %3$s</string>
+
+    <!-- Группы: карточка операции -->
+    <string name="op_title_expense">Ausgabe</string>
+    <string name="op_title_repayment">Zahlung</string>
+    <string name="op_repayment_title">Schuldenzahlung</string>
+    <string name="op_added_date">Hinzugefügt am %1$s</string>
+    <string name="op_details">Details</string>
+    <string name="op_split_equally">· gleichmäßig</string>
+    <string name="op_split_exact">· nach Beträgen</string>
+    <string name="op_you">Du</string>
+    <string name="op_paid_you">hast bezahlt</string>
+    <string name="op_paid">hat bezahlt</string>
+    <string name="op_share_yours">dein Anteil</string>
+    <string name="op_share">Anteil</string>
+    <string name="op_you_owe">du schuldest</string>
+    <string name="op_owes">schuldet</string>
+    <string name="op_received_you">hast erhalten</string>
+    <string name="op_received">hat erhalten</string>
+    <string name="op_edit">Bearbeiten</string>
+    <string name="op_delete">Löschen</string>
+    <string name="op_deleting">Wird gelöscht…</string>
+    <string name="op_delete_expense_title">Ausgabe löschen?</string>
+    <string name="op_delete_repayment_title">Zahlung löschen?</string>
+    <string name="op_delete_message">Der Vorgang verschwindet aus der Gruppe und die Salden werden neu berechnet.</string>
+    <string name="op_delete_repayment_message">Der Vorgang verschwindet aus der Gruppe und die Salden werden neu berechnet. Zahlungen lassen sich nicht bearbeiten — bei einem Fehler lösche sie und trage sie neu ein.</string>
+
+    <!-- Группы: секции карточки операции -->
+    <string name="op_who_paid">Wer bezahlt hat</string>
+    <string name="op_who_sent">Wer gesendet hat</string>
+    <string name="op_who_participates">Wer beteiligt ist</string>
+    <string name="op_who_received">Wer erhalten hat</string>
+    <string name="op_items">Positionen des Belegs</string>
+
+    <!-- Группы: вложения операции -->
+    <string name="op_attachments">Anhänge</string>
+    <string name="attach_photo">Foto</string>
+    <string name="attach_video">Video</string>
+    <string name="attach_document">Dokument</string>
+    <string name="attach_other">Anhang</string>
+    <string name="attach_open_share">Öffnen / teilen</string>
+    <string name="common_done">Fertig</string>
+
+    <!-- Группы: итоги (дашборд) -->
+    <string name="group_tab_operations">Vorgänge</string>
+    <string name="group_settings_short">Einstellungen</string>
+    <string name="group_filter_all">Alle</string>
+    <string name="group_chip_settle_short">Begleichen</string>
+    <string name="group_chip_mine_only">Mit mir</string>
+    <string name="group_mine_only_empty">Keine Vorgänge mit dir</string>
+    <string name="totals_title">Auswertung</string>
+    <string name="totals_total_spent">Gesamt ausgegeben</string>
+    <string name="totals_for_month">Für %1$s</string>
+    <string name="totals_operation_count">Vorgänge</string>
+    <string name="totals_avg_check">Durchschnittliche Ausgabe</string>
+    <string name="totals_i_paid">Von mir bezahlt</string>
+    <string name="totals_my_share">Für mich ausgegeben</string>
+    <string name="totals_by_day">Ausgaben nach Tag</string>
+    <string name="totals_no_recent_spending">Keine Ausgaben in den letzten 30 Tagen</string>
+    <string name="totals_who_paid">Wer bezahlt hat</string>
+    <string name="totals_whose_share">Für wen ausgegeben wurde</string>
+    <string name="totals_member_balance">Wer im Plus und wer im Minus ist</string>
+    <string name="totals_by_weekday">Ausgaben nach Wochentag</string>
+    <string name="totals_others">Sonstige</string>
+    <string name="totals_top_operations">Größte Ausgaben</string>
+    <string name="totals_empty_title">Noch keine Ausgaben</string>
+    <string name="totals_empty_subtitle">Füge die erste Ausgabe hinzu — hier erscheint die Statistik der Gruppe</string>
+
+    <!-- Добавление/редактирование расхода -->
+    <string name="expense_title_add">Ausgabe hinzufügen</string>
+    <string name="expense_title_edit">Ausgabe bearbeiten</string>
+    <string name="expense_group_section">Mit wem teilst du die Ausgabe?</string>
+    <string name="expense_no_groups">Du hast noch keine Gruppen — erstelle eine im Tab „Gruppen“</string>
+    <string name="expense_select_group_hint">Wähle zuerst eine Gruppe</string>
+    <string name="expense_description_placeholder">Beschreibung</string>
+    <string name="expense_paid_by_you">Bezahlt</string>
+    <string name="expense_paid_by_other">Bezahlt von</string>
+    <string name="expense_payer_you">du</string>
+    <string name="expense_member_you">%1$s (du)</string>
+    <string name="expense_split_equally">Gleichmäßig</string>
+    <string name="expense_split_by_amounts">Nach Beträgen</string>
+    <string name="expense_hint_pick_member">Wähle mindestens ein Mitglied</string>
+    <string name="expense_hint_members_count">Mitglieder: %1$d</string>
+    <string name="expense_split_hint_equal">%1$s / %2$d = %3$s pro Person</string>
+    <string name="expense_distributed">Der Betrag ist vollständig aufgeteilt</string>
+    <string name="expense_remaining">Noch aufzuteilen: %1$s</string>
+    <string name="expense_overspent">Zu viel: %1$s</string>
+
+    <!-- Офлайн-режим -->
+    <string name="offline_banner_offline">Offline — Änderungen werden auf dem Gerät gespeichert</string>
+    <string name="offline_banner_syncing">Wird gesendet…</string>
+    <string name="outbox_section_title">Nicht gesendet</string>
+    <string name="outbox_badge_pending">nicht gesendet</string>
+    <string name="expense_offline_edit_blocked">Keine Verbindung. Bearbeiten geht nur bei noch nicht gesendeten Vorgängen</string>
+    <string name="expense_itemized_edit_blocked">Dieser Vorgang ist nach Belegpositionen aufgeteilt — bearbeite ihn dort, wo er erstellt wurde</string>
+
+    <!-- AI-распознавание расхода -->
+    <string name="expense_receipt_scan_title">Beleg scannen</string>
+    <string name="expense_receipt_scan_hint">Fotografiere den Beleg — ich fülle Beschreibung, Betrag und Positionen aus</string>
+    <string name="expense_receipt_take_photo">Foto aufnehmen</string>
+    <string name="expense_receipt_pick_photo">Foto auswählen</string>
+    <string name="expense_parsing">Wird gelesen…</string>
+    <string name="expense_parsing_subtitle">Ich erfasse die Ausgabe und teile sie in Positionen auf</string>
+    <string name="expense_parsing_cancel">Abbrechen</string>
+    <string name="expense_parse_retry">Erneut versuchen</string>
+    <string name="expense_parse_failed_generic">Konnte nicht gelesen werden. Deine Daten sind gespeichert — versuche es erneut</string>
+
+    <!-- Форма расхода: itemized-режим -->
+    <string name="expense_derived_by_positions">nach Belegpositionen</string>
+    <string name="expense_derived_incomplete">nicht alle Preise angegeben</string>
+    <string name="expense_recognized_title">Per Sprache erkannt</string>
+    <string name="expense_recognized_hint">Nicht ganz richtig? Halte unten das Mikrofon gedrückt oder füge ein Foto des Belegs hinzu</string>
+    <string name="expense_recognized_add_photo">Beleg-Foto hinzufügen</string>
+    <string name="expense_correction_title">Korrektur übernommen</string>
+    <string name="expense_correction_hint_items">Die Änderungen sind auf dem Beleg hervorgehoben</string>
+    <string name="expense_correction_hint_flat">Entwurf aktualisiert</string>
+    <string name="expense_undo">Rückgängig</string>
+    <string name="expense_add_item">Position hinzufügen</string>
+    <string name="expense_split_override_title">Wird gerade nach Positionen geteilt</string>
+    <string name="expense_split_override_action">Gleichmäßig auf alle</string>
+    <string name="expense_split_override_hint">„Gleichmäßig“ verwirft die Belegpositionen und teilt den Betrag gleichmäßig auf alle Mitglieder auf. Mit „Rückgängig“ holst du sie zurück</string>
+    <string name="expense_unknown_hint">Wähle, wer „%1$s“ ist: tippe auf die rote Markierung im Beleg</string>
+    <string name="expense_priceless_hint">Gib einen Preis an — tippe auf die Position mit „Preis?“</string>
+    <string name="expense_delete_local_title">Vorgang löschen?</string>
+    <string name="expense_delete_local_message">Der nicht gesendete Eintrag verschwindet aus der Warteschlange.</string>
+
+    <!-- Голосовой ввод -->
+    <string name="expense_composer_title">Diktiere die Ausgabe</string>
+    <string name="expense_composer_hint">Halte unten das Mikrofon gedrückt und sag,\nwer was genommen hat und was es gekostet hat</string>
+    <string name="expense_composer_or">oder</string>
+    <string name="expense_composer_photo">Beleg fotografieren</string>
+    <string name="expense_composer_hold">Zum Sprechen gedrückt halten</string>
+    <string name="expense_composer_ai_no_group">Wähle zuerst eine Gruppe</string>
+    <string name="expense_composer_ai_offline">Die Erkennung funktioniert nur online</string>
+    <string name="expense_composer_manual">Manuell eingeben</string>
+    <string name="expense_composer_back_to_voice">Per Sprache ausfüllen</string>
+    <string name="expense_record_a11y">Per Sprache aufnehmen</string>
+    <string name="expense_record_a11y_hint">Gedrückt halten und sprechen; nach oben wischen zum Fixieren</string>
+    <string name="expense_voice_correction_a11y">Per Sprache korrigieren</string>
+    <string name="rec_listening">Ich höre zu…</string>
+    <string name="rec_hints_title">Noch zu klären</string>
+    <string name="rec_karaoke_listening">Ich höre zu…</string>
+    <string name="rec_status_cancel_title">Loslassen zum Abbrechen</string>
+    <string name="rec_status_cancel_sub">Geh mit dem Finger zurück, um weiterzumachen</string>
+    <string name="rec_status_locked_title">Aufnahme läuft</string>
+    <string name="rec_status_locked_sub">Sprich in Ruhe — du kannst loslassen</string>
+    <string name="rec_status_preparing_title">Aufnahme startet…</string>
+    <string name="rec_status_preparing_sub">Halte weiter gedrückt — das Mikrofon wird aktiviert</string>
+    <string name="rec_status_recording_title">Sprich…</string>
+    <string name="rec_status_recording_sub">Loslassen zum Erkennen · hoch zum Fixieren · links zum Abbrechen</string>
+    <string name="rec_locked_hint">Tippe, wenn du fertig bist</string>
+    <string name="rec_remaining">· noch %1$d s</string>
+    <string name="rec_stop_a11y">Aufnahme beenden und erkennen</string>
+    <string name="rec_cancel_a11y">Aufnahme abbrechen</string>
+    <string name="rec_short_tap_hint">Halte das Mikrofon gedrückt, während du sprichst, und lass los, wenn du fertig bist</string>
+    <string name="rec_limit_toast">Eine Minute ist das Limit. Ich erkenne, was du sagen konntest</string>
+    <string name="rec_device_lost_toast">Die Aufnahme wurde unterbrochen. Ich erkenne, was du sagen konntest</string>
+    <string name="rec_review_title">Aufgenommen</string>
+    <string name="rec_review_subtitle">Sprachaufnahme · %1$d s</string>
+    <string name="rec_review_recognize">Erkennen</string>
+    <string name="rec_review_add_photo">Beleg-Foto hinzufügen</string>
+    <string name="rec_review_add_photo_hint">Preise vom Beleg sind genauer</string>
+    <string name="rec_review_cancel">Aufnahme verwerfen</string>
+    <string name="rec_locked_back_title">Aufnahme verwerfen?</string>
+    <string name="rec_locked_back_message">Die Aufnahme geht verloren.</string>
+    <string name="rec_locked_back_discard">Verwerfen</string>
+    <string name="rec_locked_back_continue">Weiter aufnehmen</string>
+    <string name="expense_camera_permission_denied">Zugriff auf die Kamera nötig — erlaube ihn in den Einstellungen oder wähle ein Foto aus der Galerie</string>
+    <string name="expense_camera_unavailable">Dieses Gerät hat keine Kamera — wähle ein Beleg-Foto aus der Galerie</string>
+    <string name="expense_mic_permission_title">Zugriff auf das Mikrofon nötig</string>
+    <string name="expense_mic_permission_message">Erlaube den Zugriff auf das Mikrofon in den Einstellungen, um Ausgaben per Sprache zu diktieren.</string>
+    <string name="expense_mic_permission_settings">Einstellungen öffnen</string>
+    <plurals name="group_hero_pending_ops">
+        <item quantity="one">ohne %d nicht gesendeten Vorgang</item>
+        <item quantity="other">ohne %d nicht gesendete Vorgänge</item>
+    </plurals>
+    <plurals name="profile_logout_outbox_confirm">
+        <item quantity="one">Es gibt %d nicht gesendeten Vorgang — abmelden und ihn löschen?</item>
+        <item quantity="other">Es gibt %d nicht gesendete Vorgänge — abmelden und sie löschen?</item>
+    </plurals>
+
+    <!-- Погашение долга -->
+    <string name="settleup_title">Zahlung erfassen</string>
+    <string name="settleup_your_debts">Deine Schulden</string>
+    <string name="settleup_no_debts_title">Keine Schulden</string>
+    <string name="settleup_no_debts_message">Du hast in dieser Gruppe keine Schulden</string>
+    <string name="settleup_you_owe">Du schuldest %1$s</string>
+    <string name="settleup_owes_you">%1$s schuldet dir</string>
+    <string name="settleup_owes">%1$s schuldet %2$s</string>
+    <string name="settleup_you_pay">Du zahlst — %1$s</string>
+    <string name="settleup_pays_you">%1$s zahlt dir</string>
+    <string name="settleup_pays">%1$s zahlt — %2$s</string>
+    <string name="settleup_debt_hint">Schuld: %1$s</string>
+    <string name="settleup_debt_max">Nicht mehr als die Schuld: %1$s</string>
+    <string name="settleup_submit">Zahlung erfassen</string>
+    <string name="settleup_already_settled">Diese Schuld ist bereits beglichen</string>
+    <string name="settleup_back_to_list">Zurück zu den Schulden</string>
+    <string name="settleup_offline_caption">Begleichen geht nur online</string>
+    <string name="profile_app_version">Version %1$s (%2$d)</string>
+
+    <!-- Подписи графиков для TalkBack -->
+    <string name="totals_chart_daily_a11y">Diagramm der Ausgaben pro Tag im letzten Monat</string>
+    <string name="totals_chart_donut_a11y">Diagramm der Zahlungsanteile der Mitglieder</string>
+    <string name="totals_chart_weekday_a11y">Diagramm der Ausgaben nach Wochentag</string>
+</resources>

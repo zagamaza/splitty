@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Splitty</string>
+
+    <!-- Общие -->
+    <string name="common_error_title">Ошибка</string>
+    <string name="common_ok">Ок</string>
+    <string name="common_logout">Выйти</string>
+    <string name="common_todo">Экран в разработке</string>
+
+    <!-- Логин -->
+    <string name="login_tagline">Делите расходы с друзьями</string>
+    <string name="login_google_button">Войти через Google</string>
+    <!-- Credential Manager рисует системный лист поверх активити, и без неё
+         показывать нечего (findActivity вернул null — экран внутри чужого
+         ContextWrapper). Ситуация почти недостижима, но МОЛЧАТЬ о ней нельзя:
+         без текста тап по кнопке входа просто ничего не делал. Порт iOS
+         GoogleSignInError.noPresenter. -->
+    <string name="google_sign_in_no_activity">Не удалось открыть окно входа Google. Попробуйте ещё раз</string>
+    <!-- Тихая ссылка внизу экрана: форма email живёт в шторке, на первом
+         экране её нет. Две части — разного цвета, поэтому и строки две. -->
+    <string name="login_email_disclosure_prefix">Или</string>
+    <string name="login_email_disclosure_action">войдите по email</string>
+    <string name="login_email_section">Вход по email</string>
+    <string name="login_register_section">Регистрация</string>
+    <string name="login_email_placeholder">Email</string>
+    <string name="login_password_placeholder">Пароль</string>
+    <string name="login_name_placeholder">Имя</string>
+    <string name="login_password_length_hint">Пароль — не короче 8 символов</string>
+    <string name="login_email_button">Войти</string>
+    <string name="login_register_button">Зарегистрироваться</string>
+    <string name="login_switch_to_register">Нет аккаунта? Зарегистрироваться</string>
+    <string name="login_switch_to_login">Уже есть аккаунт? Войти</string>
+    <string name="login_telegram_button">Войти через Telegram</string>
+    <string name="login_server_section">Сервер</string>
+    <string name="login_server_placeholder">https://splitor.zagirnur.dev</string>
+
+    <!-- Табы -->
+    <string name="tab_friends">Друзья</string>
+    <string name="tab_groups">Группы</string>
+    <string name="tab_add">Добавить расход</string>
+    <string name="tab_activity">Активность</string>
+    <string name="tab_account">Профиль</string>
+
+    <!-- Заглушки -->
+    <string name="placeholder_friends">Здесь появятся балансы с друзьями</string>
+    <string name="placeholder_groups">Здесь появится список групп</string>
+    <string name="placeholder_activity">Здесь появится лента активности</string>
+    <string name="placeholder_account">Здесь появится профиль</string>
+    <string name="placeholder_add_expense">Здесь появится форма добавления расхода</string>
+
+    <!-- Общие (экраны) -->
+    <string name="common_retry">Повторить</string>
+    <string name="common_load_failed">Не удалось загрузить</string>
+    <string name="common_back">Назад</string>
+    <string name="common_cancel">Отмена</string>
+    <string name="common_save">Сохранить</string>
+
+    <!-- Друзья -->
+    <string name="friends_total_balance">Общий баланс</string>
+    <string name="friends_you_are_owed">Вам должны</string>
+    <string name="friends_you_owe">Вы должны</string>
+    <string name="friends_all_settled">Все долги погашены</string>
+    <string name="friends_owes_you_short">должен(на) вам</string>
+    <string name="friends_you_owe_short">вы должны</string>
+    <string name="friends_settlement">расчёт</string>
+    <string name="friends_empty_title">Пока нет друзей</string>
+    <string name="friends_empty_description">Друзья появятся, когда у вас будут общие группы с расходами</string>
+    <string name="friend_owed_caption">Должен(на) вам</string>
+    <string name="friend_settled_caption">Вы рассчитались</string>
+    <string name="friend_groups_section">По группам</string>
+    <string name="friend_no_group_debts">Долгов по группам нет</string>
+    <string name="friend_room_owed_you">вам должны</string>
+    <string name="friend_settle_up">Погасить</string>
+    <string name="friend_settle_room_picker_title">В какой группе погасить?</string>
+    <string name="friends_create_group">Создать группу</string>
+
+    <!-- Активность -->
+    <string name="activity_mine_only">Только мои</string>
+    <string name="activity_mine_only_empty_title">Нет операций с вами</string>
+    <string name="activity_mine_only_empty_description">Операции, где вы платили или участвовали, появятся здесь</string>
+    <string name="activity_empty_title">Пока нет активности</string>
+    <string name="activity_empty_description">Здесь появятся расходы и платежи ваших групп</string>
+    <string name="activity_added">добавил(а) «%1$s»</string>
+    <string name="activity_paid">заплатил(а)</string>
+    <string name="activity_paid_you">заплатил(а) вам</string>
+    <string name="activity_in_group">в группе «%1$s»</string>
+    <string name="activity_recipient_fallback">участнику</string>
+    <string name="activity_you_lent">Вы одолжили</string>
+    <string name="activity_you_owe">Вы должны</string>
+    <string name="activity_you_paid">Вы заплатили</string>
+    <string name="activity_you_received">Вы получили</string>
+    <string name="activity_not_involved">Вы не участвуете</string>
+    <string name="activity_settled">в расчёте</string>
+    <string name="activity_show_all">Показать все</string>
+    <string name="activity_filter_on">включено</string>
+    <string name="activity_filter_off">выключено</string>
+
+    <!-- Относительное время (короткий стиль, как iOS RelativeDateTimeFormatter) -->
+    <string name="time_just_now">только что</string>
+    <string name="time_minutes_ago">%1$d мин. назад</string>
+    <string name="time_hours_ago">%1$d ч. назад</string>
+    <string name="time_days_ago">%1$d дн. назад</string>
+    <string name="time_weeks_ago">%1$d нед. назад</string>
+    <string name="time_months_ago">%1$d мес. назад</string>
+    <plurals name="time_years_ago">
+        <item quantity="one">%1$d год назад</item>
+        <item quantity="few">%1$d года назад</item>
+        <item quantity="many">%1$d лет назад</item>
+        <item quantity="other">%1$d лет назад</item>
+    </plurals>
+
+    <!-- Профиль -->
+    <string name="profile_id">ID: %1$d</string>
+    <string name="profile_settings_section">Настройки</string>
+    <string name="profile_name">Имя</string>
+    <string name="notifications_title">Уведомления</string>
+    <string name="notifications_operations">Операции</string>
+    <string name="notifications_operations_footer">Кто-то добавил или изменил расход в вашей группе</string>
+    <string name="notifications_debts">Долги</string>
+    <string name="notifications_debts_footer">Вам вернули долг</string>
+    <string name="notifications_channel_telegram">Telegram</string>
+    <string name="notifications_channel_push">Приложение</string>
+    <string name="profile_theme">Тема</string>
+    <string name="profile_theme_system">Системная</string>
+    <string name="profile_theme_light">Светлая</string>
+    <string name="profile_theme_dark">Тёмная</string>
+    <string name="profile_language">Язык</string>
+    <string name="profile_language_caption">Язык сообщений бота в Telegram</string>
+    <string name="profile_language_ru">Русский</string>
+    <string name="profile_language_en">English</string>
+    <string name="profile_server_section">Сервер</string>
+    <string name="profile_logout_confirm">Выйти из аккаунта?</string>
+    <string name="profile_edit_name_title">Изменить имя</string>
+    <string name="profile_name_empty">Имя не может быть пустым</string>
+
+    <!-- Профиль: способы входа и удаление аккаунта (паритет iOS AccountView) -->
+    <string name="profile_login_methods_section">Способы входа</string>
+    <string name="profile_login_method_linked">Привязан</string>
+    <string name="profile_login_method_not_linked">Не привязан</string>
+    <string name="profile_login_method_link">Привязать</string>
+    <string name="profile_login_method_unlink">Отвязать</string>
+    <string name="profile_login_methods_footer">Любым из привязанных способов можно войти в этот же аккаунт.</string>
+    <string name="profile_login_methods_footer_last">Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. Сначала привяжите другой.</string>
+    <string name="profile_password_set">Задать</string>
+    <string name="profile_password_change">Изменить</string>
+    <string name="profile_password_not_set">%1$s · пароль не задан</string>
+    <string name="profile_password_title">Пароль</string>
+    <string name="profile_password_change_title">Смена пароля</string>
+    <string name="profile_password_current">Текущий пароль</string>
+    <string name="profile_password_new">Новый пароль</string>
+    <string name="profile_password_repeat">Новый пароль ещё раз</string>
+    <string name="profile_password_mismatch">Пароли не совпадают</string>
+    <string name="profile_password_forgot">Не помню текущий</string>
+    <string name="profile_password_reset_title">Сбросить пароль?</string>
+    <string name="profile_password_reset_message">Старый пароль перестанет работать, вход по %1$s останется доступен после того, как зададите новый.</string>
+    <string name="profile_password_reset_confirm">Сбросить</string>
+    <string name="profile_password_save">Сохранить</string>
+    <string name="profile_password_invalid_current">Неверный текущий пароль</string>
+    <string name="profile_unlink_confirm_title">Отвязать %1$s?</string>
+    <string name="profile_unlink_confirm_message">Войти в аккаунт этим способом больше не получится. Остальные привязанные способы продолжат работать.</string>
+    <!-- Отвязка Telegram НЕОБРАТИМА (internal/rest/identity.go, telegramUnlinkWarning):
+         бот на первое же следующее сообщение заведёт второй, пустой профиль, а
+         привязать этот Telegram обратно уже нельзя — сервер ответит 409
+         identity_taken. Общий текст выше об этом молчит, а серверное
+         предупреждение приходит уже ПОСЛЕ действия — поздно. Паритет с iOS,
+         где последствие названо до нажатия. -->
+    <string name="profile_unlink_confirm_message_telegram">Войти в аккаунт через Telegram больше не получится, и привязать этот Telegram обратно уже не выйдет: если вы снова напишете боту, он заведёт отдельный новый профиль без ваших групп.\n\nОстальные привязанные способы входа продолжат работать.</string>
+    <string name="profile_notice_title">Внимание</string>
+    <string name="profile_notice_ok">Понятно</string>
+    <string name="profile_delete_account">Удалить аккаунт</string>
+    <string name="profile_delete_account_caption">Профиль удаляется безвозвратно, расходы и долги в группах остаются.</string>
+    <string name="profile_delete_confirm_title">Удалить аккаунт?</string>
+    <string name="profile_delete_confirm_message">Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.\n\nРасходы и долги в группах останутся: участники увидят «Удалённый пользователь» вместо вашего имени, а суммы и расчёты не изменятся.</string>
+
+    <!-- Группы: список -->
+    <string name="groups_title">Группы</string>
+    <string name="groups_create_group">Создать группу</string>
+    <string name="groups_join_by_code">Присоединиться по коду</string>
+    <string name="groups_more">Ещё</string>
+    <string name="groups_total_balance">Общий баланс</string>
+    <string name="groups_all_settled">Все долги погашены</string>
+    <string name="groups_row_owed">вам должны</string>
+    <string name="groups_row_owes">вы должны</string>
+    <string name="groups_row_settled">расчёт</string>
+    <string name="groups_archive">Архив</string>
+    <string name="groups_archive_empty_title">Архив пуст</string>
+    <string name="groups_archive_empty_subtitle">Архивные группы появятся здесь</string>
+    <string name="groups_unarchive">Разархивировать</string>
+    <string name="groups_empty_title">Пока нет групп</string>
+    <string name="groups_empty_subtitle">Создайте группу или присоединитесь по коду приглашения</string>
+    <string name="groups_create_title">Новая группа</string>
+    <string name="groups_create_placeholder">Название</string>
+    <string name="groups_create_hint">Например: «Поездка в Стамбул» или «Квартира».</string>
+    <string name="groups_create_button">Создать</string>
+    <string name="groups_join_title">Присоединиться</string>
+    <string name="groups_join_short">Присоединиться</string>
+    <string name="groups_join_placeholder">Ссылка или код</string>
+    <string name="groups_join_paste">Вставить</string>
+    <!-- Форматов ссылки два: новая splitor.zagirnur.dev/join/… (её отдаёт сервер
+         полем inviteUrl) и легаси-ссылка бота. Парсер (parseRoomCode) понимает оба
+         и голый код, и подсказка обязана называть оба — иначе человек со свежей
+         ссылкой решит, что вставлять её сюда нельзя. -->
+    <string name="groups_join_hint">Вставьте код из приглашения или ссылку целиком — подойдёт и splitor.zagirnur.dev/join/…, и t.me/split_money_bot?start=room…</string>
+    <string name="groups_join_button">Присоединиться</string>
+    <plurals name="groups_member_count">
+        <item quantity="one">%d участник</item>
+        <item quantity="few">%d участника</item>
+        <item quantity="many">%d участников</item>
+        <item quantity="other">%d участника</item>
+    </plurals>
+
+    <!-- Группы: экран группы -->
+    <string name="group_fallback_title">Группа</string>
+    <string name="group_profile_missing">Не удалось получить данные вашего профиля</string>
+    <string name="group_archived_badge">Группа в архиве</string>
+    <string name="group_you_are_owed">Вам должны</string>
+    <string name="group_you_owe">Вы должны</string>
+    <string name="group_no_debts">Нет долгов</string>
+    <string name="group_members_settled">Все участники в расчёте</string>
+    <string name="groups_row_debts_unavailable">долги не считаются</string>
+    <string name="group_debts_unavailable_title">Долги не считаются</string>
+    <string name="group_debts_unavailable_subtitle">Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.</string>
+    <string name="group_card_pending_badge">Есть неотправленные операции</string>
+    <string name="group_settle_offline">Нет соединения. Погашение долга доступно только онлайн</string>
+    <string name="group_you_owe_name">Вы должны %1$s</string>
+    <string name="group_chip_settle">Погасить долг</string>
+    <string name="group_chip_balances">Балансы</string>
+    <string name="group_chip_totals">Итоги</string>
+    <string name="group_fab_expense">Расход</string>
+    <string name="group_add_expense">Добавить расход</string>
+    <string name="group_settings">Настройки группы</string>
+    <string name="group_empty_ops_title">Пока нет расходов</string>
+    <string name="group_empty_ops_subtitle">Добавьте первый расход — он появится в этом списке</string>
+    <string name="group_op_fallback">Расход</string>
+    <string name="group_op_you_paid_sum">Вы заплатили %1$s</string>
+    <string name="group_op_paid_sum">%1$s заплатил(а) %2$s</string>
+    <string name="group_op_lent">вы одолжили</string>
+    <string name="group_op_owe">вы должны</string>
+    <string name="group_op_settled">расчёт</string>
+    <string name="group_op_not_involved">не участвует</string>
+    <string name="group_repay_you_paid">Вы заплатили %1$s</string>
+    <string name="group_repay_paid_you">%1$s заплатил(а) вам</string>
+    <string name="group_repay_paid">%1$s заплатил(а) %2$s</string>
+
+    <!-- Группы: балансы -->
+    <string name="group_balances_title">Балансы</string>
+    <string name="group_debt_you_owe">Вы должны %1$s</string>
+    <string name="group_debt_owes_you">%1$s должен(на) вам</string>
+    <string name="group_debt_pair">%1$s должен(на) — %2$s</string>
+    <string name="group_debt_settle">Погасить</string>
+
+    <!-- Группы: настройки -->
+    <string name="group_settings_members">Участники</string>
+    <string name="group_settings_member_you">%1$s (вы)</string>
+    <string name="group_settings_currency">Валюта</string>
+    <string name="group_settings_currency_footer">В валюте группы показываются все её суммы: расходы, долги и итоги.</string>
+    <string name="group_settings_invite">Пригласить в группу</string>
+    <string name="group_settings_members_invite">Пригласить</string>
+    <string name="group_settings_code">Код группы</string>
+    <string name="group_settings_invite_footer">Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».</string>
+    <!-- Приглашение: шит и баннер -->
+    <string name="invite_sheet_title">Пригласить в группу</string>
+    <string name="invite_share_link">Поделиться ссылкой</string>
+    <string name="invite_banner_title">В группе только вы</string>
+    <string name="invite_banner_subtitle">Позовите друзей, чтобы делить расходы</string>
+    <string name="invite_banner_action">Пригласить</string>
+    <string name="group_settings_archive">Архивировать</string>
+    <string name="group_settings_unarchive">Разархивировать</string>
+    <string name="group_settings_archive_footer">Архив скрывает группу из списка только у вас. Операции и долги сохраняются.</string>
+    <string name="group_currency_change_title">Сменить валюту на %1$s?</string>
+    <string name="group_currency_change_confirm">Сменить на %1$s</string>
+    <string name="group_currency_change_message">Суммы не пересчитываются — изменится только обозначение, у всех участников группы</string>
+    <string name="group_invite_message">Присоединяйся к группе «%1$s» в Splitty: %2$s\nКод группы: %3$s</string>
+
+    <!-- Группы: карточка операции -->
+    <string name="op_title_expense">Расход</string>
+    <string name="op_title_repayment">Погашение</string>
+    <string name="op_repayment_title">Погашение долга</string>
+    <string name="op_added_date">Добавлено %1$s</string>
+    <string name="op_details">Детали</string>
+    <string name="op_split_equally">· поровну</string>
+    <string name="op_split_exact">· по суммам</string>
+    <string name="op_you">Вы</string>
+    <string name="op_paid_you">заплатили</string>
+    <string name="op_paid">заплатил(а)</string>
+    <string name="op_share_yours">ваша доля</string>
+    <string name="op_share">доля</string>
+    <string name="op_you_owe">вы должны</string>
+    <string name="op_owes">должен(на)</string>
+    <string name="op_received_you">получили</string>
+    <string name="op_received">получил(а)</string>
+    <string name="op_edit">Изменить</string>
+    <string name="op_delete">Удалить</string>
+    <string name="op_deleting">Удаление…</string>
+    <string name="op_delete_expense_title">Удалить расход?</string>
+    <string name="op_delete_repayment_title">Удалить платёж?</string>
+    <string name="op_delete_message">Операция исчезнет из группы, балансы пересчитаются.</string>
+    <!-- У погашений нет «Изменить» — объясняем, как исправить ошибку. -->
+    <string name="op_delete_repayment_message">Операция исчезнет из группы, балансы пересчитаются. Погашения не редактируются — при ошибке удалите и запишите заново.</string>
+
+    <!-- Группы: секции карточки операции -->
+    <string name="op_who_paid">Кто платил</string>
+    <string name="op_who_sent">Кто отправил</string>
+    <string name="op_who_participates">Кто участвует</string>
+    <string name="op_who_received">Кто получил</string>
+    <string name="op_items">Позиции чека</string>
+
+    <!-- Группы: вложения операции -->
+    <string name="op_attachments">Вложения</string>
+    <string name="attach_photo">Фото</string>
+    <string name="attach_video">Видео</string>
+    <string name="attach_document">Документ</string>
+    <string name="attach_other">Вложение</string>
+    <string name="attach_open_share">Открыть / поделиться</string>
+    <string name="common_done">Готово</string>
+
+    <!-- Группы: итоги (дашборд) -->
+    <string name="group_tab_operations">Операции</string>
+    <string name="group_settings_short">Настройки</string>
+    <string name="group_filter_all">Все</string>
+    <string name="group_chip_settle_short">Погасить</string>
+    <string name="group_chip_mine_only">Со мной</string>
+    <string name="group_mine_only_empty">Операций с вами нет</string>
+    <string name="totals_title">Итоги</string>
+    <string name="totals_total_spent">Всего потрачено</string>
+    <string name="totals_for_month">За %1$s</string>
+    <string name="totals_operation_count">Операций</string>
+    <string name="totals_avg_check">Средний чек</string>
+    <string name="totals_i_paid">Заплачено мной</string>
+    <string name="totals_my_share">Потрачено на меня</string>
+    <string name="totals_by_day">Траты по дням</string>
+    <string name="totals_no_recent_spending">Нет трат за последние 30 дней</string>
+    <string name="totals_who_paid">Кто платил</string>
+    <string name="totals_whose_share">На кого потрачено</string>
+    <string name="totals_member_balance">Кто в плюсе, кто в минусе</string>
+    <string name="totals_by_weekday">Траты по дням недели</string>
+    <string name="totals_others">Прочие</string>
+    <string name="totals_top_operations">Самые крупные расходы</string>
+    <string name="totals_empty_title">Пока нет расходов</string>
+    <string name="totals_empty_subtitle">Добавьте первый расход — здесь появится статистика группы</string>
+
+    <!-- Добавление/редактирование расхода -->
+    <string name="expense_title_add">Добавить расход</string>
+    <string name="expense_title_edit">Изменить расход</string>
+    <string name="expense_group_section">С кем делите расход?</string>
+    <string name="expense_no_groups">У вас пока нет групп — создайте её на вкладке «Группы»</string>
+    <string name="expense_select_group_hint">Сначала выберите группу</string>
+    <string name="expense_description_placeholder">Описание</string>
+    <string name="expense_paid_by_you">Заплатили</string>
+    <string name="expense_paid_by_other">Заплатил(а)</string>
+    <string name="expense_payer_you">вы</string>
+    <string name="expense_member_you">%1$s (вы)</string>
+    <string name="expense_split_equally">Поровну</string>
+    <string name="expense_split_by_amounts">По суммам</string>
+    <string name="expense_hint_pick_member">Выберите хотя бы одного участника</string>
+    <string name="expense_hint_members_count">Участников: %1$d</string>
+    <string name="expense_split_hint_equal">%1$s / %2$d = %3$s с человека</string>
+    <string name="expense_distributed">Сумма распределена полностью</string>
+    <string name="expense_remaining">Осталось распределить: %1$s</string>
+    <string name="expense_overspent">Перерасход: %1$s</string>
+
+    <!-- Офлайн-режим -->
+    <string name="offline_banner_offline">Офлайн — изменения сохраняются локально</string>
+    <string name="offline_banner_syncing">Отправка…</string>
+    <string name="outbox_section_title">Не отправлено</string>
+    <string name="outbox_badge_pending">не отправлено</string>
+    <string name="expense_offline_edit_blocked">Нет соединения. Можно редактировать только неотправленные операции</string>
+    <string name="expense_itemized_edit_blocked">Операция по позициям чека — правится там, где создана</string>
+
+    <!-- AI-распознавание расхода (фото чека) -->
+    <string name="expense_receipt_scan_title">Распознать по чеку</string>
+    <string name="expense_receipt_scan_hint">Сфотографируйте чек — заполню описание, сумму и позиции</string>
+    <string name="expense_receipt_take_photo">Сфотографировать</string>
+    <string name="expense_receipt_pick_photo">Выбрать фото</string>
+    <!-- «Чек» из заголовка убран: оверлей висит и на чисто голосовом пути,
+         где никакого чека нет (копия = iOS). -->
+    <string name="expense_parsing">Распознаю…</string>
+    <string name="expense_parsing_subtitle">Считываю расход и раскладываю по позициям</string>
+    <string name="expense_parsing_cancel">Отмена</string>
+    <string name="expense_parse_retry">Повторить</string>
+    <string name="expense_parse_failed_generic">Не удалось распознать. Данные сохранены — попробуйте ещё раз</string>
+
+    <!-- Форма расхода: itemized-режим (позиции чека), нуджи, отмена -->
+    <string name="expense_derived_by_positions">по позициям чека</string>
+    <string name="expense_derived_incomplete">не все цены указаны</string>
+    <string name="expense_recognized_title">Распознано голосом</string>
+    <!-- Про микрофон в подсказке важнее фото: голосовая правка черновика иначе
+         никак себя не рекламирует (копия = iOS). -->
+    <string name="expense_recognized_hint">Не то? Зажмите микрофон внизу или добавьте фото чека</string>
+    <string name="expense_recognized_add_photo">Добавить фото чека</string>
+    <string name="expense_correction_title">Правка применена</string>
+    <string name="expense_correction_hint_items">Изменения подсвечены в чеке</string>
+    <string name="expense_correction_hint_flat">Черновик обновлён</string>
+    <string name="expense_undo">Отменить</string>
+    <string name="expense_add_item">Добавить позицию</string>
+    <string name="expense_split_override_title">Сейчас делится по позициям</string>
+    <string name="expense_split_override_action">Поровну на всех</string>
+    <string name="expense_split_override_hint">«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»</string>
+    <string name="expense_unknown_hint">Выберите, кто это — «%1$s»: коснитесь красной метки в чеке</string>
+    <string name="expense_priceless_hint">Укажите цену — коснитесь позиции с меткой «цена?»</string>
+    <string name="expense_delete_local_title">Удалить операцию?</string>
+    <string name="expense_delete_local_message">Неотправленная запись исчезнет из очереди.</string>
+
+    <!-- Голосовой ввод (hold-to-talk): композер, оверлей записи, экран «Записано» -->
+    <string name="expense_composer_title">Надиктуйте расход</string>
+    <string name="expense_composer_hint">Зажмите микрофон внизу и скажите,\nкто что взял и сколько это стоило</string>
+    <string name="expense_composer_or">или</string>
+    <string name="expense_composer_photo">Сфотографировать чек</string>
+    <string name="expense_composer_hold">Удерживайте, чтобы говорить</string>
+    <string name="expense_composer_ai_no_group">Сначала выберите группу</string>
+    <string name="expense_composer_ai_offline">Распознавание доступно только онлайн</string>
+    <string name="expense_composer_manual">Ввести вручную</string>
+    <string name="expense_composer_back_to_voice">Заполнить голосом</string>
+    <string name="expense_record_a11y">Записать голосом</string>
+    <string name="expense_record_a11y_hint">Удерживайте и говорите; свайп вверх — закрепить</string>
+    <string name="expense_voice_correction_a11y">Поправить голосом</string>
+    <string name="rec_listening">Слушаю…</string>
+    <string name="rec_hints_title">Осталось уточнить</string>
+    <string name="rec_karaoke_listening">Слушаю…</string>
+    <string name="rec_status_cancel_title">Отпустите — отмена</string>
+    <string name="rec_status_cancel_sub">Верните палец, чтобы продолжить</string>
+    <string name="rec_status_locked_title">Запись идёт</string>
+    <string name="rec_status_locked_sub">Говорите свободно — палец держать не нужно</string>
+    <string name="rec_status_preparing_title">Начинаю запись…</string>
+    <string name="rec_status_preparing_sub">Держите палец — микрофон включается</string>
+    <string name="rec_status_recording_title">Говорите…</string>
+    <string name="rec_status_recording_sub">Отпустите — распознать · вверх — закрепить · влево — отмена</string>
+    <string name="rec_locked_hint">Нажмите, когда закончите</string>
+    <string name="rec_remaining">· осталось %1$d с</string>
+    <string name="rec_stop_a11y">Завершить запись и распознать</string>
+    <string name="rec_cancel_a11y">Отменить запись</string>
+    <string name="rec_short_tap_hint">Удерживайте микрофон, пока говорите, и отпустите, когда закончите</string>
+    <string name="rec_limit_toast">Минута — лимит записи. Распознаю, что успели сказать</string>
+    <string name="rec_device_lost_toast">Запись прервалась. Распознаю, что успели сказать</string>
+    <string name="rec_review_title">Записано</string>
+    <string name="rec_review_subtitle">Голосовая запись · %1$d сек</string>
+    <string name="rec_review_recognize">Распознать</string>
+    <string name="rec_review_add_photo">Добавить фото чека</string>
+    <string name="rec_review_add_photo_hint">цены возьмём с чека — точнее</string>
+    <string name="rec_review_cancel">Отменить запись</string>
+    <string name="rec_locked_back_title">Отменить запись?</string>
+    <string name="rec_locked_back_message">Запись будет отброшена.</string>
+    <string name="rec_locked_back_discard">Отбросить</string>
+    <string name="rec_locked_back_continue">Продолжить запись</string>
+    <string name="expense_camera_permission_denied">Нужен доступ к камере — разрешите его в настройках или выберите фото из галереи</string>
+    <string name="expense_camera_unavailable">На устройстве нет камеры — выберите фото чека из галереи</string>
+    <string name="expense_mic_permission_title">Нужен доступ к микрофону</string>
+    <string name="expense_mic_permission_message">Разрешите доступ к микрофону в настройках, чтобы надиктовывать расходы голосом.</string>
+    <string name="expense_mic_permission_settings">Открыть настройки</string>
+    <plurals name="group_hero_pending_ops">
+        <item quantity="one">без учёта %d неотправленной операции</item>
+        <item quantity="few">без учёта %d неотправленных операций</item>
+        <item quantity="many">без учёта %d неотправленных операций</item>
+        <item quantity="other">без учёта %d неотправленных операций</item>
+    </plurals>
+    <plurals name="profile_logout_outbox_confirm">
+        <item quantity="one">Есть %d неотправленная операция — выйти и удалить её?</item>
+        <item quantity="few">Есть %d неотправленные операции — выйти и удалить их?</item>
+        <item quantity="many">Есть %d неотправленных операций — выйти и удалить их?</item>
+        <item quantity="other">Есть %d неотправленных операций — выйти и удалить их?</item>
+    </plurals>
+
+    <!-- Погашение долга (settle up) -->
+    <string name="settleup_title">Записать платёж</string>
+    <string name="settleup_your_debts">Ваши долги</string>
+    <string name="settleup_no_debts_title">Нет долгов</string>
+    <string name="settleup_no_debts_message">У вас нет долгов в этой группе</string>
+    <string name="settleup_you_owe">Вы должны %1$s</string>
+    <string name="settleup_owes_you">%1$s должен(на) вам</string>
+    <string name="settleup_owes">%1$s должен(на) %2$s</string>
+    <string name="settleup_you_pay">Вы платите — %1$s</string>
+    <string name="settleup_pays_you">%1$s платит вам</string>
+    <string name="settleup_pays">%1$s платит — %2$s</string>
+    <string name="settleup_debt_hint">Долг: %1$s</string>
+    <string name="settleup_debt_max">Не больше долга: %1$s</string>
+    <string name="settleup_submit">Записать платёж</string>
+    <string name="settleup_already_settled">Долг уже погашен</string>
+    <string name="settleup_back_to_list">К списку долгов</string>
+    <string name="settleup_offline_caption">Погашение доступно только онлайн</string>
+    <string name="profile_app_version">Версия %1$s (%2$d)</string>
+
+    <!-- Подписи графиков для TalkBack: Canvas сам по себе для скринридера пуст,
+         без них четыре диаграммы дашборда просто не существуют. Тексты = iOS
+         (GroupTotalsView.swift accessibilityLabel). -->
+    <string name="totals_chart_daily_a11y">График трат по дням за последний месяц</string>
+    <string name="totals_chart_donut_a11y">Диаграмма долей участников в оплатах</string>
+    <string name="totals_chart_weekday_a11y">График трат по дням недели</string>
+</resources>
