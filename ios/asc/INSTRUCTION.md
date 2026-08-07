@@ -215,9 +215,13 @@ Apple ID, не состоящий в программе, получит на `/a
   `auth/revoke` отработал и ключ настроен верно.
 ### Что писать в App Review Information
 
-Ревьюеру НЕ нужен ни Telegram, ни Google/Apple-аккаунт: он входит по email и паролю —
-обычной формой на главном экране, без раскрытия секций. Вход по коду из бота с экрана
-убран, вместе с ним ушёл и прежний путь ревью через `REVIEW_LOGIN_CODE`.
+Ревьюеру НЕ нужен ни Telegram, ни Google/Apple-аккаунт: он входит по email и паролю.
+Вход по коду из бота с экрана убран, вместе с ним ушёл и прежний путь ревью через
+`REVIEW_LOGIN_CODE`.
+
+**Форма email — за ссылкой внизу экрана**, а не на виду: на первом экране только Apple,
+Google и Telegram. Про этот шаг обязательно написать в Notes, иначе ревьюер решит, что
+входа по email нет вовсе, и отклонит билд по Guideline 5.1.1.
 
 Заполнять так (Sign-in required: Yes):
 
@@ -226,8 +230,9 @@ Apple ID, не состоящий в программе, получит на `/a
 | Username | `review@splitor.zagirnur.dev`     |
 | Password | пароль демо-аккаунта              |
 
-> Notes: Sign in with the email and password above — the form is on the main screen,
-> no third-party account needed. The demo account already has groups and expenses.
+> Notes: On the sign-in screen, tap "войдите по email" at the bottom — this opens a sheet
+> with email and password fields. Sign in with the credentials above; no third-party
+> account is needed. The demo account already has groups and expenses.
 
 #### Как завести демо-аккаунт (разово)
 

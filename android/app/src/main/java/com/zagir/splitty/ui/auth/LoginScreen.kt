@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,13 +30,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,10 +51,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,19 +73,19 @@ import androidx.browser.customtabs.CustomTabsIntent
 import com.zagir.splitty.core.auth.TelegramWebAuth
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.ui.components.PrimaryPillButton
-import com.zagir.splitty.ui.components.SectionHeader
-import com.zagir.splitty.ui.components.SoftChip
-import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
- * Экран входа — паритет iOS LoginView: словомарка «Splitty», Google, форма
- * email + пароль и карточка входа по коду из @split_money_bot. Настройка
- * «Сервер» спрятана за жестом по логотипу (только DEBUG).
+ * Экран входа — паритет iOS LoginView: иконка с названием в верхней половине,
+ * Google и Telegram прижаты к низу, форма email — в шторке за тихой ссылкой.
+ * Настройка «Сервер» спрятана за жестом по иконке (только DEBUG).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var isEmailSheetOpen by remember { mutableStateOf(false) }
+    val emailSheetState = rememberModalBottomSheetState()
     // Поле «Сервер» — инструмент разработки, а не настройка приложения: на
     // экране его нет, находит только тот, кто знает жест (паритет iOS).
     var logoTapCount by remember { mutableIntStateOf(0) }
@@ -101,16 +107,20 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .imePadding()
+                .safeDrawingPadding()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(bottom = 12.dp),
         ) {
-            Logo(onTap = { if (BuildConfig.DEBUG && !isServerRevealed) logoTapCount++ })
-            // Вход через Google — над блоком входа по коду: для человека без
-            // Telegram это единственный путь внутрь, и он не должен искать его
-            // под инструкцией про бота.
+            // Распорки равные, а нижний отступ самого блока поднимает его на
+            // половину своей величины выше геометрического центра: ровно по
+            // центру блок читается съехавшим к кнопкам (паритет iOS).
+            Spacer(Modifier.weight(1f))
+            AppMark(
+                modifier = Modifier.padding(bottom = 28.dp),
+                onTap = { if (BuildConfig.DEBUG && !isServerRevealed) logoTapCount++ },
+            )
+            Spacer(Modifier.weight(1f))
+
             GoogleSignInButton(
                 enabled = !state.isLoggingIn,
                 onClick = {
@@ -119,19 +129,21 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                     }
                 },
             )
+            Spacer(Modifier.height(10.dp))
             TelegramLoginButton(
                 baseUrl = state.baseUrl,
                 enabled = !state.isLoggingIn,
                 onError = viewModel::showError,
             )
-            OrDivider()
-            EmailLoginCard(
-                state = state,
-                viewModel = viewModel,
+            Spacer(Modifier.height(14.dp))
+            EmailDisclosure(
+                enabled = !state.isLoggingIn,
+                onClick = { isEmailSheetOpen = true },
             )
             // Только в DEBUG и только после жеста: в релизе поле «Сервер» —
             // способ увести Bearer-токен на чужой адрес (паритет iOS).
             if (BuildConfig.DEBUG && isServerRevealed) {
+                Spacer(Modifier.height(16.dp))
                 ServerField(
                     baseUrl = state.baseUrl,
                     onBaseUrlChange = viewModel::onBaseUrlChange,
@@ -141,6 +153,27 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 
         if (state.isLoggingIn) {
             LoadingOverlay()
+        }
+    }
+
+    // Закрывать шторку после успеха не нужно: сессия снимает LoginScreen
+    // целиком, а вместе с ним и её. Ошибка приходит общим AlertDialog —
+    // диалог рисуется поверх шторки, так что виден.
+    if (isEmailSheetOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { isEmailSheetOpen = false },
+            sheetState = emailSheetState,
+            containerColor = Splitty.colors.surface,
+        ) {
+            EmailLoginForm(
+                state = state,
+                viewModel = viewModel,
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .imePadding()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+            )
         }
     }
 
@@ -162,35 +195,79 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 private const val SERVER_REVEAL_TAPS = 5
 
 /**
- * Крупная словомарка: изумрудный логотип и тихий подзаголовок.
- * В DEBUG он же — тайная дверь к полю «Сервер» (см. SERVER_REVEAL_TAPS).
+ * Иконка приложения, словомарка и тихий подзаголовок.
+ * В DEBUG она же — тайная дверь к полю «Сервер» (см. SERVER_REVEAL_TAPS).
+ *
+ * Иконка собирается из слоёв адаптивной: `painterResource` не умеет
+ * `adaptive-icon`, поэтому фон берём цветом, а знак — `ic_launcher_foreground`.
+ * Внутренняя обрезка 25% — требование adaptive-icon: без неё знак вылезает
+ * за скругление.
  */
 @Composable
-private fun Logo(onTap: () -> Unit) {
+private fun AppMark(modifier: Modifier = Modifier, onTap: () -> Unit) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             // Без индикации: жест служебный, подсвечивать его нечего.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onTap,
-            )
-            .padding(top = 72.dp, bottom = 12.dp),
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(colorResource(R.color.ic_launcher_background)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.mipmap.ic_launcher_foreground),
+                contentDescription = null,
+                modifier = Modifier.size(126.dp),
+            )
+        }
+        Spacer(Modifier.height(14.dp))
         Text(
             text = stringResource(R.string.app_name),
-            fontSize = 46.sp,
+            fontSize = 40.sp,
             fontWeight = FontWeight.Bold,
             color = Splitty.colors.accent,
         )
+        Spacer(Modifier.height(6.dp))
         Text(
             text = stringResource(R.string.login_tagline),
-            fontSize = 17.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.inkSecondary,
+        )
+    }
+}
+
+/**
+ * Тихая ссылка у нижнего края — единственный след формы email на первом экране.
+ */
+@Composable
+private fun EmailDisclosure(enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+    ) {
+        Text(
+            text = stringResource(R.string.login_email_disclosure_prefix),
+            fontSize = 15.sp,
+            color = Splitty.colors.inkSecondary,
+        )
+        Text(
+            text = stringResource(R.string.login_email_disclosure_action),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Splitty.colors.accent,
         )
     }
 }
@@ -226,54 +303,31 @@ private fun GoogleSignInButton(
     }
 }
 
-@Composable
-private fun OrDivider() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(
-            Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(Splitty.colors.hairline),
-        )
-        Text(
-            text = stringResource(R.string.login_or),
-            fontSize = 13.sp,
-            color = Splitty.colors.inkSecondary,
-        )
-        Box(
-            Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(Splitty.colors.hairline),
-        )
-    }
-}
-
 /**
  * Вход и регистрация по email с паролем — для тех, у кого нет ни Google, ни
- * Telegram. Та же карточка переключается в регистрацию: добавляется поле имени.
+ * Telegram. Та же форма переключается в регистрацию: добавляется поле имени.
+ * Живёт в шторке, поэтому без собственной карточки-подложки.
  */
 @Composable
-private fun EmailLoginCard(
+private fun EmailLoginForm(
     state: LoginUiState,
     viewModel: LoginViewModel,
+    modifier: Modifier = Modifier,
 ) {
-    SurfaceCard(
-        modifier = Modifier
+    Column(
+        modifier = modifier
             .fillMaxWidth()
             .animateContentSize(),
-        padding = 20.dp,
     ) {
-        SectionHeader(
-            stringResource(
+        Text(
+            text = stringResource(
                 if (state.isRegistering) R.string.login_register_section else R.string.login_email_section
-            )
+            ),
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = Splitty.colors.ink,
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(14.dp))
         if (state.isRegistering) {
             LoginField(
                 value = state.registerName,
@@ -332,9 +386,11 @@ private fun EmailLoginCard(
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.accent,
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(enabled = !state.isLoggingIn, onClick = viewModel::toggleRegistering),
+                .clickable(enabled = !state.isLoggingIn, onClick = viewModel::toggleRegistering)
+                .padding(vertical = 4.dp),
         )
     }
 }

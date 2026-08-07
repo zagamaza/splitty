@@ -41,9 +41,10 @@ enum EmailLoginForm {
 
 // MARK: - Экран входа
 
-/// Экран входа: Apple, Google, Telegram и форма email + пароль — четыре
-/// способа, больше на экране ничего нет. Настройка адреса сервера (DEBUG)
-/// спрятана за неявным жестом по логотипу, см. `serverDisclosure`.
+/// Экран входа: иконка с названием в верхней половине, стопка способов входа
+/// прижата к низу. Форма email живёт в шторке за тихой ссылкой — на первом
+/// экране её нет. Настройка адреса сервера (DEBUG) спрятана за неявным жестом
+/// по иконке, см. `serverRevealTaps`.
 struct LoginView: View {
     @Environment(SessionStore.self) private var session
     @Environment(\.colorScheme) private var colorScheme
@@ -57,6 +58,11 @@ struct LoginView: View {
     /// Та же карточка работает и на вход, и на регистрацию: отличается полем
     /// «Имя» и текстом кнопки.
     @State private var isRegistering = false
+    /// Форма email — в шторке: на первом экране остаются только три кнопки.
+    @State private var isEmailSheetPresented = false
+    /// Ошибка формы email. Отдельно от `errorMessage`: тот показывается
+    /// алертом с корневого экрана, который шторка перекрыла бы собой.
+    @State private var emailErrorMessage: String?
 
     /// Сырой nonce текущей попытки входа через Apple: в системный запрос
     /// уходит его SHA256, а на сервер — само значение. Живёт между колбэками
@@ -86,30 +92,40 @@ struct LoginView: View {
             Color.bg
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    logo
+            VStack(spacing: 0) {
+                // Распорки равные, а нижний отступ самого блока поднимает его
+                // на половину своей величины выше геометрического центра:
+                // ровно по центру блок читается съехавшим к кнопкам.
+                Spacer(minLength: 0)
+                appMark
+                    .padding(.bottom, 28)
+                Spacer(minLength: 0)
+
+                VStack(spacing: 10) {
                     appleLoginButton
                     googleLoginButton
                     telegramWebLoginButton
-                    orDivider
-                    emailPasswordCard
-                    // Только в DEBUG и только после жеста: в релизе поле
-                    // «Сервер» — способ увести Bearer-токен на чужой адрес.
-                    #if DEBUG
-                    if isServerRevealed {
-                        serverField(baseURL: $session.baseURLString)
-                    }
-                    #endif
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+                emailDisclosure
+                    .padding(.top, 14)
+                // Только в DEBUG и только после жеста: в релизе поле
+                // «Сервер» — способ увести Bearer-токен на чужой адрес.
+                #if DEBUG
+                if isServerRevealed {
+                    serverField(baseURL: $session.baseURLString)
+                        .padding(.top, 16)
+                }
+                #endif
             }
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
 
             if isLoggingIn {
                 loadingOverlay
             }
+        }
+        .sheet(isPresented: $isEmailSheetPresented) {
+            emailSheet
         }
         .tint(Color.accent)
         .alert(
@@ -127,19 +143,30 @@ struct LoginView: View {
 
     // MARK: - Блоки экрана
 
-    /// Крупная словомарка: изумрудный rounded-логотип и тихий подзаголовок.
+    /// Иконка приложения, словомарка и тихий подзаголовок.
     /// В DEBUG он же — тайная дверь к полю «Сервер» (см. `serverRevealTaps`).
-    private var logo: some View {
-        VStack(spacing: 10) {
-            Text("Splitty")
-                .scaledFont(size: 46, weight: .bold, relativeTo: .title)
-                .foregroundStyle(Color.accent)
-            Text("Делите расходы с друзьями")
-                .scaledFont(size: 17, weight: .medium)
-                .foregroundStyle(Color.inkSecondary)
+    ///
+    /// Иконка — отдельный ресурс `AppMark`, копия `icon-1024`: сам AppIcon
+    /// из кода недоступен, его забирает система.
+    private var appMark: some View {
+        VStack(spacing: 14) {
+            Image("AppMark")
+                .resizable()
+                .frame(width: 84, height: 84)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(color: .black.opacity(0.14), radius: 14, y: 7)
+                .accessibilityHidden(true)
+
+            VStack(spacing: 6) {
+                Text("Splitty")
+                    .scaledFont(size: 40, weight: .bold, relativeTo: .title)
+                    .foregroundStyle(Color.accent)
+                Text("Делите расходы с друзьями")
+                    .scaledFont(size: 16, weight: .medium)
+                    .foregroundStyle(Color.inkSecondary)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .padding(.top, 72)
-        .padding(.bottom, 12)
         #if DEBUG
         // contentShape: тапы ловятся и по пустому месту между строками,
         // иначе попасть надо ровно в глифы.
@@ -179,9 +206,12 @@ struct LoginView: View {
         Button {
             loginWithTelegramWidget()
         } label: {
-            HStack(spacing: 10) {
+            // Геометрия знака — как у Google (20×20, отступ 12): системную
+            // кнопку Apple не перевёрстывать, но свои две держим одинаковыми.
+            HStack(spacing: 12) {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 17, weight: .semibold))
+                    .frame(width: 20, height: 20)
                 Text("Войти через Telegram")
                     .scaledFont(size: 17, weight: .semibold)
             }
@@ -225,24 +255,50 @@ struct LoginView: View {
         .disabled(isLoggingIn)
     }
 
-    private var orDivider: some View {
-        HStack(spacing: 12) {
-            Rectangle().fill(Color.hairline).frame(height: 1)
-            Text("или")
-                .scaledFont(size: 13, relativeTo: .footnote)
-                .foregroundStyle(Color.inkSecondary)
-            Rectangle().fill(Color.hairline).frame(height: 1)
+    /// Тихая ссылка у нижнего края — единственный след формы email на первом
+    /// экране. Guideline 4.8 это не задевает: требование Apple про
+    /// относительную заметность сторонних кнопок, а email — свой вход.
+    private var emailDisclosure: some View {
+        Button {
+            isEmailSheetPresented = true
+        } label: {
+            HStack(spacing: 4) {
+                Text("Или")
+                    .foregroundStyle(Color.inkSecondary)
+                Text("войдите по email")
+                    .foregroundStyle(Color.accent)
+                    .fontWeight(.semibold)
+            }
+            .scaledFont(size: 15)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 4)
+        .accessibilityIdentifier("emailLoginDisclosure")
+        .disabled(isLoggingIn)
+    }
+
+    /// Форма email в шторке. Средний детент: форма короткая, во весь экран
+    /// её разворачивать незачем, а полупрозрачный верх сохраняет контекст.
+    private var emailSheet: some View {
+        ScrollView {
+            emailPasswordForm
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 24)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollDismissesKeyboard(.interactively)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 
     /// Вход и регистрация по email с паролем — для тех, у кого нет ни Apple ID,
-    /// ни Google, ни Telegram. Под соцкнопками: по Guideline 4.8 кнопка Apple
-    /// не должна выглядеть менее заметной.
-    private var emailPasswordCard: some View {
+    /// ни Google, ни Telegram.
+    private var emailPasswordForm: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(isRegistering ? "Регистрация" : "Вход по email")
-                .sectionHeaderStyle()
+                .scaledFont(size: 22, weight: .bold, relativeTo: .title3)
+                .foregroundStyle(Color.ink)
+                .padding(.bottom, 2)
 
             if isRegistering {
                 TextField("Имя", text: $registerName)
@@ -270,6 +326,15 @@ struct LoginView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
 
+            // Ошибка формы — текстом на месте, а не алертом: алерт с корневого
+            // экрана шторка перекрывает, и человек не увидел бы ничего.
+            if let emailErrorMessage {
+                Text(emailErrorMessage)
+                    .scaledFont(size: 14, relativeTo: .footnote)
+                    .foregroundStyle(Color.negative)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Button {
                 submitEmailForm()
             } label: {
@@ -281,6 +346,7 @@ struct LoginView: View {
 
             Button {
                 isRegistering.toggle()
+                emailErrorMessage = nil
             } label: {
                 Text(isRegistering ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться")
                     .scaledFont(size: 15, weight: .medium)
@@ -289,7 +355,6 @@ struct LoginView: View {
             .frame(maxWidth: .infinity)
             .disabled(isLoggingIn)
         }
-        .surfaceCard(padding: 20)
     }
 
     private var isEmailFormValid: Bool {
@@ -308,6 +373,7 @@ struct LoginView: View {
         let registering = isRegistering
 
         isLoggingIn = true
+        emailErrorMessage = nil
         Task {
             defer { isLoggingIn = false }
             do {
@@ -317,8 +383,9 @@ struct LoginView: View {
                     try await session.loginWithPassword(email: mail, password: password)
                 }
                 password = ""
+                isEmailSheetPresented = false
             } catch {
-                errorMessage = humanErrorText(error)
+                emailErrorMessage = humanErrorText(error)
             }
         }
     }

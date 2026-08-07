@@ -21,19 +21,24 @@ extension XCTestCase {
     /// dev-вход с экрана убран, а Apple/Google/Telegram требуют внешних
     /// сервисов и системных листов.
     ///
+    /// Форма живёт в шторке за ссылкой внизу экрана, поэтому первый шаг —
+    /// открыть её. Признак «уже залогинены» — отсутствие этой ссылки.
+    ///
     /// Попыток три, и решает исход, а не содержимое полей: `typeText` иногда
     /// теряет символы, а проверить это у пароля нечем — `SecureField` отдаёт в
     /// accessibility постоянную маску из пяти точек независимо от длины. Так что
-    /// признак успеха один — таб-бар; алерт «неверный email или пароль» означает
-    /// «набралось не то», и пара набирается заново.
+    /// признак успеха один — таб-бар.
     func loginIfNeeded(
         _ app: XCUIApplication,
         email: String = XCTestCase.seedEmail,
         password: String = XCTestCase.seedPassword
     ) {
-        let emailField = app.textFields["Email"]
-        guard emailField.waitForExistence(timeout: 5) else { return } // уже залогинены
+        let disclosure = app.buttons["emailLoginDisclosure"]
+        guard disclosure.waitForExistence(timeout: 5) else { return } // уже залогинены
+        disclosure.tap()
 
+        let emailField = app.textFields["Email"]
+        XCTAssertTrue(emailField.waitForExistence(timeout: 5), "Шторка входа по email не открылась")
         let passwordField = app.secureTextFields["Пароль"]
         XCTAssertTrue(passwordField.waitForExistence(timeout: 5), "Поле пароля не найдено")
 
@@ -42,22 +47,17 @@ extension XCTestCase {
             type(email, into: emailField, app: app)
             clear(passwordField, app: app)
             type(password, into: passwordField, app: app)
-            dismissKeyboard(app)
 
-            // Лейбл «Войти» уникален: код-вход и dev-вход с экрана убраны.
-            let loginButton = app.buttons["Войти"]
-            XCTAssertTrue(loginButton.waitForExistence(timeout: 5), "Кнопка «Войти» не найдена")
-            XCTAssertTrue(loginButton.isEnabled, "Кнопка «Войти» неактивна — форма считает пару невалидной")
-            loginButton.tap()
+            // Submit с клавиатуры, а не тапом по кнопке: в шторке кнопку
+            // закрывает клавиатура, а привычный swipeDown утащил бы саму шторку.
+            passwordField.typeText("\n")
 
             if app.tabBars.firstMatch.waitForExistence(timeout: 15) { return }
 
-            let alertOk = app.alerts.buttons["Ок"]
-            guard alertOk.waitForExistence(timeout: 3) else {
-                XCTFail("Ни таб-бара, ни алерта после входа — сервер молчит?")
-                return
-            }
-            alertOk.tap()
+            XCTAssertTrue(
+                emailField.waitForExistence(timeout: 3),
+                "Ни таб-бара, ни формы после входа — сервер молчит?"
+            )
             XCTAssertNotEqual(
                 attempt, 3,
                 "Три раза «неверный email или пароль» — прогнан ли scripts/seed-local.py?"

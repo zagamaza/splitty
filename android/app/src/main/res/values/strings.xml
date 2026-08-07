@@ -17,7 +17,10 @@
          без текста тап по кнопке входа просто ничего не делал. Порт iOS
          GoogleSignInError.noPresenter. -->
     <string name="google_sign_in_no_activity">Не удалось открыть окно входа Google. Попробуйте ещё раз</string>
-    <string name="login_or">или</string>
+    <!-- Тихая ссылка внизу экрана: форма email живёт в шторке, на первом
+         экране её нет. Две части — разного цвета, поэтому и строки две. -->
+    <string name="login_email_disclosure_prefix">Или</string>
+    <string name="login_email_disclosure_action">войдите по email</string>
     <string name="login_email_section">Вход по email</string>
     <string name="login_register_section">Регистрация</string>
     <string name="login_email_placeholder">Email</string>
