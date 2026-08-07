@@ -149,7 +149,7 @@
     <string name="profile_password_mismatch">Passwords don\'t match</string>
     <string name="profile_password_forgot">I don\'t remember it</string>
     <string name="profile_password_reset_title">Reset password?</string>
-    <string name="profile_password_reset_message">Your old password will stop working. You can still sign in with %1$s until you set a new one.</string>
+    <string name="profile_password_reset_message">Your old password will stop working. You\'ll still be able to sign in with %1$s and set a new one from there.</string>
     <string name="profile_password_reset_confirm">Reset</string>
     <string name="profile_password_save">Save</string>
     <string name="profile_password_invalid_current">Current password is wrong</string>
@@ -365,7 +365,7 @@
     <!-- Форма расхода: itemized-режим (позиции чека), нуджи, отмена -->
     <string name="expense_derived_by_positions">by receipt items</string>
     <string name="expense_derived_incomplete">some prices are missing</string>
-    <string name="expense_recognized_title">Recognised from your voice</string>
+    <string name="expense_recognized_title">Recognized from your voice</string>
     <string name="expense_recognized_hint">Not quite right? Hold the mic below or add a photo of the receipt</string>
     <string name="expense_recognized_add_photo">Add receipt photo</string>
     <string name="expense_correction_title">Correction applied</string>
@@ -404,17 +404,17 @@
     <string name="rec_status_preparing_title">Starting to record…</string>
     <string name="rec_status_preparing_sub">Keep holding — the mic is warming up</string>
     <string name="rec_status_recording_title">Speak…</string>
-    <string name="rec_status_recording_sub">Release to recognise · up to lock · left to cancel</string>
+    <string name="rec_status_recording_sub">Release to recognize · up to lock · left to cancel</string>
     <string name="rec_locked_hint">Tap when you\'re done</string>
     <string name="rec_remaining">· %1$d s left</string>
-    <string name="rec_stop_a11y">Stop recording and recognise</string>
+    <string name="rec_stop_a11y">Stop recording and recognize</string>
     <string name="rec_cancel_a11y">Cancel recording</string>
     <string name="rec_short_tap_hint">Hold the mic while you speak and release when you\'re done</string>
-    <string name="rec_limit_toast">One minute is the limit. Recognising what you managed to say</string>
-    <string name="rec_device_lost_toast">Recording was interrupted. Recognising what you managed to say</string>
+    <string name="rec_limit_toast">One minute is the limit. Recognizing what you managed to say</string>
+    <string name="rec_device_lost_toast">Recording was interrupted. Recognizing what you managed to say</string>
     <string name="rec_review_title">Recorded</string>
     <string name="rec_review_subtitle">Voice recording · %1$d s</string>
-    <string name="rec_review_recognize">Recognise</string>
+    <string name="rec_review_recognize">Recognize</string>
     <string name="rec_review_add_photo">Add receipt photo</string>
     <string name="rec_review_add_photo_hint">prices from the receipt are more accurate</string>
     <string name="rec_review_cancel">Discard recording</string>

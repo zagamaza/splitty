@@ -55,9 +55,9 @@
     <string name="friends_you_owe_short">debes</string>
     <string name="friends_settlement">saldado</string>
     <string name="friends_empty_title">Aún no tienes amigos</string>
-    <string name="friends_empty_description">Los amigos aparecen cuando compartís un grupo con gastos</string>
+    <string name="friends_empty_description">Los amigos aparecen cuando comparten un grupo con gastos</string>
     <string name="friend_owed_caption">Te debe</string>
-    <string name="friend_settled_caption">Estáis en paz</string>
+    <string name="friend_settled_caption">Están en paz</string>
     <string name="friend_groups_section">Por grupo</string>
     <string name="friend_no_group_debts">No hay deudas en ningún grupo</string>
     <string name="friend_room_owed_you">te debe</string>
@@ -66,7 +66,7 @@
     <string name="friends_create_group">Crear grupo</string>
 
     <!-- Активность -->
-    <string name="activity_mine_only">Solo míos</string>
+    <string name="activity_mine_only">Solo mías</string>
     <string name="activity_mine_only_empty_title">Nada en lo que participes</string>
     <string name="activity_mine_only_empty_description">Aquí aparecerán las operaciones que pagaste o en las que participaste</string>
     <string name="activity_empty_title">Aún no hay actividad</string>
@@ -91,8 +91,8 @@
     <string name="time_minutes_ago">hace %1$d min</string>
     <string name="time_hours_ago">hace %1$d h</string>
     <string name="time_days_ago">hace %1$d d</string>
-    <string name="time_weeks_ago">hace %1$d sem</string>
-    <string name="time_months_ago">hace %1$d mes</string>
+    <string name="time_weeks_ago">hace %1$d sem.</string>
+    <string name="time_months_ago">hace %1$d m.</string>
     <plurals name="time_years_ago">
         <item quantity="one">hace %1$d año</item>
         <item quantity="other">hace %1$d años</item>
@@ -106,7 +106,7 @@
     <string name="notifications_operations">Operaciones</string>
     <string name="notifications_operations_footer">Alguien añadió o cambió un gasto en tu grupo</string>
     <string name="notifications_debts">Deudas</string>
-    <string name="notifications_debts_footer">Alguien te devolvió una deuda</string>
+    <string name="notifications_debts_footer">Alguien te devolvió dinero</string>
     <string name="notifications_channel_push">Aplicación</string>
     <string name="profile_theme">Tema</string>
     <string name="profile_theme_system">Del sistema</string>
@@ -138,7 +138,7 @@
     <string name="profile_password_mismatch">Las contraseñas no coinciden</string>
     <string name="profile_password_forgot">No la recuerdo</string>
     <string name="profile_password_reset_title">¿Restablecer la contraseña?</string>
-    <string name="profile_password_reset_message">La contraseña antigua dejará de funcionar. Podrás seguir entrando con %1$s hasta que definas una nueva.</string>
+    <string name="profile_password_reset_message">La contraseña antigua dejará de funcionar. Podrás entrar con %1$s y definir una nueva desde ahí.</string>
     <string name="profile_password_reset_confirm">Restablecer</string>
     <string name="profile_password_save">Guardar</string>
     <string name="profile_password_invalid_current">La contraseña actual no es correcta</string>
@@ -170,7 +170,7 @@
     <string name="groups_empty_subtitle">Crea un grupo o únete a uno con un código de invitación</string>
     <string name="groups_create_title">Grupo nuevo</string>
     <string name="groups_create_placeholder">Nombre</string>
-    <string name="groups_create_hint">Por ejemplo: «Viaje a Estambul» o «Piso».</string>
+    <string name="groups_create_hint">Por ejemplo: «Viaje a Estambul» o «Casa».</string>
     <string name="groups_create_button">Crear</string>
     <string name="groups_join_title">Unirse</string>
     <string name="groups_join_short">Unirse</string>
@@ -214,7 +214,7 @@
     <string name="group_op_not_involved">no participa</string>
     <string name="group_repay_you_paid">Pagaste %1$s</string>
     <string name="group_repay_paid_you">%1$s te pagó</string>
-    <string name="group_repay_paid">%1$s pagó %2$s</string>
+    <string name="group_repay_paid">%1$s pagó a %2$s</string>
 
     <!-- Группы: балансы -->
     <string name="group_balances_title">Saldos</string>
@@ -234,12 +234,12 @@
     <string name="group_settings_invite_footer">Comparte el enlace o el código: con él tu amigo entra desde «Unirse».</string>
     <string name="invite_sheet_title">Invitar al grupo</string>
     <string name="invite_share_link">Compartir enlace</string>
-    <string name="invite_banner_title">Estás solo en el grupo</string>
+    <string name="invite_banner_title">No hay nadie más en el grupo</string>
     <string name="invite_banner_subtitle">Invita a tus amigos para empezar a dividir gastos</string>
     <string name="invite_banner_action">Invitar</string>
     <string name="group_settings_archive">Archivar</string>
     <string name="group_settings_unarchive">Desarchivar</string>
-    <string name="group_settings_archive_footer">Archivar oculta el grupo solo de tu lista. Las operaciones y las deudas se conservan.</string>
+    <string name="group_settings_archive_footer">Archivar oculta el grupo solo en tu lista. Las operaciones y las deudas se conservan.</string>
     <string name="group_currency_change_title">¿Cambiar la moneda a %1$s?</string>
     <string name="group_currency_change_confirm">Cambiar a %1$s</string>
     <string name="group_currency_change_message">Los importes no se convierten: solo cambia el símbolo, para todo el grupo</string>
@@ -280,7 +280,7 @@
     <!-- Группы: вложения операции -->
     <string name="op_attachments">Adjuntos</string>
     <string name="attach_photo">Foto</string>
-    <string name="attach_video">Vídeo</string>
+    <string name="attach_video">Video</string>
     <string name="attach_document">Documento</string>
     <string name="attach_other">Adjunto</string>
     <string name="attach_open_share">Abrir / compartir</string>
@@ -329,7 +329,7 @@
     <string name="expense_split_hint_equal">%1$s / %2$d = %3$s por persona</string>
     <string name="expense_distributed">El importe está repartido por completo</string>
     <string name="expense_remaining">Queda por repartir: %1$s</string>
-    <string name="expense_overspent">Te pasas por: %1$s</string>
+    <string name="expense_overspent">Excedido en: %1$s</string>
 
     <!-- Офлайн-режим -->
     <string name="offline_banner_offline">Sin conexión: los cambios se guardan en el dispositivo</string>
@@ -388,7 +388,7 @@
     <string name="rec_status_cancel_title">Suelta para cancelar</string>
     <string name="rec_status_cancel_sub">Vuelve con el dedo para continuar</string>
     <string name="rec_status_locked_title">Grabando</string>
-    <string name="rec_status_locked_sub">Habla tranquilo: ya puedes soltar</string>
+    <string name="rec_status_locked_sub">Habla con calma: ya puedes soltar</string>
     <string name="rec_status_preparing_title">Empezando a grabar…</string>
     <string name="rec_status_preparing_sub">Sigue pulsando: el micrófono se está activando</string>
     <string name="rec_status_recording_title">Habla…</string>
@@ -431,7 +431,7 @@
     <string name="settleup_no_debts_message">No tienes deudas en este grupo</string>
     <string name="settleup_you_owe">Debes a %1$s</string>
     <string name="settleup_owes_you">%1$s te debe</string>
-    <string name="settleup_owes">%1$s debe a %2$s</string>
+    <string name="settleup_owes">%1$s le debe a %2$s</string>
     <string name="settleup_you_pay">Pagas — %1$s</string>
     <string name="settleup_pays_you">%1$s te paga</string>
     <string name="settleup_pays">%1$s paga — %2$s</string>

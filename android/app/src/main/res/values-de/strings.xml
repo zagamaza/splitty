@@ -28,7 +28,7 @@
     <!-- Табы -->
     <string name="tab_friends">Freunde</string>
     <string name="tab_groups">Gruppen</string>
-    <string name="tab_add">Ausgabe hinzufügen</string>
+    <string name="tab_add">Hinzufügen</string>
     <string name="tab_activity">Aktivität</string>
     <string name="tab_account">Profil</string>
 
@@ -59,7 +59,7 @@
     <string name="friend_owed_caption">Schuldet dir</string>
     <string name="friend_settled_caption">Ihr seid quitt</string>
     <string name="friend_groups_section">Nach Gruppe</string>
-    <string name="friend_no_group_debts">Keine Schulden in einer Gruppe</string>
+    <string name="friend_no_group_debts">Keine Schulden in deinen Gruppen</string>
     <string name="friend_room_owed_you">schuldet dir</string>
     <string name="friend_settle_up">Begleichen</string>
     <string name="friend_settle_room_picker_title">In welcher Gruppe möchtest du begleichen?</string>
@@ -73,7 +73,7 @@
     <string name="activity_empty_description">Hier erscheinen Ausgaben und Zahlungen deiner Gruppen</string>
     <string name="activity_added">hat „%1$s“ hinzugefügt</string>
     <string name="activity_paid">hat bezahlt</string>
-    <string name="activity_paid_you">hat dir bezahlt</string>
+    <string name="activity_paid_you">hat dir zurückgezahlt</string>
     <string name="activity_in_group">in „%1$s“</string>
     <string name="activity_recipient_fallback">einem Mitglied</string>
     <string name="activity_you_lent">Du hast ausgelegt</string>
@@ -90,7 +90,7 @@
     <string name="time_just_now">gerade eben</string>
     <string name="time_minutes_ago">vor %1$d Min.</string>
     <string name="time_hours_ago">vor %1$d Std.</string>
-    <string name="time_days_ago">vor %1$d T.</string>
+    <string name="time_days_ago">vor %1$d Tg.</string>
     <string name="time_weeks_ago">vor %1$d Wo.</string>
     <string name="time_months_ago">vor %1$d Mon.</string>
     <plurals name="time_years_ago">
@@ -136,9 +136,9 @@
     <string name="profile_password_new">Neues Passwort</string>
     <string name="profile_password_repeat">Neues Passwort wiederholen</string>
     <string name="profile_password_mismatch">Die Passwörter stimmen nicht überein</string>
-    <string name="profile_password_forgot">Ich erinnere mich nicht</string>
+    <string name="profile_password_forgot">Ich weiß es nicht mehr</string>
     <string name="profile_password_reset_title">Passwort zurücksetzen?</string>
-    <string name="profile_password_reset_message">Das alte Passwort funktioniert dann nicht mehr. Über %1$s kommst du weiterhin hinein, bis du ein neues festlegst.</string>
+    <string name="profile_password_reset_message">Das alte Passwort funktioniert dann nicht mehr. Über %1$s kommst du weiterhin hinein und kannst dort ein neues festlegen.</string>
     <string name="profile_password_reset_confirm">Zurücksetzen</string>
     <string name="profile_password_save">Speichern</string>
     <string name="profile_password_invalid_current">Das aktuelle Passwort stimmt nicht</string>
@@ -165,7 +165,7 @@
     <string name="groups_archive">Archiv</string>
     <string name="groups_archive_empty_title">Das Archiv ist leer</string>
     <string name="groups_archive_empty_subtitle">Hier erscheinen archivierte Gruppen</string>
-    <string name="groups_unarchive">Aus dem Archiv holen</string>
+    <string name="groups_unarchive">Wiederherstellen</string>
     <string name="groups_empty_title">Noch keine Gruppen</string>
     <string name="groups_empty_subtitle">Erstelle eine Gruppe oder tritt einer mit einem Einladungscode bei</string>
     <string name="groups_create_title">Neue Gruppe</string>
@@ -213,8 +213,8 @@
     <string name="group_op_settled">ausgeglichen</string>
     <string name="group_op_not_involved">nicht beteiligt</string>
     <string name="group_repay_you_paid">Du hast %1$s bezahlt</string>
-    <string name="group_repay_paid_you">%1$s hat dir bezahlt</string>
-    <string name="group_repay_paid">%1$s hat %2$s bezahlt</string>
+    <string name="group_repay_paid_you">%1$s hat dir zurückgezahlt</string>
+    <string name="group_repay_paid">%1$s hat an %2$s gezahlt</string>
 
     <!-- Группы: балансы -->
     <string name="group_balances_title">Salden</string>
@@ -238,7 +238,7 @@
     <string name="invite_banner_subtitle">Lade Freunde ein, um Ausgaben zu teilen</string>
     <string name="invite_banner_action">Einladen</string>
     <string name="group_settings_archive">Archivieren</string>
-    <string name="group_settings_unarchive">Aus dem Archiv holen</string>
+    <string name="group_settings_unarchive">Wiederherstellen</string>
     <string name="group_settings_archive_footer">Das Archiv blendet die Gruppe nur bei dir aus. Vorgänge und Schulden bleiben erhalten.</string>
     <string name="group_currency_change_title">Währung auf %1$s ändern?</string>
     <string name="group_currency_change_confirm">Auf %1$s ändern</string>
@@ -297,7 +297,7 @@
     <string name="totals_total_spent">Gesamt ausgegeben</string>
     <string name="totals_for_month">Für %1$s</string>
     <string name="totals_operation_count">Vorgänge</string>
-    <string name="totals_avg_check">Durchschnittliche Ausgabe</string>
+    <string name="totals_avg_check">Ø pro Ausgabe</string>
     <string name="totals_i_paid">Von mir bezahlt</string>
     <string name="totals_my_share">Für mich ausgegeben</string>
     <string name="totals_by_day">Ausgaben nach Tag</string>
@@ -344,7 +344,7 @@
     <string name="expense_receipt_scan_hint">Fotografiere den Beleg — ich fülle Beschreibung, Betrag und Positionen aus</string>
     <string name="expense_receipt_take_photo">Foto aufnehmen</string>
     <string name="expense_receipt_pick_photo">Foto auswählen</string>
-    <string name="expense_parsing">Wird gelesen…</string>
+    <string name="expense_parsing">Ich lese…</string>
     <string name="expense_parsing_subtitle">Ich erfasse die Ausgabe und teile sie in Positionen auf</string>
     <string name="expense_parsing_cancel">Abbrechen</string>
     <string name="expense_parse_retry">Erneut versuchen</string>

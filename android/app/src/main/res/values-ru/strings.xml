@@ -153,7 +153,7 @@
     <string name="profile_password_mismatch">Пароли не совпадают</string>
     <string name="profile_password_forgot">Не помню текущий</string>
     <string name="profile_password_reset_title">Сбросить пароль?</string>
-    <string name="profile_password_reset_message">Старый пароль перестанет работать, вход по %1$s останется доступен после того, как зададите новый.</string>
+    <string name="profile_password_reset_message">Старый пароль перестанет работать. Войти можно будет через %1$s — и уже оттуда задать новый.</string>
     <string name="profile_password_reset_confirm">Сбросить</string>
     <string name="profile_password_save">Сохранить</string>
     <string name="profile_password_invalid_current">Неверный текущий пароль</string>

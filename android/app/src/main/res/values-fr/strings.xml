@@ -20,15 +20,15 @@
     <string name="login_password_length_hint">Le mot de passe doit faire au moins 8 caractères</string>
     <string name="login_email_button">Se connecter</string>
     <string name="login_register_button">Créer un compte</string>
-    <string name="login_switch_to_register">Pas encore de compte ? Créez-en un</string>
-    <string name="login_switch_to_login">Vous avez déjà un compte ? Connectez-vous</string>
+    <string name="login_switch_to_register">Pas encore de compte ? Créez-en un</string>
+    <string name="login_switch_to_login">Vous avez déjà un compte ? Connectez-vous</string>
     <string name="login_telegram_button">Continuer avec Telegram</string>
     <string name="login_server_section">Serveur</string>
 
     <!-- Табы -->
     <string name="tab_friends">Amis</string>
     <string name="tab_groups">Groupes</string>
-    <string name="tab_add">Ajouter une dépense</string>
+    <string name="tab_add">Ajouter</string>
     <string name="tab_activity">Activité</string>
     <string name="tab_account">Profil</string>
 
@@ -59,10 +59,10 @@
     <string name="friend_owed_caption">Vous doit</string>
     <string name="friend_settled_caption">Vous êtes quittes</string>
     <string name="friend_groups_section">Par groupe</string>
-    <string name="friend_no_group_debts">Aucune dette dans un groupe</string>
+    <string name="friend_no_group_debts">Pas de dettes dans vos groupes</string>
     <string name="friend_room_owed_you">vous doit</string>
     <string name="friend_settle_up">Régler</string>
-    <string name="friend_settle_room_picker_title">Dans quel groupe voulez-vous régler ?</string>
+    <string name="friend_settle_room_picker_title">Dans quel groupe voulez-vous régler ?</string>
     <string name="friends_create_group">Créer un groupe</string>
 
     <!-- Активность -->
@@ -71,10 +71,10 @@
     <string name="activity_mine_only_empty_description">Les opérations que vous avez payées ou auxquelles vous avez participé apparaîtront ici</string>
     <string name="activity_empty_title">Pas encore d\'activité</string>
     <string name="activity_empty_description">Les dépenses et paiements de vos groupes apparaîtront ici</string>
-    <string name="activity_added">a ajouté « %1$s »</string>
+    <string name="activity_added">a ajouté « %1$s »</string>
     <string name="activity_paid">a payé</string>
     <string name="activity_paid_you">vous a payé</string>
-    <string name="activity_in_group">dans « %1$s »</string>
+    <string name="activity_in_group">dans « %1$s »</string>
     <string name="activity_recipient_fallback">un membre</string>
     <string name="activity_you_lent">Vous avez avancé</string>
     <string name="activity_you_owe">Vous devez</string>
@@ -99,8 +99,8 @@
     </plurals>
 
     <!-- Профиль -->
-    <string name="profile_id">ID : %1$d</string>
-    <string name="profile_settings_section">Réglages</string>
+    <string name="profile_id">ID : %1$d</string>
+    <string name="profile_settings_section">Paramètres</string>
     <string name="profile_name">Nom</string>
     <string name="notifications_title">Notifications</string>
     <string name="notifications_operations">Opérations</string>
@@ -115,7 +115,7 @@
     <string name="profile_language">Langue</string>
     <string name="profile_language_caption">Langue des messages du bot Telegram</string>
     <string name="profile_server_section">Serveur</string>
-    <string name="profile_logout_confirm">Se déconnecter du compte ?</string>
+    <string name="profile_logout_confirm">Se déconnecter du compte ?</string>
     <string name="profile_edit_name_title">Modifier le nom</string>
     <string name="profile_name_empty">Le nom ne peut pas être vide</string>
 
@@ -126,7 +126,7 @@
     <string name="profile_login_method_link">Lier</string>
     <string name="profile_login_method_unlink">Délier</string>
     <string name="profile_login_methods_footer">N\'importe lequel de ces modes vous connecte au même compte.</string>
-    <string name="profile_login_methods_footer_last">Impossible de délier votre dernier mode de connexion : sans lui, plus aucun accès au compte. Liez-en un autre d\'abord.</string>
+    <string name="profile_login_methods_footer_last">Impossible de délier votre dernier mode de connexion : sans lui, plus aucun accès au compte. Liez-en un autre d\'abord.</string>
     <string name="profile_password_set">Définir</string>
     <string name="profile_password_change">Modifier</string>
     <string name="profile_password_not_set">%1$s · aucun mot de passe</string>
@@ -137,20 +137,20 @@
     <string name="profile_password_repeat">Répétez le nouveau mot de passe</string>
     <string name="profile_password_mismatch">Les mots de passe ne correspondent pas</string>
     <string name="profile_password_forgot">Je ne m\'en souviens plus</string>
-    <string name="profile_password_reset_title">Réinitialiser le mot de passe ?</string>
-    <string name="profile_password_reset_message">L\'ancien mot de passe cessera de fonctionner. Vous pourrez toujours vous connecter avec %1$s jusqu\'à ce que vous en définissiez un nouveau.</string>
+    <string name="profile_password_reset_title">Réinitialiser le mot de passe ?</string>
+    <string name="profile_password_reset_message">L\'ancien mot de passe cessera de fonctionner. Vous pourrez toujours vous connecter avec %1$s et en définir un nouveau ensuite.</string>
     <string name="profile_password_reset_confirm">Réinitialiser</string>
     <string name="profile_password_save">Enregistrer</string>
     <string name="profile_password_invalid_current">Mot de passe actuel incorrect</string>
-    <string name="profile_unlink_confirm_title">Délier %1$s ?</string>
+    <string name="profile_unlink_confirm_title">Délier %1$s ?</string>
     <string name="profile_unlink_confirm_message">Vous ne pourrez plus vous connecter de cette façon. Les autres modes liés continueront de fonctionner.</string>
-    <string name="profile_unlink_confirm_message_telegram">Vous ne pourrez plus vous connecter via Telegram, et vous ne pourrez pas relier ce Telegram ensuite : si vous réécrivez au bot, il créera un nouveau profil séparé, sans vos groupes.\n\nLes autres modes de connexion liés continueront de fonctionner.</string>
+    <string name="profile_unlink_confirm_message_telegram">Vous ne pourrez plus vous connecter via Telegram, et vous ne pourrez pas relier ce Telegram ensuite : si vous réécrivez au bot, il créera un nouveau profil séparé, sans vos groupes.\n\nLes autres modes de connexion liés continueront de fonctionner.</string>
     <string name="profile_notice_title">Attention</string>
     <string name="profile_notice_ok">Compris</string>
     <string name="profile_delete_account">Supprimer le compte</string>
-    <string name="profile_delete_account_caption">Votre profil est supprimé définitivement ; les dépenses et les dettes restent dans les groupes.</string>
-    <string name="profile_delete_confirm_title">Supprimer le compte ?</string>
-    <string name="profile_delete_confirm_message">Votre profil, votre nom et vos modes de connexion seront supprimés définitivement — le compte ne pourra pas être restauré.\n\nLes dépenses et les dettes restent dans les groupes : les membres verront « Utilisateur supprimé » à la place de votre nom, et les montants ne changeront pas.</string>
+    <string name="profile_delete_account_caption">Votre profil est supprimé définitivement ; les dépenses et les dettes restent dans les groupes.</string>
+    <string name="profile_delete_confirm_title">Supprimer le compte ?</string>
+    <string name="profile_delete_confirm_message">Votre profil, votre nom et vos modes de connexion seront supprimés définitivement — le compte ne pourra pas être restauré.\n\nLes dépenses et les dettes restent dans les groupes : les membres verront « Utilisateur supprimé » à la place de votre nom, et les montants ne changeront pas.</string>
 
     <!-- Группы: список -->
     <string name="groups_title">Groupes</string>
@@ -170,7 +170,7 @@
     <string name="groups_empty_subtitle">Créez un groupe ou rejoignez-en un avec un code d\'invitation</string>
     <string name="groups_create_title">Nouveau groupe</string>
     <string name="groups_create_placeholder">Nom</string>
-    <string name="groups_create_hint">Par exemple : « Voyage à Istanbul » ou « Coloc ».</string>
+    <string name="groups_create_hint">Par exemple : « Voyage à Istanbul » ou « Coloc ».</string>
     <string name="groups_create_button">Créer</string>
     <string name="groups_join_title">Rejoindre</string>
     <string name="groups_join_short">Rejoindre</string>
@@ -194,7 +194,7 @@
     <string name="groups_row_debts_unavailable">dettes non calculées</string>
     <string name="group_debts_unavailable_title">Dettes non calculées</string>
     <string name="group_debts_unavailable_subtitle">Les données de ce groupe viennent d\'une ancienne version, les soldes ne tombent donc pas juste. Les opérations et les totaux restent disponibles.</string>
-    <string name="group_card_pending_badge">Des opérations ne sont pas envoyées</string>
+    <string name="group_card_pending_badge">Certaines opérations n\'ont pas encore été envoyées</string>
     <string name="group_settle_offline">Pas de connexion. Le règlement ne fonctionne qu\'en ligne</string>
     <string name="group_you_owe_name">Vous devez à %1$s</string>
     <string name="group_chip_settle">Régler la dette</string>
@@ -202,7 +202,7 @@
     <string name="group_chip_totals">Bilan</string>
     <string name="group_fab_expense">Dépense</string>
     <string name="group_add_expense">Ajouter une dépense</string>
-    <string name="group_settings">Réglages du groupe</string>
+    <string name="group_settings">Paramètres du groupe</string>
     <string name="group_empty_ops_title">Pas encore de dépenses</string>
     <string name="group_empty_ops_subtitle">Ajoutez la première dépense — elle apparaîtra dans cette liste</string>
     <string name="group_op_fallback">Dépense</string>
@@ -227,23 +227,23 @@
     <string name="group_settings_members">Membres</string>
     <string name="group_settings_member_you">%1$s (vous)</string>
     <string name="group_settings_currency">Devise</string>
-    <string name="group_settings_currency_footer">Tous les montants du groupe sont affichés dans sa devise : dépenses, dettes et bilans.</string>
+    <string name="group_settings_currency_footer">Tous les montants du groupe sont affichés dans sa devise : dépenses, dettes et bilans.</string>
     <string name="group_settings_invite">Inviter dans le groupe</string>
     <string name="group_settings_members_invite">Inviter</string>
     <string name="group_settings_code">Code du groupe</string>
-    <string name="group_settings_invite_footer">Partagez le lien ou le code — votre ami rejoint le groupe avec, via « Rejoindre ».</string>
+    <string name="group_settings_invite_footer">Partagez le lien ou le code — votre ami rejoint le groupe avec, via « Rejoindre ».</string>
     <string name="invite_sheet_title">Inviter dans le groupe</string>
     <string name="invite_share_link">Partager le lien</string>
-    <string name="invite_banner_title">Vous êtes seul dans le groupe</string>
+    <string name="invite_banner_title">Il n\'y a que vous dans le groupe</string>
     <string name="invite_banner_subtitle">Invitez vos amis pour partager les dépenses</string>
     <string name="invite_banner_action">Inviter</string>
     <string name="group_settings_archive">Archiver</string>
     <string name="group_settings_unarchive">Désarchiver</string>
-    <string name="group_settings_archive_footer">L\'archivage masque le groupe de votre liste seulement. Les opérations et les dettes sont conservées.</string>
-    <string name="group_currency_change_title">Passer à la devise %1$s ?</string>
+    <string name="group_settings_archive_footer">L\'archivage retire le groupe de votre liste uniquement. Les opérations et les dettes sont conservées.</string>
+    <string name="group_currency_change_title">Passer à la devise %1$s ?</string>
     <string name="group_currency_change_confirm">Passer à %1$s</string>
     <string name="group_currency_change_message">Les montants ne sont pas convertis — seul le symbole change, pour tout le groupe</string>
-    <string name="group_invite_message">Rejoins le groupe « %1$s » sur Splitty : %2$s\nCode du groupe : %3$s</string>
+    <string name="group_invite_message">Rejoins le groupe « %1$s » sur Splitty : %2$s\nCode du groupe : %3$s</string>
 
     <!-- Группы: карточка операции -->
     <string name="op_title_expense">Dépense</string>
@@ -265,8 +265,8 @@
     <string name="op_edit">Modifier</string>
     <string name="op_delete">Supprimer</string>
     <string name="op_deleting">Suppression…</string>
-    <string name="op_delete_expense_title">Supprimer la dépense ?</string>
-    <string name="op_delete_repayment_title">Supprimer le paiement ?</string>
+    <string name="op_delete_expense_title">Supprimer la dépense ?</string>
+    <string name="op_delete_repayment_title">Supprimer le paiement ?</string>
     <string name="op_delete_message">L\'opération disparaîtra du groupe et les soldes seront recalculés.</string>
     <string name="op_delete_repayment_message">L\'opération disparaîtra du groupe et les soldes seront recalculés. Les paiements ne se modifient pas — en cas d\'erreur, supprimez-le et saisissez-le à nouveau.</string>
 
@@ -288,14 +288,14 @@
 
     <!-- Группы: итоги (дашборд) -->
     <string name="group_tab_operations">Opérations</string>
-    <string name="group_settings_short">Réglages</string>
+    <string name="group_settings_short">Paramètres</string>
     <string name="group_filter_all">Tout</string>
     <string name="group_chip_settle_short">Régler</string>
     <string name="group_chip_mine_only">Avec moi</string>
     <string name="group_mine_only_empty">Aucune opération vous concernant</string>
     <string name="totals_title">Bilan</string>
     <string name="totals_total_spent">Total dépensé</string>
-    <string name="totals_for_month">Pour %1$s</string>
+    <string name="totals_for_month">En %1$s</string>
     <string name="totals_operation_count">Opérations</string>
     <string name="totals_avg_check">Dépense moyenne</string>
     <string name="totals_i_paid">Payé par moi</string>
@@ -314,8 +314,8 @@
     <!-- Добавление/редактирование расхода -->
     <string name="expense_title_add">Ajouter une dépense</string>
     <string name="expense_title_edit">Modifier la dépense</string>
-    <string name="expense_group_section">Avec qui partagez-vous ?</string>
-    <string name="expense_no_groups">Vous n\'avez pas encore de groupe — créez-en un dans l\'onglet « Groupes »</string>
+    <string name="expense_group_section">Avec qui partagez-vous ?</string>
+    <string name="expense_no_groups">Vous n\'avez pas encore de groupe — créez-en un dans l\'onglet « Groupes »</string>
     <string name="expense_select_group_hint">Choisissez d\'abord un groupe</string>
     <string name="expense_description_placeholder">Description</string>
     <string name="expense_paid_by_you">Payé</string>
@@ -325,11 +325,11 @@
     <string name="expense_split_equally">À parts égales</string>
     <string name="expense_split_by_amounts">Par montants</string>
     <string name="expense_hint_pick_member">Choisissez au moins un membre</string>
-    <string name="expense_hint_members_count">Membres : %1$d</string>
+    <string name="expense_hint_members_count">Membres : %1$d</string>
     <string name="expense_split_hint_equal">%1$s / %2$d = %3$s par personne</string>
     <string name="expense_distributed">Le montant est entièrement réparti</string>
-    <string name="expense_remaining">Reste à répartir : %1$s</string>
-    <string name="expense_overspent">Dépassement : %1$s</string>
+    <string name="expense_remaining">Reste à répartir : %1$s</string>
+    <string name="expense_overspent">Dépassement : %1$s</string>
 
     <!-- Офлайн-режим -->
     <string name="offline_banner_offline">Hors ligne — les modifications sont enregistrées sur l\'appareil</string>
@@ -354,7 +354,7 @@
     <string name="expense_derived_by_positions">par lignes du ticket</string>
     <string name="expense_derived_incomplete">certains prix manquent</string>
     <string name="expense_recognized_title">Reconnu à la voix</string>
-    <string name="expense_recognized_hint">Pas tout à fait ça ? Maintenez le micro en bas ou ajoutez une photo du ticket</string>
+    <string name="expense_recognized_hint">Pas tout à fait ça ? Maintenez le micro en bas ou ajoutez une photo du ticket</string>
     <string name="expense_recognized_add_photo">Ajouter une photo du ticket</string>
     <string name="expense_correction_title">Correction appliquée</string>
     <string name="expense_correction_hint_items">Les modifications sont mises en évidence sur le ticket</string>
@@ -363,10 +363,10 @@
     <string name="expense_add_item">Ajouter une ligne</string>
     <string name="expense_split_override_title">Actuellement réparti par lignes</string>
     <string name="expense_split_override_action">À parts égales</string>
-    <string name="expense_split_override_hint">« À parts égales » abandonne les lignes du ticket et répartit le montant entre tous les membres. Vous pouvez revenir en arrière avec « Annuler »</string>
-    <string name="expense_unknown_hint">Choisissez qui est « %1$s » : touchez le repère rouge sur le ticket</string>
-    <string name="expense_priceless_hint">Indiquez un prix — touchez la ligne marquée « prix ? »</string>
-    <string name="expense_delete_local_title">Supprimer l\'opération ?</string>
+    <string name="expense_split_override_hint">« À parts égales » abandonne les lignes du ticket et répartit le montant entre tous les membres. Vous pouvez revenir en arrière avec « Annuler »</string>
+    <string name="expense_unknown_hint">Choisissez qui est « %1$s » : touchez le repère rouge sur le ticket</string>
+    <string name="expense_priceless_hint">Indiquez un prix — touchez la ligne marquée « prix ? »</string>
+    <string name="expense_delete_local_title">Supprimer l\'opération ?</string>
     <string name="expense_delete_local_message">L\'entrée non envoyée disparaîtra de la file.</string>
 
     <!-- Голосовой ввод -->
@@ -380,7 +380,7 @@
     <string name="expense_composer_manual">Saisir manuellement</string>
     <string name="expense_composer_back_to_voice">Remplir à la voix</string>
     <string name="expense_record_a11y">Enregistrer à la voix</string>
-    <string name="expense_record_a11y_hint">Maintenez et parlez ; balayez vers le haut pour verrouiller</string>
+    <string name="expense_record_a11y_hint">Maintenez et parlez ; balayez vers le haut pour verrouiller</string>
     <string name="expense_voice_correction_a11y">Corriger à la voix</string>
     <string name="rec_listening">J\'écoute…</string>
     <string name="rec_hints_title">Reste à préciser</string>
@@ -406,22 +406,22 @@
     <string name="rec_review_add_photo">Ajouter une photo du ticket</string>
     <string name="rec_review_add_photo_hint">les prix du ticket sont plus précis</string>
     <string name="rec_review_cancel">Abandonner l\'enregistrement</string>
-    <string name="rec_locked_back_title">Abandonner l\'enregistrement ?</string>
+    <string name="rec_locked_back_title">Abandonner l\'enregistrement ?</string>
     <string name="rec_locked_back_message">L\'enregistrement sera perdu.</string>
     <string name="rec_locked_back_discard">Abandonner</string>
     <string name="rec_locked_back_continue">Continuer l\'enregistrement</string>
-    <string name="expense_camera_permission_denied">L\'accès à l\'appareil photo est nécessaire — autorisez-le dans les Réglages ou choisissez une photo dans la galerie</string>
-    <string name="expense_camera_unavailable">Cet appareil n\'a pas d\'appareil photo — choisissez une photo du ticket dans la galerie</string>
+    <string name="expense_camera_permission_denied">L\'accès à l\'appareil photo est nécessaire — autorisez-le dans les Paramètres ou choisissez une photo dans la galerie</string>
+    <string name="expense_camera_unavailable">Ce téléphone n\'a pas d\'appareil photo — choisissez une photo du ticket dans la galerie</string>
     <string name="expense_mic_permission_title">Accès au micro nécessaire</string>
-    <string name="expense_mic_permission_message">Autorisez l\'accès au micro dans les Réglages pour dicter vos dépenses.</string>
-    <string name="expense_mic_permission_settings">Ouvrir les Réglages</string>
+    <string name="expense_mic_permission_message">Autorisez l\'accès au micro dans les Paramètres pour dicter vos dépenses.</string>
+    <string name="expense_mic_permission_settings">Ouvrir les Paramètres</string>
     <plurals name="group_hero_pending_ops">
         <item quantity="one">sans compter %d opération non envoyée</item>
         <item quantity="other">sans compter %d opérations non envoyées</item>
     </plurals>
     <plurals name="profile_logout_outbox_confirm">
-        <item quantity="one">Il y a %d opération non envoyée — se déconnecter et la supprimer ?</item>
-        <item quantity="other">Il y a %d opérations non envoyées — se déconnecter et les supprimer ?</item>
+        <item quantity="one">Il y a %d opération non envoyée — se déconnecter et la supprimer ?</item>
+        <item quantity="other">Il y a %d opérations non envoyées — se déconnecter et les supprimer ?</item>
     </plurals>
 
     <!-- Погашение долга -->
@@ -435,8 +435,8 @@
     <string name="settleup_you_pay">Vous payez — %1$s</string>
     <string name="settleup_pays_you">%1$s vous paie</string>
     <string name="settleup_pays">%1$s paie — %2$s</string>
-    <string name="settleup_debt_hint">Dette : %1$s</string>
-    <string name="settleup_debt_max">Pas plus que la dette : %1$s</string>
+    <string name="settleup_debt_hint">Dette : %1$s</string>
+    <string name="settleup_debt_max">Pas plus que la dette : %1$s</string>
     <string name="settleup_submit">Enregistrer le paiement</string>
     <string name="settleup_already_settled">Cette dette est déjà réglée</string>
     <string name="settleup_back_to_list">Retour aux dettes</string>
