@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.ui.resolve
+import com.zagir.splitty.core.ui.UiText
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -610,7 +612,7 @@ private sealed interface AttachmentPreview {
     data class Photo(val bitmap: ImageBitmap) : AttachmentPreview
     /** Не-фото (видео/документ): временный файл под системный «Поделиться». */
     data class Shareable(val file: java.io.File) : AttachmentPreview
-    data class Failed(val message: String) : AttachmentPreview
+    data class Failed(val message: UiText) : AttachmentPreview
 }
 
 /**
@@ -689,7 +691,7 @@ private fun AttachmentPreviewDialog(
                     is AttachmentPreview.Shareable -> ShareFallback(file = file, tempFile = p.file)
 
                     is AttachmentPreview.Failed -> FailedState(
-                        message = p.message,
+                        message = p.message.resolve(),
                         onRetry = { reloadKey++ },
                     )
                 }

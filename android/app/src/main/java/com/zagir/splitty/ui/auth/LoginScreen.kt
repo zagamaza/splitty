@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.core.ui.resolve
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -186,7 +188,7 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 }
             },
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
         )
     }
 }
@@ -405,7 +407,7 @@ private fun EmailLoginForm(
  * (Custom Tabs делят cookie с Chrome, аналог iOS ASWebAuthenticationSession).
  */
 @Composable
-private fun TelegramLoginButton(baseUrl: String, enabled: Boolean, onError: (String) -> Unit) {
+private fun TelegramLoginButton(baseUrl: String, enabled: Boolean, onError: (UiText) -> Unit) {
     val context = LocalContext.current
     Box(
         modifier = Modifier
@@ -445,7 +447,7 @@ private val TelegramBlue = Color(0xFF2AABEE)
  * ActivityNotFoundException остаётся возможен на устройстве вообще без
  * браузера — там честнее сказать об этом, чем молча ничего не сделать.
  */
-private fun openTelegramWidget(context: Context, baseUrl: String, onError: (String) -> Unit) {
+private fun openTelegramWidget(context: Context, baseUrl: String, onError: (UiText) -> Unit) {
     val url = TelegramWebAuth.startUrl(baseUrl)
     try {
         CustomTabsIntent.Builder()
@@ -453,7 +455,7 @@ private fun openTelegramWidget(context: Context, baseUrl: String, onError: (Stri
             .build()
             .launchUrl(context, Uri.parse(url))
     } catch (_: ActivityNotFoundException) {
-        onError("Не нашли браузер, чтобы открыть вход через Telegram")
+        onError(UiText.res(R.string.error_no_browser_for_telegram))
     }
 }
 

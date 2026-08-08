@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.components
 
+import androidx.annotation.StringRes
+import com.zagir.splitty.R
 import com.zagir.splitty.core.model.CurrencySum
 import kotlin.math.abs
 
@@ -7,22 +9,29 @@ import kotlin.math.abs
 // Единая точка правды формулировок про долги: раньше «расчёт»/«в расчёте»/
 // «Вы рассчитались»/«Все долги погашены» жили вразнобой по экранам — как
 // MoneyText для цвета денег, Glossary для текста состояния баланса.
+//
+// Возвращаются ИДЕНТИФИКАТОРЫ ресурсов, а не готовые строки: сами тексты
+// переведены на пять языков, а чистая логика выбора остаётся тестируемой
+// без Android-контекста.
 
 /** Глоссарий состояний баланса — одинаковые слова на всех экранах. */
 object Glossary {
     /** Нулевой баланс — короткая подпись строки/карточки. */
-    const val SETTLED = "в расчёте"
+    @StringRes
+    val SETTLED = R.string.friends_settlement
 
     /** Нулевой баланс — заголовок/hero-состояние. */
-    const val SETTLED_HERO = "Все долги погашены"
+    @StringRes
+    val SETTLED_HERO = R.string.friends_all_settled
 
     /**
      * Подпись направления долга для одной суммы. Нулевая ветка ОБЯЗАТЕЛЬНА:
      * тернарник «>0 ? вам : вы» при нуле врал (показывал «вы должны» на расчёте).
      */
-    fun balanceCaption(sum: Int): String = when {
-        sum > 0 -> "вам должны"
-        sum < 0 -> "вы должны"
+    @StringRes
+    fun balanceCaption(sum: Int): Int = when {
+        sum > 0 -> R.string.groups_row_owed
+        sum < 0 -> R.string.groups_row_owes
         else -> SETTLED
     }
 
@@ -32,12 +41,13 @@ object Glossary {
      * иначе — по знаку основной валюты с обязательной нулевой веткой.
      * Порт FriendsListView.caption.
      */
-    fun balanceCaption(totals: List<CurrencySum>, primary: CurrencySum): String {
+    @StringRes
+    fun balanceCaption(totals: List<CurrencySum>, primary: CurrencySum): Int {
         val hasPositive = totals.any { it.sum > 0 }
         val hasNegative = totals.any { it.sum < 0 }
-        if (hasPositive && hasNegative) return "взаимные долги"
-        if (primary.sum > 0) return "должен(на) вам"
-        if (primary.sum < 0) return "вы должны"
+        if (hasPositive && hasNegative) return R.string.glossary_mutual_debts
+        if (primary.sum > 0) return R.string.friends_owes_you_short
+        if (primary.sum < 0) return R.string.groups_row_owes
         return SETTLED
     }
 }

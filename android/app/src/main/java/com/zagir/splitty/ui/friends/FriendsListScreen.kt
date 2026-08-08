@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.friends
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,7 +98,7 @@ fun FriendsListScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissError,
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissError) {
                     Text(stringResource(R.string.common_ok))
@@ -223,7 +224,7 @@ private fun FriendRowTrailing(totals: List<CurrencySum>) {
             // Через Glossary: нулевая ветка + «взаимные долги» при разных знаках
             // по валютам (единая «должен вам»/«вы должны» тут врала бы).
             Text(
-                text = Glossary.balanceCaption(totals, primary),
+                text = stringResource(Glossary.balanceCaption(totals, primary)),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Splitty.colors.inkSecondary,
@@ -238,7 +239,7 @@ private fun FriendRowTrailing(totals: List<CurrencySum>) {
         }
     } else {
         Text(
-            text = Glossary.SETTLED,
+            text = stringResource(Glossary.SETTLED),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.inkSecondary,

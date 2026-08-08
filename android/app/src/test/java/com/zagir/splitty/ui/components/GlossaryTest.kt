@@ -1,22 +1,28 @@
 package com.zagir.splitty.ui.components
 
+import com.zagir.splitty.R
 import com.zagir.splitty.core.model.CurrencySum
 import kotlin.test.assertEquals
 import org.junit.Test
 
-/** Проверяет ветки Glossary — особенно нулевую (её отсутствие врало на расчёте). */
+/**
+ * Проверяет ветки Glossary — особенно нулевую (её отсутствие врало на расчёте).
+ *
+ * Сравниваем идентификаторы ресурсов, а не тексты: сами формулировки переведены
+ * на пять языков и меняются, а вот ВЫБОР ветки меняться не должен.
+ */
 class GlossaryTest {
 
     @Test
     fun `single sum captions by sign`() {
-        assertEquals("вам должны", Glossary.balanceCaption(4300))
-        assertEquals("вы должны", Glossary.balanceCaption(-990))
+        assertEquals(R.string.groups_row_owed, Glossary.balanceCaption(4300))
+        assertEquals(R.string.groups_row_owes, Glossary.balanceCaption(-990))
     }
 
     @Test
     fun `zero sum is settled, not a debt direction`() {
         assertEquals(Glossary.SETTLED, Glossary.balanceCaption(0))
-        assertEquals("в расчёте", Glossary.balanceCaption(0))
+        assertEquals(R.string.friends_settlement, Glossary.balanceCaption(0))
     }
 
     @Test
@@ -25,7 +31,7 @@ class GlossaryTest {
             CurrencySum(currency = "RUB", sum = 500),
             CurrencySum(currency = "USD", sum = -300),
         )
-        assertEquals("взаимные долги", Glossary.balanceCaption(totals, totals.first()))
+        assertEquals(R.string.glossary_mutual_debts, Glossary.balanceCaption(totals, totals.first()))
     }
 
     @Test
@@ -34,10 +40,10 @@ class GlossaryTest {
             CurrencySum(currency = "RUB", sum = 500),
             CurrencySum(currency = "USD", sum = 300),
         )
-        assertEquals("должен(на) вам", Glossary.balanceCaption(positive, positive.first()))
+        assertEquals(R.string.friends_owes_you_short, Glossary.balanceCaption(positive, positive.first()))
 
         val negative = listOf(CurrencySum(currency = "RUB", sum = -500))
-        assertEquals("вы должны", Glossary.balanceCaption(negative, negative.first()))
+        assertEquals(R.string.groups_row_owes, Glossary.balanceCaption(negative, negative.first()))
     }
 
     @Test

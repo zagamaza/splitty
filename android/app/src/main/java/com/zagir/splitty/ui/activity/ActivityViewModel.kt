@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.activity
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -49,8 +52,8 @@ class ActivityViewModel @Inject constructor(
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
 
     /** Ошибка обновления/подгрузки, когда лента уже показана (alert). */
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
+    val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
     /** id текущего пользователя — для позиций «Вы одолжили/должны/получили». */
     val myUserId: StateFlow<Long?> = sessionStore.state
@@ -161,7 +164,7 @@ class ActivityViewModel @Inject constructor(
             hasMore = page.size == PAGE_SIZE
         } catch (e: ApiException) {
             if (_state.value is UiState.Content) {
-                _errorMessage.value = e.message
+                _errorMessage.value = humanErrorText(e)
             } else {
                 _state.value = UiState.Error(e.message)
             }
@@ -186,7 +189,7 @@ class ActivityViewModel @Inject constructor(
             // без этой отсечки цикл повторял бы один и тот же запрос.
             hasMore = page.size == PAGE_SIZE && fresh.isNotEmpty()
         } catch (e: ApiException) {
-            _errorMessage.value = e.message
+            _errorMessage.value = humanErrorText(e)
         } finally {
             _isLoadingMore.value = false
         }

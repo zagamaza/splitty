@@ -53,6 +53,7 @@
     <string name="friends_all_settled">Todo saldado</string>
     <string name="friends_owes_you_short">te debe</string>
     <string name="friends_you_owe_short">debes</string>
+    <string name="glossary_mutual_debts">deudas mutuas</string>
     <string name="friends_settlement">saldado</string>
     <string name="friends_empty_title">Aún no tienes amigos</string>
     <string name="friends_empty_description">Los amigos aparecen cuando comparten un grupo con gastos</string>
@@ -447,4 +448,35 @@
     <string name="totals_chart_daily_a11y">Gráfico de gastos por día del último mes</string>
     <string name="totals_chart_donut_a11y">Gráfico de la parte pagada por cada miembro</string>
     <string name="totals_chart_weekday_a11y">Gráfico de gastos por día de la semana</string>
+
+    <!-- Ошибки: тексты живут в ресурсах, потому что рождаются в слоях без Context -->
+    <string name="error_timeout">El servidor tarda demasiado. Inténtalo de nuevo</string>
+    <string name="error_no_internet">Sin conexión a internet. Revisa tu red e inténtalo de nuevo</string>
+    <string name="error_decoding">No se pudo procesar la respuesta del servidor. Inténtalo de nuevo</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo</string>
+    <string name="error_validation">Datos incorrectos</string>
+    <string name="error_unauthorized">Hace falta iniciar sesión</string>
+    <string name="error_forbidden">Sin acceso</string>
+    <string name="error_not_found">No encontrado</string>
+    <string name="error_conflict">Esta acción no es posible ahora mismo</string>
+    <string name="error_too_large">La solicitud es demasiado grande</string>
+    <string name="error_unsupported_media">Formato de archivo no admitido</string>
+    <string name="error_rate_limited">Demasiadas solicitudes. Inténtalo más tarde</string>
+    <string name="error_ai_disabled">El reconocimiento no está disponible ahora mismo</string>
+    <string name="error_server_status">Error del servidor (%1$d)</string>
+    <string name="error_invalid_url">Dirección del servidor incorrecta</string>
+    <string name="error_identity_taken">Esta cuenta ya está vinculada a otro perfil de Splitty. Entra con ese</string>
+    <string name="error_identity_already_linked">Ya hay otra cuenta de esta forma de entrar vinculada. Desvincula la actual primero</string>
+    <string name="error_last_identity">No puedes desvincular tu única forma de entrar. Vincula otra primero</string>
+    <string name="error_provider_rejected">No se pudo confirmar la cuenta. Inténtalo de nuevo</string>
+    <string name="error_session_save">No se pudo guardar la sesión</string>
+    <string name="error_telegram_rejected">Telegram no confirmó el inicio de sesión. Inténtalo de nuevo</string>
+    <string name="error_google_failed">No se pudo entrar con Google</string>
+    <string name="error_google_no_account">Añade una cuenta de Google en los ajustes del dispositivo</string>
+    <string name="error_no_browser_for_telegram">No se encontró un navegador para abrir el acceso con Telegram</string>
+    <string name="error_settle_offline">Sin conexión. Saldar deudas solo funciona en línea</string>
+    <string name="error_group_not_found">Grupo no encontrado. Puede que lo hayan eliminado o que el enlace de invitación haya caducado</string>
+    <string name="error_group_no_access">Sin acceso a este grupo. Pide a un miembro que te envíe una invitación nueva</string>
+    <string name="error_operation_not_found">Operación no encontrada</string>
+    <string name="error_outbox_unsupported">Operación sin conexión no admitida</string>
 </resources>

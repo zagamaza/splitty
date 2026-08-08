@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -72,8 +74,8 @@ class ProfileViewModel @Inject constructor(
         .map { it?.baseUrl ?: SessionStore.DEFAULT_BASE_URL }
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.currentBaseUrl())
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
+    val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
@@ -180,7 +182,7 @@ class ProfileViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GoogleSignInException) {
-                _errorMessage.value = e.message
+                _errorMessage.value = humanErrorText(e)
             } catch (e: Throwable) {
                 // Throwable, а не ApiException: updateMe пишет в DataStore и
                 // бросает IOException мимо обёртки репозитория — из
@@ -319,7 +321,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     /** Локальная ошибка валидации (пустое имя) — в тот же alert. */
-    fun showError(message: String) {
+    fun showError(message: UiText) {
         _errorMessage.value = message
     }
 }

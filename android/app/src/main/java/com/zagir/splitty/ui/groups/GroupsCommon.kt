@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.ui.resolve
+import com.zagir.splitty.core.ui.UiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -47,8 +49,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 // Общие помощники экранов пакета ui/groups: аватар группы, русские даты,
 // состояния загрузки/ошибки, hairline-разделитель, поле ввода шитов.
@@ -84,15 +88,29 @@ internal fun GroupAvatar(
 
 // MARK: Даты (порт ios/Splitty/Core/DateFmt.swift)
 
-/** Форматтеры дат с русской локалью для экранов групп. */
+/**
+ * Форматтеры дат экранов групп.
+ *
+ * Локаль берётся из системы на КАЖДОМ обращении, а не фиксируется при
+ * инициализации объекта: раньше здесь был жёстко зашит русский, и на любом
+ * другом языке приложения даты всё равно выходили русскими. Готовые
+ * форматтеры кешируются по паре (шаблон, локаль) — их сборка не бесплатна,
+ * а подписи осей графиков строятся десятками за кадр.
+ */
 internal object GroupsDateFmt {
-    private val ru = Locale("ru")
-    private val dayFormatter = DateTimeFormatter.ofPattern("d", ru)
-    private val monthShortFormatter = DateTimeFormatter.ofPattern("MMM", ru)
-    private val dayMonthFormatter = DateTimeFormatter.ofPattern("d MMM", ru)
-    private val monthYearFormatter = DateTimeFormatter.ofPattern("LLLL yyyy", ru)
-    private val fullDateFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", ru)
-    private val monthNameFormatter = DateTimeFormatter.ofPattern("LLLL", ru)
+    private val cache = ConcurrentHashMap<Pair<String, Locale>, DateTimeFormatter>()
+
+    private fun fmt(pattern: String): DateTimeFormatter {
+        val locale = Locale.getDefault()
+        return cache.getOrPut(pattern to locale) { DateTimeFormatter.ofPattern(pattern, locale) }
+    }
+
+    private val dayFormatter get() = fmt("d")
+    private val monthShortFormatter get() = fmt("MMM")
+    private val dayMonthFormatter get() = fmt("d MMM")
+    private val monthYearFormatter get() = fmt("LLLL yyyy")
+    private val fullDateFormatter get() = fmt("d MMMM yyyy")
+    private val monthNameFormatter get() = fmt("LLLL")
 
     private fun zoned(instant: Instant) = instant.atZone(ZoneId.systemDefault())
 
@@ -113,7 +131,7 @@ internal object GroupsDateFmt {
     /** «Июль 2026» — заголовок секции месяца. */
     fun monthYear(month: YearMonth): String {
         val raw = monthYearFormatter.format(month)
-        return raw.replaceFirstChar { it.uppercase(ru) }
+        return raw.replaceFirstChar { it.uppercase(Locale.getDefault()) }
     }
 
     /** «5 июля 2026» — полная дата карточки операции. */
@@ -125,17 +143,22 @@ internal object GroupsDateFmt {
     /** «февраль» — название месяца точки графика (аннотация «Динамики»). */
     fun monthName(month: YearMonth): String = monthNameFormatter.format(month)
 
-    /** Фиксированные 3-буквенные русские месяцы — подписи оси «Динамики». */
-    private val monthsShort3 = arrayOf(
-        "янв", "фев", "мар", "апр", "май", "июн",
-        "июл", "авг", "сен", "окт", "ноя", "дек",
-    )
+    /**
+     * «фев» / «Feb» — короткий месяц оси графика, без завершающей точки.
+     * Названия берёт JDK по текущей локали: своего списка тут больше нет,
+     * он существовал только на русском.
+     */
+    fun monthShort3(month: YearMonth): String =
+        month.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()).trimEnd('.')
 
-    /** «фев» — короткий месяц оси графика (ровно 3 буквы, без точек). */
-    fun monthShort3(month: YearMonth): String = monthsShort3[month.monthValue - 1]
-
-    /** «пн»…«вс» — подписи оси «По дням недели» (индекс 0 — понедельник). */
-    val weekdaysShort = listOf("пн", "вт", "ср", "чт", "пт", "сб", "вс")
+    /**
+     * «пн»…«вс» — подписи оси «По дням недели», индекс 0 — понедельник.
+     * Не val: локаль может смениться без перезапуска процесса.
+     */
+    val weekdaysShort: List<String>
+        get() = DayOfWeek.entries.map {
+            it.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()).trimEnd('.')
+        }
 
     /** Месяц операции в локальном времени (группировка по месяцам). */
     fun yearMonth(instant: Instant): YearMonth = YearMonth.from(zoned(instant))
@@ -257,7 +280,7 @@ internal fun ChevronIcon(modifier: Modifier = Modifier) {
 
 /** Единый алерт ошибки: показывается, пока [message] != null. */
 @Composable
-internal fun GroupsAlertDialog(message: String?, onDismiss: () -> Unit) {
+internal fun GroupsAlertDialog(message: UiText?, onDismiss: () -> Unit) {
     if (message == null) return
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -267,7 +290,7 @@ internal fun GroupsAlertDialog(message: String?, onDismiss: () -> Unit) {
             }
         },
         title = { Text(stringResource(R.string.common_error_title)) },
-        text = { Text(message) },
+        text = { Text(message.resolve()) },
     )
 }
 

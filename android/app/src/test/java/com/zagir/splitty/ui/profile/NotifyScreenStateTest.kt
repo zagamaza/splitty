@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import com.zagir.splitty.core.model.ChannelPrefs
 import com.zagir.splitty.core.model.NotifySettings
 import kotlin.test.Test
@@ -51,20 +53,20 @@ class NotifyScreenStateTest {
 
     @Test
     fun `master failure reverts value and raises alert`() {
-        val next = loaded.applyMaster(false).masterFailed(previous = true, message = "Нет сети")
+        val next = loaded.applyMaster(false).masterFailed(previous = true, message = UiText.Raw("Нет сети"))
         assertTrue(next.masterOn) // откат к прежнему
         assertFalse(next.isSaving)
-        assertEquals("Нет сети", next.alertMessage)
+        assertEquals(UiText.Raw("Нет сети"), next.alertMessage)
     }
 
     @Test
     fun `categories failure reverts settings and raises alert`() {
         val previous = loaded.settings
         val changed = loaded.settings!!.copy(debts = ChannelPrefs(telegram = false))
-        val next = loaded.applyCategories(changed).categoriesFailed(previous, "Не удалось")
+        val next = loaded.applyCategories(changed).categoriesFailed(previous, UiText.Raw("Не удалось"))
         assertEquals(previous, next.settings) // откат к прежним категориям
         assertFalse(next.isSaving)
-        assertEquals("Не удалось", next.alertMessage)
+        assertEquals(UiText.Raw("Не удалось"), next.alertMessage)
     }
 
     @Test
@@ -81,7 +83,7 @@ class NotifyScreenStateTest {
     fun `loading only while empty and no error`() {
         assertTrue(NotifyScreenState().isLoading)
         assertFalse(loaded.isLoading)
-        assertFalse(NotifyScreenState(loadError = "boom").isLoading)
+        assertFalse(NotifyScreenState(loadError = UiText.Raw("boom")).isLoading)
     }
 
     @Test

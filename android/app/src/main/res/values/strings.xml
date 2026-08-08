@@ -61,6 +61,7 @@
     <string name="friends_all_settled">All settled up</string>
     <string name="friends_owes_you_short">owes you</string>
     <string name="friends_you_owe_short">you owe</string>
+    <string name="glossary_mutual_debts">mutual debts</string>
     <string name="friends_settlement">settled</string>
     <string name="friends_empty_title">No friends yet</string>
     <string name="friends_empty_description">Friends appear once you share a group with expenses</string>
@@ -459,4 +460,35 @@
     <string name="totals_chart_daily_a11y">Chart of spending by day over the last month</string>
     <string name="totals_chart_donut_a11y">Chart of each member\'s share of the payments</string>
     <string name="totals_chart_weekday_a11y">Chart of spending by weekday</string>
+
+    <!-- Ошибки: тексты живут в ресурсах, потому что рождаются в слоях без Context -->
+    <string name="error_timeout">The server is taking too long. Please try again</string>
+    <string name="error_no_internet">No internet connection. Check your network and try again</string>
+    <string name="error_decoding">Couldn\'t process the server response. Please try again</string>
+    <string name="error_generic">Something went wrong. Please try again</string>
+    <string name="error_validation">Invalid data</string>
+    <string name="error_unauthorized">Sign-in required</string>
+    <string name="error_forbidden">No access</string>
+    <string name="error_not_found">Not found</string>
+    <string name="error_conflict">This action isn\'t possible right now</string>
+    <string name="error_too_large">Request is too large</string>
+    <string name="error_unsupported_media">Unsupported file format</string>
+    <string name="error_rate_limited">Too many requests. Please try again later</string>
+    <string name="error_ai_disabled">Recognition is unavailable right now</string>
+    <string name="error_server_status">Server error (%1$d)</string>
+    <string name="error_invalid_url">Invalid server address</string>
+    <string name="error_identity_taken">This account is already linked to another Splitty profile. Sign in with that one</string>
+    <string name="error_identity_already_linked">Another account of this sign-in method is already linked. Unlink the current one first</string>
+    <string name="error_last_identity">You can\'t unlink your only sign-in method. Link another one first</string>
+    <string name="error_provider_rejected">Couldn\'t confirm the account. Please try again</string>
+    <string name="error_session_save">Couldn\'t save your session</string>
+    <string name="error_telegram_rejected">Telegram didn\'t confirm the sign-in. Please try again</string>
+    <string name="error_google_failed">Couldn\'t sign in with Google</string>
+    <string name="error_google_no_account">Add a Google account in your device settings</string>
+    <string name="error_no_browser_for_telegram">No browser found to open Telegram sign-in</string>
+    <string name="error_settle_offline">No connection. Settling up works only online</string>
+    <string name="error_group_not_found">Group not found. It may have been deleted, or the invite link has expired</string>
+    <string name="error_group_no_access">No access to this group. Ask a member to send you a new invite</string>
+    <string name="error_operation_not_found">Operation not found</string>
+    <string name="error_outbox_unsupported">Unsupported offline operation</string>
 </resources>

@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
@@ -159,7 +161,7 @@ class LoginGoogleTest {
         val state = vm.awaitIdle()
 
         assertNotNull(state.errorMessage)
-        assertEquals("Не удалось войти через Google", state.errorMessage)
+        assertEquals(UiText.res(R.string.error_google_failed), state.errorMessage)
         assertNull(withTimeout(5_000) { session.state.first { it != null } }?.token)
     }
 
@@ -180,13 +182,13 @@ class LoginGoogleTest {
     @Test
     fun `credential manager failure shows its message`() = runBlocking {
         val vm = viewModel(
-            FakeProvider(failure = GoogleSignInException("Добавьте Google-аккаунт в настройках устройства")),
+            FakeProvider(failure = GoogleSignInException(UiText.res(R.string.error_google_no_account))),
         )
 
         vm.loginWithGoogle(context)
         val state = vm.awaitIdle()
 
-        assertEquals("Добавьте Google-аккаунт в настройках устройства", state.errorMessage)
+        assertEquals(UiText.res(R.string.error_google_no_account), state.errorMessage)
         assertEquals(0, server.requestCount)
     }
 

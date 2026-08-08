@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,7 +101,7 @@ fun NotificationSettingsScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                GroupsErrorState(message = state.loadError!!, onRetry = viewModel::retry)
+                GroupsErrorState(message = state.loadError!!.resolve(), onRetry = viewModel::retry)
             }
 
             else -> Box(
@@ -120,7 +121,7 @@ fun NotificationSettingsScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissAlert,
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(alert) },
+            text = { Text(alert.resolve()) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissAlert) {
                     Text(stringResource(R.string.common_ok))

@@ -334,10 +334,10 @@ class SplittyRepository @Inject constructor(
     } catch (e: HttpException) {
         throw parseApiError(e.code(), e.response()?.errorBody()?.string(), json)
     } catch (e: InvalidBaseUrlException) {
-        throw ApiException(null, ApiException.CODE_INVALID_URL, "Некорректный адрес сервера", e)
+        throw ApiException(null, ApiException.CODE_INVALID_URL, "invalid base url", cause = e)
     } catch (e: SerializationException) {
-        throw ApiException(null, ApiException.CODE_DECODING, "Не удалось обработать ответ сервера", e)
+        throw ApiException(null, ApiException.CODE_DECODING, "decoding failed", cause = e)
     } catch (e: IOException) {
-        throw ApiException(null, ApiException.CODE_TRANSPORT, "Нет соединения с сервером", e)
+        throw ApiException(null, ApiException.CODE_TRANSPORT, "transport failure", cause = e)
     }
 }

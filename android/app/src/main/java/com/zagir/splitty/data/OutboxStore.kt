@@ -128,7 +128,11 @@ data class OutboxEntry(
     val payload: OutboxPayload,
     val createdAt: Instant,
     val status: OutboxStatus = OutboxStatus.PENDING,
-    /** Текст ошибки сервера при [status] == FAILED. */
+    /**
+     * Текст ошибки сервера при [status] == FAILED. Остаётся String, а не
+     * UiText: запись сериализуется на диск, и это ровно тот message, который
+     * прислал бэкенд — он уже на языке пользователя.
+     */
     val errorMessage: String? = null,
 ) {
     val isFailed: Boolean get() = status == OutboxStatus.FAILED

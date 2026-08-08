@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -57,7 +60,7 @@ data class LoginUiState(
     val baseUrl: String = "",
     val isLoggingIn: Boolean = false,
     /** null — алерта нет; иначе показывается диалог «Ошибка». */
-    val errorMessage: String? = null,
+    val errorMessage: UiText? = null,
 ) {
     /** Для входа длина пароля не проверяется: он мог быть задан до правил. */
     val isEmailFormValid: Boolean
@@ -103,7 +106,7 @@ class LoginViewModel @Inject constructor(
      * Локальная (не сетевая) ошибка экрана в тот же алерт — сейчас это
      * единственный случай «нет активити для системного листа Google».
      */
-    fun showError(message: String) = _state.update { it.copy(errorMessage = message) }
+    fun showError(message: UiText) = _state.update { it.copy(errorMessage = message) }
 
     /** Изменение адреса сервера: сразу персистится (действует на следующие запросы). */
     fun onBaseUrlChange(value: String) {
@@ -137,21 +140,21 @@ class LoginViewModel @Inject constructor(
                 // в алерт «Не удалось сохранить сессию» — а сессия сохранена.
                 throw e
             } catch (e: GoogleSignInException) {
-                _state.update { it.copy(errorMessage = e.message) }
+                _state.update { it.copy(errorMessage = humanErrorText(e)) }
             } catch (e: ApiException) {
                 // 401 здесь — «сервер отверг id-токен» (протухший/чужой aud),
                 // а не «неверный код»: пользователю сообщаем ровно это.
                 val message = if (e.isUnauthorized) {
-                    "Не удалось войти через Google"
+                    UiText.res(R.string.error_google_failed)
                 } else {
-                    e.message
+                    humanErrorText(e)
                 }
                 _state.update { it.copy(errorMessage = message) }
             } catch (e: Exception) {
                 // См. комментарий в loginWithTelegram: signIn пишет в
                 // DataStore/Keystore мимо ApiException-обёртки.
                 Log.e(TAG, "google login failed", e)
-                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
+                _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
             }
@@ -169,7 +172,7 @@ class LoginViewModel @Inject constructor(
         result.fold(
             onSuccess = ::loginWithTelegram,
             onFailure = {
-                _state.update { it.copy(errorMessage = "Telegram не подтвердил вход. Попробуйте ещё раз") }
+                _state.update { it.copy(errorMessage = UiText.res(R.string.error_telegram_rejected)) }
             },
         )
     }
@@ -185,9 +188,9 @@ class LoginViewModel @Inject constructor(
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
                 val message = if (e.isUnauthorized) {
-                    "Telegram не подтвердил вход. Попробуйте ещё раз"
+                    UiText.res(R.string.error_telegram_rejected)
                 } else {
-                    e.message
+                    humanErrorText(e)
                 }
                 _state.update { it.copy(errorMessage = message) }
             } catch (e: Exception) {
@@ -196,7 +199,7 @@ class LoginViewModel @Inject constructor(
                 // viewModelScope (обработчик стоит только на @ApplicationScope),
                 // роняя процесс прямо на экране входа.
                 Log.e(TAG, "telegram login failed", e)
-                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
+                _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
             }
@@ -229,10 +232,10 @@ class LoginViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
-                _state.update { it.copy(errorMessage = e.message) }
+                _state.update { it.copy(errorMessage = humanErrorText(e)) }
             } catch (e: Exception) {
                 Log.e(TAG, "password login failed", e)
-                _state.update { it.copy(errorMessage = "Не удалось сохранить сессию") }
+                _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {
                 _state.update { it.copy(isLoggingIn = false) }
             }

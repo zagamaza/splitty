@@ -53,6 +53,7 @@
     <string name="friends_all_settled">Alles ausgeglichen</string>
     <string name="friends_owes_you_short">schuldet dir</string>
     <string name="friends_you_owe_short">du schuldest</string>
+    <string name="glossary_mutual_debts">gegenseitige Schulden</string>
     <string name="friends_settlement">ausgeglichen</string>
     <string name="friends_empty_title">Noch keine Freunde</string>
     <string name="friends_empty_description">Freunde erscheinen, sobald ihr eine Gruppe mit Ausgaben teilt</string>
@@ -447,4 +448,35 @@
     <string name="totals_chart_daily_a11y">Diagramm der Ausgaben pro Tag im letzten Monat</string>
     <string name="totals_chart_donut_a11y">Diagramm der Zahlungsanteile der Mitglieder</string>
     <string name="totals_chart_weekday_a11y">Diagramm der Ausgaben nach Wochentag</string>
+
+    <!-- Ошибки: тексты живут в ресурсах, потому что рождаются в слоях без Context -->
+    <string name="error_timeout">Der Server braucht zu lange. Bitte versuche es erneut</string>
+    <string name="error_no_internet">Keine Internetverbindung. Prüfe dein Netz und versuche es erneut</string>
+    <string name="error_decoding">Die Antwort des Servers konnte nicht verarbeitet werden. Bitte versuche es erneut</string>
+    <string name="error_generic">Da ist etwas schiefgelaufen. Bitte versuche es erneut</string>
+    <string name="error_validation">Ungültige Daten</string>
+    <string name="error_unauthorized">Anmeldung erforderlich</string>
+    <string name="error_forbidden">Kein Zugriff</string>
+    <string name="error_not_found">Nicht gefunden</string>
+    <string name="error_conflict">Diese Aktion ist gerade nicht möglich</string>
+    <string name="error_too_large">Die Anfrage ist zu groß</string>
+    <string name="error_unsupported_media">Dateiformat wird nicht unterstützt</string>
+    <string name="error_rate_limited">Zu viele Anfragen. Bitte versuche es später</string>
+    <string name="error_ai_disabled">Die Erkennung ist gerade nicht verfügbar</string>
+    <string name="error_server_status">Serverfehler (%1$d)</string>
+    <string name="error_invalid_url">Ungültige Serveradresse</string>
+    <string name="error_identity_taken">Dieses Konto ist bereits mit einem anderen Splitty-Profil verknüpft. Melde dich damit an</string>
+    <string name="error_identity_already_linked">Es ist bereits ein anderes Konto dieser Anmeldemethode verknüpft. Trenne zuerst das aktuelle</string>
+    <string name="error_last_identity">Du kannst deine einzige Anmeldemethode nicht trennen. Verknüpfe zuerst eine andere</string>
+    <string name="error_provider_rejected">Das Konto konnte nicht bestätigt werden. Bitte versuche es erneut</string>
+    <string name="error_session_save">Die Sitzung konnte nicht gespeichert werden</string>
+    <string name="error_telegram_rejected">Telegram hat die Anmeldung nicht bestätigt. Bitte versuche es erneut</string>
+    <string name="error_google_failed">Die Anmeldung mit Google hat nicht geklappt</string>
+    <string name="error_google_no_account">Füge in den Geräteeinstellungen ein Google-Konto hinzu</string>
+    <string name="error_no_browser_for_telegram">Kein Browser gefunden, um die Telegram-Anmeldung zu öffnen</string>
+    <string name="error_settle_offline">Keine Verbindung. Begleichen geht nur online</string>
+    <string name="error_group_not_found">Gruppe nicht gefunden. Vielleicht wurde sie gelöscht oder der Einladungslink ist abgelaufen</string>
+    <string name="error_group_no_access">Kein Zugriff auf diese Gruppe. Bitte ein Mitglied um eine neue Einladung</string>
+    <string name="error_operation_not_found">Vorgang nicht gefunden</string>
+    <string name="error_outbox_unsupported">Offline-Vorgang wird nicht unterstützt</string>
 </resources>

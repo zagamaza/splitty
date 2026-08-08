@@ -53,6 +53,7 @@
     <string name="friends_all_settled">Tout est réglé</string>
     <string name="friends_owes_you_short">vous doit</string>
     <string name="friends_you_owe_short">vous devez</string>
+    <string name="glossary_mutual_debts">dettes réciproques</string>
     <string name="friends_settlement">réglé</string>
     <string name="friends_empty_title">Pas encore d\'amis</string>
     <string name="friends_empty_description">Vos amis apparaîtront dès que vous partagerez un groupe avec des dépenses</string>
@@ -447,4 +448,35 @@
     <string name="totals_chart_daily_a11y">Graphique des dépenses par jour sur le dernier mois</string>
     <string name="totals_chart_donut_a11y">Graphique de la part payée par chaque membre</string>
     <string name="totals_chart_weekday_a11y">Graphique des dépenses par jour de la semaine</string>
+
+    <!-- Ошибки: тексты живут в ресурсах, потому что рождаются в слоях без Context -->
+    <string name="error_timeout">Le serveur met trop de temps à répondre. Réessayez</string>
+    <string name="error_no_internet">Pas de connexion internet. Vérifiez votre réseau et réessayez</string>
+    <string name="error_decoding">Impossible de traiter la réponse du serveur. Réessayez</string>
+    <string name="error_generic">Une erreur est survenue. Réessayez</string>
+    <string name="error_validation">Données invalides</string>
+    <string name="error_unauthorized">Connexion requise</string>
+    <string name="error_forbidden">Accès refusé</string>
+    <string name="error_not_found">Introuvable</string>
+    <string name="error_conflict">Cette action n\'est pas possible pour le moment</string>
+    <string name="error_too_large">La requête est trop volumineuse</string>
+    <string name="error_unsupported_media">Format de fichier non pris en charge</string>
+    <string name="error_rate_limited">Trop de requêtes. Réessayez plus tard</string>
+    <string name="error_ai_disabled">La reconnaissance n\'est pas disponible pour le moment</string>
+    <string name="error_server_status">Erreur du serveur (%1$d)</string>
+    <string name="error_invalid_url">Adresse du serveur invalide</string>
+    <string name="error_identity_taken">Ce compte est déjà lié à un autre profil Splitty. Connectez-vous avec celui-là</string>
+    <string name="error_identity_already_linked">Un autre compte de ce mode de connexion est déjà lié. Déliez d\'abord l\'actuel</string>
+    <string name="error_last_identity">Impossible de délier votre seul mode de connexion. Liez-en un autre d\'abord</string>
+    <string name="error_provider_rejected">Impossible de confirmer le compte. Réessayez</string>
+    <string name="error_session_save">Impossible d\'enregistrer la session</string>
+    <string name="error_telegram_rejected">Telegram n\'a pas confirmé la connexion. Réessayez</string>
+    <string name="error_google_failed">Impossible de se connecter avec Google</string>
+    <string name="error_google_no_account">Ajoutez un compte Google dans les paramètres de l\'appareil</string>
+    <string name="error_no_browser_for_telegram">Aucun navigateur trouvé pour ouvrir la connexion Telegram</string>
+    <string name="error_settle_offline">Pas de connexion. Le règlement ne fonctionne qu\'en ligne</string>
+    <string name="error_group_not_found">Groupe introuvable. Il a peut-être été supprimé, ou le lien d\'invitation a expiré</string>
+    <string name="error_group_no_access">Pas d\'accès à ce groupe. Demandez à un membre de vous envoyer une nouvelle invitation</string>
+    <string name="error_operation_not_found">Opération introuvable</string>
+    <string name="error_outbox_unsupported">Opération hors ligne non prise en charge</string>
 </resources>

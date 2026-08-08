@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.activity
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -140,7 +141,7 @@ fun ActivityScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissError,
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissError) {
                     Text(stringResource(R.string.common_ok))

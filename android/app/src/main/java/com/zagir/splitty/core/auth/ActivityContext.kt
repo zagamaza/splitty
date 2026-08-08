@@ -1,5 +1,6 @@
 package com.zagir.splitty.core.auth
 
+import com.zagir.splitty.core.ui.UiText
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -35,7 +36,7 @@ fun Context.findActivity(): Activity? {
  */
 class CredentialManagerHost(
     private val activity: Activity?,
-    private val noActivityMessage: String,
+    private val noActivityMessage: UiText,
 ) {
     /**
      * Зовёт [action] с активити; её нет — отдаёт человеческий текст в [onError].
@@ -44,7 +45,7 @@ class CredentialManagerHost(
      * единственная кнопка для человека без Telegram, в профиле — «Привязать»
      * (в iOS этому соответствует `GoogleSignInError.noPresenter`).
      */
-    fun launch(onError: (String) -> Unit, action: (Activity) -> Unit) {
+    fun launch(onError: (UiText) -> Unit, action: (Activity) -> Unit) {
         if (activity != null) action(activity) else onError(noActivityMessage)
     }
 }
@@ -60,7 +61,7 @@ class CredentialManagerHost(
 @Composable
 fun rememberCredentialManagerHost(): CredentialManagerHost {
     val context = LocalContext.current
-    val noActivityMessage = stringResource(R.string.google_sign_in_no_activity)
+    val noActivityMessage = UiText.res(R.string.google_sign_in_no_activity)
     return remember(context, noActivityMessage) {
         CredentialManagerHost(context.findActivity(), noActivityMessage)
     }

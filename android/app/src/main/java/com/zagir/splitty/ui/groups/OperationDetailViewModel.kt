@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -57,8 +60,8 @@ class OperationDetailViewModel @Inject constructor(
     private val _isDeleting = MutableStateFlow(false)
     val isDeleting: StateFlow<Boolean> = _isDeleting.asStateFlow()
 
-    private val _alertMessage = MutableStateFlow<String?>(null)
-    val alertMessage: StateFlow<String?> = _alertMessage.asStateFlow()
+    private val _alertMessage = MutableStateFlow<UiText?>(null)
+    val alertMessage: StateFlow<UiText?> = _alertMessage.asStateFlow()
 
     /** true после успешного удаления: перезагрузки по dataVersion не нужны. */
     private var isDeleted = false
@@ -106,7 +109,7 @@ class OperationDetailViewModel @Inject constructor(
                 sessionStore.noteDataChanged()
                 onDeleted()
             } catch (e: ApiException) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } finally {
                 _isDeleting.value = false
             }
@@ -133,7 +136,7 @@ class OperationDetailViewModel @Inject constructor(
             throw e
         } catch (e: ApiException) {
             if (_state.value is UiState.Content) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } else {
                 _state.value = UiState.Error(e.message)
             }

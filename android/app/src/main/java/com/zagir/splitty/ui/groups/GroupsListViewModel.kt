@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -54,10 +57,10 @@ class GroupsListViewModel @Inject constructor(
     /** true, пока в полёте мутация (создание/join/разархивирование). */
     val isMutating: StateFlow<Boolean> = _isMutating.asStateFlow()
 
-    private val _alertMessage = MutableStateFlow<String?>(null)
+    private val _alertMessage = MutableStateFlow<UiText?>(null)
 
     /** Текст алерта «Ошибка» (мутации и тихие обновления поверх контента). */
-    val alertMessage: StateFlow<String?> = _alertMessage.asStateFlow()
+    val alertMessage: StateFlow<UiText?> = _alertMessage.asStateFlow()
 
     /**
      * id комнат с неотправленными (локальными) операциями — для бейджа
@@ -142,7 +145,7 @@ class GroupsListViewModel @Inject constructor(
                 sessionStore.noteDataChanged()
                 onSuccess()
             } catch (e: ApiException) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } finally {
                 _isMutating.value = false
             }
@@ -156,7 +159,7 @@ class GroupsListViewModel @Inject constructor(
             throw e // отмена (ушли с экрана / новая версия данных) — не ошибка
         } catch (e: ApiException) {
             if (_rooms.value is UiState.Content) {
-                _alertMessage.value = e.message // тихое обновление поверх контента
+                _alertMessage.value = humanErrorText(e) // тихое обновление поверх контента
             } else {
                 _rooms.value = UiState.Error(e.message)
             }
@@ -170,7 +173,7 @@ class GroupsListViewModel @Inject constructor(
             throw e
         } catch (e: ApiException) {
             if (_archived.value is UiState.Content) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } else {
                 _archived.value = UiState.Error(e.message)
             }

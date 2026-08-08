@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -455,7 +456,7 @@ data class AddExpenseForm(
      * null — ошибки распознавания нет; иначе текст с кнопкой «Повторить» (данные
      * НЕ теряются: фото сохранено в cacheDir, форма осталась как была).
      */
-    val parseRetryMessage: String? = null,
+    val parseRetryMessage: UiText? = null,
     /** null — алерта нет; иначе диалог «Ошибка» с этим текстом. */
     val alertMessage: String? = null,
     /** true — расход сохранён, экран пора закрывать (onDone). */

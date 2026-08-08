@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.friends
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -126,7 +127,7 @@ fun FriendDetailScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissError,
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissError) {
                     Text(stringResource(R.string.common_ok))
@@ -341,7 +342,7 @@ private fun RoomRow(room: FriendRoomBalance, onClick: () -> Unit) {
             Text(
                 // Через Glossary: тернарник «>0 ? вам : вы» на нулевом балансе
                 // показывал «вы должны» в полностью рассчитанной группе.
-                text = Glossary.balanceCaption(room.balance),
+                text = stringResource(Glossary.balanceCaption(room.balance)),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Splitty.colors.inkSecondary,

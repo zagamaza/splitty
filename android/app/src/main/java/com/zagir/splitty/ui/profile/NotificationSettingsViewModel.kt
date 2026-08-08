@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.model.NotifySettings
@@ -31,9 +32,9 @@ data class NotifyScreenState(
      *  порождали гонку запросов (последний ответ сервера побеждал бы). */
     val isSaving: Boolean = false,
     /** Полноэкранная ошибка первичной загрузки (когда [settings] == null). */
-    val loadError: String? = null,
+    val loadError: UiText? = null,
     /** Алерт поверх загруженной формы — ошибка сохранения (не молчаливый откат). */
-    val alertMessage: String? = null,
+    val alertMessage: UiText? = null,
 ) {
     /** Спиннер: ещё грузим и не упали. */
     val isLoading: Boolean get() = settings == null && loadError == null
@@ -52,7 +53,7 @@ data class NotifyScreenState(
         copy(masterOn = on, isSaving = false)
 
     /** Сохранение мастера упало: откат к прежнему значению + алерт. */
-    fun masterFailed(previous: Boolean, message: String?): NotifyScreenState =
+    fun masterFailed(previous: Boolean, message: UiText?): NotifyScreenState =
         copy(masterOn = previous, isSaving = false, alertMessage = message)
 
     /** Оптимистично применить категории и войти в «сохранение». */
@@ -64,7 +65,7 @@ data class NotifyScreenState(
         copy(settings = saved, isSaving = false)
 
     /** Сохранение категорий упало: откат к прежним + алерт. */
-    fun categoriesFailed(previous: NotifySettings?, message: String?): NotifyScreenState =
+    fun categoriesFailed(previous: NotifySettings?, message: UiText?): NotifyScreenState =
         copy(settings = previous, isSaving = false, alertMessage = message)
 }
 

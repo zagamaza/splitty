@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
@@ -358,7 +360,7 @@ class ProfileAccountTest {
         vm.deleteAccount()
         withTimeout(5_000) { vm.isDeleting.first { !it } }
 
-        assertEquals("Демонстрационный аккаунт удалить нельзя", vm.errorMessage.value)
+        assertEquals(UiText.Raw("Демонстрационный аккаунт удалить нельзя"), vm.errorMessage.value)
         assertEquals("jwt-token", session.state.value?.token)
     }
 
@@ -426,7 +428,7 @@ class ProfileAccountTest {
         withTimeout(5_000) { vm.isIdentityBusy.first { !it } }
 
         assertEquals(
-            "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него",
+            UiText.res(R.string.error_identity_taken),
             vm.errorMessage.value,
         )
         // Привязки не случилось — список прежний.
@@ -454,17 +456,17 @@ class ProfileAccountTest {
     fun `last identity conflict from the server is human readable`() {
         val error = ApiException(409, "last_identity", "нельзя отвязать последний способ входа")
         assertEquals(
-            "Нельзя отвязать единственный способ входа. Сначала привяжите другой",
+            UiText.res(R.string.error_last_identity),
             identityErrorText(error),
         )
         // 401 здесь — отказ провайдера, а не протухшая сессия.
         assertEquals(
-            "Не удалось подтвердить аккаунт. Попробуйте ещё раз",
+            UiText.res(R.string.error_provider_rejected),
             identityErrorText(ApiException(401, "unauthorized", "unauthorized")),
         )
         // Прочее падает в общий humanErrorText — свой текст не выдумываем.
         assertEquals(
-            "Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз",
+            UiText.res(R.string.error_no_internet),
             identityErrorText(
                 ApiException(null, ApiException.CODE_TRANSPORT, "Нет соединения с сервером"),
             ),

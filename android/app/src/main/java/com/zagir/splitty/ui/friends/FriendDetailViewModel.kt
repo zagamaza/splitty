@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.friends
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -45,8 +48,8 @@ class FriendDetailViewModel @Inject constructor(
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     /** Ошибка обновления, когда контент уже показан (alert). */
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
+    val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -76,7 +79,7 @@ class FriendDetailViewModel @Inject constructor(
 
     /** Тап «Погасить» без сети: погашение доступно только онлайн (алерт, как iOS). */
     fun showOfflineSettleError() {
-        _errorMessage.value = "Нет соединения. Погашение долга доступно только онлайн"
+        _errorMessage.value = UiText.res(R.string.error_settle_offline)
     }
 
     private suspend fun reload() {
@@ -91,7 +94,7 @@ class FriendDetailViewModel @Inject constructor(
             _state.value = UiState.Content(friend)
         } catch (e: ApiException) {
             if (_state.value is UiState.Content) {
-                _errorMessage.value = e.message
+                _errorMessage.value = humanErrorText(e)
             } else {
                 _state.value = UiState.Error(e.message)
             }

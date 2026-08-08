@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.friends
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -34,8 +37,8 @@ class FriendsViewModel @Inject constructor(
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     /** Ошибка обновления, когда список уже показан (alert поверх контента). */
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _errorMessage = MutableStateFlow<UiText?>(null)
+    val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -72,7 +75,7 @@ class FriendsViewModel @Inject constructor(
         } catch (e: ApiException) {
             // Контент уже есть — тихая ошибка в alert; нет — полноэкранная.
             if (_state.value is UiState.Content) {
-                _errorMessage.value = e.message
+                _errorMessage.value = humanErrorText(e)
             } else {
                 _state.value = UiState.Error(e.message)
             }

@@ -63,6 +63,7 @@
     <string name="friends_all_settled">Все долги погашены</string>
     <string name="friends_owes_you_short">должен(на) вам</string>
     <string name="friends_you_owe_short">вы должны</string>
+    <string name="glossary_mutual_debts">взаимные долги</string>
     <string name="friends_settlement">расчёт</string>
     <string name="friends_empty_title">Пока нет друзей</string>
     <string name="friends_empty_description">Друзья появятся, когда у вас будут общие группы с расходами</string>
@@ -486,4 +487,35 @@
     <string name="totals_chart_daily_a11y">График трат по дням за последний месяц</string>
     <string name="totals_chart_donut_a11y">Диаграмма долей участников в оплатах</string>
     <string name="totals_chart_weekday_a11y">График трат по дням недели</string>
+
+    <!-- Ошибки: тексты живут в ресурсах, потому что рождаются в слоях без Context -->
+    <string name="error_timeout">Сервер долго не отвечает. Попробуйте ещё раз</string>
+    <string name="error_no_internet">Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз</string>
+    <string name="error_decoding">Не удалось обработать ответ сервера. Попробуйте ещё раз</string>
+    <string name="error_generic">Что-то пошло не так. Попробуйте ещё раз</string>
+    <string name="error_validation">Некорректные данные</string>
+    <string name="error_unauthorized">Требуется вход</string>
+    <string name="error_forbidden">Нет доступа</string>
+    <string name="error_not_found">Не найдено</string>
+    <string name="error_conflict">Действие сейчас невозможно</string>
+    <string name="error_too_large">Слишком большой запрос</string>
+    <string name="error_unsupported_media">Неподдерживаемый формат файла</string>
+    <string name="error_rate_limited">Слишком много запросов. Попробуйте позже</string>
+    <string name="error_ai_disabled">Распознавание сейчас недоступно</string>
+    <string name="error_server_status">Ошибка сервера (%1$d)</string>
+    <string name="error_invalid_url">Некорректный адрес сервера</string>
+    <string name="error_identity_taken">Этот аккаунт уже связан с другим профилем Splitty. Войдите через него</string>
+    <string name="error_identity_already_linked">К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий</string>
+    <string name="error_last_identity">Нельзя отвязать единственный способ входа. Сначала привяжите другой</string>
+    <string name="error_provider_rejected">Не удалось подтвердить аккаунт. Попробуйте ещё раз</string>
+    <string name="error_session_save">Не удалось сохранить сессию</string>
+    <string name="error_telegram_rejected">Telegram не подтвердил вход. Попробуйте ещё раз</string>
+    <string name="error_google_failed">Не удалось войти через Google</string>
+    <string name="error_google_no_account">Добавьте Google-аккаунт в настройках устройства</string>
+    <string name="error_no_browser_for_telegram">Не нашли браузер, чтобы открыть вход через Telegram</string>
+    <string name="error_settle_offline">Нет соединения. Погашение долга доступно только онлайн</string>
+    <string name="error_group_not_found">Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела</string>
+    <string name="error_group_no_access">Нет доступа к этой группе. Попросите участника прислать новое приглашение</string>
+    <string name="error_operation_not_found">Операция не найдена</string>
+    <string name="error_outbox_unsupported">Неподдерживаемая офлайн-операция</string>
 </resources>

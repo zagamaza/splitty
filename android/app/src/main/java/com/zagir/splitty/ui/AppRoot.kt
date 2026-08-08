@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,10 +55,10 @@ class AppRootViewModel @Inject constructor(
     /** Комната, в которую только что вступили по ссылке: её нужно открыть. */
     val openRoomId: StateFlow<String?> = _openRoomId.asStateFlow()
 
-    private val _joinError = MutableStateFlow<String?>(null)
+    private val _joinError = MutableStateFlow<UiText?>(null)
 
     /** Человеческий текст ошибки вступления по ссылке. */
-    val joinError: StateFlow<String?> = _joinError.asStateFlow()
+    val joinError: StateFlow<UiText?> = _joinError.asStateFlow()
 
     /** Защита от повторного входа в [joinPending] на соседних эмиссиях. */
     private var isJoining = false
@@ -263,14 +265,14 @@ internal fun isTerminalJoinError(e: ApiException): Boolean =
  * это «открыл ссылку, и что-то пошло не так». Сырое «Не найдено» от сервера в
  * этом контексте не объясняет ничего.
  */
-internal fun joinLinkErrorText(e: ApiException): String = when {
+internal fun joinLinkErrorText(e: ApiException): UiText = when {
     e.status == 404 || e.code == "not_found" ->
-        "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела"
+        UiText.res(R.string.error_group_not_found)
 
     e.status == 403 || e.code == "forbidden" ->
-        "Нет доступа к этой группе. Попросите участника прислать новое приглашение"
+        UiText.res(R.string.error_group_no_access)
 
-    else -> e.message
+    else -> e.uiText()
 }
 
 /**

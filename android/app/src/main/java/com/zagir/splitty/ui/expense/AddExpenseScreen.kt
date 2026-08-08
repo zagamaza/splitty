@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.resolve
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -640,7 +641,7 @@ private fun ExpenseFormContent(
         // Ошибка распознавания: черновик не потерян, предлагаем «Повторить».
         form.parseRetryMessage?.let { message ->
             ParseRetryBanner(
-                message = message,
+                message = message.resolve(),
                 onRetry = viewModel::retryParse,
                 onDismiss = viewModel::dismissParseRetry,
             )

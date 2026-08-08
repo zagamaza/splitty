@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.humanErrorText
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -97,8 +100,8 @@ class GroupDetailViewModel @Inject constructor(
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    private val _alertMessage = MutableStateFlow<String?>(null)
-    val alertMessage: StateFlow<String?> = _alertMessage.asStateFlow()
+    private val _alertMessage = MutableStateFlow<UiText?>(null)
+    val alertMessage: StateFlow<UiText?> = _alertMessage.asStateFlow()
 
     // --- Настройки группы ---
 
@@ -160,7 +163,7 @@ class GroupDetailViewModel @Inject constructor(
     /** Тап по «Погасить долг» без сети: погашения офлайн недоступны. */
     fun showSettleUpUnavailableOffline() {
         // Единый с iOS текст: «Нет соединения. Погашение долга доступно только онлайн».
-        _alertMessage.value = OFFLINE_SETTLE_MESSAGE
+        _alertMessage.value = UiText.res(R.string.error_settle_offline)
     }
 
     companion object {
@@ -198,7 +201,7 @@ class GroupDetailViewModel @Inject constructor(
                 // Единая инвалидация: экран и списки перечитают суммы в новой валюте.
                 sessionStore.noteDataChanged()
             } catch (e: ApiException) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } finally {
                 _savingCurrency.value = null
             }
@@ -220,7 +223,7 @@ class GroupDetailViewModel @Inject constructor(
                 sessionStore.noteDataChanged()
                 onDone()
             } catch (e: ApiException) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } finally {
                 _isArchiving.value = false
             }
@@ -254,7 +257,7 @@ class GroupDetailViewModel @Inject constructor(
             throw e
         } catch (e: ApiException) {
             if (_room.value is UiState.Content) {
-                _alertMessage.value = e.message
+                _alertMessage.value = humanErrorText(e)
             } else {
                 _room.value = UiState.Error(e.message)
             }

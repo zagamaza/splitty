@@ -1,6 +1,9 @@
 package com.zagir.splitty.ui.components
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.auth.GoogleSignInException
 import com.zagir.splitty.core.network.ApiException
+import com.zagir.splitty.core.ui.UiText
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
@@ -10,29 +13,35 @@ import java.net.SocketTimeoutException
 // исключений в алертах пугает жаргоном. Таймаут — ОТДЕЛЬНАЯ ветка: «сервер
 // долго не отвечает» вместо «нет сети» (parse-запрос с таймаутом 90с — частый
 // случай, где важно не путать «нет интернета» и «ждём сервер»).
+//
+// Возвращается UiText, а не String: маппер зовут из ViewModel, где Context
+// недоступен, а сама строка должна собираться в текущей локали уже на экране.
 
-/** Человекочитаемый русский текст ошибки для алертов/failed-состояний. */
-fun humanErrorText(error: Throwable): String {
+/** Человекочитаемый текст ошибки для алертов/failed-состояний. */
+fun humanErrorText(error: Throwable): UiText {
     // Таймаут ловим до общей transport-ветки — в CODE_TRANSPORT он теряется,
     // но причина (IOException) проброшена в cause при построении ApiException.
     if (isTimeout(error) || isTimeout(error.cause)) {
-        return "Сервер долго не отвечает. Попробуйте ещё раз"
+        return UiText.res(R.string.error_timeout)
     }
+    // Провайдер входа уже собрал свой текст — общий маппер не должен его терять.
+    (error as? GoogleSignInException)?.let { return it.uiText }
     (error as? ApiException)?.let { api ->
         return when (api.code) {
-            ApiException.CODE_TRANSPORT ->
-                "Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз"
-            ApiException.CODE_DECODING ->
-                "Не удалось обработать ответ сервера. Попробуйте ещё раз"
-            // Серверный (тело error.message) и локальные тексты уже человеческие.
-            else -> api.message
+            ApiException.CODE_TRANSPORT -> UiText.res(R.string.error_no_internet)
+            ApiException.CODE_DECODING -> UiText.res(R.string.error_decoding)
+            // Текст сервера уже человеческий и на языке пользователя; при пустом
+            // теле ApiException сам подставит ресурс по коду.
+            else -> api.uiText()
         }
     }
     if (error is IOException) {
-        return "Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз"
+        return UiText.res(R.string.error_no_internet)
     }
-    return error.message?.takeIf { it.isNotBlank() }
-        ?: "Что-то пошло не так. Попробуйте ещё раз"
+    return error.message
+        ?.takeIf { it.isNotBlank() }
+        ?.let { UiText.Raw(it) }
+        ?: UiText.res(R.string.error_generic)
 }
 
 /**
@@ -43,30 +52,26 @@ fun humanErrorText(error: Throwable): String {
  * а не серверный `message`, потому что «что делать дальше» зависит от экрана:
  * здесь это «войдите через тот профиль» и «сначала привяжите другой способ».
  */
-fun identityErrorText(error: Throwable): String {
+fun identityErrorText(error: Throwable): UiText {
     val api = error as? ApiException ?: return humanErrorText(error)
     return when {
-        api.code == "identity_taken" ->
-            "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+        api.code == "identity_taken" -> UiText.res(R.string.error_identity_taken)
         // У аккаунта уже есть ДРУГАЯ личность этого провайдера. Сервер не
         // подменяет её молча: у Apple подмена оставила бы Splitty в списке
         // «Вход через Apple» прежнего Apple ID навсегда (отзывать нечем).
-        api.code == "identity_already_linked" ->
-            "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий"
-        api.code == "last_identity" ->
-            "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
-        api.code == "invalid_password" -> "Неверный текущий пароль"
+        api.code == "identity_already_linked" -> UiText.res(R.string.error_identity_already_linked)
+        api.code == "last_identity" -> UiText.res(R.string.error_last_identity)
+        api.code == "invalid_password" -> UiText.res(R.string.profile_password_invalid_current)
         // 400 provider_rejected — сервер не принял id-токен ПРОВАЙДЕРА
         // (подпись/срок/aud/nonce не сошлись). Отдельный код заведён затем,
         // чтобы не путать это с мёртвой сессией Splitty: 401 от /me/link/*
         // теперь означает ровно её и вызывает глобальный разлогин, а 400 —
         // нет. Пользователю разница не нужна: ему нужно «попробуйте ещё раз».
-        api.code == "provider_rejected" ->
-            "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+        api.code == "provider_rejected" -> UiText.res(R.string.error_provider_rejected)
         // 401 здесь — уже протухшая сессия Splitty: AuthInterceptor её сбросил
         // и нас вернёт на экран входа. Текст остаётся нейтральным — алерт
         // может успеть показаться поверх перехода.
-        api.isUnauthorized -> "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+        api.isUnauthorized -> UiText.res(R.string.error_provider_rejected)
         else -> humanErrorText(error)
     }
 }

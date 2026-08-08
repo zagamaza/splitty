@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardOptions
@@ -104,7 +106,7 @@ fun ProfileScreen(
         }
     }
 
-    val nameEmptyError = stringResource(R.string.profile_name_empty)
+    val nameEmptyError = UiText.res(R.string.profile_name_empty)
 
     Column(
         modifier = Modifier
@@ -344,7 +346,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissError,
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
             confirmButton = {
                 TextButton(onClick = viewModel::dismissError) {
                     Text(stringResource(R.string.common_ok))

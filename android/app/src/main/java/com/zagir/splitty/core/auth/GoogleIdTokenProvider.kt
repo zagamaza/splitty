@@ -1,5 +1,7 @@
 package com.zagir.splitty.core.auth
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import android.content.Context
 import android.util.Log
 import androidx.credentials.CredentialManager
@@ -16,7 +18,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /** Ошибка получения id-токена, пригодная для показа пользователю. */
-class GoogleSignInException(message: String, cause: Throwable? = null) : Exception(message, cause)
+/**
+ * Сбой входа через Google. Текст для человека — в [uiText]: класс живёт в
+ * core/auth, где Context недоступен, а `message` остаётся техническим для логов.
+ */
+class GoogleSignInException(
+    val uiText: UiText,
+    cause: Throwable? = null,
+) : Exception("google sign-in failed", cause)
 
 /**
  * Единственное место, где живёт Credential Manager (порт iOS
@@ -65,10 +74,10 @@ class CredentialManagerGoogleIdTokenProvider @Inject constructor() : GoogleIdTok
         } catch (e: NoCredentialException) {
             // На устройстве нет ни одного Google-аккаунта — сообщение про
             // «ошибку входа» тут бесполезно, человеку нужно действие.
-            throw GoogleSignInException("Добавьте Google-аккаунт в настройках устройства", e)
+            throw GoogleSignInException(UiText.res(R.string.error_google_no_account), e)
         } catch (e: GetCredentialException) {
             Log.e(TAG, "credential manager failed", e)
-            throw GoogleSignInException("Не удалось войти через Google", e)
+            throw GoogleSignInException(UiText.res(R.string.error_google_failed), e)
         }
 
         val credential = response.credential
@@ -79,12 +88,12 @@ class CredentialManagerGoogleIdTokenProvider @Inject constructor() : GoogleIdTok
                 GoogleIdTokenCredential.createFrom(credential.data).idToken
             } catch (e: GoogleIdTokenParsingException) {
                 Log.e(TAG, "google id token parsing failed", e)
-                throw GoogleSignInException("Не удалось войти через Google", e)
+                throw GoogleSignInException(UiText.res(R.string.error_google_failed), e)
             }
         }
         // Другой тип учётки (например, пароль из менеджера) для /auth/google
         // бесполезен: обменять на сессию нечего.
         Log.e(TAG, "unexpected credential type: ${credential.type}")
-        throw GoogleSignInException("Не удалось войти через Google")
+        throw GoogleSignInException(UiText.res(R.string.error_google_failed))
     }
 }

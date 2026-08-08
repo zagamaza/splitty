@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -290,7 +292,7 @@ class AppRootJoinTest {
         val vm = viewModel()
 
         assertEquals(
-            "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела",
+            UiText.res(R.string.error_group_not_found),
             withTimeout(5_000) { vm.joinError.first { it != null } },
         )
         assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
@@ -308,7 +310,7 @@ class AppRootJoinTest {
         val vm = viewModel()
 
         assertEquals(
-            "Нет доступа к этой группе. Попросите участника прислать новое приглашение",
+            UiText.res(R.string.error_group_no_access),
             withTimeout(5_000) { vm.joinError.first { it != null } },
         )
         assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
@@ -554,21 +556,21 @@ class AppRootJoinTest {
         // Человек по приглашению не нажимал «Присоединиться» и не вводил код —
         // сырое «Не найдено» от сервера ему ничего не объясняет.
         assertEquals(
-            "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела",
+            UiText.res(R.string.error_group_not_found),
             joinLinkErrorText(ApiException(404, "not_found", "Не найдено")),
         )
         // Код без статуса (и наоборот) распознаётся так же.
         assertEquals(
-            "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела",
+            UiText.res(R.string.error_group_not_found),
             joinLinkErrorText(ApiException(null, "not_found", "Не найдено")),
         )
         assertEquals(
-            "Нет доступа к этой группе. Попросите участника прислать новое приглашение",
+            UiText.res(R.string.error_group_no_access),
             joinLinkErrorText(ApiException(403, "forbidden", "Нет доступа")),
         )
         // Остальное — серверный message как есть: он уже человеческий.
         assertEquals(
-            "Нет соединения с сервером",
+            UiText.res(R.string.error_no_internet),
             joinLinkErrorText(
                 ApiException(null, ApiException.CODE_TRANSPORT, "Нет соединения с сервером"),
             ),

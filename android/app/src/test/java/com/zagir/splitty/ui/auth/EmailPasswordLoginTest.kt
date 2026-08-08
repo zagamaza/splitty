@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
 import com.zagir.splitty.core.model.SplittyJson
@@ -198,7 +200,7 @@ class EmailPasswordLoginTest {
         vm.submitEmailForm()
         val state = vm.awaitIdle()
 
-        assertEquals("этот email уже зарегистрирован", state.errorMessage)
+        assertEquals(UiText.Raw("этот email уже зарегистрирован"), state.errorMessage)
         assertNull(withTimeout(5_000) { session.state.first { it != null } }?.token)
     }
 
