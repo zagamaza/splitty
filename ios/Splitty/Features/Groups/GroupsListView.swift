@@ -1,105 +1,5 @@
 import SwiftUI
 
-/// Ширина подписи кнопки в её естественном размере — эталон для сжатия.
-private struct JoinTitleWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
-/// Прогресс схлопывания заголовка, 0…1.
-///
-/// Отдельный @Observable, а не @State экрана, по причине производительности:
-/// значение меняется КАЖДЫЙ кадр скролла, и в @State оно перестраивало бы всё
-/// тело GroupsListView — вместе со списком карточек. Отсюда и брались рывки.
-/// С Observation зависимость регистрирует только тот вид, который читает
-/// `progress` (`JoinToolbarButton`), список о нём не знает вовсе.
-@Observable
-final class TitleCollapse {
-    var progress: CGFloat = 0
-}
-
-/// Кнопка «Присоединиться» в навбаре: подпись сжимается по мере ухода заголовка.
-///
-/// Вынесена в отдельный вид намеренно — чтобы чтение `collapse.progress`
-/// инвалидировало только её, а не экран целиком.
-private struct JoinToolbarButton: View {
-    let collapse: TitleCollapse
-    let action: () -> Void
-
-    @State private var titleWidth: CGFloat = 0
-
-    private static let title = "Присоединиться"
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4 * (1 - collapse.progress)) {
-                Image(systemName: "arrow.right.circle")
-                Text(Self.title)
-                    .fixedSize()
-                    .frame(width: titleWidth * (1 - collapse.progress), alignment: .leading)
-                    .opacity(1 - collapse.progress)
-                    // Обрезаем по сжимающейся рамке, иначе текст вылезал бы за неё.
-                    .clipped()
-            }
-            // Эталон ширины меряем в фоне: он вне раскладки, поэтому не зависит
-            // от того, насколько сжата видимая подпись, — иначе замер гонялся бы
-            // за собственным результатом.
-            .background(
-                Text(Self.title)
-                    .fixedSize()
-                    .hidden()
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.preference(key: JoinTitleWidthKey.self, value: proxy.size.width)
-                        }
-                    )
-            )
-            .onPreferenceChange(JoinTitleWidthKey.self) { width in
-                if width > 0 { titleWidth = width }
-            }
-        }
-        // Голосовой ярлык не зависит от того, видна ли подпись: VoiceOver обязан
-        // называть кнопку одинаково, иначе она «меняется» на слух при скролле.
-        .accessibilityLabel("Присоединиться по коду")
-    }
-}
-
-/// Отдаёт 0…1: насколько уехал крупный заголовок.
-///
-/// Именно ПРОГРЕСС, а не булев флаг: подпись кнопки сжимается вместе с
-/// заголовком, кадр в кадр со скроллом. Переключатель здесь и стоял сначала —
-/// подпись пропадала скачком, и это читалось как рывок. Своей анимации тут
-/// поэтому нет вовсе: значение меняется каждый кадр, палец и есть анимация.
-///
-/// Системного признака «large title схлопнулся» SwiftUI не отдаёт, отсюда
-/// ручной диапазон — примерно высота самого заголовка.
-private struct TitleCollapseObserver: ViewModifier {
-    let collapse: TitleCollapse
-
-    private static let startAt: CGFloat = 8
-    private static let endAt: CGFloat = 44
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if #available(iOS 18.0, *) {
-            content.onScrollGeometryChange(for: CGFloat.self) { geometry in
-                // contentInsets.top — высота навбара вместе с крупным заголовком:
-                // без неё «ноль прокрутки» уехал бы на эту величину.
-                geometry.contentOffset.y + geometry.contentInsets.top
-            } action: { _, offset in
-                let raw = (offset - Self.startAt) / (Self.endAt - Self.startAt)
-                collapse.progress = min(max(raw, 0), 1)
-            }
-        } else {
-            // iOS 17: штатного наблюдателя за прокруткой нет — кнопка остаётся
-            // с подписью, то есть ведёт себя как раньше.
-            content
-        }
-    }
-}
-
 /// Вкладка «Группы»: hero-карточка общего баланса, карточки групп, архив.
 struct GroupsListView: View {
     @Environment(SessionStore.self) private var session
@@ -109,10 +9,6 @@ struct GroupsListView: View {
     /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
     @State private var reloadTask: Task<Void, Never>?
 
-    /// 0 — заголовок крупный, 1 — уехал совсем. Дробные значения между ними и
-    /// дают плавность: подпись сжимается ровно настолько, насколько пролистано.
-    @State private var titleCollapse = TitleCollapse()
-
     init() {}
 
     var body: some View {
@@ -120,11 +16,6 @@ struct GroupsListView: View {
             content
                 .navigationTitle("Группы")
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        JoinToolbarButton(collapse: titleCollapse) {
-                            isJoinPresented = true
-                        }
-                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             isCreatePresented = true
@@ -188,7 +79,6 @@ struct GroupsListView: View {
             .padding(.top, 8)
             .padding(.bottom, 16)
         }
-        .modifier(TitleCollapseObserver(collapse: titleCollapse))
         .background(Color.bg)
         .refreshable {
             // Pull-to-refresh — триггер синка outbox перед перечиткой.

@@ -12,6 +12,12 @@ struct GroupSettingsView: View {
     @State private var isArchiving = false
     @State private var alertMessage: String?
     @State private var isInvitePresented = false
+    /// Выбор друзей — основной путь приглашения; ссылка осталась запасным.
+    @State private var isInviteFriendsPresented = false
+    /// Участник, которого собираются убрать (подтверждение).
+    @State private var memberToRemove: User?
+    @State private var isLeaveConfirmPresented = false
+    @State private var isMutating = false
     /// Справочник валют (GET /currencies); nil — ещё грузится.
     @State private var currencies: [CurrencyInfo]?
     /// Текст ошибки загрузки справочника, когда кеша нет: без него секция
@@ -59,6 +65,7 @@ struct GroupSettingsView: View {
                 currencySection
                 inviteSection
                 archiveSection
+                leaveSection
             }
             .padding(16)
         }
@@ -67,6 +74,41 @@ struct GroupSettingsView: View {
         .errorAlert($alertMessage)
         .sheet(isPresented: $isInvitePresented) {
             InviteGroupView(room: room)
+        }
+        .sheet(isPresented: $isInviteFriendsPresented) {
+            InviteFriendView(
+                roomId: room.id,
+                existingMemberIds: Set(room.members.map(\.id)),
+                onInvited: onChange
+            )
+        }
+        .confirmationDialog(
+            "Убрать \(memberToRemove?.displayName ?? "") из группы?",
+            isPresented: Binding(
+                get: { memberToRemove != nil },
+                set: { if !$0 { memberToRemove = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: memberToRemove
+        ) { member in
+            Button("Убрать", role: .destructive) {
+                Task { await removeMember(member) }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: { _ in
+            Text("Расходы, которые уже записаны, останутся в группе")
+        }
+        .confirmationDialog(
+            "Выйти из «\(room.name)»?",
+            isPresented: $isLeaveConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Выйти", role: .destructive) {
+                Task { await leaveRoom() }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Группа исчезнет из вашего списка. Вернуться можно только по приглашению участника")
         }
         .confirmationDialog(
             "Сменить валюту на \(pendingCurrency?.code ?? "")?",
@@ -95,7 +137,7 @@ struct GroupSettingsView: View {
                     .sectionHeaderStyle()
                 Spacer(minLength: 8)
                 Button {
-                    isInvitePresented = true
+                    isInviteFriendsPresented = true
                 } label: {
                     Label("Пригласить", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
@@ -118,6 +160,19 @@ struct GroupSettingsView: View {
                             }
                         }
                         Spacer(minLength: 0)
+                        // Лекарство от «позвал не того»: убрать участника может
+                        // любой в комнате, как и править расходы.
+                        if member.id != session.me?.id {
+                            Menu {
+                                Button("Убрать из группы", role: .destructive) {
+                                    memberToRemove = member
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .foregroundStyle(Color.inkSecondary)
+                                    .padding(.leading, 8)
+                            }
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -132,6 +187,75 @@ struct GroupSettingsView: View {
             .padding(.vertical, 6)
             .surfaceCard(padding: 0)
         }
+    }
+
+    /// Выход из группы — деструктивным стилем внизу экрана.
+    private var leaveSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                isLeaveConfirmPresented = true
+            } label: {
+                HStack {
+                    Label("Выйти из группы", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.negative)
+                    Spacer(minLength: 0)
+                    if isMutating {
+                        ProgressView()
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isMutating)
+            .surfaceCard(padding: 0)
+            Text("Пока на вас записаны расходы, выйти нельзя — сначала уберите себя из них.")
+                .font(.caption)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    private func leaveRoom() async {
+        isMutating = true
+        defer { isMutating = false }
+        do {
+            try await session.api.leaveRoom(roomId: room.id)
+            session.noteDataChanged()
+            onChange()
+            dismiss()
+        } catch {
+            alertMessage = leaveErrorText(error)
+        }
+    }
+
+    private func removeMember(_ member: User) async {
+        isMutating = true
+        defer { isMutating = false }
+        do {
+            try await session.api.removeMember(roomId: room.id, userId: member.id)
+            session.noteDataChanged()
+            onChange()
+        } catch {
+            alertMessage = leaveErrorText(error)
+        }
+    }
+
+    /// Ошибки выхода объясняют путь наружу, а не просто запрещают: сервер
+    /// отдаёт has_operations и last_member, и оба случая человеку надо
+    /// объяснить своими словами, иначе он упрётся в глухое «конфликт».
+    private func leaveErrorText(_ error: Error) -> String {
+        if let apiError = error as? APIError, case .server(_, let code, let message) = apiError {
+            switch code {
+            case "has_operations", "last_member":
+                return message
+            default:
+                break
+            }
+        }
+        return humanErrorText(error)
     }
 
     /// Пикер «Валюта»: строки из GET /currencies (флаг + код), чекмарк
