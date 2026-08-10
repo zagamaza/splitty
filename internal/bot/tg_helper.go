@@ -30,7 +30,7 @@ type UserService interface {
 
 type RoomService interface {
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
-	LeaveRoom(ctx context.Context, userId int, roomId string) error
+	LeaveRoom(ctx context.Context, userId int, roomId string) (bool, error)
 	CreateRoom(ctx context.Context, u *api.Room) (*api.Room, error)
 	FindById(ctx context.Context, id string) (*api.Room, error)
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error

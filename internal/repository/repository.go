@@ -78,7 +78,8 @@ type UserRepository interface {
 type RoomRepository interface {
 	FindById(ctx context.Context, id string) (*api.Room, error)
 	JoinToRoom(ctx context.Context, u api.User, roomId string) error
-	LeaveRoom(ctx context.Context, userId int, roomId string) error
+	// LeaveRoom возвращает true, если пользователь действительно был в комнате
+	LeaveRoom(ctx context.Context, userId int, roomId string) (bool, error)
 	SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error)
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
@@ -382,17 +383,42 @@ func sanitizeRoom(r *api.Room) *api.Room {
 	return &c
 }
 
-func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId string) error {
+// LeaveRoom убирает пользователя из комнаты и возвращает true, если он в ней
+// действительно был.
+//
+// Условие членства стоит в ФИЛЬТРЕ, а не проверяется отдельным чтением: два
+// одновременных выхода (человек нажал дважды, ретрай сети) иначе оба увидели бы
+// себя участником, и проверка «последний участник» в вызывающем коде обошлась
+// бы. Здесь mongo решает это одной операцией: matched==0 значит «комнаты нет
+// или пользователь уже не участник».
+//
+// Заодно вычищается id из room_states: archived/paid_off_debts — это списки
+// int, и без чистки вернувшийся по повторному приглашению увидел бы комнату
+// сразу «в архиве» у себя, а погашенные долги — помеченными.
+//
+// ВАЖНО: проверку «есть ли на человеке операции» этот метод НЕ делает — она
+// живёт в rest на нормализованной комнате. Выразить её фильтром mongo нельзя:
+// у легаси-операций recipients_with_sum в базе отсутствует и синтезируется в
+// памяти (см. normalizedOperation), поэтому фильтр пропустил бы старые долги.
+func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId string) (bool, error) {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
-		return err
+		return false, err
 	}
-	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"users": bson.M{"_id": userId}}})
+	filter := bson.M{"_id": hex, "users._id": userId}
+	update := bson.M{
+		"$pull": bson.M{
+			"users":                              bson.M{"_id": userId},
+			"room_states.archived":               userId,
+			"room_states.paid_off_debts":         userId,
+			"room_states.finished_add_operation": userId,
+		},
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, update)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return nil
+	return res.MatchedCount > 0, nil
 }
 
 func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error) {

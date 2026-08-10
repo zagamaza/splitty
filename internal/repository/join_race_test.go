@@ -192,3 +192,98 @@ func bsonIntValue(v interface{}) (int, error) {
 		return 0, fmt.Errorf("неожиданный тип %T", v)
 	}
 }
+
+// TestLeaveRoomConcurrentSingleWinner — два одновременных выхода (человек нажал
+// дважды, ретрай сети). Условие членства стоит в фильтре, поэтому успех ровно
+// один: иначе проверка «последний участник» в вызывающем коде обходилась бы.
+func TestLeaveRoomConcurrentSingleWinner(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+	roomID := seedRoom(t, db,
+		api.User{ID: 1, DisplayName: "Хозяин"},
+		api.User{ID: 100, DisplayName: "Катя"},
+	)
+
+	var (
+		wg   sync.WaitGroup
+		mu   sync.Mutex
+		wins int
+		errs []error
+	)
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			left, err := repo.LeaveRoom(testCtx(t), 100, roomID)
+			mu.Lock()
+			defer mu.Unlock()
+			if err != nil {
+				errs = append(errs, err)
+				return
+			}
+			if left {
+				wins++
+			}
+		}()
+	}
+	wg.Wait()
+
+	if len(errs) > 0 {
+		t.Fatalf("конкурентные выходы вернули ошибки: %v", errs)
+	}
+	if wins != 1 {
+		t.Fatalf("ожидался ровно один успешный выход, получено %d", wins)
+	}
+	if ids := roomMemberIDs(t, db, roomID); len(ids) != 1 || ids[0] != 1 {
+		t.Fatalf("состав комнаты после выхода неверен: %v", ids)
+	}
+}
+
+// TestLeaveRoomClearsRoomStates — room_states это списки int id. Без чистки
+// вернувшийся по повторному приглашению увидел бы комнату сразу «в архиве»
+// у себя, а погашенные долги — помеченными.
+func TestLeaveRoomClearsRoomStates(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	room := api.Room{
+		Name:     "С состояниями",
+		Members:  &[]api.User{{ID: 1, DisplayName: "Хозяин"}, {ID: 100, DisplayName: "Катя"}},
+		CreateAt: time.Now().UTC(),
+		RoomStates: api.RoomStatesUsers{
+			Archived:             []int{1, 100},
+			PaidOffDebt:          []int{100},
+			FinishedAddOperation: []int{100, 1},
+		},
+	}
+	res, err := db.Collection("room").InsertOne(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("не удалось засеять комнату: %v", err)
+	}
+	roomID := res.InsertedID.(primitive.ObjectID).Hex()
+
+	if _, err := repo.LeaveRoom(testCtx(t), 100, roomID); err != nil {
+		t.Fatalf("LeaveRoom: %v", err)
+	}
+
+	var got api.Room
+	hex, _ := primitive.ObjectIDFromHex(roomID)
+	if err := db.Collection("room").FindOne(testCtx(t), bson.M{"_id": hex}).Decode(&got); err != nil {
+		t.Fatalf("не удалось прочитать комнату: %v", err)
+	}
+	for name, ids := range map[string][]int{
+		"archived":               got.RoomStates.Archived,
+		"paid_off_debts":         got.RoomStates.PaidOffDebt,
+		"finished_add_operation": got.RoomStates.FinishedAddOperation,
+	} {
+		for _, id := range ids {
+			if id == 100 {
+				t.Fatalf("id вышедшего остался в room_states.%s: %v", name, ids)
+			}
+		}
+	}
+	// Чужие id обязаны сохраниться.
+	if len(got.RoomStates.Archived) != 1 || got.RoomStates.Archived[0] != 1 {
+		t.Fatalf("чистка задела чужие id: archived=%v", got.RoomStates.Archived)
+	}
+}

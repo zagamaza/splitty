@@ -322,6 +322,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/rooms/{roomId}", s.auth(s.handleGetRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/join", s.auth(s.handleJoinRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/members", s.auth(s.handleAddMember))
+	mux.Handle("DELETE /api/v1/rooms/{roomId}/members/me", s.auth(s.handleLeaveRoom))
+	mux.Handle("DELETE /api/v1/rooms/{roomId}/members/{userId}", s.auth(s.handleRemoveMember))
 	mux.Handle("POST /api/v1/rooms/{roomId}/archive", s.auth(s.handleArchiveRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/unarchive", s.auth(s.handleUnarchiveRoom))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/currency", s.auth(s.handleUpdateCurrency))

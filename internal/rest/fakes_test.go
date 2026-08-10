@@ -634,19 +634,43 @@ func (f *fakeRoomRepo) JoinToRoom(_ context.Context, u api.User, roomId string) 
 	return nil
 }
 
-func (f *fakeRoomRepo) LeaveRoom(_ context.Context, userId int, roomId string) error {
+// LeaveRoom повторяет семантику mongo-реализации: false, если пользователя в
+// комнате не было (условие членства стоит в фильтре, а не в отдельном чтении),
+// плюс чистка room_states — иначе вернувшийся увидел бы комнату «в архиве».
+func (f *fakeRoomRepo) LeaveRoom(_ context.Context, userId int, roomId string) (bool, error) {
 	room, ok := f.rooms[roomId]
 	if !ok {
-		return mongo.ErrNoDocuments
+		return false, mongo.ErrNoDocuments
 	}
-	var members []api.User
+	var (
+		members []api.User
+		found   bool
+	)
 	for _, m := range roomMembers(room) {
-		if m.ID != userId {
-			members = append(members, m)
+		if m.ID == userId {
+			found = true
+			continue
 		}
+		members = append(members, m)
+	}
+	if !found {
+		return false, nil
 	}
 	room.Members = &members
-	return nil
+	room.RoomStates.Archived = withoutInt(room.RoomStates.Archived, userId)
+	room.RoomStates.PaidOffDebt = withoutInt(room.RoomStates.PaidOffDebt, userId)
+	room.RoomStates.FinishedAddOperation = withoutInt(room.RoomStates.FinishedAddOperation, userId)
+	return true, nil
+}
+
+func withoutInt(ids []int, drop int) []int {
+	var out []int
+	for _, id := range ids {
+		if id != drop {
+			out = append(out, id)
+		}
+	}
+	return out
 }
 
 func (f *fakeRoomRepo) SaveRoom(_ context.Context, r *api.Room) (primitive.ObjectID, error) {

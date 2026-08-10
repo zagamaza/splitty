@@ -443,7 +443,7 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 		}
 	}
 
-	err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
+	_, err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
 	if err != nil {
 		log.Error().Err(err).Msg("leave room failed")
 		return
