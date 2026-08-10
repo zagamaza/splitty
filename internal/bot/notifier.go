@@ -271,6 +271,53 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 		keyboard)})
 }
 
+// NotifyInvited сообщает человеку, что его позвали в комнату.
+//
+// isReturn различает два разных события: «вас добавили» (человек уже участник,
+// карточка информационная) и «приглашает вернуться» (человек уходил, приглашение
+// ждёт его решения). Тексты обязаны отличаться — иначе вернувшийся не поймёт,
+// почему от него чего-то ждут.
+//
+// Канал push помечен как invites: на Android значение data["channel"] уходит в
+// ChannelID уведомления, поэтому приложение обязано завести одноимённый канал —
+// иначе фоновый пуш на Android 8+ молча не покажется.
+func (n *Notifier) NotifyInvited(ctx context.Context, room api.Room, invitee api.User, inviter api.User, isReturn bool) {
+	title := room.Name
+	body := fmt.Sprintf("%s добавил вас в группу", inviter.DisplayName)
+	if isReturn {
+		body = fmt.Sprintf("%s приглашает вас вернуться в группу", inviter.DisplayName)
+	}
+	n.pushToUser(ctx, invitee.ID, api.NotifyInvites, title, body,
+		map[string]string{"channel": "invites", "roomId": room.ID.Hex(), "type": "invite"})
+
+	cu := canonical(ctx, n.uf)
+	if !n.allowsTelegram(cu, &invitee, api.NotifyInvites) {
+		return
+	}
+	chatId, ok := cu.chatID(&invitee)
+	if !ok {
+		return
+	}
+
+	// Кнопка ведёт в комнату. Для повторного приглашения её не даём: человек
+	// ещё не участник, и переход упёрся бы в «вы не участник этой комнаты».
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	if !isReturn {
+		rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
+		if _, err := n.bs.SaveAll(ctx, rb); err != nil {
+			log.Error().Err(err).Stack().Msg("notifier: save buttons failed")
+			return
+		}
+		keyboard = [][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(&invitee, "btn_view_room"), rb.ID.Hex())},
+		}
+	}
+
+	n.send([]tgbotapi.Chattable{NewMessage(chatId,
+		fmt.Sprintf("%s — <b>%s</b>", html.EscapeString(body), html.EscapeString(room.Name)),
+		keyboard)})
+}
+
 // send отправляет сообщения по одному; ошибки только логируются (как в
 // TelegramListener.sendBotResponse) — уведомление не должно ломать запрос
 func (n *Notifier) send(messages []tgbotapi.Chattable) {

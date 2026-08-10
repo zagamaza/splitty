@@ -3,7 +3,9 @@ package rest
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -888,11 +890,14 @@ func (f *fakeRoomRepo) AnonymizeUser(_ context.Context, userId int, placeholder 
 
 // notifierCall одно зафиксированное уведомление fakeNotifier
 type notifierCall struct {
-	event  string // created | updated | deleted | repayment
+	event  string // created | updated | deleted | repayment | invited
 	roomId string
 	op     api.Operation
 	oldOp  api.Operation // только для updated
 	author api.User
+	// invitee и isReturn — только для invited
+	invitee  api.User
+	isReturn bool
 }
 
 // fakeNotifier реализация Notifier для тестов: пишет вызовы в буферизованный
@@ -919,4 +924,86 @@ func (f *fakeNotifier) NotifyOperationDeleted(_ context.Context, room api.Room, 
 
 func (f *fakeNotifier) NotifyRepaymentCreated(_ context.Context, room api.Room, op api.Operation, author api.User) {
 	f.calls <- notifierCall{event: "repayment", roomId: room.ID.Hex(), op: op, author: author}
+}
+
+func (f *fakeNotifier) NotifyInvited(_ context.Context, room api.Room, invitee api.User, inviter api.User, isReturn bool) {
+	f.calls <- notifierCall{
+		event: "invited", roomId: room.ID.Hex(),
+		author: inviter, invitee: invitee, isReturn: isReturn,
+	}
+}
+
+// fakeInviteStore — in-memory реализация inviteStore. Ключ карты — пара
+// (комната, приглашённый): та же уникальность, что даёт unique-индекс в mongo.
+type fakeInviteStore struct {
+	mu      sync.Mutex
+	invites map[string]api.RoomInvite
+}
+
+func newFakeInviteStore() *fakeInviteStore {
+	return &fakeInviteStore{invites: map[string]api.RoomInvite{}}
+}
+
+func inviteKey(roomID primitive.ObjectID, inviteeID int) string {
+	return roomID.Hex() + ":" + strconv.Itoa(inviteeID)
+}
+
+func (f *fakeInviteStore) Upsert(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.invites[inviteKey(roomID, inviteeID)] = api.RoomInvite{
+		RoomID: roomID, InviteeID: inviteeID, InviterID: inviterID,
+		Status: status, CreatedAt: now,
+	}
+	return nil
+}
+
+func (f *fakeInviteStore) Find(_ context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	inv, ok := f.invites[inviteKey(roomID, inviteeID)]
+	if !ok {
+		return nil, mongo.ErrNoDocuments
+	}
+	return &inv, nil
+}
+
+func (f *fakeInviteStore) ListForUser(_ context.Context, userID int) ([]api.RoomInvite, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []api.RoomInvite
+	for _, inv := range f.invites {
+		if inv.InviteeID != userID {
+			continue
+		}
+		if inv.Status == api.InvitePending || inv.Status == api.InviteAdded {
+			out = append(out, inv)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeInviteStore) SetStatusIfCurrent(_ context.Context, roomID primitive.ObjectID, inviteeID int, from, to api.InviteStatus, now time.Time) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	key := inviteKey(roomID, inviteeID)
+	inv, ok := f.invites[key]
+	if !ok || inv.Status != from {
+		return false, nil
+	}
+	inv.Status = to
+	inv.CreatedAt = now
+	f.invites[key] = inv
+	return true, nil
+}
+
+func (f *fakeInviteStore) DeleteByUserId(_ context.Context, userId int) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for key, inv := range f.invites {
+		if inv.InviteeID == userId || inv.InviterID == userId {
+			delete(f.invites, key)
+		}
+	}
+	return nil
 }

@@ -29,6 +29,10 @@ type Notifier interface {
 	NotifyOperationUpdated(ctx context.Context, room api.Room, oldOp api.Operation, newOp api.Operation, author api.User)
 	NotifyOperationDeleted(ctx context.Context, room api.Room, op api.Operation, author api.User)
 	NotifyRepaymentCreated(ctx context.Context, room api.Room, op api.Operation, author api.User)
+	// NotifyInvited сообщает человеку, что его позвали в комнату. isReturn —
+	// это повторное приглашение после выхода (текст другой: «приглашает
+	// вернуться», а не «добавил вас»)
+	NotifyInvited(ctx context.Context, room api.Room, invitee api.User, inviter api.User, isReturn bool)
 }
 
 // userIDAllocator выдаёт номера пользователей Splitty, у которых нет telegram
@@ -317,6 +321,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/rooms", s.auth(s.handleCreateRoom))
 	mux.Handle("GET /api/v1/rooms/{roomId}", s.auth(s.handleGetRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/join", s.auth(s.handleJoinRoom))
+	mux.Handle("POST /api/v1/rooms/{roomId}/members", s.auth(s.handleAddMember))
 	mux.Handle("POST /api/v1/rooms/{roomId}/archive", s.auth(s.handleArchiveRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/unarchive", s.auth(s.handleUnarchiveRoom))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/currency", s.auth(s.handleUpdateCurrency))

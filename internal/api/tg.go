@@ -202,6 +202,10 @@ type NotifyCategory string
 const (
 	NotifyOperations NotifyCategory = "operations"
 	NotifyDebts      NotifyCategory = "debts"
+	// NotifyInvites — приглашения в комнаты. Собственные настройки категории
+	// добавляются позже (NotifySettings.Invites); до этого действуют общий
+	// дефолт «включено» и мастер-выключатель NotificationOn
+	NotifyInvites NotifyCategory = "invites"
 )
 
 // AllowsTelegram слать ли пользователю telegram-уведомление категории.
