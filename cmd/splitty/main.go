@@ -175,6 +175,11 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	server.SetBugReports(repository.NewBugReportRepository(db))
 	server.SetPushOutbox(pushOutbox)
 
+	// Приглашения в комнаты: кто кого позвал и в каком состоянии отношение.
+	// Нужны и REST-эндпоинтам, и удалению аккаунта (там своя PII).
+	inviteRepository := repository.NewInviteRepository(db)
+	server.SetInvites(inviteRepository)
+
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
 	}
@@ -186,6 +191,15 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	if err := userRepository.EnsureIndexes(ctx); err != nil {
 		cleanup()
 		return nil, nil, nil, errors.Wrap(err, "cannot create user identity indexes")
+	}
+
+	// Индексы приглашений — тоже фатально: запись описывает ТЕКУЩЕЕ состояние
+	// отношения «человек × комната», и без unique по паре конкурентные
+	// приглашения одного человека создали бы дубли, а Find возвращал бы
+	// произвольный из них — принять можно было бы одно, а показываться другое
+	if err := inviteRepository.EnsureIndexes(ctx); err != nil {
+		cleanup()
+		return nil, nil, nil, errors.Wrap(err, "cannot create room_invite indexes")
 	}
 
 	// Порядок фиксирован: сначала индексы, потом бэкфилл. Индекс по telegram_id

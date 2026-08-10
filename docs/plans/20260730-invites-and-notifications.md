@@ -168,19 +168,20 @@ room_invite {
 - Create: `internal/repository/invite_test.go`
 - Modify: `cmd/splitty/main.go`
 
-- [ ] создать `api.RoomInvite` с полями `ID primitive.ObjectID`, `RoomID primitive.ObjectID`, `InviteeID int`, `InviterID int`, `Status InviteStatus`, `CreatedAt time.Time`
-- [ ] **поля `SeenAt` НЕ заводить** — прочитанность решена одной отметкой на пользователе (`notifications_seen_at`, Task 6); второй механизм рядом противоречил бы принятому решению и остался бы мёртвым
-- [ ] объявить `InviteStatus` со значениями `added`, `left`, `pending`, `declined` и метод `func (s InviteStatus) IsMember() bool` (`added`)
-- [ ] создать `MongoInviteRepository` над коллекцией `room_invite` с методами: `Upsert(ctx, inv) error`, `Find(ctx, roomId, inviteeId) (*api.RoomInvite, error)`, `ListForUser(ctx, userId) ([]api.RoomInvite, error)`, **`SetStatusIfCurrent(ctx, roomId, inviteeId, from, to InviteStatus) (bool, error)`**, `DeleteByUserId(ctx, userId) error`
-- [ ] **переход статуса — только compare-and-set**: `SetStatusIfCurrent` через `UpdateOne` с фильтром по ожидаемому текущему статусу, возвращает `false`, если не совпал. Безусловного `SetStatus` не заводить: конкурентные accept и decline по last-write-wins дали бы «участник со статусом declined»
-- [ ] **`Upsert` обновляет `CreatedAt`** на текущее время при каждой смене отношения (новое приглашение = новое событие). Иначе после accept повторного приглашения `CreatedAt` остался бы временем создания `pending`, оказался бы старше отметки прочитанного, и карточка «вас добавили» не показалась бы никогда
-- [ ] **`DeleteByUserId` чистит по `$or: [{invitee_id: id}, {inviter_id: id}]`** — записи, где удалённый был приглашающим, тоже содержат его id
-- [ ] `ListForUser` возвращает только `pending` и `added` — `left`/`declined` в разделе не показываются
-- [ ] `EnsureIndexes(ctx)` по образцу `repository.go:223`: **unique** по `(room_id, invitee_id)` и обычный по `invitee_id` (для `ListForUser`)
-- [ ] вызвать `EnsureIndexes` в `cmd/splitty/main.go` рядом с остальными; ошибку считать фатальной — без unique возможны дубли приглашений
-- [ ] написать интеграционные тесты через `testDB(t)`: upsert создаёт и обновляет одну запись и двигает `CreatedAt`; unique-индекс не даёт двух записей на пару; `ListForUser` отдаёт только `pending`/`added`; `DeleteByUserId` чистит записи и по `invitee_id`, и по `inviter_id`
-- [ ] написать тест compare-and-set: `SetStatusIfCurrent(pending→added)` возвращает `true`, повторный вызов — `false`; конкурентные accept и decline дают ровно один успех
-- [ ] `go test ./internal/...` — зелёные перед Task 2
+- [x] создать `api.RoomInvite` с полями `ID primitive.ObjectID`, `RoomID primitive.ObjectID`, `InviteeID int`, `InviterID int`, `Status InviteStatus`, `CreatedAt time.Time`
+- [x] **поля `SeenAt` НЕ заводить** — прочитанность решена одной отметкой на пользователе (`notifications_seen_at`, Task 6); второй механизм рядом противоречил бы принятому решению и остался бы мёртвым
+- [x] объявить `InviteStatus` со значениями `added`, `left`, `pending`, `declined` и метод `func (s InviteStatus) IsMember() bool` (`added`)
+- [x] создать `MongoInviteRepository` над коллекцией `room_invite` с методами: `Upsert(ctx, inv) error`, `Find(ctx, roomId, inviteeId) (*api.RoomInvite, error)`, `ListForUser(ctx, userId) ([]api.RoomInvite, error)`, **`SetStatusIfCurrent(ctx, roomId, inviteeId, from, to InviteStatus) (bool, error)`**, `DeleteByUserId(ctx, userId) error`
+- [x] **переход статуса — только compare-and-set**: `SetStatusIfCurrent` через `UpdateOne` с фильтром по ожидаемому текущему статусу, возвращает `false`, если не совпал. Безусловного `SetStatus` не заводить: конкурентные accept и decline по last-write-wins дали бы «участник со статусом declined»
+- [x] **`Upsert` обновляет `CreatedAt`** на текущее время при каждой смене отношения (новое приглашение = новое событие). Иначе после accept повторного приглашения `CreatedAt` остался бы временем создания `pending`, оказался бы старше отметки прочитанного, и карточка «вас добавили» не показалась бы никогда
+- [x] **`DeleteByUserId` чистит по `$or: [{invitee_id: id}, {inviter_id: id}]`** — записи, где удалённый был приглашающим, тоже содержат его id
+- [x] `ListForUser` возвращает только `pending` и `added` — `left`/`declined` в разделе не показываются
+- [x] `EnsureIndexes(ctx)` по образцу `repository.go:223`: **unique** по `(room_id, invitee_id)` и обычный по `invitee_id` (для `ListForUser`)
+- [x] вызвать `EnsureIndexes` в `cmd/splitty/main.go` рядом с остальными; ошибку считать фатальной — без unique возможны дубли приглашений
+- [x] ➕ проводка в `rest.Server` сделана **сеттером `SetInvites`**, а не позиционным параметром `NewServer`: в проекте так подключены `SetChatStates`/`SetBugReports`/`SetPushOutbox`, и сеттер не ломает вызовы конструктора в тестах. Объявлен узкий интерфейс `inviteStore` (`server.go`) — для фейков
+- [x] написать интеграционные тесты через `testDB(t)`: upsert создаёт и обновляет одну запись и двигает `CreatedAt`; unique-индекс не даёт двух записей на пару; `ListForUser` отдаёт только `pending`/`added`; `DeleteByUserId` чистит записи и по `invitee_id`, и по `inviter_id`
+- [x] написать тест compare-and-set: `SetStatusIfCurrent(pending→added)` возвращает `true`, повторный вызов — `false`; конкурентные accept и decline дают ровно один успех
+- [x] `go test ./internal/...` — зелёные перед Task 2
 
 ### Task 2: Атомарное добавление в комнату
 

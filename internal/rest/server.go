@@ -16,6 +16,7 @@ import (
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // Notifier отправляет участникам комнаты telegram-уведомления о REST-мутациях —
@@ -46,6 +47,20 @@ type userIDAllocator interface {
 // repository.MongoChatStateRepository, MongoBugReportRepository,
 // MongoPushOutboxRepository
 type userDataCleaner interface {
+	DeleteByUserId(ctx context.Context, userId int) error
+}
+
+// inviteStore хранит отношения «человек × комната»: кто кого позвал и в каком
+// состоянии отношение сейчас. Интерфейс объявлен здесь узким — как
+// userIDAllocator и Notifier: тестам нужен фейк, а не живой mongo.
+//
+// DeleteByUserId входит в тот же набор, поэтому одна реализация служит и
+// хранилищем приглашений, и userDataCleaner при удалении аккаунта.
+type inviteStore interface {
+	Upsert(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error
+	Find(ctx context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error)
+	ListForUser(ctx context.Context, userID int) ([]api.RoomInvite, error)
+	SetStatusIfCurrent(ctx context.Context, roomID primitive.ObjectID, inviteeID int, from, to api.InviteStatus, now time.Time) (bool, error)
 	DeleteByUserId(ctx context.Context, userId int) error
 }
 
@@ -129,6 +144,9 @@ type Server struct {
 	// nil — соответствующая коллекция не чистится
 	bugReports userDataCleaner
 	pushOutbox userDataCleaner
+	// invites опционален (см. SetInvites): хранилище отношений «человек ×
+	// комната» для приглашений и раздела уведомлений
+	invites inviteStore
 
 	// accounts кеширует «жив ли аккаунт» для auth-middleware: без него проверка
 	// tombstone стоила бы запроса в mongo на КАЖДЫЙ авторизованный запрос
@@ -218,6 +236,12 @@ func (s *Server) SetBugReports(c userDataCleaner) {
 // Вызывать до Run, nil-безопасно
 func (s *Server) SetPushOutbox(c userDataCleaner) {
 	s.pushOutbox = c
+}
+
+// SetInvites подключает хранилище приглашений. Вызывать до Run, nil-безопасно:
+// без него эндпоинты приглашений отвечают 503, остальной сервер работает.
+func (s *Server) SetInvites(store inviteStore) {
+	s.invites = store
 }
 
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
