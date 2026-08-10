@@ -486,6 +486,18 @@ func (f *fakeUserRepo) SetNotifySettings(_ context.Context, userId int, s api.No
 	return nil
 }
 
+// SetNotificationsSeenAt повторяет семантику mongo: отметка двигается только
+// вперёд, иначе запоздавший запрос вернул бы уже прочитанное в непрочитанные.
+func (f *fakeUserRepo) SetNotificationsSeenAt(_ context.Context, userId int, at time.Time) error {
+	if u, ok := f.liveUser(userId); ok {
+		if u.NotificationsSeenAt == nil || u.NotificationsSeenAt.Before(at) {
+			t := at
+			u.NotificationsSeenAt = &t
+		}
+	}
+	return nil
+}
+
 func (f *fakeUserRepo) SetUserLang(_ context.Context, userId int, lang string) error {
 	if u, ok := f.liveUser(userId); ok {
 		u.SelectedLang = lang

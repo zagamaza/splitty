@@ -70,6 +70,7 @@ type UserRepository interface {
 	// самое. Пользователя нет — mongo.ErrNoDocuments
 	SoftDeleteUser(ctx context.Context, userId int) error
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
+	SetNotificationsSeenAt(ctx context.Context, userId int, at time.Time) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
 	RemovePushToken(ctx context.Context, userId int, token string) error
@@ -1436,6 +1437,27 @@ func (r MongoUserRepository) SetNotifySettings(ctx context.Context, userId int, 
 	err := r.setLiveUserField(ctx, userId, "notify", s)
 	if err != nil {
 		log.Error().Err(err).Msg("set notify settings failed")
+	}
+	return err
+}
+
+// SetNotificationsSeenAt двигает отметку просмотра раздела уведомлений.
+//
+// Только ВПЕРЁД: запоздавший запрос со старым временем (ретрай, второй экран)
+// иначе откатил бы отметку назад, и уже прочитанное всплыло бы снова. Поэтому
+// условие $lt стоит в фильтре, а не в коде вызывающего.
+func (r MongoUserRepository) SetNotificationsSeenAt(ctx context.Context, userId int, at time.Time) error {
+	filter := bson.M{
+		"_id":        userId,
+		"deleted_at": bson.M{"$exists": false},
+		"$or": bson.A{
+			bson.M{"notifications_seen_at": bson.M{"$exists": false}},
+			bson.M{"notifications_seen_at": bson.M{"$lt": at}},
+		},
+	}
+	_, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"notifications_seen_at": at}})
+	if err != nil {
+		log.Error().Err(err).Msg("set notifications seen failed")
 	}
 	return err
 }

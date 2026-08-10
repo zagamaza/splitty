@@ -161,7 +161,10 @@ func (s *Server) revokeAppleTokens(ctx context.Context, u *api.User) {
 //   - push_outbox — отрендеренные title/body, содержащие имя автора и описание
 //     расхода: без чистки после анонимизации комнат доставился бы пуш со старым
 //     именем;
-//   - login_code — живой код иначе продолжил бы логинить в tombstone.
+//   - login_code — живой код иначе продолжил бы логинить в tombstone;
+//   - room_invite — invitee_id и inviter_id это id человека, плюс сама связь
+//     «кто кого звал в какую комнату»; приглашения удалённого обязаны исчезнуть
+//     с обеих сторон.
 //
 // Что НЕ чистится осознанно:
 //   - button — только id комнат и операций, PII там нет;
@@ -195,6 +198,7 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 		{name: "chat_state", repo: s.chatStates, ids: []int{u.ID}},
 		{name: "bug_report", repo: s.bugReports, ids: []int{u.ID}},
 		{name: "push_outbox", repo: s.pushOutbox, ids: []int{u.ID}},
+		{name: "room_invite", repo: s.invites, ids: []int{u.ID}},
 	} {
 		if cleaner.repo == nil {
 			return errors.Errorf("коллекция %s не подключена: PII удалённого пользователя осталась бы в базе", cleaner.name)

@@ -1484,27 +1484,16 @@ func abs(v int) int {
 	return v
 }
 
-// handleActivity GET /api/v1/activity?limit=30&offset=0 — лента операций моих комнат
-func (s *Server) handleActivity(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	userId := userIdFromCtx(ctx)
-
-	limit, hErr := queryInt(r, "limit", defaultActivityLimit)
-	if hErr != nil {
-		hErr.write(w)
-		return
-	}
-	offset, hErr := queryInt(r, "offset", 0)
-	if hErr != nil {
-		hErr.write(w)
-		return
-	}
-
+// activityItems собирает страницу ленты событий пользователя.
+//
+// Вынесено из handleActivity, потому что тем же самым живёт раздел
+// «Уведомления» (см. notifications_feed.go): дублировать обход комнат и
+// сортировку значило бы получить две ленты, которые однажды разойдутся.
+func (s *Server) activityItems(ctx context.Context, userId, limit, offset int) ([]activityItemDto, *httpError) {
 	rooms, err := s.roomRepo.FindRoomsByUserId(ctx, userId)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot find rooms")
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось получить комнаты")
-		return
+		return nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить комнаты"}
 	}
 
 	var items []activityItemDto
@@ -1544,6 +1533,30 @@ func (s *Server) handleActivity(w http.ResponseWriter, r *http.Request) {
 	page := items[offset:end]
 	if page == nil {
 		page = []activityItemDto{}
+	}
+	return page, nil
+}
+
+// handleActivity GET /api/v1/activity?limit=30&offset=0 — лента операций моих комнат
+func (s *Server) handleActivity(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userId := userIdFromCtx(ctx)
+
+	limit, hErr := queryInt(r, "limit", defaultActivityLimit)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+	offset, hErr := queryInt(r, "offset", 0)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	page, hErr := s.activityItems(ctx, userId, limit, offset)
+	if hErr != nil {
+		hErr.write(w)
+		return
 	}
 	writeJSON(w, http.StatusOK, page)
 }

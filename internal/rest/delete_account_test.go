@@ -38,6 +38,7 @@ type deleteTestSetup struct {
 	chatStates  *fakeChatStates
 	bugReports  *fakeChatStates
 	pushOutbox  *fakeChatStates
+	invites     *fakeInviteStore
 	appleTokens *fakeAppleTokens
 	room        *api.Room
 }
@@ -106,11 +107,13 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	set := &deleteTestSetup{
 		s: s, users: users, rooms: rooms, codes: codes,
 		chatStates: &fakeChatStates{}, bugReports: &fakeChatStates{}, pushOutbox: &fakeChatStates{},
+		invites:     newFakeInviteStore(),
 		appleTokens: apple, room: room,
 	}
 	s.SetChatStates(set.chatStates)
 	s.SetBugReports(set.bugReports)
 	s.SetPushOutbox(set.pushOutbox)
+	s.SetInvites(set.invites)
 	return set
 }
 
@@ -567,5 +570,42 @@ func TestAccountCache(t *testing.T) {
 	}
 	if len(c.entries) > c.max {
 		t.Errorf("в кеше %d записей при потолке %d", len(c.entries), c.max)
+	}
+}
+
+// TestDeleteMePurgesRoomInvites — приглашения удалённого обязаны исчезнуть с
+// ОБЕИХ сторон: и там, где он приглашённый, и там, где он приглашающий (в
+// inviter_id лежит его же id, и связь «кто кого звал» это тоже персональные
+// данные). Тест обязан падать, если коллекцию забудут подключить к чистке.
+func TestDeleteMePurgesRoomInvites(t *testing.T) {
+	set := newDeleteSetup(t, Config{})
+	ctx := context.Background()
+
+	asInvitee := primitive.NewObjectID()
+	asInviter := primitive.NewObjectID()
+	foreign := primitive.NewObjectID()
+
+	if err := set.invites.Upsert(ctx, asInvitee, deletedUserID, survivorUserID, api.InviteAdded, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения к удаляемому: %v", err)
+	}
+	if err := set.invites.Upsert(ctx, asInviter, survivorUserID, deletedUserID, api.InvitePending, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения от удаляемого: %v", err)
+	}
+	if err := set.invites.Upsert(ctx, foreign, survivorUserID, 999, api.InviteAdded, time.Now()); err != nil {
+		t.Fatalf("подготовка чужого приглашения: %v", err)
+	}
+
+	if rec := set.deleteMe(t, deletedUserID); rec.Code != http.StatusNoContent {
+		t.Fatalf("DELETE /me: ожидался 204, получен %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	if _, err := set.invites.Find(ctx, asInvitee, deletedUserID); err != mongo.ErrNoDocuments {
+		t.Fatalf("приглашение К удалённому осталось: %v", err)
+	}
+	if _, err := set.invites.Find(ctx, asInviter, survivorUserID); err != mongo.ErrNoDocuments {
+		t.Fatalf("приглашение ОТ удалённого осталось: %v", err)
+	}
+	if _, err := set.invites.Find(ctx, foreign, survivorUserID); err != nil {
+		t.Fatalf("чужое приглашение пострадало: %v", err)
 	}
 }

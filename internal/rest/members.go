@@ -160,6 +160,113 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, addMemberResponse{Status: api.InviteAdded})
 }
 
+// handleAcceptInvite POST /api/v1/invites/{roomId}/accept — принять приглашение.
+//
+// Порядок: СНАЧАЛА перевод статуса, потом добавление в комнату. Compare-and-set
+// гарантирует, что из pending выйдет ровно один запрос: проигравший гонку с
+// «отклонить» (или со вторым тапом) получит 409 и не станет добавлять человека
+// второй раз.
+func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	roomId, roomHex, invite, hErr := s.pendingInvite(ctx, r)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	room, err := s.roomRepo.FindById(ctx, roomId)
+	if err != nil || room == nil {
+		// Комнату успели удалить — принимать нечего.
+		writeError(w, http.StatusNotFound, "not_found", "группа не найдена")
+		return
+	}
+
+	ok, err := s.invites.SetStatusIfCurrent(ctx, roomHex, invite.InviteeID, api.InvitePending, api.InviteAdded, s.now())
+	if err != nil {
+		log.Error().Err(err).Msg("cannot accept invite")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось принять приглашение")
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusConflict, "not_pending", "приглашение уже обработано")
+		return
+	}
+
+	// JoinToRoom идемпотентен, поэтому ретрай безопасен. Если он всё же упадёт,
+	// останется запись added без членства — её чинит повторное приглашение:
+	// оно пойдёт по шагу (5) handleAddMember, потому что человек не участник.
+	if err = s.roomRepo.JoinToRoom(ctx, *invite.user, roomId); err != nil {
+		log.Error().Err(err).Msg("cannot join room on accept")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось войти в группу")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, addMemberResponse{Status: api.InviteAdded})
+}
+
+// handleDeclineInvite POST /api/v1/invites/{roomId}/decline — отказаться.
+func (s *Server) handleDeclineInvite(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	_, roomHex, invite, hErr := s.pendingInvite(ctx, r)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	ok, err := s.invites.SetStatusIfCurrent(ctx, roomHex, invite.InviteeID, api.InvitePending, api.InviteDeclined, s.now())
+	if err != nil {
+		log.Error().Err(err).Msg("cannot decline invite")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось отклонить приглашение")
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusConflict, "not_pending", "приглашение уже обработано")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, addMemberResponse{Status: api.InviteDeclined})
+}
+
+// pendingInviteCtx — приглашение вместе с профилем приглашённого.
+type pendingInviteCtx struct {
+	*api.RoomInvite
+	user *api.User
+}
+
+// pendingInvite общая подготовка accept/decline: находит СВОЁ приглашение в
+// статусе pending. Чужое отдаём как 404, а не 403 — существование чужих
+// приглашений не наше дело раскрывать.
+func (s *Server) pendingInvite(ctx context.Context, r *http.Request) (string, primitive.ObjectID, *pendingInviteCtx, *httpError) {
+	if s.invites == nil {
+		return "", primitive.NilObjectID, nil, &httpError{http.StatusServiceUnavailable, "unavailable", "приглашения недоступны"}
+	}
+
+	roomId := r.PathValue("roomId")
+	roomHex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return "", primitive.NilObjectID, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
+	}
+
+	user, hErr := s.currentUser(ctx)
+	if hErr != nil {
+		return "", primitive.NilObjectID, nil, hErr
+	}
+
+	invite, err := s.invites.Find(ctx, roomHex, user.ID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", primitive.NilObjectID, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
+		}
+		log.Error().Err(err).Msg("cannot read invite")
+		return "", primitive.NilObjectID, nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить приглашение"}
+	}
+	if invite.Status != api.InvitePending {
+		return "", primitive.NilObjectID, nil, &httpError{http.StatusConflict, "not_pending", "приглашение уже обработано"}
+	}
+
+	return roomId, roomHex, &pendingInviteCtx{RoomInvite: invite, user: user}, nil
+}
+
 // handleLeaveRoom DELETE /api/v1/rooms/{roomId}/members/me — выйти самому.
 func (s *Server) handleLeaveRoom(w http.ResponseWriter, r *http.Request) {
 	s.removeMember(w, r, userIdFromCtx(r.Context()), true)

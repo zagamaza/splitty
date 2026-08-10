@@ -314,3 +314,88 @@ func TestAddMemberRequiresMembership(t *testing.T) {
 		t.Fatalf("ожидался 403 для не-участника, получен %d", rec.Code)
 	}
 }
+
+// --- accept / decline ---
+
+func (f *inviteFixture) invitePending(t *testing.T, userId int) {
+	t.Helper()
+	if err := f.invites.Upsert(context.Background(), f.room.ID, userId, testUser1.ID, api.InvitePending, time.Now()); err != nil {
+		t.Fatalf("подготовка pending: %v", err)
+	}
+}
+
+func (f *inviteFixture) act(t *testing.T, userId int, action string) int {
+	t.Helper()
+	token := mustToken(t, f.srv, userId)
+	target := fmt.Sprintf("/api/v1/invites/%s/%s", f.room.ID.Hex(), action)
+	return doRequest(t, f.srv, http.MethodPost, target, token, "").Code
+}
+
+func TestAcceptInviteJoinsRoom(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusOK {
+		t.Fatalf("ожидался 200, получен %d", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("принявший не стал участником")
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil || inv.Status != api.InviteAdded {
+		t.Fatalf("статус после accept неверный: %+v (%v)", inv, err)
+	}
+}
+
+func TestDeclineInviteDoesNotJoin(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	if code := f.act(t, testUser2.ID, "decline"); code != http.StatusOK {
+		t.Fatalf("ожидался 200, получен %d", code)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("отказавшийся попал в комнату")
+	}
+	inv, _ := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if inv.Status != api.InviteDeclined {
+		t.Fatalf("статус после decline: %q", inv.Status)
+	}
+}
+
+func TestAcceptInviteTwiceConflicts(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	f.act(t, testUser2.ID, "accept")
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusConflict {
+		t.Fatalf("повторный accept должен давать 409, получен %d", code)
+	}
+}
+
+// TestAcceptForeignInviteNotFound — чужое приглашение принять нельзя, и мы не
+// раскрываем, что оно вообще существует.
+func TestAcceptForeignInviteNotFound(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	if code := f.act(t, testUser1.ID, "accept"); code != http.StatusNotFound {
+		t.Fatalf("чужое приглашение — 404, получен %d", code)
+	}
+}
+
+// TestDeclinedInviteCanBeReinvited — после отказа человека можно позвать снова,
+// и это снова будет приглашение, а не тихое добавление.
+func TestDeclinedInviteCanBeReinvited(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	f.act(t, testUser2.ID, "decline")
+
+	got := f.addMember(t, testUser2.ID).expect(http.StatusAccepted)
+	if got.Status != api.InvitePending {
+		t.Fatalf("после отказа ожидался pending, получен %q", got.Status)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("отказавшегося добавили молча")
+	}
+}

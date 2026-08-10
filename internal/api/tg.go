@@ -126,6 +126,11 @@ type User struct {
 	// репозитория воскресили бы его, а выданный JWT продолжал бы работать),
 	// но PII вычищена, а поля личности освобождены под повторную регистрацию.
 	DeletedAt *time.Time `json:"-" bson:"deleted_at,omitempty"`
+	// NotificationsSeenAt — до какого момента человек просмотрел раздел
+	// уведомлений. Одна отметка на пользователя, а не флаг на каждое событие:
+	// лента выводится на лету, хранить строку на каждый расход каждому
+	// получателю было бы write amplification без пользы
+	NotificationsSeenAt *time.Time `json:"-" bson:"notifications_seen_at,omitempty"`
 	// AppleRefreshToken — refresh token Apple, полученный обменом authorization
 	// code при входе. Нужен, чтобы при удалении аккаунта отозвать токены через
 	// POST https://appleid.apple.com/auth/revoke (Apple Guideline 5.1.1(v)).
@@ -171,6 +176,7 @@ func (u User) Snapshot() User {
 	u.Notify = nil
 	u.Aliases = nil
 	u.BankDetails = ""
+	u.NotificationsSeenAt = nil
 	u.DevAuth = false
 	return u
 }
@@ -194,6 +200,8 @@ type NotifySettings struct {
 	Operations ChannelPrefs `json:"operations" bson:"operations,omitempty"`
 	// Debts — возвраты долгов (и будущие напоминания)
 	Debts ChannelPrefs `json:"debts" bson:"debts,omitempty"`
+	// Invites — приглашения в группы
+	Invites ChannelPrefs `json:"invites" bson:"invites,omitempty"`
 }
 
 // NotifyCategory категория уведомления для проверки настроек
@@ -223,8 +231,11 @@ func (u *User) AllowsTelegram(category NotifyCategory) bool {
 	}
 	if u.Notify != nil {
 		prefs := u.Notify.Operations
-		if category == NotifyDebts {
+		switch category {
+		case NotifyDebts:
 			prefs = u.Notify.Debts
+		case NotifyInvites:
+			prefs = u.Notify.Invites
 		}
 		if prefs.Telegram != nil {
 			return *prefs.Telegram
@@ -250,8 +261,11 @@ func (u *User) WantsPush(category NotifyCategory) bool {
 	}
 	if u.Notify != nil {
 		prefs := u.Notify.Operations
-		if category == NotifyDebts {
+		switch category {
+		case NotifyDebts:
 			prefs = u.Notify.Debts
+		case NotifyInvites:
+			prefs = u.Notify.Invites
 		}
 		if prefs.Push != nil {
 			return *prefs.Push

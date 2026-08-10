@@ -20,6 +20,8 @@ type notifySettingsDto struct {
 	Operations channelPrefsDto `json:"operations"`
 	// Debts — возвраты долгов (и будущие напоминания).
 	Debts channelPrefsDto `json:"debts"`
+	// Invites — приглашения в группы.
+	Invites channelPrefsDto `json:"invites"`
 }
 
 // patchNotifyRequest частичное обновление: незаданные поля не меняются.
@@ -32,6 +34,12 @@ type patchNotifyRequest struct {
 		Telegram *bool `json:"telegram"`
 		Push     *bool `json:"push"`
 	} `json:"debts"`
+	// Invites может отсутствовать в теле старого клиента — тогда категория
+	// сохраняет текущее эффективное значение (см. handlePatchNotifications).
+	Invites *struct {
+		Telegram *bool `json:"telegram"`
+		Push     *bool `json:"push"`
+	} `json:"invites"`
 }
 
 func toNotifyDto(u *api.User) notifySettingsDto {
@@ -43,6 +51,10 @@ func toNotifyDto(u *api.User) notifySettingsDto {
 		Debts: channelPrefsDto{
 			Telegram: u.AllowsTelegram(api.NotifyDebts),
 			Push:     u.WantsPush(api.NotifyDebts),
+		},
+		Invites: channelPrefsDto{
+			Telegram: u.AllowsTelegram(api.NotifyInvites),
+			Push:     u.WantsPush(api.NotifyInvites),
 		},
 	}
 }
@@ -86,6 +98,14 @@ func (s *Server) handlePatchNotifications(w http.ResponseWriter, r *http.Request
 			Telegram: boolPtr(user.AllowsTelegram(api.NotifyDebts)),
 			Push:     boolPtr(user.WantsPush(api.NotifyDebts)),
 		},
+		// Категория invites добавлена позже операций и долгов: старый клиент
+		// пришлёт тело без неё, и стартовое эффективное значение сохранит её
+		// как есть — иначе первое же изменение настроек из старой сборки молча
+		// выключило бы человеку приглашения.
+		Invites: api.ChannelPrefs{
+			Telegram: boolPtr(user.AllowsTelegram(api.NotifyInvites)),
+			Push:     boolPtr(user.WantsPush(api.NotifyInvites)),
+		},
 	}
 	if req.Operations != nil {
 		if req.Operations.Telegram != nil {
@@ -101,6 +121,14 @@ func (s *Server) handlePatchNotifications(w http.ResponseWriter, r *http.Request
 		}
 		if req.Debts.Push != nil {
 			settings.Debts.Push = req.Debts.Push
+		}
+	}
+	if req.Invites != nil {
+		if req.Invites.Telegram != nil {
+			settings.Invites.Telegram = req.Invites.Telegram
+		}
+		if req.Invites.Push != nil {
+			settings.Invites.Push = req.Invites.Push
 		}
 	}
 

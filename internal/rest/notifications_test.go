@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/almaznur91/splitty/internal/api"
 )
 
 // Дефолты без явных настроек: оба канала (telegram и push) включены для обеих
@@ -74,5 +76,55 @@ func TestNotifySettingsRespectedByHelpers(t *testing.T) {
 	}
 	if !u.WantsPush("operations") {
 		t.Fatal("operations.push включён — WantsPush должен вернуть true")
+	}
+}
+
+// TestPatchNotificationsOldClientKeepsInvites — старая сборка присылает тело
+// БЕЗ поля invites (категория появилась позже). Такой запрос обязан сохранить
+// категорию, а не обнулить: иначе после выкатки бэкенда любой человек, тронувший
+// настройки из старого клиента, молча перестал бы получать приглашения.
+func TestPatchNotificationsOldClientKeepsInvites(t *testing.T) {
+	users := newFakeUserRepo(testUser1)
+	s := newTestServer(Config{}, users, newFakeRoomRepo())
+	token := mustToken(t, s, testUser1.ID)
+
+	// Человек выключил приглашения из новой сборки.
+	rec := doRequest(t, s, http.MethodPatch, "/api/v1/me/notifications", token,
+		`{"invites":{"telegram":false,"push":false}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("подготовка: ожидался 200, получен %d", rec.Code)
+	}
+
+	// Затем старая сборка меняет только расходы.
+	rec = doRequest(t, s, http.MethodPatch, "/api/v1/me/notifications", token,
+		`{"operations":{"push":false}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("старый клиент: ожидался 200, получен %d", rec.Code)
+	}
+
+	var got notifySettingsDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("не удалось разобрать ответ: %v", err)
+	}
+	if got.Invites.Telegram || got.Invites.Push {
+		t.Fatalf("старый клиент включил обратно выключенные приглашения: %+v", got.Invites)
+	}
+	if got.Operations.Push {
+		t.Fatal("изменение из старого клиента не применилось")
+	}
+}
+
+// TestNotifyInvitesDefaultsOn — приглашения по умолчанию включены: человек,
+// никогда не открывавший настройки, обязан узнать, что его позвали.
+func TestNotifyInvitesDefaultsOn(t *testing.T) {
+	u := testUser1
+	if !u.AllowsTelegram(api.NotifyInvites) || !u.WantsPush(api.NotifyInvites) {
+		t.Fatal("приглашения должны быть включены по умолчанию")
+	}
+
+	off := false
+	u.NotificationOn = &off
+	if u.AllowsTelegram(api.NotifyInvites) || u.WantsPush(api.NotifyInvites) {
+		t.Fatal("мастер-выключатель обязан гасить и приглашения")
 	}
 }
