@@ -165,27 +165,58 @@ extension PushManager: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .list, .sound])
     }
 
-    /// Тап по уведомлению: пока просто выводит приложение на передний план.
-    /// Данные (`room_id`/`operation_id`) прокидываем в NotificationCenter —
-    /// задел под deep-link к конкретной комнате (реализуется отдельно).
+    /// Тап по уведомлению: разбираем payload и просим корневой экран открыть
+    /// нужное место. Подписчик — RootView.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let data = response.notification.request.content.userInfo
-        if let roomId = data["room_id"] as? String {
+        if let route = PushRoute(userInfo: data) {
             NotificationCenter.default.post(
                 name: .splittyPushTapped,
                 object: nil,
-                userInfo: ["room_id": roomId, "operation_id": data["operation_id"] as? String ?? ""]
+                userInfo: [PushRoute.userInfoKey: route]
             )
         }
         completionHandler()
     }
 }
 
+/// Куда вести по тапу на push.
+///
+/// Разбор вынесен из делегата отдельным типом: так он покрывается тестами и
+/// перестаёт быть «заделом». Раньше данные просто клались в NotificationCenter,
+/// подписчиков не было ни одного, а ключ читался неверный — переход по пушу не
+/// работал вовсе.
+enum PushRoute: Equatable {
+    /// Расход или возврат долга — открываем комнату.
+    case room(id: String)
+    /// Приглашение — открываем раздел «Уведомления», а НЕ комнату: у человека с
+    /// ожидающим приглашением доступа к ней ещё нет, и переход упёрся бы в
+    /// «вы не участник этой комнаты».
+    case notifications
+
+    static let userInfoKey = "splitty.push.route"
+
+    init?(userInfo: [AnyHashable: Any]) {
+        // Ключи payload — camelCase, как их шлёт бэкенд (internal/bot/notifier.go).
+        // Здесь читался `room_id`, которого в payload нет, поэтому тап никогда
+        // не находил комнату.
+        if userInfo["type"] as? String == "invite" {
+            self = .notifications
+            return
+        }
+        guard let roomId = userInfo["roomId"] as? String, !roomId.isEmpty else {
+            return nil
+        }
+        self = .room(id: roomId)
+    }
+}
+
 extension Notification.Name {
-    /// Тап по push-уведомлению (userInfo: room_id, operation_id) — задел под deep-link.
+    /// Тап по push-уведомлению; в userInfo лежит PushRoute по ключу
+    /// `PushRoute.userInfoKey`.
     static let splittyPushTapped = Notification.Name("splitty.push.tapped")
 }

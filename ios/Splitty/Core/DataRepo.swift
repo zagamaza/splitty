@@ -76,6 +76,18 @@ final class DataRepo {
         }
     }
 
+    /// Первая страница раздела «Уведомления»: приглашения + лента + счётчик.
+    /// Кешируется так же, как лента активности — офлайн раздел открывается
+    /// мгновенно, пусть и без свежего счётчика.
+    func notificationFeedFirstPage(
+        limit: Int,
+        onCached: ((NotificationsFeed) -> Void)? = nil
+    ) async throws -> CachedResult<NotificationsFeed> {
+        try await cachedFirst(key: "notifications-first", onCached: onCached) {
+            try await self.api.notificationFeed(limit: limit, offset: 0)
+        }
+    }
+
     func statistics(
         roomId: String,
         onCached: ((Statistics) -> Void)? = nil

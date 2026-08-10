@@ -48,11 +48,20 @@ struct SplittyApp: App {
                     // получен и пользователь авторизован — токен уйдёт на бэкенд.
                     PushManager.shared.attach(session: session)
                     await session.refreshMe()
+                    // Бейдж обязан появляться до открытия раздела — иначе
+                    // счётчик показывался бы ровно тогда, когда его гасят.
+                    await session.refreshUnreadCount()
                 }
                 // Логин/логаут → (пере)регистрация FCM-токена. Отвязка при выходе
                 // делается ЯВНО в AccountView до logout (там JWT ещё валиден).
                 .onChange(of: session.isAuthenticated) {
                     PushManager.shared.authStateChanged()
+                    if !session.isAuthenticated { session.unreadNotifications = 0 }
+                }
+                // Возврат из фона и приход push — второй и третий источники
+                // счётчика помимо старта.
+                .onReceive(NotificationCenter.default.publisher(for: .splittyPushTapped)) { _ in
+                    Task { await session.refreshUnreadCount() }
                 }
                 // ЕДИНСТВЕННЫЙ onOpenURL сцены: второй такой модификатор не
                 // «добавляется», а побеждает — один из обработчиков перестал бы

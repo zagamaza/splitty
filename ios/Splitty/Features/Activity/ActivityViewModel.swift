@@ -22,6 +22,13 @@ final class ActivityViewModel {
 
     var state: LoadState = .idle
     var items: [ActivityItem] = []
+    /// Закреплённые карточки приглашений над лентой.
+    var invites: [InviteCard] = []
+    /// Непрочитанное: pending-приглашения + непрочитанные added + новые события.
+    private(set) var unreadCount = 0
+    /// Время формирования последнего ответа — его же отправляем при отметке
+    /// прочитанного, чтобы не погасить то, что пришло позже.
+    private var seenThrough: Date?
     /// Фильтр «Только мои»: операции, где я донор или в получателях.
     var isMineOnly = false
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
@@ -41,6 +48,65 @@ final class ActivityViewModel {
         case .idle, .failed:
             state = .loading
             await reload(repo: repo)
+        }
+    }
+
+    /// Отметить прочитанным всё, что было в последнем ответе.
+    ///
+    /// Отправляем СЕРВЕРНЫЙ `seenThrough` из ответа, а не текущее время: между
+    /// ответом и этим вызовом мог прийти новый расход, и «сейчас» погасило бы
+    /// его, так и не показав человеку.
+    func markSeen(session: SessionStore) async {
+        guard let through = seenThrough, unreadCount > 0 else { return }
+        do {
+            try await session.api.markNotificationsSeen(through: through)
+            unreadCount = invites.filter { $0.status == .pending }.count
+            session.unreadNotifications = unreadCount
+        } catch {
+            // Не показываем алерт: отметка прочитанного — фоновое действие,
+            // человек её не запрашивал явно.
+            if error.isTaskCancellation { return }
+        }
+    }
+
+    /// Принять приглашение вернуться в группу.
+    func acceptInvite(_ card: InviteCard, session: SessionStore) async {
+        await actOnInvite(card, session: session) {
+            try await session.api.acceptInvite(roomId: card.roomId)
+        }
+    }
+
+    /// Отклонить приглашение.
+    func declineInvite(_ card: InviteCard, session: SessionStore) async {
+        await actOnInvite(card, session: session) {
+            try await session.api.declineInvite(roomId: card.roomId)
+        }
+    }
+
+    /// Выйти из группы прямо с карточки «вас добавили».
+    ///
+    /// Кнопка обязана быть здесь: человека добавили, не спросив, и если
+    /// единственное действие — «Открыть», отказаться можно только разыскав
+    /// настройки группы.
+    func leaveFromCard(_ card: InviteCard, session: SessionStore) async {
+        await actOnInvite(card, session: session) {
+            try await session.api.leaveRoom(roomId: card.roomId)
+        }
+    }
+
+    private func actOnInvite(
+        _ card: InviteCard,
+        session: SessionStore,
+        _ action: () async throws -> Void
+    ) async {
+        do {
+            try await action()
+            invites.removeAll { $0.roomId == card.roomId }
+            // Данные комнат изменились — списки групп и друзей перечитаются.
+            session.noteDataChanged()
+        } catch {
+            if error.isTaskCancellation { return }
+            errorMessage = humanErrorText(error)
         }
     }
 
@@ -99,16 +165,22 @@ final class ActivityViewModel {
 
     private func reload(repo: DataRepo) async {
         do {
-            let result = try await repo.activityFirstPage(limit: Self.pageSize) { [weak self] cached in
+            let result = try await repo.notificationFeedFirstPage(limit: Self.pageSize) { [weak self] cached in
                 // Кеш мгновенно — только пока в памяти нет более свежих данных.
                 guard let self, self.items.isEmpty else { return }
-                self.items = cached
+                self.items = cached.items
+                self.invites = cached.invites
+                self.unreadCount = cached.unreadCount
                 self.isFromCache = true
                 self.hasMore = false
                 self.state = .loaded
             }
-            let page = result.value
+            let feed = result.value
+            let page = feed.items
             items = page
+            invites = feed.invites
+            unreadCount = feed.unreadCount
+            seenThrough = feed.seenThrough
             isFromCache = result.isFromCache
             // Из кеша дальше не листаем (следующие страницы не кешируются) —
             // иначе офлайн-прокрутка до конца ленты давала бы ложный алерт.

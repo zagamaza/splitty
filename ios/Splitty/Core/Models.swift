@@ -628,6 +628,33 @@ struct ActivityItem: Codable, Identifiable, Hashable {
     var id: String { operation.id }
 }
 
+/// Статус отношения «человек × группа» в приглашениях.
+enum InviteStatus: String, Codable, Hashable {
+    case added, pending, left, declined
+}
+
+/// Закреплённая карточка приглашения в разделе «Уведомления».
+struct InviteCard: Codable, Identifiable, Hashable {
+    let roomId: String
+    let roomName: String
+    let inviterName: String
+    let status: InviteStatus
+    let createdAt: Date
+
+    var id: String { roomId }
+}
+
+/// Ответ раздела «Уведомления»: закреплённые приглашения, лента событий и
+/// счётчик непрочитанного.
+struct NotificationsFeed: Codable, Hashable {
+    let invites: [InviteCard]
+    let items: [ActivityItem]
+    let unreadCount: Int
+    /// Время формирования ОТВЕТА. Возвращается серверу при отметке прочитанного:
+    /// событие, пришедшее позже, иначе погасло бы, так и не показавшись.
+    let seenThrough: Date
+}
+
 // MARK: - Статистика группы (дашборд «Итоги»)
 
 /// Траты одного дня; `date` — «2026-07-05» (локальная дата, не RFC3339).

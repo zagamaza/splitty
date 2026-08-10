@@ -37,6 +37,8 @@ struct ActivityView: View {
                 // возврате (pop) с экрана группы — лента обновляется.
                 .task {
                     await model.load(repo: session.repo)
+                    // Раздел открыт — значит человек всё это увидел.
+                    await model.markSeen(session: session)
                 }
                 // Единая инвалидация: перезагрузка после любой мутации данных.
                 .onChange(of: session.dataVersion) {
@@ -91,6 +93,17 @@ struct ActivityView: View {
         let displayItems = model.displayItems(meId: session.me?.id)
         return ScrollView {
             LazyVStack(spacing: 12) {
+                ForEach(model.invites) { card in
+                    InviteCardView(card: card) { action in
+                        Task {
+                            switch action {
+                            case .accept: await model.acceptInvite(card, session: session)
+                            case .decline: await model.declineInvite(card, session: session)
+                            case .leave: await model.leaveFromCard(card, session: session)
+                            }
+                        }
+                    }
+                }
                 ForEach(displayItems) { item in
                     NavigationLink {
                         GroupDetailView(roomId: item.roomId)
@@ -254,4 +267,79 @@ private struct ActivityRow: View {
 #Preview {
     ActivityView()
         .environment(SessionStore())
+}
+
+
+// MARK: - Карточка приглашения
+
+/// Закреплённая карточка над лентой. Два вида:
+/// `added` — «вас добавили», кнопки «Открыть» и **«Выйти»**;
+/// `pending` — «приглашает вернуться», кнопки «Принять» и «Отклонить».
+///
+/// «Выйти» на карточке `added` обязательна: человека добавили, не спросив, и
+/// без неё отказаться можно было бы только разыскав настройки группы.
+private struct InviteCardView: View {
+    enum Action { case accept, decline, leave }
+
+    let card: InviteCard
+    let onAction: (Action) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "person.2.badge.plus.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.accent)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .scaledFont(size: 15)
+                        .foregroundStyle(Color.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(DateFmt.relative(card.createdAt))
+                        .scaledFont(size: 12, relativeTo: .footnote)
+                        .foregroundStyle(Color.inkSecondary)
+                }
+                Spacer(minLength: 0)
+            }
+            buttons
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color.accent.opacity(0.5), lineWidth: 1.5)
+        }
+    }
+
+    private var title: String {
+        let who = card.inviterName.isEmpty ? "Вас" : "\(card.inviterName)"
+        switch card.status {
+        case .pending:
+            return "\(who) приглашает вас вернуться в «\(card.roomName)»"
+        default:
+            return "\(who) добавил вас в группу «\(card.roomName)»"
+        }
+    }
+
+    @ViewBuilder
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            switch card.status {
+            case .pending:
+                Button("Принять") { onAction(.accept) }
+                    .buttonStyle(.softChip(isSelected: true))
+                Button("Отклонить") { onAction(.decline) }
+                    .buttonStyle(.softChip)
+            default:
+                NavigationLink("Открыть") {
+                    GroupDetailView(roomId: card.roomId)
+                }
+                .buttonStyle(.softChip(isSelected: true))
+                Button("Выйти") { onAction(.leave) }
+                    .buttonStyle(.softChip)
+            }
+            Spacer(minLength: 0)
+        }
+    }
 }

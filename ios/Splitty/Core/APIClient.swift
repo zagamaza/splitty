@@ -737,6 +737,56 @@ final class APIClient: OperationAPI {
         try await request("GET", "/api/v1/friends")
     }
 
+    /// Раздел «Уведомления»: приглашения + лента + счётчик.
+    ///
+    /// Имя намеренно НЕ `notifications()` — так уже называются настройки
+    /// уведомлений (см. ниже), и совпадение имён было бы ловушкой.
+    func notificationFeed(limit: Int, offset: Int) async throws -> NotificationsFeed {
+        try await request(
+            "GET", "/api/v1/notifications",
+            query: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "offset", value: String(offset)),
+            ]
+        )
+    }
+
+    /// Отметить прочитанным всё, что было в ответе с этим `seenThrough`.
+    func markNotificationsSeen(through: Date) async throws {
+        struct Body: Encodable { let seenThrough: Date }
+        try await send("POST", "/api/v1/me/notifications-seen", body: Body(seenThrough: through))
+    }
+
+    /// Позвать человека в группу. Возвращает статус: `added` — уже участник,
+    /// `pending` — приглашение ждёт его решения.
+    func addMember(roomId: String, userId: Int) async throws -> InviteStatus {
+        struct Body: Encodable { let userId: Int }
+        struct Response: Decodable { let status: InviteStatus }
+        let out: Response = try await request(
+            "POST", "/api/v1/rooms/\(roomId)/members", body: Body(userId: userId))
+        return out.status
+    }
+
+    /// Выйти из группы самому.
+    func leaveRoom(roomId: String) async throws {
+        try await send("DELETE", "/api/v1/rooms/\(roomId)/members/me")
+    }
+
+    /// Убрать участника из группы.
+    func removeMember(roomId: String, userId: Int) async throws {
+        try await send("DELETE", "/api/v1/rooms/\(roomId)/members/\(userId)")
+    }
+
+    /// Принять приглашение вернуться в группу.
+    func acceptInvite(roomId: String) async throws {
+        try await send("POST", "/api/v1/invites/\(roomId)/accept")
+    }
+
+    /// Отклонить приглашение.
+    func declineInvite(roomId: String) async throws {
+        try await send("POST", "/api/v1/invites/\(roomId)/decline")
+    }
+
     func activity(limit: Int, offset: Int) async throws -> [ActivityItem] {
         try await request(
             "GET", "/api/v1/activity",

@@ -47,9 +47,11 @@ struct MainTabView: View {
                 .tabItem { Text("").accessibilityHidden(true) }
                 .tag(Tab.add)
 
-            // clock — согласованно с empty state ленты (chart.bar обещал графики).
+            // Раздел стал не журналом, а входящими: тут лежат приглашения с
+            // кнопками, поэтому колокол и бейдж, а не часы.
             ActivityView()
-                .tabItem { Label("Активность", systemImage: "clock.fill") }
+                .tabItem { Label("Уведомления", systemImage: "bell.fill") }
+                .badge(session.unreadNotifications)
                 .tag(Tab.activity)
 
             AccountView()

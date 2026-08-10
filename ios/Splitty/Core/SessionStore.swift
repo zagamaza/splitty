@@ -30,6 +30,13 @@ final class SessionStore {
     /// Профиль текущего пользователя (nil до первого refreshMe/login).
     var me: Me?
 
+    /// Непрочитанные уведомления — источник бейджа на табе.
+    ///
+    /// Живёт в сессии, а не во вью-модели экрана: иначе счётчик появлялся бы
+    /// ровно в тот момент, когда экран его и гасит. Обновляется при старте,
+    /// возврате из фона и приходе push.
+    var unreadNotifications = 0
+
     /// Монитор сети (NWPathMonitor): офлайн-баннер и офлайн-ветки экранов.
     let network = NetworkMonitor()
 
@@ -131,6 +138,15 @@ final class SessionStore {
     private(set) var dataVersion = 0
 
     /// Отметить мутацию данных: все подписанные экраны перезагрузятся.
+    /// Перечитать счётчик непрочитанного (старт, возврат из фона, push).
+    /// Тихо: сбой не должен ничем мигать пользователю.
+    func refreshUnreadCount() async {
+        guard isAuthenticated else { return }
+        if let feed = try? await api.notificationFeed(limit: 1, offset: 0) {
+            unreadNotifications = feed.unreadCount
+        }
+    }
+
     func noteDataChanged() {
         dataVersion += 1
     }
