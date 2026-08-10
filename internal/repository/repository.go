@@ -289,18 +289,31 @@ func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Roo
 	return rm, nil
 }
 
+// JoinToRoom добавляет пользователя в комнату. Идемпотентен: повторный вызов
+// для существующего участника — не ошибка, просто ничего не меняет.
+//
+// Одним атомарным UpdateOne, а не парой «проверить hasUserInRoom → $push»:
+// раньше между проверкой и записью было окно, и два одновременных добавления
+// одного человека клали в users ДВА снимка. Пока добавить себя мог только сам
+// пользователь, окно было практически недостижимо; приглашения создают второй
+// путь записи (человек принял приглашение и параллельно прошёл по ссылке), и
+// дубль становится реальным. А дубль в users — это дубль участника в расчёте
+// долгов, то есть тихо неверные деньги.
+//
+// Условие "users._id": {$ne: u.ID} проверяется и применяется сервером mongo в
+// одной операции, поэтому гонки не остаётся.
 func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u api.User, roomId string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
-	hasUserInRoom, err := rr.hasUserInRoom(ctx, u.ID, hex)
-	if err != nil || hasUserInRoom {
-		return err
-	}
 
-	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "users", Value: u.Snapshot()}}}})
+	filter := bson.M{"_id": hex, "users._id": bson.M{"$ne": u.ID}}
+	update := bson.M{"$push": bson.M{"users": u.Snapshot()}}
+	// MatchedCount == 0 значит «комнаты нет ИЛИ пользователь уже участник».
+	// Оба случая для вызывающего одинаковы: состояние уже такое, каким он его
+	// хотел видеть, либо комнату он проверил раньше (roomForMember/findRoom).
+	_, err = rr.col.UpdateOne(ctx, filter, update)
 	return err
 }
 
@@ -466,11 +479,10 @@ func (rr MongoRoomRepository) hasRoom(ctx context.Context, u *api.User) (bool, e
 	return resp > 0, err
 }
 
-func (rr MongoRoomRepository) hasUserInRoom(ctx context.Context, uId int, roomId primitive.ObjectID) (bool, error) {
-	resp, err := rr.col.CountDocuments(ctx, bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: roomId}}},
-		{Key: "users._id", Value: bson.D{{Key: "$eq", Value: uId}}}})
-	return resp > 0, err
-}
+// hasUserInRoom удалён вместе с check-then-act в JoinToRoom: единственным его
+// потребителем была та самая небезопасная пара «проверить → записать».
+// Проверка членства теперь стоит внутри фильтра UpdateOne, а чтение членства
+// вне записи делает isRoomMember по уже загруженной комнате (пакет rest).
 
 func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, userId int) (*[]api.Room, error) {
 	cur, err := rr.col.Find(ctx, bson.M{
