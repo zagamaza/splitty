@@ -344,7 +344,36 @@ struct SettleUpView: View {
             onDone?()
             dismiss()
         } catch {
+            // 409 — долг успели погасить или уменьшить параллельным платежом.
+            // Общий текст «Действие сейчас невозможно» оставлял человека перед
+            // формой с уже введённой суммой и устаревшим долгом: понять, что
+            // произошло, можно было только закрыв экран (порт Android).
+            if let apiError = error as? APIError,
+               case .server(let status, _, _) = apiError, status == 409 {
+                await recoverFromSettledDebt()
+                return
+            }
             alertMessage = humanErrorText(error)
+        }
+    }
+
+    /// Перечитывает долги после 409 и возвращает к выбору.
+    ///
+    /// Если перечитать не удалось, выбор НЕ сбрасываем: иначе экран откатился бы
+    /// на шаг «выберите долг» поверх устаревшего списка, а при единственном
+    /// долге — ещё и без кнопки возврата к нему.
+    private func recoverFromSettledDebt() async {
+        alertMessage = "Долг уже погашен"
+        guard let fresh = try? await session.api.debts(roomId: roomId, involving: "me") else {
+            return
+        }
+        debts = fresh
+        session.noteDataChanged()
+        if let only = fresh.first, fresh.count == 1 {
+            select(only)
+        } else {
+            selectedDebt = nil
+            sumText = ""
         }
     }
 }

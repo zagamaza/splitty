@@ -267,3 +267,32 @@ final class JoinLinkErrorTextTests: XCTestCase {
         XCTAssertEqual(text, "не удалось присоединиться к комнате")
     }
 }
+
+/// Коды распознавания и троттлинга в текстах ошибок.
+///
+/// Фолбэк срабатывает, только когда тело ответа пустое — то есть ответил
+/// прокси, а не приложение. Именно в этом случае человеку и доставалась
+/// голая «Ошибка сервера (429)», из которой ничего не следует.
+final class ParseErrorCodeTests: XCTestCase {
+
+    private func text(_ status: Int, _ code: String) -> String {
+        humanErrorText(APIError.server(status: status, code: code, message: ""))
+    }
+
+    func testParseAndThrottlingCodesHaveTheirOwnTexts() {
+        XCTAssertEqual(text(413, "too_large"), "Слишком большой запрос")
+        XCTAssertEqual(text(415, "unsupported_media"), "Неподдерживаемый формат файла")
+        XCTAssertEqual(text(429, "rate_limited"), "Слишком много запросов. Попробуйте позже")
+        XCTAssertEqual(text(503, "ai_disabled"), "Распознавание сейчас недоступно")
+    }
+
+    func testUnknownCodeStillFallsBackToStatus() {
+        XCTAssertEqual(text(500, "нет_такого_кода"), "Ошибка сервера (500)")
+    }
+
+    func testServerMessageWinsOverFallback() {
+        // Сервер почти всегда шлёт свой текст — он и должен побеждать.
+        let withBody = APIError.server(status: 429, code: "rate_limited", message: "Подождите минуту")
+        XCTAssertEqual(humanErrorText(withBody), "Подождите минуту")
+    }
+}

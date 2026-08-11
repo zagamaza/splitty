@@ -26,8 +26,13 @@ import kotlinx.coroutines.launch
 data class NotifyScreenState(
     /** Категории; null пока идёт первичная загрузка. */
     val settings: NotifySettings? = null,
-    /** Мастер-тумблер: локальная копия `me.notificationOn`. */
-    val masterOn: Boolean = true,
+    /**
+     * Мастер-тумблер: локальная копия `me.notificationOn`. null — профиль ещё
+     * не прочитан, и утверждать «включено» нельзя: у человека с
+     * notificationOn = false экран показывал бы уведомления включёнными и
+     * пускал бы трогать категории (порт iOS `masterOn: Bool?`).
+     */
+    val masterOn: Boolean? = null,
     /** true — PATCH в полёте; тумблеры задизейблены, чтобы быстрые тапы не
      *  порождали гонку запросов (последний ответ сервера побеждал бы). */
     val isSaving: Boolean = false,
@@ -40,7 +45,10 @@ data class NotifyScreenState(
     val isLoading: Boolean get() = settings == null && loadError == null
 
     /** Категории действуют только при включённом мастере и вне сохранения. */
-    val categoriesEnabled: Boolean get() = masterOn && !isSaving
+    val categoriesEnabled: Boolean get() = masterOn == true && !isSaving
+
+    /** Сам мастер: пока профиль неизвестен, трогать его нечего. */
+    val masterEnabled: Boolean get() = masterOn != null && !isSaving
 
     // --- Чистые переходы (тестируются без Android/сети) ---
 
@@ -53,7 +61,7 @@ data class NotifyScreenState(
         copy(masterOn = on, isSaving = false)
 
     /** Сохранение мастера упало: откат к прежнему значению + алерт. */
-    fun masterFailed(previous: Boolean, message: UiText?): NotifyScreenState =
+    fun masterFailed(previous: Boolean?, message: UiText?): NotifyScreenState =
         copy(masterOn = previous, isSaving = false, alertMessage = message)
 
     /** Оптимистично применить категории и войти в «сохранение». */
@@ -81,7 +89,7 @@ class NotificationSettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(
-        NotifyScreenState(masterOn = sessionStore.state.value?.me?.notificationOn ?: true)
+        NotifyScreenState(masterOn = sessionStore.state.value?.me?.notificationOn)
     )
     val state: StateFlow<NotifyScreenState> = _state.asStateFlow()
 

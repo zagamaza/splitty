@@ -38,7 +38,7 @@ class NotifyScreenStateTest {
     @Test
     fun `applying master off disables categories and enters saving`() {
         val next = loaded.applyMaster(false)
-        assertFalse(next.masterOn)
+        assertEquals(false, next.masterOn)
         assertTrue(next.isSaving)
         assertFalse(next.categoriesEnabled)
     }
@@ -46,7 +46,7 @@ class NotifyScreenStateTest {
     @Test
     fun `master saved leaves saving and keeps value`() {
         val next = loaded.applyMaster(false).masterSaved(false)
-        assertFalse(next.masterOn)
+        assertEquals(false, next.masterOn)
         assertFalse(next.isSaving)
     }
 
@@ -55,7 +55,7 @@ class NotifyScreenStateTest {
     @Test
     fun `master failure reverts value and raises alert`() {
         val next = loaded.applyMaster(false).masterFailed(previous = true, message = UiText.Raw("Нет сети"))
-        assertTrue(next.masterOn) // откат к прежнему
+        assertEquals(true, next.masterOn) // откат к прежнему
         assertFalse(next.isSaving)
         assertEquals(UiText.Raw("Нет сети"), next.alertMessage)
     }
@@ -99,5 +99,17 @@ class NotifyScreenStateTest {
     @Test
     fun `no alert on freshly loaded state`() {
         assertNull(loaded.alertMessage)
+    }
+
+    @Test
+    fun `master is untouchable while the profile is unknown`() {
+        val unknown = loaded.copy(masterOn = null)
+
+        // Утверждать «включено», не прочитав профиль, нельзя: у человека с
+        // notificationOn = false экран показывал бы обратное и пускал бы
+        // трогать категории.
+        assertNull(unknown.masterOn)
+        assertFalse(unknown.masterEnabled, "тумблер активен до загрузки профиля")
+        assertFalse(unknown.categoriesEnabled, "категории активны при неизвестном мастере")
     }
 }

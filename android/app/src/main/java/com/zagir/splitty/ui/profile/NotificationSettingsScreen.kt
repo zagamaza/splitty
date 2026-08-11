@@ -147,13 +147,13 @@ private fun SettingsContent(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         MasterSection(
-            masterOn = state.masterOn,
-            enabled = !state.isSaving,
+            masterOn = state.masterOn == true,
+            enabled = state.masterEnabled,
             onChange = onMasterChange,
         )
         // Мастер выключен — категории не действуют: блокируем и притушаем.
         Column(
-            modifier = Modifier.alpha(if (state.masterOn) 1f else 0.5f),
+            modifier = Modifier.alpha(if (state.masterOn == true) 1f else 0.5f),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             NotifySection(
