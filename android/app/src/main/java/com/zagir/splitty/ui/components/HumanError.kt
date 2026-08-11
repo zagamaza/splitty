@@ -30,6 +30,11 @@ fun humanErrorText(error: Throwable): UiText {
         return when (api.code) {
             ApiException.CODE_TRANSPORT -> UiText.res(R.string.error_no_internet)
             ApiException.CODE_DECODING -> UiText.res(R.string.error_decoding)
+            // Отказы выхода из группы — своим текстом: `message` сервера
+            // всегда по-русски, а немцу с испанцем нужен их язык. Оба текста
+            // обязаны объяснять выход наружу, иначе человек упрётся в стену.
+            "has_operations" -> UiText.res(R.string.error_leave_has_operations)
+            "last_member" -> UiText.res(R.string.error_leave_last_member)
             // Текст сервера уже человеческий и на языке пользователя; при пустом
             // теле ApiException сам подставит ресурс по коду.
             else -> api.uiText()

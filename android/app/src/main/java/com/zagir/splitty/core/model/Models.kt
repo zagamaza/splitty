@@ -63,6 +63,8 @@ data class User(
     val id: Long,
     val username: String? = null,
     val displayName: String,
+    /** Аккаунт удалён и обезличен. Сервер шлёт поле только когда true. */
+    val deleted: Boolean = false,
 )
 
 /** Профиль текущего пользователя. */

@@ -12,6 +12,23 @@ struct User: Codable, Identifiable, Hashable {
     let id: Int
     let username: String?
     let displayName: String
+    /// true — аккаунт удалён, снимок анонимизирован. Приглашать такого нельзя
+    /// (сервер ответит 404), но из уже записанных расходов он не исчезает.
+    var deleted = false
+}
+
+// init(from:) в extension, чтобы сохранить memberwise-инициализатор.
+// `deleted` декодируется мягко: сервер шлёт его только для удалённых, и в
+// большинстве ответов (как и в офлайн-кеше, записанном без этого ключа) поля
+// нет вовсе — строгий decode уронил бы каждую комнату и каждую операцию.
+extension User {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        username = try c.decodeIfPresent(String.self, forKey: .username)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        deleted = try c.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
+    }
 }
 
 /// Каналы уведомлений одной категории.

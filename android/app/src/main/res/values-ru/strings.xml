@@ -41,6 +41,8 @@
     <string name="tab_add">Добавить расход</string>
     <string name="tab_activity">Уведомления</string>
     <string name="tab_account">Профиль</string>
+    <!-- Бейдж таба: всё, что больше сотни, показывается одинаково -->
+    <string name="notifications_badge_overflow">99+</string>
 
     <!-- Заглушки -->
     <string name="placeholder_friends">Здесь появятся балансы с друзьями</string>
@@ -113,6 +115,8 @@
     <string name="invite_friends_send">Пригласить</string>
     <string name="invite_friends_link">Отправить ссылку</string>
     <string name="invite_friends_link_footer">Ссылка нужна тем, с кем вы ещё не делили расходы.</string>
+    <string name="invite_friends_failed">Не удалось позвать: %1$s. Попробуйте ещё раз</string>
+    <string name="invite_friends_pending">%1$s выходил(а) из этой группы — приглашение отправлено, вернуться решает сам(а)</string>
 
     <!-- Приглашения -->
     <string name="invite_added_you">%1$s добавил вас в «%2$s»</string>
@@ -543,6 +547,8 @@
     <string name="error_group_no_access">Нет доступа к этой группе. Попросите участника прислать новое приглашение</string>
     <string name="error_operation_not_found">Операция не найдена</string>
     <string name="error_outbox_unsupported">Неподдерживаемая офлайн-операция</string>
+    <string name="error_leave_has_operations">На вас ещё висят расходы. Уберите себя из них — а если вы плательщик, смените плательщика или удалите расход — и выходите</string>
+    <string name="error_leave_last_member">Вы последний участник. Заархивируйте группу, если она больше не нужна</string>
     <string name="push_channel_operations">Расходы</string>
     <string name="push_channel_operations_desc">Добавление и изменение расходов в ваших тусах</string>
     <string name="push_channel_debts">Долги</string>

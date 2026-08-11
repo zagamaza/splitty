@@ -16,13 +16,17 @@ struct HidesGlobalAddButtonKey: PreferenceKey {
 /// Здесь же — глобальный офлайн-баннер (тонкая полоса сверху) и триггеры
 /// синка outbox: сеть появилась / приложение стало активным.
 struct MainTabView: View {
-    private enum Tab: Hashable {
+    /// Не private: по вкладке проверяется маршрут push (`pushTarget`).
+    enum Tab: Hashable {
         case friends, groups, add, activity, account
     }
 
     @Environment(SessionStore.self) private var session
     @Environment(\.scenePhase) private var scenePhase
     @State private var selection: Tab = .friends
+    /// Путь стека вкладки «Группы» — здесь, а не внутри списка: тап по push
+    /// про расход обязан открыть комнату поверх этой вкладки.
+    @State private var groupsPath: [GroupsRoute] = []
     @State private var isAddExpensePresented = false
     /// Кнопка «+» скрывается при видимой клавиатуре: overlay поднимается
     /// вместе с safe area и иначе висит поверх контента над клавиатурой.
@@ -36,7 +40,7 @@ struct MainTabView: View {
                 .tabItem { Label("Друзья", systemImage: "person.2.fill") }
                 .tag(Tab.friends)
 
-            GroupsListView()
+            GroupsListView(path: $groupsPath)
                 .tabItem { Label("Группы", systemImage: "person.3.fill") }
                 .tag(Tab.groups)
 
@@ -99,10 +103,40 @@ struct MainTabView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
-                Task { await session.syncOutbox() }
+                Task {
+                    await session.syncOutbox()
+                    // Пока приложение было в фоне, пуши могли прийти без тапа —
+                    // бейдж иначе врал бы до открытия раздела (Android делает
+                    // то же по LifecycleEventEffect(ON_START)).
+                    await session.refreshUnreadCount()
+                }
+            }
+        }
+        // Тап по push: единственный подписчик, который реально куда-то ведёт.
+        // Без него событие постилось в пустоту, и переход по уведомлению был
+        // фикцией (SplittyApp лишь перечитывает счётчик).
+        .onReceive(NotificationCenter.default.publisher(for: .splittyPushTapped)) { notification in
+            guard let route = notification.userInfo?[PushRoute.userInfoKey] as? PushRoute else { return }
+            let target = Self.pushTarget(for: route)
+            selection = target.tab
+            if let roomId = target.roomId {
+                groupsPath = [.room(id: roomId)]
             }
         }
         .task { await session.syncOutbox() }
+    }
+
+    /// Куда ведёт тап по push: вкладка и, для расхода/долга, комната.
+    /// Отдельной функцией — внутри `body` этот выбор не проверить ничем.
+    static func pushTarget(for route: PushRoute) -> (tab: Tab, roomId: String?) {
+        switch route {
+        case .room(let id):
+            return (.groups, id)
+        case .notifications:
+            // Приглашение ведёт в раздел, а не в комнату: доступа к ней у
+            // приглашённого ещё нет.
+            return (.activity, nil)
+        }
     }
 
     // MARK: Офлайн-баннер

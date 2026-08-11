@@ -2,6 +2,7 @@ package com.zagir.splitty.ui.groups
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
+import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.SplittyJson
@@ -138,14 +139,59 @@ class GroupMembersViewModelTest {
     fun `inviting friends posts one member request per id`() = runBlocking {
         val vm = loadedViewModel()
         server.enqueue(MockResponse().setBody("""{"status":"added"}"""))
+        server.enqueue(MockResponse().setBody("""{"status":"added"}"""))
         server.enqueue(MockResponse().setBody(ROOM_JSON)) // refresh после приглашения
+
+        var done = false
+        // Двое, а не один: VM, отправившая только первого, с одним id прошла бы.
+        vm.inviteFriends(setOf(7L, 8L)) { done = true }
+
+        val invited = (1..2).map {
+            val request = awaitRequest("/api/v1/rooms/65af/members")
+            assertEquals("POST", request.method)
+            request.body.readUtf8()
+        }
+        assertTrue(invited.any { it.contains("\"userId\":7") }, "позван 7")
+        assertTrue(invited.any { it.contains("\"userId\":8") }, "позван 8")
+        withTimeout(5_000) {
+            while (!done) kotlinx.coroutines.delay(20)
+        }
+    }
+
+    @Test
+    fun `a failed invite does not cancel the rest and names who failed`() = runBlocking {
+        val vm = loadedViewModel()
+        // Первый отвечает ошибкой: раньше общий try обрывал цикл, и второй друг
+        // не получал приглашения вовсе — молча.
+        server.enqueue(MockResponse().setResponseCode(404).setBody("""{"error":{"code":"not_found"}}"""))
+        server.enqueue(MockResponse().setBody("""{"status":"added"}"""))
+        server.enqueue(MockResponse().setBody(ROOM_JSON)) // refresh: один-то позван
+
+        var done = false
+        vm.inviteFriends(setOf(7L, 8L)) { done = true }
+
+        repeat(2) { assertEquals("POST", awaitRequest("/api/v1/rooms/65af/members").method) }
+        // Комната перечитывается — успешное приглашение обязано появиться на экране.
+        awaitRequest("/api/v1/rooms/65af")
+        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        assertEquals(R.string.invite_friends_failed, (alert as UiText.Res).id)
+        assertFalse(done, "шит не закрывается: часть друзей не позвана")
+    }
+
+    @Test
+    fun `invite answered pending is reported separately from a plain success`() = runBlocking {
+        val vm = loadedViewModel()
+        // 202 pending: человек выходил из группы, молча его вернуть нельзя —
+        // «готово» без оговорки соврало бы, его в группе нет.
+        server.enqueue(MockResponse().setResponseCode(202).setBody("""{"status":"pending"}"""))
+        server.enqueue(MockResponse().setBody(ROOM_JSON))
 
         var done = false
         vm.inviteFriends(setOf(7L)) { done = true }
 
-        val request = awaitRequest("/api/v1/rooms/65af/members")
-        assertEquals("POST", request.method)
-        assertTrue(request.body.readUtf8().contains("\"userId\":7"))
+        awaitRequest("/api/v1/rooms/65af/members")
+        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        assertEquals(R.string.invite_friends_pending, (alert as UiText.Res).id)
         withTimeout(5_000) {
             while (!done) kotlinx.coroutines.delay(20)
         }
@@ -180,9 +226,10 @@ class GroupMembersViewModelTest {
 
         awaitRequest("/api/v1/rooms/65af/members/me")
         val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
-        // Именно текст сервера: он объясняет, как выйти (убрать себя из
-        // расходов), а свой «конфликт» не объяснил бы ничего.
-        assertEquals(SERVER_MESSAGE, (alert as UiText.Raw).value)
+        // Свой текст из ресурсов, а не `message` сервера: тот всегда по-русски,
+        // и немец с испанцем прочитали бы русскую строку. Объяснить путь наружу
+        // (убрать себя из расходов) обязан он же — «конфликт» не объясняет ничего.
+        assertEquals(R.string.error_leave_has_operations, (alert as UiText.Res).id)
         assertFalse(closed, "экран не закрывается, выход не состоялся")
     }
 

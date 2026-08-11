@@ -63,39 +63,55 @@ class SplittyMessagingService : FirebaseMessagingService() {
         nm.notify(id, notification)
     }
 
+    /** Канал уведомлений: id из `data["channel"]` бэкенда плюс его тексты. */
+    data class Channel(val id: String, val nameRes: Int, val descRes: Int)
+
     companion object {
         const val CHANNEL_OPERATIONS = "operations"
         const val CHANNEL_DEBTS = "debts"
         const val CHANNEL_INVITES = "invites"
 
         /**
-         * Канал уведомления по значению `data["channel"]` от бэкенда.
+         * Единственный список каналов: и маршрутизация, и создание берут его.
          *
-         * Важно: бэкенд кладёт это значение прямо в ChannelID уведомления
-         * (internal/push/push.go), и на Android 8+ уведомление с НЕСУЩЕСТВУЮЩИМ
-         * каналом просто не показывается — молча. Поэтому список каналов здесь
-         * обязан покрывать все значения, которые шлёт сервер, а неизвестное
-         * значение уходит в operations, а не теряется.
+         * Раздельные списки расходились молча: бэкенд кладёт `data["channel"]`
+         * прямо в ChannelID уведомления (internal/push/push.go), а на Android 8+
+         * уведомление с НЕСОЗДАННЫМ каналом просто не показывается — без ошибки
+         * и без следа.
          */
-        fun channelIdFor(channel: String?): String = when (channel) {
-            CHANNEL_DEBTS -> CHANNEL_DEBTS
-            CHANNEL_INVITES -> CHANNEL_INVITES
-            else -> CHANNEL_OPERATIONS
-        }
+        val CHANNELS = listOf(
+            Channel(
+                CHANNEL_OPERATIONS,
+                R.string.push_channel_operations,
+                R.string.push_channel_operations_desc,
+            ),
+            Channel(CHANNEL_DEBTS, R.string.push_channel_debts, R.string.push_channel_debts_desc),
+            Channel(
+                CHANNEL_INVITES,
+                R.string.push_channel_invites,
+                R.string.push_channel_invites_desc,
+            ),
+        )
+
+        /**
+         * Канал уведомления по значению `data["channel"]` от бэкенда.
+         * Незнакомое значение уходит в operations, а не теряется.
+         */
+        fun channelIdFor(channel: String?): String =
+            CHANNELS.firstOrNull { it.id == channel }?.id ?: CHANNEL_OPERATIONS
 
         /** Создаёт каналы уведомлений (идемпотентно). */
         fun ensureChannels(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            fun channel(id: String, nameRes: Int, descRes: Int) = nm.createNotificationChannel(
-                NotificationChannel(
-                    id,
-                    context.getString(nameRes),
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                ).apply { description = context.getString(descRes) },
-            )
-            channel(CHANNEL_OPERATIONS, R.string.push_channel_operations, R.string.push_channel_operations_desc)
-            channel(CHANNEL_DEBTS, R.string.push_channel_debts, R.string.push_channel_debts_desc)
-            channel(CHANNEL_INVITES, R.string.push_channel_invites, R.string.push_channel_invites_desc)
+            CHANNELS.forEach { channel ->
+                nm.createNotificationChannel(
+                    NotificationChannel(
+                        channel.id,
+                        context.getString(channel.nameRes),
+                        NotificationManager.IMPORTANCE_DEFAULT,
+                    ).apply { description = context.getString(channel.descRes) },
+                )
+            }
         }
     }
 }

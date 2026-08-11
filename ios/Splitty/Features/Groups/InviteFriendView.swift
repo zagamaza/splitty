@@ -20,6 +20,9 @@ struct InviteFriendView: View {
     @State private var isLoading = true
     @State private var isSending = false
     @State private var alertMessage: String?
+    /// Итог приглашения, когда рассказать есть что (кто-то ждёт согласия,
+    /// кого-то не получилось позвать). По «ОК» экран закрывается.
+    @State private var resultMessage: String?
     @State private var isLinkPresented = false
 
     var body: some View {
@@ -41,6 +44,17 @@ struct InviteFriendView: View {
                 }
                 .task { await load() }
                 .errorAlert($alertMessage)
+                .alert(
+                    "Приглашение",
+                    isPresented: Binding(
+                        get: { resultMessage != nil },
+                        set: { if !$0 { resultMessage = nil } }
+                    )
+                ) {
+                    Button("ОК") { dismiss() }
+                } message: {
+                    Text(resultMessage ?? "")
+                }
                 .sheet(isPresented: $isLinkPresented) {
                     // Ссылка — запасной канал для тех, с кем ещё не делили расходы.
                     InviteLinkSheet(roomId: roomId)
@@ -101,9 +115,11 @@ struct InviteFriendView: View {
             .padding(.horizontal, 4)
     }
 
-    /// Кого показываем: друзья минус те, кто уже в этой группе.
+    /// Кого показываем: друзья минус те, кто уже в этой группе, и минус
+    /// удалённые. Удалённые остаются в `/friends` (их снимки в комнатах не
+    /// исчезают, только анонимизируются), а приглашение им вернуло бы 404.
     private var candidates: [FriendBalance] {
-        friends.filter { !existingMemberIds.contains($0.user.id) }
+        friends.filter { !existingMemberIds.contains($0.user.id) && !$0.user.deleted }
     }
 
     private func row(_ friend: FriendBalance) -> some View {
@@ -139,26 +155,74 @@ struct InviteFriendView: View {
         }
     }
 
+    /// Приглашения уходят по одному, и часть может не дойти. Раньше любой сбой
+    /// считался общим провалом: показывалась первая ошибка, а уже позванные
+    /// люди не доезжали до списка — экран закрывался, не обновив ничего.
     private func invite() async {
         isSending = true
         defer { isSending = false }
 
+        var added: [String] = []
+        var pending: [String] = []
         var failed: [String] = []
-        for userId in selected {
+        /// Причина последнего сбоя: «нет соединения» и «нет доступа» человеку
+        /// подсказывают разное, и терять её нельзя.
+        var reason: String?
+        for userId in selected.sorted() {
+            let name = friends.first { $0.user.id == userId }?.user.displayName ?? "Участник"
             do {
-                _ = try await session.api.addMember(roomId: roomId, userId: userId)
+                let status = try await session.api.addMember(roomId: roomId, userId: userId)
+                if status == .pending {
+                    pending.append(name)
+                } else {
+                    added.append(name)
+                }
+                // Осталось в выборе — только то, что не прошло: повтор не
+                // должен звать по второму разу уже позванных.
+                selected.remove(userId)
             } catch {
-                failed.append(humanErrorText(error))
+                failed.append(name)
+                reason = humanErrorText(error)
             }
         }
-        if let first = failed.first {
-            alertMessage = first
+
+        guard !added.isEmpty || !pending.isEmpty else {
+            alertMessage = "Не удалось пригласить: \(failed.joined(separator: ", "))"
+                + (reason.map { ". \($0)" } ?? "")
             return
         }
+        // Хоть кто-то позван — данные изменились, и звавший должен это увидеть,
+        // даже если остальные приглашения упали.
         session.noteDataChanged()
         Haptics.success()
         onInvited()
-        dismiss()
+        if let message = Self.resultText(added: added, pending: pending, failed: failed) {
+            resultMessage = message
+        } else {
+            dismiss()
+        }
+    }
+
+    /// Итог приглашения человеческим текстом; nil — всех просто добавили,
+    /// объяснять нечего.
+    ///
+    /// `pending` — не отказ и не успех «добавлен»: человек уже выходил из
+    /// группы, и вернуть его можно только с его согласия.
+    static func resultText(added: [String], pending: [String], failed: [String]) -> String? {
+        var lines: [String] = []
+        if !pending.isEmpty {
+            lines.append("Приглашение отправлено — ждём согласия: \(pending.joined(separator: ", "))")
+        }
+        if !failed.isEmpty {
+            lines.append("Не удалось пригласить: \(failed.joined(separator: ", "))")
+        }
+        if lines.isEmpty {
+            return nil
+        }
+        if !added.isEmpty {
+            lines.insert("Добавлен(а) в группу: \(added.joined(separator: ", "))", at: 0)
+        }
+        return lines.joined(separator: "\n")
     }
 }
 

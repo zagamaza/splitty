@@ -93,6 +93,7 @@ import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
+import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.User
@@ -1667,11 +1668,22 @@ private fun GroupSettingsTab(
 }
 
 /**
+ * Кого можно позвать в комнату из списка друзей.
+ *
+ * Участников комнаты не показываем — приглашение им ничего бы не сделало.
+ * Удалённые аккаунты — тоже: человека за ними нет, приглашение вернётся 404,
+ * а в списке друзей они остаются, потому что общие расходы никуда не делись.
+ */
+internal fun inviteCandidates(
+    friends: List<FriendBalance>,
+    memberIds: Set<Long>,
+): List<FriendBalance> = friends.filterNot { it.user.id in memberIds || it.user.deleted }
+
+/**
  * Шит выбора друзей для приглашения.
  *
  * Друг — человек, с которым уже была общая группа, значит его id известен и
- * вводить код никому не нужно. Тех, кто уже в этой группе, не показываем:
- * приглашение им ничего бы не сделало.
+ * вводить код никому не нужно.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1686,7 +1698,7 @@ private fun InviteFriendsSheet(
     val colors = Splitty.colors
     val friends by viewModel.friends.collectAsStateWithLifecycle()
     val memberIds = remember(room) { room.members.map { it.id }.toSet() }
-    val candidates = friends.filterNot { memberIds.contains(it.user.id) }
+    val candidates = inviteCandidates(friends, memberIds)
     var selected by remember { mutableStateOf(emptySet<Long>()) }
 
     ModalBottomSheet(

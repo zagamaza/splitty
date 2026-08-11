@@ -216,7 +216,7 @@ final class APIClient: OperationAPI {
     /// тест и течёт в соседние), поэтому транспорт передаётся явно.
     private let urlSession: URLSession
     private let decoder: JSONDecoder
-    private let encoder = JSONEncoder()
+    private let encoder: JSONEncoder
 
     /// Вызывается при любом ответе 401 (протухший/невалидный токен):
     /// SessionStore сбрасывает сессию (см. `SessionStore.api`).
@@ -241,6 +241,15 @@ final class APIClient: OperationAPI {
             )
         }
         self.decoder = decoder
+        let encoder = JSONEncoder()
+        // Зеркало декодера. Дефолтная стратегия шлёт дату ЧИСЛОМ, а `time.Time`
+        // на сервере разбирается только из строки RFC3339 — отметка
+        // прочитанного (`markNotificationsSeen`) отвечала бы 400 всегда.
+        encoder.dateEncodingStrategy = .custom { date, e in
+            var container = e.singleValueContainer()
+            try container.encode(Self.rfc3339Fractional.string(from: date))
+        }
+        self.encoder = encoder
     }
 
     private static let rfc3339: ISO8601DateFormatter = {

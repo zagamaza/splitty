@@ -39,6 +39,8 @@
     <string name="tab_add">Add expense</string>
     <string name="tab_activity">Notifications</string>
     <string name="tab_account">Profile</string>
+    <!-- Бейдж таба: всё, что больше сотни, показывается одинаково -->
+    <string name="notifications_badge_overflow">99+</string>
 
     <!-- Заглушки -->
     <string name="placeholder_friends">Balances with friends will appear here</string>
@@ -111,6 +113,8 @@
     <string name="invite_friends_send">Invite</string>
     <string name="invite_friends_link">Send a link</string>
     <string name="invite_friends_link_footer">A link is for people you haven\'t split expenses with yet.</string>
+    <string name="invite_friends_failed">Couldn\'t invite: %1$s. Try again</string>
+    <string name="invite_friends_pending">%1$s left this group before, so we sent an invite — it\'s their call to come back</string>
 
     <!-- Приглашения -->
     <string name="invite_added_you">%1$s added you to “%2$s”</string>
@@ -516,6 +520,8 @@
     <string name="error_group_no_access">No access to this group. Ask a member to send you a new invite</string>
     <string name="error_operation_not_found">Operation not found</string>
     <string name="error_outbox_unsupported">Unsupported offline operation</string>
+    <string name="error_leave_has_operations">Expenses are still recorded on you. Remove yourself from them — and if you paid, hand the expense to another payer or delete it — then leave</string>
+    <string name="error_leave_last_member">You\'re the last member. Archive the group if you don\'t need it anymore</string>
     <string name="push_channel_operations">Expenses</string>
     <string name="push_channel_operations_desc">New and changed expenses in your groups</string>
     <string name="push_channel_debts">Debts</string>

@@ -56,7 +56,14 @@ struct SplittyApp: App {
                 // делается ЯВНО в AccountView до logout (там JWT ещё валиден).
                 .onChange(of: session.isAuthenticated) {
                     PushManager.shared.authStateChanged()
-                    if !session.isAuthenticated { session.unreadNotifications = 0 }
+                    // Вход: счётчик у нового человека свой, и `.task` корня
+                    // второй раз уже не выполнится — без этого бейдж оставался
+                    // бы пустым до возврата из фона.
+                    if session.isAuthenticated {
+                        Task { await session.refreshUnreadCount() }
+                    } else {
+                        session.unreadNotifications = 0
+                    }
                 }
                 // Возврат из фона и приход push — второй и третий источники
                 // счётчика помимо старта.

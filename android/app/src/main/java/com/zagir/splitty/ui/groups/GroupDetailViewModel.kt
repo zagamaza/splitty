@@ -9,6 +9,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.FriendBalance
+import com.zagir.splitty.core.model.InviteStatus
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
@@ -221,18 +222,50 @@ class GroupDetailViewModel @Inject constructor(
         }
     }
 
-    /** Позвать выбранных друзей: их id уже известен, код никому не нужен. */
+    /**
+     * Позвать выбранных друзей: их id уже известен, код никому не нужен.
+     *
+     * Каждый приглашается отдельным запросом, и сбой на одном не отменяет
+     * остальных: общий try обрывал приглашение на первой же ошибке, а человек
+     * видел один текст и не знал, кто в итоге позван. Поэтому — поимённо, кто
+     * не прошёл. Ответ `pending` (тот, кто выходил, должен согласиться сам)
+     * называем отдельно: молчаливое «готово» обмануло бы — его в группе нет.
+     */
     fun inviteFriends(userIds: Set<Long>, onDone: () -> Unit) {
         val detail = (_room.value as? UiState.Content)?.value ?: return
         viewModelScope.launch {
-            try {
-                userIds.forEach { repository.addMember(detail.id, it) }
+            val names = _friends.value.associate { it.user.id to it.user.displayName }
+            fun name(id: Long) = names[id] ?: id.toString()
+
+            val pending = mutableListOf<String>()
+            val failed = mutableListOf<String>()
+            var invited = 0
+            userIds.forEach { id ->
+                try {
+                    if (repository.addMember(detail.id, id) == InviteStatus.PENDING) {
+                        pending += name(id)
+                    }
+                    invited++
+                } catch (e: ApiException) {
+                    failed += name(id)
+                }
+            }
+
+            if (invited > 0) {
                 sessionStore.noteDataChanged()
                 refresh()
-                onDone()
-            } catch (e: ApiException) {
-                _alertMessage.value = humanErrorText(e)
             }
+            // Сбои важнее ожидания согласия: они требуют повтора, а pending — нет.
+            _alertMessage.value = when {
+                failed.isNotEmpty() ->
+                    UiText.res(R.string.invite_friends_failed, failed.joinToString(", "))
+                pending.isNotEmpty() ->
+                    UiText.res(R.string.invite_friends_pending, pending.joinToString(", "))
+                else -> null
+            }
+            // Шит закрываем, только если приглашены все: иначе человеку нужно
+            // видеть список и повторить для тех, кто не прошёл.
+            if (failed.isEmpty()) onDone()
         }
     }
 
@@ -240,8 +273,9 @@ class GroupDetailViewModel @Inject constructor(
      * Выйти из группы.
      *
      * Сервер отклонит выход, пока на человеке висят расходы (409
-     * has_operations) — его текст объясняет путь наружу, поэтому показываем
-     * сообщение сервера как есть, а не подменяем своим «конфликт».
+     * has_operations) или пока он последний участник (`last_member`). Тексты
+     * обоих отказов — свои, из ресурсов (`humanErrorText`): серверный `message`
+     * всегда по-русски и не годится немцу с испанцем.
      */
     fun leaveRoom(onDone: () -> Unit) {
         val detail = (_room.value as? UiState.Content)?.value ?: return

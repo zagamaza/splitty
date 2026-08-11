@@ -239,23 +239,8 @@ struct GroupSettingsView: View {
             session.noteDataChanged()
             onChange()
         } catch {
-            alertMessage = leaveErrorText(error)
+            alertMessage = leaveErrorText(error, isSelf: false)
         }
-    }
-
-    /// Ошибки выхода объясняют путь наружу, а не просто запрещают: сервер
-    /// отдаёт has_operations и last_member, и оба случая человеку надо
-    /// объяснить своими словами, иначе он упрётся в глухое «конфликт».
-    private func leaveErrorText(_ error: Error) -> String {
-        if let apiError = error as? APIError, case .server(_, let code, let message) = apiError {
-            switch code {
-            case "has_operations", "last_member":
-                return message
-            default:
-                break
-            }
-        }
-        return humanErrorText(error)
     }
 
     /// Пикер «Валюта»: строки из GET /currencies (флаг + код), чекмарк
@@ -466,5 +451,30 @@ struct GroupSettingsView: View {
         } catch {
             alertMessage = humanErrorText(error)
         }
+    }
+}
+
+// MARK: - Тексты отказов при выходе и удалении участника
+
+/// Человеческий текст отказа `409` при выходе (`isSelf`) или удалении участника.
+///
+/// Текст свой, а не серверный: отказ обязан объяснять путь наружу — правка и
+/// удаление расхода открыты любому участнику, поэтому себя (или его) можно
+/// убрать из операции и выйти. Без этого человек упирается в глухое «конфликт».
+func leaveErrorText(_ error: Error, isSelf: Bool = true) -> String {
+    guard let apiError = error as? APIError, case .server(_, let code, _) = apiError else {
+        return humanErrorText(error)
+    }
+    switch code {
+    case "has_operations":
+        return isSelf
+            ? "На вас записаны расходы. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник. После этого выход сработает"
+            : "На участнике записаны расходы. Уберите его из них, а если платил он — смените плательщика или удалите расход. После этого его можно будет убрать"
+    case "last_member":
+        // Без ветки isSelf: последним участником можешь быть только ты сам —
+        // убирать в такой комнате больше некого.
+        return "Вы последний участник. Заархивируйте группу, если она больше не нужна"
+    default:
+        return humanErrorText(error)
     }
 }

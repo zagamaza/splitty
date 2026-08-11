@@ -478,6 +478,8 @@
     <string name="error_group_no_access">Sin acceso a este grupo. Pide a un miembro que te envíe una invitación nueva</string>
     <string name="error_operation_not_found">Operación no encontrada</string>
     <string name="error_outbox_unsupported">Operación sin conexión no admitida</string>
+    <string name="error_leave_has_operations">Todavía hay gastos a tu nombre. Quítate de ellos —y si tú pagaste, cambia el pagador o elimina el gasto— y luego sal</string>
+    <string name="error_leave_last_member">Eres el último miembro. Archiva el grupo si ya no lo necesitas</string>
     <string name="push_channel_operations">Gastos</string>
     <string name="push_channel_operations_desc">Gastos nuevos y modificados en tus grupos</string>
     <string name="push_channel_debts">Deudas</string>

@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// Куда ведёт навигация вкладки «Группы». Переходы значениями, а не
+/// view-ссылками: путь задаётся и СНАРУЖИ — тап по push открывает комнату,
+/// а это возможно только с типизированным стеком.
+enum GroupsRoute: Hashable {
+    case room(id: String)
+    case archive
+}
+
 /// Вкладка «Группы»: hero-карточка общего баланса, карточки групп, архив.
 struct GroupsListView: View {
     @Environment(SessionStore.self) private var session
@@ -8,12 +16,25 @@ struct GroupsListView: View {
     @State private var isJoinPresented = false
     /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
     @State private var reloadTask: Task<Void, Never>?
+    /// Путь стека вкладки — владеет им `MainTabView`: тап по push обязан
+    /// открыть комнату, а изнутри списка это недостижимо.
+    @Binding private var path: [GroupsRoute]
 
-    init() {}
+    init(path: Binding<[GroupsRoute]>) {
+        _path = path
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             content
+                .navigationDestination(for: GroupsRoute.self) { route in
+                    switch route {
+                    case .room(let id):
+                        GroupDetailView(roomId: id)
+                    case .archive:
+                        ArchivedGroupsView(model: model)
+                    }
+                }
                 .navigationTitle("Группы")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -145,9 +166,7 @@ struct GroupsListView: View {
     /// маленький бейдж icloud.slash — есть неотправленные (outbox) операции.
     private var groupCards: some View {
         ForEach(model.rooms) { room in
-            NavigationLink {
-                GroupDetailView(roomId: room.id)
-            } label: {
+            NavigationLink(value: GroupsRoute.room(id: room.id)) {
                 GroupCardRow(
                     room: room,
                     hasLocalOperations: !session.outbox.entries(roomId: room.id).isEmpty
@@ -159,9 +178,7 @@ struct GroupsListView: View {
 
     /// «Архив» — тихая строка внизу списка, без карточки.
     private var archiveRow: some View {
-        NavigationLink {
-            ArchivedGroupsView(model: model)
-        } label: {
+        NavigationLink(value: GroupsRoute.archive) {
             HStack(spacing: 10) {
                 Image(systemName: "archivebox")
                 Text("Архив")
@@ -304,9 +321,7 @@ private struct ArchivedGroupsView: View {
                     HStack(spacing: 14) {
                         // Архивная группа открывается так же, как обычная
                         // (внутри — read-only бейдж «Группа в архиве»).
-                        NavigationLink {
-                            GroupDetailView(roomId: room.id)
-                        } label: {
+                        NavigationLink(value: GroupsRoute.room(id: room.id)) {
                             HStack(spacing: 14) {
                                 GroupAvatarView(roomId: room.id, name: room.name, size: 46)
                                 VStack(alignment: .leading, spacing: 3) {
@@ -359,6 +374,6 @@ private struct ArchivedGroupsView: View {
 }
 
 #Preview {
-    GroupsListView()
+    GroupsListView(path: .constant([]))
         .environment(SessionStore())
 }

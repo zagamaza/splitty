@@ -106,7 +106,9 @@ final class ActivityViewModel {
             session.noteDataChanged()
         } catch {
             if error.isTaskCancellation { return }
-            errorMessage = humanErrorText(error)
+            // Тот же текст, что в настройках группы: 409 сюда приходит только
+            // с кнопки «Выйти», и он обязан объяснять путь наружу.
+            errorMessage = leaveErrorText(error)
         }
     }
 

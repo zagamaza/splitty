@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.InviteCard
+import com.zagir.splitty.core.model.InviteStatus
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxSyncer
@@ -60,6 +61,17 @@ class ActivityViewModel @Inject constructor(
     /** Время формирования последнего ответа — его же шлём при отметке
      *  прочитанного, чтобы не погасить пришедшее позже. */
     private var seenThrough: java.time.Instant? = null
+
+    /** Счётчик из последнего ответа: нечего гасить — незачем и ходить на сервер. */
+    private var unreadCount = 0
+
+    /**
+     * Экран на виду. Отметка прочитанного зависит от ДВУХ событий — открытия
+     * раздела и прихода ленты, — и первый визит всегда наступает раньше
+     * второго: `seenThrough` берётся из ответа, до него отмечать нечего.
+     * Поэтому оба пути ведут в [markSeen], а флаг связывает их.
+     */
+    private var isScreenVisible = false
 
     private val _errorMessage = MutableStateFlow<UiText?>(null)
     val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
@@ -159,15 +171,32 @@ class ActivityViewModel @Inject constructor(
         }
     }
 
+    /** Раздел открыт — значит человек всё это увидел. */
+    fun onScreenVisible() {
+        isScreenVisible = true
+        markSeen()
+    }
+
+    fun onScreenHidden() {
+        isScreenVisible = false
+    }
+
     /** Отметить прочитанным всё, что было в последнем ответе. */
     fun markSeen() {
         val through = seenThrough ?: return
+        if (unreadCount == 0) return
         viewModelScope.launch {
             // Фоновое действие: сбой не должен ничем мигать пользователю.
             runCatching { repository.markNotificationsSeen(through) }
             // Бейдж гасим только после подтверждённой отметки: иначе непрочитанное
             // исчезло бы с таба, оставшись непрочитанным на сервере.
-                .onSuccess { sessionStore.setUnreadNotifications(0) }
+                .onSuccess {
+                    // Не ноль: `pending`-приглашения сервер считает непрочитанными,
+                    // пока на них не ответили, — обнулив бейдж, мы бы разошлись
+                    // с ним до следующего обновления (паритет с iOS).
+                    unreadCount = _invites.value.count { it.status == InviteStatus.PENDING }
+                    sessionStore.setUnreadNotifications(unreadCount)
+                }
         }
     }
 
@@ -208,10 +237,14 @@ class ActivityViewModel @Inject constructor(
             generation++ // подгрузки, стартовавшие до этого момента, свой результат выбросят
             _invites.value = feed.invites
             seenThrough = feed.seenThrough
+            unreadCount = feed.unreadCount
             sessionStore.setUnreadNotifications(feed.unreadCount)
             _state.value = UiState.Content(page)
             loadedCount = page.size
             hasMore = page.size == PAGE_SIZE
+            // Первый визит: экран открылся раньше, чем приехал ответ, и отметить
+            // прочитанное до этой строки было нечем.
+            if (isScreenVisible) markSeen()
         } catch (e: ApiException) {
             if (_state.value is UiState.Content) {
                 _errorMessage.value = humanErrorText(e)

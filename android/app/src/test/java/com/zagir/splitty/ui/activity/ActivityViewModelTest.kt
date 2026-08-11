@@ -1,6 +1,7 @@
 package com.zagir.splitty.ui.activity
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.InviteStatus
 import com.zagir.splitty.core.model.Me
@@ -9,6 +10,7 @@ import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.session.TokenCipher
+import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.data.ApiCache
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.OutboxSyncer
@@ -158,6 +160,41 @@ class ActivityViewModelTest {
     }
 
     @Test
+    fun `first visit marks seen once the feed arrives, not at composition`() = runBlocking {
+        // Ответ приходит с задержкой — так первый визит гарантированно случается
+        // РАНЬШЕ ленты, как на живом экране.
+        server.enqueue(
+            MockResponse().setBody(FEED_JSON)
+                .setBodyDelay(300, java.util.concurrent.TimeUnit.MILLISECONDS),
+        )
+        server.enqueue(MockResponse().setResponseCode(204))
+        val vm = viewModel()
+
+        vm.onScreenVisible()
+
+        awaitRequest("/api/v1/notifications")
+        // Отметка обязана уйти сама: в момент показа seenThrough ещё null, и
+        // отмечать было нечего — а второго «показа» у открытого экрана нет.
+        val seen = awaitRequest("/api/v1/me/notifications-seen")
+        assertTrue(seen.body.readUtf8().contains(SEEN_THROUGH), "seenThrough из ответа")
+    }
+
+    @Test
+    fun `after mark seen the badge equals pending invites, not zero`() = runBlocking {
+        server.enqueue(MockResponse().setBody(FEED_WITH_PENDING_JSON))
+        server.enqueue(MockResponse().setResponseCode(204))
+        val vm = viewModel()
+        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+
+        vm.markSeen()
+        awaitRequest("/api/v1/me/notifications-seen")
+
+        // Ноль соврал бы: pending-приглашения сервер считает непрочитанными,
+        // пока на них не ответили, и следующий ответ вернул бы бейдж обратно.
+        assertEquals(1, withTimeout(5_000) { session.unreadNotifications.first { it == 1 } })
+    }
+
+    @Test
     fun `accepting an invite drops the card and reloads the feed`() = runBlocking {
         server.enqueue(MockResponse().setBody(FEED_JSON))
         server.enqueue(MockResponse().setResponseCode(204)) // accept
@@ -223,8 +260,11 @@ class ActivityViewModelTest {
         val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
         vm.leaveFromCard(card)
 
+        // Не «пришло хоть что-то» (filterNotNull это уже гарантирует), а
+        // конкретный текст с путём наружу: сервер прислал message пустым, и без
+        // маппинга по коду человек увидел бы дежурное «конфликт».
         val error = withTimeout(5_000) { vm.errorMessage.filterNotNull().first() }
-        assertTrue(error != null)
+        assertEquals(UiText.Res(R.string.error_leave_has_operations), error)
         // Карточка на месте: действие не состоялось, убирать её нечестно.
         assertEquals(1, vm.invites.value.size)
     }
@@ -254,6 +294,28 @@ class ActivityViewModelTest {
                 }
               ],
               "unreadCount": 3,
+              "seenThrough": "${SEEN_THROUGH}Z"
+            }
+        """.trimIndent()
+
+        /** Лента с одним pending-приглашением: его сервер считает непрочитанным
+         *  до ответа, поэтому после отметки бейдж обязан остаться единицей. */
+        val FEED_WITH_PENDING_JSON = """
+            {
+              "invites": [
+                {
+                  "roomId": "65b0", "roomName": "Байкал",
+                  "inviterName": "Аня", "status": "pending",
+                  "createdAt": "2026-07-05T12:20:00Z"
+                },
+                {
+                  "roomId": "65b1", "roomName": "Дача",
+                  "inviterName": "Боря", "status": "added",
+                  "createdAt": "2026-07-05T12:21:00Z"
+                }
+              ],
+              "items": [],
+              "unreadCount": 4,
               "seenThrough": "${SEEN_THROUGH}Z"
             }
         """.trimIndent()

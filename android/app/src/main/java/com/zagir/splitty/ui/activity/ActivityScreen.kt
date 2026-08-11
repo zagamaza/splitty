@@ -41,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
@@ -89,8 +90,13 @@ fun ActivityScreen(
     val myUserId by viewModel.myUserId.collectAsStateWithLifecycle()
     val invites by viewModel.invites.collectAsStateWithLifecycle()
 
-    // Раздел открыт — значит человек всё это увидел.
-    LaunchedEffect(Unit) { viewModel.markSeen() }
+    // Раздел открыт — значит человек всё это увидел. Сообщаем именно факт
+    // показа, а не «отметь сейчас»: на первом визите ленты ещё нет, и отметку
+    // отправит сама VM, когда придёт ответ с seenThrough.
+    DisposableEffect(Unit) {
+        viewModel.onScreenVisible()
+        onDispose { viewModel.onScreenHidden() }
+    }
     val haptics = rememberHaptics()
 
     Column(

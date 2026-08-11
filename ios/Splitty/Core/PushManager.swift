@@ -165,8 +165,9 @@ extension PushManager: UNUserNotificationCenterDelegate {
         completionHandler([.banner, .list, .sound])
     }
 
-    /// Тап по уведомлению: разбираем payload и просим корневой экран открыть
-    /// нужное место. Подписчик — RootView.
+    /// Тап по уведомлению: разбираем payload и просим открыть нужное место.
+    /// Подписчики — `MainTabView` (вкладка и комната) и `SplittyApp`
+    /// (перечитать счётчик непрочитанного).
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,

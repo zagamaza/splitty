@@ -495,7 +495,14 @@ private fun RowScope.TabItem(
         },
         icon = {
             if (badgeCount > 0) {
-                BadgedBox(badge = { Badge { Text(badgeCount.coerceAtMost(99).toString()) } }) {
+                // Свыше сотни — «99+»: обрезание до «99» врало бы, что
+                // непрочитанного ровно столько.
+                val badgeText = if (badgeCount > 99) {
+                    stringResource(R.string.notifications_badge_overflow)
+                } else {
+                    badgeCount.toString()
+                }
+                BadgedBox(badge = { Badge { Text(badgeText) } }) {
                     Icon(tab.icon, contentDescription = null)
                 }
             } else {

@@ -61,6 +61,28 @@ class HumanErrorTextTest {
     }
 
     @Test
+    fun `leave refusals get their own localized copy, not the russian server text`() {
+        // `message` сервера всегда по-русски: немцу с испанцем показали бы его.
+        val hasOperations = ApiException(
+            status = 409,
+            code = "has_operations",
+            message = "Сначала уберите себя из расходов",
+            fromServer = true,
+        )
+        assertEquals(
+            UiText.res(R.string.error_leave_has_operations),
+            humanErrorText(hasOperations),
+        )
+        val lastMember = ApiException(
+            status = 409,
+            code = "last_member",
+            message = "Вы последний участник",
+            fromServer = true,
+        )
+        assertEquals(UiText.res(R.string.error_leave_last_member), humanErrorText(lastMember))
+    }
+
+    @Test
     fun `empty server body falls back to a resource by code`() {
         val server = ApiException(status = 409, code = "conflict", message = "conflict (409)")
         assertEquals(UiText.res(R.string.error_conflict), humanErrorText(server))

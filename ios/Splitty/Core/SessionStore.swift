@@ -137,8 +137,7 @@ final class SessionStore {
     /// экраны-списки перезагружаются по `.onChange(of: session.dataVersion)`.
     private(set) var dataVersion = 0
 
-    /// Отметить мутацию данных: все подписанные экраны перезагрузятся.
-    /// Перечитать счётчик непрочитанного (старт, возврат из фона, push).
+    /// Перечитать счётчик непрочитанного (старт, вход, возврат из фона, push).
     /// Тихо: сбой не должен ничем мигать пользователю.
     func refreshUnreadCount() async {
         guard isAuthenticated else { return }
@@ -147,6 +146,7 @@ final class SessionStore {
         }
     }
 
+    /// Отметить мутацию данных: все подписанные экраны перезагрузятся.
     func noteDataChanged() {
         dataVersion += 1
     }
