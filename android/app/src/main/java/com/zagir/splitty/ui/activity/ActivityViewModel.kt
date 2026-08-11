@@ -196,6 +196,11 @@ class ActivityViewModel @Inject constructor(
             try {
                 action()
                 _invites.value = _invites.value.filterNot { it.roomId == card.roomId }
+                // Не только своя лента: принятое приглашение добавляет группу, а
+                // выход убирает. Списки групп и друзей перезагружаются лишь по
+                // dataVersion, а вкладки переживают переключение — без этого
+                // «Группы» показывали бы старое до pull-to-refresh.
+                sessionStore.noteDataChanged()
                 reloadFirstPage()
             } catch (e: ApiException) {
                 _errorMessage.value = humanErrorText(e)
@@ -205,7 +210,8 @@ class ActivityViewModel @Inject constructor(
 
     private suspend fun reloadFirstPage() {
         try {
-            val feed = repository.notificationFeed(limit = PAGE_SIZE, offset = 0).value
+            val fetched = repository.notificationFeed(limit = PAGE_SIZE, offset = 0)
+            val feed = fetched.value
             val page = feed.items
             generation++ // подгрузки, стартовавшие до этого момента, свой результат выбросят
             _invites.value = feed.invites
@@ -214,7 +220,10 @@ class ActivityViewModel @Inject constructor(
             sessionStore.setUnreadNotifications(feed.unreadCount)
             _state.value = UiState.Content(page)
             loadedCount = page.size
-            hasMore = page.size == PAGE_SIZE
+            // Из кеша листать некуда: следующая страница есть только на сервере,
+            // и попытка её взять офлайн заканчивалась алертом «нет соединения»
+            // поверх нормально показанной ленты (порт iOS ActivityViewModel).
+            hasMore = !fetched.fromCache && page.size == PAGE_SIZE
             // Первый визит: экран открылся раньше, чем приехал ответ, и отметить
             // прочитанное до этой строки было нечем.
             if (isScreenVisible) markSeen()

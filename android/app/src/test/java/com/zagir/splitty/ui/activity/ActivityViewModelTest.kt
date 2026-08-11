@@ -21,6 +21,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import okhttp3.mockwebserver.SocketPolicy
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -319,7 +321,69 @@ class ActivityViewModelTest {
         assertEquals(1, vm.invites.value.size)
     }
 
+    @Test
+    fun `invite action bumps dataVersion so other tabs reload`() = runBlocking {
+        server.enqueue(MockResponse().setBody(FEED_JSON))
+        server.enqueue(MockResponse().setResponseCode(204)) // accept
+        server.enqueue(MockResponse().setBody(FEED_WITHOUT_INVITE_JSON))
+        val vm = viewModel()
+        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val before = session.dataVersion.value
+
+        vm.acceptInvite(card)
+
+        // Списки групп и друзей перезагружаются ТОЛЬКО по dataVersion, а вкладки
+        // переживают переключение: без этого принятая группа не появлялась бы
+        // в «Группах» до pull-to-refresh.
+        val after = withTimeout(5_000) { session.dataVersion.first { it > before } }
+        assertTrue(after > before, "dataVersion не сдвинулся — «Группы» не перезагрузятся")
+    }
+
+    @Test
+    fun `cached feed does not pretend there is a next page`() = runBlocking {
+        // 1) успешный ответ наполняет кеш первой страницы
+        server.enqueue(MockResponse().setBody(feedPage(VM_PAGE_SIZE)))
+        val warmUp = viewModel()
+        withTimeout(5_000) { warmUp.state.first { it is UiState.Content } }
+        awaitRequest("/api/v1/notifications")
+
+        // 2) сети нет вовсе — новая VM поднимает ленту из кеша
+        server.shutdown()
+        val vm = viewModel()
+        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+
+        vm.onItemShown(VM_PAGE_SIZE - 1)
+        kotlinx.coroutines.delay(500)
+
+        // Следующая страница есть только на сервере: без отсечки по fromCache
+        // долистывание офлайн роняло алерт «нет соединения» поверх нормально
+        // показанной ленты.
+        assertNull(vm.errorMessage.value, "ложный алерт при долистывании из кеша")
+    }
+
+    /** Страница из [count] операций с уникальными id — для проверки пагинации. */
+    private fun feedPage(count: Int): String {
+        val items = (1..count).joinToString(",") { i ->
+            """
+            {
+              "roomId": "65af", "roomName": "Ужин", "roomCurrency": "RUB",
+              "operation": {
+                "id": "op$i", "description": "Расход $i", "sum": 100,
+                "isDebtRepayment": false,
+                "donor": {"id": 2, "displayName": "Боря"},
+                "recipients": [{"user": {"id": 1, "displayName": "Загир"}, "sum": 100}],
+                "createdAt": "2026-07-05T12:00:00Z"
+              }
+            }
+            """.trimIndent()
+        }
+        return """{"invites": [], "items": [$items], "unreadCount": 0, "seenThrough": "${SEEN_THROUGH}Z"}"""
+    }
+
     private companion object {
+        /** Дубль ActivityViewModel.PAGE_SIZE: там он приватный. */
+        const val VM_PAGE_SIZE = 30
+
         const val SEEN_THROUGH = "2026-07-05T12:30:00"
 
         /** Столько же, сколько PAGE_SIZE во VM: полная страница включает hasMore. */

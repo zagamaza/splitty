@@ -489,4 +489,30 @@
     <string name="push_channel_debts_desc">Devoluciones de deudas</string>
     <string name="push_channel_invites">Invitaciones</string>
     <string name="push_channel_invites_desc">Invitaciones a grupos</string>
+
+    <!-- Приглашения и выход из группы -->
+    <string name="group_leave_action">Salir del grupo</string>
+    <string name="group_leave_confirm">Salir</string>
+    <string name="group_leave_footer">Mientras haya gastos a tu nombre no puedes salir: quítate de ellos primero.</string>
+    <string name="group_leave_message">El grupo desaparece de tu lista. Solo puedes volver si un miembro te invita</string>
+    <string name="group_leave_title">¿Salir de «%1$s»?</string>
+    <string name="group_remove_member_action">Quitar del grupo</string>
+    <string name="group_remove_member_confirm">Quitar</string>
+    <string name="group_remove_member_message">Los gastos ya registrados se quedan en el grupo</string>
+    <string name="group_remove_member_title">¿Quitar a %1$s del grupo?</string>
+    <string name="invite_accept">Aceptar</string>
+    <string name="invite_added_you">%1$s te añadió a «%2$s»</string>
+    <string name="invite_decline">Rechazar</string>
+    <string name="invite_friends_empty">Aún no hay a quién invitar: aquí aparecerán las personas con las que hayas compartido grupos.</string>
+    <string name="invite_friends_failed">No se pudo invitar: %1$s. Inténtalo de nuevo</string>
+    <string name="invite_friends_link">Enviar un enlace</string>
+    <string name="invite_friends_link_footer">El enlace es para quienes aún no han compartido gastos contigo.</string>
+    <string name="invite_friends_pending">%1$s salió de este grupo, así que enviamos una invitación: volver depende de esa persona</string>
+    <string name="invite_friends_section">De tus grupos</string>
+    <string name="invite_friends_send">Invitar</string>
+    <string name="invite_friends_title">Invitar</string>
+    <string name="invite_leave">Salir</string>
+    <string name="invite_open">Abrir</string>
+    <string name="invite_someone">Alguien</string>
+    <string name="invite_wants_you_back">%1$s te invita a volver a «%2$s»</string>
 </resources>

@@ -489,4 +489,30 @@
     <string name="push_channel_debts_desc">Remboursements de dettes</string>
     <string name="push_channel_invites">Invitations</string>
     <string name="push_channel_invites_desc">Invitations à des groupes</string>
+
+    <!-- Приглашения и выход из группы -->
+    <string name="group_leave_action">Quitter le groupe</string>
+    <string name="group_leave_confirm">Quitter</string>
+    <string name="group_leave_footer">Tant que des dépenses sont à ton nom, tu ne peux pas partir — retire-toi d\'abord.</string>
+    <string name="group_leave_message">Le groupe disparaît de ta liste. Tu ne pourras revenir que si un membre t\'invite</string>
+    <string name="group_leave_title">Quitter « %1$s » ?</string>
+    <string name="group_remove_member_action">Retirer du groupe</string>
+    <string name="group_remove_member_confirm">Retirer</string>
+    <string name="group_remove_member_message">Les dépenses déjà enregistrées restent dans le groupe</string>
+    <string name="group_remove_member_title">Retirer %1$s du groupe ?</string>
+    <string name="invite_accept">Accepter</string>
+    <string name="invite_added_you">%1$s t\'a ajouté à « %2$s »</string>
+    <string name="invite_decline">Refuser</string>
+    <string name="invite_friends_empty">Personne à inviter pour l\'instant : les personnes avec qui tu as partagé des groupes apparaîtront ici.</string>
+    <string name="invite_friends_failed">Invitation impossible : %1$s. Réessaie</string>
+    <string name="invite_friends_link">Envoyer un lien</string>
+    <string name="invite_friends_link_footer">Le lien s\'adresse à ceux avec qui tu n\'as pas encore partagé de dépenses.</string>
+    <string name="invite_friends_pending">%1$s a quitté ce groupe : nous avons envoyé une invitation, à cette personne de décider</string>
+    <string name="invite_friends_section">De tes groupes</string>
+    <string name="invite_friends_send">Inviter</string>
+    <string name="invite_friends_title">Inviter</string>
+    <string name="invite_leave">Quitter</string>
+    <string name="invite_open">Ouvrir</string>
+    <string name="invite_someone">Quelqu\'un</string>
+    <string name="invite_wants_you_back">%1$s t\'invite à revenir dans « %2$s »</string>
 </resources>

@@ -489,4 +489,30 @@
     <string name="push_channel_debts_desc">Rückzahlungen von Schulden</string>
     <string name="push_channel_invites">Einladungen</string>
     <string name="push_channel_invites_desc">Einladungen in Gruppen</string>
+
+    <!-- Приглашения и выход из группы -->
+    <string name="group_leave_action">Gruppe verlassen</string>
+    <string name="group_leave_confirm">Verlassen</string>
+    <string name="group_leave_footer">Solange Ausgaben auf dich laufen, kannst du nicht austreten — nimm dich zuerst aus ihnen heraus.</string>
+    <string name="group_leave_message">Die Gruppe verschwindet aus deiner Liste. Zurück kommst du nur, wenn dich ein Mitglied einlädt</string>
+    <string name="group_leave_title">„%1$s“ verlassen?</string>
+    <string name="group_remove_member_action">Aus der Gruppe entfernen</string>
+    <string name="group_remove_member_confirm">Entfernen</string>
+    <string name="group_remove_member_message">Bereits erfasste Ausgaben bleiben in der Gruppe</string>
+    <string name="group_remove_member_title">%1$s aus der Gruppe entfernen?</string>
+    <string name="invite_accept">Annehmen</string>
+    <string name="invite_added_you">%1$s hat dich zu „%2$s“ hinzugefügt</string>
+    <string name="invite_decline">Ablehnen</string>
+    <string name="invite_friends_empty">Noch niemand zum Einladen: Leute, mit denen du Gruppen geteilt hast, erscheinen hier.</string>
+    <string name="invite_friends_failed">Einladung fehlgeschlagen: %1$s. Versuch es noch einmal</string>
+    <string name="invite_friends_link">Link senden</string>
+    <string name="invite_friends_link_footer">Ein Link ist für Leute, mit denen du noch keine Ausgaben geteilt hast.</string>
+    <string name="invite_friends_pending">%1$s hat diese Gruppe verlassen — wir haben eine Einladung geschickt, die Entscheidung liegt bei ihnen</string>
+    <string name="invite_friends_section">Aus deinen Gruppen</string>
+    <string name="invite_friends_send">Einladen</string>
+    <string name="invite_friends_title">Einladen</string>
+    <string name="invite_leave">Verlassen</string>
+    <string name="invite_open">Öffnen</string>
+    <string name="invite_someone">Jemand</string>
+    <string name="invite_wants_you_back">%1$s lädt dich zurück zu „%2$s“ ein</string>
 </resources>
