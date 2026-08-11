@@ -449,27 +449,27 @@ room_invite {
 
 **Автоматически проверяемое (подтвердить прогоном тестов):**
 
-- [ ] есть тест: друг добавляется в группу, запись `added` создана, push отправлен
-- [ ] есть тест: не-друга добавить нельзя (403)
-- [ ] есть тест: выход с операциями → 409 `has_operations`; без операций → успех, долги остальных не изменились
-- [ ] есть тест: после выхода повторное приглашение создаёт `pending`, а не добавляет молча
-- [ ] есть тест: accept переводит в участники, decline — нет
-- [ ] есть тест: 10 конкурентных `JoinToRoom` дают одну запись в `room.users`
-- [ ] есть тест: `purgeUserData` чистит `room_invite` (по `invitee_id` и по `inviter_id`)
-- [ ] есть тест: `unreadCount` учитывает непрочитанный `added`, а не только `pending` и события
-- [ ] есть тест: событие, пришедшее после `seenThrough`, остаётся непрочитанным
-- [ ] есть тест: конкурентные accept и decline дают ровно один успех
-- [ ] есть тест: **выход с легаси-операцией** (`recipients` без `recipients_with_sum`, пустой `status`) отклонён с 409 — иначе старые долги протекут
-- [ ] есть тест: конкурентные выходы одного пользователя дают ровно один успех
-- [ ] есть тест: `PATCH /me/notifications` телом старого клиента (без `invites`) не выключает категорию
-- [ ] есть тест: маршрутизация Android-каналов пушей, включая `invites`
-- [ ] `/activity` продолжает отвечать (старые клиенты)
-- [ ] **интеграционные тесты репозитория реально исполнялись, а не были пропущены**: прогнать `go test ./internal/repository/... -v` и убедиться, что нет `SKIP` (они скипаются без доступного mongo — `testsupport_test.go`)
-- [ ] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...` — всё зелёное
-- [ ] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go vet ./...` — чисто
-- [ ] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — успешно
-- [ ] `cd ios && xcodebuild test …` — зелёное
-- [ ] перечислить в этом файле задачи, помеченные `⚠️ заблокировано`
+- [x] есть тест: друг добавляется в группу, запись `added` создана, push отправлен
+- [x] есть тест: не-друга добавить нельзя (403)
+- [x] есть тест: выход с операциями → 409 `has_operations`; без операций → успех, долги остальных не изменились
+- [x] есть тест: после выхода повторное приглашение создаёт `pending`, а не добавляет молча
+- [x] есть тест: accept переводит в участники, decline — нет
+- [x] есть тест: 10 конкурентных `JoinToRoom` дают одну запись в `room.users`
+- [x] есть тест: `purgeUserData` чистит `room_invite` (по `invitee_id` и по `inviter_id`)
+- [x] есть тест: `unreadCount` учитывает непрочитанный `added`, а не только `pending` и события
+- [x] есть тест: событие, пришедшее после `seenThrough`, остаётся непрочитанным
+- [x] есть тест: конкурентные accept и decline дают ровно один успех
+- [x] есть тест: **выход с легаси-операцией** (`recipients` без `recipients_with_sum`, пустой `status`) отклонён с 409 — иначе старые долги протекут
+- [x] есть тест: конкурентные выходы одного пользователя дают ровно один успех
+- [x] есть тест: `PATCH /me/notifications` телом старого клиента (без `invites`) не выключает категорию
+- [x] есть тест: маршрутизация Android-каналов пушей, включая `invites`
+- [x] `/activity` продолжает отвечать (старые клиенты)
+- [x] **интеграционные тесты репозитория реально исполнялись, а не были пропущены**: прогнать `go test ./internal/repository/... -v` и убедиться, что нет `SKIP` (они скипаются без доступного mongo — `testsupport_test.go`)
+- [x] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go test ./internal/...` — всё зелёное
+- [x] `GOTOOLCHAIN=local ~/sdk/go1.23.5/bin/go vet ./...` — чисто
+- [x] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:assembleRelease` — успешно
+- [x] `cd ios && xcodebuild test …` — зелёное
+- [x] перечислить в этом файле задачи, помеченные `⚠️ заблокировано` — таких нет; единственная отметка `⚠️` в плане про флак `AppRootJoinTest`, он воспроизводится и на чистом `HEAD`
 
 **Ручное — переносится в Post-Completion, чекбоксами не отмечать:**
 
@@ -483,12 +483,12 @@ room_invite {
 - Modify: `docs/API.md`
 - Modify: `README.md`
 
-- [ ] описать в `docs/API.md`: `POST /rooms/{roomId}/members`, `DELETE /rooms/{roomId}/members/me`, `DELETE /rooms/{roomId}/members/{userId}`, `POST /invites/{roomId}/accept`, `POST /invites/{roomId}/decline`, `GET /notifications`, `POST /me/notifications-seen`
-- [ ] задокументировать коды ошибок `has_operations`, `last_member`, `not_a_friend`, `not_pending` и их смысл
-- [ ] описать категорию уведомлений `invites` рядом с `operations`/`debts`
-- [ ] зафиксировать в `README.md` правило: **выход запрещён при наличии операций, escape — правка расхода любым участником**; и что приглашать можно только друзей, а посторонних — ссылкой
-- [ ] отметить, что `/activity` оставлен для обратной совместимости и его следует убрать, когда старые клиенты вымрут
-- [ ] перенести план в `docs/plans/completed/`
+- [x] описать в `docs/API.md`: `POST /rooms/{roomId}/members`, `DELETE /rooms/{roomId}/members/me`, `DELETE /rooms/{roomId}/members/{userId}`, `POST /invites/{roomId}/accept`, `POST /invites/{roomId}/decline`, `GET /notifications`, `POST /me/notifications-seen`
+- [x] задокументировать коды ошибок `has_operations`, `last_member`, `not_a_friend`, `not_pending` и их смысл
+- [x] описать категорию уведомлений `invites` рядом с `operations`/`debts`
+- [x] зафиксировать в `README.md` правило: **выход запрещён при наличии операций, escape — правка расхода любым участником**; и что приглашать можно только друзей, а посторонних — ссылкой
+- [x] отметить, что `/activity` оставлен для обратной совместимости и его следует убрать, когда старые клиенты вымрут
+- [x] перенести план в `docs/plans/completed/`
 
 ## Post-Completion
 
