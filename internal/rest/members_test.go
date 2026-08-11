@@ -494,3 +494,105 @@ func TestAcceptInviteRollsBackWhenJoinFails(t *testing.T) {
 		t.Fatal("человек так и не стал участником")
 	}
 }
+
+// TestAcceptInviteKeepsAddedWhenAlreadyMember — ошибка JoinToRoom не означает,
+// что записи не было: ответ mongo мог потеряться уже после неё, а параллельно
+// человека мог добавить другой запрос. Откат «вслепую» дал бы участника с
+// приглашением pending — карточку с выбором для комнаты, где он состоит, а тап
+// по «Отклонить» записал бы declined участнику.
+func TestAcceptInviteKeepsAddedWhenAlreadyMember(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	// вход состоялся (другим запросом или до потерянного ответа), а нам вернулась ошибка
+	if err := f.roomRepo.JoinToRoom(context.Background(), testUser2, f.room.ID.Hex()); err != nil {
+		t.Fatalf("подготовка гонки не удалась: %v", err)
+	}
+	f.roomRepo.joinErr = errors.New("mongo недоступна")
+
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusInternalServerError {
+		t.Fatalf("сбой входа в комнату обязан отдавать 500, получен %d", code)
+	}
+
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status != api.InviteAdded {
+		t.Fatalf("участник остался со статусом %q — раздел уведомлений предложит ему «Отклонить» комнату, в которой он состоит", inv.Status)
+	}
+}
+
+// TestAddMemberDoesNotReconcileByStaleRoomSnapshot — снимок комнаты, по
+// которому решается «он уже участник», устаревает: между ним и записью
+// помещается чтение тела запроса (его темп задаёт клиент) и два запроса в базу.
+// Решая по нему, примирение писало бы added человеку, которого в комнате уже
+// нет, — и следующее приглашение вернуло бы его молча, мимо согласия.
+func TestAddMemberDoesNotReconcileByStaleRoomSnapshot(t *testing.T) {
+	f := newInviteFixture(t, true)
+	// человек в комнате, запись pending (вошёл по ссылке) — случай примирения
+	if err := f.roomRepo.JoinToRoom(context.Background(), testUser2, f.room.ID.Hex()); err != nil {
+		t.Fatalf("подготовка не удалась: %v", err)
+	}
+	f.invitePending(t, testUser2.ID)
+
+	// конкурентный выход, легший сразу после первого чтения комнаты
+	f.roomRepo.afterFindById = func(roomId string) {
+		if err := f.invites.Upsert(context.Background(), f.room.ID, testUser2.ID,
+			testUser2.ID, api.InviteLeft, time.Now()); err != nil {
+			t.Fatalf("подготовка гонки не удалась: %v", err)
+		}
+		if _, err := f.roomRepo.LeaveRoom(context.Background(), testUser2.ID, roomId); err != nil {
+			t.Fatalf("подготовка гонки не удалась: %v", err)
+		}
+	}
+
+	got := f.addMember(t, testUser2.ID).expect(http.StatusAccepted)
+	if got.Status != api.InvitePending {
+		t.Fatalf("ответ %q: вышедшего посчитали участником по устаревшему снимку", got.Status)
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status != api.InvitePending {
+		t.Fatalf("запись стала %q при отсутствующем членстве — следующее приглашение вернёт человека молча", inv.Status)
+	}
+	waitInvited(t, f.notifier)
+}
+
+// TestAddMemberReconcileKeepsFresherInvite — вторая половина той же гонки.
+// Выход пишет left ДО удаления из комнаты, поэтому снимок комнаты законно
+// показывает человека участником уже после записи left; за это время его
+// успевают позвать заново (pending, уведомление ушло). Безусловное примирение
+// затирало бы это приглашение статусом added, а возврат записи в left после
+// выхода к тому моменту уже отработал — чинить состояние было бы некому,
+// и карточка «Принять» исчезла бы у человека, которому о ней сообщили.
+func TestAddMemberReconcileKeepsFresherInvite(t *testing.T) {
+	f := newInviteFixture(t, true)
+	if err := f.roomRepo.JoinToRoom(context.Background(), testUser2, f.room.ID.Hex()); err != nil {
+		t.Fatalf("подготовка не удалась: %v", err)
+	}
+	// выход уже записал left, но из комнаты человека ещё не убрал
+	if err := f.invites.Upsert(context.Background(), f.room.ID, testUser2.ID,
+		testUser2.ID, api.InviteLeft, time.Now().Add(-time.Minute)); err != nil {
+		t.Fatalf("подготовка не удалась: %v", err)
+	}
+
+	// пока мы решаем, третий участник зовёт человека обратно
+	f.invites.afterFind = func() {
+		if err := f.invites.Upsert(context.Background(), f.room.ID, testUser2.ID,
+			testUser3.ID, api.InvitePending, time.Now()); err != nil {
+			t.Fatalf("подготовка гонки не удалась: %v", err)
+		}
+	}
+
+	f.addMember(t, testUser2.ID).expect(http.StatusOK)
+
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status != api.InvitePending || inv.InviterID != testUser3.ID {
+		t.Fatalf("примирение затёрло свежее приглашение: %+v", inv)
+	}
+}

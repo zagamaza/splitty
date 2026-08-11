@@ -624,6 +624,10 @@ type fakeRoomRepo struct {
 	// joinErr — сбой JoinToRoom: проверяем, что принятое приглашение, не
 	// доведённое до членства, не запирает человека в статусе added
 	joinErr error
+	// afterFindById вызывается ПОСЛЕ чтения комнаты и сбрасывает сам себя, то
+	// есть срабатывает один раз: так симулируется чужой запрос, легший между
+	// двумя чтениями комнаты в одном хендлере
+	afterFindById func(roomId string)
 }
 
 func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
@@ -640,6 +644,10 @@ func (f *fakeRoomRepo) delete(roomId string) {
 	delete(f.rooms, roomId)
 }
 
+// FindById отдаёт СНИМОК комнаты, а не живой указатель: mongo возвращает
+// раскодированную копию, и хендлер, читающий комнату дважды, обязан видеть
+// разное состояние. С живым указателем «устаревший снимок» был бы невоспроизводим,
+// а именно на нём строятся гонки примирения записи приглашения.
 func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error) {
 	if _, err := primitive.ObjectIDFromHex(id); err != nil {
 		return nil, err
@@ -648,7 +656,26 @@ func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error)
 	if !ok {
 		return nil, mongo.ErrNoDocuments
 	}
-	return room, nil
+	snapshot := snapshotRoom(room)
+	if hook := f.afterFindById; hook != nil {
+		f.afterFindById = nil
+		hook(id)
+	}
+	return snapshot, nil
+}
+
+// snapshotRoom копирует комнату вместе с участниками и операциями.
+func snapshotRoom(r *api.Room) *api.Room {
+	c := *r
+	if r.Members != nil {
+		members := append([]api.User(nil), *r.Members...)
+		c.Members = &members
+	}
+	if r.Operations != nil {
+		ops := append([]api.Operation(nil), *r.Operations...)
+		c.Operations = &ops
+	}
+	return &c
 }
 
 func (f *fakeRoomRepo) JoinToRoom(_ context.Context, u api.User, roomId string) error {
@@ -788,6 +815,19 @@ func (f *fakeRoomRepo) UpdateOperation(_ context.Context, o *api.Operation, room
 		}
 	}
 	return mongo.ErrNoDocuments
+}
+
+// ActivateOperation как mongo-реализация: та же замена, что в UpdateOperation,
+// но с условием состава — все связываемые расходом люди обязаны быть в комнате
+func (f *fakeRoomRepo) ActivateOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if !allParticipantsAreMembers(room, o) {
+		return repository.ErrParticipantLeft
+	}
+	return f.UpdateOperation(ctx, o, roomId)
 }
 
 // CreateOperation как mongo-реализация: $push новой операции,
@@ -1038,6 +1078,9 @@ type fakeInviteStore struct {
 	// upsertErr — сбой записи отношения: проверяем, что незаписанный left не
 	// оставляет человека вне комнаты без следа
 	upsertErr error
+	// afterFind вызывается ПОСЛЕ чтения записи и сбрасывает сам себя: так
+	// симулируется чужое решение, легшее между чтением записи и её примирением
+	afterFind func()
 }
 
 func newFakeInviteStore() *fakeInviteStore {
@@ -1061,10 +1104,40 @@ func (f *fakeInviteStore) Upsert(_ context.Context, roomID primitive.ObjectID, i
 	return nil
 }
 
-func (f *fakeInviteStore) Find(_ context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error) {
+// UpsertIfUnchanged как mongo-реализация: условие по created_at стоит в
+// фильтре, то есть проверка «запись не менялась» и запись — одно действие
+func (f *fakeInviteStore) UpsertIfUnchanged(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
+	status api.InviteStatus, since, now time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.upsertErr != nil {
+		return false, f.upsertErr
+	}
+	key := inviteKey(roomID, inviteeID)
+	inv, ok := f.invites[key]
+	if since.IsZero() {
+		if ok {
+			return false, nil
+		}
+	} else if !ok || !inv.CreatedAt.Equal(since) {
+		return false, nil
+	}
+	f.invites[key] = api.RoomInvite{
+		RoomID: roomID, InviteeID: inviteeID, InviterID: inviterID,
+		Status: status, CreatedAt: now,
+	}
+	return true, nil
+}
+
+func (f *fakeInviteStore) Find(_ context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error) {
+	f.mu.Lock()
 	inv, ok := f.invites[inviteKey(roomID, inviteeID)]
+	hook := f.afterFind
+	f.afterFind = nil
+	f.mu.Unlock()
+	if hook != nil {
+		hook()
+	}
 	if !ok {
 		return nil, mongo.ErrNoDocuments
 	}

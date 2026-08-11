@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/sdk"
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -21,6 +22,9 @@ import (
 
 type OperationService interface {
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	// ActivateOperation переводит черновик в действующий расход с проверкой
+	// состава комнаты (repository.ErrParticipantLeft — кто-то успел выйти)
+	ActivateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
@@ -1268,9 +1272,32 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	backB := api.NewButton(viewStart, &api.CallbackData{})
 	buttons = append(buttons, rb, backB)
 
+	// Активация идёт ПЕРВОЙ: она единственная может быть отклонена (состав
+	// комнаты изменился), а удаление прошлой версии и рассылка уведомлений
+	// необратимы. Обратный порядок терял бы отредактированный расход целиком:
+	// старая версия удалена, новая осталась черновиком, в долгах нет ни той,
+	// ни другой.
+	oldOperationId := opn.OldOperationId
+	opn.Status = active
+	opn.OldOperationId = nil
+	if err = s.os.ActivateOperation(ctx, &opn, room.ID.Hex()); err != nil {
+		if errors.Is(err, repository.ErrParticipantLeft) {
+			// Черновик собирают минутами, и всё это время он никого не держит в
+			// комнате: получатель успевает выйти. Записать его в долг молча
+			// нельзя — комнату он уже не видит и убрать себя из расхода не сможет
+			callback := createCallback(u, I18n(u.User, "msg_operation_participant_left"), true)
+			return api.TelegramMessage{
+				CallbackConfig: callback,
+				Send:           true,
+			}
+		}
+		log.Error().Err(err).Msg("upsert operation failed")
+		return
+	}
+
 	var oldOp api.Operation
-	if opn.OldOperationId != nil {
-		oldOp = findOperationByID(room, *opn.OldOperationId)
+	if oldOperationId != nil {
+		oldOp = findOperationByID(room, *oldOperationId)
 		if err := s.os.DeleteOperation(ctx, room.ID.Hex(), oldOp.ID); err != nil {
 			log.Error().Err(err).Msg("upsert operation failed")
 			return
@@ -1279,12 +1306,6 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 		buttons, messages = notificationWhenUpdateOperation(canonical(ctx, s.us), u, oldOp, newOp, room, buttons, messages)
 	} else {
 		messages = s.notificationWhenCreateOperation(ctx, u, opn, room, rb, backB, messages)
-	}
-	opn.Status = active
-	opn.OldOperationId = nil
-	if err = s.os.UpdateOperation(ctx, &opn, room.ID.Hex()); err != nil {
-		log.Error().Err(err).Msg("upsert operation failed")
-		return
 	}
 
 	viewRoomBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.Button.CallbackData.RoomId})
@@ -1306,9 +1327,9 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 // расходе. opn берётся ПО ЗНАЧЕНИЮ намеренно: список notification_sent здесь
 // только защита от второго сообщения назначенному плательщику, который заодно
 // и получатель, — в базу он не идёт. Поле пишет один путь, REST-нотификатор
-// (bot.Notifier, точечный SetNotificationSent); вызывающий сразу после нас
-// пишет операцию целиком через UpdateOperation, и любая запись отсюда всё
-// равно была бы затёрта. Записывать «кому ушло» из бота нельзя дёшево: список
+// (bot.Notifier, точечный SetNotificationSent); вызывающий записал операцию
+// целиком ещё до нас (ActivateOperation), и любая запись отсюда в базу всё
+// равно не попала бы. Записывать «кому ушло» из бота нельзя дёшево: список
 // собирался бы под гейтами chatID/AllowsTelegram, то есть означал бы «у кого
 // есть телеграм», и получатель из приложения молча выпал бы из бейджа
 func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *api.Update, opn api.Operation, room *api.Room, rb *api.Button, backB *api.Button, messages []tgbotapi.Chattable) []tgbotapi.Chattable {

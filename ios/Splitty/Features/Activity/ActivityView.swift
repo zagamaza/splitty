@@ -1,6 +1,9 @@
 import SwiftUI
 
-/// Вкладка «Активность»: лента карточных строк операций всех групп с пагинацией.
+/// Вкладка «Уведомления»: карточки приглашений и лента операций всех групп
+/// с пагинацией. Заголовок экрана обязан совпадать с подписью таба (и с
+/// Android, где заголовок берётся из той же строки tab_activity): раздел
+/// один, а имён у него было два.
 struct ActivityView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = ActivityViewModel()
@@ -14,7 +17,7 @@ struct ActivityView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
-                .navigationTitle("Активность")
+                .navigationTitle("Уведомления")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {

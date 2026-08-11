@@ -62,6 +62,9 @@ type userDataCleaner interface {
 // хранилищем приглашений, и userDataCleaner при удалении аккаунта.
 type inviteStore interface {
 	Upsert(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error
+	// UpsertIfUnchanged пишет, только если запись не менялась с момента чтения
+	// (since — её created_at, нулевое since означает «записи не было»)
+	UpsertIfUnchanged(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, since, now time.Time) (bool, error)
 	Find(ctx context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error)
 	ListForUser(ctx context.Context, userID int) ([]api.RoomInvite, error)
 	SetStatusIfCurrent(ctx context.Context, roomID primitive.ObjectID, inviteeID int, from, to api.InviteStatus, now time.Time) (bool, error)

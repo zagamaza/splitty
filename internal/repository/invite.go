@@ -61,6 +61,40 @@ func (r MongoInviteRepository) Upsert(ctx context.Context, roomID primitive.Obje
 	return nil
 }
 
+// UpsertIfUnchanged записывает состояние отношения, ТОЛЬКО если запись не
+// менялась с момента чтения: since — created_at прочитанной записи, нулевое
+// since означает «записи не было» (тогда она создаётся, и лишь если её не
+// создали параллельно). false — с момента чтения кто-то записал более свежее
+// решение, и затирать его нельзя.
+//
+// Нужен примирению записи по снимку комнаты: снимок стареет, а решение по нему
+// пишется безусловным Upsert'ом и затирало бы, например, приглашение, выданное
+// вышедшему человеку уже после его выхода — карточка «Принять» исчезала бы,
+// хотя уведомление о приглашении ушло. created_at годится ключом версии,
+// потому что обновляется на КАЖДУЮ запись (см. Upsert).
+func (r MongoInviteRepository) UpsertIfUnchanged(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
+	status api.InviteStatus, since, now time.Time) (bool, error) {
+	fields := bson.M{"inviter_id": inviterID, "status": status, "created_at": now}
+	if since.IsZero() {
+		res, err := r.col.UpdateOne(ctx, bson.M{"room_id": roomID, "invitee_id": inviteeID},
+			bson.M{"$setOnInsert": fields}, options.Update().SetUpsert(true))
+		if err != nil {
+			log.Error().Err(err).Msg("insert room invite failed")
+			return false, err
+		}
+		return res.UpsertedCount > 0, nil
+	}
+	// created_at в mongo хранится с точностью до миллисекунды: since из базы уже
+	// усечён, а since из собственной записи — нет, и фильтр не совпал бы с ней
+	filter := bson.M{"room_id": roomID, "invitee_id": inviteeID, "created_at": since.UTC().Truncate(time.Millisecond)}
+	res, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": fields})
+	if err != nil {
+		log.Error().Err(err).Msg("conditional upsert room invite failed")
+		return false, err
+	}
+	return res.MatchedCount > 0, nil
+}
+
 // Find возвращает отношение по паре или mongo.ErrNoDocuments, если его нет.
 func (r MongoInviteRepository) Find(ctx context.Context, roomID primitive.ObjectID, inviteeID int) (*api.RoomInvite, error) {
 	var inv api.RoomInvite

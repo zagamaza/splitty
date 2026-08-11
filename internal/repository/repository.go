@@ -86,6 +86,10 @@ type RoomRepository interface {
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	// ActivateOperation переводит черновик в действующий расход и требует, чтобы
+	// связываемые им люди были участниками комнаты. ErrParticipantLeft — кто-то
+	// вышел, пока черновик собирали
+	ActivateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	// CreateOperationIfAbsent атомарно добавляет операцию, если в комнате ещё нет
@@ -647,10 +651,98 @@ func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operat
 	return nil
 }
 
+// ActivateOperation — тот же UpdateOperation, но с условием состава: все, кого
+// расход СВЯЗЫВАЕТ, обязаны быть участниками комнаты.
+//
+// Переход draft → active это рождение долга, и на него правило «состав важнее
+// снимка» распространяется так же, как на вставку (см. membersFilter). Своего
+// условия он требует отдельно, потому что черновик живёт долго: бот создаёт его
+// на первом экране, а активируют его тапом «Готово» через минуты — и всё это
+// время черновик НИКОГО не держит в комнате (api.HasOperations смотрит только
+// на активные, LeaveRoom — только на status active). Получатель успевает выйти
+// и оказаться должником комнаты, которой уже не видит.
+//
+// Безусловным его делать нельзя (и UpdateOperation остаётся безусловным
+// намеренно): в старых комнатах есть действующие расходы с давно вышедшими
+// участниками, и общий фильтр сделал бы их нередактируемыми.
+func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.M{"_id": hex, "operations._id": o.ID}
+	for k, v := range boundMembersFilter(o) {
+		filter[k] = v
+	}
+	// $[op] вместо позиционного $: в фильтре два массива (users и operations),
+	// и обычный $ берёт индекс совпадения по ПЕРВОМУ из них — обновление молча
+	// уходило бы не в ту операцию. arrayFilters выбирает элемент сам
+	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o)}}
+	opts := options.Update().SetArrayFilters(options.ArrayFilters{
+		Filters: []interface{}{bson.M{"op._id": o.ID}},
+	})
+	res, err := rr.col.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex, "operations._id": o.ID})
+		if cErr != nil {
+			return cErr
+		}
+		if n == 0 {
+			return mongo.ErrNoDocuments
+		}
+		return ErrParticipantLeft
+	}
+	return nil
+}
+
 // ErrParticipantLeft — участник новой операции вышел из комнаты, пока запрос
 // шёл: вставка отменена. Отдельная ошибка, а не ErrNoDocuments, потому что
 // сказать человеку надо разное — «группы нет» и «состав изменился».
 var ErrParticipantLeft = errors.New("operation participant is not a room member")
+
+// boundMembersFilter — условие «все, кого расход связывает, сейчас в комнате».
+// Набор берётся ПОСЛЕ нормализации (api.NormalizedOperation), то есть ровно
+// тот, по которому api.HasOperations не выпускает человека из комнаты:
+// плательщик и текущие доли, а при пустых долях — легаси-получатели.
+//
+// Протухший список recipients при непустых долях НЕ учитывается: бот копирует
+// его при правке и никогда не чистит, из-за чего он держит людей, которых
+// расход давно не касается (см. TestBotLeaveAllowsWhenLegacyRecipientsAreStale).
+// Требуя членства по нему, мы запретили бы активировать правку старого расхода
+// в комнате, откуда такой «получатель» вышел, — то есть чинили бы гонку ценой
+// неработающего редактирования.
+func boundMembersFilter(o *api.Operation) bson.M {
+	if o == nil {
+		return bson.M{}
+	}
+	norm := api.NormalizedOperation(*o)
+	if norm.Status != api.StatusActive {
+		// Черновик и архив никого не связывают — условию нечего проверять
+		return bson.M{}
+	}
+	seen := map[int]bool{}
+	var ids []int
+	add := func(id int) {
+		if id == 0 || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if norm.Donor != nil {
+		add(norm.Donor.ID)
+	}
+	for _, r := range norm.RecipientsWithSum {
+		add(r.User.ID)
+	}
+	if len(ids) == 0 {
+		return bson.M{}
+	}
+	return bson.M{"users._id": bson.M{"$all": ids}}
+}
 
 // operationParticipants — id всех, кого затрагивает операция: плательщик, доли и
 // легаси-получатели. Именно их членство проверяется при вставке.

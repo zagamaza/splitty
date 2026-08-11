@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/rs/zerolog/log"
@@ -100,13 +101,29 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Снимок комнаты для решения о членстве перечитываем ЗАНОВО и ПОСЛЕ чтения
+	// записи отношения. Снимок шага (1) успел устареть на чтение тела запроса
+	// (его темп задаёт клиент) и два запроса в базу, а по нему решается «он уже
+	// участник» — то есть решается судьба записи.
+	//
+	// Этот порядок вместе с условием по created_at (см. reconcileInvite) не даёт
+	// примирению лечь по устаревшим данным: чужая запись между чтением записи и
+	// нашей записью отменяет нашу, а выход, начавшийся после свежего чтения
+	// комнаты, сам вернёт запись в left — он пишет left ДО удаления из комнаты
+	// и переспрашивает состояние после (см. removeMember).
+	room, hErr = s.roomForMember(ctx, roomId, inviterId)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
 	// (3) Уже участник — идемпотентный 200, но с ПРИМИРЕНИЕМ записи. Человек мог
 	// войти сам по ссылке /join/{roomId}, которая про приглашения ничего не
 	// знает: без примирения он остался бы участником со статусом pending
 	// навсегда, и следующее приглашение повело бы себя как для вышедшего.
 	if isRoomMember(room, invitee.ID) {
 		if existing == nil || existing.Status != api.InviteAdded {
-			if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InviteAdded, s.now()); err != nil {
+			if err = s.reconcileInvite(ctx, roomHex, invitee.ID, inviterId, existing); err != nil {
 				log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot reconcile invite")
 				writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
 				return
@@ -217,20 +234,45 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	// вернуть статус обратно в pending: с записью added и без членства человек
 	// упирался бы в not_pending на каждое следующее «Принять» и выбраться сам не
 	// мог — приглашение чинил бы только кто-то другой, позвав его заново.
-	// Откат тоже compare-and-set: если статус за это время увели (второй тап,
-	// «Отклонить»), трогать его не наше дело.
 	if err = s.roomRepo.JoinToRoom(ctx, *user, roomId); err != nil {
 		log.Error().Err(err).Msg("cannot join room on accept")
-		if _, rbErr := s.invites.SetStatusIfCurrent(ctx, invite.RoomID, invite.InviteeID,
-			api.InviteAdded, api.InvitePending, s.now()); rbErr != nil {
-			log.Error().Err(rbErr).Str("room", roomId).Int("invitee", invite.InviteeID).
-				Msg("cannot roll invite back to pending")
-		}
+		s.rollbackAcceptedInvite(ctx, invite)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось войти в группу")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, addMemberResponse{Status: api.InviteAdded})
+}
+
+// rollbackAcceptedInvite возвращает принятое приглашение в pending после сбоя
+// входа в комнату — но только если человека в комнате ДЕЙСТВИТЕЛЬНО нет.
+//
+// Ошибка JoinToRoom не означает, что запись не легла: ответ mongo мог потеряться
+// уже после записи, а параллельно человека мог добавить другой запрос (второй
+// тап, приглашение из бота, вход по ссылке). Откат «вслепую» тогда давал бы
+// участника с приглашением pending: раздел уведомлений показывал бы ему выбор
+// для комнаты, где он состоит, а тап по «Отклонить» записал бы declined
+// участнику — то самое противоречие, ради которого заведён compare-and-set.
+//
+// Сам откат тоже compare-and-set: если статус за это время увели (второй тап,
+// «Отклонить»), трогать его не наше дело. Ошибку чтения комнаты трактуем как
+// «не знаем» и оставляем added: у участника он верен, а не-участника починит
+// повторное приглашение (шаг 4 handleAddMember).
+func (s *Server) rollbackAcceptedInvite(ctx context.Context, invite *api.RoomInvite) {
+	roomId := invite.RoomID.Hex()
+	fresh, err := s.roomRepo.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Str("room", roomId).Msg("cannot re-read room before invite rollback")
+		return
+	}
+	if fresh != nil && isRoomMember(fresh, invite.InviteeID) {
+		return
+	}
+	if _, err := s.invites.SetStatusIfCurrent(ctx, invite.RoomID, invite.InviteeID,
+		api.InviteAdded, api.InvitePending, s.now()); err != nil {
+		log.Error().Err(err).Str("room", roomId).Int("invitee", invite.InviteeID).
+			Msg("cannot roll invite back to pending")
+	}
 }
 
 // handleDeclineInvite POST /api/v1/invites/{roomId}/decline — отказаться.
@@ -439,9 +481,32 @@ func (s *Server) reconcileInviteOnJoin(ctx context.Context, roomID primitive.Obj
 	if err != nil || existing == nil || existing.Status == api.InviteAdded {
 		return
 	}
-	if err = s.invites.Upsert(ctx, roomID, userId, existing.InviterID, api.InviteAdded, s.now()); err != nil {
+	if err = s.reconcileInvite(ctx, roomID, userId, existing.InviterID, existing); err != nil {
 		log.Error().Err(err).Msg("cannot reconcile invite on join")
 	}
+}
+
+// reconcileInvite приводит запись отношения к added для человека, который УЖЕ
+// участник комнаты, — но только если с момента чтения записи её никто не менял.
+//
+// Условие обязательно: примирение опирается на снимок комнаты, а тот стареет.
+// Без него интерлив «A прочитал комнату → человек вышел → его позвали заново
+// (pending) → A дописал added» затирал бы свежее приглашение: карточка с
+// «Принять» исчезала бы, хотя уведомление о ней человеку уже ушло, а возврат
+// записи в left после выхода (см. removeMember) к этому моменту уже отработал
+// и починить состояние было бы некому.
+//
+// «Уступили» и «записали» вызывающему одинаковы, поэтому наружу отдаётся только
+// ошибка: в обоих случаях запись в согласованном состоянии и делать больше
+// нечего.
+func (s *Server) reconcileInvite(ctx context.Context, roomID primitive.ObjectID, inviteeId, inviterId int,
+	existing *api.RoomInvite) error {
+	var since time.Time
+	if existing != nil {
+		since = existing.CreatedAt
+	}
+	_, err := s.invites.UpsertIfUnchanged(ctx, roomID, inviteeId, inviterId, api.InviteAdded, since, s.now())
+	return err
 }
 
 // notifyInvited шлёт уведомление приглашённому в фоне (как остальные

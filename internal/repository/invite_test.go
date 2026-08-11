@@ -243,6 +243,60 @@ func TestInviteConcurrentAcceptDeclineSingleWinner(t *testing.T) {
 	}
 }
 
+// TestInviteUpsertIfUnchanged — примирение записи решает по снимку комнаты, а
+// снимок стареет. Условие по created_at и есть тот номер версии, по которому
+// устаревшее решение отменяется: пока запись та же — пишем, изменилась —
+// уступаем более свежему решению.
+func TestInviteUpsertIfUnchanged(t *testing.T) {
+	repo, room := newInviteRepo(t)
+	ctx := testCtx(t)
+	first := time.Now().Add(-time.Hour).UTC()
+
+	// записи нет: создаём (нулевое since — «мы её не видели»)
+	ok, err := repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, time.Time{}, first)
+	if err != nil || !ok {
+		t.Fatalf("вставка отсутствующей записи: ok=%v err=%v", ok, err)
+	}
+	// повтор со «мы её не видели» не должен затирать уже существующую
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 2, api.InviteDeclined, time.Time{}, first.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("повторная вставка: %v", err)
+	}
+	if ok {
+		t.Fatal("вставка затёрла существующую запись — чужое решение потеряно")
+	}
+
+	got, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if got.Status != api.InviteAdded {
+		t.Fatalf("статус записи %q вместо added", got.Status)
+	}
+
+	// запись не менялась с момента чтения — примирение проходит
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InvitePending, got.CreatedAt, first.Add(time.Minute))
+	if err != nil || !ok {
+		t.Fatalf("запись не менялась, а примирение не прошло: ok=%v err=%v", ok, err)
+	}
+
+	// а с устаревшим since — уже нет: за это время кто-то записал своё решение
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, got.CreatedAt, first.Add(2*time.Minute))
+	if err != nil {
+		t.Fatalf("устаревшее примирение: %v", err)
+	}
+	if ok {
+		t.Fatal("устаревшее примирение затёрло свежее решение")
+	}
+	after, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if after.Status != api.InvitePending {
+		t.Fatalf("итоговый статус %q — свежее решение потеряно", after.Status)
+	}
+}
+
 // TestInviteDeleteByUserIdCleansBothSides — при удалении аккаунта обязаны
 // исчезнуть и приглашения К человеку, и приглашения ОТ него: inviter_id это
 // тоже его id, и оставлять его в базе после удаления нельзя.
