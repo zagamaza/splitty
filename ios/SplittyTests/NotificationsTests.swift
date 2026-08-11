@@ -508,3 +508,44 @@ final class InviteCardTitleTests: XCTestCase {
                        "Аня добавил вас в группу «Дача»")
     }
 }
+
+/// Пустое состояние ленты «Активность»/«Уведомления».
+///
+/// Оверлей проверял только операции и накрывал карточки приглашений: человека
+/// позвали, у него ещё ничего нет — и ровно в этот момент вместо кнопок
+/// «Принять»/«Отклонить» он видел «Пока нет активности». Это головной сценарий
+/// раздела, а не край.
+final class ActivityEmptyStateTests: XCTestCase {
+    private func invite() -> InviteCard {
+        InviteCard(roomId: "r1", roomName: "Дача", inviterName: "Аня",
+                   status: .pending, createdAt: Date(timeIntervalSince1970: 0))
+    }
+
+    /// Строки ленты берём из той же фикстуры, что и остальные тесты раздела:
+    /// собирать ActivityItem руками значило бы городить второй разбор ответа.
+    private func items() async throws -> [ActivityItem] {
+        StubURLProtocol.handler = { _ in (200, Data(feedJSON.utf8)) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(
+            baseURL: URL(string: "https://api.example.test"),
+            token: "jwt",
+            urlSession: URLSession(configuration: configuration)
+        )
+        return try await client.notificationFeed(limit: 30, offset: 0).items
+    }
+
+    func testEmptyOnlyWhenNothingToShow() {
+        XCTAssertTrue(activityFeedIsEmpty(items: [], invites: []))
+    }
+
+    func testInviteAloneIsNotEmpty() {
+        XCTAssertFalse(activityFeedIsEmpty(items: [], invites: [invite()]),
+                       "карточка приглашения накрыта пустым состоянием — согласиться или отказаться нечем")
+    }
+
+    func testOperationsAloneAreNotEmpty() async throws {
+        let feedItems = try await items()
+        XCTAssertFalse(activityFeedIsEmpty(items: feedItems, invites: []))
+    }
+}

@@ -615,6 +615,15 @@ type fakeRoomRepo struct {
 	// onFindRooms вызывается в начале FindRoomsByUserId — позволяет засечь
 	// момент чтения ленты относительно остальных шагов хендлера
 	onFindRooms func()
+	// beforeLeave вызывается в начале LeaveRoom, до условий членства и расходов —
+	// симулирует запись, легшую между проверками хендлера и самим выходом
+	beforeLeave func(roomId string)
+	// beforeCreate вызывается в начале CreateOperation, до условия на состав —
+	// симулирует выход участника между валидацией хендлера и вставкой расхода
+	beforeCreate func(roomId string)
+	// joinErr — сбой JoinToRoom: проверяем, что принятое приглашение, не
+	// доведённое до членства, не запирает человека в статусе added
+	joinErr error
 }
 
 func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
@@ -643,6 +652,9 @@ func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error)
 }
 
 func (f *fakeRoomRepo) JoinToRoom(_ context.Context, u api.User, roomId string) error {
+	if f.joinErr != nil {
+		return f.joinErr
+	}
 	room, ok := f.rooms[roomId]
 	if !ok {
 		return mongo.ErrNoDocuments
@@ -656,12 +668,22 @@ func (f *fakeRoomRepo) JoinToRoom(_ context.Context, u api.User, roomId string) 
 }
 
 // LeaveRoom повторяет семантику mongo-реализации: false, если пользователя в
-// комнате не было (условие членства стоит в фильтре, а не в отдельном чтении),
-// плюс чистка room_states — иначе вернувшийся увидел бы комнату «в архиве».
+// комнате не было ИЛИ на нём висит действующий расход (оба условия стоят в
+// фильтре, а не в отдельном чтении), плюс чистка room_states — иначе
+// вернувшийся увидел бы комнату «в архиве».
 func (f *fakeRoomRepo) LeaveRoom(_ context.Context, userId int, roomId string) (bool, error) {
+	if f.beforeLeave != nil {
+		f.beforeLeave(roomId)
+	}
 	room, ok := f.rooms[roomId]
 	if !ok {
 		return false, mongo.ErrNoDocuments
+	}
+	// Условие расходов в фильтре mongo уже правила api.HasOperations (см.
+	// activeOperationOf), но всё, что ловит фильтр, ловит и оно: для фейка этой
+	// стороны достаточно, легаси до записи не доходит — его отсекает хендлер.
+	if api.HasOperations(room, userId) {
+		return false, nil
 	}
 	var (
 		members []api.User
@@ -769,11 +791,19 @@ func (f *fakeRoomRepo) UpdateOperation(_ context.Context, o *api.Operation, room
 }
 
 // CreateOperation как mongo-реализация: $push новой операции,
-// mongo.ErrNoDocuments если комнаты нет
+// mongo.ErrNoDocuments если комнаты нет, repository.ErrParticipantLeft если
+// кто-то из участников операции успел выйти (условие стоит в фильтре вставки)
 func (f *fakeRoomRepo) CreateOperation(_ context.Context, o *api.Operation, roomId string) error {
+	if hook := f.beforeCreate; hook != nil {
+		f.beforeCreate = nil
+		hook(roomId)
+	}
 	room, ok := f.rooms[roomId]
 	if !ok {
 		return mongo.ErrNoDocuments
+	}
+	if !allParticipantsAreMembers(room, o) {
+		return repository.ErrParticipantLeft
 	}
 	ops := append(roomOperations(room), *o)
 	room.Operations = &ops
@@ -800,9 +830,28 @@ func (f *fakeRoomRepo) CreateOperationIfAbsent(_ context.Context, o *api.Operati
 			return false, nil
 		}
 	}
+	if !allParticipantsAreMembers(room, o) {
+		return false, repository.ErrParticipantLeft
+	}
 	ops := append(roomOperations(room), *o)
 	room.Operations = &ops
 	return true, nil
+}
+
+// allParticipantsAreMembers — то же условие, что стоит в фильтре вставки
+// (repository.membersFilter): плательщик и получатели новой операции обязаны
+// быть участниками комнаты В МОМЕНТ ЗАПИСИ, иначе долг ложится на того, кто
+// комнату уже не видит.
+func allParticipantsAreMembers(room *api.Room, o *api.Operation) bool {
+	if o.Donor != nil && !isRoomMember(room, o.Donor.ID) {
+		return false
+	}
+	for _, r := range o.RecipientsWithSum {
+		if !isRoomMember(room, r.User.ID) {
+			return false
+		}
+	}
+	return true
 }
 
 func (f *fakeRoomRepo) DeleteOperation(_ context.Context, roomId string, operationId primitive.ObjectID) error {

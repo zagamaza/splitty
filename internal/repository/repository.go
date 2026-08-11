@@ -403,16 +403,16 @@ func sanitizeRoom(r *api.Room) *api.Room {
 // int, и без чистки вернувшийся по повторному приглашению увидел бы комнату
 // сразу «в архиве» у себя, а погашенные долги — помеченными.
 //
-// ВАЖНО: проверку «есть ли на человеке операции» этот метод НЕ делает — она
-// живёт в rest на нормализованной комнате. Выразить её фильтром mongo нельзя:
-// у легаси-операций recipients_with_sum в базе отсутствует и синтезируется в
-// памяти (см. normalizedOperation), поэтому фильтр пропустил бы старые долги.
+// ВАЖНО: полное правило «есть ли на человеке операции» этот метод НЕ повторяет —
+// оно живёт в rest/боте на нормализованной комнате (api.HasOperations). Здесь
+// стоит лишь его УЗКАЯ часть (activeOperationOf), закрывающая гонку записи;
+// см. комментарий у activeOperationOf.
 func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId string) (bool, error) {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return false, err
 	}
-	filter := bson.M{"_id": hex, "users._id": userId}
+	filter := bson.M{"_id": hex, "users._id": userId, "operations": bson.M{"$not": activeOperationOf(userId)}}
 	update := bson.M{
 		"$pull": bson.M{
 			"users":                              bson.M{"_id": userId},
@@ -426,6 +426,42 @@ func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId 
 		return false, err
 	}
 	return res.MatchedCount > 0, nil
+}
+
+// activeOperationOf — $elemMatch «в комнате есть действующий расход этого
+// человека». Стоит в фильтре LeaveRoom, потому что users[] и operations[] лежат
+// в ОДНОМ документе комнаты: mongo применяет условие и $pull одной операцией,
+// и расход, заведённый на выходящего между проверкой в rest и этой записью, не
+// проскочит. Без него уход стирал бы долг ровно так, как запрещает правило
+// «пока на человеке висят расходы, убрать его нельзя»: человек уже не участник,
+// комнату не видит, а убрать себя из расхода некому.
+//
+// Фильтр НАМЕРЕННО уже правила api.HasOperations и не пытается быть его второй
+// копией:
+//   - только status == active. Легаси эпохи master-2021 (status в базе нет,
+//     доли синтезируются в памяти) он не видит — и не должен: такие операции
+//     существуют на момент чтения комнаты и отсекаются проверкой в rest/боте,
+//     а гонка возможна лишь с НОВОЙ записью, а её оба пути пишут со status;
+//   - донора держит только расход с получателями — как в NormalizedOperation,
+//     где активная операция без долей понижается до драфта. Иначе брошенный
+//     драфт бота снова запирал бы человека в комнате навсегда.
+//
+// Расхождение поэтому одностороннее: всё, что ловит фильтр, поймала бы и
+// проверка в памяти, а значит matched==0 не может отказать в законном выходе.
+func activeOperationOf(userId int) bson.M {
+	return bson.M{"$elemMatch": bson.M{
+		"status": api.StatusActive,
+		"$or": bson.A{
+			bson.M{"recipients_with_sum.user._id": userId},
+			bson.M{"$and": bson.A{
+				bson.M{"donor._id": userId},
+				bson.M{"$or": bson.A{
+					bson.M{"recipients_with_sum.0": bson.M{"$exists": true}},
+					bson.M{"recipients.0": bson.M{"$exists": true}},
+				}},
+			}},
+		},
+	}}
 }
 
 func (rr MongoRoomRepository) SaveRoom(ctx context.Context, r *api.Room) (primitive.ObjectID, error) {
@@ -611,20 +647,80 @@ func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operat
 	return nil
 }
 
+// ErrParticipantLeft — участник новой операции вышел из комнаты, пока запрос
+// шёл: вставка отменена. Отдельная ошибка, а не ErrNoDocuments, потому что
+// сказать человеку надо разное — «группы нет» и «состав изменился».
+var ErrParticipantLeft = errors.New("operation participant is not a room member")
+
+// operationParticipants — id всех, кого затрагивает операция: плательщик, доли и
+// легаси-получатели. Именно их членство проверяется при вставке.
+func operationParticipants(o *api.Operation) []int {
+	seen := map[int]bool{}
+	var ids []int
+	add := func(id int) {
+		if id == 0 || seen[id] {
+			return
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	if o.Donor != nil {
+		add(o.Donor.ID)
+	}
+	for _, r := range o.RecipientsWithSum {
+		add(r.User.ID)
+	}
+	if o.Recipients != nil {
+		for _, r := range *o.Recipients {
+			add(r.ID)
+		}
+	}
+	return ids
+}
+
+// membersFilter — условие «все эти люди сейчас участники комнаты». Вторая
+// половина защиты от гонки «выход × расход» (первая — в LeaveRoom): rest
+// проверяет членство по прочитанному снимку, а между чтением и вставкой человек
+// успевает выйти, и долг ложится на того, кто комнату уже не видит.
+//
+// Стоит только на СОЗДАНИИ операции: у новой записи состав участников только
+// что проверен по комнате, поэтому отказ означает ровно гонку. На правке такого
+// условия нет намеренно — в старых комнатах есть операции с давно вышедшими
+// участниками, и фильтр сделал бы их нередактируемыми (бот, добавляя фото,
+// переписывает операцию целиком, состав не трогая).
+func membersFilter(o *api.Operation) bson.M {
+	ids := operationParticipants(o)
+	if len(ids) == 0 {
+		return bson.M{}
+	}
+	return bson.M{"users._id": bson.M{"$all": ids}}
+}
+
 // CreateOperation добавляет новую операцию одним $push (операции всегда создаются
-// с новым ObjectID, прежний $pull был no-op). MatchedCount == 0 (комнаты нет) —
-// mongo.ErrNoDocuments вместо прежнего молчаливого успеха
+// с новым ObjectID, прежний $pull был no-op). MatchedCount == 0 — комнаты нет
+// (mongo.ErrNoDocuments) или участник операции успел выйти (ErrParticipantLeft)
 func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operation, roomId string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
-	res, err := rr.col.UpdateOne(ctx, bson.M{"_id": hex}, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
+	filter := bson.M{"_id": hex}
+	for k, v := range membersFilter(o) {
+		filter[k] = v
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return err
 	}
 	if res.MatchedCount == 0 {
-		return mongo.ErrNoDocuments
+		n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex})
+		if cErr != nil {
+			return cErr
+		}
+		if n == 0 {
+			return mongo.ErrNoDocuments
+		}
+		return ErrParticipantLeft
 	}
 	return nil
 }
@@ -633,9 +729,10 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 // client_op_id: один UpdateOne с фильтром {_id, "operations.client_op_id": {$ne: id}}
 // — $push выполняется, только если ни одна операция комнаты не несёт этот ключ,
 // проверка и вставка атомарны (конкурентные повторы не создают дубль).
-// MatchedCount == 0 означает «комнаты нет» ЛИБО «дубль уже есть» — различаем
-// дополнительным CountDocuments по _id: комнаты нет — mongo.ErrNoDocuments,
-// комната есть — (false, nil), существующую операцию вычитывает вызывающий
+// MatchedCount == 0 означает «комнаты нет», «дубль уже есть» ЛИБО «участник
+// операции вышел» (см. membersFilter) — различаем дополнительным чтением:
+// комнаты нет — mongo.ErrNoDocuments, дубль есть — (false, nil) и существующую
+// операцию вычитывает вызывающий, иначе — ErrParticipantLeft
 func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *api.Operation, roomId string) (bool, error) {
 	if o.ClientOpId == "" {
 		return false, errors.New("client_op_id must not be empty")
@@ -645,6 +742,9 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 		return false, err
 	}
 	filter := bson.M{"_id": hex, "operations.client_op_id": bson.M{"$ne": o.ClientOpId}}
+	for k, v := range membersFilter(o) {
+		filter[k] = v
+	}
 	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return false, err
@@ -659,7 +759,17 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	if n == 0 {
 		return false, mongo.ErrNoDocuments
 	}
-	return false, nil
+	// Комната есть: либо повтор с тем же ключом (тогда идемпотентный ответ),
+	// либо участник вышел — состав важнее, чем ключ, но проверять его надо
+	// вторым: повтор из outbox приходит и после чужого выхода.
+	dup, err := rr.col.CountDocuments(ctx, bson.M{"_id": hex, "operations.client_op_id": o.ClientOpId})
+	if err != nil {
+		return false, err
+	}
+	if dup > 0 {
+		return false, nil
+	}
+	return false, ErrParticipantLeft
 }
 
 func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error {

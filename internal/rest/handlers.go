@@ -688,6 +688,13 @@ func findOperationByClientOpId(room *api.Room, clientOpId string) *api.Operation
 	return nil
 }
 
+// errParticipantLeft — состав комнаты изменился, пока запрос шёл: кого-то из
+// участников операции успели убрать (см. repository.ErrParticipantLeft).
+// Отдельный ответ, а не 404 «комната не найдена»: чинится он по-другому —
+// обновить группу и пересобрать расход.
+var errParticipantLeft = &httpError{http.StatusConflict, "conflict",
+	"Состав группы изменился: участник вышел. Обновите группу и повторите"}
+
 // createOperationIdempotent вставляет операцию с непустым ClientOpId ровно один раз:
 // атомарный CreateOperationIfAbsent (проверка дубля + $push одним UpdateOne), при
 // дубле — перечитывает комнату и возвращает существующую операцию (created=false).
@@ -698,6 +705,9 @@ func (s *Server) createOperationIdempotent(ctx context.Context, operation *api.O
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return nil, false, &httpError{http.StatusNotFound, "not_found", "комната не найдена"}
+			}
+			if errors.Is(err, repository.ErrParticipantLeft) {
+				return nil, false, errParticipantLeft
 			}
 			log.Error().Err(err).Msg("create operation failed")
 			return nil, false, &httpError{http.StatusInternalServerError, "internal", "не удалось сохранить операцию"}
@@ -831,6 +841,10 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 	if err := s.operationSrv.CreateOperation(ctx, operation, roomId); err != nil {
 		if err == mongo.ErrNoDocuments {
 			writeError(w, http.StatusNotFound, "not_found", "комната не найдена")
+			return
+		}
+		if errors.Is(err, repository.ErrParticipantLeft) {
+			errParticipantLeft.write(w)
 			return
 		}
 		log.Error().Err(err).Msg("create operation failed")
@@ -1107,6 +1121,10 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 	} else if err := s.operationSrv.CreateOperation(ctx, operation, roomId); err != nil {
 		if err == mongo.ErrNoDocuments {
 			writeError(w, http.StatusNotFound, "not_found", "комната не найдена")
+			return
+		}
+		if errors.Is(err, repository.ErrParticipantLeft) {
+			errParticipantLeft.write(w)
 			return
 		}
 		log.Error().Err(err).Msg("create operation failed")

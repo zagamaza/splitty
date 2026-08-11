@@ -131,7 +131,7 @@ struct ActivityView: View {
         // она выступает над таб-баром и перекрывала бы последнюю строку.
         .contentMargins(.bottom, 40, for: .scrollContent)
         .overlay {
-            if displayItems.isEmpty {
+            if activityFeedIsEmpty(items: displayItems, invites: model.invites) {
                 ContentUnavailableView {
                     Label(
                         model.isMineOnly ? "Нет операций с вами" : "Пока нет активности",
@@ -271,6 +271,14 @@ private struct ActivityRow: View {
 
 
 // MARK: - Карточка приглашения
+
+/// Пусто ли на экране. Карточки приглашений — тоже содержимое: типовой первый
+/// экран новичка это одно приглашение и ни одной операции, и оверлей «Пока нет
+/// активности» ложился бы поверх карточек, пряча кнопки «Принять»/«Отклонить» —
+/// то есть весь смысл раздела. Паритет с Android (ActivityScreen.kt).
+func activityFeedIsEmpty(items: [ActivityItem], invites: [InviteCard]) -> Bool {
+    items.isEmpty && invites.isEmpty
+}
 
 /// Заголовок карточки приглашения.
 ///

@@ -455,7 +455,9 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 	// месте, и шаг (3) handleAddMember вернёт запись в added.
 	// Не-участнику не пишем ничего: left тому, кто не выходил, погнал бы его
 	// следующее приглашение через лишний pending.
-	if containsUserId(room.Members, userID) {
+	var roomHex primitive.ObjectID
+	wasMember := containsUserId(room.Members, userID)
+	if wasMember {
 		// Последнего участника не выпускаем — паритет с REST (409 last_member):
 		// комната осталась бы бесхозной, а удаления комнаты нет ни там, ни тут.
 		if len(*room.Members) <= 1 {
@@ -473,7 +475,8 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 			log.Error().Msg("invite store is not wired, cannot mark invite as left")
 			return
 		}
-		roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId)
+		var hexErr error
+		roomHex, hexErr = primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId)
 		if hexErr != nil {
 			log.Error().Err(hexErr).Str("room", u.Button.CallbackData.RoomId).Msg("bad room id")
 			return
@@ -484,9 +487,32 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 		}
 	}
 
-	if _, err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId); err != nil {
+	left, err := bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
+	if err != nil {
 		log.Error().Err(err).Msg("leave room failed")
 		return
+	}
+	// matched==0 — либо человека в комнате уже нет (выход состоялся), либо фильтр
+	// LeaveRoom увидел активный расход: его завели на выходящего между проверкой
+	// выше и записью. Второй случай обязан ответить тем же, чем ответила бы
+	// проверка, — иначе бот отрапортовал бы о выходе, которого не было.
+	if !left && wasMember {
+		if fresh, fErr := bot.rs.FindById(ctx, u.Button.CallbackData.RoomId); fErr == nil &&
+			fresh != nil && containsUserId(fresh.Members, userID) {
+			callback := createCallback(u, I18n(u.User, "msg_you_can_not_leave"), true)
+			return api.TelegramMessage{
+				CallbackConfig: callback,
+				Send:           true,
+			}
+		}
+	}
+	// Человека в комнате точно нет: если конкурентное примирение в REST (шаг (3)
+	// handleAddMember) успело записать added по устаревшему снимку комнаты,
+	// возвращаем left — иначе следующее приглашение вернуло бы его молча.
+	if wasMember {
+		if _, invErr := bot.is.SetStatusIfCurrent(ctx, roomHex, userID, api.InviteAdded, api.InviteLeft, time.Now()); invErr != nil {
+			log.Error().Err(invErr).Msg("re-assert invite as left failed")
+		}
 	}
 	u.Button = api.NewButton(viewStart, u.Button.CallbackData)
 	callback := createCallback(u, I18n(u.User, "msg_you_left"), true)

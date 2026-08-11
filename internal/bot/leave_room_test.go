@@ -65,6 +65,12 @@ type recordingInvites struct {
 	records []leftRecord
 	// err — сбой записи: проверяем, что без следа отношения выхода не будет
 	err error
+	// status — текущее состояние записи, из которого исходит compare-and-set.
+	// Тесты подменяют его на added: так выглядит запись, которую конкурентное
+	// примирение в REST записало по устаревшему снимку комнаты
+	status api.InviteStatus
+	// reasserts — попытки вернуть запись в left уже ПОСЛЕ выхода
+	reasserts []leftRecord
 }
 
 func (r *recordingInvites) Upsert(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
@@ -74,6 +80,19 @@ func (r *recordingInvites) Upsert(_ context.Context, roomID primitive.ObjectID, 
 	}
 	r.records = append(r.records, leftRecord{roomID, inviteeID, inviterID, status})
 	return nil
+}
+
+func (r *recordingInvites) SetStatusIfCurrent(_ context.Context, roomID primitive.ObjectID, inviteeID int,
+	from, to api.InviteStatus, _ time.Time) (bool, error) {
+	r.reasserts = append(r.reasserts, leftRecord{roomID, inviteeID, inviteeID, to})
+	if r.err != nil {
+		return false, r.err
+	}
+	if r.status != from {
+		return false, nil
+	}
+	r.status = to
+	return true, nil
 }
 
 // wroteLeft — ровно одна запись left про этого человека в этой комнате.
@@ -339,5 +358,66 @@ func TestBotLeaveBadRoomIdKeepsMembership(t *testing.T) {
 	}
 	if len(invites.records) != 0 {
 		t.Fatalf("записей отношения быть не должно: %+v", invites.records)
+	}
+}
+
+// TestBotLeaveReassertsLeftAfterConcurrentAdded — примирение записи в REST
+// (шаг (3) handleAddMember) читает комнату РАНЬШЕ выхода и может записать added
+// уже после нашего left. Осталось бы «в комнате нет, а приглашение added», и
+// следующее приглашение вернуло бы человека молча, мимо согласия. Поэтому после
+// выхода запись возвращается в left compare-and-set'ом.
+func TestBotLeaveReassertsLeftAfterConcurrentAdded(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+	// запись, которую конкурентное примирение увело в added по устаревшему снимку
+	invites.status = api.InviteAdded
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 1 {
+		t.Fatalf("выход не состоялся, вызовов LeaveRoom: %d", rs.calls)
+	}
+	if len(invites.reasserts) != 1 {
+		t.Fatalf("после выхода запись не проверялась на added: %+v", invites.reasserts)
+	}
+	got := invites.reasserts[0]
+	if got.roomID != r.ID || got.inviteeID != 2 || got.status != api.InviteLeft {
+		t.Fatalf("проверка ушла не туда: %+v", got)
+	}
+	if invites.status != api.InviteLeft {
+		t.Fatalf("запись осталась в %q — человек вне комнаты с приглашением added", invites.status)
+	}
+}
+
+// TestBotLeaveBlockedWhenOperationLandsDuringLeave — расход на выходящего могли
+// завести уже ПОСЛЕ проверки api.HasOperations: его ловит фильтр LeaveRoom, и
+// matched==0 при сохранившемся членстве означает не выход, а отказ. Бот обязан
+// сказать то же, что сказала бы проверка, иначе отрапортует о выходе, которого
+// не было.
+func TestBotLeaveBlockedWhenOperationLandsDuringLeave(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{}}
+	// членство в комнате есть, а LeaveRoom не сработал — так выглядит фильтр,
+	// увидевший расход, которого не было в прочитанном снимке
+	rs := &leaveRoomService{room: r, members: map[int]bool{1: true}}
+	invites := &recordingInvites{}
+	h := NewSelectedLeaveRoom(nil, nil, rs, invites, nil, &Config{})
+
+	resp := h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if resp.CallbackConfig == nil {
+		t.Fatal("отказ выхода без ответа человеку")
+	}
+	if resp.CallbackConfig.Text != I18n(&api.User{ID: 2}, "msg_you_can_not_leave") {
+		t.Fatalf("человеку сообщили %q вместо отказа по расходам", resp.CallbackConfig.Text)
+	}
+	if resp.Redirect != nil {
+		t.Fatal("бот увёл человека на стартовый экран, будто выход состоялся")
+	}
+	if len(invites.reasserts) != 0 {
+		t.Fatalf("отказанный выход не должен трогать запись: %+v", invites.reasserts)
 	}
 }

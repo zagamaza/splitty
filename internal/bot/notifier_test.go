@@ -168,3 +168,68 @@ func TestNotifierUsesCanonicalNotifyPrefs(t *testing.T) {
 		t.Fatalf("уведомления выключены в профиле, но отправлено %d сообщений", len(tg.sent))
 	}
 }
+
+// captureOperationService запоминает список notification_sent, ушедший в базу.
+type captureOperationService struct {
+	OperationService
+	sent []int
+}
+
+func (c *captureOperationService) UpdateOperation(context.Context, *api.Operation, string) error {
+	return nil
+}
+
+func (c *captureOperationService) SetNotificationSent(_ context.Context, _ string, _ primitive.ObjectID, sent []int) error {
+	c.sent = sent
+	return nil
+}
+
+// TestNotifierRecordsAddresseesRegardlessOfDelivery — notification_sent это
+// АДРЕСАТЫ события, а не отчёт о доставке, и гейты каналов его не сужают.
+//
+// Список — источник правды для счётчика непрочитанного (rest.notifiesUser), а
+// раздел «Уведомления» это входящие в приложении, а не третий канал доставки.
+// Записывай мы только доставленное — человек, отказавший приложению в push и не
+// имеющий telegram (обычный вход через Google/Apple), выпадал бы из списка при
+// НЕПУСТОМ списке остальных, то есть бейдж у него не поднялся бы никогда. Плюс
+// правило разошлось бы с фоллбэком по долям, который никаких гейтов не знает:
+// один и тот же расход считался бы непрочитанным или нет в зависимости от того,
+// завели его в приложении или в боте.
+func TestNotifierRecordsAddresseesRegardlessOfDelivery(t *testing.T) {
+	loadLang(t)
+	off := false
+	silent := &api.User{ID: 3, DisplayName: "Гость", NotificationOn: &off}
+	finder := stubUserFinder{users: map[int]*api.User{
+		1: tgUser(1, 1001, "Автор"),
+		2: tgUser(2, 1002, "Плательщик"),
+		3: silent, // ни telegram, ни push: уведомления выключены целиком
+	}}
+	tg := &captureSender{}
+	ops := &captureOperationService{}
+	n := NewNotifier(tg, ops, noopButtonService{}, finder, push.NoopSender{})
+
+	author := api.User{ID: 1, DisplayName: "Автор"}
+	donor := &api.User{ID: 2, DisplayName: "Плательщик"}
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor:             donor,
+		RecipientsWithSum: []api.RecipientWithSum{{User: *silent, Sum: 50}},
+	}
+
+	n.NotifyOperationCreated(context.Background(), room(), op, author)
+
+	var recorded bool
+	for _, id := range ops.sent {
+		if id == silent.ID {
+			recorded = true
+		}
+	}
+	if !recorded {
+		t.Fatalf("получатель с выключенными уведомлениями выпал из notification_sent (%v) — бейдж у него не поднимется никогда", ops.sent)
+	}
+	for _, text := range tg.texts() {
+		if strings.Contains(text, "Гость") {
+			t.Fatalf("человеку с выключенными уведомлениями ушло сообщение: %q", text)
+		}
+	}
+}

@@ -100,9 +100,17 @@ func (n *Notifier) allowsTelegram(cu *canonicalUsers, u *api.User, category api.
 
 // NotifyOperationCreated — паритет с OperationAdded.notificationWhenCreateOperation:
 // если плательщик не автор — ему уходит scrn_notification_payer_changed; каждому
-// получателю (кроме автора, ещё не уведомлённых, с включёнными уведомлениями и
-// ненулевой долей) — scrn_notification_operation_added. Уведомлённые помечаются
-// в NotificationSent и персистятся, как у бота
+// получателю с ненулевой долей (кроме автора и уже уведомлённых) —
+// scrn_notification_operation_added.
+//
+// NotificationSent пополняется ДО гейтов каналов — намеренно. Список означает
+// «кому это событие адресовано», а не «что доставлено»: по нему считается
+// непрочитанное в разделе «Уведомления» (rest.notifiesUser), а раздел — входящие
+// в приложении, а не третий канал доставки. Записывай мы только доставленное,
+// человек без push-разрешения и без telegram (обычный вход через Google/Apple)
+// выпадал бы из НЕПУСТОГО списка — и бейдж у него не поднялся бы никогда; заодно
+// правило разошлось бы с фоллбэком по долям, который гейтов не знает вовсе.
+// Пинается тестом TestNotifierRecordsAddresseesRegardlessOfDelivery
 func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op api.Operation, author api.User) {
 	if op.Donor == nil {
 		return

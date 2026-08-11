@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -463,5 +464,33 @@ func TestJoinByLinkReconcilesPendingInvite(t *testing.T) {
 	}
 	if inv.Status != api.InviteAdded {
 		t.Fatalf("после входа по ссылке запись осталась %q вместо added", inv.Status)
+	}
+}
+
+// TestAcceptInviteRollsBackWhenJoinFails — статус переводится в added ДО входа
+// в комнату (compare-and-set решает гонку accept/decline). Если вход упал,
+// оставить added нельзя: pendingInvite отвечал бы на каждое следующее «Принять»
+// 409 not_pending, и выбраться из этого человек сам не мог — приглашение чинил
+// бы только кто-то другой, позвав его заново.
+func TestAcceptInviteRollsBackWhenJoinFails(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	f.roomRepo.joinErr = errors.New("mongo недоступна")
+
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusInternalServerError {
+		t.Fatalf("сбой входа в комнату обязан отдавать 500, получен %d", code)
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil || inv.Status != api.InvitePending {
+		t.Fatalf("после несостоявшегося входа статус %+v (%v), а не pending", inv, err)
+	}
+
+	// повтор обязан пройти: ради этого откат и делается
+	f.roomRepo.joinErr = nil
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusOK {
+		t.Fatalf("повторное «Принять» после сбоя отклонено: %d", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("человек так и не стал участником")
 	}
 }

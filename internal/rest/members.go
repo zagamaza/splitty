@@ -213,11 +213,19 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// JoinToRoom идемпотентен, поэтому ретрай безопасен. Если он всё же упадёт,
-	// останется запись added без членства — её чинит повторное приглашение:
-	// оно пойдёт по шагу (5) handleAddMember, потому что человек не участник.
+	// JoinToRoom идемпотентен, поэтому ретрай безопасен. А вот его сбой обязан
+	// вернуть статус обратно в pending: с записью added и без членства человек
+	// упирался бы в not_pending на каждое следующее «Принять» и выбраться сам не
+	// мог — приглашение чинил бы только кто-то другой, позвав его заново.
+	// Откат тоже compare-and-set: если статус за это время увели (второй тап,
+	// «Отклонить»), трогать его не наше дело.
 	if err = s.roomRepo.JoinToRoom(ctx, *user, roomId); err != nil {
 		log.Error().Err(err).Msg("cannot join room on accept")
+		if _, rbErr := s.invites.SetStatusIfCurrent(ctx, invite.RoomID, invite.InviteeID,
+			api.InviteAdded, api.InvitePending, s.now()); rbErr != nil {
+			log.Error().Err(rbErr).Str("room", roomId).Int("invitee", invite.InviteeID).
+				Msg("cannot roll invite back to pending")
+		}
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось войти в группу")
 		return
 	}
@@ -326,17 +334,12 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	}
 
 	// Проверка на НОРМАЛИЗОВАННОЙ комнате: у легаси-операций recipients_with_sum
-	// в базе нет, доли синтезируются в памяти (normalizedOperation). Фильтром
-	// mongo это не выразить, поэтому решение принимается здесь.
-	// Тексты ниже — запасные: оба клиента перехватывают отказ по КОДУ и рисуют
-	// свою локализованную строку (message сервера всегда по-русски). Держать их
-	// дословно синхронными с клиентскими не нужно, синхронизировать надо код.
+	// в базе нет, доли синтезируются в памяти (normalizedOperation). Полным
+	// фильтром mongo это не выразить, поэтому решение принимается здесь — а от
+	// расхода, заведённого уже ПОСЛЕ этой проверки, страхует узкий фильтр в
+	// LeaveRoom (см. ветку !left ниже).
 	if api.HasOperations(room, targetId) {
-		msg := "На вас записаны расходы. Уберите себя из них — или, если вы плательщик, смените плательщика либо удалите расход. После этого сможете выйти"
-		if !isSelf {
-			msg = "На участнике записаны расходы. Уберите его из них — или, если он плательщик, смените плательщика либо удалите расход. После этого сможете его убрать"
-		}
-		writeError(w, http.StatusConflict, "has_operations", msg)
+		writeError(w, http.StatusConflict, "has_operations", hasOperationsMessage(isSelf))
 		return
 	}
 
@@ -374,15 +377,49 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 		return
 	}
 
-	// Результат (matched) не смотрим: гонку с параллельным выходом трактуем как
-	// успех — состояние уже такое, каким его хотел видеть вызывающий.
-	if _, err := s.roomRepo.LeaveRoom(ctx, targetId, roomId); err != nil {
+	left, err := s.roomRepo.LeaveRoom(ctx, targetId, roomId)
+	if err != nil {
 		log.Error().Err(err).Msg("cannot leave room")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
 		return
 	}
+	if !left {
+		// matched==0 значит либо «человека в комнате уже нет» (гонка двух
+		// выходов — это успех, состояние такое, каким его хотел видеть
+		// вызывающий), либо «фильтр LeaveRoom увидел активный расход»: его
+		// завели на человека между проверкой выше и записью. Различаем свежим
+		// чтением комнаты — иначе второй случай отдавался бы как успешный выход,
+		// а человек оставался бы участником с долгом.
+		fresh, fErr := s.roomRepo.FindById(ctx, roomId)
+		if fErr == nil && fresh != nil && isRoomMember(fresh, targetId) {
+			// Запись left при этом остаётся — тот же безвредный «лишний left»,
+			// что и при сбое выхода: участник на месте, и шаг (3) вернёт её в added.
+			writeError(w, http.StatusConflict, "has_operations", hasOperationsMessage(isSelf))
+			return
+		}
+	}
+
+	// Человека в комнате точно нет — самое время исправить запись, если её увёл
+	// в added конкурентный шаг (3) handleAddMember по УСТАРЕВШЕМУ снимку комнаты
+	// (на момент его чтения человек ещё был участником). Иначе получалось бы
+	// «не в комнате, но приглашение added», и следующее приглашение вернуло бы
+	// человека молча, мимо согласия. pending и declined не трогаем: для
+	// не-участника они верны — его как раз позвали обратно или он отказался.
+	if _, err := s.invites.SetStatusIfCurrent(ctx, roomHex, targetId, api.InviteAdded, api.InviteLeft, s.now()); err != nil {
+		log.Error().Err(err).Str("room", roomId).Int("member", targetId).Msg("cannot re-assert invite as left")
+	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// hasOperationsMessage запасной текст отказа «на человеке висят расходы»: оба
+// клиента перехватывают отказ по КОДУ и рисуют свою локализованную строку
+// (message сервера всегда по-русски). Синхронизировать надо код, не формулировку.
+func hasOperationsMessage(isSelf bool) string {
+	if isSelf {
+		return "На вас записаны расходы. Уберите себя из них — или, если вы плательщик, смените плательщика либо удалите расход. После этого сможете выйти"
+	}
+	return "На участнике записаны расходы. Уберите его из них — или, если он плательщик, смените плательщика либо удалите расход. После этого сможете его убрать"
 }
 
 // reconcileInviteOnJoin приводит запись отношения к added, когда человек вошёл

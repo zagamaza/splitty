@@ -15,9 +15,10 @@ import (
 
 // leaveFixture — комната с тремя участниками без операций.
 type leaveFixture struct {
-	srv     *Server
-	invites *fakeInviteStore
-	room    *api.Room
+	srv      *Server
+	invites  *fakeInviteStore
+	room     *api.Room
+	roomRepo *fakeRoomRepo
 }
 
 func newLeaveFixture(t *testing.T, ops ...api.Operation) *leaveFixture {
@@ -33,7 +34,7 @@ func newLeaveFixture(t *testing.T, ops ...api.Operation) *leaveFixture {
 	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), roomRepo)
 	invites := newFakeInviteStore()
 	srv.SetInvites(invites)
-	return &leaveFixture{srv: srv, invites: invites, room: room}
+	return &leaveFixture{srv: srv, invites: invites, room: room, roomRepo: roomRepo}
 }
 
 func (f *leaveFixture) leave(t *testing.T, userId int) int {
@@ -293,5 +294,89 @@ func TestLeaveRoomWithoutInviteStore(t *testing.T) {
 	}
 	if !isRoomMember(room, testUser2.ID) {
 		t.Fatal("человек вышел без следа отношения — следующее приглашение вернёт его молча")
+	}
+}
+
+// TestLeaveRoomBlockedByOperationCreatedDuringLeave — расход на выходящего
+// могли завести уже ПОСЛЕ проверки api.HasOperations: создание операции читает
+// комнату отдельно и с членством в момент записи не связано. Раньше выход всё
+// равно состоялся бы, и долг остался бы висеть на человеке, который комнату уже
+// не видит и убрать себя из расхода не может. Теперь условие стоит в фильтре
+// LeaveRoom, и его отказ обязан дойти до клиента тем же 409 has_operations.
+func TestLeaveRoomBlockedByOperationCreatedDuringLeave(t *testing.T) {
+	f := newLeaveFixture(t)
+	donor := testUser1
+	// конкурентный POST /operations, легший между проверкой и выходом
+	f.roomRepo.beforeLeave = func(roomId string) {
+		f.roomRepo.beforeLeave = nil
+		ops := append(roomOperations(f.room), api.Operation{
+			ID: primitive.NewObjectID(), Description: "Такси", Sum: 300,
+			Donor:             &donor,
+			RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 300}},
+			Status:            statusActive,
+			CreateAt:          time.Now(),
+		})
+		f.room.Operations = &ops
+	}
+
+	if code := f.leave(t, testUser2.ID); code != http.StatusConflict {
+		t.Fatalf("выход с расходом, легшим во время выхода, обязан быть отклонён 409, получен %d", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("человек вышел с активным расходом — долг повис на не-участнике")
+	}
+}
+
+// TestLeaveRoomReassertsLeftAfterConcurrentReconcile — примирение записи в
+// handleAddMember (шаг 3) решает по снимку комнаты, прочитанному ДО нашего
+// выхода: оно может записать added уже после нашего left. Получилось бы «в
+// комнате нет, а приглашение added», и следующее приглашение вернуло бы
+// человека молча, мимо согласия. После выхода запись возвращается в left.
+func TestLeaveRoomReassertsLeftAfterConcurrentReconcile(t *testing.T) {
+	f := newLeaveFixture(t)
+	// конкурентное примирение, легшее между нашей записью left и выходом
+	f.roomRepo.beforeLeave = func(roomId string) {
+		f.roomRepo.beforeLeave = nil
+		if err := f.invites.Upsert(context.Background(), f.room.ID, testUser2.ID,
+			testUser1.ID, api.InviteAdded, time.Now()); err != nil {
+			t.Fatalf("подготовка гонки не удалась: %v", err)
+		}
+	}
+
+	if code := f.leave(t, testUser2.ID); code != http.StatusNoContent {
+		t.Fatalf("ожидался 204, получен %d", code)
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись отношения не найдена: %v", err)
+	}
+	if inv.Status != api.InviteLeft {
+		t.Fatalf("вышедший остался с записью %q — следующее приглашение вернёт его молча", inv.Status)
+	}
+}
+
+// TestCreateOperationRefusedWhenParticipantLeftDuringRequest — вторая половина
+// той же гонки: участника убрали, пока запрос на расход шёл. Комната прочитана
+// раньше, членство по ней сходится, но записывать расход на не-участника
+// нельзя — он комнату уже не видит и убрать себя из расхода не сможет.
+// Отдельный 409 conflict, а не 404: чинится он обновлением группы.
+func TestCreateOperationRefusedWhenParticipantLeftDuringRequest(t *testing.T) {
+	f := newLeaveFixture(t)
+	// конкурентный DELETE /members/{id}, легший между валидацией и вставкой
+	f.roomRepo.beforeCreate = func(roomId string) {
+		if _, err := f.roomRepo.LeaveRoom(context.Background(), testUser3.ID, roomId); err != nil {
+			t.Fatalf("подготовка гонки не удалась: %v", err)
+		}
+	}
+
+	token := mustToken(t, f.srv, testUser1.ID)
+	target := fmt.Sprintf("/api/v1/rooms/%s/operations", f.room.ID.Hex())
+	body := fmt.Sprintf(`{"description":"Такси","sum":300,"donorId":%d,"recipientIds":[%d]}`,
+		testUser1.ID, testUser3.ID)
+	rec := doRequest(t, f.srv, http.MethodPost, target, token, body)
+
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+	if len(roomOperations(f.room)) != 0 {
+		t.Fatal("расход записан на не-участника — долг у того, кто комнату не видит")
 	}
 }
