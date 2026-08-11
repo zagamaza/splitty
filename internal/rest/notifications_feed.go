@@ -2,6 +2,7 @@ package rest
 
 import (
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -34,8 +35,9 @@ type notificationsDto struct {
 	Invites []inviteCardDto `json:"invites"`
 	// Items — та же лента событий, что отдаёт /activity
 	Items []activityItemDto `json:"items"`
-	// UnreadCount — pending + непрочитанные added + адресованные человеку
-	// события новее отметки; maxUnreadCount+1 означает «больше 99»
+	// UnreadCount — pending + непрочитанные added + события новее отметки, о
+	// которых человеку уходило уведомление (см. notifiesUser);
+	// maxUnreadCount+1 означает «больше 99»
 	UnreadCount int `json:"unreadCount"`
 	// SeenThrough — время формирования ОТВЕТА. Клиент возвращает ровно это
 	// значение в POST /me/notifications-seen: если поставить там серверное
@@ -93,11 +95,11 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	// удаления расходов в счётчик не попадают. Это принятое ограничение, а не
 	// недосмотр — «новое» здесь значит «новые расходы».
 	for i := range all {
-		op := &all[i].Operation
-		if !notifiesUser(op, user.ID) {
+		item := &all[i]
+		if !notifiesUser(item, user.ID) {
 			continue
 		}
-		if user.NotificationsSeenAt != nil && !op.CreatedAt.After(*user.NotificationsSeenAt) {
+		if user.NotificationsSeenAt != nil && !item.Operation.CreatedAt.After(*user.NotificationsSeenAt) {
 			continue
 		}
 		out.UnreadCount++
@@ -156,12 +158,21 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 
 // notifiesUser считается ли событие ленты непрочитанным ЛИЧНО для человека.
 //
-// Раздел — входящие, поэтому счётчик обязан совпадать с тем, о чём приходит
-// push: notifier уведомляет получателей с ненулевой долей и никогда — автора
-// (internal/bot/notifier.go). Автора у операции в базе нет, и ближайший его
-// заменитель — донор: расход почти всегда заводит тот, кто платил. Отсюда два
-// правила: свой расход бейдж не поднимает, чужой расход без твоей доли — тоже.
-func notifiesUser(op *operationDto, userId int) bool {
+// Раздел — входящие, поэтому счётчик обязан совпадать с тем, о чём человеку
+// сообщали. Точный ответ хранится в самой операции: notification_sent — список
+// тех, кому по ней ушло уведомление, его пишут оба пути (notifier REST и экраны
+// бота). Никаких догадок про автора: назначенный плательщик там есть, автор —
+// нет, получатель с нулевой долей — нет.
+//
+// Пустой список — не «никому», а «неизвестно»: у легаси-операций эпохи
+// master-2021 поля нет вовсе, а у свежих оно появляется чуть позже самой
+// операции (уведомления уходят фоном). Для таких работает прежнее правило по
+// долям — свой расход бейдж не поднимает, чужой без твоей доли тоже.
+func notifiesUser(item *activityItemDto, userId int) bool {
+	if len(item.notified) > 0 {
+		return slices.Contains(item.notified, userId)
+	}
+	op := &item.Operation
 	if op.Donor.ID == userId {
 		return false
 	}

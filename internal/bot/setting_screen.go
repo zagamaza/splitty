@@ -437,46 +437,36 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 		return
 	}
 	userID := u.User.ID
-	if room.Operations != nil {
-		for _, o := range *room.Operations {
-			// Только АКТИВНЫЕ операции — как в REST (rest.activeOperations):
-			// драфты и архивные версии отредактированных расходов в долгах не
-			// участвуют, и запирать ими человека в комнате навсегда нельзя.
-			// Пустой status — легаси эпохи master-2021, оно активно.
-			if o.Status != active && o.Status != "" {
-				continue
-			}
-			// У легаси-операций долей нет вовсе, получатели лежат в recipients:
-			// проверяя только recipients_with_sum, мы выпустили бы должника.
-			if (o.Donor != nil && o.Donor.ID == userID) ||
-				containsRecipient(o.RecipientsWithSum, userID) ||
-				containsLegacyRecipient(o.Recipients, userID) {
-				callback := createCallback(u, I18n(u.User, "msg_you_can_not_leave"), true)
-				return api.TelegramMessage{
-					CallbackConfig: callback,
-					Send:           true,
-				}
+	// Проверка расходов — общая с REST (api.HasOperations): своя копия правила
+	// в боте уже расходилась с приложением, и человек, которого REST выпускал,
+	// оставался запертым в телеграме без единого способа выбраться.
+	if api.HasOperations(room, userID) {
+		callback := createCallback(u, I18n(u.User, "msg_you_can_not_leave"), true)
+		return api.TelegramMessage{
+			CallbackConfig: callback,
+			Send:           true,
+		}
+	}
+
+	// Запись left идёт ПЕРЕД выходом, и её сбой отменяет выход — как в REST
+	// (rest.removeMember): человек вне комнаты без следа отношения вернулся бы
+	// по следующему приглашению молча, мимо «после выхода — только с явного
+	// согласия». Лишний left при неудавшемся выходе безвреден: участник на
+	// месте, и шаг (3) handleAddMember вернёт запись в added.
+	// Не-участнику не пишем ничего: left тому, кто не выходил, погнал бы его
+	// следующее приглашение через лишний pending.
+	if bot.is != nil && containsUserId(room.Members, userID) {
+		if roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId); hexErr == nil {
+			if invErr := bot.is.Upsert(ctx, roomHex, userID, userID, api.InviteLeft, time.Now()); invErr != nil {
+				log.Error().Err(invErr).Msg("mark invite as left failed")
+				return
 			}
 		}
 	}
 
-	left, err := bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId)
-	if err != nil {
+	if _, err = bot.rs.LeaveRoom(ctx, userID, u.Button.CallbackData.RoomId); err != nil {
 		log.Error().Err(err).Msg("leave room failed")
 		return
-	}
-	// Выход через бота обязан оставлять ту же запись left, что и выход через
-	// REST: без неё повторное приглашение не увидело бы прошлого выхода и
-	// вернуло бы человека в комнату молча, мимо «только с явного согласия».
-	// Только если выход действительно случился: left у того, кто в комнате не
-	// состоял, погнал бы его следующее приглашение через лишний pending.
-	// Сбой записи не отменяет уже состоявшийся выход — только логируем.
-	if left && bot.is != nil {
-		if roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId); hexErr == nil {
-			if invErr := bot.is.Upsert(ctx, roomHex, userID, userID, api.InviteLeft, time.Now()); invErr != nil {
-				log.Error().Err(invErr).Msg("mark invite as left failed")
-			}
-		}
 	}
 	u.Button = api.NewButton(viewStart, u.Button.CallbackData)
 	callback := createCallback(u, I18n(u.User, "msg_you_left"), true)

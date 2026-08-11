@@ -477,6 +477,23 @@ private fun MainNavHost(
     }
 }
 
+/** Последнее ТОЧНОЕ значение счётчика (maxUnreadCount на сервере). */
+private const val MAX_EXACT_UNREAD = 99
+
+/**
+ * Текст бейджа: null — бейджа нет вовсе.
+ *
+ * Сервер отдаёт точное число до 99, а 100 означает «больше 99»
+ * (maxUnreadCount в internal/rest/notifications_feed.go). Рисовать потолок
+ * числом нельзя: «100» выглядело бы точным количеством, которого никто не
+ * считал. Порт iOS MainTabView.badgeLabel — правило обязано совпадать.
+ */
+internal fun badgeLabel(count: Int, overflow: String): String? = when {
+    count <= 0 -> null
+    count > MAX_EXACT_UNREAD -> overflow
+    else -> count.toString()
+}
+
 @Composable
 private fun RowScope.TabItem(
     tab: TabSpec,
@@ -494,16 +511,8 @@ private fun RowScope.TabItem(
             onClick(tab.route)
         },
         icon = {
-            if (badgeCount > 0) {
-                // Сервер отдаёт точное число до 99, а 100 означает «больше 99»
-                // (maxUnreadCount в internal/rest/notifications_feed.go).
-                // Рисовать его числом нельзя: «100» выглядело бы точным
-                // количеством, которого никто не считал.
-                val badgeText = if (badgeCount > 99) {
-                    stringResource(R.string.notifications_badge_overflow)
-                } else {
-                    badgeCount.toString()
-                }
+            val badgeText = badgeLabel(badgeCount, stringResource(R.string.notifications_badge_overflow))
+            if (badgeText != null) {
                 BadgedBox(badge = { Badge { Text(badgeText) } }) {
                     Icon(tab.icon, contentDescription = null)
                 }

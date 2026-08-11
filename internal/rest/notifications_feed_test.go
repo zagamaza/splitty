@@ -329,6 +329,112 @@ func TestNotificationsCountsOnlyEventsAddressedToUser(t *testing.T) {
 	}
 }
 
+// notifServerWithOps — сервер с одной комнатой из переданных операций.
+func notifServerWithOps(t *testing.T, ops ...api.Operation) *Server {
+	t.Helper()
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members:    &[]api.User{testUser1, testUser2, testUser3},
+		Operations: &ops,
+		CreateAt:   time.Now(),
+	}
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	srv.SetInvites(newFakeInviteStore())
+	return srv
+}
+
+// TestNotificationsCountsWhoWasNotified — счётчик обязан совпадать с тем, о чём
+// человеку сообщали, а точная запись этого — notification_sent самой операции
+// (его пишут и notifier REST, и экраны бота).
+//
+// Без него бейдж строился по долям и промахивался в обе стороны: расход, где
+// тебя НАЗНАЧИЛИ плательщиком (уведомление уходит всегда, даже мимо настроек),
+// в бейдж не попадал, а свой же расход с чужим плательщиком — попадал.
+func TestNotificationsCountsWhoWasNotified(t *testing.T) {
+	me, other := testUser2, testUser1
+
+	// Меня назначили плательщиком: уведомление ушло мне, по долям я «свой».
+	payerAssigned := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Такси", Sum: 100,
+		Donor:             &me,
+		RecipientsWithSum: []api.RecipientWithSum{{User: other, Sum: 50}, {User: me, Sum: 50}},
+		NotificationSent:  []int{me.ID},
+		CreateAt:          time.Now(),
+	}
+	// Расход завёл я, плательщиком поставил другого: уведомили его, не меня.
+	authoredByMe := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor:             &other,
+		RecipientsWithSum: []api.RecipientWithSum{{User: me, Sum: 100}},
+		NotificationSent:  []int{other.ID},
+		CreateAt:          time.Now(),
+	}
+	// Легаси эпохи master-2021: списка нет вовсе — работает правило по долям.
+	legacy := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Продукты", Sum: 100,
+		Donor:      &other,
+		Recipients: &[]api.User{other, me},
+		CreateAt:   time.Now(),
+	}
+
+	tests := []struct {
+		name string
+		op   api.Operation
+		want int
+	}{
+		{"назначенный плательщик — уведомили, значит непрочитано", payerAssigned, 1},
+		{"свой расход с чужим плательщиком — уведомили не меня", authoredByMe, 0},
+		{"легаси без списка — правило по долям", legacy, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := fetchNotifications(t, notifServerWithOps(t, tt.op), me.ID)
+			if len(got.Items) != 1 {
+				t.Fatalf("лента показывает событие всегда, получено %d", len(got.Items))
+			}
+			if got.UnreadCount != tt.want {
+				t.Fatalf("непрочитанных должно быть %d, получено %d", tt.want, got.UnreadCount)
+			}
+		})
+	}
+}
+
+// TestNotificationsExactCeilingIsNotOverflow — граница 99/100. Ровно 99
+// непрочитанных — честное число, и клампить его нельзя: клиент нарисовал бы
+// «99+» там, где счёт точный. Сотый переводит счётчик в маркер переполнения.
+func TestNotificationsExactCeilingIsNotOverflow(t *testing.T) {
+	// Литерал, а не константа: «99+» на обоих клиентах зашит числом
+	// (MainTabView.badgeLabel, MainScaffold.badgeLabel), и сдвиг потолка на
+	// сервере молча превратил бы точный счёт в потолок.
+	if maxUnreadCount != 99 {
+		t.Fatalf("потолок счётчика изменился (%d) — клиенты рисуют «99+» по 99", maxUnreadCount)
+	}
+
+	donor := testUser1
+	op := func(i int) api.Operation {
+		return api.Operation{
+			ID: primitive.NewObjectID(), Description: fmt.Sprintf("Расход %d", i), Sum: 100,
+			Donor:             &donor,
+			RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
+			NotificationSent:  []int{testUser2.ID},
+			CreateAt:          time.Now(),
+		}
+	}
+
+	exact := make([]api.Operation, 0, 99)
+	for i := 0; i < 99; i++ {
+		exact = append(exact, op(i))
+	}
+	if got := fetchNotifications(t, notifServerWithOps(t, exact...), testUser2.ID); got.UnreadCount != 99 {
+		t.Fatalf("ровно 99 непрочитанных обязаны отдаваться точным числом, получено %d", got.UnreadCount)
+	}
+
+	over := append(exact, op(99))
+	if got := fetchNotifications(t, notifServerWithOps(t, over...), testUser2.ID); got.UnreadCount != 100 {
+		t.Fatalf("сотое непрочитанное обязано давать маркер переполнения 100, получено %d", got.UnreadCount)
+	}
+}
+
 // TestNotificationsSeenThroughTakenBeforeFeedRead — seenThrough обязан быть
 // снят ДО чтения ленты. Иначе событие, созданное между чтением и снимком
 // времени, в ответ не попадает, но клиентская отметка его гасит.

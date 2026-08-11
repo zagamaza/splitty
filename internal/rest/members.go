@@ -365,26 +365,11 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// hasOperations участвует ли пользователь хотя бы в одной АКТИВНОЙ операции —
-// как донор или как получатель (доля роли не играет: нулевая доля тоже часть
-// расчёта, и молчаливое исключение таких получателей разошлось бы с долгами).
-//
-// Работает по activeOperations, а не по сырым данным: легаси-операции эпохи
-// бота хранят recipients без recipients_with_sum, и доли для них синтезируются
-// при нормализации. Без этого старые долги были бы не видны, и человек с
-// реальной задолженностью спокойно вышел бы.
+// hasOperations см. api.HasOperations — правило общее с ботом: свою копию
+// этой проверки бот уже дважды писал иначе, и выход через приложение расходился
+// с выходом через телеграм.
 func hasOperations(room *api.Room, userId int) bool {
-	for _, op := range activeOperations(room) {
-		if op.Donor != nil && op.Donor.ID == userId {
-			return true
-		}
-		for _, r := range op.RecipientsWithSum {
-			if r.User.ID == userId {
-				return true
-			}
-		}
-	}
-	return false
+	return api.HasOperations(room, userId)
 }
 
 // reconcileInviteOnJoin приводит запись отношения к added, когда человек вошёл

@@ -77,10 +77,12 @@ const (
 	document api.FileType = "document"
 )
 
+// Статусы операции — из api: правило «какая операция действующая» общее
+// с REST, и вторая копия констант уже приводила к расхождению трактовок
 const (
-	draft   api.OperationStatus = "draft"
-	active  api.OperationStatus = "active"
-	archive api.OperationStatus = "archive"
+	draft   = api.StatusDraft
+	active  = api.StatusActive
+	archive = api.StatusArchive
 )
 
 const (

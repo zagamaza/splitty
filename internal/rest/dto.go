@@ -9,11 +9,11 @@ import (
 )
 
 // Статусы и типы деления операций develop-модели.
-// Константы в internal/bot приватные, поэтому REST заводит свои
+// Статусы — общие с ботом (api), типы деления REST заводит свои
 const (
-	statusDraft   api.OperationStatus = "draft"
-	statusActive  api.OperationStatus = "active"
-	statusArchive api.OperationStatus = "archive"
+	statusDraft   = api.StatusDraft
+	statusActive  = api.StatusActive
+	statusArchive = api.StatusArchive
 
 	splitEqually       api.SplitType = "equally"
 	splitByExactAmount api.SplitType = "by_exact_amount"
@@ -172,6 +172,11 @@ type activityItemDto struct {
 	RoomName     string       `json:"roomName"`
 	RoomCurrency string       `json:"roomCurrency"`
 	Operation    operationDto `json:"operation"`
+	// notified — кому по этой операции ушло уведомление (notification_sent).
+	// Не экспортируется: клиенту знать чужие рассылки незачем, а счётчику
+	// непрочитанного этот список нужен как единственный точный ответ на вопрос
+	// «тебе об этом сообщали» (см. notifiesUser)
+	notified []int
 }
 
 // currencyInfoDto запись справочника валют для пикера в приложении
@@ -381,46 +386,14 @@ func roomOperations(r *api.Room) []api.Operation {
 	return *r.Operations
 }
 
-// normalizedOperation приводит операцию к модели develop, НЕ мутируя оригинал
-// (работает с копией): легаси-операции эпохи master-2021 — без status и без
-// recipients_with_sum — считаются активными, а их доли синтезируются канонически
-// из легаси-поля recipients (поровну, остаток первым по порядку массива).
-// Активная операция без получателей (битые данные) исключается как draft —
-// иначе она валила бы весь расчёт долгов комнаты
+// normalizedOperation см. api.NormalizedOperation — правило общее с ботом
 func normalizedOperation(o api.Operation) api.Operation {
-	if o.Status == "" {
-		o.Status = statusActive
-	}
-	if len(o.RecipientsWithSum) == 0 && o.Recipients != nil && len(*o.Recipients) > 0 {
-		recipients := *o.Recipients
-		withSum := make([]api.RecipientWithSum, 0, len(recipients))
-		for i := range recipients {
-			withSum = append(withSum, api.RecipientWithSum{
-				User: recipients[i],
-				Sum:  float64(api.ShareOf(o.Sum, len(recipients), i)),
-			})
-		}
-		o.RecipientsWithSum = withSum
-	}
-	if o.Status == statusActive && len(o.RecipientsWithSum) == 0 {
-		o.Status = statusDraft
-	}
-	return o
+	return api.NormalizedOperation(o)
 }
 
-// activeOperations возвращает нормализованные АКТИВНЫЕ операции комнаты.
-// REST работает только с ними: драфты бота и архивные версии отредактированных
-// операций не показываются и не участвуют в долгах/статистике (как в
-// GetRoomDebts develop). База при нормализации не мутируется
+// activeOperations см. api.ActiveOperations — правило общее с ботом
 func activeOperations(r *api.Room) []api.Operation {
-	var ops []api.Operation
-	for _, o := range roomOperations(r) {
-		n := normalizedOperation(o)
-		if n.Status == statusActive {
-			ops = append(ops, n)
-		}
-	}
-	return ops
+	return api.ActiveOperations(r)
 }
 
 // normalizedRoom копия комнаты с нормализованными активными операциями —

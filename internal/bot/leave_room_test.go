@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -49,13 +50,49 @@ func (s *leaveRoomService) FindRoomsByLikeName(context.Context, int, string) (*[
 	return nil, nil
 }
 
-// recordingInvites запоминает записи отношения «человек × комната».
-type recordingInvites struct{ statuses []api.InviteStatus }
+// leftRecord — запись отношения целиком: статуса мало, перепутанные комната
+// или человек невидимы, а именно они решают, увидит ли следующее приглашение
+// прошлый выход.
+type leftRecord struct {
+	roomID    primitive.ObjectID
+	inviteeID int
+	inviterID int
+	status    api.InviteStatus
+}
 
-func (r *recordingInvites) Upsert(_ context.Context, _ primitive.ObjectID, _, _ int,
+// recordingInvites запоминает записи отношения «человек × комната».
+type recordingInvites struct {
+	records []leftRecord
+	// err — сбой записи: проверяем, что без следа отношения выхода не будет
+	err error
+}
+
+func (r *recordingInvites) Upsert(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
 	status api.InviteStatus, _ time.Time) error {
-	r.statuses = append(r.statuses, status)
+	if r.err != nil {
+		return r.err
+	}
+	r.records = append(r.records, leftRecord{roomID, inviteeID, inviterID, status})
 	return nil
+}
+
+// wroteLeft — ровно одна запись left про этого человека в этой комнате.
+func (r *recordingInvites) wroteLeft(t *testing.T, room *api.Room, userID int) {
+	t.Helper()
+	if len(r.records) != 1 {
+		t.Fatalf("ожидалась одна запись отношения, получено %d: %+v", len(r.records), r.records)
+	}
+	got := r.records[0]
+	if got.status != api.InviteLeft {
+		t.Fatalf("статус записи %q вместо left", got.status)
+	}
+	if got.roomID != room.ID {
+		t.Fatalf("запись ушла в чужую комнату %s вместо %s", got.roomID.Hex(), room.ID.Hex())
+	}
+	if got.inviteeID != userID || got.inviterID != userID {
+		t.Fatalf("запись про чужого человека: invitee=%d inviter=%d, выходил %d",
+			got.inviteeID, got.inviterID, userID)
+	}
 }
 
 func leaveUpdate(roomId string, userId int) *api.Update {
@@ -96,8 +133,118 @@ func TestBotLeaveBlockedByLegacyOperation(t *testing.T) {
 	if rs.calls != 0 {
 		t.Fatal("должника выпустили из комнаты — кредитор молча теряет деньги")
 	}
-	if len(invites.statuses) != 0 {
-		t.Fatalf("записей отношения быть не должно: %v", invites.statuses)
+	if len(invites.records) != 0 {
+		t.Fatalf("записей отношения быть не должно: %+v", invites.records)
+	}
+}
+
+// TestBotLeaveAllowsWhenLegacyRecipientsAreStale — операцию с легаси-полем
+// recipients отредактировали в боте: он копирует старый список в новую запись и
+// никогда его не чистит, а доли пишет заново. Считая recipients поверх
+// recipients_with_sum, бот запирал бы человека, которого REST выпускает (он
+// смотрит только на актуальные доли), — и выхода из телеграма не осталось бы
+// вовсе: очистить recipients бот не умеет.
+func TestBotLeaveAllowsWhenLegacyRecipientsAreStale(t *testing.T) {
+	loadLang(t)
+	donor := api.User{ID: 1, DisplayName: "Автор"}
+	edited := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor: &donor,
+		// свежие доли уже без участника 2
+		RecipientsWithSum: []api.RecipientWithSum{{User: api.User{ID: 1}, Sum: 100}},
+		// а протухший легаси-список всё ещё с ним
+		Recipients: &[]api.User{{ID: 1}, {ID: 2}},
+		Status:     active,
+	}
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{edited}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 1 {
+		t.Fatal("протухший legacy-список запер человека в комнате навсегда — REST его выпускает")
+	}
+	invites.wroteLeft(t, r, 2)
+}
+
+// TestBotLeaveAllowsWhenActiveOperationHasNoShares — активная операция без
+// долей это битые данные; REST понижает её до драфта (api.NormalizedOperation)
+// именно чтобы не запирать людей. Бот обязан решать так же, иначе донор такой
+// операции выходит через приложение и не выходит через телеграм.
+func TestBotLeaveAllowsWhenActiveOperationHasNoShares(t *testing.T) {
+	loadLang(t)
+	donor := api.User{ID: 2, DisplayName: "Гость"}
+	broken := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Битая", Sum: 100,
+		Donor:  &donor,
+		Status: active,
+	}
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{broken}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 1 {
+		t.Fatal("активная операция без долей заперла донора в комнате — REST его выпускает")
+	}
+	invites.wroteLeft(t, r, 2)
+}
+
+// TestBotLeaveRoomWithoutOperations — у комнат, созданных мимо бота, поле
+// operations не заведено вовсе. Разыменование nil роняло хендлер: тап по
+// «выйти» не делал ничего.
+func TestBotLeaveRoomWithoutOperations(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 1 {
+		t.Fatal("выход из комнаты без операций не состоялся")
+	}
+	invites.wroteLeft(t, r, 2)
+}
+
+// TestBotLeaveOperationWithoutDonor — плательщика в операции может не быть
+// (черновик бота, битые данные). Проверка донора обязана это пережить.
+func TestBotLeaveOperationWithoutDonor(t *testing.T) {
+	loadLang(t)
+	orphan := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Без плательщика", Sum: 100,
+		RecipientsWithSum: []api.RecipientWithSum{{User: api.User{ID: 1}, Sum: 100}},
+		Status:            active,
+	}
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{orphan}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 1 {
+		t.Fatal("операция без плательщика заперла постороннего человека в комнате")
+	}
+	invites.wroteLeft(t, r, 2)
+}
+
+// TestBotLeaveKeepsMembershipWhenLeftRecordFails — паритет с REST
+// (rest.removeMember): сбой записи left отменяет выход. Иначе человек оказался
+// бы вне комнаты без следа отношения, и следующее приглашение вернуло бы его
+// молча, мимо «после выхода — только с явного согласия».
+func TestBotLeaveKeepsMembershipWhenLeftRecordFails(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+	invites.err = errors.New("mongo недоступна")
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 0 {
+		t.Fatal("человек вышел, хотя записать след отношения не удалось — следующее приглашение вернёт его молча")
 	}
 }
 
@@ -122,9 +269,7 @@ func TestBotLeaveIgnoresArchivedOperation(t *testing.T) {
 	if rs.calls != 1 {
 		t.Fatal("архивная версия расхода заперла человека в комнате")
 	}
-	if len(invites.statuses) != 1 || invites.statuses[0] != api.InviteLeft {
-		t.Fatalf("после выхода обязана остаться запись left: %v", invites.statuses)
-	}
+	invites.wroteLeft(t, r, 2)
 }
 
 // TestBotLeaveNonMemberWritesNothing — выход того, кого в комнате нет, ничего
@@ -138,7 +283,7 @@ func TestBotLeaveNonMemberWritesNothing(t *testing.T) {
 
 	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
 
-	if len(invites.statuses) != 0 {
-		t.Fatalf("не-участнику записали отношение: %v", invites.statuses)
+	if len(invites.records) != 0 {
+		t.Fatalf("не-участнику записали отношение: %+v", invites.records)
 	}
 }

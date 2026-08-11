@@ -134,6 +134,35 @@ func TestInviteListForUserSkipsFinishedStatuses(t *testing.T) {
 	}
 }
 
+// TestInviteListForUserNewestFirst — порядок карточек в разделе: свежая сверху.
+// Без сортировки mongo отдаёт натуральный порядок вставки, и приглашение,
+// пришедшее только что, пряталось бы под прошлогодним.
+func TestInviteListForUserNewestFirst(t *testing.T) {
+	repo, _ := newInviteRepo(t)
+	ctx := testCtx(t)
+	now := time.Now().UTC()
+
+	older, newer := primitive.NewObjectID(), primitive.NewObjectID()
+	// Вставляем в обратном порядке: натуральный порядок дал бы старую первой.
+	if err := repo.Upsert(ctx, older, 100, 1, api.InvitePending, now.Add(-time.Hour)); err != nil {
+		t.Fatalf("upsert старой записи: %v", err)
+	}
+	if err := repo.Upsert(ctx, newer, 100, 1, api.InvitePending, now); err != nil {
+		t.Fatalf("upsert свежей записи: %v", err)
+	}
+
+	got, err := repo.ListForUser(ctx, 100)
+	if err != nil {
+		t.Fatalf("ListForUser: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("ожидалось 2 отношения, получено %d", len(got))
+	}
+	if got[0].RoomID != newer {
+		t.Fatal("карточки идут не от свежих к старым — новое приглашение уедет вниз списка")
+	}
+}
+
 func TestInviteSetStatusIfCurrent(t *testing.T) {
 	repo, room := newInviteRepo(t)
 	ctx := testCtx(t)

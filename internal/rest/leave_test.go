@@ -124,6 +124,47 @@ func TestRemoveMemberWithoutOperations(t *testing.T) {
 	if isRoomMember(f.room, testUser3.ID) {
 		t.Fatal("удалённый остался участником")
 	}
+
+	// Запись left обязана быть про УБРАННОГО, а не про убравшего: перепутав их,
+	// мы оставили бы ушедшего без следа отношения (следующее приглашение вернёт
+	// его молча) и повесили бы left на оставшегося участника.
+	ctx := context.Background()
+	inv, err := f.invites.Find(ctx, f.room.ID, testUser3.ID)
+	if err != nil {
+		t.Fatalf("записи left про убранного нет: %v", err)
+	}
+	if inv.Status != api.InviteLeft {
+		t.Fatalf("статус убранного: %q вместо left", inv.Status)
+	}
+	if inv.InviterID != testUser1.ID {
+		t.Fatalf("в записи должен остаться убравший (%d), получен %d", testUser1.ID, inv.InviterID)
+	}
+	if _, err := f.invites.Find(ctx, f.room.ID, testUser1.ID); err == nil {
+		t.Fatal("убравшему записали отношение — он из комнаты не выходил")
+	}
+}
+
+// TestRemoveMemberThenInviteAsksConsent — сквозной смысл записи left: убранного
+// нельзя вернуть молча. Повторное приглашение обязано ждать его решения (202
+// pending), а не добавлять в комнату (200 added).
+func TestRemoveMemberThenInviteAsksConsent(t *testing.T) {
+	f := newLeaveFixture(t)
+
+	if code := f.remove(t, testUser1.ID, testUser3.ID); code != http.StatusNoContent {
+		t.Fatalf("удаление участника: ожидался 204, получен %d", code)
+	}
+
+	token := mustToken(t, f.srv, testUser1.ID)
+	target := fmt.Sprintf("/api/v1/rooms/%s/members", f.room.ID.Hex())
+	body := fmt.Sprintf(`{"userId":%d}`, testUser3.ID)
+	rec := doRequest(t, f.srv, http.MethodPost, target, token, body)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("после удаления приглашение обязано ждать согласия (202), получен %d (%s)",
+			rec.Code, rec.Body.String())
+	}
+	if isRoomMember(f.room, testUser3.ID) {
+		t.Fatal("убранного вернули в комнату без его согласия")
+	}
 }
 
 func TestRemoveMemberBlockedByOperations(t *testing.T) {

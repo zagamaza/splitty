@@ -115,6 +115,10 @@ func (bot Operation) OnMessage(ctx context.Context, u *api.Update) (response api
 }
 
 func containsUserId(users *[]api.User, id int) bool {
+	// nil бывает у комнат, созданных мимо бота: разыменование уронило бы хендлер
+	if users == nil {
+		return false
+	}
 	for _, u := range *users {
 		if u.ID == id {
 			return true
@@ -126,20 +130,6 @@ func containsUserId(users *[]api.User, id int) bool {
 func containsRecipient(users []api.RecipientWithSum, id int) bool {
 	for _, u := range users {
 		if u.User.ID == id {
-			return true
-		}
-	}
-	return false
-}
-
-// containsLegacyRecipient получатели легаси-операций эпохи master-2021: долей у
-// них нет вовсе, список лежит в recipients
-func containsLegacyRecipient(users *[]api.User, id int) bool {
-	if users == nil {
-		return false
-	}
-	for _, u := range *users {
-		if u.ID == id {
 			return true
 		}
 	}

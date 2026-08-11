@@ -1556,6 +1556,7 @@ func (s *Server) allActivityItems(ctx context.Context, userId int) ([]activityIt
 					RoomName:     room.Name,
 					RoomCurrency: roomCurrencyCode(room),
 					Operation:    toOperationDto(&op),
+					notified:     op.NotificationSent,
 				})
 			}
 		}

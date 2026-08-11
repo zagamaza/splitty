@@ -242,6 +242,26 @@ final class ActivityViewModelTests: XCTestCase {
         XCTAssertEqual(session.unreadNotifications, 0)
     }
 
+    /// Лента не загрузилась — гасить нечего: счётчик нулевой не потому, что
+    /// входящие пусты, а потому что их никто не считал. Отметку прочитанного
+    /// при этом тоже никто не отправлял, и непрочитанное на сервере осталось.
+    @MainActor
+    func testMarkSeenKeepsBadgeWhenFeedFailed() async {
+        StubURLProtocol.handler = { _ in
+            (500, Data(#"{"error":{"code":"internal","message":"сервер недоступен"}}"#.utf8))
+        }
+        let model = await loadedModel()
+        XCTAssertEqual(model.unreadCount, 0)
+
+        let session = SessionStore(urlSession: stubSession)
+        session.unreadNotifications = 7
+        await model.markSeen(session: session)
+
+        XCTAssertEqual(session.unreadNotifications, 7)
+        // И отметка не уходила: гасить на сервере тоже нечего.
+        XCTAssertNotEqual(StubURLProtocol.lastRequest?.url?.path, "/api/v1/me/notifications-seen")
+    }
+
     /// Сбой отметки не должен ни гасить бейдж, ни показывать алерт: человек
     /// этого действия не просил.
     @MainActor
@@ -326,6 +346,92 @@ final class ActivityViewModelTests: XCTestCase {
         let message = try XCTUnwrap(model.errorMessage)
         XCTAssertTrue(message.contains("Уберите себя"))
         XCTAssertFalse(message.contains("конфликт"))
+    }
+}
+
+/// Обновление бейджа мимо экрана раздела: старт приложения, вход, возврат из
+/// фона, приход и тап по push. Самый частый новый запрос приложения — и до
+/// этих тестов ни один не проверял ни его адрес, ни разбор ответа: ошибись в
+/// них, бейдж просто никогда бы не появился, молча и на всех сборках.
+final class UnreadBadgeRefreshTests: XCTestCase {
+    private var stubSession: URLSession!
+
+    override func setUp() {
+        super.setUp()
+        StubURLProtocol.handler = nil
+        StubURLProtocol.lastRequest = nil
+        StubURLProtocol.lastBody = nil
+        StubURLProtocol.responseDelay = nil
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        stubSession = URLSession(configuration: configuration)
+    }
+
+    override func tearDown() {
+        StubURLProtocol.handler = nil
+        StubURLProtocol.lastRequest = nil
+        super.tearDown()
+    }
+
+    @MainActor
+    private func loggedInSession() async throws -> SessionStore {
+        let session = SessionStore(urlSession: stubSession)
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"""
+            {"token":"jwt-777","user":{"id":77,"username":null,"displayName":"Аня","lang":"ru",
+             "linkedProviders":["google"],"notificationOn":true}}
+            """#.utf8))
+        }
+        try await session.loginWithPassword(email: "anya@splitty.test", password: "Passw0rd!")
+        XCTAssertTrue(session.isAuthenticated)
+        return session
+    }
+
+    /// Запрос ровно на одну строку ленты: бейджу нужен только счётчик, а он
+    /// считается по ВСЕЙ ленте (см. internal/rest/notifications_feed.go).
+    @MainActor
+    func testRefreshUnreadCountAsksForSingleRowAndPublishesCount() async throws {
+        let session = try await loggedInSession()
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"{"invites":[],"items":[],"unreadCount":4,"seenThrough":"2026-07-30T12:00:00Z"}"#.utf8))
+        }
+
+        await session.refreshUnreadCount()
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.path, "/api/v1/notifications")
+        let query = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems
+        XCTAssertEqual(query?.first { $0.name == "limit" }?.value, "1")
+        XCTAssertEqual(query?.first { $0.name == "offset" }?.value, "0")
+        XCTAssertEqual(session.unreadNotifications, 4)
+    }
+
+    /// Сбой обновления тихий и НЕ гасит бейдж: сеть отвалилась — про
+    /// непрочитанное это ничего не сообщает.
+    @MainActor
+    func testRefreshUnreadCountKeepsBadgeOnFailure() async throws {
+        let session = try await loggedInSession()
+        session.unreadNotifications = 3
+        StubURLProtocol.handler = { _ in (500, Data(#"{"error":{"code":"internal","message":"нет"}}"#.utf8)) }
+
+        await session.refreshUnreadCount()
+
+        XCTAssertEqual(session.unreadNotifications, 3)
+    }
+
+    /// До входа запроса быть не должно: 401 на каждом старте приложения.
+    @MainActor
+    func testRefreshUnreadCountDoesNothingWhenLoggedOut() async {
+        let session = SessionStore(urlSession: stubSession)
+        session.logout()
+        StubURLProtocol.lastRequest = nil
+        StubURLProtocol.handler = { _ in (200, Data(#"{"invites":[],"items":[],"unreadCount":9,"seenThrough":"2026-07-30T12:00:00Z"}"#.utf8)) }
+
+        await session.refreshUnreadCount()
+
+        XCTAssertNil(StubURLProtocol.lastRequest)
+        XCTAssertEqual(session.unreadNotifications, 0)
     }
 }
 

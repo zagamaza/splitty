@@ -57,12 +57,18 @@ final class ActivityViewModel {
     /// ответом и этим вызовом мог прийти новый расход, и «сейчас» погасило бы
     /// его, так и не показав человеку.
     func markSeen(session: SessionStore) async {
+        // Публикуем счётчик, только когда за ним стоит настоящий ответ (сетевой
+        // или из кеша). Лента могла не загрузиться — нет сети, ошибка сервера,
+        // отменённый .task, — и тогда unreadCount ноль просто потому, что его
+        // никто не считал: обнулив бейдж, приложение соврало бы о пустых
+        // входящих, а отметку прочитанного при этом никто не отправлял.
+        guard let through = seenThrough else { return }
         // Счётчик из последнего ответа — источник правды для бейджа, и записать
-        // его надо ДО ранних выходов: если отметку уже поставили с другого
+        // его надо ДО раннего выхода: если отметку уже поставили с другого
         // устройства, unreadCount придёт нулём, отмечать будет нечего, а бейдж
         // так и висел бы до следующего возврата из фона.
         session.unreadNotifications = unreadCount
-        guard let through = seenThrough, unreadCount > 0 else { return }
+        guard unreadCount > 0 else { return }
         do {
             try await session.api.markNotificationsSeen(through: through)
             unreadCount = invites.filter { $0.status == .pending }.count
