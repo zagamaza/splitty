@@ -96,7 +96,7 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	// недосмотр — «новое» здесь значит «новые расходы».
 	for i := range all {
 		item := &all[i]
-		if !notifiesUser(item, user.ID) {
+		if !notifiesUser(item.source, user.ID) {
 			continue
 		}
 		if user.NotificationsSeenAt != nil && !item.Operation.CreatedAt.After(*user.NotificationsSeenAt) {
@@ -206,20 +206,68 @@ func inviteCardStatus(inv *api.RoomInvite, room *api.Room, roomKnown bool) api.I
 // master-2021 поля нет вовсе, а у свежих оно появляется чуть позже самой
 // операции (уведомления уходят фоном). Для таких работает прежнее правило по
 // долям — свой расход бейдж не поднимает, чужой без твоей доли тоже.
-func notifiesUser(item *activityItemDto, userId int) bool {
-	if len(item.notified) > 0 {
-		return slices.Contains(item.notified, userId)
-	}
-	op := &item.Operation
-	if op.Donor.ID == userId {
+func notifiesUser(op *api.Operation, userId int) bool {
+	if op == nil {
 		return false
 	}
-	for _, r := range op.Recipients {
-		if r.User.ID == userId && r.Sum != 0 {
+	if len(op.NotificationSent) > 0 {
+		return slices.Contains(op.NotificationSent, userId)
+	}
+	if op.Donor != nil && op.Donor.ID == userId {
+		return false
+	}
+	for i := range op.RecipientsWithSum {
+		if op.RecipientsWithSum[i].User.ID == userId && recipientShare(op, i) != 0 {
 			return true
 		}
 	}
 	return false
+}
+
+// roomSeenAt отметка прочитанного КОНКРЕТНОЙ комнаты; nil — не прочитано ничего.
+//
+// Отметки по комнате может не быть: до выкатки счётчиков её не существовало ни
+// у кого, а ставится она только открытием группы. Поэтому фоллбэк на общую
+// notifications_seen_at — её бэкфилл (repository.BackfillNotificationsSeenAt)
+// проставил всем момент выкатки раздела уведомлений, и старые расходы не
+// зажгут разом все карточки в списке групп.
+func roomSeenAt(user *api.User, roomId string) *time.Time {
+	if user == nil {
+		return nil
+	}
+	if at, ok := user.RoomsSeenAt[roomId]; ok {
+		return &at
+	}
+	return user.NotificationsSeenAt
+}
+
+// roomUnreadCount непрочитанные события ОДНОЙ комнаты для карточки в списке групп.
+//
+// Считается по уже загруженному документу комнаты — списку групп не нужно ни
+// одного дополнительного запроса. Правило «событие адресовано мне» — то же
+// самое, что поднимает бейдж раздела (notifiesUser): два разных ответа на этот
+// вопрос в одном приложении означали бы, что счётчики противоречат друг другу.
+//
+// Потолок общий с бейджем: maxUnreadCount+1 значит «больше 99».
+func roomUnreadCount(room *api.Room, user *api.User) int {
+	if room == nil || user == nil {
+		return 0
+	}
+	seen := roomSeenAt(user, room.ID.Hex())
+	count := 0
+	for _, op := range api.ActiveOperations(room) {
+		if seen != nil && !op.CreateAt.After(*seen) {
+			continue
+		}
+		if !notifiesUser(&op, user.ID) {
+			continue
+		}
+		count++
+		if count > maxUnreadCount {
+			return unreadOverflow
+		}
+	}
+	return count
 }
 
 // markSeenRequest тело POST /me/notifications-seen.
@@ -235,25 +283,67 @@ type markSeenRequest struct {
 func (s *Server) handleMarkNotificationsSeen(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var req markSeenRequest
-	if dErr := decodeJSON(r, &req); dErr != nil {
-		dErr.write(w)
-		return
-	}
-	if req.SeenThrough.IsZero() {
-		writeError(w, http.StatusBadRequest, "validation", "поле seenThrough обязательно")
-		return
-	}
-	// Из будущего — почти наверняка кривые часы клиента или подделка: приняв
-	// такое, мы погасили бы и всё, что придёт дальше.
-	if req.SeenThrough.After(s.now().Add(time.Minute)) {
-		writeError(w, http.StatusBadRequest, "validation", "seenThrough из будущего")
+	seenThrough, hErr := s.parseSeenThrough(r)
+	if hErr != nil {
+		hErr.write(w)
 		return
 	}
 
-	if err := s.userRepo.SetNotificationsSeenAt(ctx, userIdFromCtx(ctx), req.SeenThrough.UTC()); err != nil {
+	if err := s.userRepo.SetNotificationsSeenAt(ctx, userIdFromCtx(ctx), seenThrough); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить отметку")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleMarkRoomSeen POST /api/v1/rooms/{roomId}/notifications-seen — гасит
+// счётчик непрочитанного на карточке ЭТОЙ группы.
+//
+// Отдельная отметка, а не общая: раздел «Уведомления» не должен гасить счётчики
+// групп (иначе их почти никто не увидел бы — в раздел ведёт как раз бейдж), а
+// открытая группа не должна гасить чужие.
+//
+// Членство проверяется как на любом маршруте комнаты: без него посторонний
+// писал бы себе отметки по чужим id, а заодно узнавал бы, существует ли комната.
+func (s *Server) handleMarkRoomSeen(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userId := userIdFromCtx(ctx)
+
+	seenThrough, hErr := s.parseSeenThrough(r)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	room, hErr := s.roomForMember(ctx, r.PathValue("roomId"), userId)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	if err := s.userRepo.SetRoomSeenAt(ctx, userId, room.ID.Hex(), seenThrough); err != nil {
+		log.Error().Err(err).Msg("cannot set room seen")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить отметку")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// parseSeenThrough разбирает и проверяет тело отметки прочитанного — общее для
+// глобальной отметки и отметки по комнате: разъехавшись, они начали бы
+// принимать разное, а тело у них одно и то же.
+func (s *Server) parseSeenThrough(r *http.Request) (time.Time, *httpError) {
+	var req markSeenRequest
+	if dErr := decodeJSON(r, &req); dErr != nil {
+		return time.Time{}, dErr
+	}
+	if req.SeenThrough.IsZero() {
+		return time.Time{}, &httpError{http.StatusBadRequest, "validation", "поле seenThrough обязательно"}
+	}
+	// Из будущего — почти наверняка кривые часы клиента или подделка: приняв
+	// такое, мы погасили бы и всё, что придёт дальше.
+	if req.SeenThrough.After(s.now().Add(time.Minute)) {
+		return time.Time{}, &httpError{http.StatusBadRequest, "validation", "seenThrough из будущего"}
+	}
+	return req.SeenThrough.UTC(), nil
 }

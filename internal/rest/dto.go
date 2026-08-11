@@ -124,6 +124,10 @@ type roomSummaryDto struct {
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
 	// (см. roomDebtsSafe): myBalance отдан нулём, клиент может показать бейдж
 	DebtsUnavailable bool `json:"debtsUnavailable,omitempty"`
+	// UnreadCount непрочитанные события ЭТОЙ группы: те же события, что
+	// поднимают бейдж раздела (notifiesUser), но новее отметки по комнате
+	// (см. roomSeenAt). omitempty — у прочитанной группы ключа нет
+	UnreadCount int `json:"unreadCount,omitempty"`
 }
 
 type roomDetailDto struct {
@@ -146,6 +150,11 @@ type roomDetailDto struct {
 	// Отсутствует, пока не задан PUBLIC_BASE_URL: клиент тогда показывает
 	// старую ссылку через telegram-бота (см. Server.inviteURL)
 	InviteUrl string `json:"inviteUrl,omitempty"`
+	// SeenThrough — время формирования ЭТОГО ответа, снятое до чтения комнаты.
+	// Клиент возвращает ровно его в POST /rooms/{id}/notifications-seen: с
+	// серверным «сейчас» расход, добавленный между ответом и отметкой, погас бы
+	// в счётчике карточки, так и не показавшись человеку
+	SeenThrough time.Time `json:"seenThrough"`
 }
 
 type friendRoomBalanceDto struct {
@@ -172,11 +181,13 @@ type activityItemDto struct {
 	RoomName     string       `json:"roomName"`
 	RoomCurrency string       `json:"roomCurrency"`
 	Operation    operationDto `json:"operation"`
-	// notified — кому по этой операции ушло уведомление (notification_sent).
-	// Не экспортируется: клиенту знать чужие рассылки незачем, а счётчику
-	// непрочитанного этот список нужен как единственный точный ответ на вопрос
-	// «тебе об этом сообщали» (см. notifiesUser)
-	notified []int
+	// source — исходная (нормализованная) операция события. Не экспортируется:
+	// клиенту знать чужие рассылки незачем, а счётчику непрочитанного отсюда
+	// нужны notification_sent и доли — единственный точный ответ на вопрос
+	// «тебе об этом сообщали» (см. notifiesUser). Правило живёт на api.Operation,
+	// а не на DTO, чтобы список групп считал свои счётчики по тем же комнатам,
+	// не собирая DTO на каждый расход
+	source *api.Operation
 }
 
 // currencyInfoDto запись справочника валют для пикера в приложении

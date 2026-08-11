@@ -331,6 +331,29 @@ class GroupDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Открытая группа прочитана: гасим счётчик на её карточке в списке.
+     *
+     * Отправляем `seenThrough` ИЗ ОТВЕТА, а не своё «сейчас», — иначе погас бы
+     * и расход, добавленный между ответом и отметкой. Комнату из кеша не
+     * отмечаем (её `seenThrough` описывает прошлый визит, да и запрос офлайн
+     * всё равно не уйдёт).
+     *
+     * Best-effort и молча: человек этого не просил, алерт поверх открытой
+     * группы был бы шумом. Список групп перечитается сам — экран списка
+     * грузится заново при возврате (порт iOS GroupDetailViewModel.markSeen).
+     */
+    private suspend fun markSeen(detail: RoomDetail) {
+        val through = detail.seenThrough ?: return
+        try {
+            repository.markRoomSeen(detail.id, through)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: ApiException) {
+            // счётчик просто погаснет при следующем открытии группы
+        }
+    }
+
     private suspend fun load(roomId: String) {
         if ((_room.value as? UiState.Content)?.value?.id != roomId) {
             _room.value = UiState.Loading
@@ -350,10 +373,12 @@ class GroupDetailViewModel @Inject constructor(
                     // бросает IOException — необработанным он убивал процесс.
                 }
             }
-            val detail = repository.room(roomId).value
+            val fetched = repository.room(roomId)
+            val detail = fetched.value
             _room.value = UiState.Content(detail)
             _sections.value = groupOperationsByMonth(detail.operations)
             _selectedCurrencyOverride.value = null // источник истины снова сервер
+            if (!fetched.fromCache) markSeen(detail)
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiException) {

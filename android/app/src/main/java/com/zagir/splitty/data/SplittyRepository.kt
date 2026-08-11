@@ -306,6 +306,10 @@ class SplittyRepository @Inject constructor(
     suspend fun markNotificationsSeen(through: java.time.Instant) =
         call { api.markNotificationsSeen(MarkSeenBody(through)) }
 
+    /** Отметить прочитанной ОДНУ группу — гасит счётчик на её карточке. */
+    suspend fun markRoomSeen(roomId: String, through: java.time.Instant) =
+        call { api.markRoomSeen(roomId, MarkSeenBody(through)) }
+
     suspend fun addMember(roomId: String, userId: Long): InviteStatus =
         call { api.addMember(roomId, AddMemberBody(userId)) }.status
 

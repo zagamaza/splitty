@@ -444,6 +444,7 @@ func (f *fakeUserRepo) SoftDeleteUser(_ context.Context, userId int) error {
 	u.PushTokens = nil
 	u.Aliases = nil
 	u.BankDetails = ""
+	u.RoomsSeenAt = nil
 	return nil
 }
 
@@ -495,6 +496,23 @@ func (f *fakeUserRepo) SetNotificationsSeenAt(_ context.Context, userId int, at 
 			u.NotificationsSeenAt = &t
 		}
 	}
+	return nil
+}
+
+// SetRoomSeenAt повторяет семантику mongo: отметка по комнате двигается только
+// вперёд и только на живом аккаунте.
+func (f *fakeUserRepo) SetRoomSeenAt(_ context.Context, userId int, roomId string, at time.Time) error {
+	u, ok := f.liveUser(userId)
+	if !ok {
+		return nil
+	}
+	if prev, seen := u.RoomsSeenAt[roomId]; seen && !prev.Before(at) {
+		return nil
+	}
+	if u.RoomsSeenAt == nil {
+		u.RoomsSeenAt = map[string]time.Time{}
+	}
+	u.RoomsSeenAt[roomId] = at
 	return nil
 }
 
@@ -628,6 +646,9 @@ type fakeRoomRepo struct {
 	// есть срабатывает один раз: так симулируется чужой запрос, легший между
 	// двумя чтениями комнаты в одном хендлере
 	afterFindById func(roomId string)
+	// findByIdCalls — сколько раз читали комнату поимённо. Списку групп такие
+	// чтения запрещены: он обязан считаться по уже загруженным документам
+	findByIdCalls int
 }
 
 func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
@@ -649,6 +670,7 @@ func (f *fakeRoomRepo) delete(roomId string) {
 // разное состояние. С живым указателем «устаревший снимок» был бы невоспроизводим,
 // а именно на нём строятся гонки примирения записи приглашения.
 func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error) {
+	f.findByIdCalls++
 	if _, err := primitive.ObjectIDFromHex(id); err != nil {
 		return nil, err
 	}

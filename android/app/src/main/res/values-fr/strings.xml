@@ -191,6 +191,7 @@
     <string name="group_debts_unavailable_title">Dettes non calculées</string>
     <string name="group_debts_unavailable_subtitle">Les données de ce groupe viennent d\'une ancienne version, les soldes ne tombent donc pas juste. Les opérations et les totaux restent disponibles.</string>
     <string name="group_card_pending_badge">Certaines opérations n\'ont pas encore été envoyées</string>
+    <string name="group_card_unread_badge">Nouveaux événements : %1$s</string>
     <string name="group_settle_offline">Pas de connexion. Le règlement ne fonctionne qu\'en ligne</string>
     <string name="group_you_owe_name">Vous devez à %1$s</string>
     <string name="group_chip_settle">Régler la dette</string>

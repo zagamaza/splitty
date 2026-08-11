@@ -766,6 +766,15 @@ final class APIClient: OperationAPI {
         try await send("POST", "/api/v1/me/notifications-seen", body: Body(seenThrough: through))
     }
 
+    /// Отметить прочитанной ОДНУ группу — гасит счётчик на её карточке.
+    /// Отдельно от `markNotificationsSeen`: раздел «Уведомления» счётчики групп
+    /// не гасит, иначе их почти никто не успевал бы увидеть.
+    func markRoomSeen(roomId: String, through: Date) async throws {
+        struct Body: Encodable { let seenThrough: Date }
+        try await send(
+            "POST", "/api/v1/rooms/\(roomId)/notifications-seen", body: Body(seenThrough: through))
+    }
+
     /// Позвать человека в группу. Возвращает статус: `added` — уже участник,
     /// `pending` — приглашение ждёт его решения.
     func addMember(roomId: String, userId: Int) async throws -> InviteStatus {

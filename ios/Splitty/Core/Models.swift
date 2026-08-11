@@ -538,6 +538,11 @@ struct RoomSummary: Codable, Identifiable, Hashable {
     /// баланс читался бы как «все в расчёте», то есть ложное утверждение о деньгах.
     /// omitempty на сервере → у здоровых комнат ключа нет, отсюда default false.
     var debtsUnavailable: Bool = false
+    /// Непрочитанные события ЭТОЙ группы. Бейдж на вкладке сообщает, ЧТО
+    /// что-то случилось, счётчик на карточке — ГДЕ; гаснет открытием самой
+    /// группы. `100` означает «больше 99» (см. `MainTabView.badgeLabel`).
+    /// omitempty на сервере → у прочитанной группы ключа нет, отсюда default 0.
+    var unreadCount: Int = 0
 }
 
 // init(from:) в extension, чтобы сохранить memberwise-инициализатор (объявление
@@ -556,6 +561,9 @@ extension RoomSummary {
         totalSpent = try c.decode(Int.self, forKey: .totalSpent)
         myBalance = try c.decode(Int.self, forKey: .myBalance)
         debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
+        // Ключа нет ни у прочитанной группы (omitempty), ни в списках, лежащих
+        // в офлайн-кеше с прошлой версии приложения.
+        unreadCount = try c.decodeIfPresent(Int.self, forKey: .unreadCount) ?? 0
     }
 }
 
@@ -586,6 +594,14 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     /// nil/пусто — публичный домен на сервере ещё не настроен; экран
     /// приглашения тогда откатывается на легаси-ссылку бота (`InviteGroupView`).
     var inviteUrl: String?
+    /// Время формирования ЭТОГО ответа сервером — его и надо вернуть в
+    /// `POST /rooms/{id}/notifications-seen`, чтобы погасить счётчик группы.
+    /// Своё локальное «сейчас» гасило бы и расход, пришедший между ответом и
+    /// отметкой, — человек его так и не увидел бы.
+    ///
+    /// nil — ответ старого сервера или комната из офлайн-кеша прошлой версии:
+    /// отмечать тогда нечем, счётчик просто останется до следующего открытия.
+    var seenThrough: Date?
 }
 
 extension RoomDetail {
@@ -606,6 +622,7 @@ extension RoomDetail {
         // Поля может не быть вовсе: и в ответах старого сервера, и в комнатах,
         // лежащих в офлайн-кеше с прошлой версии приложения.
         inviteUrl = try c.decodeIfPresent(String.self, forKey: .inviteUrl)
+        seenThrough = try c.decodeIfPresent(Date.self, forKey: .seenThrough)
     }
 }
 

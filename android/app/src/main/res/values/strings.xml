@@ -232,6 +232,7 @@
     <string name="group_debts_unavailable_title">Debts not calculated</string>
     <string name="group_debts_unavailable_subtitle">This group\'s data comes from an old version, so balances don\'t add up. Operations and totals still work.</string>
     <string name="group_card_pending_badge">Some operations aren\'t sent yet</string>
+    <string name="group_card_unread_badge">New events: %1$s</string>
     <string name="group_settle_offline">No connection. Settling up works only online</string>
     <string name="group_you_owe_name">You owe %1$s</string>
     <string name="group_chip_settle">Settle up</string>

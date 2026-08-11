@@ -144,10 +144,13 @@ func (s *Server) roomDebtsSafe(room *api.Room) ([]api.Debt, bool) {
 // buildRoomDetail собирает RoomDetail для пользователя. Комната с неисчислимыми
 // долгами (см. roomDebtsSafe) всё равно открывается: операции, участники и траты
 // видны, debts=[], myBalance=0, debtsUnavailable=true
-func (s *Server) buildRoomDetail(room *api.Room, userId int) *roomDetailDto {
+//
+// seenThrough снимает ВЫЗЫВАЮЩИЙ до чтения комнаты — см. roomDetailDto.SeenThrough
+func (s *Server) buildRoomDetail(room *api.Room, userId int, seenThrough time.Time) *roomDetailDto {
 	debts, ok := s.roomDebtsSafe(room)
 	ops := activeOperations(room)
 	return &roomDetailDto{
+		SeenThrough:      seenThrough,
 		ID:               room.ID.Hex(),
 		Name:             room.Name,
 		CreatedAt:        room.CreateAt,
@@ -276,6 +279,15 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId := userIdFromCtx(ctx)
 
+	// Профиль нужен целиком ради отметок прочитанного (rooms_seen_at и
+	// notifications_seen_at). Один запрос на весь список — счётчики считаются
+	// по уже загруженным комнатам, отдельного чтения на комнату здесь нет.
+	user, hErr := s.currentUser(ctx)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
 	var archived bool
 	switch r.URL.Query().Get("archived") {
 	case "", "false":
@@ -319,6 +331,7 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 				TotalSpent:       roomTotalSpent(activeOperations(room)),
 				MyBalance:        balanceFromDebts(debts, userId),
 				DebtsUnavailable: !ok,
+				UnreadCount:      roomUnreadCount(room, user),
 			})
 		}
 	}
@@ -366,7 +379,7 @@ func (s *Server) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, s.buildRoomDetail(room, user.ID))
+	writeJSON(w, http.StatusCreated, s.buildRoomDetail(room, user.ID, s.now().UTC()))
 }
 
 // handleGetRoom GET /api/v1/rooms/{roomId}
@@ -374,19 +387,25 @@ func (s *Server) handleGetRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	userId := userIdFromCtx(ctx)
 
+	// Время берём ДО чтения комнаты — как в разделе «Уведомления»: расход,
+	// созданный во время чтения, иначе не попал бы в ответ, но оказался бы
+	// старше seenThrough, и отметка погасила бы его непоказанным.
+	seenThrough := s.now().UTC()
+
 	room, hErr := s.roomForMember(ctx, r.PathValue("roomId"), userId)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, s.buildRoomDetail(room, userId))
+	writeJSON(w, http.StatusOK, s.buildRoomDetail(room, userId, seenThrough))
 }
 
 // handleJoinRoom POST /api/v1/rooms/{roomId}/join — идемпотентное присоединение
 func (s *Server) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	roomId := r.PathValue("roomId")
+	seenThrough := s.now().UTC()
 
 	room, hErr := s.findRoom(ctx, roomId)
 	if hErr != nil {
@@ -413,7 +432,7 @@ func (s *Server) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	s.reconcileInviteOnJoin(ctx, room.ID, user.ID)
 
-	writeJSON(w, http.StatusOK, s.buildRoomDetail(room, user.ID))
+	writeJSON(w, http.StatusOK, s.buildRoomDetail(room, user.ID, seenThrough))
 }
 
 // handleArchiveRoom POST /api/v1/rooms/{roomId}/archive
@@ -1554,14 +1573,15 @@ func (s *Server) allActivityItems(ctx context.Context, userId int) ([]activityIt
 	if rooms != nil {
 		for i := range *rooms {
 			room := &(*rooms)[i]
-			for _, o := range activeOperations(room) {
-				op := o
+			ops := activeOperations(room)
+			for j := range ops {
+				op := &ops[j]
 				items = append(items, activityItemDto{
 					RoomId:       room.ID.Hex(),
 					RoomName:     room.Name,
 					RoomCurrency: roomCurrencyCode(room),
-					Operation:    toOperationDto(&op),
-					notified:     op.NotificationSent,
+					Operation:    toOperationDto(op),
+					source:       op,
 				})
 			}
 		}

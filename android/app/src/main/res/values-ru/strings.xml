@@ -248,6 +248,7 @@
     <string name="group_debts_unavailable_title">Долги не считаются</string>
     <string name="group_debts_unavailable_subtitle">Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.</string>
     <string name="group_card_pending_badge">Есть неотправленные операции</string>
+    <string name="group_card_unread_badge">Новых событий: %1$s</string>
     <string name="group_settle_offline">Нет соединения. Погашение долга доступно только онлайн</string>
     <string name="group_you_owe_name">Вы должны %1$s</string>
     <string name="group_chip_settle">Погасить долг</string>

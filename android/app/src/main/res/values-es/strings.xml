@@ -191,6 +191,7 @@
     <string name="group_debts_unavailable_title">Deudas sin calcular</string>
     <string name="group_debts_unavailable_subtitle">Los datos de este grupo vienen de una versión antigua y los saldos no cuadran. Las operaciones y los totales sí funcionan.</string>
     <string name="group_card_pending_badge">Hay operaciones sin enviar</string>
+    <string name="group_card_unread_badge">Eventos nuevos: %1$s</string>
     <string name="group_settle_offline">Sin conexión. Saldar deudas solo funciona en línea</string>
     <string name="group_you_owe_name">Debes a %1$s</string>
     <string name="group_chip_settle">Saldar deuda</string>

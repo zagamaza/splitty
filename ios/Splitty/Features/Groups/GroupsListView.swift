@@ -220,6 +220,10 @@ private struct GroupCardRow: View {
                             .foregroundStyle(Color.inkSecondary)
                             .accessibilityLabel("Есть неотправленные операции")
                     }
+                    if let unread = MainTabView.badgeLabel(for: room.unreadCount) {
+                        UnreadBadge(text: unread)
+                            .accessibilityLabel("Новых событий: \(unread)")
+                    }
                 }
                 Text(memberCountText(room.memberCount))
                     .font(.system(size: 13))
@@ -257,6 +261,22 @@ private struct GroupCardRow: View {
                 MoneyText(room.myBalance, size: 15, currency: room.currency)
             }
         }
+    }
+}
+
+/// Счётчик непрочитанного на карточке группы: акцентная капсула рядом с
+/// названием. Текст готовит `MainTabView.badgeLabel` — правило «99+» обязано
+/// совпадать с бейджем вкладки, иначе одно и то же число выглядело бы по-разному.
+private struct UnreadBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color.accent, in: Capsule())
     }
 }
 

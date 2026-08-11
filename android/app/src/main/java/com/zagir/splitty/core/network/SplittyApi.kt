@@ -232,6 +232,17 @@ interface SplittyApi {
     @POST("api/v1/me/notifications-seen")
     suspend fun markNotificationsSeen(@Body body: MarkSeenBody)
 
+    /**
+     * Отметить прочитанной ОДНУ группу — гасит счётчик на её карточке.
+     * Отдельно от глобальной отметки: раздел «Уведомления» счётчики групп не
+     * гасит, иначе их почти никто не успевал бы увидеть.
+     */
+    @POST("api/v1/rooms/{roomId}/notifications-seen")
+    suspend fun markRoomSeen(
+        @Path("roomId") roomId: String,
+        @Body body: MarkSeenBody,
+    )
+
     @POST("api/v1/rooms/{roomId}/members")
     suspend fun addMember(
         @Path("roomId") roomId: String,

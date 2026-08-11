@@ -49,6 +49,9 @@ final class GroupDetailViewModel {
             }
             guard generation == loadGeneration else { return }
             apply(result.value, isFromCache: result.isFromCache)
+            if !result.isFromCache {
+                await markSeen(repo: repo, room: result.value)
+            }
         } catch {
             guard generation == loadGeneration else { return }
             // Отмена .task (ушли с экрана) — не ошибка.
@@ -59,6 +62,22 @@ final class GroupDetailViewModel {
                 alertMessage = humanErrorText(error)
             }
         }
+    }
+
+    /// Открытая группа прочитана: гасим счётчик на её карточке в списке.
+    ///
+    /// Отправляем `seenThrough` ИЗ ОТВЕТА, а не своё «сейчас», — иначе погас бы
+    /// и расход, добавленный между ответом и отметкой. Кешированную комнату не
+    /// отмечаем: её `seenThrough` описывает прошлый визит, а офлайн запрос
+    /// всё равно не уйдёт.
+    ///
+    /// Best-effort и молча: человек этого действия не просил, и алерт поверх
+    /// открытой группы был бы шумом — счётчик погаснет при следующем заходе.
+    /// Список обновится сам: у вкладки «Группы» перезагрузка висит на .task,
+    /// который срабатывает и при возврате с этого экрана.
+    private func markSeen(repo: DataRepo, room: RoomDetail) async {
+        guard let through = room.seenThrough else { return }
+        try? await repo.api.markRoomSeen(roomId: room.id, through: through)
     }
 
     private func apply(_ room: RoomDetail, isFromCache: Bool) {

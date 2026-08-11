@@ -2,6 +2,7 @@ package com.zagir.splitty.ui.groups
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -54,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -76,6 +79,7 @@ import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
 import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
+import com.zagir.splitty.ui.main.badgeLabel
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
@@ -327,6 +331,16 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
                             modifier = Modifier.size(15.dp),
                         )
                     }
+                    // Непрочитанные события этой группы. Текст готовит общий с
+                    // бейджем вкладки badgeLabel: одно и то же число не должно
+                    // выглядеть на двух экранах по-разному.
+                    val unread = badgeLabel(
+                        room.unreadCount,
+                        stringResource(R.string.notifications_badge_overflow),
+                    )
+                    if (unread != null) {
+                        UnreadBadge(unread)
+                    }
                 }
                 Text(
                     text = memberCountText(room.memberCount),
@@ -366,6 +380,27 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
             ChevronIcon()
         }
     }
+}
+
+/**
+ * Счётчик непрочитанного на карточке группы: акцентная капсула рядом с
+ * названием (порт iOS GroupsListView.UnreadBadge — вид должен совпадать).
+ */
+@Composable
+private fun UnreadBadge(text: String) {
+    val colors = Splitty.colors
+    val description = stringResource(R.string.group_card_unread_badge, text)
+    Text(
+        text = text,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color.White,
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(colors.accent)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .semantics { contentDescription = description },
+    )
 }
 
 /** «Архив» — тихая строка внизу списка, без карточки. */

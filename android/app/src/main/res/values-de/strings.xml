@@ -191,6 +191,7 @@
     <string name="group_debts_unavailable_title">Schulden nicht berechnet</string>
     <string name="group_debts_unavailable_subtitle">Die Daten dieser Gruppe stammen aus einer alten Version, deshalb gehen die Salden nicht auf. Vorgänge und Auswertungen funktionieren weiterhin.</string>
     <string name="group_card_pending_badge">Es gibt nicht gesendete Vorgänge</string>
+    <string name="group_card_unread_badge">Neue Ereignisse: %1$s</string>
     <string name="group_settle_offline">Keine Verbindung. Begleichen geht nur online</string>
     <string name="group_you_owe_name">Du schuldest %1$s</string>
     <string name="group_chip_settle">Schuld begleichen</string>

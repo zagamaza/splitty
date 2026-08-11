@@ -331,6 +331,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/invites/{roomId}/decline", s.auth(s.handleDeclineInvite))
 	mux.Handle("GET /api/v1/notifications", s.auth(s.handleNotifications))
 	mux.Handle("POST /api/v1/me/notifications-seen", s.auth(s.handleMarkNotificationsSeen))
+	mux.Handle("POST /api/v1/rooms/{roomId}/notifications-seen", s.auth(s.handleMarkRoomSeen))
 	mux.Handle("POST /api/v1/rooms/{roomId}/archive", s.auth(s.handleArchiveRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/unarchive", s.auth(s.handleUnarchiveRoom))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/currency", s.auth(s.handleUpdateCurrency))

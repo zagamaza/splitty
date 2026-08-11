@@ -131,6 +131,20 @@ type User struct {
 	// лента выводится на лету, хранить строку на каждый расход каждому
 	// получателю было бы write amplification без пользы
 	NotificationsSeenAt *time.Time `json:"-" bson:"notifications_seen_at,omitempty"`
+	// RoomsSeenAt — отметка прочитанного ПО КОМНАТЕ (ключ — hex id комнаты):
+	// счётчик на карточке группы гасится открытием ЭТОЙ группы, а не заходом в
+	// раздел «Уведомления» — иначе счётчики умирали бы раньше, чем человек
+	// успевал ими воспользоваться (в раздел его ведёт как раз бейдж).
+	//
+	// Карта на документе пользователя, а не массив в room_states комнаты: там
+	// лежат списки id, форма «кто → когда» туда не ложится, а на пользователе
+	// отметки исчезают вместе с аккаунтом сами — отдельную коллекцию пришлось
+	// бы дописывать в чистку руками (см. room_invite в rest/delete_account.go).
+	//
+	// Отсутствующий ключ — НЕ «непрочитано всё»: читатель откатывается на
+	// общий NotificationsSeenAt (см. rest.roomSeenAt). Без этого в день выкатки
+	// загорелись бы разом все карточки у всех
+	RoomsSeenAt map[string]time.Time `json:"-" bson:"rooms_seen_at,omitempty"`
 	// AppleRefreshToken — refresh token Apple, полученный обменом authorization
 	// code при входе. Нужен, чтобы при удалении аккаунта отозвать токены через
 	// POST https://appleid.apple.com/auth/revoke (Apple Guideline 5.1.1(v)).
@@ -177,6 +191,7 @@ func (u User) Snapshot() User {
 	u.Aliases = nil
 	u.BankDetails = ""
 	u.NotificationsSeenAt = nil
+	u.RoomsSeenAt = nil
 	u.DevAuth = false
 	return u
 }

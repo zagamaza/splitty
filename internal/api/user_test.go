@@ -139,6 +139,12 @@ func TestSnapshotGuardAllFields(t *testing.T) {
 // fillNonZero кладёт в поле ненулевое значение. Незнакомый тип — ошибка, чтобы
 // новое поле User нельзя было добавить, не подумав про Snapshot.
 func fillNonZero(v reflect.Value) error {
+	// time.Time — структура с НЕэкспортируемыми полями: обход по полям на ней
+	// падает, да и заполнять их нечем. Ставим конкретный момент.
+	if v.Type() == reflect.TypeOf(time.Time{}) {
+		v.Set(reflect.ValueOf(time.Unix(1, 0).UTC()))
+		return nil
+	}
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		v.SetInt(42)
@@ -157,6 +163,18 @@ func fillNonZero(v reflect.Value) error {
 		}
 	case reflect.Slice:
 		v.Set(reflect.MakeSlice(v.Type(), 1, 1))
+	case reflect.Map:
+		m := reflect.MakeMap(v.Type())
+		key := reflect.New(v.Type().Key()).Elem()
+		if err := fillNonZero(key); err != nil {
+			return err
+		}
+		val := reflect.New(v.Type().Elem()).Elem()
+		if err := fillNonZero(val); err != nil {
+			return err
+		}
+		m.SetMapIndex(key, val)
+		v.Set(m)
 	case reflect.Struct:
 		for i := 0; i < v.NumField(); i++ {
 			if err := fillNonZero(v.Field(i)); err != nil {

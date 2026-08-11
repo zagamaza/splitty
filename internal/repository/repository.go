@@ -71,6 +71,8 @@ type UserRepository interface {
 	SoftDeleteUser(ctx context.Context, userId int) error
 	SetNotifySettings(ctx context.Context, userId int, s api.NotifySettings) error
 	SetNotificationsSeenAt(ctx context.Context, userId int, at time.Time) error
+	// SetRoomSeenAt двигает отметку прочитанного ОДНОЙ комнаты (rooms_seen_at.<roomId>)
+	SetRoomSeenAt(ctx context.Context, userId int, roomId string, at time.Time) error
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
 	RemovePushToken(ctx context.Context, userId int, token string) error
@@ -1142,7 +1144,11 @@ func (r MongoUserRepository) ClearIdentity(ctx context.Context, userId int, prov
 // password_hash — по той же причине: секрет, в снимки комнат не попадающий.
 // Вместе с login_email (он в snapshotPIIFields) это освобождает адрес под
 // повторную регистрацию: unique sparse индекс отсутствующего поля не видит
-var tombstoneExtraFields = []string{"apple_refresh_token", "password_hash"}
+//
+// rooms_seen_at — не секрет, но его КЛЮЧИ это список комнат человека, и
+// переживать удаление аккаунта такой след не должен: у tombstone нет ни
+// карточек групп, ни счётчиков, чтобы отметки кому-то пригодились
+var tombstoneExtraFields = []string{"apple_refresh_token", "password_hash", "rooms_seen_at"}
 
 // SoftDeleteUser ставит tombstone: помечает документ удалённым, чистит PII и
 // освобождает личности.
@@ -1634,6 +1640,35 @@ func (r MongoUserRepository) SetNotificationsSeenAt(ctx context.Context, userId 
 	_, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"notifications_seen_at": at}})
 	if err != nil {
 		log.Error().Err(err).Msg("set notifications seen failed")
+	}
+	return err
+}
+
+// SetRoomSeenAt двигает отметку прочитанного одной комнаты.
+//
+// Условия те же, что у SetNotificationsSeenAt (tombstone и «только вперёд»), но
+// по вложенному ключу rooms_seen_at.<roomId>: откат назад вернул бы на карточку
+// группы уже просмотренные события.
+//
+// roomId обязан быть валидным hex ObjectId — вызывающий проверяет это, находя
+// комнату. Точка в ключе иначе увела бы $set на произвольный вложенный путь
+// документа пользователя.
+func (r MongoUserRepository) SetRoomSeenAt(ctx context.Context, userId int, roomId string, at time.Time) error {
+	if _, err := primitive.ObjectIDFromHex(roomId); err != nil {
+		return err
+	}
+	field := "rooms_seen_at." + roomId
+	filter := bson.M{
+		"_id":        userId,
+		"deleted_at": bson.M{"$exists": false},
+		"$or": bson.A{
+			bson.M{field: bson.M{"$exists": false}},
+			bson.M{field: bson.M{"$lt": at}},
+		},
+	}
+	_, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{field: at}})
+	if err != nil {
+		log.Error().Err(err).Msg("set room seen failed")
 	}
 	return err
 }
