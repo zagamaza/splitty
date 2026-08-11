@@ -313,8 +313,16 @@ func (n *Notifier) NotifyInvited(ctx context.Context, room api.Room, invitee api
 		}
 	}
 
+	// Текст telegram — через I18n, как все остальные сообщения бота: тело push
+	// собирается по-русски (так же, как у операций и долгов, — там текст
+	// адресату не локализуется вовсе), но в telegram у человека выбран язык, и
+	// подставлять туда русскую строку нельзя.
+	key := "scrn_notification_invited"
+	if isReturn {
+		key = "scrn_notification_invited_return"
+	}
 	n.send([]tgbotapi.Chattable{NewMessage(chatId,
-		fmt.Sprintf("%s — <b>%s</b>", html.EscapeString(body), html.EscapeString(room.Name)),
+		I18n(&invitee, key, html.EscapeString(inviter.DisplayName), html.EscapeString(room.Name)),
 		keyboard)})
 }
 

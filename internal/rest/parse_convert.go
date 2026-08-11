@@ -79,7 +79,7 @@ func (s *Server) handleAddAlias(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if callerId != targetId && !s.shareRoom(ctx, callerId, targetId) {
+	if callerId != targetId && !s.shareRoomOrClosed(ctx, callerId, targetId) {
 		writeError(w, http.StatusForbidden, "forbidden", "нельзя добавить прозвище пользователю без общей комнаты")
 		return
 	}
@@ -124,18 +124,33 @@ func containsAlias(aliases []string, alias string) bool {
 	return false
 }
 
-// shareRoom сообщает, состоят ли двое в общей комнате.
-func (s *Server) shareRoom(ctx context.Context, a, b int) bool {
+// shareRoom сообщает, состоят ли двое в общей комнате — то же отношение, на
+// котором строится /friends.
+//
+// Ошибка чтения возвращается наружу: для ACL «не смогли прочитать» и «не
+// связаны» — одно и то же (доступ закрыт, см. shareRoomOrClosed), а для
+// приглашения это разные ответы, 500 против 403.
+func (s *Server) shareRoom(ctx context.Context, a, b int) (bool, error) {
 	rooms, err := s.roomRepo.FindRoomsByUserId(ctx, a)
-	if err != nil || rooms == nil {
-		return false
+	if err != nil {
+		return false, err
+	}
+	if rooms == nil {
+		return false, nil
 	}
 	for i := range *rooms {
 		if isRoomMember(&(*rooms)[i], b) {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
+}
+
+// shareRoomOrClosed — shareRoom для ACL: сбой чтения трактуется как «не
+// связаны», то есть доступ закрыт.
+func (s *Server) shareRoomOrClosed(ctx context.Context, a, b int) bool {
+	shared, err := s.shareRoom(ctx, a, b)
+	return err == nil && shared
 }
 
 // toApiItems конвертирует транспортные позиции (ai.DraftItem) в доменные

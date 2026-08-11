@@ -123,6 +123,16 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Приглашение уже ждёт решения — повтор идемпотентен: ни новой записи, ни
+	// второго push. Без этой ветки второй вызов (тот же участник тапнул ещё раз
+	// или позвал другой) проваливался бы в шаг (5), где existing != nil делает
+	// связь истинной, и человек оказался бы в комнате БЕЗ согласия — прямое
+	// нарушение решения 5 плана.
+	if existing != nil && existing.Status == api.InvitePending {
+		writeJSON(w, http.StatusAccepted, addMemberResponse{Status: api.InvitePending})
+		return
+	}
+
 	// (5) Связь: друг ИЛИ прошлое отношение по этой комнате.
 	//
 	// /friends строится из ТЕКУЩИХ участников неархивных комнат, поэтому вышедший
@@ -131,9 +141,11 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	// недостижимым в самом типовом случае — отсюда вторая ветка.
 	related := existing != nil
 	if !related {
-		related, hErr = s.shareRoomWith(ctx, inviterId, invitee.ID)
-		if hErr != nil {
-			hErr.write(w)
+		var shareErr error
+		related, shareErr = s.shareRoom(ctx, inviterId, invitee.ID)
+		if shareErr != nil {
+			log.Error().Err(shareErr).Msg("cannot find rooms")
+			writeError(w, http.StatusInternalServerError, "internal", "не удалось получить комнаты")
 			return
 		}
 	}
@@ -168,11 +180,12 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 // второй раз.
 func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	roomId, roomHex, invite, hErr := s.pendingInvite(ctx, r)
+	invite, user, hErr := s.pendingInvite(ctx, r)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
+	roomId := invite.RoomID.Hex()
 
 	room, err := s.roomRepo.FindById(ctx, roomId)
 	if err != nil || room == nil {
@@ -181,7 +194,7 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, err := s.invites.SetStatusIfCurrent(ctx, roomHex, invite.InviteeID, api.InvitePending, api.InviteAdded, s.now())
+	ok, err := s.invites.SetStatusIfCurrent(ctx, invite.RoomID, invite.InviteeID, api.InvitePending, api.InviteAdded, s.now())
 	if err != nil {
 		log.Error().Err(err).Msg("cannot accept invite")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось принять приглашение")
@@ -195,7 +208,7 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 	// JoinToRoom идемпотентен, поэтому ретрай безопасен. Если он всё же упадёт,
 	// останется запись added без членства — её чинит повторное приглашение:
 	// оно пойдёт по шагу (5) handleAddMember, потому что человек не участник.
-	if err = s.roomRepo.JoinToRoom(ctx, *invite.user, roomId); err != nil {
+	if err = s.roomRepo.JoinToRoom(ctx, *user, roomId); err != nil {
 		log.Error().Err(err).Msg("cannot join room on accept")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось войти в группу")
 		return
@@ -207,13 +220,13 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 // handleDeclineInvite POST /api/v1/invites/{roomId}/decline — отказаться.
 func (s *Server) handleDeclineInvite(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	_, roomHex, invite, hErr := s.pendingInvite(ctx, r)
+	invite, _, hErr := s.pendingInvite(ctx, r)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
 
-	ok, err := s.invites.SetStatusIfCurrent(ctx, roomHex, invite.InviteeID, api.InvitePending, api.InviteDeclined, s.now())
+	ok, err := s.invites.SetStatusIfCurrent(ctx, invite.RoomID, invite.InviteeID, api.InvitePending, api.InviteDeclined, s.now())
 	if err != nil {
 		log.Error().Err(err).Msg("cannot decline invite")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось отклонить приглашение")
@@ -227,44 +240,37 @@ func (s *Server) handleDeclineInvite(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, addMemberResponse{Status: api.InviteDeclined})
 }
 
-// pendingInviteCtx — приглашение вместе с профилем приглашённого.
-type pendingInviteCtx struct {
-	*api.RoomInvite
-	user *api.User
-}
-
 // pendingInvite общая подготовка accept/decline: находит СВОЁ приглашение в
-// статусе pending. Чужое отдаём как 404, а не 403 — существование чужих
-// приглашений не наше дело раскрывать.
-func (s *Server) pendingInvite(ctx context.Context, r *http.Request) (string, primitive.ObjectID, *pendingInviteCtx, *httpError) {
+// статусе pending и профиль приглашённого. Чужое отдаём как 404, а не 403 —
+// существование чужих приглашений не наше дело раскрывать.
+func (s *Server) pendingInvite(ctx context.Context, r *http.Request) (*api.RoomInvite, *api.User, *httpError) {
 	if s.invites == nil {
-		return "", primitive.NilObjectID, nil, &httpError{http.StatusServiceUnavailable, "unavailable", "приглашения недоступны"}
+		return nil, nil, &httpError{http.StatusServiceUnavailable, "unavailable", "приглашения недоступны"}
 	}
 
-	roomId := r.PathValue("roomId")
-	roomHex, err := primitive.ObjectIDFromHex(roomId)
+	roomHex, err := primitive.ObjectIDFromHex(r.PathValue("roomId"))
 	if err != nil {
-		return "", primitive.NilObjectID, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
+		return nil, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
 	}
 
 	user, hErr := s.currentUser(ctx)
 	if hErr != nil {
-		return "", primitive.NilObjectID, nil, hErr
+		return nil, nil, hErr
 	}
 
 	invite, err := s.invites.Find(ctx, roomHex, user.ID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			return "", primitive.NilObjectID, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
+			return nil, nil, &httpError{http.StatusNotFound, "not_found", "приглашение не найдено"}
 		}
 		log.Error().Err(err).Msg("cannot read invite")
-		return "", primitive.NilObjectID, nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить приглашение"}
+		return nil, nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить приглашение"}
 	}
 	if invite.Status != api.InvitePending {
-		return "", primitive.NilObjectID, nil, &httpError{http.StatusConflict, "not_pending", "приглашение уже обработано"}
+		return nil, nil, &httpError{http.StatusConflict, "not_pending", "приглашение уже обработано"}
 	}
 
-	return roomId, roomHex, &pendingInviteCtx{RoomInvite: invite, user: user}, nil
+	return invite, user, nil
 }
 
 // handleLeaveRoom DELETE /api/v1/rooms/{roomId}/members/me — выйти самому.
@@ -340,7 +346,7 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	if !left {
 		// Гонку с параллельным выходом трактуем как успех: состояние уже такое,
 		// каким его хотел видеть вызывающий.
-		writeJSON(w, http.StatusNoContent, nil)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -355,11 +361,12 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 		}
 	}
 
-	writeJSON(w, http.StatusNoContent, nil)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // hasOperations участвует ли пользователь хотя бы в одной АКТИВНОЙ операции —
-// как донор или как получатель с ненулевой долей.
+// как донор или как получатель (доля роли не играет: нулевая доля тоже часть
+// расчёта, и молчаливое исключение таких получателей разошлось бы с долгами).
 //
 // Работает по activeOperations, а не по сырым данным: легаси-операции эпохи
 // бота хранят recipients без recipients_with_sum, и доли для них синтезируются
@@ -379,6 +386,28 @@ func hasOperations(room *api.Room, userId int) bool {
 	return false
 }
 
+// reconcileInviteOnJoin приводит запись отношения к added, когда человек вошёл
+// в комнату сам — по коду или по ссылке /join.
+//
+// Без этого приглашённый, который вместо кнопки «Принять» прошёл по ссылке,
+// оставался бы pending: раздел уведомлений вечно показывал бы ему карточку с
+// выбором для комнаты, где он уже состоит, а тап по «Отклонить» записал бы
+// declined участнику — ровно то противоречивое состояние, ради которого заведён
+// compare-and-set. Сбой только логируем: членство уже записано, а следующее
+// приглашение доведёт запись шагом (3) handleAddMember.
+func (s *Server) reconcileInviteOnJoin(ctx context.Context, roomID primitive.ObjectID, userId int) {
+	if s.invites == nil {
+		return
+	}
+	existing, err := s.invites.Find(ctx, roomID, userId)
+	if err != nil || existing == nil || existing.Status == api.InviteAdded {
+		return
+	}
+	if err = s.invites.Upsert(ctx, roomID, userId, existing.InviterID, api.InviteAdded, s.now()); err != nil {
+		log.Error().Err(err).Msg("cannot reconcile invite on join")
+	}
+}
+
 // notifyInvited шлёт уведомление приглашённому в фоне (как остальные
 // уведомления REST — сбой доставки не должен ронять запрос).
 func (s *Server) notifyInvited(ctx context.Context, room api.Room, invitee api.User, inviterId int, isReturn bool) {
@@ -390,23 +419,4 @@ func (s *Server) notifyInvited(ctx context.Context, room api.Room, invitee api.U
 	s.notifyAsync(ctx, func(nctx context.Context, n Notifier) {
 		n.NotifyInvited(nctx, room, invitee, *inviter, isReturn)
 	})
-}
-
-// shareRoomWith есть ли у двоих общая неархивная комната — то же отношение,
-// на котором строится /friends.
-func (s *Server) shareRoomWith(ctx context.Context, userId, otherId int) (bool, *httpError) {
-	rooms, err := s.roomRepo.FindRoomsByUserId(ctx, userId)
-	if err != nil {
-		log.Error().Err(err).Msg("cannot find rooms")
-		return false, &httpError{http.StatusInternalServerError, "internal", "не удалось получить комнаты"}
-	}
-	if rooms == nil {
-		return false, nil
-	}
-	for i := range *rooms {
-		if isRoomMember(&(*rooms)[i], otherId) {
-			return true, nil
-		}
-	}
-	return false, nil
 }

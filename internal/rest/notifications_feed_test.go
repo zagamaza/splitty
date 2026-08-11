@@ -176,8 +176,13 @@ func TestMarkSeenNeverGoesBackwards(t *testing.T) {
 	srv, _, _ := notifFixture(t)
 
 	got := fetchNotifications(t, srv, testUser2.ID)
-	markSeen(t, srv, testUser2.ID, got.SeenThrough)
-	markSeen(t, srv, testUser2.ID, got.SeenThrough.Add(-time.Hour))
+	if code := markSeen(t, srv, testUser2.ID, got.SeenThrough); code != http.StatusNoContent {
+		t.Fatalf("первая отметка: ожидался 204, получен %d", code)
+	}
+	// Запоздавший запрос — идемпотентный повтор, а не ошибка: 204 без изменений.
+	if code := markSeen(t, srv, testUser2.ID, got.SeenThrough.Add(-time.Hour)); code != http.StatusNoContent {
+		t.Fatalf("запоздавшая отметка: ожидался 204, получен %d", code)
+	}
 
 	after := fetchNotifications(t, srv, testUser2.ID)
 	if after.UnreadCount != 0 {
@@ -201,5 +206,156 @@ func TestActivityStillWorks(t *testing.T) {
 	}
 	if len(items) != 1 {
 		t.Fatalf("ожидалось 1 событие, получено %d", len(items))
+	}
+}
+
+// TestNotificationsAddedCardDisappearsAfterSeen — карточка «вас добавили»
+// информационная и обязана гаснуть после просмотра. Требование Task 7; без
+// этого теста переход к «показывать added всегда» прошёл бы незамеченным.
+func TestNotificationsAddedCardDisappearsAfterSeen(t *testing.T) {
+	srv, invites, room := notifFixture(t)
+	if err := invites.Upsert(context.Background(), room.ID, testUser2.ID, testUser1.ID, api.InviteAdded, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения: %v", err)
+	}
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if len(got.Invites) != 1 {
+		t.Fatalf("карточка added должна показываться до отметки, получено %d", len(got.Invites))
+	}
+	if code := markSeen(t, srv, testUser2.ID, got.SeenThrough); code != http.StatusNoContent {
+		t.Fatalf("отметка прочитанного: получен %d", code)
+	}
+
+	after := fetchNotifications(t, srv, testUser2.ID)
+	if len(after.Invites) != 0 {
+		t.Fatalf("после отметки карточка added осталась: %+v", after.Invites)
+	}
+	if after.UnreadCount != 0 {
+		t.Fatalf("после отметки непрочитанных должно быть 0, получено %d", after.UnreadCount)
+	}
+}
+
+// TestNotificationsUnreadCountsWholeFeed — счётчик считается по ВСЕЙ ленте, а
+// не по отданной странице. Источник бейджа просит limit=1, и счёт по странице
+// упирал бы его в единицу: двадцать новых расходов давали бы «1».
+func TestNotificationsUnreadCountsWholeFeed(t *testing.T) {
+	donor := testUser1
+	ops := make([]api.Operation, 0, 5)
+	for i := 0; i < 5; i++ {
+		ops = append(ops, api.Operation{
+			ID: primitive.NewObjectID(), Description: fmt.Sprintf("Расход %d", i), Sum: 100,
+			Donor:             &donor,
+			RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
+			CreateAt:          time.Now(),
+		})
+	}
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{testUser1, testUser2}, Operations: &ops,
+		CreateAt: time.Now(),
+	}
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	srv.SetInvites(newFakeInviteStore())
+
+	token := mustToken(t, srv, testUser2.ID)
+	rec := doRequest(t, srv, http.MethodGet, "/api/v1/notifications?limit=1&offset=0", token, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("ожидался 200, получен %d", rec.Code)
+	}
+	var got notificationsDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("не удалось разобрать ответ: %v", err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("страница обязана уважать limit=1, получено %d", len(got.Items))
+	}
+	if got.UnreadCount != 5 {
+		t.Fatalf("счётчик должен считать всю ленту (5), получено %d", got.UnreadCount)
+	}
+}
+
+// TestNotificationsPagination — лента листается теми же limit/offset, что и
+// /activity: хендлер, игнорирующий offset, обязан падать здесь.
+func TestNotificationsPagination(t *testing.T) {
+	donor := testUser1
+	ops := make([]api.Operation, 0, 3)
+	for i := 0; i < 3; i++ {
+		ops = append(ops, api.Operation{
+			ID: primitive.NewObjectID(), Description: fmt.Sprintf("Расход %d", i), Sum: 100,
+			Donor:             &donor,
+			RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
+			// Разное время: порядок ленты обязан быть предсказуем.
+			CreateAt: time.Now().Add(time.Duration(-i) * time.Hour),
+		})
+	}
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{testUser1, testUser2}, Operations: &ops,
+		CreateAt: time.Now(),
+	}
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	srv.SetInvites(newFakeInviteStore())
+	token := mustToken(t, srv, testUser2.ID)
+
+	page := func(query string) notificationsDto {
+		t.Helper()
+		rec := doRequest(t, srv, http.MethodGet, "/api/v1/notifications"+query, token, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("ожидался 200, получен %d", rec.Code)
+		}
+		var out notificationsDto
+		if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+			t.Fatalf("не удалось разобрать ответ: %v", err)
+		}
+		return out
+	}
+
+	first := page("?limit=2&offset=0")
+	if len(first.Items) != 2 {
+		t.Fatalf("первая страница: ожидалось 2 события, получено %d", len(first.Items))
+	}
+	second := page("?limit=2&offset=2")
+	if len(second.Items) != 1 {
+		t.Fatalf("вторая страница: ожидалось 1 событие, получено %d", len(second.Items))
+	}
+	if second.Items[0].Operation.ID == first.Items[0].Operation.ID {
+		t.Fatal("offset проигнорирован: вторая страница повторяет первую")
+	}
+}
+
+// TestNotificationsEmptyState — пустой раздел отдаёт пустые массивы, а не null:
+// клиенты декодируют их в списки.
+func TestNotificationsEmptyState(t *testing.T) {
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	srv.SetInvites(newFakeInviteStore())
+
+	got := fetchNotifications(t, srv, testUser1.ID)
+	if got.Items == nil || len(got.Items) != 0 {
+		t.Fatalf("items должны быть пустым списком, получено %+v", got.Items)
+	}
+	if got.Invites == nil || len(got.Invites) != 0 {
+		t.Fatalf("invites должны быть пустым списком, получено %+v", got.Invites)
+	}
+	if got.UnreadCount != 0 {
+		t.Fatalf("непрочитанных быть не должно, получено %d", got.UnreadCount)
+	}
+}
+
+// TestNotificationsInviteToDeletedRoom — комнату удалили, а приглашение
+// осталось: ответ обязан построиться, карточка приходит с пустым названием.
+func TestNotificationsInviteToDeletedRoom(t *testing.T) {
+	srv, invites, room := notifFixture(t)
+	gone := primitive.NewObjectID()
+	if err := invites.Upsert(context.Background(), gone, testUser2.ID, testUser1.ID, api.InvitePending, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения: %v", err)
+	}
+	_ = room
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if len(got.Invites) != 1 {
+		t.Fatalf("ожидалась 1 карточка, получено %d", len(got.Invites))
+	}
+	if got.Invites[0].RoomName != "" {
+		t.Fatalf("название удалённой комнаты взяться неоткуда, получено %q", got.Invites[0].RoomName)
 	}
 }

@@ -32,6 +32,7 @@ func initApp(ctx context.Context, cfg *config) (tg *events.TelegramListener, clo
 		repository.NewChatStateRepository, wire.Bind(new(repository.ChatStateRepository), new(*repository.MongoChatStateRepository)),
 		repository.NewButtonRepository, wire.Bind(new(repository.ButtonRepository), new(*repository.MongoButtonRepository)),
 		repository.NewLoginCodeRepository, wire.Bind(new(repository.LoginCodeRepository), new(*repository.MongoLoginCodeRepository)),
+		repository.NewInviteRepository, wire.Bind(new(bot.InviteService), new(*repository.MongoInviteRepository)),
 		dailyexpenses.NewIntegrationService, wire.Bind(new(events.DeIntegrationService), new(*dailyexpenses.IntegrationService)),
 	)
 	return nil, nil, nil

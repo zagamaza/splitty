@@ -622,6 +622,12 @@ func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
 	return repo
 }
 
+// delete — «комнату успели удалить»: нужно тестам, где приглашение или
+// карточка ссылаются на исчезнувшую комнату.
+func (f *fakeRoomRepo) delete(roomId string) {
+	delete(f.rooms, roomId)
+}
+
 func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error) {
 	if _, err := primitive.ObjectIDFromHex(id); err != nil {
 		return nil, err

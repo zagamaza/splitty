@@ -24,11 +24,6 @@ const (
 	InviteDeclined InviteStatus = "declined"
 )
 
-// IsMember значит ли статус, что человек сейчас в комнате.
-func (s InviteStatus) IsMember() bool {
-	return s == InviteAdded
-}
-
 // RoomInvite — ОДНА запись на пару (комната, приглашённый), хранящая текущее
 // состояние отношения, а не историю приглашений. Уникальный индекс по паре
 // гарантирует единственность, Upsert обновляет запись на месте.

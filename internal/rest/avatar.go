@@ -148,7 +148,7 @@ func (s *Server) handleGetUserAvatar(w http.ResponseWriter, r *http.Request) {
 	// Токен бота даёт доступ к фото ЛЮБОГО собеседника бота — отдаём только
 	// себя и тех, с кем у вызывающего есть общая комната (как в handleAddAlias).
 	callerId := userIdFromCtx(ctx)
-	if callerId != userId && !s.shareRoom(ctx, callerId, userId) {
+	if callerId != userId && !s.shareRoomOrClosed(ctx, callerId, userId) {
 		writeError(w, http.StatusNotFound, "not_found", "пользователь не найден")
 		return
 	}

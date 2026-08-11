@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type UserService interface {
@@ -37,6 +38,16 @@ type RoomService interface {
 	FindRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
+}
+
+// InviteService пишет отношение «человек × комната» — ту же запись, что ведёт
+// REST (коллекция room_invite).
+//
+// Боту нужен ровно один метод: зафиксировать выход. Без записи left человека,
+// вышедшего из бота, повторное приглашение через REST вернуло бы в комнату
+// молча, мимо правила «после выхода — только с явного согласия».
+type InviteService interface {
+	Upsert(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error
 }
 
 type RoomStateService interface {

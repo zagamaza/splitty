@@ -411,6 +411,7 @@ func (s *Server) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	s.reconcileInviteOnJoin(ctx, room.ID, user.ID)
 
 	writeJSON(w, http.StatusOK, s.buildRoomDetail(room, user.ID))
 }
@@ -1431,6 +1432,12 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Друзья собраны из ВСТРОЕННЫХ снимков, а снимок удалённого аккаунта не
+	// исчезает — он анонимизируется. Без признака такие строки выглядели бы
+	// живыми людьми, и приглашение упиралось бы в 404 без объяснений. Один
+	// запрос на всех, а не FindById в цикле
+	s.markDeletedFriends(ctx, friends)
+
 	result := make([]friendBalanceDto, 0, len(friends))
 	// «вес» друга для сортировки — сумма модулей итогов по всем валютам
 	totalAbs := map[int]int{}
@@ -1453,6 +1460,35 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 		return result[i].User.DisplayName < result[j].User.DisplayName
 	})
 	writeJSON(w, http.StatusOK, result)
+}
+
+// markDeletedFriends проставляет признак удалённого аккаунта строкам /friends.
+//
+// Сбой чтения не рушит список: без признака клиент просто покажет строку как
+// обычно — хуже, чем было, не станет, а список друзей ради этого падать не
+// должен.
+func (s *Server) markDeletedFriends(ctx context.Context, friends map[int]*friendBalanceDto) {
+	if len(friends) == 0 {
+		return
+	}
+	ids := make([]int, 0, len(friends))
+	for id := range friends {
+		ids = append(ids, id)
+	}
+	users, err := s.userRepo.FindByIds(ctx, ids)
+	if err != nil {
+		log.Warn().Err(err).Msg("cannot check deleted friends")
+		return
+	}
+	alive := make(map[int]bool, len(users))
+	for i := range users {
+		alive[users[i].ID] = !users[i].IsDeleted()
+	}
+	for id, f := range friends {
+		// Документа нет вовсе — аккаунта нет; для клиента это то же самое, что
+		// tombstone: звать некого.
+		f.User.Deleted = !alive[id]
+	}
 }
 
 // currencyTotals ненулевые итоги по валютам в стабильном порядке справочника
@@ -1490,6 +1526,19 @@ func abs(v int) int {
 // «Уведомления» (см. notifications_feed.go): дублировать обход комнат и
 // сортировку значило бы получить две ленты, которые однажды разойдутся.
 func (s *Server) activityItems(ctx context.Context, userId, limit, offset int) ([]activityItemDto, *httpError) {
+	items, hErr := s.allActivityItems(ctx, userId)
+	if hErr != nil {
+		return nil, hErr
+	}
+	return activityPage(items, limit, offset), nil
+}
+
+// allActivityItems вся лента пользователя, отсортированная по времени.
+//
+// Отделена от пагинации ради счётчика непрочитанного: считая его по СТРАНИЦЕ,
+// бейдж упирался бы в её размер, а источник бейджа просит limit=1 — двадцать
+// новых расходов давали бы «1».
+func (s *Server) allActivityItems(ctx context.Context, userId int) ([]activityItemDto, *httpError) {
 	rooms, err := s.roomRepo.FindRoomsByUserId(ctx, userId)
 	if err != nil {
 		log.Error().Err(err).Msg("cannot find rooms")
@@ -1514,7 +1563,11 @@ func (s *Server) activityItems(ctx context.Context, userId, limit, offset int) (
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].Operation.CreatedAt.After(items[j].Operation.CreatedAt)
 	})
+	return items, nil
+}
 
+// activityPage вырезает страницу из полной ленты.
+func activityPage(items []activityItemDto, limit, offset int) []activityItemDto {
 	// клампим границы: queryInt гарантирует offset/limit >= 0, здесь ограничиваем
 	// limit диапазоном [1, maxActivityLimit] — offset+limit после этого не переполняется
 	if limit < 1 {
@@ -1534,7 +1587,7 @@ func (s *Server) activityItems(ctx context.Context, userId, limit, offset int) (
 	if page == nil {
 		page = []activityItemDto{}
 	}
-	return page, nil
+	return page
 }
 
 // handleActivity GET /api/v1/activity?limit=30&offset=0 — лента операций моих комнат

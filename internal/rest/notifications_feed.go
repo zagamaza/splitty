@@ -8,6 +8,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// maxUnreadCount потолок счётчика непрочитанного: точное число сверх сотни
+// человеку ничего не даёт, а обход всей ленты ради него — лишняя работа.
+const maxUnreadCount = 99
+
 // inviteCardDto закреплённая карточка приглашения в разделе уведомлений.
 type inviteCardDto struct {
 	RoomId      string           `json:"roomId"`
@@ -58,7 +62,7 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, hErr := s.activityItems(ctx, user.ID, limit, offset)
+	all, hErr := s.allActivityItems(ctx, user.ID)
 	if hErr != nil {
 		hErr.write(w)
 		return
@@ -67,17 +71,24 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	seenThrough := s.now()
 	out := notificationsDto{
 		Invites:     []inviteCardDto{},
-		Items:       items,
+		Items:       activityPage(all, limit, offset),
 		SeenThrough: seenThrough,
 	}
 
-	// Непрочитанные события ленты. Считаем по CreateAt активных операций:
-	// времени изменения у операции нет (api.Operation хранит только CreateAt),
-	// поэтому правки и удаления расходов в счётчик не попадают. Это принятое
-	// ограничение, а не недосмотр — «новое» здесь значит «новые расходы».
-	for _, it := range items {
+	// Непрочитанные события ленты — по ВСЕЙ ленте, а не по отданной странице:
+	// бейдж читают запросом с limit=1, и счёт по странице упирал бы его в
+	// единицу. Считаем по CreateAt активных операций: времени изменения у
+	// операции нет (api.Operation хранит только CreateAt), поэтому правки и
+	// удаления расходов в счётчик не попадают. Это принятое ограничение, а не
+	// недосмотр — «новое» здесь значит «новые расходы».
+	for _, it := range all {
 		if user.NotificationsSeenAt == nil || it.Operation.CreatedAt.After(*user.NotificationsSeenAt) {
 			out.UnreadCount++
+		}
+		// Потолок: у старого пользователя без отметки непрочитано вообще всё, и
+		// бейдж «347» не сообщает ничего сверх «много». Клиент рисует «99+».
+		if out.UnreadCount >= maxUnreadCount {
+			break
 		}
 	}
 
@@ -103,16 +114,25 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 				Status:    inv.Status,
 				CreatedAt: inv.CreatedAt,
 			}
-			// Комнату могли удалить — карточка не должна ронять весь ответ.
-			if room, err := s.roomRepo.FindById(ctx, inv.RoomID.Hex()); err == nil && room != nil {
+			// Комнату или пригласившего могли удалить — карточка не должна ронять
+			// весь ответ. Пустое имя клиент подменяет своим плейсхолдером, но сбой
+			// чтения обязан быть виден в логах, а не растворяться в «».
+			if room, err := s.roomRepo.FindById(ctx, inv.RoomID.Hex()); err != nil {
+				log.Warn().Err(err).Str("room", inv.RoomID.Hex()).Msg("cannot read room for invite card")
+			} else if room != nil {
 				card.RoomName = room.Name
 			}
-			if inviter, err := s.userRepo.FindById(ctx, inv.InviterID); err == nil && inviter != nil {
+			if inviter, err := s.userRepo.FindById(ctx, inv.InviterID); err != nil {
+				log.Warn().Err(err).Int("user", inv.InviterID).Msg("cannot read inviter for invite card")
+			} else if inviter != nil {
 				card.InviterName = toUserDto(inviter).DisplayName
 			}
 			out.Invites = append(out.Invites, card)
 			out.UnreadCount++
 		}
+	}
+	if out.UnreadCount > maxUnreadCount {
+		out.UnreadCount = maxUnreadCount
 	}
 
 	writeJSON(w, http.StatusOK, out)
@@ -151,5 +171,5 @@ func (s *Server) handleMarkNotificationsSeen(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить отметку")
 		return
 	}
-	writeJSON(w, http.StatusNoContent, nil)
+	w.WriteHeader(http.StatusNoContent)
 }

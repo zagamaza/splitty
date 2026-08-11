@@ -399,3 +399,69 @@ func TestDeclinedInviteCanBeReinvited(t *testing.T) {
 		t.Fatal("отказавшегося добавили молча")
 	}
 }
+
+// TestAddMemberSecondInviteWhilePendingDoesNotJoin — приглашение уже ждёт
+// решения, и повтор обязан остаться повтором.
+//
+// Тест закрывает прямое нарушение решения 5 плана: пока шаг (4) ловил только
+// left/declined, запись pending проваливалась в шаг (5), где существующая
+// запись сама делала «связь» истинной, — и человек оказывался в комнате, ни
+// разу не согласившись.
+func TestAddMemberSecondInviteWhilePendingDoesNotJoin(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	got := f.addMember(t, testUser2.ID).expect(http.StatusAccepted)
+	if got.Status != api.InvitePending {
+		t.Fatalf("ожидался pending, получен %q", got.Status)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("повторное приглашение затащило человека в комнату без согласия")
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil || inv.Status != api.InvitePending {
+		t.Fatalf("статус записи изменился: %+v (%v)", inv, err)
+	}
+	// Второго push быть не должно: событие для человека то же самое.
+	expectNoNotification(t, f.notifier)
+}
+
+// TestAcceptInviteIntoDeletedRoomNotFound — комнату успели удалить: принимать
+// нечего, и статус приглашения обязан остаться pending, иначе человек потерял
+// бы карточку, ничего не получив взамен.
+func TestAcceptInviteIntoDeletedRoomNotFound(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	f.roomRepo.delete(f.room.ID.Hex())
+
+	if code := f.act(t, testUser2.ID, "accept"); code != http.StatusNotFound {
+		t.Fatalf("accept в удалённую комнату — 404, получен %d", code)
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil || inv.Status != api.InvitePending {
+		t.Fatalf("статус после неудачного accept: %+v (%v)", inv, err)
+	}
+}
+
+// TestJoinByLinkReconcilesPendingInvite — приглашённый прошёл по ссылке вместо
+// кнопки «Принять». Без примирения раздел уведомлений вечно предлагал бы ему
+// решение по комнате, где он уже состоит, а «Отклонить» записало бы declined
+// участнику — то самое противоречие, ради которого заведён compare-and-set.
+func TestJoinByLinkReconcilesPendingInvite(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+
+	token := mustToken(t, f.srv, testUser2.ID)
+	target := fmt.Sprintf("/api/v1/rooms/%s/join", f.room.ID.Hex())
+	if rec := doRequest(t, f.srv, http.MethodPost, target, token, ""); rec.Code != http.StatusOK {
+		t.Fatalf("вход по ссылке: ожидался 200, получен %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status != api.InviteAdded {
+		t.Fatalf("после входа по ссылке запись осталась %q вместо added", inv.Status)
+	}
+}

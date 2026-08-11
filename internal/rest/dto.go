@@ -32,6 +32,12 @@ type userDto struct {
 	ID          int    `json:"id"`
 	Username    string `json:"username"`
 	DisplayName string `json:"displayName"`
+	// Deleted — аккаунт удалён; проставляется только там, где клиенту нужно
+	// отличить живого человека от анонимизированного снимка (/friends). Звать
+	// такого в группу бессмысленно: добавление вернёт 404. По самому снимку
+	// признак не виден — там остаётся лишь затёртое имя, а ловить совпадение с
+	// плейсхолдером нельзя, оно бывает и у настоящего имени
+	Deleted bool `json:"deleted,omitempty"`
 }
 
 type meDto struct {

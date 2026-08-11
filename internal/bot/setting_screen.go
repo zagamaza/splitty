@@ -5,9 +5,11 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"html"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type RoomSetting struct {
@@ -408,15 +410,17 @@ type SelectedLeaveRoom struct {
 	bs  ButtonService
 	us  UserService
 	rs  RoomService
+	is  InviteService
 	css ChatStateService
 	cfg *Config
 }
 
-func NewSelectedLeaveRoom(bs ButtonService, us UserService, rs RoomService, css ChatStateService, cfg *Config) *SelectedLeaveRoom {
+func NewSelectedLeaveRoom(bs ButtonService, us UserService, rs RoomService, is InviteService, css ChatStateService, cfg *Config) *SelectedLeaveRoom {
 	return &SelectedLeaveRoom{
 		bs:  bs,
 		us:  us,
 		rs:  rs,
+		is:  is,
 		cfg: cfg,
 		css: css,
 	}
@@ -447,6 +451,17 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 	if err != nil {
 		log.Error().Err(err).Msg("leave room failed")
 		return
+	}
+	// Выход через бота обязан оставлять ту же запись left, что и выход через
+	// REST: без неё повторное приглашение не увидело бы прошлого выхода и
+	// вернуло бы человека в комнату молча, мимо «только с явного согласия».
+	// Сбой записи не отменяет уже состоявшийся выход — только логируем.
+	if bot.is != nil {
+		if roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId); hexErr == nil {
+			if invErr := bot.is.Upsert(ctx, roomHex, userID, userID, api.InviteLeft, time.Now()); invErr != nil {
+				log.Error().Err(invErr).Msg("mark invite as left failed")
+			}
+		}
 	}
 	u.Button = api.NewButton(viewStart, u.Button.CallbackData)
 	callback := createCallback(u, I18n(u.User, "msg_you_left"), true)

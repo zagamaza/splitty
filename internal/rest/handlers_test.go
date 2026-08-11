@@ -1471,3 +1471,43 @@ func TestIdempotentReplayNotifiesOnce(t *testing.T) {
 	}
 	assertNoNotifierCall(t, notifier)
 }
+
+// TestFriendsMarkDeletedAccounts — снимок удалённого аккаунта из комнаты не
+// исчезает, он анонимизируется, поэтому такой человек продолжает попадать в
+// /friends. Без признака клиент предлагал бы позвать его в группу, а
+// добавление возвращало бы 404 без объяснений.
+func TestFriendsMarkDeletedAccounts(t *testing.T) {
+	deleted := testUser3
+	deletedAt := time.Now()
+	deleted.DeletedAt = &deletedAt
+
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Поездка",
+		Members:  &[]api.User{testUser1, testUser2, testUser3},
+		CreateAt: time.Now(),
+	}
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, deleted), newFakeRoomRepo(room))
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/friends", token, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("ожидался 200, получен %d", rec.Code)
+	}
+	var friends []friendBalanceDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &friends); err != nil {
+		t.Fatalf("не удалось разобрать ответ: %v", err)
+	}
+	flags := map[int]bool{}
+	for _, f := range friends {
+		flags[f.User.ID] = f.User.Deleted
+	}
+	if len(flags) != 2 {
+		t.Fatalf("ожидалось 2 друга, получено %+v", friends)
+	}
+	if flags[testUser3.ID] != true {
+		t.Error("удалённый друг не помечен признаком deleted")
+	}
+	if flags[testUser2.ID] != false {
+		t.Error("живой друг помечен как удалённый")
+	}
+}
