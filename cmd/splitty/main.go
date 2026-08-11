@@ -222,6 +222,15 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		return nil, nil, nil, errors.Wrap(err, "cannot backfill telegram_id")
 	}
 
+	// Раздел «Уведомления» считает непрочитанным всё новее notifications_seen_at,
+	// а до этой выкатки поля не было ни у кого: без бэкфилла в день релиза вкладка
+	// загорелась бы «99+» у каждого действующего пользователя — по расходам,
+	// которые он давно видел. См. repository.BackfillNotificationsSeenAt
+	if _, err := repository.BackfillNotificationsSeenAt(ctx, db); err != nil {
+		cleanup()
+		return nil, nil, nil, errors.Wrap(err, "cannot backfill notifications_seen_at")
+	}
+
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
 	if cfg.GeminiApiKey != "" {
 		aiUsageRepo := repository.NewAiUsageRepository(db)

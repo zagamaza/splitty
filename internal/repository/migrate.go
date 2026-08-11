@@ -17,6 +17,9 @@ const migrationCollection = "migration"
 // backfillTelegramIDMarker — _id маркера бэкфилла telegram_id
 const backfillTelegramIDMarker = "backfill_telegram_id"
 
+// backfillSeenAtMarker — _id маркера бэкфилла notifications_seen_at
+const backfillSeenAtMarker = "backfill_notifications_seen_at"
+
 // BackfillTelegramID проставляет исторические telegram_id = _id: до этого плана
 // _id пользователя И БЫЛ его telegram id, а теперь это отдельные вещи.
 //
@@ -99,5 +102,70 @@ func BackfillTelegramID(ctx context.Context, db *mongo.Database) (int64, error) 
 	}
 
 	log.Info().Int64("modified", ur.ModifiedCount).Msg("backfill telegram_id done")
+	return ur.ModifiedCount, nil
+}
+
+// BackfillNotificationsSeenAt проставляет отметку прочитанного всем, кто её ещё
+// не имеет, на момент выкатки.
+//
+// Без неё раздел «Уведомления» считает непрочитанным ВСЁ: счётчик берёт события
+// новее notifications_seen_at, а до этой выкатки поля не существовало ни у кого.
+// В день релиза каждый действующий пользователь увидел бы на вкладке «99+» —
+// потолок счётчика — по расходам, которые он давно видел в ленте. Число
+// выглядит как авария, гасится только заходом в раздел, и первое впечатление от
+// фичи оказывается ложной тревогой.
+//
+// Отметка ставится в now: всё, что было ДО выкатки, считается прочитанным, а
+// счётчик начинает жизнь с нуля и отсчитывает только новые события. Момент
+// снимается один раз и общий для всех — иначе пользователи, чьи документы
+// обновились позже, потеряли бы события, случившиеся в процессе миграции.
+//
+// Идемпотентность здесь даёт САМ ФИЛЬТР `notifications_seen_at: {$exists:
+// false}`: после первого прогона поле есть у всех, и повторный заход не находит
+// ни одного документа. Маркер (в отличие от BackfillTelegramID, где он несёт
+// корректность) нужен только чтобы не сканировать коллекцию user на каждом
+// старте сервера — потеря маркера данным не вредит.
+//
+// Tombstone (deleted_at) пропускаем: у удалённого аккаунта нет ни ленты, ни
+// бейджа, а лишняя запись в его документ противоречит чистке PII.
+func BackfillNotificationsSeenAt(ctx context.Context, db *mongo.Database) (int64, error) {
+	migrations := db.Collection(migrationCollection)
+
+	res := migrations.FindOne(ctx, bson.D{{Key: "_id", Value: backfillSeenAtMarker}})
+	switch {
+	case res.Err() == nil:
+		return 0, nil
+	case errors.Is(res.Err(), mongo.ErrNoDocuments):
+	default:
+		return 0, errors.Wrap(res.Err(), "cannot read migration marker")
+	}
+
+	now := time.Now().UTC()
+	filter := bson.D{
+		{Key: "notifications_seen_at", Value: bson.D{{Key: "$exists", Value: false}}},
+		{Key: "deleted_at", Value: bson.D{{Key: "$exists", Value: false}}},
+	}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "notifications_seen_at", Value: now}}}}
+
+	ur, err := db.Collection("user").UpdateMany(ctx, filter, update)
+	if err != nil {
+		return 0, errors.Wrap(err, "backfill notifications_seen_at failed")
+	}
+
+	marker := bson.D{
+		{Key: "_id", Value: backfillSeenAtMarker},
+		{Key: "applied_at", Value: now},
+		{Key: "modified", Value: ur.ModifiedCount},
+	}
+	if _, err = migrations.InsertOne(ctx, marker); err != nil {
+		// маркер вставил параллельно стартовавший процесс — данные в порядке:
+		// его UpdateMany уже проставил отметку, а наш фильтр по $exists
+		// повторно её не тронет.
+		if !IsDuplicateKey(err) {
+			return ur.ModifiedCount, errors.Wrap(err, "cannot write migration marker")
+		}
+	}
+
+	log.Info().Int64("modified", ur.ModifiedCount).Msg("backfill notifications_seen_at done")
 	return ur.ModifiedCount, nil
 }

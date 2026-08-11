@@ -6,6 +6,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/api"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -207,5 +208,124 @@ func TestBackfillTelegramIDRespectsUniqueIndex(t *testing.T) {
 		if u.ID != id {
 			t.Fatalf("по telegram_id=%d найден _id=%d", id, u.ID)
 		}
+	}
+}
+
+// seenAtOf читает notifications_seen_at сырым документом: тесту важно отличать
+// «поля нет» от нулевого времени, а api.User эти случаи не различает.
+func seenAtOf(t *testing.T, db *mongo.Database, id int) (value time.Time, present bool) {
+	t.Helper()
+	var doc bson.M
+	if err := db.Collection("user").FindOne(testCtx(t), bson.M{"_id": id}).Decode(&doc); err != nil {
+		t.Fatalf("пользователь _id=%d не найден: %v", id, err)
+	}
+	raw, ok := doc["notifications_seen_at"]
+	if !ok || raw == nil {
+		return time.Time{}, false
+	}
+	dt, ok := raw.(primitive.DateTime)
+	if !ok {
+		t.Fatalf("notifications_seen_at у _id=%d неожиданного типа %T", id, raw)
+	}
+	return dt.Time().UTC(), true
+}
+
+// TestBackfillNotificationsSeenAt — основной прогон: у кого отметки не было,
+// получает её (иначе в день выкатки вкладка загорится «99+» по давно виденным
+// расходам), существующая отметка не сдвигается, tombstone не трогается.
+func TestBackfillNotificationsSeenAt(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+
+	old := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+	deletedAt := time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC)
+	seedUsers(t, db,
+		api.User{ID: 1, DisplayName: "без отметки"},
+		api.User{ID: 2, DisplayName: "уже смотрел", NotificationsSeenAt: &old},
+		api.User{ID: 3, DisplayName: "удалён", DeletedAt: &deletedAt},
+	)
+
+	before := time.Now().UTC()
+	modified, err := BackfillNotificationsSeenAt(ctx, db)
+	if err != nil {
+		t.Fatalf("бэкфилл упал: %v", err)
+	}
+	if modified != 1 {
+		t.Fatalf("ожидался ровно один изменённый документ, получено %d", modified)
+	}
+
+	got, present := seenAtOf(t, db, 1)
+	if !present {
+		t.Fatal("пользователю без отметки её не проставили — вкладка загорится «99+»")
+	}
+	if got.Before(before.Add(-time.Minute)) {
+		t.Fatalf("отметка проставлена не моментом выкатки: %v", got)
+	}
+
+	// Чужую отметку двигать нельзя: это стёрло бы реально непрочитанное.
+	kept, present := seenAtOf(t, db, 2)
+	if !present || !kept.Equal(old) {
+		t.Fatalf("существующая отметка сдвинулась: %v (present=%v)", kept, present)
+	}
+
+	// У tombstone нет ни ленты, ни бейджа — лишняя запись противоречит чистке PII.
+	if _, present = seenAtOf(t, db, 3); present {
+		t.Fatal("отметка проставлена удалённому аккаунту")
+	}
+}
+
+// TestBackfillNotificationsSeenAtIdempotent — рестарт сервера не сдвигает
+// отметку человеку, который уже что-то не прочитал.
+//
+// Проверяется именно ФИЛЬТР, а не маркер: маркер здесь экономит скан коллекции,
+// но корректность держит `$exists: false`. Поэтому тест снимает маркер — иначе
+// он был бы зелёным на любом коде, включая безусловный UpdateMany.
+func TestBackfillNotificationsSeenAtIdempotent(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+
+	seedUsers(t, db, api.User{ID: 1, DisplayName: "без отметки"})
+
+	if _, err := BackfillNotificationsSeenAt(ctx, db); err != nil {
+		t.Fatalf("первый прогон упал: %v", err)
+	}
+
+	// Человек прочитал раздел давно, а потом ему пришли новые события: отметка
+	// в прошлом — это его непрочитанное. Рестарт не вправе его погасить.
+	past := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	if _, err := db.Collection("user").UpdateOne(ctx, bson.M{"_id": 1},
+		bson.M{"$set": bson.M{"notifications_seen_at": past}}); err != nil {
+		t.Fatalf("не удалось откатить отметку: %v", err)
+	}
+	if _, err := db.Collection(migrationCollection).DeleteOne(ctx,
+		bson.M{"_id": backfillSeenAtMarker}); err != nil {
+		t.Fatalf("не удалось снять маркер: %v", err)
+	}
+
+	modified, err := BackfillNotificationsSeenAt(ctx, db)
+	if err != nil {
+		t.Fatalf("второй прогон упал: %v", err)
+	}
+	if modified != 0 {
+		t.Fatalf("второй прогон изменил %d документов — фильтр не защитил", modified)
+	}
+	got, _ := seenAtOf(t, db, 1)
+	if !got.Equal(past) {
+		t.Fatalf("рестарт погасил непрочитанное: было %v, стало %v", past, got)
+	}
+}
+
+// TestBackfillNotificationsSeenAtWritesMarker — маркер пишется, чтобы сервер не
+// сканировал коллекцию user на каждом старте.
+func TestBackfillNotificationsSeenAtWritesMarker(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+
+	if _, err := BackfillNotificationsSeenAt(ctx, db); err != nil {
+		t.Fatalf("бэкфилл упал: %v", err)
+	}
+	if err := db.Collection(migrationCollection).
+		FindOne(ctx, bson.M{"_id": backfillSeenAtMarker}).Err(); err != nil {
+		t.Fatalf("маркер не записан: %v", err)
 	}
 }
