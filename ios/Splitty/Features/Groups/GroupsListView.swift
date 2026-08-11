@@ -160,12 +160,12 @@ struct GroupsListView: View {
     private var summarySubtitle: String {
         let primary = model.totals.first?.sum ?? 0
         if primary > 0 {
-            return "Вам должны"
+            return String(localized: "Вам должны")
         }
         if primary < 0 {
-            return "Вы должны"
+            return String(localized: "Вы должны")
         }
-        return "Все долги погашены"
+        return Glossary.settledHero
     }
 
     /// Карточки групп: аватар-градиент, название, баланс справа;
@@ -261,7 +261,7 @@ private struct GroupCardRow: View {
                 .foregroundStyle(Color.inkSecondary)
         } else {
             VStack(alignment: .trailing, spacing: 2) {
-                Text(room.myBalance > 0 ? "вам должны" : "вы должны")
+                Text(Glossary.balanceCaption(room.myBalance))
                     .font(.caption2)
                     .foregroundStyle(Color.inkSecondary)
                 MoneyText(room.myBalance, size: 15, currency: room.currency)
@@ -286,21 +286,10 @@ private struct UnreadBadge: View {
     }
 }
 
-/// «1 участник», «2 участника», «5 участников».
+/// «1 участник», «2 участника», «5 участников» — формы задаёт String Catalog,
+/// у каждого языка свой набор.
 private func memberCountText(_ count: Int) -> String {
-    let rem100 = count % 100
-    let rem10 = count % 10
-    let word: String
-    if (11...14).contains(rem100) {
-        word = "участников"
-    } else if rem10 == 1 {
-        word = "участник"
-    } else if (2...4).contains(rem10) {
-        word = "участника"
-    } else {
-        word = "участников"
-    }
-    return "\(count) \(word)"
+    String(localized: "\(count) участников")
 }
 
 // MARK: - Аватар группы

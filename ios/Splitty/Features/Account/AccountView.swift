@@ -151,9 +151,9 @@ struct AccountView: View {
     /// что неотправленные операции будут удалены вместе с кешем.
     private var logoutConfirmTitle: String {
         let pending = session.outbox.entries.count
-        guard pending > 0 else { return "Выйти из аккаунта?" }
-        let word = pluralRu(pending, "неотправленная операция", "неотправленные операции", "неотправленных операций")
-        return "Есть \(pending) \(word) — выйти и удалить?"
+        guard pending > 0 else { return String(localized: "Выйти из аккаунта?") }
+        // Формы «операция/операции/операций» задаёт String Catalog.
+        return String(localized: "Есть \(pending) неотправленных операций — выйти и удалить?")
     }
 
     // MARK: - Секции
@@ -174,7 +174,7 @@ struct AccountView: View {
                         .scaledFont(size: 24, weight: .semibold)
                         .foregroundStyle(Color.ink)
                     if let username = me.username, !username.isEmpty {
-                        Text("@\(username)")
+                        Text(verbatim: "@\(username)")
                             .scaledFont(size: 15)
                             .foregroundStyle(Color.inkSecondary)
                     }
@@ -369,10 +369,9 @@ struct AccountView: View {
     private var loginMethodsFooter: String {
         let linked = session.me?.linkedProviders.count ?? 0
         if linked <= 1 {
-            return "Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. "
-                + "Сначала привяжите другой."
+            return String(localized: "Последний способ входа отвязать нельзя: без него в аккаунт будет не войти. Сначала привяжите другой.")
         }
-        return "Любым из привязанных способов можно войти в этот же аккаунт."
+        return String(localized: "Любым из привязанных способов можно войти в этот же аккаунт.")
     }
 
     /// Строка способа входа: название, статус и действие справа.
@@ -421,10 +420,10 @@ struct AccountView: View {
     /// он у аккаунта один и меняться не умеет, а помнить его человек должен.
     private func providerStatus(_ provider: LoginProvider, isLinked: Bool) -> String {
         guard provider == .password else {
-            return isLinked ? "Привязан" : "Не привязан"
+            return isLinked ? String(localized: "Привязан") : String(localized: "Не привязан")
         }
         let email = session.me?.loginEmail ?? ""
-        return isLinked ? email : "\(email) · пароль не задан"
+        return isLinked ? email : String(localized: "\(email) · пароль не задан")
     }
 
     /// Привязка Apple ID — системная кнопка, а не своя вёрстка: собственный
@@ -540,7 +539,7 @@ struct AccountView: View {
     private func saveName() {
         let trimmed = nameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            errorMessage = "Имя не может быть пустым"
+            errorMessage = String(localized: "Имя не может быть пустым")
             return
         }
         guard trimmed != session.me?.displayName else { return }
@@ -556,15 +555,13 @@ struct AccountView: View {
     private func unlinkConfirmMessage(_ provider: LoginProvider) -> String {
         switch provider {
         case .telegram:
-            return "Войти через Telegram больше не получится, а бот при следующем сообщении "
-                + "заведёт отдельный профиль без ваших групп. Привязать этот Telegram обратно нельзя."
+            return String(localized: "Войти через Telegram больше не получится, а бот при следующем сообщении заведёт отдельный профиль без ваших групп. Привязать этот Telegram обратно нельзя.")
         case .password:
             // Сюда не приходит: у строки пароля кнопка «Изменить», а сброс
             // подтверждается в самом листе (ChangePasswordSheet)
-            return "Войти по паролю больше не получится. Адрес останется за аккаунтом."
+            return String(localized: "Войти по паролю больше не получится. Адрес останется за аккаунтом.")
         case .google, .apple:
-            return "Войти через \(provider.title) больше не получится. "
-                + "Остальные способы входа продолжат работать."
+            return String(localized: "Войти через \(provider.title) больше не получится. Остальные способы входа продолжат работать.")
         }
     }
 
@@ -598,10 +595,10 @@ struct AccountView: View {
         } catch AppleSignInError.cancelled {
             return
         } catch AppleSignInError.nonceUnavailable {
-            errorMessage = "Не удалось начать привязку Apple. Попробуйте ещё раз"
+            errorMessage = String(localized: "Не удалось начать привязку Apple. Попробуйте ещё раз")
             return
         } catch AppleSignInError.missingCredential {
-            errorMessage = "Apple не вернул данные для привязки. Попробуйте ещё раз"
+            errorMessage = String(localized: "Apple не вернул данные для привязки. Попробуйте ещё раз")
             return
         } catch {
             errorMessage = humanErrorText(error)
@@ -653,10 +650,9 @@ struct AccountView: View {
     /// Текст подтверждения. Про сохранение расходов и долгов сказано прямо:
     /// снимки участника остаются во всех группах (имя заменяется на
     /// «Удалённый пользователь»), и обещать «удалим всё» было бы ложью.
-    static let deleteConfirmMessage =
-        "Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.\n\n"
-        + "Расходы и долги в группах останутся: участники увидят «Удалённый пользователь» "
-        + "вместо вашего имени, а суммы и расчёты не изменятся."
+    static var deleteConfirmMessage: String {
+        String(localized: "Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.\n\nРасходы и долги в группах останутся: участники увидят «Удалённый пользователь» вместо вашего имени, а суммы и расчёты не изменятся.")
+    }
 
     /// DELETE /me → полный logout (Keychain, офлайн-кеш, outbox, отложенное
     /// вступление по ссылке) и возврат на экран входа делает `RootView`
@@ -708,22 +704,22 @@ func identityErrorText(_ error: Error) -> String {
     }
     switch code {
     case "identity_taken":
-        return "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+        return String(localized: "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него")
     case "identity_already_linked":
         // У аккаунта уже есть ДРУГАЯ личность этого провайдера. Сервер не
         // подменяет её молча: подмена отцепила бы прежний Apple ID без
         // auth/revoke, и Splitty остался бы в его списке «Вход через Apple».
-        return "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий"
+        return String(localized: "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий")
     case "last_identity":
-        return "Нельзя отвязать единственный способ входа. Сначала привяжите другой"
+        return String(localized: "Нельзя отвязать единственный способ входа. Сначала привяжите другой")
     case "invalid_password":
-        return "Неверный текущий пароль"
+        return String(localized: "Неверный текущий пароль")
     case "provider_rejected":
         // Отказ ПРОВАЙДЕРА (подпись, nonce, срок id-токена) сервер отдаёт
         // 400 с этим кодом — именно чтобы его нельзя было спутать с мёртвой
         // сессией Splitty и чтобы клиент не выкидывал человека на экран входа
         // из-за одной неудачной привязки.
-        return "Не удалось подтвердить аккаунт. Попробуйте ещё раз"
+        return String(localized: "Не удалось подтвердить аккаунт. Попробуйте ещё раз")
     default:
         break
     }
@@ -731,7 +727,7 @@ func identityErrorText(_ error: Error) -> String {
         // С контрактом «отказ провайдера = 400 provider_rejected» 401 отсюда
         // означает ровно одно: сессия Splitty мертва. Сброс уже сделал
         // APIClient (`onUnauthorized`), нам остаётся объяснить, что произошло.
-        return "Сессия истекла. Войдите ещё раз"
+        return String(localized: "Сессия истекла. Войдите ещё раз")
     }
     return humanErrorText(error)
 }
@@ -797,16 +793,15 @@ func runAccountDeletion(session: SessionStore, push: PushTokenBinding) async -> 
 func deleteAccountErrorText(_ error: Error) -> String {
     guard let apiError = error as? APIError else { return humanErrorText(error) }
     if apiError.isPurgeIncomplete {
-        return "Аккаунт удалён, но очистка данных не завершена. "
-            + "Нажмите «Удалить аккаунт» ещё раз, чтобы её доделать"
+        return String(localized: "Аккаунт удалён, но очистка данных не завершена. Нажмите «Удалить аккаунт» ещё раз, чтобы её доделать")
     }
     if apiError.isForbidden {
-        return apiError.errorDescription ?? "Этот аккаунт удалить нельзя"
+        return apiError.errorDescription ?? String(localized: "Этот аккаунт удалить нельзя")
     }
     if !apiError.isServerResponse {
         return humanErrorText(apiError)
     }
-    return "Не удалось удалить аккаунт. Аккаунт и данные на месте — попробуйте ещё раз"
+    return String(localized: "Не удалось удалить аккаунт. Аккаунт и данные на месте — попробуйте ещё раз")
 }
 
 #Preview {

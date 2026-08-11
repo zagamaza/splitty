@@ -22,6 +22,14 @@ targets:
     type: application
     platform: iOS
     sources:
+      # Splitty/Localizable.xcstrings попадает в ресурсы отсюда же: каталог
+      # лежит внутри папки таргета, отдельной строки не нужно. Ключ каталога —
+      # русский исходный текст (CFBundleDevelopmentRegion: ru), переводы —
+      # en/es/de/fr, формулировки согласованы с android/values-*/strings.xml.
+      #
+      # Список ключей, которые реально просит код, снимается сборкой:
+      #   xcodebuild ... SWIFT_EMIT_LOC_STRINGS=YES
+      # и лежит в Objects-normal/<arch>/*.stringsdata.
       - Splitty
     dependencies:
       # Только Messaging: тянет FirebaseCore транзитивно, без Analytics и пр.
@@ -76,8 +84,10 @@ targets:
         UIBackgroundModes:
           - remote-notification
         CFBundleIconName: AppIcon
+        # Русский — язык исходников и запасной вариант; остальные четыре
+        # ровно те же, что в android/app/src/main/res/values-*.
         CFBundleDevelopmentRegion: ru
-        CFBundleLocalizations: [ru]
+        CFBundleLocalizations: [ru, en, es, de, fr]
         CFBundleDisplayName: Splitty
         CFBundleShortVersionString: "1.4"
         CFBundleVersion: "14"
@@ -147,6 +157,11 @@ schemes:
       config: Debug
     test:
       config: Debug
+      # Тесты сверяют РУССКИЕ тексты (коды ошибок, конфликт выхода, приглашения),
+      # а язык приложения теперь зависит от системного. Без явной локали набор
+      # падал бы на симуляторе с английским языком.
+      language: ru
+      region: RU
       targets:
         - SplittyTests
         - SplittyUITests

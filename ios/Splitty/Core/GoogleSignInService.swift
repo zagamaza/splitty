@@ -19,11 +19,11 @@ enum GoogleSignInError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .cancelled:
-            return "Вход через Google отменён"
+            return String(localized: "Вход через Google отменён")
         case .noPresenter:
-            return "Не удалось открыть окно входа Google. Попробуйте ещё раз"
+            return String(localized: "Не удалось открыть окно входа Google. Попробуйте ещё раз")
         case .missingIdToken:
-            return "Google не вернул данные для входа. Попробуйте ещё раз"
+            return String(localized: "Google не вернул данные для входа. Попробуйте ещё раз")
         }
     }
 }

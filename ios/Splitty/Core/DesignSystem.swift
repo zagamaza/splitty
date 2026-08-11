@@ -225,7 +225,7 @@ struct MoneyTotalsText: View {
         HStack(spacing: 6) {
             ForEach(Array(totals.dropFirst().enumerated()), id: \.element) { index, total in
                 if index > 0 {
-                    Text("·")
+                    Text(verbatim: "·")
                         .font(.system(size: secondarySize, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.inkSecondary)
                 }

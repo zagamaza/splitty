@@ -156,8 +156,8 @@ struct NotificationSettingsView: View {
     }
 
     private func section(
-        title: String,
-        footer: String,
+        title: LocalizedStringKey,
+        footer: LocalizedStringKey,
         telegram: Binding<Bool>,
         push: Binding<Bool>
     ) -> some View {

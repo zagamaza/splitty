@@ -437,7 +437,7 @@ struct LoginView: View {
             } catch TelegramWebAuth.Failure.cancelled {
                 // человек закрыл окно — это не ошибка
             } catch TelegramWebAuth.Failure.badResponse {
-                errorMessage = "Telegram не подтвердил вход. Попробуйте ещё раз"
+                errorMessage = String(localized: "Telegram не подтвердил вход. Попробуйте ещё раз")
             } catch {
                 errorMessage = humanErrorText(error)
             }
@@ -460,7 +460,7 @@ struct LoginView: View {
             } catch GoogleSignInError.cancelled {
                 return
             } catch let error as APIError where error.isUnauthorized {
-                errorMessage = "Google не подтвердил вход. Попробуйте ещё раз"
+                errorMessage = String(localized: "Google не подтвердил вход. Попробуйте ещё раз")
             } catch {
                 errorMessage = humanErrorText(error)
             }
@@ -486,9 +486,9 @@ struct LoginView: View {
         } catch AppleSignInError.cancelled {
             return
         } catch AppleSignInError.nonceUnavailable {
-            errorMessage = "Не удалось начать вход через Apple. Попробуйте ещё раз"
+            errorMessage = String(localized: "Не удалось начать вход через Apple. Попробуйте ещё раз")
         } catch AppleSignInError.missingCredential {
-            errorMessage = "Apple не вернул данные для входа. Попробуйте ещё раз"
+            errorMessage = String(localized: "Apple не вернул данные для входа. Попробуйте ещё раз")
         } catch {
             errorMessage = humanErrorText(error)
         }
@@ -511,7 +511,7 @@ struct LoginView: View {
                     authorizationCode: authorizationCode
                 )
             } catch let error as APIError where error.isUnauthorized {
-                errorMessage = "Apple не подтвердил вход. Попробуйте ещё раз"
+                errorMessage = String(localized: "Apple не подтвердил вход. Попробуйте ещё раз")
             } catch {
                 errorMessage = humanErrorText(error)
             }

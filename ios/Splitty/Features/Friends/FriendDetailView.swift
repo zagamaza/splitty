@@ -95,7 +95,7 @@ struct FriendDetailView: View {
                     .scaledFont(size: 24, weight: .semibold)
                     .foregroundStyle(Color.ink)
                 if let username = friend.user.username, !username.isEmpty {
-                    Text("@\(username)")
+                    Text(verbatim: "@\(username)")
                         .scaledFont(size: 15)
                         .foregroundStyle(Color.inkSecondary)
                 }
@@ -125,7 +125,7 @@ struct FriendDetailView: View {
     /// офлайн не работают), затем сразу форма или выбор группы.
     private func settleUpTapped() {
         guard session.isOnline else {
-            errorMessage = "Нет соединения. Погашение долга доступно только онлайн"
+            errorMessage = String(localized: "Нет соединения. Погашение долга доступно только онлайн")
             return
         }
         if friend.rooms.count == 1, let only = friend.rooms.first {
@@ -139,10 +139,10 @@ struct FriendDetailView: View {
     private var totalCaption: String {
         let primary = friend.totals.first?.sum ?? 0
         if primary > 0 {
-            return "Должен(на) вам"
+            return String(localized: "Должен(на) вам")
         }
         if primary < 0 {
-            return "Вы должны"
+            return String(localized: "Вы должны")
         }
         return Glossary.settledHero
     }

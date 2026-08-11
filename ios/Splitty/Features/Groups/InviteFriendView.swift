@@ -169,7 +169,7 @@ struct InviteFriendView: View {
         /// подсказывают разное, и терять её нельзя.
         var reason: String?
         for userId in selected.sorted() {
-            let name = friends.first { $0.user.id == userId }?.user.displayName ?? "Участник"
+            let name = friends.first { $0.user.id == userId }?.user.displayName ?? String(localized: "Участник")
             do {
                 let status = try await session.api.addMember(roomId: roomId, userId: userId)
                 if status == .pending {
@@ -187,7 +187,7 @@ struct InviteFriendView: View {
         }
 
         guard !added.isEmpty || !pending.isEmpty else {
-            alertMessage = "Не удалось пригласить: \(failed.joined(separator: ", "))"
+            alertMessage = String(localized: "Не удалось пригласить: \(failed.joined(separator: ", "))")
                 + (reason.map { ". \($0)" } ?? "")
             return
         }
@@ -211,16 +211,16 @@ struct InviteFriendView: View {
     static func resultText(added: [String], pending: [String], failed: [String]) -> String? {
         var lines: [String] = []
         if !pending.isEmpty {
-            lines.append("Приглашение отправлено — ждём согласия: \(pending.joined(separator: ", "))")
+            lines.append(String(localized: "Приглашение отправлено — ждём согласия: \(pending.joined(separator: ", "))"))
         }
         if !failed.isEmpty {
-            lines.append("Не удалось пригласить: \(failed.joined(separator: ", "))")
+            lines.append(String(localized: "Не удалось пригласить: \(failed.joined(separator: ", "))"))
         }
         if lines.isEmpty {
             return nil
         }
         if !added.isEmpty {
-            lines.insert("Добавлен(а) в группу: \(added.joined(separator: ", "))", at: 0)
+            lines.insert(String(localized: "Добавлен(а) в группу: \(added.joined(separator: ", "))"), at: 0)
         }
         return lines.joined(separator: "\n")
     }

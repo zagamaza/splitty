@@ -115,7 +115,7 @@ struct GroupTotalsView: View {
                 }
                 if let shares = MemberBarsCard.prepared(stats.shareByMember) {
                     MemberBarsCard(
-                        title: "На кого потрачено",
+                        title: String(localized: "На кого потрачено"),
                         bars: shares,
                         currency: stats.currency,
                         palette: palette
@@ -154,7 +154,7 @@ struct GroupTotalsView: View {
             }
             HStack(spacing: 16) {
                 statTile(title: "Операций", icon: "list.bullet") {
-                    Text("\(stats.operationCount)")
+                    Text(verbatim: "\(stats.operationCount)")
                         .scaledFont(size: 22, weight: .semibold)
                         .monospacedDigit()
                         .foregroundStyle(Color.ink)
@@ -188,7 +188,7 @@ struct GroupTotalsView: View {
     }
 
     private func statTile(
-        title: String,
+        title: LocalizedStringKey,
         icon: String,
         @ViewBuilder value: () -> some View
     ) -> some View {
@@ -211,10 +211,11 @@ struct GroupTotalsView: View {
         .surfaceCard()
     }
 
-    /// «июль» — текущий месяц по-русски (для плитки «За июль»).
+    /// «июль» — текущий месяц на языке приложения (для плитки «За июль»).
+    /// Locale.current уже сужен до локализаций бандла, отдельный ru_RU не нужен.
     static func currentMonthName(for date: Date = Date()) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
+        formatter.locale = Locale.current
         formatter.dateFormat = "LLLL"
         return formatter.string(from: date)
     }
@@ -244,11 +245,11 @@ struct GroupTotalsView: View {
     private func topOperationRow(_ operation: TopOperation, currency: String) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(operation.description.isEmpty ? "Расход" : operation.description)
+                Text(operation.description.isEmpty ? String(localized: "Расход") : operation.description)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.ink)
                     .lineLimit(1)
-                Text("\(operation.donor.displayName) · \(DateFmt.dayMonth(operation.createdAt))")
+                Text(verbatim: "\(operation.donor.displayName) · \(DateFmt.dayMonth(operation.createdAt))")
                     .font(.caption)
                     .foregroundStyle(Color.inkSecondary)
                     .lineLimit(1)
@@ -300,7 +301,7 @@ private struct SelectionBadge: View {
         HStack(spacing: 4) {
             Text(label)
                 .foregroundStyle(Color.inkSecondary)
-            Text("—")
+            Text(verbatim: "—")
                 .foregroundStyle(Color.inkSecondary)
             Text(money(sum, currency: currency))
                 .fontWeight(.semibold)
@@ -505,7 +506,7 @@ private struct PaidDonutCard: View {
                         .foregroundStyle(Color.ink)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    Text("\(money(slice.sum, currency: currency)) · \(percent(slice))%")
+                    Text(verbatim: "\(money(slice.sum, currency: currency)) · \(percent(slice))%")
                         .scaledFont(size: 12, relativeTo: .footnote)
                         .monospacedDigit()
                         .foregroundStyle(Color.inkSecondary)
@@ -712,8 +713,15 @@ private struct MemberNetCard: View {
 /// столбец-максимум выделен непрозрачностью, значения не подписываются
 /// (сетка + оси). Данные — `DashboardMath.weekdayTotals`.
 private struct WeekdayCard: View {
-    /// Русские короткие подписи, индекс 0 — понедельник.
-    static let labels = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"]
+    /// Короткие подписи дней, индекс 0 — понедельник. Формы — в String Catalog:
+    /// системные shortWeekdaySymbols дали бы «пн.» с точкой, не наш вид.
+    static var labels: [String] {
+        [
+            String(localized: "пн"), String(localized: "вт"), String(localized: "ср"),
+            String(localized: "чт"), String(localized: "пт"), String(localized: "сб"),
+            String(localized: "вс"),
+        ]
+    }
 
     /// 7 сумм, индекс 0 — понедельник … 6 — воскресенье.
     let totals: [Int]

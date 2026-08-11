@@ -68,42 +68,42 @@ enum APIError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Некорректный адрес сервера"
+            return String(localized: "Некорректный адрес сервера")
         case .transport:
-            return "Нет соединения с сервером"
+            return String(localized: "Нет соединения с сервером")
         case .server(let status, let code, let message):
             return message.isEmpty ? Self.fallbackMessage(status: status, code: code) : message
         case .decoding:
-            return "Не удалось обработать ответ сервера"
+            return String(localized: "Не удалось обработать ответ сервера")
         }
     }
 
     private static func fallbackMessage(status: Int, code: String) -> String {
         switch code {
         case "validation":
-            return "Некорректные данные"
+            return String(localized: "Некорректные данные")
         case "unauthorized":
-            return "Требуется вход"
+            return String(localized: "Требуется вход")
         case "forbidden":
-            return "Нет доступа"
+            return String(localized: "Нет доступа")
         case "not_found":
-            return "Не найдено"
+            return String(localized: "Не найдено")
         case "conflict":
-            return "Действие сейчас невозможно"
+            return String(localized: "Действие сейчас невозможно")
         // Коды распознавания и троттлинга. Сюда попадаем, только когда тело
         // пустое (ответил прокси, а не приложение), но «Ошибка сервера (429)»
         // не говорит человеку ничего. Тексты — те же, что на Android: одна
         // ошибка не должна объясняться на платформах по-разному.
         case "too_large":
-            return "Слишком большой запрос"
+            return String(localized: "Слишком большой запрос")
         case "unsupported_media":
-            return "Неподдерживаемый формат файла"
+            return String(localized: "Неподдерживаемый формат файла")
         case "rate_limited":
-            return "Слишком много запросов. Попробуйте позже"
+            return String(localized: "Слишком много запросов. Попробуйте позже")
         case "ai_disabled":
-            return "Распознавание сейчас недоступно"
+            return String(localized: "Распознавание сейчас недоступно")
         default:
-            return "Ошибка сервера (\(status))"
+            return String(localized: "Ошибка сервера (\(status))")
         }
     }
 }

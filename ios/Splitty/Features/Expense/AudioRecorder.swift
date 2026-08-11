@@ -461,9 +461,9 @@ enum AudioRecorderError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .failedToStart:
-            return "Не удалось начать запись. Проверьте доступ к микрофону"
+            return String(localized: "Не удалось начать запись. Проверьте доступ к микрофону")
         case .alreadyStarting:
-            return "Запись ещё готовится. Попробуйте ещё раз"
+            return String(localized: "Запись ещё готовится. Попробуйте ещё раз")
         }
     }
 }

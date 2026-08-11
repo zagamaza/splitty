@@ -180,9 +180,9 @@ struct SettleUpView: View {
 
     private func debtTitle(_ debt: Debt) -> String {
         if debt.debtor.id == meId {
-            return "Вы должны \(debt.lender.displayName)"
+            return String(localized: "Вы должны \(debt.lender.displayName)")
         }
-        return "\(debt.debtor.displayName) должен(на) вам"
+        return String(localized: "\(debt.debtor.displayName) должен(на) вам")
     }
 
     // MARK: Форма платежа
@@ -239,12 +239,12 @@ struct SettleUpView: View {
 
     private func paymentTitle(debt: Debt) -> String {
         if debt.debtor.id == meId {
-            return "Вы платите — \(debt.lender.displayName)"
+            return String(localized: "Вы платите — \(debt.lender.displayName)")
         }
         if debt.lender.id == meId {
-            return "\(debt.debtor.displayName) платит вам"
+            return String(localized: "\(debt.debtor.displayName) платит вам")
         }
-        return "\(debt.debtor.displayName) платит — \(debt.lender.displayName)"
+        return String(localized: "\(debt.debtor.displayName) платит — \(debt.lender.displayName)")
     }
 
     /// Карточка суммы: hero-поле rounded + monospacedDigit по центру,
@@ -363,7 +363,7 @@ struct SettleUpView: View {
     /// на шаг «выберите долг» поверх устаревшего списка, а при единственном
     /// долге — ещё и без кнопки возврата к нему.
     private func recoverFromSettledDebt() async {
-        alertMessage = "Долг уже погашен"
+        alertMessage = String(localized: "Долг уже погашен")
         guard let fresh = try? await session.api.debts(roomId: roomId, involving: "me") else {
             return
         }

@@ -42,8 +42,7 @@ struct ChangePasswordSheet: View {
                 Button("Сбросить", role: .destructive) { resetPassword() }
                 Button("Отмена", role: .cancel) {}
             } message: {
-                Text("Старый пароль перестанет работать, вход по \(session.me?.loginEmail ?? "email") "
-                    + "останется доступен после того, как зададите новый.")
+                Text("Старый пароль перестанет работать, вход по \(session.me?.loginEmail ?? "email") останется доступен после того, как зададите новый.")
             }
             .alert(
                 "Ошибка",
@@ -103,10 +102,10 @@ struct ChangePasswordSheet: View {
 
     private var hint: String? {
         if !newPassword.isEmpty, !EmailLoginForm.isValidPassword(newPassword) {
-            return "Пароль — не короче \(EmailLoginForm.minPasswordLength) символов"
+            return String(localized: "Пароль — не короче \(EmailLoginForm.minPasswordLength) символов")
         }
         if !repeatPassword.isEmpty, repeatPassword != newPassword {
-            return "Пароли не совпадают"
+            return String(localized: "Пароли не совпадают")
         }
         return nil
     }

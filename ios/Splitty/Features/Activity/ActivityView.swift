@@ -178,11 +178,11 @@ private struct ActivityRow: View {
                     + sum
                     + Text(" в группе «\(item.roomName)»")
             }
-            let lenderName = op.recipients.first?.user.displayName ?? "участнику"
+            let lenderName = op.recipients.first?.user.displayName ?? String(localized: "участнику")
             return donor
                 + Text(" заплатил(а) ")
                 + Text(lenderName).fontWeight(.semibold)
-                + Text(" ")
+                + Text(verbatim: " ")
                 + sum
                 + Text(" в группе «\(item.roomName)»")
         }
@@ -208,29 +208,29 @@ private struct ActivityRow: View {
     private var positionInfo: (label: String, amount: Int?, role: MoneyText.Role) {
         let op = item.operation
         guard let myUserId else {
-            return ("Вы не участвуете", nil, .neutral)
+            return (String(localized: "Вы не участвуете"), nil, .neutral)
         }
 
         if op.isDebtRepayment {
             if op.donor.id == myUserId {
-                return ("Вы заплатили", op.sum, .negative)
+                return (String(localized: "Вы заплатили"), op.sum, .negative)
             }
             if op.recipients.contains(where: { $0.user.id == myUserId }) {
-                return ("Вы получили", op.sum, .positive)
+                return (String(localized: "Вы получили"), op.sum, .positive)
             }
-            return ("Вы не участвуете", nil, .neutral)
+            return (String(localized: "Вы не участвуете"), nil, .neutral)
         }
 
         // Расход: позиция — из ХРАНИМЫХ долей операции
         // (Operation.netPosition; при неравном делении доли не пересчитываются).
         guard let net = op.netPosition(of: myUserId) else {
-            return ("Вы не участвуете", nil, .neutral)
+            return (String(localized: "Вы не участвуете"), nil, .neutral)
         }
         if net > 0 {
-            return ("Вы одолжили", net, .positive)
+            return (String(localized: "Вы одолжили"), net, .positive)
         }
         if net < 0 {
-            return ("Вы должны", -net, .negative)
+            return (String(localized: "Вы должны"), -net, .negative)
         }
         return (Glossary.settled, nil, .neutral)
     }
@@ -258,12 +258,12 @@ func activityFeedIsEmpty(items: [ActivityItem], invites: [InviteCard]) -> Bool {
 /// если строку пригласившего прочитать не удалось. Прежнее «Вас» давало «Вас
 /// добавил вас в группу».
 func inviteCardTitle(_ card: InviteCard) -> String {
-    let who = card.inviterName.isEmpty ? "Кто-то" : card.inviterName
+    let who = card.inviterName.isEmpty ? String(localized: "Кто-то") : card.inviterName
     switch card.status {
     case .pending:
-        return "\(who) приглашает вас вернуться в «\(card.roomName)»"
+        return String(localized: "\(who) приглашает вас вернуться в «\(card.roomName)»")
     default:
-        return "\(who) добавил вас в группу «\(card.roomName)»"
+        return String(localized: "\(who) добавил вас в группу «\(card.roomName)»")
     }
 }
 

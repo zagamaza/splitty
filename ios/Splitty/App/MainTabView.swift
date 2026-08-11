@@ -180,7 +180,7 @@ struct MainTabView: View {
         .animation(.easeInOut(duration: 0.25), value: session.outbox.isSyncing)
     }
 
-    private func bannerRow(icon: String, text: String) -> some View {
+    private func bannerRow(icon: String, text: LocalizedStringKey) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))

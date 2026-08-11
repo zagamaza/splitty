@@ -166,7 +166,7 @@ struct AddExpenseView: View {
                 isMicPressed = false
                 isCancellingRecording = false
                 recordingDragOffset = .zero
-                model.toastMessage = "Запись прервана системой. Продиктуйте ещё раз"
+                model.toastMessage = String(localized: "Запись прервана системой. Продиктуйте ещё раз")
             }
         }
         // Второй хептик — в момент, когда запись РЕАЛЬНО пошла (движок поднялся):
@@ -182,7 +182,7 @@ struct AddExpenseView: View {
             guard recorder.isRecording else { return }
             isRecordingLocked = false
             isMicPressed = false
-            model.toastMessage = "Минута — лимит записи. Распознаю, что успели сказать"
+            model.toastMessage = String(localized: "Минута — лимит записи. Распознаю, что успели сказать")
             stopRecordingAndParse()
         }
     }
@@ -929,8 +929,8 @@ struct AddExpenseView: View {
 
     /// Причина блокировки AI для подсказки под композером (nil — доступно).
     private var aiDisabledReason: String? {
-        if model.selectedRoomId == nil { return "Сначала выберите группу" }
-        if !session.isOnline { return "Распознавание доступно только онлайн" }
+        if model.selectedRoomId == nil { return String(localized: "Сначала выберите группу") }
+        if !session.isOnline { return String(localized: "Распознавание доступно только онлайн") }
         return nil
     }
 
@@ -962,7 +962,7 @@ struct AddExpenseView: View {
 
     /// Текст нудж-тоста «выберите группу»: константа, чтобы выбор группы
     /// мог мгновенно погасить именно этот тост (см. `groupChip`).
-    private static let selectGroupToast = "Сначала выберите группу"
+    private static var selectGroupToast: String { String(localized: "Сначала выберите группу") }
 
     /// AI недоступен, но пользователь жмёт микрофон: показываем, ЧТО не так —
     /// встряхиваем поле выбора группы или объясняем тостом (офлайн).
@@ -1117,7 +1117,7 @@ struct AddExpenseView: View {
         // тостом: это обучение, модальный алерт «Ошибка» тут пугал.
         guard data.count >= 24_000 else {
             recorder.reset()
-            model.toastMessage = "Удерживайте микрофон, пока говорите, и отпустите, когда закончите"
+            model.toastMessage = String(localized: "Удерживайте микрофон, пока говорите, и отпустите, когда закончите")
             return
         }
         lastAudio = data
@@ -1547,7 +1547,7 @@ struct AddExpenseView: View {
         }
     }
 
-    private func splitModeChip(_ title: String, type: SplitType) -> some View {
+    private func splitModeChip(_ title: LocalizedStringKey, type: SplitType) -> some View {
         Button {
             guard model.splitType != type else { return }
             Haptics.tap()
@@ -1571,7 +1571,9 @@ struct AddExpenseView: View {
             }
             Text("и разделено")
                 .foregroundStyle(Color.ink)
-            segmentButton(model.splitType == .equally ? "поровну" : "по суммам") {
+            segmentButton(model.splitType == .equally
+                ? String(localized: "поровну")
+                : String(localized: "по суммам")) {
                 isSplitPickerPresented = true
             }
         }
@@ -1602,7 +1604,7 @@ struct AddExpenseView: View {
     private func amountRow(_ member: User) -> some View {
         HStack(spacing: 12) {
             UserAvatarView(user: member, size: 32)
-            Text(member.id == session.me?.id ? "\(member.displayName) (вы)" : member.displayName)
+            Text(memberLabel(member.displayName, isMe: member.id == session.me?.id))
                 .scaledFont(size: 15)
                 .foregroundStyle(Color.ink)
                 .lineLimit(1)
@@ -1656,7 +1658,7 @@ struct AddExpenseView: View {
 
     private var payerLabel: String {
         if payerIsMe {
-            return "вы"
+            return String(localized: "вы")
         }
         return model.payer?.displayName ?? "…"
     }
@@ -1687,7 +1689,7 @@ private struct PayerPickerView: View {
                 } label: {
                     HStack(spacing: 12) {
                         UserAvatarView(user: member, size: 36)
-                        Text(member.id == meId ? "\(member.displayName) (вы)" : member.displayName)
+                        Text(memberLabel(member.displayName, isMe: member.id == meId))
                             .foregroundStyle(Color.ink)
                         Spacer()
                         if member.id == model.payerId {
@@ -1738,7 +1740,7 @@ private struct SplitPickerView: View {
                 } label: {
                     HStack(spacing: 12) {
                         UserAvatarView(user: member, size: 36)
-                        Text(member.id == meId ? "\(member.displayName) (вы)" : member.displayName)
+                        Text(memberLabel(member.displayName, isMe: member.id == meId))
                             .foregroundStyle(Color.ink)
                         Spacer()
                         Image(systemName: model.recipientIds.contains(member.id)
@@ -2097,17 +2099,17 @@ struct RecordingOverlay: View {
         let title: String
         let subtitle: String
         if isCancelling {
-            title = "Отпустите — отмена"
-            subtitle = "Верните палец, чтобы продолжить"
+            title = String(localized: "Отпустите — отмена")
+            subtitle = String(localized: "Верните палец, чтобы продолжить")
         } else if isLocked {
-            title = "Запись идёт"
-            subtitle = "Говорите свободно — палец держать не нужно"
+            title = String(localized: "Запись идёт")
+            subtitle = String(localized: "Говорите свободно — палец держать не нужно")
         } else if isPreparing {
-            title = "Начинаю запись…"
-            subtitle = "Держите палец — микрофон включается"
+            title = String(localized: "Начинаю запись…")
+            subtitle = String(localized: "Держите палец — микрофон включается")
         } else {
-            title = "Говорите…"
-            subtitle = "Отпустите — распознать · вверх — закрепить · влево — отмена"
+            title = String(localized: "Говорите…")
+            subtitle = String(localized: "Отпустите — распознать · вверх — закрепить · влево — отмена")
         }
         return VStack(spacing: 6) {
             Text(title)
@@ -2569,7 +2571,7 @@ struct ItemSheetView: View {
                 toggle(member.id)
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(member.id == meId ? "\(member.displayName) (вы)" : member.displayName)
+                    Text(memberLabel(member.displayName, isMe: member.id == meId))
                         .scaledFont(size: 15)
                         .foregroundStyle(isOn ? Color.ink : Color.inkSecondary)
                         .lineLimit(1)
@@ -2604,8 +2606,8 @@ struct ItemSheetView: View {
         guard participating.contains(userId) else { return nil }
         if byAmount {
             guard fixedAmount(userId) == nil else { return nil }
-            guard let amount = liveAmount(userId) else { return "авто" }
-            return "авто · \(money(amount, currency: model.currency))"
+            guard let amount = liveAmount(userId) else { return String(localized: "авто") }
+            return String(localized: "авто · \(money(amount, currency: model.currency))")
         }
         let weight = max(1, weights[userId] ?? 1)
         guard let amount = liveAmount(userId) else { return "×\(weight)" }

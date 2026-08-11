@@ -117,7 +117,7 @@ enum DashboardMath {
         if !rest.isEmpty {
             slices.append(DonutSlice(
                 userId: nil,
-                label: "Прочие",
+                label: String(localized: "Прочие"),
                 sum: rest.reduce(0) { $0 + $1.sum }
             ))
         }

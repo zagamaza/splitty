@@ -128,10 +128,10 @@ extension APIError {
 func joinLinkErrorText(_ error: Error) -> String {
     if let apiError = error as? APIError, case .server(let status, let code, _) = apiError {
         if status == 404 || code == "not_found" {
-            return "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела"
+            return String(localized: "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела")
         }
         if status == 403 || code == "forbidden" {
-            return "Нет доступа к этой группе. Попросите участника прислать новое приглашение"
+            return String(localized: "Нет доступа к этой группе. Попросите участника прислать новое приглашение")
         }
     }
     return humanErrorText(error)

@@ -266,7 +266,7 @@ final class OutboxStore {
                     break
                 }
             } catch is OutboxError {
-                markFailed(localId: entry.localId, message: "Некорректная локальная запись")
+                markFailed(localId: entry.localId, message: String(localized: "Некорректная локальная запись"))
             } catch {
                 // Отмена задачи и прочее — прерываемся, записи остаются pending.
                 break

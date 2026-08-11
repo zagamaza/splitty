@@ -22,7 +22,7 @@ func currencySymbol(_ currency: String) -> String {
     case "EUR": return "€"
     case "IDR": return "Rp"
     case "KZT": return "₸"
-    case "UZS": return "сум"
+    case "UZS": return String(localized: "сум")
     default: return currency
     }
 }

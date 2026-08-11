@@ -7,38 +7,26 @@ import SwiftUI
 /// Одна точка правды — как `MoneyText` для цвета денег.
 enum Glossary {
     /// Нулевой баланс — короткая подпись строки/карточки.
-    static let settled = "в расчёте"
+    static var settled: String { String(localized: "в расчёте") }
     /// Нулевой баланс — заголовок/hero-состояние.
-    static let settledHero = "Все долги погашены"
+    static var settledHero: String { String(localized: "Все долги погашены") }
 
     /// Долги комнаты неисчислимы (легаси-данные бота, доли не сходятся). Сервер
     /// шлёт debtsUnavailable вместе с myBalance=0, поэтому без отдельной подписи
     /// экран сказал бы «в расчёте» — ложное утверждение о деньгах.
     /// Тексты — паритет с android strings.xml/group_debts_unavailable_*.
-    static let debtsUnavailableShort = "долги не считаются"
-    static let debtsUnavailableHero = "Долги не считаются"
-    static let debtsUnavailableSubtitle =
-        "Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны."
+    static var debtsUnavailableShort: String { String(localized: "долги не считаются") }
+    static var debtsUnavailableHero: String { String(localized: "Долги не считаются") }
+    static var debtsUnavailableSubtitle: String {
+        String(localized: "Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.")
+    }
 
     /// Подпись направления долга для суммы: положительная — должны вам.
     /// Нулевая ветка обязательна: тернарник «>0 ? вам : вы» при нуле врал.
     static func balanceCaption(_ sum: Int) -> String {
-        if sum > 0 { return "вам должны" }
-        if sum < 0 { return "вы должны" }
+        if sum > 0 { return String(localized: "вам должны") }
+        if sum < 0 { return String(localized: "вы должны") }
         return settled
-    }
-}
-
-// MARK: - Русская плюрализация
-
-/// Форма слова по числу: pluralRu(1, "операция", "операции", "операций").
-func pluralRu(_ n: Int, _ one: String, _ few: String, _ many: String) -> String {
-    let mod100 = abs(n) % 100
-    if (11...14).contains(mod100) { return many }
-    switch mod100 % 10 {
-    case 1: return one
-    case 2...4: return few
-    default: return many
     }
 }
 
@@ -70,7 +58,7 @@ struct FailedStateView: View {
 extension View {
     /// Alert «Ошибка» поверх optional-сообщения: одна точка вместо
     /// скопированного Binding-бойлерплейта в каждом экране.
-    func errorAlert(_ message: Binding<String?>, title: String = "Ошибка") -> some View {
+    func errorAlert(_ message: Binding<String?>, title: LocalizedStringKey = "Ошибка") -> some View {
         alert(
             title,
             isPresented: Binding(
@@ -100,12 +88,20 @@ func humanErrorText(_ error: Error) -> String {
     if let urlError = error as? URLError {
         switch urlError.code {
         case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
-            return "Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз"
+            return String(localized: "Нет соединения с интернетом. Проверьте сеть и попробуйте ещё раз")
         case .timedOut:
-            return "Сервер долго не отвечает. Попробуйте ещё раз"
+            return String(localized: "Сервер долго не отвечает. Попробуйте ещё раз")
         default:
-            return "Не получилось связаться с сервером. Попробуйте ещё раз"
+            return String(localized: "Не получилось связаться с сервером. Попробуйте ещё раз")
         }
     }
     return error.localizedDescription
+}
+
+// MARK: - Имя участника
+
+/// Имя со сноской «(вы)» для себя. Отдельная функция, а не тернарник по месту:
+/// в другом языке сноска может стоять иначе, и порядок задаёт перевод.
+func memberLabel(_ name: String, isMe: Bool) -> String {
+    isMe ? String(localized: "\(name) (вы)") : name
 }

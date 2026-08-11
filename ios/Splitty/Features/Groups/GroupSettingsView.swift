@@ -150,11 +150,11 @@ struct GroupSettingsView: View {
                     HStack(spacing: 12) {
                         UserAvatarView(user: member, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(member.id == session.me?.id ? "\(member.displayName) (вы)" : member.displayName)
+                            Text(memberLabel(member.displayName, isMe: member.id == session.me?.id))
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(Color.ink)
                             if let username = member.username, !username.isEmpty {
-                                Text("@\(username)")
+                                Text(verbatim: "@\(username)")
                                     .font(.caption)
                                     .foregroundStyle(Color.inkSecondary)
                             }
@@ -468,12 +468,12 @@ func leaveErrorText(_ error: Error, isSelf: Bool = true) -> String {
     switch code {
     case "has_operations":
         return isSelf
-            ? "На вас записаны расходы. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник. После этого выход сработает"
-            : "На участнике записаны расходы. Уберите его из них, а если платил он — смените плательщика или удалите расход. После этого его можно будет убрать"
+            ? String(localized: "На вас записаны расходы. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник. После этого выход сработает")
+            : String(localized: "На участнике записаны расходы. Уберите его из них, а если платил он — смените плательщика или удалите расход. После этого его можно будет убрать")
     case "last_member":
         // Без ветки isSelf: последним участником можешь быть только ты сам —
         // убирать в такой комнате больше некого.
-        return "Вы последний участник. Заархивируйте группу, если она больше не нужна"
+        return String(localized: "Вы последний участник. Заархивируйте группу, если она больше не нужна")
     default:
         return humanErrorText(error)
     }

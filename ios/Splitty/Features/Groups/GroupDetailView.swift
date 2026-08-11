@@ -43,7 +43,7 @@ struct GroupDetailView: View {
     var body: some View {
         content
             .background(Color.bg.ignoresSafeArea())
-            .navigationTitle(model.room?.name ?? "Группа")
+            .navigationTitle(model.room?.name ?? String(localized: "Группа"))
             .navigationBarTitleDisplayMode(.large)
             // Туса — «центр мира»: глобальный таб-бар скрыт, вместо него —
             // системный таб-бар вложенного TabView (нативный вид и анимации).
@@ -255,7 +255,7 @@ struct GroupDetailView: View {
                         if session.isOnline {
                             isSettleUpPresented = true
                         } else {
-                            model.alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
+                            model.alertMessage = String(localized: "Нет соединения. Погашение долга доступно только онлайн")
                         }
                     }
                     .buttonStyle(.softChip(isSelected: true))
@@ -263,8 +263,9 @@ struct GroupDetailView: View {
             }
             if !localEntries.isEmpty {
                 // Родительный падеж после «без учёта»: 1 → «неотправленной
-                // операции», 2 и 5 → «неотправленных операций».
-                Text("без учёта \(localEntries.count) \(pluralRu(localEntries.count, "неотправленной операции", "неотправленных операций", "неотправленных операций"))")
+                // операции», 2 и 5 → «неотправленных операций». Формы —
+                // в String Catalog, по правилам языка.
+                Text("без учёта \(localEntries.count) неотправленных операций")
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -356,7 +357,7 @@ struct GroupDetailView: View {
         .animation(.spring(duration: 0.25), value: isMineOnly)
     }
 
-    private func segmentButton(_ title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func segmentButton(_ title: LocalizedStringKey, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button {
             // Отклик только на реальное переключение, не на повторный тап.
             if !isOn { Haptics.tap() }
@@ -519,7 +520,7 @@ private struct LocalOperationRow: View {
 
     private var title: String {
         let description = entry.payload?.description ?? ""
-        return description.isEmpty ? "Расход" : description
+        return description.isEmpty ? String(localized: "Расход") : description
     }
 
     /// Бейдж статуса: «не отправлено» (inkSecondary); failed — negative
@@ -537,9 +538,9 @@ private struct LocalOperationRow: View {
 
     private var statusText: String {
         if let message = entry.status.failureMessage {
-            return "не отправлено · \(message)"
+            return String(localized: "не отправлено · \(message)")
         }
-        return "не отправлено"
+        return String(localized: "не отправлено")
     }
 
     // Колонка даты — в стиле строк операций («июл» сверху, «5» снизу).
@@ -638,19 +639,19 @@ private struct OperationRow: View {
         if operation.isDebtRepayment {
             return repaymentTitle
         }
-        return operation.description.isEmpty ? "Расход" : operation.description
+        return operation.description.isEmpty ? String(localized: "Расход") : operation.description
     }
 
     private var repaymentTitle: String {
         let donor = operation.donor
         let recipient = operation.recipients.first?.user
         if donor.id == currentUserId {
-            return "Вы заплатили \(recipient?.displayName ?? "")"
+            return String(localized: "Вы заплатили \(recipient?.displayName ?? "")")
         }
         if recipient?.id == currentUserId {
-            return "\(donor.displayName) заплатил(а) вам"
+            return String(localized: "\(donor.displayName) заплатил(а) вам")
         }
-        return "\(donor.displayName) заплатил(а) \(recipient?.displayName ?? "")"
+        return String(localized: "\(donor.displayName) заплатил(а) \(recipient?.displayName ?? "")")
     }
 
     private var subtitle: String? {
@@ -658,9 +659,9 @@ private struct OperationRow: View {
             return nil
         }
         if operation.donor.id == currentUserId {
-            return "Вы заплатили \(money(operation.sum, currency: currency))"
+            return String(localized: "Вы заплатили \(money(operation.sum, currency: currency))")
         }
-        return "\(operation.donor.displayName) заплатил(а) \(money(operation.sum, currency: currency))"
+        return String(localized: "\(operation.donor.displayName) заплатил(а) \(money(operation.sum, currency: currency))")
     }
 
     /// Моя позиция по операции: >0 — одолжил, <0 — должен, nil — не участвую.

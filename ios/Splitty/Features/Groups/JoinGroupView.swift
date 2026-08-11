@@ -73,8 +73,7 @@ struct JoinGroupView: View {
                     // сервер (см. RoomDetail.inviteUrl), и вписанный сюда
                     // разошёлся бы с реальным на первой же смене — распознаётся
                     // ссылка всё равно по пути /join/, а не по хосту.
-                    Text("Вставьте код из приглашения или ссылку целиком — и вида "
-                        + "…/join/…, и t.me/split_money_bot?start=room…")
+                    Text("Вставьте код из приглашения или ссылку целиком — и вида …/join/…, и t.me/split_money_bot?start=room…")
                         .font(.caption)
                         .foregroundStyle(Color.inkSecondary)
                         .padding(.horizontal, 4)

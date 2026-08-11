@@ -97,7 +97,7 @@ enum LoginProvider: String, CaseIterable, Identifiable, Hashable {
         case .telegram: return "Telegram"
         case .google: return "Google"
         case .apple: return "Apple"
-        case .password: return "Email и пароль"
+        case .password: return String(localized: "Email и пароль")
         }
     }
 

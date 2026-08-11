@@ -90,12 +90,12 @@ struct ReceiptView: View {
     private func itemRow(index: Int, item: OperationItem) -> some View {
         let row = VStack(alignment: .leading, spacing: 9) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(item.name.isEmpty ? "Позиция" : item.name)
+                Text(item.name.isEmpty ? String(localized: "Позиция") : item.name)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(Color.ink)
                     .multilineTextAlignment(.leading)
                 if item.qty > 1 {
-                    Text("×\(item.qty)")
+                    Text(verbatim: "×\(item.qty)")
                         .font(.system(size: 12.5, weight: .regular, design: .monospaced))
                         .foregroundStyle(Color.inkSecondary)
                 }
@@ -166,7 +166,7 @@ struct ReceiptView: View {
                             }
                         } else if !even {
                             badge {
-                                Text("\(share.weight)")
+                                Text(verbatim: "\(share.weight)")
                                     .font(.system(size: 9, weight: .bold, design: .monospaced))
                             }
                         }
@@ -185,7 +185,7 @@ struct ReceiptView: View {
     private func unknownChip(index: Int, name: String) -> some View {
         let chip = HStack(spacing: 3) {
             Text(name)
-            Text("?")
+            Text(verbatim: "?")
         }
         .font(.system(size: 11.5, weight: .bold, design: .rounded))
         .foregroundStyle(Color.negative)
@@ -237,11 +237,11 @@ struct ReceiptView: View {
     private func surchargeRow(index: Int, item: OperationItem) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(item.name.isEmpty ? "Сбор" : item.name)
+                Text(item.name.isEmpty ? String(localized: "Сбор") : item.name)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.ink)
                 if let p = item.percent {
-                    Text("\(p)%")
+                    Text(verbatim: "\(p)%")
                         .font(.system(size: 12.5, design: .monospaced))
                         .foregroundStyle(Color.ink.opacity(0.6))
                 }
@@ -293,7 +293,7 @@ struct ReceiptView: View {
 
     // MARK: footer
 
-    private func footerLine(_ title: String, _ amount: Int, emphasis: Emphasis) -> some View {
+    private func footerLine(_ title: LocalizedStringKey, _ amount: Int, emphasis: Emphasis) -> some View {
         HStack {
             Text(title)
                 .font(.system(size: 12, weight: emphasis == .total ? .bold : .semibold))
@@ -330,22 +330,22 @@ struct ReceiptView: View {
     }
 
     private func shareHint(_ item: OperationItem) -> String {
-        if item.hasUnknown { return "кто это — выберите" }
+        if item.hasUnknown { return String(localized: "кто это — выберите") }
         let n = item.shareList.count
-        if item.price < 1 { return n > 0 ? "укажите цену" : "" }
+        if item.price < 1 { return n > 0 ? String(localized: "укажите цену") : "" }
         if n == 0 { return "" }
-        if n == 1 { return "целиком" }
+        if n == 1 { return String(localized: "целиком") }
         if item.shareList.contains(where: { $0.amount != nil }) {
             let fixed = item.shareList.reduce(0) { $0 + ($1.amount ?? 0) }
             let weighted = item.shareList.filter { $0.amount == nil }.count
-            if weighted > 0 { return "\(money(fixed, currency: currency)) фиксом · остальное поровну" }
-            return "точные суммы"
+            if weighted > 0 { return String(localized: "\(money(fixed, currency: currency)) фиксом · остальное поровну") }
+            return String(localized: "точные суммы")
         }
         if isEven(item) {
-            return "по \(perPersonText(item.price, parts: n)) × \(n)"
+            return String(localized: "по \(perPersonText(item.price, parts: n)) × \(n)")
         }
         let units = item.shareList.reduce(0) { $0 + $1.weight }
-        return "\(units) шт · \(perPersonText(item.price, parts: units)) за шт"
+        return String(localized: "\(units) шт · \(perPersonText(item.price, parts: units)) за шт")
     }
 
     /// «По сколько с носа»: при неделящейся нацело цене — честный диапазон
@@ -497,6 +497,6 @@ struct PersonBreakdownCard: View {
 
     private func name(_ id: Int) -> String {
         guard let user = members.first(where: { $0.id == id }) else { return "…" }
-        return id == meId ? "\(user.displayName) (вы)" : user.displayName
+        return memberLabel(user.displayName, isMe: id == meId)
     }
 }

@@ -137,10 +137,10 @@ struct FriendsListView: View {
     private var totalCaption: String {
         let primary = model.totals.first?.sum ?? 0
         if primary > 0 {
-            return "Вам должны"
+            return String(localized: "Вам должны")
         }
         if primary < 0 {
-            return "Вы должны"
+            return String(localized: "Вы должны")
         }
         return Glossary.settledHero
     }
@@ -193,9 +193,9 @@ private struct FriendRow: View {
     private func caption(totals: [CurrencySum], primary: CurrencySum) -> String {
         let hasPositive = totals.contains { $0.sum > 0 }
         let hasNegative = totals.contains { $0.sum < 0 }
-        if hasPositive && hasNegative { return "взаимные долги" }
-        if primary.sum > 0 { return "должен(на) вам" }
-        if primary.sum < 0 { return "вы должны" }
+        if hasPositive && hasNegative { return String(localized: "взаимные долги") }
+        if primary.sum > 0 { return String(localized: "должен(на) вам") }
+        if primary.sum < 0 { return String(localized: "вы должны") }
         return Glossary.settled
     }
 }

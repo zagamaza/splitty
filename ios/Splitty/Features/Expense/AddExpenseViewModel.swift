@@ -180,9 +180,9 @@ final class AddExpenseViewModel {
     /// и объясняет причину, а не молча игнорирует). nil — сохранять можно.
     var saveBlockedReason: String? {
         if hasDraftItems {
-            if hasUnknownItems { return "Сначала выберите, кто есть кто в позициях" }
-            if hasPricelessItems { return "Укажите цены позиций — без них не посчитать доли" }
-            if draftItemList.derivedShares() == nil { return "Проверьте позиции чека — доли не сходятся" }
+            if hasUnknownItems { return String(localized: "Сначала выберите, кто есть кто в позициях") }
+            if hasPricelessItems { return String(localized: "Укажите цены позиций — без них не посчитать доли") }
+            if draftItemList.derivedShares() == nil { return String(localized: "Проверьте позиции чека — доли не сходятся") }
             return nil
         }
         if splitType == .byExactAmount, !isDistributionBalanced || recipientIds.isEmpty {
@@ -193,14 +193,14 @@ final class AddExpenseViewModel {
 
     /// Живая подпись режима «По суммам»: остаток/перерасход/готово.
     var distributionHint: String {
-        guard !recipientIds.isEmpty else { return "Выберите хотя бы одного участника" }
+        guard !recipientIds.isEmpty else { return String(localized: "Выберите хотя бы одного участника") }
         if isDistributionBalanced {
-            return "Сумма распределена полностью"
+            return String(localized: "Сумма распределена полностью")
         }
         if remainingToDistribute < 0 {
-            return "Перерасход: \(money(-remainingToDistribute, currency: currency))"
+            return String(localized: "Перерасход: \(money(-remainingToDistribute, currency: currency))")
         }
-        return "Осталось распределить: \(money(remainingToDistribute, currency: currency))"
+        return String(localized: "Осталось распределить: \(money(remainingToDistribute, currency: currency))")
     }
 
     /// Доли получателей для `recipientSums` (контракт v2) в переданном
@@ -220,17 +220,17 @@ final class AddExpenseViewModel {
     /// (по каноническому правилу остаток достаётся первым получателям).
     var splitHint: String {
         let count = recipientIds.count
-        guard count > 0 else { return "Выберите хотя бы одного участника" }
-        guard let sum, sum >= 1 else { return "Участников: \(count)" }
+        guard count > 0 else { return String(localized: "Выберите хотя бы одного участника") }
+        guard let sum, sum >= 1 else { return String(localized: "Участников: \(count)") }
         let parts = shares(sum: sum, count: count)
         guard let maxShare = parts.first, let minShare = parts.last else {
-            return "Участников: \(count)"
+            return String(localized: "Участников: \(count)")
         }
         if minShare == maxShare {
-            return "\(money(sum, currency: currency)) / \(count) = \(money(minShare, currency: currency)) с человека"
+            return String(localized: "\(money(sum, currency: currency)) / \(count) = \(money(minShare, currency: currency)) с человека")
         }
         let range = moneyRange(minShare, maxShare, currency: currency)
-        return "\(money(sum, currency: currency)) / \(count) = \(range) с человека"
+        return String(localized: "\(money(sum, currency: currency)) / \(count) = \(range) с человека")
     }
 
     // MARK: AI-черновик (позиции чека)
@@ -431,7 +431,7 @@ final class AddExpenseViewModel {
             didRecognize = true
         } else if parseQuestions.isEmpty {
             // совсем пусто и без вопросов — говорим явно, а не молча возвращаем форму
-            alertMessage = "Не удалось распознать. Скажите ещё раз — с блюдами и ценами"
+            alertMessage = String(localized: "Не удалось распознать. Скажите ещё раз — с блюдами и ценами")
         }
         // Голосовая правка непустой формы: снапшот для отмены + подсветка диффа.
         if wasCorrection, recognizedSomething {
@@ -489,7 +489,7 @@ final class AddExpenseViewModel {
     /// блокируется, а обгоняет его (см. `parseGeneration`).
     func parse(api: APIClient, audio: Data? = nil, image: Data? = nil, text: String? = nil) async {
         guard let roomId = selectedRoomId else {
-            alertMessage = "Выберите группу"
+            alertMessage = String(localized: "Выберите группу")
             return
         }
         parseGeneration += 1
@@ -546,13 +546,13 @@ final class AddExpenseViewModel {
         for item in draftItemList {
             for name in item.unknown ?? [] {
                 // Безличная форма: «кто такой Маша?» звучала бы криво.
-                hints.append("Кто это — «\(name)»?")
+                hints.append(String(localized: "Кто это — «\(name)»?"))
                 covered.append(name.lowercased())
             }
         }
         for item in draftItemList where !item.isSurcharge && item.price < 1 {
-            let name = item.name.isEmpty ? "позиция" : item.name
-            hints.append("Сколько стоит «\(name)»?")
+            let name = item.name.isEmpty ? String(localized: "позиция") : item.name
+            hints.append(String(localized: "Сколько стоит «\(name)»?"))
             covered.append(name.lowercased())
         }
         for question in parseQuestions {
@@ -665,7 +665,7 @@ final class AddExpenseViewModel {
         draftItems = items
         syncRecipientsFromItems()
         if let member = members.first(where: { $0.id == userId }) {
-            toastMessage = "«\(name)» — это \(member.displayName). Запомнил, больше не спрошу"
+            toastMessage = String(localized: "«\(name)» — это \(member.displayName). Запомнил, больше не спрошу")
         }
         // Дозапись алиаса — best-effort: ошибка (сеть/доступ) не критична для формы.
         Task { try? await api.addAlias(userId: userId, alias: name) }
@@ -769,7 +769,7 @@ final class AddExpenseViewModel {
             // а кнопки «Повторить» в этом состоянии нет.
             if error.isTaskCancellation {
                 isConfigured = false
-                state = .failed("Загрузка прервана. Попробуйте ещё раз")
+                state = .failed(String(localized: "Загрузка прервана. Попробуйте ещё раз"))
                 return
             }
             state = .failed(humanErrorText(error))
@@ -848,12 +848,12 @@ final class AddExpenseViewModel {
         // не должен отправить второй POST (isSaving выставляется до await).
         guard !isSaving, !didSave else { return false }
         guard let roomId = selectedRoomId else {
-            alertMessage = "Выберите группу"
+            alertMessage = String(localized: "Выберите группу")
             return false
         }
         let description = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else {
-            alertMessage = "Введите описание расхода"
+            alertMessage = String(localized: "Введите описание расхода")
             return false
         }
         // Сумма itemized-черновика — ПРОИЗВОДНАЯ от позиций, а не поле формы:
@@ -863,20 +863,20 @@ final class AddExpenseViewModel {
         // кнопке «Сохранить» пользователь получал «Введите сумму» без поля суммы.
         guard let sum = hasDraftItems ? itemizedTotal : sum, sum >= 1 else {
             alertMessage = hasDraftItems
-                ? "Проверьте позиции чека — итог не считается"
-                : "Введите сумму (целое число рублей, не меньше 1)"
+                ? String(localized: "Проверьте позиции чека — итог не считается")
+                : String(localized: "Введите сумму (целое число рублей, не меньше 1)")
             return false
         }
         guard let payerId else {
-            alertMessage = "Выберите, кто заплатил"
+            alertMessage = String(localized: "Выберите, кто заплатил")
             return false
         }
         guard !recipientIds.isEmpty else {
-            alertMessage = "Выберите хотя бы одного участника"
+            alertMessage = String(localized: "Выберите хотя бы одного участника")
             return false
         }
         guard !isSaveBlocked(isOnline: isOnline) else {
-            alertMessage = "Нет соединения. Можно редактировать только неотправленные операции"
+            alertMessage = String(localized: "Нет соединения. Можно редактировать только неотправленные операции")
             return false
         }
 
@@ -895,7 +895,7 @@ final class AddExpenseViewModel {
         let itemsToSend: [OperationItem]?
         if let itemSums = itemizedRecipientSums(orderedFrom: ids) {
             guard !hasUnknownItems else {
-                alertMessage = "Сначала выберите, кто такой \(firstUnknownName ?? "…")"
+                alertMessage = String(localized: "Сначала выберите, кто такой \(firstUnknownName ?? "…")")
                 return false
             }
             itemsToSend = draftItems
@@ -903,7 +903,7 @@ final class AddExpenseViewModel {
             exactSums = itemSums
         } else if splitType == .byExactAmount {
             guard isDistributionBalanced else {
-                alertMessage = "Суммы участников должны сходиться с суммой расхода"
+                alertMessage = String(localized: "Суммы участников должны сходиться с суммой расхода")
                 return false
             }
             let sums = exactRecipientSums(orderedIds: ids)

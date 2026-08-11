@@ -9,9 +9,9 @@ enum AppTheme: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .system: return "Системная"
-        case .light: return "Светлая"
-        case .dark: return "Тёмная"
+        case .system: return String(localized: "Системная")
+        case .light: return String(localized: "Светлая")
+        case .dark: return String(localized: "Тёмная")
         }
     }
 

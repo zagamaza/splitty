@@ -87,8 +87,7 @@ struct OperationDetailView: View {
             // У погашений нет «Изменить» — объясняем, как исправить ошибку.
             Text(
                 operation.isDebtRepayment
-                    ? "Операция исчезнет из группы, балансы пересчитаются. "
-                        + "Погашения не редактируются — при ошибке удалите и запишите заново."
+                    ? "Операция исчезнет из группы, балансы пересчитаются. Погашения не редактируются — при ошибке удалите и запишите заново."
                     : "Операция исчезнет из группы, балансы пересчитаются."
             )
         }
@@ -137,9 +136,9 @@ struct OperationDetailView: View {
 
     private var title: String {
         if operation.isDebtRepayment {
-            return "Погашение долга"
+            return String(localized: "Погашение долга")
         }
-        return operation.description.isEmpty ? "Расход" : operation.description
+        return operation.description.isEmpty ? String(localized: "Расход") : operation.description
     }
 
     /// Две раздельные секции вместо сплошного списка: «Кто платил» (донор с
@@ -193,7 +192,7 @@ struct OperationDetailView: View {
         HStack(spacing: 12) {
             UserAvatarView(user: operation.donor, size: 36)
             VStack(alignment: .leading, spacing: 2) {
-                Text(operation.donor.id == currentUserId ? "Вы" : operation.donor.displayName)
+                Text(operation.donor.id == currentUserId ? String(localized: "Вы") : operation.donor.displayName)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.ink)
                 Text(operation.donor.id == currentUserId ? "заплатили за всех" : "заплатил(а) за всех")
@@ -211,7 +210,7 @@ struct OperationDetailView: View {
         HStack(spacing: 12) {
             UserAvatarView(user: recipient.user, size: 36)
             VStack(alignment: .leading, spacing: 2) {
-                Text(recipient.user.id == currentUserId ? "Вы" : recipient.user.displayName)
+                Text(recipient.user.id == currentUserId ? String(localized: "Вы") : recipient.user.displayName)
                     .font(.subheadline)
                     .foregroundStyle(Color.ink)
                 Text(recipientCaption(recipient.user))
@@ -228,15 +227,15 @@ struct OperationDetailView: View {
     /// Подпись позиции получателя (словоформы — как в боте).
     private func recipientCaption(_ recipient: User) -> String {
         if operation.isDebtRepayment {
-            return recipient.id == currentUserId ? "получили" : "получил(а)"
+            return recipient.id == currentUserId ? String(localized: "получили") : String(localized: "получил(а)")
         }
         if recipient.id == operation.donor.id {
-            return recipient.id == currentUserId ? "ваша доля" : "доля"
+            return recipient.id == currentUserId ? String(localized: "ваша доля") : String(localized: "доля")
         }
         if recipient.id == currentUserId {
-            return "вы должны"
+            return String(localized: "вы должны")
         }
-        return "должен(на)"
+        return String(localized: "должен(на)")
     }
 
     /// Цвет доли: негатив — только для СВОЕГО долга; остальное нейтрально.
@@ -381,10 +380,10 @@ struct OperationDetailView: View {
 /// Человеческое имя типа вложения: сырое значение API («video») в UI пугает.
 private func attachmentTypeName(_ type: String) -> String {
     switch type {
-    case "photo", "image": return "Фото"
-    case "video": return "Видео"
-    case "document": return "Документ"
-    default: return "Вложение"
+    case "photo", "image": return String(localized: "Фото")
+    case "video": return String(localized: "Видео")
+    case "document": return String(localized: "Документ")
+    default: return String(localized: "Вложение")
     }
 }
 

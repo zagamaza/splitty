@@ -105,7 +105,7 @@ struct GroupBalancesView: View {
                         if session.isOnline {
                             settleDebt = debt
                         } else {
-                            alertMessage = "Нет соединения. Погашение долга доступно только онлайн"
+                            alertMessage = String(localized: "Нет соединения. Погашение долга доступно только онлайн")
                         }
                     }
                     if debt.id != room.debts.last?.id {
@@ -173,14 +173,14 @@ private struct DebtRow: View {
 
     private var title: String {
         if debt.debtor.id == meId {
-            return "Вы должны \(debt.lender.displayName)"
+            return String(localized: "Вы должны \(debt.lender.displayName)")
         }
         if debt.lender.id == meId {
-            return "\(debt.debtor.displayName) должен(на) вам"
+            return String(localized: "\(debt.debtor.displayName) должен(на) вам")
         }
         // Имя кредитора не склоняем (нет надёжной морфологии) — тире вместо
         // датива, по образцу «Вы платите — Алмаз» в форме погашения.
-        return "\(debt.debtor.displayName) должен(на) — \(debt.lender.displayName)"
+        return String(localized: "\(debt.debtor.displayName) должен(на) — \(debt.lender.displayName)")
     }
 
     /// Цвет суммы: мой долг — negative, долг мне — accent, чужие — нейтрально.
