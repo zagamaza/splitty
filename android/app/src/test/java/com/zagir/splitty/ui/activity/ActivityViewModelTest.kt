@@ -270,6 +270,35 @@ class ActivityViewModelTest {
     }
 
     @Test
+    fun `prefetch fires near the end of the list, not in its middle`() = runBlocking {
+        server.enqueue(MockResponse().setBody(feedJson(PAGE_SIZE)))
+        server.enqueue(MockResponse().setBody(activityPageJson(from = PAGE_SIZE, count = 1)))
+        val vm = viewModel()
+        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        awaitRequest("/api/v1/notifications")
+        val afterFirstPage = server.requestCount
+
+        // Середина списка: тянуть страницу рано.
+        vm.onItemShown(10)
+        kotlinx.coroutines.delay(300)
+        assertEquals(afterFirstPage, server.requestCount)
+
+        // За PREFETCH_THRESHOLD строк до конца — порог считается по той самой
+        // ленте, что показана: фильтра, из-за которого он считался по другому
+        // списку, больше нет.
+        vm.onItemShown(PAGE_SIZE - 4)
+
+        val next = awaitRequest("/api/v1/activity")
+        assertTrue(next.path.orEmpty().contains("offset=$PAGE_SIZE"), "offset следующей страницы")
+        assertEquals(
+            PAGE_SIZE + 1,
+            withTimeout(5_000) {
+                vm.state.first { it is UiState.Content && it.value.size == PAGE_SIZE + 1 }
+            }.let { (it as UiState.Content).value.size },
+        )
+    }
+
+    @Test
     fun `failed invite action surfaces an error and keeps the card`() = runBlocking {
         server.enqueue(MockResponse().setBody(FEED_JSON))
         server.enqueue(
@@ -292,6 +321,34 @@ class ActivityViewModelTest {
 
     private companion object {
         const val SEEN_THROUGH = "2026-07-05T12:30:00"
+
+        /** Столько же, сколько PAGE_SIZE во VM: полная страница включает hasMore. */
+        const val PAGE_SIZE = 30
+
+        fun itemJson(index: Int) = """
+            {
+              "roomId": "65af", "roomName": "Ужин", "roomCurrency": "RUB",
+              "operation": {
+                "id": "op$index", "description": "Ужин $index", "sum": 100,
+                "isDebtRepayment": false,
+                "donor": {"id": 2, "displayName": "Боря"},
+                "recipients": [{"user": {"id": 2, "displayName": "Боря"}, "sum": 100}],
+                "createdAt": "2026-07-05T12:00:00Z"
+              }
+            }
+        """.trimIndent()
+
+        fun activityPageJson(from: Int, count: Int) =
+            (from until from + count).joinToString(",", "[", "]") { itemJson(it) }
+
+        fun feedJson(count: Int) = """
+            {
+              "invites": [],
+              "items": ${activityPageJson(from = 0, count = count)},
+              "unreadCount": 0,
+              "seenThrough": "${SEEN_THROUGH}Z"
+            }
+        """.trimIndent()
 
         val FEED_JSON = """
             {

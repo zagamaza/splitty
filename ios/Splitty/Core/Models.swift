@@ -308,7 +308,7 @@ struct Operation: Codable, Identifiable, Hashable {
 
 extension Operation {
     /// Операция «касается» пользователя: он платил или есть в получателях
-    /// (фильтры «Со мной» на экране группы и «Только мои» в активности).
+    /// (фильтр «Со мной» на экране группы).
     func involves(_ userId: Int) -> Bool {
         donor.id == userId || recipients.contains { $0.user.id == userId }
     }

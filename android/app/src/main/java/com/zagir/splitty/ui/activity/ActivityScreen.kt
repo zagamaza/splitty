@@ -8,10 +8,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,9 +25,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.AlertDialog
@@ -49,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -67,23 +61,25 @@ import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
-import com.zagir.splitty.ui.components.PrimaryPillButton
-import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
- * Вкладка «Активность»: лента карточных строк операций всех групп,
+ * Вкладка «Уведомления»: лента карточных строк операций всех групп,
  * пагинация offset/limit по скроллу, тап по строке — переход в группу.
  * Порт ios/Splitty/Features/Activity/ActivityView.swift.
+ *
+ * Лента показывается ровно такой, какой её отдал сервер: раздел стал
+ * входящими, счётчик непрочитанного считает адресованное вам
+ * (`notifiesUser`), и тумблер «Только мои» — переключавший ленту между
+ * «мне» и «всё подряд» — противоречил этому, да ещё и без подписи.
  */
 @Composable
 fun ActivityScreen(
     onOpenRoom: (String) -> Unit,
     viewModel: ActivityViewModel = hiltViewModel(),
 ) {
-    val state by viewModel.displayItems.collectAsStateWithLifecycle()
-    val isMineOnly by viewModel.isMineOnly.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -97,46 +93,21 @@ fun ActivityScreen(
         viewModel.onScreenVisible()
         onDispose { viewModel.onScreenHidden() }
     }
-    val haptics = rememberHaptics()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Splitty.colors.bg),
     ) {
-        Row(
+        Text(
+            text = stringResource(R.string.tab_activity),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = stringResource(R.string.tab_activity),
-                modifier = Modifier.weight(1f),
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = Splitty.colors.ink,
-            )
-            // Фильтр «Только мои»: операции, где я донор или в получателях.
-            val filterState = stringResource(
-                if (isMineOnly) R.string.activity_filter_on else R.string.activity_filter_off
-            )
-            IconButton(
-                onClick = {
-                    // Переключение фильтра — контракт хептиков «выбор» (порт iOS).
-                    haptics.tap()
-                    viewModel.toggleMineOnly()
-                },
-                // stateDescription: TalkBack читает «включено/выключено» у фильтра.
-                modifier = Modifier.semantics { stateDescription = filterState },
-            ) {
-                Icon(
-                    imageVector = if (isMineOnly) Icons.Filled.Person else Icons.Outlined.Person,
-                    contentDescription = stringResource(R.string.activity_mine_only),
-                    tint = if (isMineOnly) Splitty.colors.accent else Splitty.colors.inkSecondary,
-                )
-            }
-        }
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = Splitty.colors.ink,
+        )
         when (val current = state) {
             is UiState.Loading -> ActivityLoadingView()
             is UiState.Error -> ActivityErrorView(current.message, onRetry = viewModel::retry)
@@ -150,14 +121,12 @@ fun ActivityScreen(
                         InviteAction.LEAVE -> viewModel.leaveFromCard(card)
                     }
                 },
-                isMineOnly = isMineOnly,
                 myUserId = myUserId,
                 isRefreshing = isRefreshing,
                 isLoadingMore = isLoadingMore,
                 onRefresh = viewModel::refresh,
                 onItemShown = viewModel::onItemShown,
                 onOpenRoom = onOpenRoom,
-                onShowAll = viewModel::toggleMineOnly,
             )
         }
     }
@@ -184,14 +153,12 @@ private fun ActivityFeed(
     items: List<ActivityItem>,
     invites: List<InviteCard>,
     onInviteAction: (InviteCard, InviteAction) -> Unit,
-    isMineOnly: Boolean,
     myUserId: Long?,
     isRefreshing: Boolean,
     isLoadingMore: Boolean,
     onRefresh: () -> Unit,
     onItemShown: (Int) -> Unit,
     onOpenRoom: (String) -> Unit,
-    onShowAll: () -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -223,8 +190,6 @@ private fun ActivityFeed(
             if (items.isEmpty() && invites.isEmpty()) {
                 item {
                     ActivityEmptyView(
-                        isMineOnly = isMineOnly,
-                        onShowAll = onShowAll,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 120.dp),
@@ -403,11 +368,7 @@ private fun ActivityErrorView(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ActivityEmptyView(
-    isMineOnly: Boolean = false,
-    onShowAll: () -> Unit = {},
-    modifier: Modifier = Modifier,
-) {
+private fun ActivityEmptyView(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -420,33 +381,18 @@ private fun ActivityEmptyView(
             tint = Splitty.colors.inkSecondary,
         )
         Text(
-            text = stringResource(
-                if (isMineOnly) R.string.activity_mine_only_empty_title
-                else R.string.activity_empty_title
-            ),
+            text = stringResource(R.string.activity_empty_title),
             fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = Splitty.colors.ink,
         )
         Text(
-            text = stringResource(
-                if (isMineOnly) R.string.activity_mine_only_empty_description
-                else R.string.activity_empty_description
-            ),
+            text = stringResource(R.string.activity_empty_description),
             modifier = Modifier.padding(horizontal = 24.dp),
             fontSize = 15.sp,
             color = Splitty.colors.inkSecondary,
             textAlign = TextAlign.Center,
         )
-        // При включённом фильтре — быстрый сброс к полной ленте.
-        if (isMineOnly) {
-            Spacer(Modifier.height(8.dp))
-            PrimaryPillButton(
-                text = stringResource(R.string.activity_show_all),
-                onClick = onShowAll,
-                modifier = Modifier.padding(horizontal = 48.dp),
-            )
-        }
     }
 }
 

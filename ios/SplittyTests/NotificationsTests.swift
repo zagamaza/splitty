@@ -347,6 +347,55 @@ final class ActivityViewModelTests: XCTestCase {
         XCTAssertTrue(message.contains("Уберите себя"))
         XCTAssertFalse(message.contains("конфликт"))
     }
+
+    // MARK: пагинация
+
+    /// Порог подгрузки считается по той самой ленте, что показана: фильтра,
+    /// из-за которого он считался по другому списку, больше нет.
+    @MainActor
+    func testNextPageLoadsNearTheEndButNotInTheMiddle() async throws {
+        let pageSize = 30
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/api/v1/notifications" {
+                return (200, Data(pagedFeedJSON(count: pageSize).utf8))
+            }
+            return (200, Data(activityPageJSON(from: pageSize, count: 1).utf8))
+        }
+        let model = await loadedModel()
+        XCTAssertEqual(model.items.count, pageSize)
+        let repo = makeRepo()
+
+        await model.loadMoreIfNeeded(repo: repo, current: model.items[10])
+        XCTAssertEqual(model.items.count, pageSize, "середина списка — тянуть страницу рано")
+
+        await model.loadMoreIfNeeded(repo: repo, current: model.items[pageSize - 4])
+        XCTAssertEqual(model.items.count, pageSize + 1)
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.url?.path, "/api/v1/activity")
+        XCTAssertTrue(request.url?.query?.contains("offset=\(pageSize)") == true)
+    }
+}
+
+/// Строка ленты с предсказуемым id — для проверок пагинации.
+private func activityItemJSON(_ index: Int) -> String {
+    """
+    {"roomId":"room-added","roomName":"Дача","roomCurrency":"RUB",
+     "operation":{"id":"op-\(index)","description":"Ужин","sum":1200,"isDebtRepayment":false,
+      "donor":{"id":77,"username":null,"displayName":"Аня"},
+      "recipients":[{"user":{"id":77,"username":null,"displayName":"Аня"},"sum":1200}],
+      "splitType":"equally","createdAt":"2026-07-30T11:30:00Z","files":[]}}
+    """
+}
+
+private func activityPageJSON(from: Int, count: Int) -> String {
+    "[" + (from..<(from + count)).map(activityItemJSON).joined(separator: ",") + "]"
+}
+
+private func pagedFeedJSON(count: Int) -> String {
+    """
+    {"invites":[],"items":\(activityPageJSON(from: 0, count: count)),
+     "unreadCount":0,"seenThrough":"2026-07-30T12:00:00Z"}
+    """
 }
 
 /// Обновление бейджа мимо экрана раздела: старт приложения, вход, возврат из

@@ -19,16 +19,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * VM вкладки «Активность»: лента операций всех групп (GET /activity)
+ * VM вкладки «Уведомления»: лента операций всех групп (GET /activity)
  * с пагинацией offset/limit по скроллу. Первичная загрузка и перезагрузка
  * первой страницы после каждой мутации — по [SessionStore.dataVersion].
  * Порт ios/Splitty/Features/Activity/ActivityViewModel.swift.
+ *
+ * Лента отдаётся экрану как есть: раздел стал входящими, счётчик
+ * непрочитанного на сервере считает адресованное вам (`notifiesUser`), и
+ * фильтр «Только мои», переключавший ленту между «мне» и «всё подряд»,
+ * этому противоречил.
  */
 @HiltViewModel
 class ActivityViewModel @Inject constructor(
@@ -81,20 +85,6 @@ class ActivityViewModel @Inject constructor(
         .map { it?.me?.id }
         .stateIn(viewModelScope, SharingStarted.Eagerly, sessionStore.state.value?.me?.id)
 
-    /** Фильтр «Только мои»: операции, где я донор или в получателях. */
-    private val _isMineOnly = MutableStateFlow(false)
-    val isMineOnly: StateFlow<Boolean> = _isMineOnly.asStateFlow()
-
-    /** Лента с учётом фильтра «Только мои». */
-    val displayItems: StateFlow<UiState<List<ActivityItem>>> =
-        combine(_state, _isMineOnly, myUserId) { state, mineOnly, meId ->
-            if (!mineOnly || meId == null || state !is UiState.Content) {
-                state
-            } else {
-                UiState.Content(state.value.filter { it.operation.involves(meId) })
-            }
-        }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
-
     private var hasMore = true
 
     /**
@@ -140,9 +130,7 @@ class ActivityViewModel @Inject constructor(
      * LazyListState): у конца списка подгружает следующую страницу.
      */
     fun onItemShown(index: Int) {
-        // Порог — по ВИДИМОМУ списку: с фильтром «Только мои» конец исходного
-        // списка по индексам отфильтрованных строк иначе никогда не наступает.
-        val items = (displayItems.value as? UiState.Content)?.value ?: return
+        val items = (_state.value as? UiState.Content)?.value ?: return
         if (!hasMore || _isLoadingMore.value) return
         if (index < items.size - PREFETCH_THRESHOLD) return
         viewModelScope.launch { loadMore() }
@@ -150,25 +138,6 @@ class ActivityViewModel @Inject constructor(
 
     fun dismissError() {
         _errorMessage.value = null
-    }
-
-    /**
-     * Переключение фильтра. После включения отфильтрованных строк может быть
-     * меньше страницы — добираем следующие страницы (максимум несколько за
-     * раз, чтобы не выкачать всю историю).
-     */
-    fun toggleMineOnly() {
-        _isMineOnly.value = !_isMineOnly.value
-        if (!_isMineOnly.value) return
-        viewModelScope.launch {
-            var attempts = 0
-            while (hasMore && !_isLoadingMore.value && attempts < 5 &&
-                filteredCount() < PAGE_SIZE
-            ) {
-                attempts++
-                loadMore()
-            }
-        }
     }
 
     /**
@@ -232,11 +201,6 @@ class ActivityViewModel @Inject constructor(
                 _errorMessage.value = humanErrorText(e)
             }
         }
-    }
-
-    private fun filteredCount(): Int {
-        val content = (displayItems.value as? UiState.Content)?.value ?: return 0
-        return content.size
     }
 
     private suspend fun reloadFirstPage() {

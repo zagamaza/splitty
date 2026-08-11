@@ -4,6 +4,11 @@ import SwiftUI
 /// с пагинацией. Заголовок экрана обязан совпадать с подписью таба (и с
 /// Android, где заголовок берётся из той же строки tab_activity): раздел
 /// один, а имён у него было два.
+///
+/// Лента показывается ровно такой, какой её отдал сервер: раздел стал
+/// входящими, счётчик непрочитанного считает адресованное вам
+/// (`notifiesUser`), и тумблер «Только мои» — переключавший ленту между
+/// «мне» и «всё подряд» — противоречил этому, да ещё и без подписи.
 struct ActivityView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = ActivityViewModel()
@@ -18,24 +23,6 @@ struct ActivityView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
                 .navigationTitle("Уведомления")
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            Haptics.tap()
-                            model.isMineOnly.toggle()
-                            Task { await model.fillFilteredIfNeeded(repo: session.repo, meId: session.me?.id) }
-                        } label: {
-                            Image(systemName: model.isMineOnly
-                                ? "person.crop.circle.fill"
-                                : "person.crop.circle")
-                        }
-                        // Активный фильтр — акцентный, выключенный — тихий:
-                        // иначе состояние тумблера читалось только по заливке иконки.
-                        .tint(model.isMineOnly ? Color.accent : Color.inkSecondary)
-                        .accessibilityLabel("Только мои")
-                        .accessibilityValue(model.isMineOnly ? "включено" : "выключено")
-                    }
-                }
                 // .task на контенте (не на NavigationStack): срабатывает и при
                 // возврате (pop) с экрана группы — лента обновляется.
                 .task {
@@ -93,8 +80,7 @@ struct ActivityView: View {
     /// Лента карточных строк на Color.bg; ленивая подгрузка страниц сохранена
     /// (.task на строке — LazyVStack создаёт строки по мере прокрутки).
     private var feed: some View {
-        let displayItems = model.displayItems(meId: session.me?.id)
-        return ScrollView {
+        ScrollView {
             LazyVStack(spacing: 12) {
                 ForEach(model.invites) { card in
                     InviteCardView(card: card) { action in
@@ -107,7 +93,7 @@ struct ActivityView: View {
                         }
                     }
                 }
-                ForEach(displayItems) { item in
+                ForEach(model.items) { item in
                     NavigationLink {
                         GroupDetailView(roomId: item.roomId)
                     } label: {
@@ -115,7 +101,7 @@ struct ActivityView: View {
                     }
                     .buttonStyle(.plain)
                     .task {
-                        await model.loadMoreIfNeeded(repo: session.repo, current: item, meId: session.me?.id)
+                        await model.loadMoreIfNeeded(repo: session.repo, current: item)
                     }
                 }
                 if model.isLoadingMore {
@@ -134,28 +120,11 @@ struct ActivityView: View {
         // она выступает над таб-баром и перекрывала бы последнюю строку.
         .contentMargins(.bottom, 40, for: .scrollContent)
         .overlay {
-            if activityFeedIsEmpty(items: displayItems, invites: model.invites) {
+            if activityFeedIsEmpty(items: model.items, invites: model.invites) {
                 ContentUnavailableView {
-                    Label(
-                        model.isMineOnly ? "Нет операций с вами" : "Пока нет активности",
-                        systemImage: "clock"
-                    )
+                    Label("Пока нет активности", systemImage: "clock")
                 } description: {
-                    Text(
-                        model.isMineOnly
-                            ? "Операции, где вы платили или участвовали, появятся здесь"
-                            : "Здесь появятся расходы и платежи ваших групп"
-                    )
-                } actions: {
-                    // Пустота может быть следствием фильтра — даём выход
-                    // одним тапом вместо поиска тумблера в тулбаре.
-                    if model.isMineOnly {
-                        Button("Показать все") {
-                            model.isMineOnly = false
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Color.accent)
-                    }
+                    Text("Здесь появятся расходы и платежи ваших групп")
                 }
             }
         }

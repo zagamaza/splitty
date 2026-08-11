@@ -79,9 +79,6 @@
     <string name="friends_create_group">Создать группу</string>
 
     <!-- Активность -->
-    <string name="activity_mine_only">Только мои</string>
-    <string name="activity_mine_only_empty_title">Нет операций с вами</string>
-    <string name="activity_mine_only_empty_description">Операции, где вы платили или участвовали, появятся здесь</string>
     <string name="activity_empty_title">Пока нет активности</string>
     <string name="activity_empty_description">Здесь появятся расходы и платежи ваших групп</string>
     <string name="activity_added">добавил(а) «%1$s»</string>
@@ -95,9 +92,6 @@
     <string name="activity_you_received">Вы получили</string>
     <string name="activity_not_involved">Вы не участвуете</string>
     <string name="activity_settled">в расчёте</string>
-    <string name="activity_show_all">Показать все</string>
-    <string name="activity_filter_on">включено</string>
-    <string name="activity_filter_off">выключено</string>
 
     <!-- Группа: участники и выход -->
     <string name="group_remove_member_title">Убрать %1$s из группы?</string>

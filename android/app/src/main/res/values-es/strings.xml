@@ -67,9 +67,6 @@
     <string name="friends_create_group">Crear grupo</string>
 
     <!-- Активность -->
-    <string name="activity_mine_only">Solo mías</string>
-    <string name="activity_mine_only_empty_title">Nada en lo que participes</string>
-    <string name="activity_mine_only_empty_description">Aquí aparecerán las operaciones que pagaste o en las que participaste</string>
     <string name="activity_empty_title">Aún no hay actividad</string>
     <string name="activity_empty_description">Aquí aparecerán los gastos y pagos de tus grupos</string>
     <string name="activity_added">añadió «%1$s»</string>
@@ -83,9 +80,6 @@
     <string name="activity_you_received">Recibiste</string>
     <string name="activity_not_involved">No participas</string>
     <string name="activity_settled">saldado</string>
-    <string name="activity_show_all">Ver todo</string>
-    <string name="activity_filter_on">activado</string>
-    <string name="activity_filter_off">desactivado</string>
 
     <!-- Относительное время -->
     <string name="time_just_now">ahora mismo</string>
