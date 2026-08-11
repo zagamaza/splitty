@@ -403,6 +403,11 @@
     <string name="rec_review_add_photo">Beleg-Foto hinzufügen</string>
     <string name="rec_review_add_photo_hint">Preise vom Beleg sind genauer</string>
     <string name="rec_review_cancel">Aufnahme verwerfen</string>
+    <string name="rec_review_title_photo">Beleg aufgenommen</string>
+    <string name="rec_review_subtitle_photo">Beleg-Foto</string>
+    <string name="rec_review_add_voice">Sprache hinzufügen</string>
+    <string name="rec_review_add_voice_hint">sag, wer was genommen hat — genauer</string>
+    <string name="rec_review_cancel_photo">Foto verwerfen</string>
     <string name="rec_locked_back_title">Aufnahme verwerfen?</string>
     <string name="rec_locked_back_message">Die Aufnahme geht verloren.</string>
     <string name="rec_locked_back_discard">Verwerfen</string>

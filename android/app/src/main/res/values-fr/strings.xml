@@ -403,6 +403,11 @@
     <string name="rec_review_add_photo">Ajouter une photo du ticket</string>
     <string name="rec_review_add_photo_hint">les prix du ticket sont plus précis</string>
     <string name="rec_review_cancel">Abandonner l\'enregistrement</string>
+    <string name="rec_review_title_photo">Ticket pris en photo</string>
+    <string name="rec_review_subtitle_photo">Photo du ticket</string>
+    <string name="rec_review_add_voice">Ajouter la voix</string>
+    <string name="rec_review_add_voice_hint">dites qui a pris quoi — plus précis</string>
+    <string name="rec_review_cancel_photo">Abandonner la photo</string>
     <string name="rec_locked_back_title">Abandonner l\'enregistrement ?</string>
     <string name="rec_locked_back_message">L\'enregistrement sera perdu.</string>
     <string name="rec_locked_back_discard">Abandonner</string>

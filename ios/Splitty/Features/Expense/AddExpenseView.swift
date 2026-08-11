@@ -187,16 +187,20 @@ struct AddExpenseView: View {
         }
     }
 
-    /// Экран «записано, распознавание ЕЩЁ НЕ началось»: явный выбор — добавить
-    /// фото чека (уйдёт вместе с голосом одним запросом) или сразу «Распознать».
-    /// Транскрипт здесь НЕ показываем: локальное распознавание может отличаться
-    /// от того, что поймёт Gemini, и смущает как «вот что записалось» —
-    /// только нейтральная длительность. Показывается только на первой
-    /// надиктовке без фото; правки готового черновика уходят без остановки.
+    /// Экран «записано/снято, распознавание ЕЩЁ НЕ началось»: явный выбор —
+    /// добавить второй источник (он уйдёт вместе с первым одним запросом) или
+    /// сразу «Распознать». Транскрипт здесь НЕ показываем: локальное
+    /// распознавание может отличаться от того, что поймёт Gemini, и смущает
+    /// как «вот что записалось» — только нейтральная длительность.
+    /// Показывается только на ПЕРВОМ вводе в пустую форму (см. `stopsAtReview`).
     /// Длительность последней записи в секундах (WAV 16 кГц/16 бит ≈ 32 КБ/с).
     private var recordedSeconds: Int {
         max(1, (lastAudio?.count ?? 0) / 32_000)
     }
+
+    /// Экран разбора открыт по фото чека, а не по диктовке: одна вёрстка, но
+    /// зеркальные тексты и вторичное действие.
+    private var reviewIsPhoto: Bool { lastAudio == nil }
 
     private var reviewOverlay: some View {
         ZStack {
@@ -212,35 +216,43 @@ struct AddExpenseView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(Color.accent)
-                    Text("Записано")
+                    Text(reviewIsPhoto ? "Чек снят" : "Записано")
                         .scaledFont(size: 20, weight: .bold)
                         .foregroundStyle(.white)
                 }
-                Text("Голосовая запись · \(recordedSeconds) сек")
+                Text(reviewIsPhoto ? "Фото чека" : "Голосовая запись · \(recordedSeconds) сек")
                     .scaledFont(size: 15, weight: .medium)
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.top, 12)
                 Spacer(minLength: 24)
 
                 // Иерархия: главное действие — «Распознать» (основной путь),
-                // фото — вторичный усилитель, отмена — тихая третья.
+                // второй источник — вторичный усилитель, отмена — тихая третья.
                 VStack(spacing: 12) {
                     Button {
-                        isReviewPresented = false
-                        sendParse()
+                        sendParse(image: capture.imageData)
                     } label: {
                         Text("Распознать")
                     }
                     .buttonStyle(.primaryPill)
 
                     Button {
-                        isPhotoSourceDialogPresented = true
+                        if reviewIsPhoto {
+                            startVoiceFromReview()
+                        } else {
+                            isPhotoSourceDialogPresented = true
+                        }
                     } label: {
                         VStack(spacing: 3) {
-                            Label("Добавить фото чека", systemImage: "camera.fill")
-                                .scaledFont(size: 15, weight: .semibold)
-                                .foregroundStyle(.white)
-                            Text("цены возьмём с чека — точнее")
+                            Label(
+                                reviewIsPhoto ? "Добавить голосом" : "Добавить фото чека",
+                                systemImage: reviewIsPhoto ? "mic.fill" : "camera.fill"
+                            )
+                            .scaledFont(size: 15, weight: .semibold)
+                            .foregroundStyle(.white)
+                            Text(reviewIsPhoto
+                                ? "скажите, кто что взял — точнее"
+                                : "цены возьмём с чека — точнее")
                                 .scaledFont(size: 12, relativeTo: .footnote)
                                 .foregroundStyle(.white.opacity(0.65))
                         }
@@ -252,10 +264,14 @@ struct AddExpenseView: View {
 
                     Button {
                         isReviewPresented = false
-                        lastAudio = nil
-                        recorder.reset()
+                        if reviewIsPhoto {
+                            capture.reset()
+                        } else {
+                            lastAudio = nil
+                            recorder.reset()
+                        }
                     } label: {
-                        Text("Отменить запись")
+                        Text(reviewIsPhoto ? "Убрать фото" : "Отменить запись")
                             .scaledFont(size: 14, weight: .medium)
                             .foregroundStyle(.white.opacity(0.6))
                             .padding(.vertical, 8)
@@ -356,13 +372,13 @@ struct AddExpenseView: View {
                         let ok = await capture.load(from: newItem)
                         photoItem = nil
                         guard ok, let data = capture.imageData else { return }
-                        sendParse(image: data)
+                        handleCaptured(image: data)
                     }
                 }
                 .fullScreenCover(isPresented: $isCameraPresented) {
                     CameraPicker { image in
                         guard capture.setImage(image), let data = capture.imageData else { return }
-                        sendParse(image: data)
+                        handleCaptured(image: data)
                     }
                     .ignoresSafeArea()
                 }
@@ -505,11 +521,14 @@ struct AddExpenseView: View {
                         recognizedBanner
                     }
                     expenseCard(description: $model.descriptionText, sum: $model.sumText)
-                    if model.hasDraftItems {
-                        receiptSection
-                    } else {
+                    if model.showsPayerLine {
+                        payerLineCard
+                    }
+                    if model.showsSplitCard {
                         parseQuestionLabels
                         splitCard
+                    } else {
+                        receiptSection
                     }
                     // Из ручного режима можно вернуться к голосу, пока форма
                     // пуста (раньше выход был только закрытием всей формы).
@@ -1103,18 +1122,45 @@ struct AddExpenseView: View {
         }
         lastAudio = data
         focusedField = nil
-        // Первая надиктовка без фото: СТОП перед распознаванием — экран выбора
-        // (добавить чек / распознать / отменить). Правка черновика или повтор
-        // с уже приложенным фото уходят сразу.
-        if model.isEmptyForm, capture.imageData == nil {
+        // Первая надиктовка без фото: СТОП перед распознаванием — экран разбора
+        // (добавить чек / распознать / отменить). Правка черновика или запись
+        // поверх уже приложенного фото уходят сразу (см. `stopsAtReview`).
+        if AddExpenseViewModel.stopsAtReview(
+            isEmptyForm: model.isEmptyForm, hasOtherCapture: capture.imageData != nil
+        ) {
             isReviewPresented = true
             return
         }
-        model.startParse(api: session.api, audio: data, image: capture.imageData) {
-            recorder.reset()
-            focusedField = nil
-            clearAudioAfterParse()
+        sendParse(image: capture.imageData)
+    }
+
+    /// Фото чека доставлено (камера/галерея). То же правило, что и для голоса:
+    /// первый ввод в пустую форму ждёт решения на экране разбора, снимок для
+    /// уточнения черновика или досыл к уже записанной диктовке — сразу в разбор.
+    private func handleCaptured(image data: Data) {
+        if AddExpenseViewModel.stopsAtReview(
+            isEmptyForm: model.isEmptyForm, hasOtherCapture: lastAudio != nil
+        ) {
+            isReviewPresented = true
+            return
         }
+        sendParse(image: data)
+    }
+
+    /// «Добавить голосом» на экране разбора фото — зеркало «Добавить фото чека»
+    /// на экране разбора диктовки. Оверлей закрывает нижнюю панель, удерживать
+    /// микрофон негде: пишем в ЗАКРЕПЛЁННОМ режиме («Готово»/«Отмена» на
+    /// оверлее записи), как под VoiceOver. «Готово» уходит в разбор сразу
+    /// вместе с фото — второй остановки не будет.
+    private func startVoiceFromReview() {
+        guard !recorder.isRecording, !isRecordingLocked else { return }
+        if aiDisabled {
+            nudgeAIUnavailable()
+            return
+        }
+        isRecordingLocked = true
+        Haptics.tap()
+        startRecordingIfNeeded()
     }
 
     /// После УДАЧНОГО разбора надиктовка больше не нужна: иначе следующий
@@ -1445,6 +1491,30 @@ struct AddExpenseView: View {
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .onTapGesture { focusedField = .sum }
+    }
+
+    // MARK: «Заплатил(а) X» — режим чека
+
+    /// Компактная строка плательщика над чеком (см. `showsPayerLine`): способ
+    /// деления в этом режиме задают позиции, а плательщик — нет, и выбрать его
+    /// больше негде. Тап открывает тот же `PayerPickerView`, что и в карточке
+    /// деления.
+    private var payerLineCard: some View {
+        HStack(spacing: 6) {
+            Text(payerIsMe ? "Заплатили" : "Заплатил(а)")
+                .foregroundStyle(Color.ink)
+            segmentButton(payerLabel) {
+                isPayerPickerPresented = true
+            }
+            Spacer(minLength: 0)
+        }
+        .scaledFont(size: 15)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .disabled(model.members.isEmpty)
+        .opacity(model.members.isEmpty ? 0.4 : 1)
+        .frame(maxWidth: .infinity)
+        .surfaceCard()
     }
 
     // MARK: «Заплатили вы и разделено поровну / по суммам»

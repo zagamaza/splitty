@@ -466,6 +466,11 @@
     <string name="rec_review_add_photo">Добавить фото чека</string>
     <string name="rec_review_add_photo_hint">цены возьмём с чека — точнее</string>
     <string name="rec_review_cancel">Отменить запись</string>
+    <string name="rec_review_title_photo">Чек снят</string>
+    <string name="rec_review_subtitle_photo">Фото чека</string>
+    <string name="rec_review_add_voice">Добавить голосом</string>
+    <string name="rec_review_add_voice_hint">скажите, кто что взял — точнее</string>
+    <string name="rec_review_cancel_photo">Убрать фото</string>
     <string name="rec_locked_back_title">Отменить запись?</string>
     <string name="rec_locked_back_message">Запись будет отброшена.</string>
     <string name="rec_locked_back_discard">Отбросить</string>

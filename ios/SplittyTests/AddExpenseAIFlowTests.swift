@@ -49,6 +49,45 @@ final class AddExpenseAIFlowTests: XCTestCase {
         XCTAssertFalse(model.isEmptyForm)        // → не композер
     }
 
+    /// Позиции чека решают, КАК делить, а плательщик — КТО дал деньги: строка
+    /// «Заплатил(а)» обязана пережить распознавание чека. Раньше её уносило
+    /// вместе со всей карточкой деления, и расход молча записывался на себя.
+    func testPayerLineStaysVisibleWithReceiptItems() {
+        let model = AddExpenseViewModel()
+        model.apply(parse: ParseResponse(
+            draft: ParseDraft(description: "Ужин", sum: 1200, donorId: 1,
+                              items: [OperationItem(name: "Пицца", price: 1200,
+                                                    shares: [ItemShare(userId: 1, weight: 1)])]),
+            questions: nil))
+        XCTAssertTrue(model.showsPayerLine)      // → payerLineCard над чеком
+        XCTAssertFalse(model.showsSplitCard)     // способ деления задают позиции
+    }
+
+    /// Плоский расход: плательщик живёт внутри карточки деления, отдельной
+    /// строки быть не должно — иначе он покажется дважды.
+    func testPayerLineHiddenForFlatExpense() {
+        let model = AddExpenseViewModel()
+        model.apply(parse: ParseResponse(
+            draft: ParseDraft(description: "Такси", sum: 400, donorId: nil, items: nil),
+            questions: nil))
+        XCTAssertFalse(model.showsPayerLine)
+        XCTAssertTrue(model.showsSplitCard)
+    }
+
+    // MARK: Экран разбора: что останавливается, а что уходит сразу
+
+    /// Одно правило для голоса и фото: первый ввод в пустую форму ждёт решения
+    /// («Распознать / добавить второй источник / отмена»), всё остальное уходит
+    /// в разбор без лишнего тапа.
+    func testStopsAtReviewOnlyOnFirstInputIntoEmptyForm() {
+        XCTAssertTrue(AddExpenseViewModel.stopsAtReview(isEmptyForm: true, hasOtherCapture: false))
+        // второй источник к уже приложенному первому — уходят одним запросом
+        XCTAssertFalse(AddExpenseViewModel.stopsAtReview(isEmptyForm: true, hasOtherCapture: true))
+        // уточнение готового черновика — сразу в разбор
+        XCTAssertFalse(AddExpenseViewModel.stopsAtReview(isEmptyForm: false, hasOtherCapture: false))
+        XCTAssertFalse(AddExpenseViewModel.stopsAtReview(isEmptyForm: false, hasOtherCapture: true))
+    }
+
     func testFlatResultMarkedRecognizedNotManual() {
         // модель вернула сумму без позиций — это НЕ ручной ввод, форма должна
         // показать плашку «Распознано голосом», а не выглядеть как мануал

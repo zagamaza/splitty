@@ -71,6 +71,18 @@ internal fun canSaveExpenseOffline(isEditingSyncedOperation: Boolean, isOnline: 
     isOnline || !isEditingSyncedOperation
 
 /**
+ * Останавливать ли ввод на экране разбора («Распознать / добавить второй
+ * источник / отмена»). Правило ОДНО для голоса и фото чека: первый ввод в
+ * пустую форму ждёт решения (второй источник уйдёт вместе с первым одним
+ * запросом — модель сопоставит цены с чека и распределение из голоса), а всё,
+ * что уточняет готовый черновик или досылается ко второму уже приложенному
+ * источнику, уходит на распознавание сразу: лишний тап на каждой правке дороже
+ * выигрыша от выбора. Порт iOS `AddExpenseViewModel.stopsAtReview`.
+ */
+internal fun stopsAtReview(isEmptyForm: Boolean, hasOtherCapture: Boolean): Boolean =
+    isEmptyForm && !hasOtherCapture
+
+/**
  * Сумма операции для отправки: при itemized-чеке — Σ производных долей, иначе
  * поле ввода. Сервер требует `sum == Σ recipientSums` (иначе 400), а в
  * itemized-режиме поле суммы read-only и [AddExpenseForm.sumText] не
@@ -924,10 +936,10 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun parseReceiptImage(path: String) {
         savedStateHandle[KEY_RECEIPT_PATH] = path
-        // Экран «Записано» гасим, ТОЛЬКО если распознавание действительно пошло:
-        // иначе (форма ещё грузится или не загрузилась) голос остался бы
+        // Экран разбора гасим, ТОЛЬКО если распознавание действительно пошло:
+        // иначе (форма ещё грузится или не загрузилась) медиа осталось бы
         // приложенным, а отменить или распознать его было бы уже нечем.
-        if (launchParse()) savedStateHandle[KEY_PENDING_AUDIO] = null
+        if (launchParse()) clearPendingCaptures()
     }
 
     /**
@@ -938,22 +950,49 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun parseVoice(audioPath: String) {
         savedStateHandle[KEY_AUDIO_PATH] = audioPath
-        // Гасим экран «Записано», только если распознавание реально стартовало
+        // Гасим экран разбора, только если распознавание реально стартовало
         // (см. [parseReceiptImage]).
-        if (launchParse()) savedStateHandle[KEY_PENDING_AUDIO] = null
+        if (launchParse()) clearPendingCaptures()
     }
 
     /**
-     * Диктовка, ожидающая решения на экране «Записано» (фото / распознать /
-     * отмена), или null. Живёт в SavedStateHandle, а не в state композиции:
-     * иначе поворот экрана или смерть процесса убирали бы оверлей, оставляя
-     * уже приложенный к форме голос без способа его увидеть и отменить.
+     * Диктовка, ожидающая решения на экране разбора (второй источник /
+     * распознать / отмена), или null. Живёт в SavedStateHandle, а не в state
+     * композиции: иначе поворот экрана или смерть процесса убирали бы оверлей,
+     * оставляя уже приложенный к форме голос без способа его увидеть и отменить.
      */
     val pendingAudioPath: StateFlow<String?> =
         savedStateHandle.getStateFlow<String?>(KEY_PENDING_AUDIO, null)
 
+    /** Фото чека, ожидающее решения на экране разбора (см. [pendingAudioPath]). */
+    val pendingReceiptPath: StateFlow<String?> =
+        savedStateHandle.getStateFlow<String?>(KEY_PENDING_RECEIPT, null)
+
     /**
-     * Приложить голос к форме БЕЗ запуска распознавания (экран «Записано» →
+     * Фото чека доставлено (камера/галерея). Правило одно для обоих источников
+     * (см. [stopsAtReview]): первый снимок в пустую форму ждёт решения на экране
+     * разбора, а снимок для уточнения черновика и досыл к уже записанной
+     * диктовке уходят в распознавание сразу — без лишнего тапа на каждой правке.
+     */
+    fun onReceiptCaptured(path: String) {
+        if (stopsAtReview(currentForm()?.isEmptyForm == true, pendingAudioPath.value != null)) {
+            attachReceipt(path)
+        } else {
+            parseReceiptImage(path)
+        }
+    }
+
+    /** Диктовка записана — то же правило, зеркально (см. [onReceiptCaptured]). */
+    fun onVoiceRecorded(path: String) {
+        if (stopsAtReview(currentForm()?.isEmptyForm == true, pendingReceiptPath.value != null)) {
+            attachAudio(path)
+        } else {
+            parseVoice(path)
+        }
+    }
+
+    /**
+     * Приложить голос к форме БЕЗ запуска распознавания (экран разбора →
      * «Добавить фото чека»): путь к WAV сохраняется, чтобы последующий
      * [parseReceiptImage] отправил голос и фото одним запросом.
      */
@@ -963,12 +1002,34 @@ class AddExpenseViewModel @Inject constructor(
     }
 
     /**
-     * Отбросить приложенную диктовку («Отменить запись» на экране «Записано»):
+     * Приложить фото чека БЕЗ запуска распознавания — зеркало [attachAudio] для
+     * первого снимка в пустую форму (см. [stopsAtReview]): диктовка, записанная
+     * следом, уйдёт вместе с фото одним запросом.
+     */
+    fun attachReceipt(path: String) {
+        savedStateHandle[KEY_RECEIPT_PATH] = path
+        savedStateHandle[KEY_PENDING_RECEIPT] = path
+    }
+
+    /**
+     * Отбросить приложенную диктовку («Отменить запись» на экране разбора):
      * иначе следующее фото чека ушло бы вместе с отменённым голосом.
      */
     fun discardAudio() {
         savedStateHandle.remove<String>(KEY_AUDIO_PATH)
         savedStateHandle[KEY_PENDING_AUDIO] = null
+    }
+
+    /** Отбросить приложенное фото («Убрать фото» на экране разбора). */
+    fun discardReceipt() {
+        savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
+        savedStateHandle[KEY_PENDING_RECEIPT] = null
+    }
+
+    /** Медиа ушло в разбор (или отменено) — экран разбора больше не нужен. */
+    private fun clearPendingCaptures() {
+        savedStateHandle[KEY_PENDING_AUDIO] = null
+        savedStateHandle[KEY_PENDING_RECEIPT] = null
     }
 
     /**
@@ -1039,7 +1100,7 @@ class AddExpenseViewModel @Inject constructor(
                 if (audio == null && image == null) {
                     savedStateHandle.remove<String>(KEY_AUDIO_PATH)
                     savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
-                    savedStateHandle[KEY_PENDING_AUDIO] = null
+                    clearPendingCaptures()
                     updateForm {
                         it.copy(
                             isParsing = false,
@@ -1322,7 +1383,10 @@ class AddExpenseViewModel @Inject constructor(
         /** Путь к WAV голоса в cacheDir — для «Повторить» и досыла с фото (Task 12). */
         const val KEY_AUDIO_PATH = "expense_audio_path"
 
-        /** Путь диктовки, ожидающей решения на экране «Записано» (см. [pendingAudioPath]). */
+        /** Путь диктовки, ожидающей решения на экране разбора (см. [pendingAudioPath]). */
         const val KEY_PENDING_AUDIO = "expense_pending_audio"
+
+        /** Путь фото чека, ожидающего решения на экране разбора (см. [pendingReceiptPath]). */
+        const val KEY_PENDING_RECEIPT = "expense_pending_receipt"
     }
 }

@@ -403,6 +403,11 @@
     <string name="rec_review_add_photo">Añadir foto del recibo</string>
     <string name="rec_review_add_photo_hint">los precios del recibo son más exactos</string>
     <string name="rec_review_cancel">Descartar la grabación</string>
+    <string name="rec_review_title_photo">Recibo capturado</string>
+    <string name="rec_review_subtitle_photo">Foto del recibo</string>
+    <string name="rec_review_add_voice">Añadir voz</string>
+    <string name="rec_review_add_voice_hint">di quién tomó qué — más exacto</string>
+    <string name="rec_review_cancel_photo">Descartar la foto</string>
     <string name="rec_locked_back_title">¿Descartar la grabación?</string>
     <string name="rec_locked_back_message">La grabación se perderá.</string>
     <string name="rec_locked_back_discard">Descartar</string>

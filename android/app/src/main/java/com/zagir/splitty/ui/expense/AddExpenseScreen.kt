@@ -150,14 +150,15 @@ fun AddExpenseScreen(
     val haptics = rememberHaptics()
 
     val context = LocalContext.current
-    // Записанное, но ещё не отправленное: экран «Записано» (выбор фото/распознать).
-    // Состояние живёт во ViewModel (SavedStateHandle) — переживает поворот и
-    // смерть процесса вместе с самим приложенным к форме голосом.
+    // Записанное/снятое, но ещё не отправленное: экран разбора (второй источник
+    // / распознать / отмена). Состояние живёт во ViewModel (SavedStateHandle) —
+    // переживает поворот и смерть процесса вместе с приложенным к форме медиа.
     val pendingAudioPath by viewModel.pendingAudioPath.collectAsStateWithLifecycle()
+    val pendingReceiptPath by viewModel.pendingReceiptPath.collectAsStateWithLifecycle()
 
     // Фото чека → путь к готовому JPEG в cacheDir → распознавание (Task 7).
     val receiptCapture = rememberReceiptCapture(
-        // Отказ в доступе к камере: экран «Записано» остаётся на месте (диктовка
+        // Отказ в доступе к камере: экран разбора остаётся на месте (диктовка
         // не потеряна), пользователю объясняем, почему ничего не открылось.
         onCameraDenied = {
             viewModel.showToast(context.getString(R.string.expense_camera_permission_denied))
@@ -167,8 +168,9 @@ fun AddExpenseScreen(
         onCameraUnavailable = {
             viewModel.showToast(context.getString(R.string.expense_camera_unavailable))
         },
-        // Фото доставлено — экран «Записано» гасит сама parseReceiptImage.
-        onReceipt = viewModel::parseReceiptImage,
+        // Первый снимок в пустую форму останавливается на экране разбора — так же,
+        // как первая диктовка (решает VM: см. [stopsAtReview]).
+        onReceipt = viewModel::onReceiptCaptured,
     )
 
     // Встряска поля группы при нудже (тап по «Сохранить» без выбранной группы).
@@ -208,15 +210,10 @@ fun AddExpenseScreen(
         // исправную диктовку потерянной.
         voiceScope.launch {
             recorder.awaitAudioPersisted()
-            if (showComposer) {
-                // Первая надиктовка на пустой форме: сначала спрашиваем про фото
-                // чека — оно уйдёт вместе с голосом одним запросом (точнее цены).
-                // attachAudio заодно поднимает экран «Записано» (pendingAudioPath).
-                viewModel.attachAudio(path)
-            } else {
-                // Правка готового черновика — уходит сразу, без лишнего шага.
-                viewModel.parseVoice(path)
-            }
+            // Первая надиктовка на пустой форме останавливается на экране разбора
+            // (спросим про фото чека — оно уйдёт вместе с голосом одним запросом);
+            // правка черновика и диктовка к уже снятому чеку уходят сразу.
+            viewModel.onVoiceRecorded(path)
         }
     }
     voice.onShortTap = { viewModel.showToast(context.getString(R.string.rec_short_tap_hint)) }
@@ -226,14 +223,43 @@ fun AddExpenseScreen(
     // Разрешение спрашиваем ДО жеста: удержание без него упёрлось бы в отказ
     // движка уже во время записи (жест «съеден», объяснить нечем).
     var micGranted by remember { mutableStateOf(hasRecordAudioPermission(context)) }
+    // Тап «Добавить голосом» на экране разбора упёрся в запрос доступа: после
+    // выдачи дописываем начатое, иначе кнопка выглядела бы съевшей тап.
+    var startVoiceAfterPermission by remember { mutableStateOf(false) }
     val requestMic = rememberRecordAudioPermission(
         onGranted = {
             micGranted = true
             // Под TalkBack удержания нет — выдача разрешения сразу начинает запись.
-            if (talkBack) voice.toggleTalkBack()
+            if (talkBack || startVoiceAfterPermission) voice.toggleTalkBack()
+            startVoiceAfterPermission = false
         },
-        onPermanentlyDenied = { micPermissionDenied = true },
+        onPermanentlyDenied = {
+            micPermissionDenied = true
+            startVoiceAfterPermission = false
+        },
     )
+
+    // Нудж «AI недоступен»: причина тостом, а не молчаливый disabled. Поднято
+    // из нижней панели — тем же нуджем защищён микрофон на экране разбора.
+    val nudgeAiUnavailable = {
+        haptics.warning()
+        if (form?.selectedRoomId == null) {
+            groupNudge++
+            viewModel.nudgeSelectGroup()
+        }
+        aiDisabledReason?.let(viewModel::showToast)
+        Unit
+    }
+    // Тап (TalkBack, экран разбора): нет разрешения — сначала спрашиваем, потом
+    // пишем. toggleTalkBack стартует ЗАКРЕПЛЁННУЮ запись («Готово»/«Отмена» на
+    // оверлее) — удерживать микрофон под полноэкранным оверлеем невозможно.
+    val startVoice = {
+        when {
+            aiDisabledReason != null -> nudgeAiUnavailable()
+            !micGranted -> requestMic()
+            else -> voice.toggleTalkBack()
+        }
+    }
 
     // Автостоп по лимиту: минута — потолок записи, дальше распознаём сказанное.
     val recordStartedAt = recorder.startedAtElapsedMs
@@ -318,24 +344,6 @@ fun AddExpenseScreen(
                         .imePadding()
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                 ) {
-                    // Нудж «AI недоступен»: причина тостом, а не молчаливый disabled.
-                    val nudgeAiUnavailable = {
-                        haptics.warning()
-                        if (form.selectedRoomId == null) {
-                            groupNudge++
-                            viewModel.nudgeSelectGroup()
-                        }
-                        aiDisabledReason?.let(viewModel::showToast)
-                        Unit
-                    }
-                    // Тап (TalkBack): нет разрешения — сначала спрашиваем, потом пишем.
-                    val startVoice = {
-                        when {
-                            aiDisabledReason != null -> nudgeAiUnavailable()
-                            !micGranted -> requestMic()
-                            else -> voice.toggleTalkBack()
-                        }
-                    }
                     if (showComposer) {
                         // Пустая форма: БОЛЬШОЙ hold-to-talk микрофон в зоне
                         // большого пальца — свайп вверх (замок) снизу естественен.
@@ -455,26 +463,43 @@ fun AddExpenseScreen(
         }
     }
 
-    // Экран «записано, распознавание ещё НЕ началось»: фото/распознать/отмена.
-    // Полный экран поверх Scaffold: form != null (иначе launchParse — no-op),
-    // selectedRoomId != null (без группы launchParse откажет, а оверлей закрыл бы
-    // чипы). Диктовка переживает скрытие оверлея (KEY_PENDING_AUDIO).
-    val pending = pendingAudioPath
-    if (!voice.isActive && pending != null && form != null && !form.isParsing &&
-        form.selectedRoomId != null
+    // Экран «записано/снято, распознавание ещё НЕ началось»: второй источник /
+    // распознать / отмена. Полный экран поверх Scaffold: form != null (иначе
+    // launchParse — no-op), selectedRoomId != null (без группы launchParse
+    // откажет, а оверлей закрыл бы чипы). Медиа переживает скрытие оверлея
+    // (KEY_PENDING_AUDIO / KEY_PENDING_RECEIPT).
+    val pendingAudio = pendingAudioPath
+    val pendingReceipt = pendingReceiptPath
+    if (!voice.isActive && (pendingAudio != null || pendingReceipt != null) &&
+        form != null && !form.isParsing && form.selectedRoomId != null
     ) {
         RecordedReviewOverlay(
-            audioPath = pending,
-            onRecognize = { viewModel.parseVoice(pending) },
+            audioPath = pendingAudio,
+            onRecognize = {
+                // Оба пути уже лежат в SavedStateHandle — распознавание заберёт
+                // и голос, и фото, каким бы из них ни открылся экран.
+                if (pendingAudio != null) viewModel.parseVoice(pendingAudio)
+                else viewModel.parseReceiptImage(pendingReceipt!!)
+            },
             onAddPhoto = {
                 // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
-                // Экран «Записано» НЕ гасим: отказ/отмена съёмки оставили бы
+                // Экран разбора НЕ гасим: отказ/отмена съёмки оставили бы
                 // диктовку без него. Гасит его parseReceiptImage при доставке фото.
                 receiptCapture.captureFromCamera()
             },
+            // Зеркало «добавить фото» для снятого чека: запись стартует
+            // закреплённой, «Готово» уходит в разбор вместе с фото.
+            onAddVoice = {
+                startVoiceAfterPermission = !micGranted
+                startVoice()
+            },
             onCancel = {
-                viewModel.discardAudio()
-                recorder.reset()
+                if (pendingAudio != null) {
+                    viewModel.discardAudio()
+                    recorder.reset()
+                } else {
+                    viewModel.discardReceipt()
+                }
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -688,12 +713,15 @@ private fun ExpenseFormContent(
             }
             ExpenseCard(form = form, viewModel = viewModel)
             if (form.hasDraftItems) {
-                ReceiptSection(
+                ReceiptModeSection(
                     form = form,
-                    viewModel = viewModel,
+                    onSelectPayer = viewModel::selectPayer,
                     onEditItem = onEditItem,
                     onResolveUnknown = onResolveUnknown,
                     onAddItem = onAddItem,
+                    onToggleSurchargeRule = viewModel::toggleSurchargeRule,
+                    onCollapseToEqual = viewModel::collapseToEqualSplit,
+                    onHighlightsShown = viewModel::clearChangeHighlights,
                 )
             } else {
                 ParseQuestionLabels(form.parseQuestions)
@@ -738,6 +766,43 @@ private fun ExpenseFormContent(
 }
 
 /**
+ * Режим чека: строка плательщика + секция распознанного чека. Плательщик здесь
+ * ОБЯЗАТЕЛЕН — позиции решают, КАК делить (кто что взял), а не КТО дал деньги,
+ * и карточки деления с её выбором плательщика в этом режиме нет. Без строки
+ * расход молча уходил на текущего пользователя, и поправить его было нечем.
+ *
+ * internal и без ViewModel (только данные и колбэки) — покрыто Robolectric-тестом.
+ */
+@Composable
+internal fun ReceiptModeSection(
+    form: AddExpenseForm,
+    onSelectPayer: (Long) -> Unit,
+    onEditItem: (Int) -> Unit,
+    onResolveUnknown: (Int, String) -> Unit,
+    onAddItem: () -> Unit,
+    onToggleSurchargeRule: (Int) -> Unit,
+    onCollapseToEqual: () -> Unit,
+    onHighlightsShown: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        if (form.members.isNotEmpty()) {
+            SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+                PayerRow(form = form, onSelect = onSelectPayer)
+            }
+        }
+        ReceiptSection(
+            form = form,
+            onEditItem = onEditItem,
+            onResolveUnknown = onResolveUnknown,
+            onAddItem = onAddItem,
+            onToggleSurchargeRule = onToggleSurchargeRule,
+            onCollapseToEqual = onCollapseToEqual,
+            onHighlightsShown = onHighlightsShown,
+        )
+    }
+}
+
+/**
  * Секция распознанного чека: интерактивная карточка-чек (тап по строке → шит),
  * подсказки по нераспознанным именам/ценам, разбивка «С кого сколько»,
  * «+ Добавить позицию» и карточка переопределения деления «Поровну на всех».
@@ -745,17 +810,19 @@ private fun ExpenseFormContent(
 @Composable
 private fun ReceiptSection(
     form: AddExpenseForm,
-    viewModel: AddExpenseViewModel,
     onEditItem: (Int) -> Unit,
     onResolveUnknown: (Int, String) -> Unit,
     onAddItem: () -> Unit,
+    onToggleSurchargeRule: (Int) -> Unit,
+    onCollapseToEqual: () -> Unit,
+    onHighlightsShown: () -> Unit,
 ) {
     val colors = Splitty.colors
     // Подсветка правки — вспышка: гаснет сама через 2.5с.
     LaunchedEffect(form.changedItemIndices) {
         if (form.changedItemIndices.isNotEmpty()) {
             delay(2500)
-            viewModel.clearChangeHighlights()
+            onHighlightsShown()
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -765,7 +832,7 @@ private fun ReceiptSection(
             currency = form.currency,
             onEditItem = onEditItem,
             onResolveUnknown = onResolveUnknown,
-            onToggleSurchargeRule = viewModel::toggleSurchargeRule,
+            onToggleSurchargeRule = onToggleSurchargeRule,
             highlightedIndices = form.changedItemIndices,
         )
         if (form.hasUnknownItems) {
@@ -812,7 +879,7 @@ private fun ReceiptSection(
                 color = colors.accent,
             )
         }
-        SplitOverrideCard(onCollapse = viewModel::collapseToEqualSplit)
+        SplitOverrideCard(onCollapse = onCollapseToEqual)
     }
 }
 
@@ -1979,23 +2046,29 @@ private fun Modifier.micHold(
 }
 
 /**
- * Экран «записано, распознавание ещё НЕ началось»: явный выбор — добавить фото
- * чека (уйдёт вместе с голосом одним запросом) или сразу «Распознать».
+ * Экран «записано/снято, распознавание ещё НЕ началось»: явный выбор — добавить
+ * второй источник (уйдёт вместе с первым одним запросом) или сразу «Распознать».
+ * Одна вёрстка на оба ввода, [audioPath] == null — открыт по фото чека, и
+ * вторичное действие зеркалится в «Добавить голосом».
  * Транскрипт тут НЕ показываем: локальное распознавание может отличаться от
  * того, что поймёт модель, и читается как «вот что записалось» — только
  * нейтральная длительность (порт iOS `reviewOverlay`).
  */
 @Composable
 private fun RecordedReviewOverlay(
-    audioPath: String,
+    audioPath: String?,
     onRecognize: () -> Unit,
     onAddPhoto: () -> Unit,
+    onAddVoice: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Splitty.colors
+    val isPhoto = audioPath == null
     // WAV 16 кГц/16 бит mono ≈ 32 КБ/с — длительности достаточно из размера файла.
-    val seconds = remember(audioPath) { recordedSeconds(java.io.File(audioPath).length()) }
+    val seconds = remember(audioPath) {
+        audioPath?.let { recordedSeconds(java.io.File(it).length()) } ?: 0
+    }
     Box(
         modifier = modifier
             .background(Color(0xFF0C0F13))
@@ -2020,7 +2093,9 @@ private fun RecordedReviewOverlay(
                     modifier = Modifier.size(20.dp),
                 )
                 Text(
-                    text = stringResource(R.string.rec_review_title),
+                    text = stringResource(
+                        if (isPhoto) R.string.rec_review_title_photo else R.string.rec_review_title
+                    ),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -2028,13 +2103,18 @@ private fun RecordedReviewOverlay(
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                text = stringResource(R.string.rec_review_subtitle, seconds),
+                text = if (isPhoto) {
+                    stringResource(R.string.rec_review_subtitle_photo)
+                } else {
+                    stringResource(R.string.rec_review_subtitle, seconds)
+                },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color.White.copy(alpha = 0.75f),
             )
             Spacer(Modifier.height(28.dp))
-            // Иерархия: главное — «Распознать», фото вторично, отмена третья.
+            // Иерархия: главное — «Распознать», второй источник вторичен,
+            // отмена третья.
             PrimaryPillButton(
                 text = stringResource(R.string.rec_review_recognize),
                 onClick = onRecognize,
@@ -2045,7 +2125,7 @@ private fun RecordedReviewOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .clickable(onClick = onAddPhoto)
+                    .clickable(onClick = if (isPhoto) onAddVoice else onAddPhoto)
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -2055,26 +2135,36 @@ private fun RecordedReviewOverlay(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.PhotoCamera,
+                        imageVector = if (isPhoto) Icons.Filled.Mic else Icons.Filled.PhotoCamera,
                         contentDescription = null,
                         tint = Color.White,
                         modifier = Modifier.size(17.dp),
                     )
                     Text(
-                        text = stringResource(R.string.rec_review_add_photo),
+                        text = stringResource(
+                            if (isPhoto) R.string.rec_review_add_voice else R.string.rec_review_add_photo
+                        ),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
                     )
                 }
                 Text(
-                    text = stringResource(R.string.rec_review_add_photo_hint),
+                    text = stringResource(
+                        if (isPhoto) {
+                            R.string.rec_review_add_voice_hint
+                        } else {
+                            R.string.rec_review_add_photo_hint
+                        }
+                    ),
                     fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.65f),
                 )
             }
             Text(
-                text = stringResource(R.string.rec_review_cancel),
+                text = stringResource(
+                    if (isPhoto) R.string.rec_review_cancel_photo else R.string.rec_review_cancel
+                ),
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .clickable(onClick = onCancel)

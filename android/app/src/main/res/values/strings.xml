@@ -445,6 +445,11 @@
     <string name="rec_review_add_photo">Add receipt photo</string>
     <string name="rec_review_add_photo_hint">prices from the receipt are more accurate</string>
     <string name="rec_review_cancel">Discard recording</string>
+    <string name="rec_review_title_photo">Receipt captured</string>
+    <string name="rec_review_subtitle_photo">Receipt photo</string>
+    <string name="rec_review_add_voice">Add voice</string>
+    <string name="rec_review_add_voice_hint">say who took what — more accurate</string>
+    <string name="rec_review_cancel_photo">Discard photo</string>
     <string name="rec_locked_back_title">Discard recording?</string>
     <string name="rec_locked_back_message">The recording will be thrown away.</string>
     <string name="rec_locked_back_discard">Discard</string>
