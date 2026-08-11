@@ -22,6 +22,8 @@ import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.AvatarStore
 import com.zagir.splitty.data.OfflineDataCleaner
 import com.zagir.splitty.di.ApplicationScope
+import com.zagir.splitty.push.PushEventBus
+import com.zagir.splitty.push.PushRoute
 import com.zagir.splitty.ui.components.LocalAvatarStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.ui.AppRoot
@@ -54,6 +56,9 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var pendingJoinStore: PendingJoinStore
     @Inject lateinit var telegramAuthBus: TelegramAuthBus
 
+    /** Переход по тапу на push-уведомление (исполняет MainScaffold). */
+    @Inject lateinit var pushEventBus: PushEventBus
+
     /**
      * Скоуп приложения для записи диплинка: на `lifecycleScope` запись в
      * DataStore отменялась вместе с активити. Ровно этот путь и рвётся чаще
@@ -75,7 +80,10 @@ class MainActivity : ComponentActivity() {
         // Только на ПЕРВОМ создании: при повороте экрана система заново отдаёт
         // тот же VIEW-интент, и без проверки savedInstanceState приложение
         // повторяло бы вступление в группу на каждом пересоздании Activity.
-        if (savedInstanceState == null) handleDeepLink(intent)
+        if (savedInstanceState == null) {
+            handleDeepLink(intent)
+            handlePushTap(intent)
+        }
         setContent {
             val session by sessionStore.state.collectAsStateWithLifecycle()
             val darkTheme = when (session?.theme) {
@@ -92,9 +100,12 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Ссылка пришла в ЖИВОЕ приложение. Вызывается только благодаря
-     * `android:launchMode="singleTop"` в манифесте: при standard система
-     * создала бы второй экземпляр Activity и позвала [onCreate].
+     * Ссылка или тап по пушу пришли в ЖИВОЕ приложение. Вызывается только
+     * благодаря `android:launchMode="singleTop"` в манифесте: при standard
+     * система создала бы второй экземпляр Activity и позвала [onCreate].
+     *
+     * Для пушей это ОСНОВНОЙ путь: приложение почти всегда уже запущено, и
+     * разбор только в [onCreate] означал бы «тап не делает ничего».
      */
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
@@ -102,6 +113,7 @@ class MainActivity : ComponentActivity() {
         // следующее пересоздание Activity разобрало бы устаревшую ссылку.
         setIntent(intent)
         handleDeepLink(intent)
+        handlePushTap(intent)
     }
 
     override fun onStart() {
@@ -157,6 +169,35 @@ class MainActivity : ComponentActivity() {
             runCatching { pendingJoinStore.set(roomId, ownerId) }
                 .onFailure { Log.w(TAG, "не удалось запомнить приглашение из ссылки", it) }
         }
+    }
+
+    /**
+     * Тап по push-уведомлению: комната или карточка операции из extras.
+     *
+     * Extras кладём либо мы сами (форграунд, [com.zagir.splitty.push.SplittyMessagingService]),
+     * либо FCM, когда уведомление рисовал системный трей, — ключи одни и те же.
+     * Как и приглашение по ссылке, намерение здесь только ЗАПОМИНАЕТСЯ: на
+     * холодном старте активити просыпается раньше, чем прочитана сессия и
+     * собран корневой экран, а без входа переходить всё равно некуда. Исполняет
+     * его `MainScaffold` — сразу же либо после входа.
+     */
+    private fun handlePushTap(intent: Intent?) {
+        if (intent == null) return
+        // Перезапуск из «недавних»: система отдаёт ТОТ ЖЕ интент, которым таск
+        // был создан, — иначе однажды тапнутый пуш уносил бы в ту же комнату
+        // при каждом возврате в приложение (та же болезнь, что у ссылок выше).
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+        val route = PushRoute.fromIntent(intent) ?: return
+        // Помечаем интент израсходованным: он переживает пересоздание активити
+        // (поворот экрана) и без очистки открывал бы ту же комнату заново.
+        intent.removeExtra(PushRoute.KEY_ROOM_ID)
+        intent.removeExtra(PushRoute.KEY_OPERATION_ID)
+        intent.removeExtra(PushRoute.KEY_TYPE)
+        setIntent(intent)
+        // Владелец намерения — тот, кто в аккаунте ПРЯМО СЕЙЧАС (null на
+        // холодном старте: сессия ещё читается с диска). Дальше см.
+        // `AppRootViewModel.pushRoute` — чужому аккаунту намерение не достанется.
+        pushEventBus.postRoute(route, sessionStore.state.value?.me?.id)
     }
 
     private fun requestNotificationPermissionIfNeeded() {

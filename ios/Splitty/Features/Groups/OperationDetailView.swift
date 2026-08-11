@@ -539,3 +539,84 @@ private struct ZoomableImage: View {
         min(max(value, scaleRange.lowerBound), scaleRange.upperBound)
     }
 }
+
+// MARK: - Карточка операции по id (тап по push)
+
+/// Карточка операции, открытая по push: в payload есть только id, а сама
+/// операция живёт в детали комнаты — отдельного GET операции в API нет
+/// (как и на Android, см. `OperationDetailViewModel`).
+///
+/// Три исхода вместо одного экрана ошибки: операции нет в комнате (её удалили,
+/// пока уведомление лежало в шторке), комната не читается вовсе (вышли из неё —
+/// сервер отвечает 403) и «пока грузим». Ни один из них не должен выглядеть как
+/// пустая карточка: под этим экраном лежит группа, «назад» уводит из тупика.
+struct PushOperationView: View {
+    let roomId: String
+    let operationId: String
+
+    @Environment(SessionStore.self) private var session
+    @State private var operation: Operation?
+    @State private var currency = "RUB"
+    @State private var isMissing = false
+    @State private var loadErrorText: String?
+
+    var body: some View {
+        content
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.bg)
+            .task {
+                // Профиль мог не загрузиться на старте (холодный старт по тапу
+                // приходит раньше первого запроса) — без meId доли не подписать.
+                if session.me == nil {
+                    await session.refreshMe()
+                }
+                await load()
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let operation, let meId = session.me?.id {
+            OperationDetailView(
+                roomId: roomId,
+                operation: operation,
+                currentUserId: meId,
+                currency: currency
+            ) {}
+        } else if isMissing {
+            ContentUnavailableView {
+                Label("Операция не найдена", systemImage: "doc.questionmark")
+            } description: {
+                Text("Её могли удалить, пока уведомление ждало в шторке")
+            }
+            .navigationTitle("Расход")
+            .navigationBarTitleDisplayMode(.inline)
+        } else if let loadErrorText {
+            FailedStateView(message: loadErrorText) {
+                await load()
+            }
+        } else {
+            ProgressView()
+        }
+    }
+
+    private func load() async {
+        isMissing = false
+        loadErrorText = nil
+        do {
+            let room = try await session.repo.room(id: roomId).value
+            currency = room.currency
+            // Операции нет — это не ошибка загрузки: повторять запрос незачем,
+            // и «Повторить» здесь только обманывало бы.
+            guard let found = room.operations.first(where: { $0.id == operationId }) else {
+                isMissing = true
+                return
+            }
+            operation = found
+        } catch {
+            // Отмена .task (ушли с экрана) — не ошибка.
+            if error.isTaskCancellation { return }
+            loadErrorText = humanErrorText(error)
+        }
+    }
+}

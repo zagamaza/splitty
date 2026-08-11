@@ -5,6 +5,10 @@ import SwiftUI
 /// а это возможно только с типизированным стеком.
 enum GroupsRoute: Hashable {
     case room(id: String)
+    /// Карточка операции по id — путь тапа по push про расход. Отдельный случай
+    /// от перехода из списка: там операция уже загружена целиком, а из payload
+    /// известен только её id (см. `PushOperationView`).
+    case operation(roomId: String, operationId: String)
     case archive
 }
 
@@ -31,6 +35,8 @@ struct GroupsListView: View {
                     switch route {
                     case .room(let id):
                         GroupDetailView(roomId: id)
+                    case .operation(let roomId, let operationId):
+                        PushOperationView(roomId: roomId, operationId: operationId)
                     case .archive:
                         ArchivedGroupsView(model: model)
                     }

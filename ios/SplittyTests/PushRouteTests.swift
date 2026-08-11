@@ -9,14 +9,29 @@ import XCTest
 /// проверять было нечего.
 final class PushRouteTests: XCTestCase {
 
-    func testOperationPushOpensRoom() {
+    /// Пуш про расход несёт и комнату, и операцию — ведёт в карточку.
+    /// Раньше `operationId` из payload просто выбрасывался, и человек попадал
+    /// в список операций искать тот расход, о котором ему только что сказали.
+    func testOperationPushOpensOperationCard() {
         let route = PushRoute(userInfo: [
             "channel": "operations",
             "roomId": "68f2a1c4d9",
-            "operationId": "abc",
+            "operationId": "6a7b339f63a4ee45a2aed6db",
             "type": "operation",
         ])
-        XCTAssertEqual(route, .room(id: "68f2a1c4d9"))
+        XCTAssertEqual(route, .operation(roomId: "68f2a1c4d9", operationId: "6a7b339f63a4ee45a2aed6db"))
+    }
+
+    /// Пустая строка — не операция: payload FCM состоит только из строк, и
+    /// «operationId»: "" уводило бы в карточку с пустым id (404 на ровном месте).
+    func testEmptyOperationIdFallsBackToRoom() {
+        let route = PushRoute(userInfo: [
+            "channel": "operations",
+            "roomId": "room-1",
+            "operationId": "",
+            "type": "operation",
+        ])
+        XCTAssertEqual(route, .room(id: "room-1"))
     }
 
     func testDebtPushOpensRoom() {
@@ -34,6 +49,18 @@ final class PushRouteTests: XCTestCase {
         let route = PushRoute(userInfo: [
             "channel": "invites",
             "roomId": "room-1",
+            "type": "invite",
+        ])
+        XCTAssertEqual(route, .notifications)
+    }
+
+    /// Правило приглашения сильнее операции: даже приди в таком payload
+    /// operationId, в комнату приглашённого пускать нельзя.
+    func testInviteWinsOverOperationId() {
+        let route = PushRoute(userInfo: [
+            "channel": "invites",
+            "roomId": "room-1",
+            "operationId": "op-1",
             "type": "invite",
         ])
         XCTAssertEqual(route, .notifications)

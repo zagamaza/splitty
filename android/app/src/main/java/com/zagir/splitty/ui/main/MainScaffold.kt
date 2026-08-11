@@ -64,6 +64,8 @@ import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.push.PushEventBus
+import com.zagir.splitty.push.PushRoute
 import com.zagir.splitty.ui.activity.ActivityScreen
 import com.zagir.splitty.ui.expense.AddExpenseScreen
 import com.zagir.splitty.ui.friends.FriendDetailScreen
@@ -84,8 +86,11 @@ import kotlinx.coroutines.launch
 /**
  * Маршруты главного графа навигации. Вкладки — [FRIENDS]/[GROUPS]/[ACTIVITY]/
  * [ACCOUNT]; остальное — детальные экраны поверх вкладок (нижний бар скрыт).
+ *
+ * internal, а не private: тем же адресам, которые здесь собираются, обязан
+ * соответствовать переход по тапу на push — тест сверяет его именно с ними.
  */
-private object MainRoutes {
+internal object MainRoutes {
     const val FRIENDS = "friends"
     const val GROUPS = "groups"
     const val ACTIVITY = "activity"
@@ -120,6 +125,67 @@ private object MainRoutes {
         "settleup/$roomId?debtorId=$debtorId&lenderId=$lenderId"
 }
 
+/**
+ * Переход по тапу на push-уведомление.
+ *
+ * Карточка операции ложится ПОВЕРХ комнаты, а не вместо неё: «назад» с карточки
+ * обязано вести в группу — иначе удалённая операция запирает человека на экране
+ * «не найдено» без пути обратно.
+ *
+ * Повторный тап не должен наслаивать одинаковые экраны, а `launchSingleTop`
+ * один этого не даёт: при переходе «комната → операция» наверху оказывается
+ * операция, и комната легла бы копией. Поэтому решает не флаг, а текущий экран:
+ * уже открытое не открывается заново. Отсюда же следствие — пуш о долге,
+ * пришедший, когда человек и так внутри этой комнаты, никуда его не дёргает.
+ */
+internal fun NavHostController.openPushRoute(route: PushRoute) {
+    when (route) {
+        is PushRoute.Notifications -> {
+            if (isAtRoute(MainRoutes.ACTIVITY)) return
+            navigate(MainRoutes.ACTIVITY) {
+                // Те же опции, что у обычного переключения таба: стек вкладок
+                // сохраняется, второй копии раздела не появляется.
+                popUpTo(graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
+
+        is PushRoute.Room -> {
+            if (isInRoom(route.roomId)) return
+            navigate(MainRoutes.room(route.roomId)) { launchSingleTop = true }
+        }
+
+        is PushRoute.Operation -> {
+            if (isAtOperation(route.roomId, route.operationId)) return
+            if (!isInRoom(route.roomId)) {
+                navigate(MainRoutes.room(route.roomId)) { launchSingleTop = true }
+            }
+            navigate(MainRoutes.operation(route.roomId, route.operationId)) {
+                launchSingleTop = true
+            }
+        }
+    }
+}
+
+private fun NavHostController.isAtRoute(route: String): Boolean =
+    currentBackStackEntry?.destination?.route == route
+
+/** Человек уже внутри этой комнаты — на её экране или на карточке её операции. */
+private fun NavHostController.isInRoom(roomId: String): Boolean {
+    val entry = currentBackStackEntry ?: return false
+    val route = entry.destination.route
+    if (route != MainRoutes.ROOM && route != MainRoutes.OPERATION) return false
+    return entry.arguments?.getString("roomId") == roomId
+}
+
+private fun NavHostController.isAtOperation(roomId: String, operationId: String): Boolean {
+    val entry = currentBackStackEntry ?: return false
+    if (entry.destination.route != MainRoutes.OPERATION) return false
+    val args = entry.arguments ?: return false
+    return args.getString("roomId") == roomId && args.getString("operationId") == operationId
+}
+
 private data class TabSpec(
     val route: String,
     val icon: ImageVector,
@@ -147,6 +213,7 @@ private val RightTabs = listOf(
 class MainScaffoldViewModel @Inject constructor(
     networkMonitor: NetworkMonitor,
     outboxSyncer: OutboxSyncer,
+    pushEventBus: PushEventBus,
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
 ) : ViewModel() {
@@ -155,6 +222,16 @@ class MainScaffoldViewModel @Inject constructor(
 
     /** Бейдж на табе «Уведомления»; источник — сессия, см. SessionStore. */
     val unreadNotifications: StateFlow<Int> = sessionStore.unreadNotifications
+
+    init {
+        // Пуш пришёл в ОТКРЫТОЕ приложение: `ON_START` до следующего
+        // сворачивания уже не сработает, и бейдж оставался бы вчерашним —
+        // человек видит баннер о новом расходе, а на колоколе прежнее число
+        // (порт iOS .splittyPushReceived).
+        viewModelScope.launch {
+            pushEventBus.received.collect { refreshUnreadCount() }
+        }
+    }
 
     /**
      * Перечитать счётчик. Зовётся на старте и на каждом возврате из фона —
@@ -181,6 +258,8 @@ fun MainScaffold(
     viewModel: MainScaffoldViewModel = hiltViewModel(),
     openRoomId: String? = null,
     onRoomOpened: () -> Unit = {},
+    pushRoute: PushRoute? = null,
+    onPushRouteHandled: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -205,6 +284,15 @@ fun MainScaffold(
         // Гасим намерение сразу: иначе оно доживёт до следующего пересоздания
         // корня и комната откроется второй раз поверх первой.
         onRoomOpened()
+    }
+
+    // Тап по push-уведомлению: комната, карточка операции или раздел
+    // «Уведомления» (приглашение).
+    LaunchedEffect(pushRoute) {
+        if (pushRoute == null) return@LaunchedEffect
+        navController.openPushRoute(pushRoute)
+        // Гасим сразу — по тем же причинам, что и намерение из ссылки выше.
+        onPushRouteHandled()
     }
 
     fun switchTab(route: String) {

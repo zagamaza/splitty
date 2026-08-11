@@ -18,6 +18,9 @@ import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.Session
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.push.PendingPushRoute
+import com.zagir.splitty.push.PushEventBus
+import com.zagir.splitty.push.PushRoute
 import com.zagir.splitty.ui.auth.LoginScreen
 import com.zagir.splitty.ui.groups.GroupsAlertDialog
 import com.zagir.splitty.ui.main.MainScaffold
@@ -27,11 +30,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -47,6 +52,7 @@ class AppRootViewModel @Inject constructor(
     private val sessionStore: SessionStore,
     private val pendingJoinStore: PendingJoinStore,
     private val repository: SplittyRepository,
+    private val pushEventBus: PushEventBus,
 ) : ViewModel() {
     val session: StateFlow<Session?> = sessionStore.state
 
@@ -54,6 +60,31 @@ class AppRootViewModel @Inject constructor(
 
     /** Комната, в которую только что вступили по ссылке: её нужно открыть. */
     val openRoomId: StateFlow<String?> = _openRoomId.asStateFlow()
+
+    /**
+     * Куда вести по тапу на push; null — вести некуда.
+     *
+     * Той же дорогой, что и вступление по ссылке: намерение ждёт здесь, пока
+     * соберётся корневой экран (холодный старт по тапу) и пока человек войдёт
+     * (тап при протухшей сессии). Гасит его исполнитель — [onPushRouteHandled].
+     *
+     * Намерение с ЧУЖИМ владельцем выбрасывается: пуш адресован тому, кто был
+     * в аккаунте в момент тапа, а войти на устройстве после этого мог уже
+     * другой человек — и его уносило бы в чужую группу (то же правило, что в
+     * `PendingJoinStore.reconcileOwner`). Владелец null — сессия в момент тапа
+     * ещё читалась с диска, сравнивать не с чем.
+     */
+    val pushRoute: StateFlow<PushRoute?> = combine(
+        pushEventBus.pendingRoute,
+        sessionStore.state,
+    ) { pending, session ->
+        pendingPushRouteFor(pending, session?.me?.id)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Тап исполнен — намерение забываем, иначе оно переиграется. */
+    fun onPushRouteHandled() {
+        pushEventBus.consumeRoute()
+    }
 
     private val _joinError = MutableStateFlow<UiText?>(null)
 
@@ -250,6 +281,18 @@ class AppRootViewModel @Inject constructor(
 }
 
 /**
+ * Кому достанется намерение перейти по пушу: своему — да, чужому — нет.
+ * Отдельной функцией — внутри `combine` это правило не проверить ничем, а
+ * ошибка в нём уносит человека в чужую группу.
+ */
+internal fun pendingPushRouteFor(pending: PendingPushRoute?, userId: Long?): PushRoute? {
+    if (pending == null) return null
+    val owner = pending.ownerId
+    if (owner != null && userId != null && owner != userId) return null
+    return pending.route
+}
+
+/**
  * Отказ, который не исправится повторной попыткой: группы нет (404) либо в неё
  * не пускают (403). Только на них намерение стирается — всё остальное (сеть,
  * 5xx) может пройти со второго раза, и приглашение обязано дожить до него.
@@ -284,6 +327,7 @@ internal fun joinLinkErrorText(e: ApiException): UiText = when {
 fun AppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
     val session by viewModel.session.collectAsStateWithLifecycle()
     val openRoomId by viewModel.openRoomId.collectAsStateWithLifecycle()
+    val pushRoute by viewModel.pushRoute.collectAsStateWithLifecycle()
     val joinError by viewModel.joinError.collectAsStateWithLifecycle()
     Surface(modifier = Modifier.fillMaxSize(), color = Splitty.colors.bg) {
         Box(Modifier.fillMaxSize()) {
@@ -294,9 +338,13 @@ fun AppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                         .background(Splitty.colors.bg)
                 )
 
+                // Тап по пушу исполняется только здесь, под входом: гостю
+                // открывать нечего, и намерение дождётся его входа.
                 session?.isAuthenticated == true -> MainScaffold(
                     openRoomId = openRoomId,
                     onRoomOpened = viewModel::onRoomOpened,
+                    pushRoute = pushRoute,
+                    onPushRouteHandled = viewModel::onPushRouteHandled,
                 )
 
                 else -> LoginScreen()

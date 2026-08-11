@@ -510,7 +510,18 @@ final class PushTargetTests: XCTestCase {
     func testRoomPushOpensGroupsTabWithRoom() {
         let target = MainTabView.pushTarget(for: .room(id: "room-1"))
         XCTAssertEqual(target.tab, .groups)
-        XCTAssertEqual(target.roomId, "room-1")
+        XCTAssertEqual(target.path, [.room(id: "room-1")])
+    }
+
+    /// Карточка операции ложится ПОВЕРХ комнаты: «назад» обязано вести в
+    /// группу — иначе удалённая операция запирает на экране «не найдено».
+    func testOperationPushOpensCardAboveRoom() {
+        let target = MainTabView.pushTarget(for: .operation(roomId: "room-1", operationId: "op-1"))
+        XCTAssertEqual(target.tab, .groups)
+        XCTAssertEqual(target.path, [
+            .room(id: "room-1"),
+            .operation(roomId: "room-1", operationId: "op-1"),
+        ])
     }
 
     /// Приглашение ведёт в раздел, а не в комнату: доступа к ней у
@@ -518,19 +529,33 @@ final class PushTargetTests: XCTestCase {
     func testInvitePushOpensNotificationsTabWithoutRoom() {
         let target = MainTabView.pushTarget(for: .notifications)
         XCTAssertEqual(target.tab, .activity)
-        XCTAssertNil(target.roomId)
+        XCTAssertTrue(target.path.isEmpty)
     }
 
-    /// Сквозной путь: payload бэкенда → маршрут → вкладка.
-    func testPayloadFromBackendLeadsToRoom() throws {
+    /// Сквозной путь: payload бэкенда → маршрут → вкладка и стек.
+    func testPayloadFromBackendLeadsToOperationCard() throws {
         let route = try XCTUnwrap(PushRoute(userInfo: [
             "channel": "operations",
             "roomId": "68f2a1c4d9",
+            "operationId": "6a7b339f63a4ee45a2aed6db",
             "type": "operation",
         ]))
         let target = MainTabView.pushTarget(for: route)
         XCTAssertEqual(target.tab, .groups)
-        XCTAssertEqual(target.roomId, "68f2a1c4d9")
+        XCTAssertEqual(target.path, [
+            .room(id: "68f2a1c4d9"),
+            .operation(roomId: "68f2a1c4d9", operationId: "6a7b339f63a4ee45a2aed6db"),
+        ])
+    }
+
+    /// Долг операции не несёт — остаётся комната.
+    func testDebtPayloadLeadsToRoomOnly() throws {
+        let route = try XCTUnwrap(PushRoute(userInfo: [
+            "channel": "debts",
+            "roomId": "68f2a1c4d9",
+            "type": "debt",
+        ]))
+        XCTAssertEqual(MainTabView.pushTarget(for: route).path, [.room(id: "68f2a1c4d9")])
     }
 }
 

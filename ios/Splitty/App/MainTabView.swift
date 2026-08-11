@@ -119,8 +119,10 @@ struct MainTabView: View {
             guard let route = notification.userInfo?[PushRoute.userInfoKey] as? PushRoute else { return }
             let target = Self.pushTarget(for: route)
             selection = target.tab
-            if let roomId = target.roomId {
-                groupsPath = [.room(id: roomId)]
+            // Присваивание, а не append: повторный тап по тому же уведомлению
+            // задаёт тот же путь и ничего не наслаивает.
+            if !target.path.isEmpty {
+                groupsPath = target.path
             }
         }
         .task { await session.syncOutbox() }
@@ -140,16 +142,22 @@ struct MainTabView: View {
         }
     }
 
-    /// Куда ведёт тап по push: вкладка и, для расхода/долга, комната.
+    /// Куда ведёт тап по push: вкладка и путь стека вкладки «Группы».
     /// Отдельной функцией — внутри `body` этот выбор не проверить ничем.
-    static func pushTarget(for route: PushRoute) -> (tab: Tab, roomId: String?) {
+    ///
+    /// Карточка операции ложится ПОВЕРХ комнаты, а не вместо неё: «назад» с
+    /// карточки обязано вести в группу — иначе удалённая операция запирает
+    /// человека на «не найдено» прямо над корнем вкладки.
+    static func pushTarget(for route: PushRoute) -> (tab: Tab, path: [GroupsRoute]) {
         switch route {
         case .room(let id):
-            return (.groups, id)
+            return (.groups, [.room(id: id)])
+        case .operation(let roomId, let operationId):
+            return (.groups, [.room(id: roomId), .operation(roomId: roomId, operationId: operationId)])
         case .notifications:
             // Приглашение ведёт в раздел, а не в комнату: доступа к ней у
             // приглашённого ещё нет.
-            return (.activity, nil)
+            return (.activity, [])
         }
     }
 

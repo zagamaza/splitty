@@ -197,8 +197,12 @@ extension PushManager: UNUserNotificationCenterDelegate {
 /// подписчиков не было ни одного, а ключ читался неверный — переход по пушу не
 /// работал вовсе.
 enum PushRoute: Equatable {
-    /// Расход или возврат долга — открываем комнату.
+    /// Возврат долга (и любой пуш без операции) — открываем комнату.
     case room(id: String)
+    /// Расход: в payload есть и комната, и операция — ведём в карточку.
+    /// Человек тапает по «добавил расход «Пицца»» и ждёт увидеть именно его,
+    /// а не список из сорока операций, где его надо ещё найти.
+    case operation(roomId: String, operationId: String)
     /// Приглашение — открываем раздел «Уведомления», а НЕ комнату: у человека с
     /// ожидающим приглашением доступа к ней ещё нет, и переход упёрся бы в
     /// «вы не участник этой комнаты».
@@ -216,6 +220,12 @@ enum PushRoute: Equatable {
         }
         guard let roomId = userInfo["roomId"] as? String, !roomId.isEmpty else {
             return nil
+        }
+        // Пустая строка = операции нет: payload FCM состоит только из строк, и
+        // "operationId": "" не должно уводить в карточку с пустым id.
+        if let operationId = userInfo["operationId"] as? String, !operationId.isEmpty {
+            self = .operation(roomId: roomId, operationId: operationId)
+            return
         }
         self = .room(id: roomId)
     }

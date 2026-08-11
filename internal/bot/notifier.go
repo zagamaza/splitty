@@ -70,11 +70,15 @@ func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.Noti
 }
 
 // opPushData — данные deeplink пуша по операции (комната/операция + канал Android).
+//
+// Hex(), а не fmt "%v": ObjectID.String() возвращает `ObjectID("68f2…")`, и
+// клиент открывал бы по этому id несуществующую операцию. Значение обязано
+// совпадать с полем `id` операции в REST-ответе — по нему клиент её и ищет.
 func opPushData(room api.Room, op api.Operation) map[string]string {
 	return map[string]string{
 		"channel":     "operations",
 		"roomId":      room.ID.Hex(),
-		"operationId": fmt.Sprintf("%v", op.ID),
+		"operationId": op.ID.Hex(),
 		"type":        "operation",
 	}
 }

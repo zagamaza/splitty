@@ -18,6 +18,7 @@ import com.zagir.splitty.data.AvatarStore
 import com.zagir.splitty.data.OfflineDataCleaner
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.SplittyRepository
+import com.zagir.splitty.push.PushEventBus
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
@@ -129,7 +130,7 @@ class AppRootJoinTest {
         sessionDir.deleteRecursively()
     }
 
-    private fun viewModel() = AppRootViewModel(session, pendingJoin, repository)
+    private fun viewModel() = AppRootViewModel(session, pendingJoin, repository, PushEventBus())
 
     /** Вход: без токена вступление не начинается вовсе. */
     private suspend fun signIn(token: String = "jwt-token", me: Me = ME) {

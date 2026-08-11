@@ -26,6 +26,9 @@ class SplittyMessagingService : FirebaseMessagingService() {
     @Inject
     lateinit var registrar: PushTokenRegistrar
 
+    @Inject
+    lateinit var events: PushEventBus
+
     override fun onNewToken(token: String) {
         registrar.onTokenRefreshed(token)
     }
@@ -35,16 +38,32 @@ class SplittyMessagingService : FirebaseMessagingService() {
         val title = message.notification?.title ?: message.data["title"] ?: getString(R.string.app_name)
         val body = message.notification?.body ?: message.data["body"] ?: return
 
+        // Сюда попадаем только при ОТКРЫТОМ приложении (в фоне уведомление
+        // рисует трей), а `ON_START` до следующего сворачивания уже не
+        // сработает — без этого бейдж на колоколе остаётся вчерашним, пока
+        // человек смотрит на баннер о новом расходе.
+        events.noteReceived()
+
         ensureChannels(this)
+
+        // ID по комнате: пуши одной тусы схлопываются в одну строку, не спамят.
+        val id = message.data[PushRoute.KEY_ROOM_ID]?.hashCode() ?: System.identityHashCode(message)
 
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            // Deeplink-данные — на будущее (открытие комнаты/операции по тапу).
-            message.data["roomId"]?.let { putExtra("roomId", it) }
-            message.data["operationId"]?.let { putExtra("operationId", it) }
+            // Данные перехода: те же ключи, что кладёт в extras сам FCM, когда
+            // уведомление рисует трей, — активити разбирает оба пути одинаково.
+            message.data[PushRoute.KEY_ROOM_ID]?.let { putExtra(PushRoute.KEY_ROOM_ID, it) }
+            message.data[PushRoute.KEY_OPERATION_ID]?.let { putExtra(PushRoute.KEY_OPERATION_ID, it) }
+            // Без type приглашение вело бы в комнату, куда приглашённого ещё
+            // не пускают.
+            message.data[PushRoute.KEY_TYPE]?.let { putExtra(PushRoute.KEY_TYPE, it) }
         }
         val pending = PendingIntent.getActivity(
-            this, 0, intent,
+            // requestCode = id уведомления, а не 0: с общим кодом
+            // FLAG_UPDATE_CURRENT переписывал extras ВСЕХ висящих уведомлений
+            // последним пришедшим, и тап по пушу одной группы открывал другую.
+            this, id, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -58,8 +77,6 @@ class SplittyMessagingService : FirebaseMessagingService() {
             .build()
 
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        // ID по комнате: пуши одной тусы схлопываются в одну строку, не спамят.
-        val id = message.data["roomId"]?.hashCode() ?: System.identityHashCode(message)
         nm.notify(id, notification)
     }
 
