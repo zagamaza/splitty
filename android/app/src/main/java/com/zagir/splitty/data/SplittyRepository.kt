@@ -1,6 +1,12 @@
 package com.zagir.splitty.data
 
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.AddMemberBody
+import com.zagir.splitty.core.model.AddMemberResponse
+import com.zagir.splitty.core.model.InviteCard
+import com.zagir.splitty.core.model.InviteStatus
+import com.zagir.splitty.core.model.MarkSeenBody
+import com.zagir.splitty.core.model.NotificationsFeed
 import com.zagir.splitty.core.model.NotifySettings
 import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.DeviceBody
@@ -274,6 +280,42 @@ class SplittyRepository @Inject constructor(
         } else {
             Fetched(call { api.activity(limit, offset) }, fromCache = false)
         }
+
+    /**
+     * Раздел «Уведомления»: приглашения + лента + счётчик.
+     * Кешируется как и лента активности — офлайн раздел открывается мгновенно.
+     */
+    suspend fun notificationFeed(limit: Int = 30, offset: Int = 0): Fetched<NotificationsFeed> =
+        if (offset == 0) {
+            cached(ApiCache.Keys.NOTIFICATIONS_FIRST_PAGE, NotificationsFeed.serializer()) {
+                api.notificationFeed(limit, 0)
+            }
+        } else {
+            Fetched(call { api.notificationFeed(limit, offset) }, fromCache = false)
+        }
+
+    /**
+     * Только счётчик непрочитанного — для бейджа на табе.
+     *
+     * Мимо кеша намеренно: путь `notificationFeed(offset = 0)` записывает ответ
+     * в кеш первой страницы, и запрос на одну строку подменил бы собой всю
+     * закешированную ленту раздела — офлайн там осталась бы ровно одна запись.
+     */
+    suspend fun unreadNotificationCount(): Int = call { api.notificationFeed(1, 0) }.unreadCount
+
+    suspend fun markNotificationsSeen(through: java.time.Instant) =
+        call { api.markNotificationsSeen(MarkSeenBody(through)) }
+
+    suspend fun addMember(roomId: String, userId: Long): InviteStatus =
+        call { api.addMember(roomId, AddMemberBody(userId)) }.status
+
+    suspend fun leaveRoom(roomId: String) = call { api.leaveRoom(roomId) }
+
+    suspend fun removeMember(roomId: String, userId: Long) = call { api.removeMember(roomId, userId) }
+
+    suspend fun acceptInvite(roomId: String) = call { api.acceptInvite(roomId) }
+
+    suspend fun declineInvite(roomId: String) = call { api.declineInvite(roomId) }
 
     suspend fun statistics(roomId: String): Fetched<Statistics> =
         cached(ApiCache.Keys.statistics(roomId), Statistics.serializer()) {

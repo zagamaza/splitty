@@ -250,6 +250,21 @@ class SessionStore @Inject constructor(
         _dataVersion.update { it + 1 }
     }
 
+    private val _unreadNotifications = MutableStateFlow(0)
+
+    /**
+     * Непрочитанное для бейджа на табе «Уведомления».
+     *
+     * Живёт в сессии, а не во вью-модели раздела: раздел счётчик как раз
+     * гасит, и держи мы его там — бейдж появлялся бы ровно в тот момент,
+     * когда его уже погасили. Порт iOS SessionStore.unreadNotifications.
+     */
+    val unreadNotifications: StateFlow<Int> = _unreadNotifications
+
+    fun setUnreadNotifications(count: Int) {
+        _unreadNotifications.value = count
+    }
+
     /** Текущий адрес сервера — для OkHttp-интерцептора (синхронно). */
     fun currentBaseUrl(): String = state.value?.baseUrl ?: DEFAULT_BASE_URL
 
@@ -362,6 +377,9 @@ class SessionStore @Inject constructor(
         // Причину публикуем ДО записи: подписчик увидит пропажу токена уже
         // после неё (см. [lastSessionEndReason]).
         _lastSessionEndReason.value = reason
+        // Чужой счётчик на табе следующего вошедшего — не косметика: он
+        // показывает, сколько входящих было у предыдущего владельца.
+        _unreadNotifications.value = 0
         dataStore.edit { prefs ->
             prefs.remove(KEY_TOKEN_ENC)
             prefs.remove(KEY_TOKEN)

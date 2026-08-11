@@ -95,6 +95,7 @@ import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.RoomDetail
+import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.money.money
 import com.zagir.splitty.data.OutboxEntry
 import com.zagir.splitty.ui.components.GradientAvatar
@@ -155,6 +156,7 @@ fun GroupDetailScreen(
     var tusaTab by rememberSaveable { mutableStateOf(TUSA_TAB_OPS) }
     // Шит приглашения — открывается из баннера, участников и настроек.
     var isInvitePresented by rememberSaveable { mutableStateOf(false) }
+    var isInviteFriendsPresented by rememberSaveable { mutableStateOf(false) }
 
     val colors = Splitty.colors
     val detail = (state as? UiState.Content)?.value
@@ -249,6 +251,8 @@ fun GroupDetailScreen(
                         meId = meId,
                         viewModel = viewModel,
                         onInvite = { isInvitePresented = true },
+                        onInviteFriends = { isInviteFriendsPresented = true },
+                        onLeft = onBack,
                         modifier = Modifier.padding(innerPadding),
                     )
 
@@ -271,6 +275,17 @@ fun GroupDetailScreen(
         }
     }
 
+    if (isInviteFriendsPresented && detail != null) {
+        InviteFriendsSheet(
+            room = detail,
+            viewModel = viewModel,
+            onLink = {
+                isInviteFriendsPresented = false
+                isInvitePresented = true
+            },
+            onDismiss = { isInviteFriendsPresented = false },
+        )
+    }
     if (isInvitePresented && detail != null) {
         InviteBottomSheet(room = detail, onDismiss = { isInvitePresented = false })
     }
@@ -1290,9 +1305,52 @@ private fun GroupSettingsTab(
     meId: Long?,
     viewModel: GroupDetailViewModel,
     onInvite: () -> Unit,
+    onInviteFriends: () -> Unit,
+    onLeft: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(Unit) { viewModel.loadCurrencies() }
+
+    // Кого убираем / подтверждение выхода.
+    var memberToRemove by remember { mutableStateOf<User?>(null) }
+    var isLeaveConfirmVisible by remember { mutableStateOf(false) }
+
+    memberToRemove?.let { member ->
+        AlertDialog(
+            onDismissRequest = { memberToRemove = null },
+            title = { Text(stringResource(R.string.group_remove_member_title, member.displayName)) },
+            text = { Text(stringResource(R.string.group_remove_member_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.removeMember(member.id)
+                    memberToRemove = null
+                }) { Text(stringResource(R.string.group_remove_member_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { memberToRemove = null }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
+    if (isLeaveConfirmVisible) {
+        AlertDialog(
+            onDismissRequest = { isLeaveConfirmVisible = false },
+            title = { Text(stringResource(R.string.group_leave_title, room.name)) },
+            text = { Text(stringResource(R.string.group_leave_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    isLeaveConfirmVisible = false
+                    viewModel.leaveRoom(onLeft)
+                }) { Text(stringResource(R.string.group_leave_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { isLeaveConfirmVisible = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 
     val currencies by viewModel.currencies.collectAsStateWithLifecycle()
     val savingCurrency by viewModel.savingCurrency.collectAsStateWithLifecycle()
@@ -1350,7 +1408,7 @@ private fun GroupSettingsTab(
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50))
-                            .clickable(onClick = onInvite)
+                            .clickable(onClick = onInviteFriends)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1395,6 +1453,18 @@ private fun GroupSettingsTab(
                                         text = "@$username",
                                         fontSize = 12.sp,
                                         color = colors.inkSecondary,
+                                    )
+                                }
+                            }
+                            // Лекарство от «позвал не того»: убрать участника
+                            // может любой в комнате, как и править расходы.
+                            if (member.id != meId) {
+                                Spacer(Modifier.weight(1f))
+                                TextButton(onClick = { memberToRemove = member }) {
+                                    Text(
+                                        text = stringResource(R.string.group_remove_member_confirm),
+                                        fontSize = 13.sp,
+                                        color = colors.negative,
                                     )
                                 }
                             }
@@ -1560,7 +1630,149 @@ private fun GroupSettingsTab(
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
+
+            // Выход из группы
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isLeaveConfirmVisible = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = colors.negative,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(R.string.group_leave_action),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.negative,
+                        )
+                    }
+                }
+                Text(
+                    text = stringResource(R.string.group_leave_footer),
+                    fontSize = 12.sp,
+                    color = colors.inkSecondary,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
         }
+}
+
+/**
+ * Шит выбора друзей для приглашения.
+ *
+ * Друг — человек, с которым уже была общая группа, значит его id известен и
+ * вводить код никому не нужно. Тех, кто уже в этой группе, не показываем:
+ * приглашение им ничего бы не сделало.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InviteFriendsSheet(
+    room: RoomDetail,
+    viewModel: GroupDetailViewModel,
+    onLink: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    LaunchedEffect(Unit) { viewModel.loadFriends() }
+
+    val colors = Splitty.colors
+    val friends by viewModel.friends.collectAsStateWithLifecycle()
+    val memberIds = remember(room) { room.members.map { it.id }.toSet() }
+    val candidates = friends.filterNot { memberIds.contains(it.user.id) }
+    var selected by remember { mutableStateOf(emptySet<Long>()) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = colors.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.invite_friends_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+
+            if (candidates.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.invite_friends_empty),
+                    fontSize = 14.sp,
+                    color = colors.inkSecondary,
+                )
+            } else {
+                SectionHeader(stringResource(R.string.invite_friends_section))
+                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                    candidates.forEachIndexed { index, friend ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selected = if (selected.contains(friend.user.id)) {
+                                        selected - friend.user.id
+                                    } else {
+                                        selected + friend.user.id
+                                    }
+                                }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            GradientAvatar(user = friend.user, size = 36.dp)
+                            Text(
+                                text = friend.user.displayName,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.ink,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            if (selected.contains(friend.user.id)) {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                        if (index < candidates.lastIndex) {
+                            HairlineDivider(startIndent = 64.dp)
+                        }
+                    }
+                }
+                PrimaryPillButton(
+                    text = stringResource(R.string.invite_friends_send),
+                    onClick = { viewModel.inviteFriends(selected) { onDismiss() } },
+                    enabled = selected.isNotEmpty(),
+                )
+            }
+
+            SoftChip(
+                text = stringResource(R.string.invite_friends_link),
+                onClick = onLink,
+            )
+            Text(
+                text = stringResource(R.string.invite_friends_link_footer),
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+            )
+        }
+    }
 }
 
 /** Строка пикера валют: флаг, код, символ; чекмарк у текущей, спиннер у PUT. */

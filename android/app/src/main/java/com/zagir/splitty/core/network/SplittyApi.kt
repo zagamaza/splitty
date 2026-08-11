@@ -1,6 +1,12 @@
 package com.zagir.splitty.core.network
 
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.AddMemberBody
+import com.zagir.splitty.core.model.AddMemberResponse
+import com.zagir.splitty.core.model.InviteCard
+import com.zagir.splitty.core.model.InviteStatus
+import com.zagir.splitty.core.model.MarkSeenBody
+import com.zagir.splitty.core.model.NotificationsFeed
 import com.zagir.splitty.core.model.AliasBody
 import com.zagir.splitty.core.model.AuthResponse
 import com.zagir.splitty.core.model.DeviceBody
@@ -210,6 +216,42 @@ interface SplittyApi {
 
     @GET("api/v1/friends")
     suspend fun friends(): List<FriendBalance>
+
+    /**
+     * Раздел «Уведомления»: приглашения + лента + счётчик.
+     *
+     * Имя намеренно НЕ `notifications()` — так уже называются настройки
+     * уведомлений (см. выше), и совпадение имён было бы ловушкой.
+     */
+    @GET("api/v1/notifications")
+    suspend fun notificationFeed(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int,
+    ): NotificationsFeed
+
+    @POST("api/v1/me/notifications-seen")
+    suspend fun markNotificationsSeen(@Body body: MarkSeenBody)
+
+    @POST("api/v1/rooms/{roomId}/members")
+    suspend fun addMember(
+        @Path("roomId") roomId: String,
+        @Body body: AddMemberBody,
+    ): AddMemberResponse
+
+    @DELETE("api/v1/rooms/{roomId}/members/me")
+    suspend fun leaveRoom(@Path("roomId") roomId: String)
+
+    @DELETE("api/v1/rooms/{roomId}/members/{userId}")
+    suspend fun removeMember(
+        @Path("roomId") roomId: String,
+        @Path("userId") userId: Long,
+    )
+
+    @POST("api/v1/invites/{roomId}/accept")
+    suspend fun acceptInvite(@Path("roomId") roomId: String)
+
+    @POST("api/v1/invites/{roomId}/decline")
+    suspend fun declineInvite(@Path("roomId") roomId: String)
 
     @GET("api/v1/activity")
     suspend fun activity(

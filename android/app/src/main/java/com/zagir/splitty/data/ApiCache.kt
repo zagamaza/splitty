@@ -30,6 +30,7 @@ class ApiCache(
     object Keys {
         const val FRIENDS = "friends"
         const val ACTIVITY_FIRST_PAGE = "activity-page0"
+        const val NOTIFICATIONS_FIRST_PAGE = "notifications-first"
         const val CURRENCIES = "currencies"
         const val ME = "me"
 

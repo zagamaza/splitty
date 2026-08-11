@@ -31,7 +31,7 @@ class SplittyMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val channelId = message.data["channel"]?.takeIf { it == CHANNEL_DEBTS } ?: CHANNEL_OPERATIONS
+        val channelId = channelIdFor(message.data["channel"])
         val title = message.notification?.title ?: message.data["title"] ?: getString(R.string.app_name)
         val body = message.notification?.body ?: message.data["body"] ?: return
 
@@ -66,20 +66,36 @@ class SplittyMessagingService : FirebaseMessagingService() {
     companion object {
         const val CHANNEL_OPERATIONS = "operations"
         const val CHANNEL_DEBTS = "debts"
+        const val CHANNEL_INVITES = "invites"
+
+        /**
+         * Канал уведомления по значению `data["channel"]` от бэкенда.
+         *
+         * Важно: бэкенд кладёт это значение прямо в ChannelID уведомления
+         * (internal/push/push.go), и на Android 8+ уведомление с НЕСУЩЕСТВУЮЩИМ
+         * каналом просто не показывается — молча. Поэтому список каналов здесь
+         * обязан покрывать все значения, которые шлёт сервер, а неизвестное
+         * значение уходит в operations, а не теряется.
+         */
+        fun channelIdFor(channel: String?): String = when (channel) {
+            CHANNEL_DEBTS -> CHANNEL_DEBTS
+            CHANNEL_INVITES -> CHANNEL_INVITES
+            else -> CHANNEL_OPERATIONS
+        }
 
         /** Создаёт каналы уведомлений (идемпотентно). */
         fun ensureChannels(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_OPERATIONS, "Расходы", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Добавление и изменение расходов в ваших тусах"
-                },
+            fun channel(id: String, nameRes: Int, descRes: Int) = nm.createNotificationChannel(
+                NotificationChannel(
+                    id,
+                    context.getString(nameRes),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply { description = context.getString(descRes) },
             )
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_DEBTS, "Долги", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Возвраты долгов"
-                },
-            )
+            channel(CHANNEL_OPERATIONS, R.string.push_channel_operations, R.string.push_channel_operations_desc)
+            channel(CHANNEL_DEBTS, R.string.push_channel_debts, R.string.push_channel_debts_desc)
+            channel(CHANNEL_INVITES, R.string.push_channel_invites, R.string.push_channel_invites_desc)
         }
     }
 }

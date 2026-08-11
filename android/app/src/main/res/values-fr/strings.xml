@@ -29,7 +29,7 @@
     <string name="tab_friends">Amis</string>
     <string name="tab_groups">Groupes</string>
     <string name="tab_add">Ajouter</string>
-    <string name="tab_activity">Activité</string>
+    <string name="tab_activity">Notifications</string>
     <string name="tab_account">Profil</string>
 
     <!-- Заглушки -->
@@ -174,7 +174,6 @@
     <string name="groups_create_hint">Par exemple : « Voyage à Istanbul » ou « Coloc ».</string>
     <string name="groups_create_button">Créer</string>
     <string name="groups_join_title">Rejoindre</string>
-    <string name="groups_join_short">Rejoindre</string>
     <string name="groups_join_placeholder">Lien ou code</string>
     <string name="groups_join_paste">Coller</string>
     <string name="groups_join_hint">Collez le code de l\'invitation ou le lien entier — splitor.zagirnur.dev/join/… et t.me/split_money_bot?start=room… fonctionnent tous les deux</string>
@@ -479,4 +478,10 @@
     <string name="error_group_no_access">Pas d\'accès à ce groupe. Demandez à un membre de vous envoyer une nouvelle invitation</string>
     <string name="error_operation_not_found">Opération introuvable</string>
     <string name="error_outbox_unsupported">Opération hors ligne non prise en charge</string>
+    <string name="push_channel_operations">Dépenses</string>
+    <string name="push_channel_operations_desc">Dépenses ajoutées ou modifiées dans vos groupes</string>
+    <string name="push_channel_debts">Dettes</string>
+    <string name="push_channel_debts_desc">Remboursements de dettes</string>
+    <string name="push_channel_invites">Invitations</string>
+    <string name="push_channel_invites_desc">Invitations à des groupes</string>
 </resources>

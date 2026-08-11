@@ -19,10 +19,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.WifiOff
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -44,8 +46,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -56,7 +61,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.zagir.splitty.R
 import com.zagir.splitty.core.network.NetworkMonitor
+import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxSyncer
+import com.zagir.splitty.data.SplittyRepository
 import com.zagir.splitty.ui.activity.ActivityScreen
 import com.zagir.splitty.ui.expense.AddExpenseScreen
 import com.zagir.splitty.ui.friends.FriendDetailScreen
@@ -72,6 +79,7 @@ import com.zagir.splitty.ui.theme.Splitty
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /**
  * Маршруты главного графа навигации. Вкладки — [FRIENDS]/[GROUPS]/[ACTIVITY]/
@@ -124,19 +132,42 @@ private val LeftTabs = listOf(
 )
 
 private val RightTabs = listOf(
-    // clock — согласованно с empty state ленты (BarChart обещал графики).
-    TabSpec(MainRoutes.ACTIVITY, Icons.Filled.Schedule, R.string.tab_activity),
+    // Колокол, а не часы: раздел перестал быть журналом — в нём лежат
+    // приглашения с кнопками. Маршрут остаётся ACTIVITY: имя NOTIFICATIONS
+    // уже занято экраном настроек уведомлений в профиле.
+    TabSpec(MainRoutes.ACTIVITY, Icons.Filled.Notifications, R.string.tab_activity),
     TabSpec(MainRoutes.ACCOUNT, Icons.Outlined.AccountCircle, R.string.tab_account),
 )
 
-/** VM главного экрана: онлайн-статус и активный синк для глобального баннера. */
+/**
+ * VM главного экрана: онлайн-статус и активный синк для глобального баннера
+ * плюс счётчик непрочитанного для бейджа на табе.
+ */
 @HiltViewModel
 class MainScaffoldViewModel @Inject constructor(
     networkMonitor: NetworkMonitor,
     outboxSyncer: OutboxSyncer,
+    private val repository: SplittyRepository,
+    private val sessionStore: SessionStore,
 ) : ViewModel() {
     val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
     val isSyncing: StateFlow<Boolean> = outboxSyncer.isSyncing
+
+    /** Бейдж на табе «Уведомления»; источник — сессия, см. SessionStore. */
+    val unreadNotifications: StateFlow<Int> = sessionStore.unreadNotifications
+
+    /**
+     * Перечитать счётчик. Зовётся на старте и на каждом возврате из фона —
+     * бейдж обязан появляться ДО открытия раздела, иначе он показывался бы
+     * ровно в момент, когда раздел его гасит. Тихо: сбой ничем не мигает.
+     */
+    fun refreshUnreadCount() {
+        if (sessionStore.currentToken() == null) return
+        viewModelScope.launch {
+            runCatching { repository.unreadNotificationCount() }
+                .onSuccess { sessionStore.setUnreadNotifications(it) }
+        }
+    }
 }
 
 /**
@@ -156,8 +187,13 @@ fun MainScaffold(
     val currentRoute = backStackEntry?.destination?.route
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val unread by viewModel.unreadNotifications.collectAsStateWithLifecycle()
     val colors = Splitty.colors
     val haptics = rememberHaptics()
+
+    // Старт и каждый возврат из фона: бейдж обязан быть виден до того, как
+    // человек откроет раздел (порт iOS .task + scenePhase в SplittyApp).
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refreshUnreadCount() }
 
     // Вступили в группу по ссылке-приглашению — открываем её.
     LaunchedEffect(openRoomId) {
@@ -203,7 +239,14 @@ fun MainScaffold(
                                 indicatorColor = Color.Transparent,
                             ),
                         )
-                        RightTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
+                        RightTabs.forEach { tab ->
+                            TabItem(
+                                tab,
+                                currentRoute,
+                                ::switchTab,
+                                badgeCount = if (tab.route == MainRoutes.ACTIVITY) unread else 0,
+                            )
+                        }
                     }
                     // Приподнятая кнопка «+» поверх бара, по центру; верхняя часть
                     // выступает над баром и больше не режется (порт iOS addExpenseButton).
@@ -439,6 +482,7 @@ private fun RowScope.TabItem(
     tab: TabSpec,
     currentRoute: String?,
     onClick: (String) -> Unit,
+    badgeCount: Int = 0,
 ) {
     val colors = Splitty.colors
     val haptics = rememberHaptics()
@@ -449,7 +493,15 @@ private fun RowScope.TabItem(
             if (currentRoute != tab.route) haptics.tap()
             onClick(tab.route)
         },
-        icon = { Icon(tab.icon, contentDescription = null) },
+        icon = {
+            if (badgeCount > 0) {
+                BadgedBox(badge = { Badge { Text(badgeCount.coerceAtMost(99).toString()) } }) {
+                    Icon(tab.icon, contentDescription = null)
+                }
+            } else {
+                Icon(tab.icon, contentDescription = null)
+            }
+        },
         label = {
             Text(text = stringResource(tab.labelRes), fontSize = 11.sp, maxLines = 1)
         },

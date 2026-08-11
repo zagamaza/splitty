@@ -15,6 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.outlined.PersonAddAlt
+import com.zagir.splitty.core.model.InviteCard
+import com.zagir.splitty.core.model.InviteStatus
+import com.zagir.splitty.ui.components.SoftChip
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -79,6 +87,10 @@ fun ActivityScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val myUserId by viewModel.myUserId.collectAsStateWithLifecycle()
+    val invites by viewModel.invites.collectAsStateWithLifecycle()
+
+    // Раздел открыт — значит человек всё это увидел.
+    LaunchedEffect(Unit) { viewModel.markSeen() }
     val haptics = rememberHaptics()
 
     Column(
@@ -124,6 +136,14 @@ fun ActivityScreen(
             is UiState.Error -> ActivityErrorView(current.message, onRetry = viewModel::retry)
             is UiState.Content -> ActivityFeed(
                 items = current.value,
+                invites = invites,
+                onInviteAction = { card, action ->
+                    when (action) {
+                        InviteAction.ACCEPT -> viewModel.acceptInvite(card)
+                        InviteAction.DECLINE -> viewModel.declineInvite(card)
+                        InviteAction.LEAVE -> viewModel.leaveFromCard(card)
+                    }
+                },
                 isMineOnly = isMineOnly,
                 myUserId = myUserId,
                 isRefreshing = isRefreshing,
@@ -156,6 +176,8 @@ fun ActivityScreen(
 @Composable
 private fun ActivityFeed(
     items: List<ActivityItem>,
+    invites: List<InviteCard>,
+    onInviteAction: (InviteCard, InviteAction) -> Unit,
     isMineOnly: Boolean,
     myUserId: Long?,
     isRefreshing: Boolean,
@@ -185,7 +207,14 @@ private fun ActivityFeed(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (items.isEmpty()) {
+            items(invites, key = { "invite-" + it.roomId }) { card ->
+                InviteCardView(
+                    card = card,
+                    onAction = { action -> onInviteAction(card, action) },
+                    onOpen = { onOpenRoom(card.roomId) },
+                )
+            }
+            if (items.isEmpty() && invites.isEmpty()) {
                 item {
                     ActivityEmptyView(
                         isMineOnly = isMineOnly,
@@ -412,5 +441,89 @@ private fun ActivityEmptyView(
                 modifier = Modifier.padding(horizontal = 48.dp),
             )
         }
+    }
+}
+
+
+/** Действия на карточке приглашения. */
+enum class InviteAction { ACCEPT, DECLINE, LEAVE }
+
+/**
+ * Закреплённая карточка над лентой. Два вида:
+ * `added` — «вас добавили», кнопки «Открыть» и **«Выйти»**;
+ * `pending` — «приглашает вернуться», кнопки «Принять» и «Отклонить».
+ *
+ * «Выйти» на карточке `added` обязательна: человека добавили, не спросив, и
+ * без неё отказаться можно было бы только разыскав настройки группы.
+ */
+@Composable
+private fun InviteCardView(
+    card: InviteCard,
+    onAction: (InviteAction) -> Unit,
+    onOpen: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.surface)
+            .border(1.5.dp, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.PersonAddAlt,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = inviteTitle(card),
+                    fontSize = 14.sp,
+                    color = colors.ink,
+                )
+                Text(
+                    text = relativeTimeText(card.createdAt),
+                    fontSize = 12.sp,
+                    color = colors.inkSecondary,
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (card.status == InviteStatus.PENDING) {
+                SoftChip(
+                    text = stringResource(R.string.invite_accept),
+                    onClick = { onAction(InviteAction.ACCEPT) },
+                    isSelected = true,
+                )
+                SoftChip(
+                    text = stringResource(R.string.invite_decline),
+                    onClick = { onAction(InviteAction.DECLINE) },
+                )
+            } else {
+                SoftChip(
+                    text = stringResource(R.string.invite_open),
+                    onClick = onOpen,
+                    isSelected = true,
+                )
+                SoftChip(
+                    text = stringResource(R.string.invite_leave),
+                    onClick = { onAction(InviteAction.LEAVE) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun inviteTitle(card: InviteCard): String {
+    val who = card.inviterName.ifEmpty { stringResource(R.string.invite_someone) }
+    return if (card.status == InviteStatus.PENDING) {
+        stringResource(R.string.invite_wants_you_back, who, card.roomName)
+    } else {
+        stringResource(R.string.invite_added_you, who, card.roomName)
     }
 }

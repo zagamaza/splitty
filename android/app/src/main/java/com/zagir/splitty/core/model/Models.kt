@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -505,6 +506,51 @@ data class ActivityItem(
     val roomCurrency: String,
     val operation: Operation,
 )
+
+/** Статус отношения «человек × группа» в приглашениях. */
+@Serializable
+enum class InviteStatus {
+    @SerialName("added") ADDED,
+    @SerialName("pending") PENDING,
+    @SerialName("left") LEFT,
+    @SerialName("declined") DECLINED,
+}
+
+/** Закреплённая карточка приглашения в разделе «Уведомления». */
+@Serializable
+data class InviteCard(
+    val roomId: String,
+    val roomName: String = "",
+    val inviterName: String = "",
+    val status: InviteStatus,
+    val createdAt: Instant,
+)
+
+/**
+ * Ответ раздела «Уведомления»: приглашения, лента и счётчик непрочитанного.
+ *
+ * [seenThrough] — время формирования ОТВЕТА, его же возвращаем при отметке
+ * прочитанного: событие, пришедшее позже, иначе погасло бы непоказанным.
+ */
+@Serializable
+data class NotificationsFeed(
+    val invites: List<InviteCard> = emptyList(),
+    val items: List<ActivityItem> = emptyList(),
+    val unreadCount: Int = 0,
+    val seenThrough: Instant,
+)
+
+/** Тело POST /me/notifications-seen. */
+@Serializable
+data class MarkSeenBody(val seenThrough: Instant)
+
+/** Тело POST /rooms/{roomId}/members. */
+@Serializable
+data class AddMemberBody(val userId: Long)
+
+/** Ответ приглашения: added — уже участник, pending — ждёт согласия. */
+@Serializable
+data class AddMemberResponse(val status: InviteStatus)
 
 // --- Статистика группы (дашборд «Итоги») ---
 

@@ -262,6 +262,11 @@ val verifyReleaseShrinking by tasks.registering {
             // падала бы на разборе ответа ТОЛЬКО в релизной сборке.
             "com.zagir.splitty.core.model.LinkedProvidersResponse",
             "com.zagir.splitty.core.model.RepaymentBody",
+            "com.zagir.splitty.core.model.NotificationsFeed",
+            "com.zagir.splitty.core.model.InviteCard",
+            "com.zagir.splitty.core.model.MarkSeenBody",
+            "com.zagir.splitty.core.model.AddMemberBody",
+            "com.zagir.splitty.core.model.AddMemberResponse",
         )
         val missing = requiredSerializers.filterNot { "$it\$\$serializer" in survivors }
         require(missing.isEmpty()) {

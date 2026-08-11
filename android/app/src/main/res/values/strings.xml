@@ -37,7 +37,7 @@
     <string name="tab_friends">Friends</string>
     <string name="tab_groups">Groups</string>
     <string name="tab_add">Add expense</string>
-    <string name="tab_activity">Activity</string>
+    <string name="tab_activity">Notifications</string>
     <string name="tab_account">Profile</string>
 
     <!-- Заглушки -->
@@ -94,6 +94,32 @@
     <string name="activity_show_all">Show all</string>
     <string name="activity_filter_on">on</string>
     <string name="activity_filter_off">off</string>
+
+    <!-- Группа: участники и выход -->
+    <string name="group_remove_member_title">Remove %1$s from the group?</string>
+    <string name="group_remove_member_message">Expenses already recorded stay in the group</string>
+    <string name="group_remove_member_confirm">Remove</string>
+    <string name="group_remove_member_action">Remove from group</string>
+    <string name="group_leave_title">Leave “%1$s”?</string>
+    <string name="group_leave_message">The group disappears from your list. You can only come back if a member invites you</string>
+    <string name="group_leave_confirm">Leave</string>
+    <string name="group_leave_action">Leave group</string>
+    <string name="group_leave_footer">While expenses are recorded on you, you can\'t leave — remove yourself from them first.</string>
+    <string name="invite_friends_title">Invite</string>
+    <string name="invite_friends_section">From your groups</string>
+    <string name="invite_friends_empty">No one to invite yet: people you\'ve shared groups with will appear here.</string>
+    <string name="invite_friends_send">Invite</string>
+    <string name="invite_friends_link">Send a link</string>
+    <string name="invite_friends_link_footer">A link is for people you haven\'t split expenses with yet.</string>
+
+    <!-- Приглашения -->
+    <string name="invite_added_you">%1$s added you to “%2$s”</string>
+    <string name="invite_wants_you_back">%1$s invites you back to “%2$s”</string>
+    <string name="invite_someone">Someone</string>
+    <string name="invite_accept">Accept</string>
+    <string name="invite_decline">Decline</string>
+    <string name="invite_open">Open</string>
+    <string name="invite_leave">Leave</string>
 
     <!-- Относительное время (короткий стиль, как iOS RelativeDateTimeFormatter) -->
     <string name="time_just_now">just now</string>
@@ -185,7 +211,6 @@
     <string name="groups_create_hint">For example: “Trip to Istanbul” or “Flat”.</string>
     <string name="groups_create_button">Create</string>
     <string name="groups_join_title">Join</string>
-    <string name="groups_join_short">Join</string>
     <string name="groups_join_placeholder">Link or code</string>
     <string name="groups_join_paste">Paste</string>
     <string name="groups_join_hint">Paste the code from the invite or the whole link — both splitor.zagirnur.dev/join/… and t.me/split_money_bot?start=room… work</string>
@@ -491,4 +516,10 @@
     <string name="error_group_no_access">No access to this group. Ask a member to send you a new invite</string>
     <string name="error_operation_not_found">Operation not found</string>
     <string name="error_outbox_unsupported">Unsupported offline operation</string>
+    <string name="push_channel_operations">Expenses</string>
+    <string name="push_channel_operations_desc">New and changed expenses in your groups</string>
+    <string name="push_channel_debts">Debts</string>
+    <string name="push_channel_debts_desc">Debt repayments</string>
+    <string name="push_channel_invites">Invites</string>
+    <string name="push_channel_invites_desc">Invitations to groups</string>
 </resources>

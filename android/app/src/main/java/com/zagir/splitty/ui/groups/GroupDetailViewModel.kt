@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Operation
+import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
@@ -204,6 +205,67 @@ class GroupDetailViewModel @Inject constructor(
                 _alertMessage.value = humanErrorText(e)
             } finally {
                 _savingCurrency.value = null
+            }
+        }
+    }
+
+    /** Друзья для выбора при приглашении (без тех, кто уже в группе). */
+    private val _friends = MutableStateFlow<List<FriendBalance>>(emptyList())
+    val friends: StateFlow<List<FriendBalance>> = _friends.asStateFlow()
+
+    fun loadFriends() {
+        viewModelScope.launch {
+            runCatching { repository.friends().value }
+                .onSuccess { _friends.value = it }
+                .onFailure { if (it is ApiException) _alertMessage.value = humanErrorText(it) }
+        }
+    }
+
+    /** Позвать выбранных друзей: их id уже известен, код никому не нужен. */
+    fun inviteFriends(userIds: Set<Long>, onDone: () -> Unit) {
+        val detail = (_room.value as? UiState.Content)?.value ?: return
+        viewModelScope.launch {
+            try {
+                userIds.forEach { repository.addMember(detail.id, it) }
+                sessionStore.noteDataChanged()
+                refresh()
+                onDone()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e)
+            }
+        }
+    }
+
+    /**
+     * Выйти из группы.
+     *
+     * Сервер отклонит выход, пока на человеке висят расходы (409
+     * has_operations) — его текст объясняет путь наружу, поэтому показываем
+     * сообщение сервера как есть, а не подменяем своим «конфликт».
+     */
+    fun leaveRoom(onDone: () -> Unit) {
+        val detail = (_room.value as? UiState.Content)?.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.leaveRoom(detail.id)
+                sessionStore.noteDataChanged()
+                onDone()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e)
+            }
+        }
+    }
+
+    /** Убрать участника — лекарство от «позвал не того». */
+    fun removeMember(userId: Long) {
+        val detail = (_room.value as? UiState.Content)?.value ?: return
+        viewModelScope.launch {
+            try {
+                repository.removeMember(detail.id, userId)
+                sessionStore.noteDataChanged()
+                refresh()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e)
             }
         }
     }

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.InviteCard
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxSyncer
@@ -31,7 +32,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ActivityViewModel @Inject constructor(
     private val repository: SplittyRepository,
-    sessionStore: SessionStore,
+    private val sessionStore: SessionStore,
     private val outboxSyncer: OutboxSyncer,
 ) : ViewModel() {
 
@@ -52,6 +53,14 @@ class ActivityViewModel @Inject constructor(
     val isLoadingMore: StateFlow<Boolean> = _isLoadingMore.asStateFlow()
 
     /** Ошибка обновления/подгрузки, когда лента уже показана (alert). */
+    /** Закреплённые карточки приглашений над лентой. */
+    private val _invites = MutableStateFlow<List<InviteCard>>(emptyList())
+    val invites: StateFlow<List<InviteCard>> = _invites.asStateFlow()
+
+    /** Время формирования последнего ответа — его же шлём при отметке
+     *  прочитанного, чтобы не погасить пришедшее позже. */
+    private var seenThrough: java.time.Instant? = null
+
     private val _errorMessage = MutableStateFlow<UiText?>(null)
     val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
@@ -150,6 +159,43 @@ class ActivityViewModel @Inject constructor(
         }
     }
 
+    /** Отметить прочитанным всё, что было в последнем ответе. */
+    fun markSeen() {
+        val through = seenThrough ?: return
+        viewModelScope.launch {
+            // Фоновое действие: сбой не должен ничем мигать пользователю.
+            runCatching { repository.markNotificationsSeen(through) }
+            // Бейдж гасим только после подтверждённой отметки: иначе непрочитанное
+            // исчезло бы с таба, оставшись непрочитанным на сервере.
+                .onSuccess { sessionStore.setUnreadNotifications(0) }
+        }
+    }
+
+    fun acceptInvite(card: InviteCard) = actOnInvite(card) { repository.acceptInvite(card.roomId) }
+
+    fun declineInvite(card: InviteCard) = actOnInvite(card) { repository.declineInvite(card.roomId) }
+
+    /**
+     * Выйти из группы прямо с карточки «вас добавили».
+     *
+     * Кнопка обязана быть здесь: человека добавили, не спросив, и если
+     * единственное действие — «Открыть», отказаться можно только разыскав
+     * настройки группы.
+     */
+    fun leaveFromCard(card: InviteCard) = actOnInvite(card) { repository.leaveRoom(card.roomId) }
+
+    private fun actOnInvite(card: InviteCard, action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try {
+                action()
+                _invites.value = _invites.value.filterNot { it.roomId == card.roomId }
+                reloadFirstPage()
+            } catch (e: ApiException) {
+                _errorMessage.value = humanErrorText(e)
+            }
+        }
+    }
+
     private fun filteredCount(): Int {
         val content = (displayItems.value as? UiState.Content)?.value ?: return 0
         return content.size
@@ -157,8 +203,12 @@ class ActivityViewModel @Inject constructor(
 
     private suspend fun reloadFirstPage() {
         try {
-            val page = repository.activity(limit = PAGE_SIZE, offset = 0).value
+            val feed = repository.notificationFeed(limit = PAGE_SIZE, offset = 0).value
+            val page = feed.items
             generation++ // подгрузки, стартовавшие до этого момента, свой результат выбросят
+            _invites.value = feed.invites
+            seenThrough = feed.seenThrough
+            sessionStore.setUnreadNotifications(feed.unreadCount)
             _state.value = UiState.Content(page)
             loadedCount = page.size
             hasMore = page.size == PAGE_SIZE
