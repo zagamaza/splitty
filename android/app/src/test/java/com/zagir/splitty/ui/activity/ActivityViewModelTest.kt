@@ -163,11 +163,13 @@ class ActivityViewModelTest {
     fun `first visit marks seen once the feed arrives, not at composition`() = runBlocking {
         // Ответ приходит с задержкой — так первый визит гарантированно случается
         // РАНЬШЕ ленты, как на живом экране.
-        server.enqueue(
-            MockResponse().setBody(FEED_JSON)
-                .setBodyDelay(300, java.util.concurrent.TimeUnit.MILLISECONDS),
-        )
-        server.enqueue(MockResponse().setResponseCode(204))
+        repeat(2) {
+            server.enqueue(
+                MockResponse().setBody(FEED_JSON)
+                    .setBodyDelay(300, java.util.concurrent.TimeUnit.MILLISECONDS),
+            )
+        }
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(204)) }
         val vm = viewModel()
 
         vm.onScreenVisible()
@@ -177,6 +179,25 @@ class ActivityViewModelTest {
         // отмечать было нечего — а второго «показа» у открытого экрана нет.
         val seen = awaitRequest("/api/v1/me/notifications-seen")
         assertTrue(seen.body.readUtf8().contains(SEEN_THROUGH), "seenThrough из ответа")
+    }
+
+    @Test
+    fun `re-entering the screen reloads the feed, not just marks seen`() = runBlocking {
+        repeat(2) { server.enqueue(MockResponse().setBody(FEED_JSON)) }
+        repeat(2) { server.enqueue(MockResponse().setResponseCode(204)) }
+        val vm = viewModel()
+        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        awaitRequest("/api/v1/notifications")
+        vm.onScreenHidden()
+
+        vm.onScreenVisible()
+
+        // VM переживает переключение табов: без перезагрузки человек смотрел бы
+        // на ленту прошлого визита, а бейдж, поднятый обновлением счётчика в
+        // фоне, гасился бы отметкой со СТАРЫМ seenThrough — то есть никогда.
+        awaitRequest("/api/v1/notifications")
+        val seen = awaitRequest("/api/v1/me/notifications-seen")
+        assertTrue(seen.body.readUtf8().contains(SEEN_THROUGH), "seenThrough из свежего ответа")
     }
 
     @Test

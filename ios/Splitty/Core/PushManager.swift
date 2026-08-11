@@ -157,11 +157,16 @@ extension PushManager: MessagingDelegate {
 extension PushManager: UNUserNotificationCenterDelegate {
     /// Пуш пришёл, когда приложение на переднем плане — показываем баннер+звук
     /// (по умолчанию iOS foreground-уведомления не показывает).
+    ///
+    /// И сообщаем о приходе: бейдж иначе оставался бы вчерашним до следующего
+    /// возврата из фона — человек видит баннер о новом расходе, а на колоколе
+    /// прежнее число.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        NotificationCenter.default.post(name: .splittyPushReceived, object: nil)
         completionHandler([.banner, .list, .sound])
     }
 
@@ -220,4 +225,8 @@ extension Notification.Name {
     /// Тап по push-уведомлению; в userInfo лежит PushRoute по ключу
     /// `PushRoute.userInfoKey`.
     static let splittyPushTapped = Notification.Name("splitty.push.tapped")
+
+    /// Push пришёл, пока приложение открыто. Никуда не ведёт — только повод
+    /// перечитать счётчик непрочитанного (тап отдельным событием выше).
+    static let splittyPushReceived = Notification.Name("splitty.push.received")
 }

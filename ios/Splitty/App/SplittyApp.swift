@@ -65,9 +65,14 @@ struct SplittyApp: App {
                         session.unreadNotifications = 0
                     }
                 }
-                // Возврат из фона и приход push — второй и третий источники
-                // счётчика помимо старта.
+                // Возврат из фона и push — второй и третий источники счётчика
+                // помимо старта. Приход (баннер поверх открытого приложения) и
+                // тап — разные события: по первому бейдж обязан обновиться, не
+                // дожидаясь, пока человек тапнет.
                 .onReceive(NotificationCenter.default.publisher(for: .splittyPushTapped)) { _ in
+                    Task { await session.refreshUnreadCount() }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .splittyPushReceived)) { _ in
                     Task { await session.refreshUnreadCount() }
                 }
                 // ЕДИНСТВЕННЫЙ onOpenURL сцены: второй такой модификатор не

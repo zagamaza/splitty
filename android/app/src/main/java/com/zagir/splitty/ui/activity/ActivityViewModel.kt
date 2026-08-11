@@ -171,10 +171,19 @@ class ActivityViewModel @Inject constructor(
         }
     }
 
-    /** Раздел открыт — значит человек всё это увидел. */
+    /**
+     * Раздел открыт — значит человек всё это увидел.
+     *
+     * Перезагружаем ленту, а не просто отмечаем прочитанное: VM переживает
+     * переключение табов (`saveState`/`restoreState`), и на повторном входе
+     * `seenThrough` с `unreadCount` остались бы от прошлого визита. Пришедшее
+     * в фоне приглашение не показалось бы вовсе, а бейдж, поднятый обновлением
+     * счётчика на старте, гасить было бы нечем — `markSeen` уходил бы в no-op.
+     * Отметку пошлёт сам [reloadFirstPage], когда приедет ответ.
+     */
     fun onScreenVisible() {
         isScreenVisible = true
-        markSeen()
+        viewModelScope.launch { reloadFirstPage() }
     }
 
     fun onScreenHidden() {

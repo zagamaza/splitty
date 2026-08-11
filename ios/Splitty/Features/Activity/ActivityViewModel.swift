@@ -57,6 +57,11 @@ final class ActivityViewModel {
     /// ответом и этим вызовом мог прийти новый расход, и «сейчас» погасило бы
     /// его, так и не показав человеку.
     func markSeen(session: SessionStore) async {
+        // Счётчик из последнего ответа — источник правды для бейджа, и записать
+        // его надо ДО ранних выходов: если отметку уже поставили с другого
+        // устройства, unreadCount придёт нулём, отмечать будет нечего, а бейдж
+        // так и висел бы до следующего возврата из фона.
+        session.unreadNotifications = unreadCount
         guard let through = seenThrough, unreadCount > 0 else { return }
         do {
             try await session.api.markNotificationsSeen(through: through)

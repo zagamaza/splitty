@@ -132,6 +132,20 @@ func containsRecipient(users []api.RecipientWithSum, id int) bool {
 	return false
 }
 
+// containsLegacyRecipient получатели легаси-операций эпохи master-2021: долей у
+// них нет вовсе, список лежит в recipients
+func containsLegacyRecipient(users *[]api.User, id int) bool {
+	if users == nil {
+		return false
+	}
+	for _, u := range *users {
+		if u.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
 type WantDonorOperation struct {
 	css ChatStateService
 	bs  ButtonService

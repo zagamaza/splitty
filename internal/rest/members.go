@@ -337,28 +337,29 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 		return
 	}
 
-	left, err := s.roomRepo.LeaveRoom(ctx, targetId, roomId)
-	if err != nil {
-		log.Error().Err(err).Msg("cannot leave room")
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
-		return
-	}
-	if !left {
-		// Гонку с параллельным выходом трактуем как успех: состояние уже такое,
-		// каким его хотел видеть вызывающий.
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
+	// Запись left идёт ПЕРЕД выходом и её сбой отменяет операцию. Порядок
+	// наоборот оставлял бы человека вне комнаты без следа отношения, и
+	// следующее приглашение вернуло бы его молча, мимо «после выхода — только с
+	// явного согласия». Лишний left при неудавшемся выходе безвреден: человек
+	// остался участником, и шаг (3) handleAddMember примирит запись обратно
+	// в added.
 	if s.invites != nil {
 		roomHex, hexErr := primitive.ObjectIDFromHex(roomId)
 		if hexErr == nil {
-			// Запись left закрывает тихий возврат: следующее приглашение пойдёт
-			// через pending и будет ждать согласия человека.
-			if err = s.invites.Upsert(ctx, roomHex, targetId, userIdFromCtx(ctx), api.InviteLeft, s.now()); err != nil {
+			if err := s.invites.Upsert(ctx, roomHex, targetId, userIdFromCtx(ctx), api.InviteLeft, s.now()); err != nil {
 				log.Error().Err(err).Msg("cannot mark invite as left")
+				writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
+				return
 			}
 		}
+	}
+
+	// Результат (matched) не смотрим: гонку с параллельным выходом трактуем как
+	// успех — состояние уже такое, каким его хотел видеть вызывающий.
+	if _, err := s.roomRepo.LeaveRoom(ctx, targetId, roomId); err != nil {
+		log.Error().Err(err).Msg("cannot leave room")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)

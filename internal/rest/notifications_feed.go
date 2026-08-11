@@ -8,9 +8,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// maxUnreadCount потолок счётчика непрочитанного: точное число сверх сотни
-// человеку ничего не даёт, а обход всей ленты ради него — лишняя работа.
+// maxUnreadCount последнее ТОЧНОЕ значение счётчика непрочитанного: число сверх
+// сотни человеку ничего не даёт, а обход всей ленты ради него — лишняя работа.
+// Переполнение отдаётся как maxUnreadCount+1 — «больше 99»; клиент рисует «99+».
+// Клампить ровно 99 нельзя: клиент не отличил бы потолок от честной сотни минус
+// один и рисовал бы точное «99», которого не было.
 const maxUnreadCount = 99
+
+// unreadOverflow значение-маркер «непрочитанного больше, чем maxUnreadCount».
+const unreadOverflow = maxUnreadCount + 1
 
 // inviteCardDto закреплённая карточка приглашения в разделе уведомлений.
 type inviteCardDto struct {
@@ -28,7 +34,8 @@ type notificationsDto struct {
 	Invites []inviteCardDto `json:"invites"`
 	// Items — та же лента событий, что отдаёт /activity
 	Items []activityItemDto `json:"items"`
-	// UnreadCount — pending + непрочитанные added + события новее отметки
+	// UnreadCount — pending + непрочитанные added + адресованные человеку
+	// события новее отметки; maxUnreadCount+1 означает «больше 99»
 	UnreadCount int `json:"unreadCount"`
 	// SeenThrough — время формирования ОТВЕТА. Клиент возвращает ровно это
 	// значение в POST /me/notifications-seen: если поставить там серверное
@@ -56,6 +63,11 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Время берём ДО первого чтения: возьми мы его после, событие, созданное
+	// пока читалась лента, не попало бы в ответ, но оказалось бы старше
+	// seenThrough — и клиентская отметка погасила бы его непоказанным.
+	seenThrough := s.now().UTC()
+
 	user, hErr := s.currentUser(ctx)
 	if hErr != nil {
 		hErr.write(w)
@@ -68,7 +80,6 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	seenThrough := s.now()
 	out := notificationsDto{
 		Invites:     []inviteCardDto{},
 		Items:       activityPage(all, limit, offset),
@@ -81,13 +92,18 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	// операции нет (api.Operation хранит только CreateAt), поэтому правки и
 	// удаления расходов в счётчик не попадают. Это принятое ограничение, а не
 	// недосмотр — «новое» здесь значит «новые расходы».
-	for _, it := range all {
-		if user.NotificationsSeenAt == nil || it.Operation.CreatedAt.After(*user.NotificationsSeenAt) {
-			out.UnreadCount++
+	for i := range all {
+		op := &all[i].Operation
+		if !notifiesUser(op, user.ID) {
+			continue
 		}
+		if user.NotificationsSeenAt != nil && !op.CreatedAt.After(*user.NotificationsSeenAt) {
+			continue
+		}
+		out.UnreadCount++
 		// Потолок: у старого пользователя без отметки непрочитано вообще всё, и
 		// бейдж «347» не сообщает ничего сверх «много». Клиент рисует «99+».
-		if out.UnreadCount >= maxUnreadCount {
+		if out.UnreadCount > maxUnreadCount {
 			break
 		}
 	}
@@ -132,10 +148,29 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if out.UnreadCount > maxUnreadCount {
-		out.UnreadCount = maxUnreadCount
+		out.UnreadCount = unreadOverflow
 	}
 
 	writeJSON(w, http.StatusOK, out)
+}
+
+// notifiesUser считается ли событие ленты непрочитанным ЛИЧНО для человека.
+//
+// Раздел — входящие, поэтому счётчик обязан совпадать с тем, о чём приходит
+// push: notifier уведомляет получателей с ненулевой долей и никогда — автора
+// (internal/bot/notifier.go). Автора у операции в базе нет, и ближайший его
+// заменитель — донор: расход почти всегда заводит тот, кто платил. Отсюда два
+// правила: свой расход бейдж не поднимает, чужой расход без твоей доли — тоже.
+func notifiesUser(op *operationDto, userId int) bool {
+	if op.Donor.ID == userId {
+		return false
+	}
+	for _, r := range op.Recipients {
+		if r.User.ID == userId && r.Sum != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // markSeenRequest тело POST /me/notifications-seen.

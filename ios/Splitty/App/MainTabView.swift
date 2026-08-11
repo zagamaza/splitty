@@ -55,7 +55,7 @@ struct MainTabView: View {
             // кнопками, поэтому колокол и бейдж, а не часы.
             ActivityView()
                 .tabItem { Label("Уведомления", systemImage: "bell.fill") }
-                .badge(session.unreadNotifications)
+                .badge(Self.badgeLabel(for: session.unreadNotifications))
                 .tag(Tab.activity)
 
             AccountView()
@@ -124,6 +124,20 @@ struct MainTabView: View {
             }
         }
         .task { await session.syncOutbox() }
+    }
+
+    /// Текст бейджа непрочитанного: nil — бейджа нет.
+    ///
+    /// Сервер отдаёт точное число до 99, а `99 + 1` означает «больше 99»
+    /// (см. `maxUnreadCount` в internal/rest/notifications_feed.go). Рисовать
+    /// такое значение числом нельзя: «100» выглядело бы точным количеством,
+    /// которого никто не считал.
+    static func badgeLabel(for count: Int) -> String? {
+        switch count {
+        case ...0: return nil
+        case ...99: return String(count)
+        default: return "99+"
+        }
     }
 
     /// Куда ведёт тап по push: вкладка и, для расхода/долга, комната.

@@ -495,8 +495,10 @@ private fun RowScope.TabItem(
         },
         icon = {
             if (badgeCount > 0) {
-                // Свыше сотни — «99+»: обрезание до «99» врало бы, что
-                // непрочитанного ровно столько.
+                // Сервер отдаёт точное число до 99, а 100 означает «больше 99»
+                // (maxUnreadCount в internal/rest/notifications_feed.go).
+                // Рисовать его числом нельзя: «100» выглядело бы точным
+                // количеством, которого никто не считал.
                 val badgeText = if (badgeCount > 99) {
                     stringResource(R.string.notifications_badge_overflow)
                 } else {

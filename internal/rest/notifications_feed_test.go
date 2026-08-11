@@ -274,6 +274,114 @@ func TestNotificationsUnreadCountsWholeFeed(t *testing.T) {
 	}
 }
 
+// TestNotificationsCountsOnlyEventsAddressedToUser — счётчик обязан совпадать с
+// тем, о чём приходит push (internal/bot/notifier.go): свой расход и чужой
+// расход без твоей доли бейдж не поднимают. Иначе раздел «Уведомления» сообщал
+// бы человеку о его же действиях.
+func TestNotificationsCountsOnlyEventsAddressedToUser(t *testing.T) {
+	me, other := testUser2, testUser1
+	mine := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Мой расход", Sum: 100,
+		Donor:             &me,
+		RecipientsWithSum: []api.RecipientWithSum{{User: testUser1, Sum: 50}, {User: testUser2, Sum: 50}},
+		CreateAt:          time.Now(),
+	}
+	foreign := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Чужой расход", Sum: 100,
+		Donor:             &other,
+		RecipientsWithSum: []api.RecipientWithSum{{User: testUser3, Sum: 100}},
+		CreateAt:          time.Now(),
+	}
+	zeroShare := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Нулевая доля", Sum: 100,
+		Donor:             &other,
+		SplitType:         splitByExactAmount,
+		RecipientsWithSum: []api.RecipientWithSum{{User: testUser3, Sum: 100}, {User: testUser2, Sum: 0}},
+		CreateAt:          time.Now(),
+	}
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members:    &[]api.User{testUser1, testUser2, testUser3},
+		Operations: &[]api.Operation{mine, foreign, zeroShare},
+		CreateAt:   time.Now(),
+	}
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2, testUser3), newFakeRoomRepo(room))
+	srv.SetInvites(newFakeInviteStore())
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if len(got.Items) != 3 {
+		t.Fatalf("лента показывает все события комнаты, получено %d", len(got.Items))
+	}
+	if got.UnreadCount != 0 {
+		t.Fatalf("непрочитанных быть не должно (свой расход, чужой расход, нулевая доля), получено %d", got.UnreadCount)
+	}
+
+	// Контроль: расход с ненулевой долей от другого человека считается.
+	addressed := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor:             &other,
+		RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
+		CreateAt:          time.Now(),
+	}
+	*room.Operations = append(*room.Operations, addressed)
+	if again := fetchNotifications(t, srv, testUser2.ID); again.UnreadCount != 1 {
+		t.Fatalf("адресованный человеку расход обязан попасть в счётчик, получено %d", again.UnreadCount)
+	}
+}
+
+// TestNotificationsSeenThroughTakenBeforeFeedRead — seenThrough обязан быть
+// снят ДО чтения ленты. Иначе событие, созданное между чтением и снимком
+// времени, в ответ не попадает, но клиентская отметка его гасит.
+func TestNotificationsSeenThroughTakenBeforeFeedRead(t *testing.T) {
+	srv, _, _ := notifFixture(t)
+
+	// Часы тикают на каждом обращении: так порядок вызовов виден по значениям.
+	base := time.Now()
+	var tick int
+	srv.now = func() time.Time {
+		tick++
+		return base.Add(time.Duration(tick) * time.Second)
+	}
+	var readAt time.Time
+	srv.roomRepo.(*fakeRoomRepo).onFindRooms = func() { readAt = srv.now() }
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if readAt.IsZero() {
+		t.Fatal("лента не читалась — тест не проверяет порядок")
+	}
+	if !got.SeenThrough.Before(readAt) {
+		t.Fatalf("seenThrough (%v) снят не раньше чтения ленты (%v): всё, что появится между ними, погаснет непоказанным",
+			got.SeenThrough, readAt)
+	}
+}
+
+// TestNotificationsOverflowIsDistinguishable — переполнение обязано отличаться
+// от честной сотни минус один: ровно 99 клиент нарисовал бы как точное число.
+func TestNotificationsOverflowIsDistinguishable(t *testing.T) {
+	donor := testUser1
+	ops := make([]api.Operation, 0, 120)
+	for i := 0; i < 120; i++ {
+		ops = append(ops, api.Operation{
+			ID: primitive.NewObjectID(), Description: fmt.Sprintf("Расход %d", i), Sum: 100,
+			Donor:             &donor,
+			RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
+			CreateAt:          time.Now(),
+		})
+	}
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{testUser1, testUser2}, Operations: &ops,
+		CreateAt: time.Now(),
+	}
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	srv.SetInvites(newFakeInviteStore())
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if got.UnreadCount != unreadOverflow {
+		t.Fatalf("переполнение должно отдаваться как %d («больше 99»), получено %d", unreadOverflow, got.UnreadCount)
+	}
+}
+
 // TestNotificationsPagination — лента листается теми же limit/offset, что и
 // /activity: хендлер, игнорирующий offset, обязан падать здесь.
 func TestNotificationsPagination(t *testing.T) {

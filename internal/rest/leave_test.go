@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -182,6 +183,22 @@ func TestRemoveMemberNotInRoom(t *testing.T) {
 	f := newLeaveFixture(t)
 	if code := f.remove(t, testUser1.ID, 999); code != http.StatusNotFound {
 		t.Fatalf("несуществующий участник — 404, получен %d", code)
+	}
+}
+
+// TestLeaveRoomKeepsMembershipWhenLeftRecordFails — выход без записи left
+// открывал бы тихий возврат: следующее приглашение не увидело бы прошлого
+// выхода и вернуло бы человека в комнату без спроса. Поэтому сбой записи
+// отменяет весь выход.
+func TestLeaveRoomKeepsMembershipWhenLeftRecordFails(t *testing.T) {
+	f := newLeaveFixture(t)
+	f.invites.upsertErr = errors.New("mongo недоступна")
+
+	if code := f.leave(t, testUser2.ID); code != http.StatusInternalServerError {
+		t.Fatalf("сбой записи left обязан отдавать 500, получен %d", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("человек вышел из комнаты, но следа отношения не осталось — следующее приглашение вернёт его молча")
 	}
 }
 

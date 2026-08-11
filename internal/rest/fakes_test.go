@@ -612,6 +612,9 @@ type fakeRoomRepo struct {
 	anonymizeErr error
 	// anonymized — id, по которым анонимизация действительно отработала
 	anonymized []int
+	// onFindRooms вызывается в начале FindRoomsByUserId — позволяет засечь
+	// момент чтения ленты относительно остальных шагов хендлера
+	onFindRooms func()
 }
 
 func newFakeRoomRepo(rooms ...*api.Room) *fakeRoomRepo {
@@ -699,6 +702,9 @@ func (f *fakeRoomRepo) SaveRoom(_ context.Context, r *api.Room) (primitive.Objec
 }
 
 func (f *fakeRoomRepo) FindRoomsByUserId(_ context.Context, id int) (*[]api.Room, error) {
+	if f.onFindRooms != nil {
+		f.onFindRooms()
+	}
 	return f.findRooms(id, false), nil
 }
 
@@ -980,6 +986,9 @@ func (f *fakeNotifier) NotifyInvited(_ context.Context, room api.Room, invitee a
 type fakeInviteStore struct {
 	mu      sync.Mutex
 	invites map[string]api.RoomInvite
+	// upsertErr — сбой записи отношения: проверяем, что незаписанный left не
+	// оставляет человека вне комнаты без следа
+	upsertErr error
 }
 
 func newFakeInviteStore() *fakeInviteStore {
@@ -993,6 +1002,9 @@ func inviteKey(roomID primitive.ObjectID, inviteeID int) string {
 func (f *fakeInviteStore) Upsert(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.upsertErr != nil {
+		return f.upsertErr
+	}
 	f.invites[inviteKey(roomID, inviteeID)] = api.RoomInvite{
 		RoomID: roomID, InviteeID: inviteeID, InviterID: inviterID,
 		Status: status, CreatedAt: now,

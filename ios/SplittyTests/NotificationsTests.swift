@@ -97,6 +97,23 @@ final class NotificationsAPITests: XCTestCase {
         XCTAssertEqual(query?.first { $0.name == "offset" }?.value, "0")
     }
 
+    /// `seenThrough` — единственная дата API, которая рождается не в mongo, а из
+    /// `time.Now()`, и уезжает в RFC3339Nano с девятью знаками после точки.
+    /// Отвергни её декодер — раздел и бейдж умерли бы целиком, молча.
+    func testNotificationFeedDecodesNanosecondPrecisionDate() async throws {
+        let nanoJSON = feedJSON.replacingOccurrences(
+            of: "\"seenThrough\": \"2026-07-30T12:00:00Z\"",
+            with: "\"seenThrough\": \"2026-07-30T12:00:00.123456789Z\""
+        )
+        XCTAssertTrue(nanoJSON.contains("123456789"), "подмена даты в фикстуре не сработала")
+        StubURLProtocol.handler = { _ in (200, Data(nanoJSON.utf8)) }
+
+        let feed = try await client.notificationFeed(limit: 30, offset: 0)
+
+        XCTAssertEqual(feed.seenThrough.timeIntervalSince1970,
+                       seenThroughDate.timeIntervalSince1970 + 0.123, accuracy: 0.001)
+    }
+
     // MARK: POST /me/notifications-seen
 
     /// Дата уходит СТРОКОЙ RFC3339: числу (`.deferredToDate`) сервер отвечает
@@ -202,6 +219,29 @@ final class ActivityViewModelTests: XCTestCase {
         XCTAssertEqual(model.unreadCount, 1)
     }
 
+    /// Счётчик из ответа обязан доехать до бейджа даже когда отмечать нечего:
+    /// отметку мог поставить другой девайс, и без этой записи бейдж висел бы
+    /// со старым числом до следующего возврата из фона.
+    @MainActor
+    func testMarkSeenPublishesCountWhenNothingToMark() async {
+        let seenJSON = feedJSON
+            .replacingOccurrences(of: "\"unreadCount\": 3", with: "\"unreadCount\": 0")
+        StubURLProtocol.handler = { request in
+            if request.url?.path == "/api/v1/notifications" {
+                return (200, Data(seenJSON.utf8))
+            }
+            return (204, Data())
+        }
+        let model = await loadedModel()
+        XCTAssertEqual(model.unreadCount, 0)
+
+        let session = SessionStore(urlSession: stubSession)
+        session.unreadNotifications = 5
+        await model.markSeen(session: session)
+
+        XCTAssertEqual(session.unreadNotifications, 0)
+    }
+
     /// Сбой отметки не должен ни гасить бейдж, ни показывать алерт: человек
     /// этого действия не просил.
     @MainActor
@@ -286,6 +326,26 @@ final class ActivityViewModelTests: XCTestCase {
         let message = try XCTUnwrap(model.errorMessage)
         XCTAssertTrue(message.contains("Уберите себя"))
         XCTAssertFalse(message.contains("конфликт"))
+    }
+}
+
+/// Текст бейджа: сервер отдаёт точное число до 99, а 100 означает «больше 99».
+final class BadgeLabelTests: XCTestCase {
+    func testBadgeHiddenWhenNothingUnread() {
+        XCTAssertNil(MainTabView.badgeLabel(for: 0))
+        XCTAssertNil(MainTabView.badgeLabel(for: -1))
+    }
+
+    func testExactCountShownUpToCeiling() {
+        XCTAssertEqual(MainTabView.badgeLabel(for: 1), "1")
+        XCTAssertEqual(MainTabView.badgeLabel(for: 99), "99")
+    }
+
+    /// Потолок рисуется «99+», а не числом: «100» выглядело бы точным
+    /// количеством, которого сервер не считал.
+    func testOverflowShownAsPlus() {
+        XCTAssertEqual(MainTabView.badgeLabel(for: 100), "99+")
+        XCTAssertEqual(MainTabView.badgeLabel(for: 500), "99+")
     }
 }
 
