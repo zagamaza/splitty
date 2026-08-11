@@ -83,6 +83,23 @@ class HumanErrorTextTest {
     }
 
     @Test
+    fun `removing somebody else does not get the you-text`() {
+        // Тот же код 409, но действие другое: «уберите СЕБЯ из расходов» человеку,
+        // который убирает соседа, отправляет искать не те расходы. Сервер и iOS
+        // (`leaveErrorText(_:isSelf:)`) различают эти два случая с самого начала.
+        val hasOperations = ApiException(
+            status = 409,
+            code = "has_operations",
+            message = "На участнике записаны расходы",
+            fromServer = true,
+        )
+        assertEquals(
+            UiText.res(R.string.error_remove_member_has_operations),
+            humanErrorText(hasOperations, isSelf = false),
+        )
+    }
+
+    @Test
     fun `empty server body falls back to a resource by code`() {
         val server = ApiException(status = 409, code = "conflict", message = "conflict (409)")
         assertEquals(UiText.res(R.string.error_conflict), humanErrorText(server))

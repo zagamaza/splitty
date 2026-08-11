@@ -1520,19 +1520,6 @@ func abs(v int) int {
 	return v
 }
 
-// activityItems собирает страницу ленты событий пользователя.
-//
-// Вынесено из handleActivity, потому что тем же самым живёт раздел
-// «Уведомления» (см. notifications_feed.go): дублировать обход комнат и
-// сортировку значило бы получить две ленты, которые однажды разойдутся.
-func (s *Server) activityItems(ctx context.Context, userId, limit, offset int) ([]activityItemDto, *httpError) {
-	items, hErr := s.allActivityItems(ctx, userId)
-	if hErr != nil {
-		return nil, hErr
-	}
-	return activityPage(items, limit, offset), nil
-}
-
 // allActivityItems вся лента пользователя, отсортированная по времени.
 //
 // Отделена от пагинации ради счётчика непрочитанного: считая его по СТРАНИЦЕ,
@@ -1607,12 +1594,15 @@ func (s *Server) handleActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, hErr := s.activityItems(ctx, userId, limit, offset)
+	// Как в разделе «Уведомления» (notifications_feed.go): вся лента, потом
+	// страница. Обход комнат и сортировка живут в allActivityItems — две копии
+	// ленты однажды разошлись бы.
+	all, hErr := s.allActivityItems(ctx, userId)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
-	writeJSON(w, http.StatusOK, page)
+	writeJSON(w, http.StatusOK, activityPage(all, limit, offset))
 }
 
 // queryInt парсит неотрицательный int-параметр запроса

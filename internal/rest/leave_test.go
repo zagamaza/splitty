@@ -272,3 +272,26 @@ func TestLeaveRoomKeepsOthersDebts(t *testing.T) {
 		}
 	}
 }
+
+// TestLeaveRoomWithoutInviteStore — без хранилища приглашений записать след
+// выхода нечем. Прежний `if s.invites != nil` пропускал запись молча и открывал
+// ровно тот тихий возврат, ради закрытия которого она заведена: следующее
+// приглашение не увидело бы прошлого выхода.
+func TestLeaveRoomWithoutInviteStore(t *testing.T) {
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{testUser1, testUser2}, CreateAt: time.Now(),
+	}
+	roomRepo := newFakeRoomRepo(room)
+	srv := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), roomRepo)
+
+	token := mustToken(t, srv, testUser2.ID)
+	target := fmt.Sprintf("/api/v1/rooms/%s/members/me", room.ID.Hex())
+	rec := doRequest(t, srv, http.MethodDelete, target, token, "")
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("выход без хранилища приглашений обязан быть отклонён 503, получен %d", rec.Code)
+	}
+	if !isRoomMember(room, testUser2.ID) {
+		t.Fatal("человек вышел без следа отношения — следующее приглашение вернёт его молча")
+	}
+}

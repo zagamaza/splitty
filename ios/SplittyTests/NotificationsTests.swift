@@ -484,3 +484,27 @@ final class PushTargetTests: XCTestCase {
         XCTAssertEqual(target.roomId, "68f2a1c4d9")
     }
 }
+
+/// Заголовок карточки приглашения.
+///
+/// Сервер оставляет `inviterName` пустым, когда строку пригласившего прочитать
+/// не удалось (`notifications_feed.go`), — плейсхолдер занимает слот
+/// ПОДЛЕЖАЩЕГО, и «Вас» давало «Вас добавил вас в группу».
+final class InviteCardTitleTests: XCTestCase {
+    private func card(inviter: String, status: InviteStatus) -> InviteCard {
+        InviteCard(roomId: "r1", roomName: "Дача", inviterName: inviter,
+                   status: status, createdAt: Date(timeIntervalSince1970: 0))
+    }
+
+    func testEmptyInviterReadsAsSubject() {
+        XCTAssertEqual(inviteCardTitle(card(inviter: "", status: .added)),
+                       "Кто-то добавил вас в группу «Дача»")
+        XCTAssertEqual(inviteCardTitle(card(inviter: "", status: .pending)),
+                       "Кто-то приглашает вас вернуться в «Дача»")
+    }
+
+    func testKnownInviterKeepsTheName() {
+        XCTAssertEqual(inviteCardTitle(card(inviter: "Аня", status: .added)),
+                       "Аня добавил вас в группу «Дача»")
+    }
+}

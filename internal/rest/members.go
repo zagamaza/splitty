@@ -11,6 +11,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
+// errInviteNotPending единственный ответ на «приглашение уже обработано». К нему
+// приходят три пути: чтение статуса в pendingInvite и проигранный compare-and-set
+// в accept/decline — контракт один, и три копии литерала расходились бы.
+var errInviteNotPending = &httpError{http.StatusConflict, "not_pending", "приглашение уже обработано"}
+
 // addMemberRequest тело POST /rooms/{roomId}/members.
 type addMemberRequest struct {
 	UserId int `json:"userId"`
@@ -102,6 +107,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	if isRoomMember(room, invitee.ID) {
 		if existing == nil || existing.Status != api.InviteAdded {
 			if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InviteAdded, s.now()); err != nil {
+				log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot reconcile invite")
 				writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
 				return
 			}
@@ -115,6 +121,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	// Создаём приглашение, которое ждёт его решения.
 	if existing != nil && (existing.Status == api.InviteLeft || existing.Status == api.InviteDeclined) {
 		if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InvitePending, s.now()); err != nil {
+			log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot save invite")
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
 			return
 		}
@@ -164,6 +171,7 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InviteAdded, s.now()); err != nil {
+		log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot save invite")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
 		return
 	}
@@ -201,7 +209,7 @@ func (s *Server) handleAcceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		writeError(w, http.StatusConflict, "not_pending", "приглашение уже обработано")
+		errInviteNotPending.write(w)
 		return
 	}
 
@@ -233,7 +241,7 @@ func (s *Server) handleDeclineInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		writeError(w, http.StatusConflict, "not_pending", "приглашение уже обработано")
+		errInviteNotPending.write(w)
 		return
 	}
 
@@ -267,7 +275,7 @@ func (s *Server) pendingInvite(ctx context.Context, r *http.Request) (*api.RoomI
 		return nil, nil, &httpError{http.StatusInternalServerError, "internal", "не удалось получить приглашение"}
 	}
 	if invite.Status != api.InvitePending {
-		return nil, nil, &httpError{http.StatusConflict, "not_pending", "приглашение уже обработано"}
+		return nil, nil, errInviteNotPending
 	}
 
 	return invite, user, nil
@@ -320,7 +328,10 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	// Проверка на НОРМАЛИЗОВАННОЙ комнате: у легаси-операций recipients_with_sum
 	// в базе нет, доли синтезируются в памяти (normalizedOperation). Фильтром
 	// mongo это не выразить, поэтому решение принимается здесь.
-	if hasOperations(room, targetId) {
+	// Тексты ниже — запасные: оба клиента перехватывают отказ по КОДУ и рисуют
+	// свою локализованную строку (message сервера всегда по-русски). Держать их
+	// дословно синхронными с клиентскими не нужно, синхронизировать надо код.
+	if api.HasOperations(room, targetId) {
 		msg := "На вас записаны расходы. Уберите себя из них — или, если вы плательщик, смените плательщика либо удалите расход. После этого сможете выйти"
 		if !isSelf {
 			msg = "На участнике записаны расходы. Уберите его из них — или, если он плательщик, смените плательщика либо удалите расход. После этого сможете его убрать"
@@ -343,15 +354,24 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	// явного согласия». Лишний left при неудавшемся выходе безвреден: человек
 	// остался участником, и шаг (3) handleAddMember примирит запись обратно
 	// в added.
-	if s.invites != nil {
-		roomHex, hexErr := primitive.ObjectIDFromHex(roomId)
-		if hexErr == nil {
-			if err := s.invites.Upsert(ctx, roomHex, targetId, userIdFromCtx(ctx), api.InviteLeft, s.now()); err != nil {
-				log.Error().Err(err).Msg("cannot mark invite as left")
-				writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
-				return
-			}
-		}
+	//
+	// Поэтому ни отсутствующее хранилище, ни неразбираемый id комнаты запись не
+	// «пропускают»: молчаливый пропуск и есть тот самый тихий возврат, ради
+	// закрытия которого запись заведена.
+	if s.invites == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "приглашения недоступны")
+		return
+	}
+	roomHex, hexErr := primitive.ObjectIDFromHex(roomId)
+	if hexErr != nil {
+		log.Error().Err(hexErr).Str("room", roomId).Msg("bad room id on leave")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
+		return
+	}
+	if err := s.invites.Upsert(ctx, roomHex, targetId, userIdFromCtx(ctx), api.InviteLeft, s.now()); err != nil {
+		log.Error().Err(err).Msg("cannot mark invite as left")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось выйти из группы")
+		return
 	}
 
 	// Результат (matched) не смотрим: гонку с параллельным выходом трактуем как
@@ -363,13 +383,6 @@ func (s *Server) removeMember(w http.ResponseWriter, r *http.Request, targetId i
 	}
 
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// hasOperations см. api.HasOperations — правило общее с ботом: свою копию
-// этой проверки бот уже дважды писал иначе, и выход через приложение расходился
-// с выходом через телеграм.
-func hasOperations(room *api.Room, userId int) bool {
-	return api.HasOperations(room, userId)
 }
 
 // reconcileInviteOnJoin приводит запись отношения к added, когда человек вошёл

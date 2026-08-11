@@ -433,6 +433,25 @@ func (s EditDonorOperation) HasReact(u *api.Update) bool {
 		(u.Button != nil && hasAction(u, addDonorOperation))
 }
 
+// editedOperationDraft черновая копия расхода для правки в боте: правка — это
+// архив прежней версии плюс новая запись с новым ID и новой датой.
+//
+// notification_sent обнуляется вместе с ними. Новая дата поднимает расход в
+// ленте как свежее событие, а унаследованный список описывал бы состав ПРОШЛОЙ
+// версии: назначенный правкой плательщик в него не попадал (бейдж не поднялся
+// бы у того, кому уведомление как раз ушло), а выкинутый получатель оставался
+// (бейдж поднимался бы за чужой расход). Пустой список означает «неизвестно» и
+// включает правило по долям — см. rest.notifiesUser
+func editedOperationDraft(op api.Operation, now time.Time) api.Operation {
+	oldId := op.ID
+	op.OldOperationId = &oldId
+	op.ID = primitive.NewObjectID()
+	op.Status = draft
+	op.CreateAt = now
+	op.NotificationSent = []int{}
+	return op
+}
+
 // OnMessage returns one entry
 func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	// Получаем идентификаторы пользователя, операции и данные комнаты
@@ -465,12 +484,7 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 
 	if hasAction(u, editDonorOperation) && operation.OldOperationId == nil {
-		oldId := operation.ID
-		newOp := operation // копирование по значению (shallow copy)
-		newOp.OldOperationId = &oldId
-		newOp.ID = primitive.NewObjectID() // генерируем новый идентификатор для черновой записи
-		newOp.Status = draft               // устанавливаем статус черновика
-		newOp.CreateAt = time.Now()        // обновляем дату создания для новой записи
+		newOp := editedOperationDraft(operation, time.Now())
 
 		// Сохраняем новую операцию (черновик) в БД
 		if err := s.os.CreateOperation(ctx, &newOp, room.ID.Hex()); err != nil {
@@ -1288,6 +1302,15 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 }
 
+// notificationWhenCreateOperation рассылает уведомления о созданном в боте
+// расходе. opn берётся ПО ЗНАЧЕНИЮ намеренно: список notification_sent здесь
+// только защита от второго сообщения назначенному плательщику, который заодно
+// и получатель, — в базу он не идёт. Поле пишет один путь, REST-нотификатор
+// (bot.Notifier, точечный SetNotificationSent); вызывающий сразу после нас
+// пишет операцию целиком через UpdateOperation, и любая запись отсюда всё
+// равно была бы затёрта. Записывать «кому ушло» из бота нельзя дёшево: список
+// собирался бы под гейтами chatID/AllowsTelegram, то есть означал бы «у кого
+// есть телеграм», и получатель из приложения молча выпал бы из бейджа
 func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *api.Update, opn api.Operation, room *api.Room, rb *api.Button, backB *api.Button, messages []tgbotapi.Chattable) []tgbotapi.Chattable {
 
 	// Донор и получатели здесь — встроенные снимки, telegram_id в них нет никогда:
@@ -1330,9 +1353,6 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_to_start"), backB.ID.Hex())},
 				})
 			opn.NotificationSent = append(opn.NotificationSent, recipientsWithSum.User.ID)
-			if err := s.os.UpdateOperation(ctx, &opn, room.ID.Hex()); err != nil {
-				log.Error().Err(err).Msg("upsert operation failed")
-			}
 			messages = append(messages, msg)
 		}
 	}

@@ -287,3 +287,57 @@ func TestBotLeaveNonMemberWritesNothing(t *testing.T) {
 		t.Fatalf("не-участнику записали отношение: %+v", invites.records)
 	}
 }
+
+// TestBotLeaveLastMemberBlocked — паритет с REST (409 last_member): комната без
+// участников осталась бы бесхозной, а удаления комнаты нет ни в REST, ни в боте.
+// Правила в боте не было вовсе — через телеграм комнату можно было осиротить.
+func TestBotLeaveLastMemberBlocked(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Соло",
+		Members: &[]api.User{{ID: 2}}, Operations: &[]api.Operation{}}
+	h, rs, invites := leaveHandler(r, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 0 {
+		t.Fatal("последний участник вышел — комната осталась бесхозной, а удалить её нечем")
+	}
+	if len(invites.records) != 0 {
+		t.Fatalf("отказанный выход не должен писать отношение: %+v", invites.records)
+	}
+}
+
+// TestBotLeaveWithoutInviteStoreKeepsMembership — без хранилища приглашений
+// след выхода записать нечем, и молчаливый пропуск записи открыл бы ровно тот
+// тихий возврат, ради которого она заведена. Выход отменяется.
+func TestBotLeaveWithoutInviteStoreKeepsMembership(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{}}
+	rs := &leaveRoomService{room: r, members: map[int]bool{1: true, 2: true}}
+	h := NewSelectedLeaveRoom(nil, nil, rs, nil, nil, &Config{})
+
+	h.OnMessage(context.Background(), leaveUpdate(r.ID.Hex(), 2))
+
+	if rs.calls != 0 {
+		t.Fatal("человек вышел без следа отношения — следующее приглашение вернёт его молча")
+	}
+}
+
+// TestBotLeaveBadRoomIdKeepsMembership — то же для неразбираемого id комнаты:
+// запись left в него не уйдёт, значит и выхода быть не должно.
+func TestBotLeaveBadRoomIdKeepsMembership(t *testing.T) {
+	loadLang(t)
+	r := &api.Room{ID: primitive.NewObjectID(), Name: "Квартира",
+		Members: &[]api.User{{ID: 1}, {ID: 2}}, Operations: &[]api.Operation{}}
+	h, rs, invites := leaveHandler(r, 1, 2)
+
+	h.OnMessage(context.Background(), leaveUpdate("не-hex", 2))
+
+	if rs.calls != 0 {
+		t.Fatal("выход состоялся с id комнаты, в который след отношения записать нельзя")
+	}
+	if len(invites.records) != 0 {
+		t.Fatalf("записей отношения быть не должно: %+v", invites.records)
+	}
+}

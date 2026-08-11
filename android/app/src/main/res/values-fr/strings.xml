@@ -479,6 +479,7 @@
     <string name="error_operation_not_found">Opération introuvable</string>
     <string name="error_outbox_unsupported">Opération hors ligne non prise en charge</string>
     <string name="error_leave_has_operations">Des dépenses sont encore à votre nom. Retirez-vous de celles-ci — et si vous avez payé, changez de payeur ou supprimez la dépense — puis quittez</string>
+    <string name="error_remove_member_has_operations">Des dépenses sont encore au nom de ce membre. Retirez-le de celles-ci — et s\'il a payé, changez de payeur ou supprimez la dépense — puis retirez-le</string>
     <string name="error_leave_last_member">Vous êtes le dernier membre. Archivez le groupe si vous n\'en avez plus besoin</string>
     <string name="push_channel_operations">Dépenses</string>
     <string name="push_channel_operations_desc">Dépenses ajoutées ou modifiées dans vos groupes</string>

@@ -479,6 +479,7 @@
     <string name="error_operation_not_found">Vorgang nicht gefunden</string>
     <string name="error_outbox_unsupported">Offline-Vorgang wird nicht unterstützt</string>
     <string name="error_leave_has_operations">Auf dir liegen noch Ausgaben. Nimm dich aus ihnen heraus — und wenn du bezahlt hast, wechsle den Zahler oder lösche die Ausgabe — dann kannst du gehen</string>
+    <string name="error_remove_member_has_operations">Auf diesem Mitglied liegen noch Ausgaben. Nimm es aus ihnen heraus — und wenn es bezahlt hat, wechsle den Zahler oder lösche die Ausgabe — dann kannst du es entfernen</string>
     <string name="error_leave_last_member">Du bist das letzte Mitglied. Archiviere die Gruppe, wenn du sie nicht mehr brauchst</string>
     <string name="push_channel_operations">Ausgaben</string>
     <string name="push_channel_operations_desc">Neue und geänderte Ausgaben in deinen Gruppen</string>

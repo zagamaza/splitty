@@ -17,8 +17,15 @@ import java.net.SocketTimeoutException
 // Возвращается UiText, а не String: маппер зовут из ViewModel, где Context
 // недоступен, а сама строка должна собираться в текущей локали уже на экране.
 
-/** Человекочитаемый текст ошибки для алертов/failed-состояний. */
-fun humanErrorText(error: Throwable): UiText {
+/**
+ * Человекочитаемый текст ошибки для алертов/failed-состояний.
+ *
+ * [isSelf] различает «выхожу сам» и «убираю другого» — отказ `has_operations`
+ * приходит на оба действия, но объяснять надо разное: «уберите СЕБЯ из расходов»
+ * человеку, который убирает соседа, не говорит ничего. Сервер и iOS
+ * (`leaveErrorText(_:isSelf:)`) это различают с самого начала.
+ */
+fun humanErrorText(error: Throwable, isSelf: Boolean = true): UiText {
     // Таймаут ловим до общей transport-ветки — в CODE_TRANSPORT он теряется,
     // но причина (IOException) проброшена в cause при построении ApiException.
     if (isTimeout(error) || isTimeout(error.cause)) {
@@ -33,7 +40,10 @@ fun humanErrorText(error: Throwable): UiText {
             // Отказы выхода из группы — своим текстом: `message` сервера
             // всегда по-русски, а немцу с испанцем нужен их язык. Оба текста
             // обязаны объяснять выход наружу, иначе человек упрётся в стену.
-            "has_operations" -> UiText.res(R.string.error_leave_has_operations)
+            "has_operations" -> UiText.res(
+                if (isSelf) R.string.error_leave_has_operations
+                else R.string.error_remove_member_has_operations,
+            )
             "last_member" -> UiText.res(R.string.error_leave_last_member)
             // Текст сервера уже человеческий и на языке пользователя; при пустом
             // теле ApiException сам подставит ресурс по коду.

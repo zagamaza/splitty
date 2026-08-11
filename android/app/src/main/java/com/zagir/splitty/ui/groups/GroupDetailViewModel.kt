@@ -290,7 +290,12 @@ class GroupDetailViewModel @Inject constructor(
         }
     }
 
-    /** Убрать участника — лекарство от «позвал не того». */
+    /**
+     * Убрать участника — лекарство от «позвал не того».
+     *
+     * `isSelf = false`: отказ `has_operations` здесь про ДРУГОГО человека, и текст
+     * «уберите себя из расходов» отправлял бы искать свои расходы вместо его.
+     */
     fun removeMember(userId: Long) {
         val detail = (_room.value as? UiState.Content)?.value ?: return
         viewModelScope.launch {
@@ -299,7 +304,7 @@ class GroupDetailViewModel @Inject constructor(
                 sessionStore.noteDataChanged()
                 refresh()
             } catch (e: ApiException) {
-                _alertMessage.value = humanErrorText(e)
+                _alertMessage.value = humanErrorText(e, isSelf = false)
             }
         }
     }

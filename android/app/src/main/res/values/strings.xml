@@ -521,6 +521,7 @@
     <string name="error_operation_not_found">Operation not found</string>
     <string name="error_outbox_unsupported">Unsupported offline operation</string>
     <string name="error_leave_has_operations">Expenses are still recorded on you. Remove yourself from them — and if you paid, hand the expense to another payer or delete it — then leave</string>
+    <string name="error_remove_member_has_operations">Expenses are still recorded on this member. Remove them from those expenses — and if they paid, hand the expense to another payer or delete it — then remove them</string>
     <string name="error_leave_last_member">You\'re the last member. Archive the group if you don\'t need it anymore</string>
     <string name="push_channel_operations">Expenses</string>
     <string name="push_channel_operations_desc">New and changed expenses in your groups</string>

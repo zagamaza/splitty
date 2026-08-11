@@ -455,12 +455,32 @@ func (bot *SelectedLeaveRoom) OnMessage(ctx context.Context, u *api.Update) (res
 	// месте, и шаг (3) handleAddMember вернёт запись в added.
 	// Не-участнику не пишем ничего: left тому, кто не выходил, погнал бы его
 	// следующее приглашение через лишний pending.
-	if bot.is != nil && containsUserId(room.Members, userID) {
-		if roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId); hexErr == nil {
-			if invErr := bot.is.Upsert(ctx, roomHex, userID, userID, api.InviteLeft, time.Now()); invErr != nil {
-				log.Error().Err(invErr).Msg("mark invite as left failed")
-				return
+	if containsUserId(room.Members, userID) {
+		// Последнего участника не выпускаем — паритет с REST (409 last_member):
+		// комната осталась бы бесхозной, а удаления комнаты нет ни там, ни тут.
+		if len(*room.Members) <= 1 {
+			callback := createCallback(u, I18n(u.User, "msg_you_are_last_member"), true)
+			return api.TelegramMessage{
+				CallbackConfig: callback,
+				Send:           true,
 			}
+		}
+
+		// Ни отсутствующее хранилище, ни кривой id комнаты выход не «пропускают»:
+		// молчаливый пропуск записи и был бы тем самым тихим возвратом, который
+		// эта запись закрывает.
+		if bot.is == nil {
+			log.Error().Msg("invite store is not wired, cannot mark invite as left")
+			return
+		}
+		roomHex, hexErr := primitive.ObjectIDFromHex(u.Button.CallbackData.RoomId)
+		if hexErr != nil {
+			log.Error().Err(hexErr).Str("room", u.Button.CallbackData.RoomId).Msg("bad room id")
+			return
+		}
+		if invErr := bot.is.Upsert(ctx, roomHex, userID, userID, api.InviteLeft, time.Now()); invErr != nil {
+			log.Error().Err(invErr).Msg("mark invite as left failed")
+			return
 		}
 	}
 

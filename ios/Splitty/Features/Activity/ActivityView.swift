@@ -272,6 +272,21 @@ private struct ActivityRow: View {
 
 // MARK: - Карточка приглашения
 
+/// Заголовок карточки приглашения.
+///
+/// Плейсхолдер занимает слот ПОДЛЕЖАЩЕГО: сервер оставляет `inviterName` пустым,
+/// если строку пригласившего прочитать не удалось. Прежнее «Вас» давало «Вас
+/// добавил вас в группу».
+func inviteCardTitle(_ card: InviteCard) -> String {
+    let who = card.inviterName.isEmpty ? "Кто-то" : card.inviterName
+    switch card.status {
+    case .pending:
+        return "\(who) приглашает вас вернуться в «\(card.roomName)»"
+    default:
+        return "\(who) добавил вас в группу «\(card.roomName)»"
+    }
+}
+
 /// Закреплённая карточка над лентой. Два вида:
 /// `added` — «вас добавили», кнопки «Открыть» и **«Выйти»**;
 /// `pending` — «приглашает вернуться», кнопки «Принять» и «Отклонить».
@@ -312,15 +327,7 @@ private struct InviteCardView: View {
         }
     }
 
-    private var title: String {
-        let who = card.inviterName.isEmpty ? "Вас" : "\(card.inviterName)"
-        switch card.status {
-        case .pending:
-            return "\(who) приглашает вас вернуться в «\(card.roomName)»"
-        default:
-            return "\(who) добавил вас в группу «\(card.roomName)»"
-        }
-    }
+    private var title: String { inviteCardTitle(card) }
 
     @ViewBuilder
     private var buttons: some View {

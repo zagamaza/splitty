@@ -248,6 +248,24 @@ class GroupMembersViewModelTest {
         assertEquals("/api/v1/rooms/65af", awaitRequest("/api/v1/rooms/65af").path)
     }
 
+    @Test
+    fun `removing a member with expenses explains it is about them, not you`() = runBlocking {
+        val vm = loadedViewModel()
+        server.enqueue(
+            MockResponse().setResponseCode(409).setBody(
+                """{"error":{"code":"has_operations","message":"$SERVER_MESSAGE"}}""",
+            ),
+        )
+
+        vm.removeMember(2L)
+
+        awaitRequest("/api/v1/rooms/65af/members/2")
+        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        // Текст «уберите СЕБЯ из расходов» здесь отправлял бы человека искать
+        // свои расходы вместо чужих: сервер и iOS различают эти два случая.
+        assertEquals(R.string.error_remove_member_has_operations, (alert as UiText.Res).id)
+    }
+
     private companion object {
         const val SERVER_MESSAGE = "Сначала уберите себя из расходов группы"
 

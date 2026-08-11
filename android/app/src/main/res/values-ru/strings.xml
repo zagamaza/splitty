@@ -121,7 +121,7 @@
     <!-- Приглашения -->
     <string name="invite_added_you">%1$s добавил вас в «%2$s»</string>
     <string name="invite_wants_you_back">%1$s приглашает вас вернуться в «%2$s»</string>
-    <string name="invite_someone">Вас</string>
+    <string name="invite_someone">Кто-то</string>
     <string name="invite_accept">Принять</string>
     <string name="invite_decline">Отклонить</string>
     <string name="invite_open">Открыть</string>
@@ -548,6 +548,7 @@
     <string name="error_operation_not_found">Операция не найдена</string>
     <string name="error_outbox_unsupported">Неподдерживаемая офлайн-операция</string>
     <string name="error_leave_has_operations">На вас ещё висят расходы. Уберите себя из них — а если вы плательщик, смените плательщика или удалите расход — и выходите</string>
+    <string name="error_remove_member_has_operations">На участнике ещё висят расходы. Уберите его из них — а если платил он, смените плательщика или удалите расход — и убирайте</string>
     <string name="error_leave_last_member">Вы последний участник. Заархивируйте группу, если она больше не нужна</string>
     <string name="push_channel_operations">Расходы</string>
     <string name="push_channel_operations_desc">Добавление и изменение расходов в ваших тусах</string>
