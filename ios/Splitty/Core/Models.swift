@@ -42,6 +42,7 @@ struct ChannelPrefs: Codable, Hashable {
 struct NotifySettings: Codable, Hashable {
     var operations: ChannelPrefs
     var debts: ChannelPrefs
+    var invites: ChannelPrefs
 }
 
 /// Профиль текущего пользователя.

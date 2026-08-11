@@ -1097,17 +1097,18 @@ func (f *fakeInviteStore) Upsert(_ context.Context, roomID primitive.ObjectID, i
 	if f.upsertErr != nil {
 		return f.upsertErr
 	}
-	f.invites[inviteKey(roomID, inviteeID)] = api.RoomInvite{
+	key := inviteKey(roomID, inviteeID)
+	f.invites[key] = api.RoomInvite{
 		RoomID: roomID, InviteeID: inviteeID, InviterID: inviterID,
-		Status: status, CreatedAt: now,
+		Status: status, CreatedAt: now, Version: f.invites[key].Version + 1,
 	}
 	return nil
 }
 
-// UpsertIfUnchanged как mongo-реализация: условие по created_at стоит в
-// фильтре, то есть проверка «запись не менялась» и запись — одно действие
+// UpsertIfUnchanged как mongo-реализация: условие по версии стоит в фильтре, то
+// есть проверка «запись не менялась» и запись — одно действие
 func (f *fakeInviteStore) UpsertIfUnchanged(_ context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
-	status api.InviteStatus, since, now time.Time) (bool, error) {
+	status api.InviteStatus, since *api.RoomInvite, now time.Time) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.upsertErr != nil {
@@ -1115,16 +1116,16 @@ func (f *fakeInviteStore) UpsertIfUnchanged(_ context.Context, roomID primitive.
 	}
 	key := inviteKey(roomID, inviteeID)
 	inv, ok := f.invites[key]
-	if since.IsZero() {
+	if since == nil {
 		if ok {
 			return false, nil
 		}
-	} else if !ok || !inv.CreatedAt.Equal(since) {
+	} else if !ok || inv.Version != since.Version {
 		return false, nil
 	}
 	f.invites[key] = api.RoomInvite{
 		RoomID: roomID, InviteeID: inviteeID, InviterID: inviterID,
-		Status: status, CreatedAt: now,
+		Status: status, CreatedAt: now, Version: inv.Version + 1,
 	}
 	return true, nil
 }
@@ -1169,6 +1170,7 @@ func (f *fakeInviteStore) SetStatusIfCurrent(_ context.Context, roomID primitive
 	}
 	inv.Status = to
 	inv.CreatedAt = now
+	inv.Version++
 	f.invites[key] = inv
 	return true, nil
 }

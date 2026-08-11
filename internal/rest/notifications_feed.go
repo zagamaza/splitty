@@ -118,26 +118,33 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, inv := range invites {
+			// Комнату или пригласившего могли удалить — карточка не должна ронять
+			// весь ответ. Пустое имя клиент подменяет своим плейсхолдером, но сбой
+			// чтения обязан быть виден в логах, а не растворяться в «».
+			room, rErr := s.roomRepo.FindById(ctx, inv.RoomID.Hex())
+			if rErr != nil {
+				log.Warn().Err(rErr).Str("room", inv.RoomID.Hex()).Msg("cannot read room for invite card")
+			}
+
+			status := inviteCardStatus(&inv, room, rErr == nil)
+			if status == "" {
+				continue
+			}
 			// pending показываем всегда: они требуют решения и не гаснут от
 			// того, что человек заглянул в раздел. added — только пока не
 			// просмотрены.
-			unreadAdded := inv.Status == api.InviteAdded &&
+			unreadAdded := status == api.InviteAdded &&
 				(user.NotificationsSeenAt == nil || inv.CreatedAt.After(*user.NotificationsSeenAt))
-			if inv.Status != api.InvitePending && !unreadAdded {
+			if status != api.InvitePending && !unreadAdded {
 				continue
 			}
 
 			card := inviteCardDto{
 				RoomId:    inv.RoomID.Hex(),
-				Status:    inv.Status,
+				Status:    status,
 				CreatedAt: inv.CreatedAt,
 			}
-			// Комнату или пригласившего могли удалить — карточка не должна ронять
-			// весь ответ. Пустое имя клиент подменяет своим плейсхолдером, но сбой
-			// чтения обязан быть виден в логах, а не растворяться в «».
-			if room, err := s.roomRepo.FindById(ctx, inv.RoomID.Hex()); err != nil {
-				log.Warn().Err(err).Str("room", inv.RoomID.Hex()).Msg("cannot read room for invite card")
-			} else if room != nil {
+			if room != nil {
 				card.RoomName = room.Name
 			}
 			if inviter, err := s.userRepo.FindById(ctx, inv.InviterID); err != nil {
@@ -154,6 +161,37 @@ func (s *Server) handleNotifications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, out)
+}
+
+// inviteCardStatus статус карточки приглашения — по КОМНАТЕ, а не по хранимой
+// записи. Пустая строка означает «карточки нет».
+//
+// Хранимые added и left дублируют факт, который живёт в другом документе
+// (состав комнаты), а два документа без транзакций не синхронизировать: mongo
+// развёрнут одним узлом. Поэтому запись у нас — история отношения, а «человек
+// сейчас в группе или нет» спрашивают у группы:
+//   - участник → карточка информационная, added. Даже если в записи лежит
+//     pending: выбор «Принять/Отклонить» для группы, где человек уже состоит,
+//     сам себе противоречит, а такой pending остаётся после отката неудавшегося
+//     accept или конкурентного входа по ссылке;
+//   - не участник → added в записи протух (его добавили, и он успел выйти),
+//     показывать «вас добавили в группу» для группы, которой человек не видит,
+//     нельзя.
+//
+// roomKnown false — комнату прочитать не удалось; тогда доверяем записи, чтобы
+// сбой чтения не гасил живые карточки. Удалённая комната (room == nil) ведёт
+// себя как прежде: карточка остаётся, но без имени.
+func inviteCardStatus(inv *api.RoomInvite, room *api.Room, roomKnown bool) api.InviteStatus {
+	if !roomKnown || room == nil {
+		return inv.Status
+	}
+	if isRoomMember(room, inv.InviteeID) {
+		return api.InviteAdded
+	}
+	if inv.Status == api.InviteAdded {
+		return ""
+	}
+	return inv.Status
 }
 
 // notifiesUser считается ли событие ленты непрочитанным ЛИЧНО для человека.

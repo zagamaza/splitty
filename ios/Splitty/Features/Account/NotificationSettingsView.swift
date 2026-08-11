@@ -105,6 +105,26 @@ struct NotificationSettingsView: View {
                             }
                         )
                     )
+                    section(
+                        title: "Приглашения",
+                        footer: "Вас пригласили или добавили в группу",
+                        telegram: Binding(
+                            get: { current.invites.telegram },
+                            set: { newValue in
+                                var updated = current
+                                updated.invites.telegram = newValue
+                                save(updated)
+                            }
+                        ),
+                        push: Binding(
+                            get: { current.invites.push },
+                            set: { newValue in
+                                var updated = current
+                                updated.invites.push = newValue
+                                save(updated)
+                            }
+                        )
+                    )
                 }
                 // Мастер выключен (или ещё неизвестен) — категории не действуют,
                 // показываем это визуально и блокируем их переключение.

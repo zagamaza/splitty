@@ -21,6 +21,7 @@ class NotifyScreenStateTest {
         settings = NotifySettings(
             operations = ChannelPrefs(telegram = true),
             debts = ChannelPrefs(telegram = true),
+            invites = ChannelPrefs(telegram = true),
         ),
         masterOn = true,
     )
@@ -67,6 +68,15 @@ class NotifyScreenStateTest {
         assertEquals(previous, next.settings) // откат к прежним категориям
         assertFalse(next.isSaving)
         assertEquals(UiText.Raw("Не удалось"), next.alertMessage)
+    }
+
+    @Test
+    fun `invites toggle changes only its own category`() {
+        val changed = loaded.settings!!.copy(invites = ChannelPrefs(telegram = false, push = true))
+        val next = loaded.applyCategories(changed).categoriesSaved(changed)
+        assertEquals(ChannelPrefs(telegram = false, push = true), next.settings!!.invites)
+        assertEquals(loaded.settings!!.operations, next.settings!!.operations)
+        assertEquals(loaded.settings!!.debts, next.settings!!.debts)
     }
 
     @Test

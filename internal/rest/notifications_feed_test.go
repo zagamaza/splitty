@@ -107,6 +107,10 @@ func TestNotificationsUnreadCountsAddedInvite(t *testing.T) {
 // не гаснет от того, что человек заглянул в раздел.
 func TestNotificationsPendingSurvivesSeen(t *testing.T) {
 	srv, invites, room := notifFixture(t)
+	// pending бывает только у НЕ-участника: приглашение как раз и ждёт согласия
+	// войти. Участнику такая карточка не показывается вовсе (inviteCardStatus),
+	// поэтому «висящая заявка» на участнике проверяла бы несуществующий случай
+	room.Members = &[]api.User{testUser1}
 	if err := invites.Upsert(context.Background(), room.ID, testUser2.ID, testUser1.ID, api.InvitePending, time.Now()); err != nil {
 		t.Fatalf("подготовка приглашения: %v", err)
 	}
@@ -571,5 +575,45 @@ func TestNotificationsInviteToDeletedRoom(t *testing.T) {
 	}
 	if got.Invites[0].RoomName != "" {
 		t.Fatalf("название удалённой комнаты взяться неоткуда, получено %q", got.Invites[0].RoomName)
+	}
+}
+
+// TestNotificationsHidesAddedCardForNonMember — added у не-участника это не
+// битые данные, а штатный исход гонки «добавили × вышел»: две записи в разных
+// документах, транзакций нет. Показывать «вас добавили в группу» для группы,
+// которой человек не видит, нельзя — карточка ведёт в никуда.
+func TestNotificationsHidesAddedCardForNonMember(t *testing.T) {
+	srv, invites, room := notifFixture(t)
+	room.Members = &[]api.User{testUser1}
+	if err := invites.Upsert(context.Background(), room.ID, testUser2.ID, testUser1.ID, api.InviteAdded, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения: %v", err)
+	}
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if len(got.Invites) != 0 {
+		t.Fatalf("карточка показана не-участнику: %+v", got.Invites)
+	}
+	if got.UnreadCount != 0 {
+		t.Fatalf("бейдж поднят карточкой, которой не должно быть: %d", got.UnreadCount)
+	}
+}
+
+// TestNotificationsShowsPendingToMemberAsAdded — обратная сторона того же
+// правила: участнику выбор «Принять/Отклонить» не предлагаем. Членство у него
+// уже есть, «Отклонить» из группы не выводит, а pending на участнике остаётся
+// после отката неудавшегося accept или конкурентного входа по ссылке.
+func TestNotificationsShowsPendingToMemberAsAdded(t *testing.T) {
+	srv, invites, room := notifFixture(t)
+	if err := invites.Upsert(context.Background(), room.ID, testUser2.ID, testUser1.ID, api.InvitePending, time.Now()); err != nil {
+		t.Fatalf("подготовка приглашения: %v", err)
+	}
+
+	got := fetchNotifications(t, srv, testUser2.ID)
+	if len(got.Invites) != 1 {
+		t.Fatalf("ожидалась 1 карточка, получено %d", len(got.Invites))
+	}
+	if got.Invites[0].Status != api.InviteAdded {
+		t.Fatalf("участнику показан статус %q — он увидит кнопки «Принять/Отклонить» для своей же группы",
+			got.Invites[0].Status)
 	}
 }

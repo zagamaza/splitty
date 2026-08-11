@@ -244,21 +244,21 @@ func TestInviteConcurrentAcceptDeclineSingleWinner(t *testing.T) {
 }
 
 // TestInviteUpsertIfUnchanged — примирение записи решает по снимку комнаты, а
-// снимок стареет. Условие по created_at и есть тот номер версии, по которому
-// устаревшее решение отменяется: пока запись та же — пишем, изменилась —
-// уступаем более свежему решению.
+// снимок стареет. Условие по версии и есть тот номер, по которому устаревшее
+// решение отменяется: пока запись та же — пишем, изменилась — уступаем более
+// свежему решению.
 func TestInviteUpsertIfUnchanged(t *testing.T) {
 	repo, room := newInviteRepo(t)
 	ctx := testCtx(t)
 	first := time.Now().Add(-time.Hour).UTC()
 
-	// записи нет: создаём (нулевое since — «мы её не видели»)
-	ok, err := repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, time.Time{}, first)
+	// записи нет: создаём (nil since — «мы её не видели»)
+	ok, err := repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, nil, first)
 	if err != nil || !ok {
 		t.Fatalf("вставка отсутствующей записи: ok=%v err=%v", ok, err)
 	}
 	// повтор со «мы её не видели» не должен затирать уже существующую
-	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 2, api.InviteDeclined, time.Time{}, first.Add(time.Minute))
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 2, api.InviteDeclined, nil, first.Add(time.Minute))
 	if err != nil {
 		t.Fatalf("повторная вставка: %v", err)
 	}
@@ -275,13 +275,13 @@ func TestInviteUpsertIfUnchanged(t *testing.T) {
 	}
 
 	// запись не менялась с момента чтения — примирение проходит
-	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InvitePending, got.CreatedAt, first.Add(time.Minute))
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InvitePending, got, first.Add(time.Minute))
 	if err != nil || !ok {
 		t.Fatalf("запись не менялась, а примирение не прошло: ok=%v err=%v", ok, err)
 	}
 
 	// а с устаревшим since — уже нет: за это время кто-то записал своё решение
-	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, got.CreatedAt, first.Add(2*time.Minute))
+	ok, err = repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, got, first.Add(2*time.Minute))
 	if err != nil {
 		t.Fatalf("устаревшее примирение: %v", err)
 	}
@@ -331,5 +331,88 @@ func TestInviteDeleteByUserIdCleansBothSides(t *testing.T) {
 	}
 	if _, err := repo.Find(ctx, untouched, 200); err != nil {
 		t.Fatalf("чужая запись пострадала: %v", err)
+	}
+}
+
+// TestInviteUpsertIfUnchangedRejectsSameMillisecondWrite — почему токеном
+// версии стал счётчик, а не created_at.
+//
+// Mongo хранит даты с точностью до миллисекунды. Пока условие стояло по
+// created_at, чужая запись, легшая в ТУ ЖЕ миллисекунду, оставляла сохранённое
+// значение неотличимым от прочитанного: фильтр совпадал, и устаревшее решение
+// затирало более свежее — ровно то, ради чего условие и заводилось. Счётчик по
+// $inc такой дыры не имеет: он растёт на каждую запись независимо от часов.
+func TestInviteUpsertIfUnchangedRejectsSameMillisecondWrite(t *testing.T) {
+	repo, room := newInviteRepo(t)
+	ctx := testCtx(t)
+	at := time.Now().UTC().Truncate(time.Millisecond)
+
+	if err := repo.Upsert(ctx, room, 100, 1, api.InviteAdded, at); err != nil {
+		t.Fatalf("подготовка записи: %v", err)
+	}
+	got, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+
+	// чужое решение легло в ту же миллисекунду — по времени оно НЕОТЛИЧИМО от
+	// прочитанного нами
+	if err = repo.Upsert(ctx, room, 100, 2, api.InvitePending, at); err != nil {
+		t.Fatalf("конкурентная запись: %v", err)
+	}
+
+	ok, err := repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, got, at)
+	if err != nil {
+		t.Fatalf("устаревшее примирение: %v", err)
+	}
+	if ok {
+		t.Fatal("устаревшее примирение прошло: запись, легшая в ту же миллисекунду, не была замечена")
+	}
+	after, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if after.Status != api.InvitePending || after.InviterID != 2 {
+		t.Fatalf("свежее решение затёрто: %+v", after)
+	}
+}
+
+// TestInviteUpsertIfUnchangedHandlesRecordWithoutVersion — записи, созданные до
+// появления поля version, читаются как версия 0. Отсутствующее поле в mongo
+// сравнимо только с null, поэтому фильтр «version: 0» их бы НЕ находил, и
+// примирение старых записей молча перестало бы работать.
+func TestInviteUpsertIfUnchangedHandlesRecordWithoutVersion(t *testing.T) {
+	repo, room := newInviteRepo(t)
+	ctx := testCtx(t)
+	at := time.Now().UTC().Truncate(time.Millisecond)
+
+	// запись эпохи до счётчика версий: поля version в документе нет вовсе
+	if _, err := repo.col.InsertOne(ctx, bson.M{
+		"room_id": room, "invitee_id": 100, "inviter_id": 1,
+		"status": api.InvitePending, "created_at": at,
+	}); err != nil {
+		t.Fatalf("подготовка легаси-записи: %v", err)
+	}
+	got, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if got.Version != 0 {
+		t.Fatalf("версия легаси-записи %d вместо 0", got.Version)
+	}
+
+	ok, err := repo.UpsertIfUnchanged(ctx, room, 100, 1, api.InviteAdded, got, at.Add(time.Minute))
+	if err != nil {
+		t.Fatalf("примирение легаси-записи: %v", err)
+	}
+	if !ok {
+		t.Fatal("примирение не нашло запись без поля version")
+	}
+	after, err := repo.Find(ctx, room, 100)
+	if err != nil {
+		t.Fatalf("Find: %v", err)
+	}
+	if after.Status != api.InviteAdded || after.Version != 1 {
+		t.Fatalf("легаси-запись не примирилась: %+v", after)
 	}
 }

@@ -182,6 +182,19 @@ private fun SettingsContent(
                     onChange(settings.copy(debts = settings.debts.copy(push = on)))
                 },
             )
+            NotifySection(
+                title = stringResource(R.string.notifications_invites),
+                footer = stringResource(R.string.notifications_invites_footer),
+                telegramOn = settings.invites.telegram,
+                pushOn = settings.invites.push,
+                enabled = state.categoriesEnabled,
+                onTelegramChange = { on ->
+                    onChange(settings.copy(invites = settings.invites.copy(telegram = on)))
+                },
+                onPushChange = { on ->
+                    onChange(settings.copy(invites = settings.invites.copy(push = on)))
+                },
+            )
         }
     }
 }

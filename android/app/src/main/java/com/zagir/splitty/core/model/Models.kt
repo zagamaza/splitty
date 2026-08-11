@@ -167,6 +167,9 @@ data class NotifySettings(
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val debts: ChannelPrefs = ChannelPrefs(),
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    val invites: ChannelPrefs = ChannelPrefs(),
 )
 
 /** Долг: [debtor] должен [lender]'у [sum]. */

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/rs/zerolog/log"
@@ -36,8 +35,9 @@ type addMemberResponse struct {
 //  1. зовущий — участник;
 //  2. приглашаемый существует и не удалён;
 //  3. уже участник → 200 + примирение записи;
-//  4. уходил раньше → 202, приглашение ждёт согласия;
-//  5. иначе → проверка связи и добавление.
+//  4. приглашение уже висит → 202, повтор идемпотентен;
+//  5. запись есть, но участником он не является → 202, ждём согласия;
+//  6. записи нет вовсе → проверка связи и добавление.
 func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	if s.invites == nil {
@@ -133,10 +133,29 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// (4) Уходил раньше или отказывался — тихо вернуть его нельзя, иначе
-	// получался бы цикл «убрал себя из расхода → вышел → добавили снова».
-	// Создаём приглашение, которое ждёт его решения.
-	if existing != nil && (existing.Status == api.InviteLeft || existing.Status == api.InviteDeclined) {
+	// (4) Приглашение уже ждёт решения — повтор идемпотентен: ни новой записи, ни
+	// второго push. Без этой ветки второй вызов (тот же участник тапнул ещё раз
+	// или позвал другой) уводил бы отношение по кругу в новый pending, поднимая
+	// человеку ещё одно уведомление о том, о чём ему уже сообщили.
+	if existing != nil && existing.Status == api.InvitePending {
+		writeJSON(w, http.StatusAccepted, addMemberResponse{Status: api.InvitePending})
+		return
+	}
+
+	// (5) Запись отношения ЕСТЬ, а участником человек не является. Тихо вернуть
+	// его нельзя, иначе получался бы цикл «убрал себя из расхода → вышел →
+	// добавили снова». Создаём приглашение, которое ждёт его решения.
+	//
+	// Ветка стоит на ЧЛЕНСТВЕ, а не на хранимом статусе (было: left или
+	// declined), и это принципиально. added у не-участника — не битые данные, а
+	// штатный исход гонки «добавили × вышел»: членство и запись отношения лежат в
+	// РАЗНЫХ документах, атомарно их не связать (mongo развёрнут одним узлом,
+	// транзакций нет), поэтому Upsert(added) после JoinToRoom всегда может лечь
+	// уже после чужого выхода. Ветка по статусу пропускала бы такого человека в
+	// шаг (6) и возвращала бы в комнату без спроса — та самая дыра, которую
+	// круги 5-6 пытались закрыть условными фильтрами. Здесь она закрыта тем, что
+	// про «участник или нет» спрашивают комнату, а не запись.
+	if existing != nil {
 		if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InvitePending, s.now()); err != nil {
 			log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot save invite")
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
@@ -147,31 +166,13 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Приглашение уже ждёт решения — повтор идемпотентен: ни новой записи, ни
-	// второго push. Без этой ветки второй вызов (тот же участник тапнул ещё раз
-	// или позвал другой) проваливался бы в шаг (5), где existing != nil делает
-	// связь истинной, и человек оказался бы в комнате БЕЗ согласия — прямое
-	// нарушение решения 5 плана.
-	if existing != nil && existing.Status == api.InvitePending {
-		writeJSON(w, http.StatusAccepted, addMemberResponse{Status: api.InvitePending})
+	// (6) Записи нет вовсе — в этой комнате человека не звали и он из неё не
+	// выходил. Тогда связь: друг ИЛИ общая неархивная комната.
+	related, shareErr := s.shareRoom(ctx, inviterId, invitee.ID)
+	if shareErr != nil {
+		log.Error().Err(shareErr).Msg("cannot find rooms")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось получить комнаты")
 		return
-	}
-
-	// (5) Связь: друг ИЛИ прошлое отношение по этой комнате.
-	//
-	// /friends строится из ТЕКУЩИХ участников неархивных комнат, поэтому вышедший
-	// перестаёт быть другом, если общая комната была единственной. Проверка
-	// «только друзья» в чистом виде сделала бы повторное приглашение
-	// недостижимым в самом типовом случае — отсюда вторая ветка.
-	related := existing != nil
-	if !related {
-		var shareErr error
-		related, shareErr = s.shareRoom(ctx, inviterId, invitee.ID)
-		if shareErr != nil {
-			log.Error().Err(shareErr).Msg("cannot find rooms")
-			writeError(w, http.StatusInternalServerError, "internal", "не удалось получить комнаты")
-			return
-		}
 	}
 	if !related {
 		writeError(w, http.StatusForbidden, "not_a_friend",
@@ -187,6 +188,10 @@ func (s *Server) handleAddMember(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось добавить участника")
 		return
 	}
+	// Запись added безусловна и может лечь уже ПОСЛЕ того, как человек успел
+	// выйти. Раньше это было опасно (следующее приглашение видело added и молча
+	// возвращало его в комнату) — теперь нет: и повторное приглашение, и карточки
+	// раздела уведомлений судят о членстве по комнате, а не по этой строке.
 	if err = s.invites.Upsert(ctx, roomHex, invitee.ID, inviterId, api.InviteAdded, s.now()); err != nil {
 		log.Error().Err(err).Str("room", roomId).Int("invitee", invitee.ID).Msg("cannot save invite")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить приглашение")
@@ -281,6 +286,28 @@ func (s *Server) handleDeclineInvite(w http.ResponseWriter, r *http.Request) {
 	invite, _, hErr := s.pendingInvite(ctx, r)
 	if hErr != nil {
 		hErr.write(w)
+		return
+	}
+
+	// Участнику отказываться не от чего: членство у него УЖЕ есть, и «Отклонить»
+	// его из комнаты не выведет — для этого отдельная кнопка «Выйти». Записав
+	// declined, мы получили бы участника, помеченного отказавшимся, а состояние
+	// «участник + pending» возникает штатно: откат неудавшегося accept и
+	// примирение после входа по ссылке решают по снимку комнаты, который стареет.
+	// Проверка ставит точку на записи, а не на чтении, — тогда declined у
+	// участника не появляется вообще.
+	roomId := invite.RoomID.Hex()
+	room, err := s.roomRepo.FindById(ctx, roomId)
+	if err != nil {
+		log.Error().Err(err).Str("room", roomId).Msg("cannot read room on decline")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось отклонить приглашение")
+		return
+	}
+	if room != nil && isRoomMember(room, invite.InviteeID) {
+		if rErr := s.reconcileInvite(ctx, invite.RoomID, invite.InviteeID, invite.InviterID, invite); rErr != nil {
+			log.Error().Err(rErr).Str("room", roomId).Msg("cannot reconcile invite on decline")
+		}
+		errInviteNotPending.write(w)
 		return
 	}
 
@@ -468,11 +495,11 @@ func hasOperationsMessage(isSelf bool) string {
 // в комнату сам — по коду или по ссылке /join.
 //
 // Без этого приглашённый, который вместо кнопки «Принять» прошёл по ссылке,
-// оставался бы pending: раздел уведомлений вечно показывал бы ему карточку с
-// выбором для комнаты, где он уже состоит, а тап по «Отклонить» записал бы
-// declined участнику — ровно то противоречивое состояние, ради которого заведён
-// compare-and-set. Сбой только логируем: членство уже записано, а следующее
-// приглашение доведёт запись шагом (3) handleAddMember.
+// оставался бы pending, и раздел уведомлений долго показывал бы ему карточку с
+// выбором для комнаты, где он уже состоит. Сбой (как и уступка условной записи
+// конкуренту) только логируем: членство уже записано, а от pending у участника
+// вреда нет — карточку рисует членство, «Отклонить» участнику запрещено, и
+// следующее приглашение доведёт запись шагом (3) handleAddMember.
 func (s *Server) reconcileInviteOnJoin(ctx context.Context, roomID primitive.ObjectID, userId int) {
 	if s.invites == nil {
 		return
@@ -498,14 +525,14 @@ func (s *Server) reconcileInviteOnJoin(ctx context.Context, roomID primitive.Obj
 //
 // «Уступили» и «записали» вызывающему одинаковы, поэтому наружу отдаётся только
 // ошибка: в обоих случаях запись в согласованном состоянии и делать больше
-// нечего.
+// нечего. Уступка безобидна потому, что решение «участник или нет» нигде больше
+// не принимается по хранимому статусу: и шаг (5) handleAddMember, и карточки
+// раздела уведомлений спрашивают об этом комнату (см. inviteCardStatus). Оставшийся
+// pending у участника — мусор в базе, а не состояние, по которому что-то
+// произойдёт.
 func (s *Server) reconcileInvite(ctx context.Context, roomID primitive.ObjectID, inviteeId, inviterId int,
 	existing *api.RoomInvite) error {
-	var since time.Time
-	if existing != nil {
-		since = existing.CreatedAt
-	}
-	_, err := s.invites.UpsertIfUnchanged(ctx, roomID, inviteeId, inviterId, api.InviteAdded, since, s.now())
+	_, err := s.invites.UpsertIfUnchanged(ctx, roomID, inviteeId, inviterId, api.InviteAdded, existing, s.now())
 	return err
 }
 

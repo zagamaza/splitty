@@ -44,16 +44,32 @@ func (r MongoInviteRepository) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
+// versionFilter — условие «версия записи ровно такая, какой мы её прочитали».
+// Нулевая версия значит «поля version у записи не было» (она создана до его
+// появления), а равенство нулю такую запись НЕ находит: отсутствующее поле в
+// mongo сравнимо только с null. Отсюда $in.
+func versionFilter(version int) interface{} {
+	if version == 0 {
+		return bson.M{"$in": bson.A{0, nil}}
+	}
+	return version
+}
+
 // Upsert записывает состояние отношения, создавая запись или обновляя
 // существующую. CreatedAt всегда обновляется на now: смена отношения — это
 // новое событие для раздела уведомлений (см. комментарий у api.RoomInvite).
+// Version растёт на каждую запись — по нему условная запись отличает «с момента
+// чтения никто не писал» от «писали».
 func (r MongoInviteRepository) Upsert(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int, status api.InviteStatus, now time.Time) error {
 	filter := bson.M{"room_id": roomID, "invitee_id": inviteeID}
-	update := bson.M{"$set": bson.M{
-		"inviter_id": inviterID,
-		"status":     status,
-		"created_at": now,
-	}}
+	update := bson.M{
+		"$set": bson.M{
+			"inviter_id": inviterID,
+			"status":     status,
+			"created_at": now,
+		},
+		"$inc": bson.M{"version": 1},
+	}
 	if _, err := r.col.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true)); err != nil {
 		log.Error().Err(err).Msg("upsert room invite failed")
 		return err
@@ -62,32 +78,36 @@ func (r MongoInviteRepository) Upsert(ctx context.Context, roomID primitive.Obje
 }
 
 // UpsertIfUnchanged записывает состояние отношения, ТОЛЬКО если запись не
-// менялась с момента чтения: since — created_at прочитанной записи, нулевое
-// since означает «записи не было» (тогда она создаётся, и лишь если её не
-// создали параллельно). false — с момента чтения кто-то записал более свежее
-// решение, и затирать его нельзя.
+// менялась с момента чтения: since — сама прочитанная запись, nil означает
+// «записи не было» (тогда она создаётся, и лишь если её не создали параллельно).
+// false — с момента чтения кто-то записал более свежее решение, и затирать его
+// нельзя.
 //
 // Нужен примирению записи по снимку комнаты: снимок стареет, а решение по нему
 // пишется безусловным Upsert'ом и затирало бы, например, приглашение, выданное
 // вышедшему человеку уже после его выхода — карточка «Принять» исчезала бы,
-// хотя уведомление о приглашении ушло. created_at годится ключом версии,
-// потому что обновляется на КАЖДУЮ запись (см. Upsert).
+// хотя уведомление о приглашении ушло.
 func (r MongoInviteRepository) UpsertIfUnchanged(ctx context.Context, roomID primitive.ObjectID, inviteeID, inviterID int,
-	status api.InviteStatus, since, now time.Time) (bool, error) {
+	status api.InviteStatus, since *api.RoomInvite, now time.Time) (bool, error) {
 	fields := bson.M{"inviter_id": inviterID, "status": status, "created_at": now}
-	if since.IsZero() {
+	if since == nil {
+		// Версию ставим здесь же: $inc рядом с $setOnInsert бил бы счётчик и при
+		// совпадении фильтра, то есть «не записали, но версию сдвинули»
+		insert := bson.M{}
+		for k, v := range fields {
+			insert[k] = v
+		}
+		insert["version"] = 1
 		res, err := r.col.UpdateOne(ctx, bson.M{"room_id": roomID, "invitee_id": inviteeID},
-			bson.M{"$setOnInsert": fields}, options.Update().SetUpsert(true))
+			bson.M{"$setOnInsert": insert}, options.Update().SetUpsert(true))
 		if err != nil {
 			log.Error().Err(err).Msg("insert room invite failed")
 			return false, err
 		}
 		return res.UpsertedCount > 0, nil
 	}
-	// created_at в mongo хранится с точностью до миллисекунды: since из базы уже
-	// усечён, а since из собственной записи — нет, и фильтр не совпал бы с ней
-	filter := bson.M{"room_id": roomID, "invitee_id": inviteeID, "created_at": since.UTC().Truncate(time.Millisecond)}
-	res, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": fields})
+	filter := bson.M{"room_id": roomID, "invitee_id": inviteeID, "version": versionFilter(since.Version)}
+	res, err := r.col.UpdateOne(ctx, filter, bson.M{"$set": fields, "$inc": bson.M{"version": 1}})
 	if err != nil {
 		log.Error().Err(err).Msg("conditional upsert room invite failed")
 		return false, err
@@ -134,7 +154,7 @@ func (r MongoInviteRepository) ListForUser(ctx context.Context, userID int) ([]a
 // получает false и отвечает 409, ничего не меняя.
 func (r MongoInviteRepository) SetStatusIfCurrent(ctx context.Context, roomID primitive.ObjectID, inviteeID int, from, to api.InviteStatus, now time.Time) (bool, error) {
 	filter := bson.M{"room_id": roomID, "invitee_id": inviteeID, "status": from}
-	update := bson.M{"$set": bson.M{"status": to, "created_at": now}}
+	update := bson.M{"$set": bson.M{"status": to, "created_at": now}, "$inc": bson.M{"version": 1}}
 	res, err := r.col.UpdateOne(ctx, filter, update)
 	if err != nil {
 		log.Error().Err(err).Msg("set invite status failed")

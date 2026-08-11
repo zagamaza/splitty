@@ -108,6 +108,8 @@
     <string name="notifications_operations_footer">Jemand hat in deiner Gruppe eine Ausgabe hinzugefügt oder geändert</string>
     <string name="notifications_debts">Schulden</string>
     <string name="notifications_debts_footer">Jemand hat dir Geld zurückgezahlt</string>
+    <string name="notifications_invites">Einladungen</string>
+    <string name="notifications_invites_footer">Jemand hat dich zu einer Gruppe eingeladen oder hinzugefügt</string>
     <string name="notifications_channel_push">App</string>
     <string name="profile_theme">Design</string>
     <string name="profile_theme_system">Systemeinstellung</string>

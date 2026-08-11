@@ -1285,6 +1285,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 			// Черновик собирают минутами, и всё это время он никого не держит в
 			// комнате: получатель успевает выйти. Записать его в долг молча
 			// нельзя — комнату он уже не видит и убрать себя из расхода не сможет
+			s.restoreArchivedVersion(ctx, room, oldOperationId)
 			callback := createCallback(u, I18n(u.User, "msg_operation_participant_left"), true)
 			return api.TelegramMessage{
 				CallbackConfig: callback,
@@ -1320,6 +1321,32 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 		Chattable: messages,
 		Send:      true,
 		Redirect:  u,
+	}
+}
+
+// restoreArchivedVersion возвращает прежнюю версию расхода в active после
+// отказа активации правки.
+//
+// Правка в боте — это архив прежней версии плюс черновик новой, и архивируется
+// прежняя СРАЗУ, на входе в редактор. Отказ активации приходит намного позже, и
+// без восстановления состояние остаётся таким: старая версия в архиве, новая в
+// черновике. В долгах комнаты нет ни той, ни другой — расход исчезает из
+// расчёта молча, а человек видит лишь «состав изменился» и считает, что просто
+// не сохранилось.
+//
+// Сбой восстановления только логируем: сказать человеку тут нечего, а повторное
+// «Готово» упрётся в тот же отказ и попробует снова.
+func (s OperationAdded) restoreArchivedVersion(ctx context.Context, room *api.Room, oldOperationId *primitive.ObjectID) {
+	if oldOperationId == nil {
+		return
+	}
+	oldOp := findOperationByID(room, *oldOperationId)
+	if oldOp.ID.IsZero() {
+		return
+	}
+	oldOp.Status = active
+	if err := s.os.UpdateOperation(ctx, &oldOp, room.ID.Hex()); err != nil {
+		log.Error().Err(err).Str("room", room.ID.Hex()).Msg("cannot restore archived operation")
 	}
 }
 

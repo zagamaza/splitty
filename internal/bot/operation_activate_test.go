@@ -195,3 +195,72 @@ func TestOperationAddedKeepsOldVersionWhenActivationRefused(t *testing.T) {
 		t.Fatal("прошлая версия расхода удалена, а новая осталась черновиком — расход потерян")
 	}
 }
+
+// TestOperationAddedRestoresArchivedVersionWhenActivationRefused — самая
+// дорогая из правок седьмого круга: без неё отказ активации ПРЯЧЕТ деньги.
+//
+// Правка в боте архивирует прежнюю версию сразу, на входе в редактор, а отказ
+// приходит намного позже — на «Готово». Итог без восстановления: старая версия
+// в архиве, новая в черновике, в долгах комнаты нет ни той, ни другой. Расход
+// исчезает из расчёта молча, а человек видит лишь «состав изменился» и решает,
+// что просто не сохранилось.
+func TestOperationAddedRestoresArchivedVersionWhenActivationRefused(t *testing.T) {
+	donor := api.User{ID: 1, DisplayName: "Автор"}
+	leaver := api.User{ID: 2, DisplayName: "Гость"}
+	oldID := primitive.NewObjectID()
+	oldOp := api.Operation{
+		ID: oldID, Description: "Ужин", Sum: 100, Donor: &donor, Status: archive,
+		RecipientsWithSum: []api.RecipientWithSum{{User: donor, Sum: 50}, {User: leaver, Sum: 50}},
+	}
+	draftOp := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин на двоих", Sum: 100,
+		Donor: &donor, Status: draft, OldOperationId: &oldID, CreateAt: time.Now(),
+		RecipientsWithSum: []api.RecipientWithSum{{User: donor, Sum: 40}, {User: leaver, Sum: 60}},
+	}
+	// получатель вышел, пока правку собирали: черновик его не держал
+	h, os, room := activateFixture(t, []api.User{donor}, draftOp)
+	ops := []api.Operation{oldOp, draftOp}
+	room.Operations = &ops
+
+	h.OnMessage(context.Background(), addedOperationUpdate(room, draftOp, &donor))
+
+	if len(os.activated) != 0 {
+		t.Fatal("расход записан на не-участника")
+	}
+	var restored *api.Operation
+	for i := range os.updated {
+		if os.updated[i].ID == oldID {
+			restored = &os.updated[i]
+		}
+	}
+	if restored == nil {
+		t.Fatal("прежняя версия осталась в архиве: расход пропал из долгов, хотя правку не приняли")
+	}
+	if restored.Status != active {
+		t.Fatalf("прежняя версия восстановлена со статусом %q", restored.Status)
+	}
+	if restored.Sum != oldOp.Sum || len(restored.RecipientsWithSum) != len(oldOp.RecipientsWithSum) {
+		t.Fatalf("восстановлена не та версия: %+v", *restored)
+	}
+}
+
+// TestOperationAddedDoesNotTouchOperationsWhenRefusedOnCreate — отказ при
+// СОЗДАНИИ расхода (правки не было, OldOperationId пуст) не должен ничего
+// восстанавливать: восстанавливать нечего, а лишняя запись перетёрла бы
+// черновик, который человек ещё может починить.
+func TestOperationAddedDoesNotTouchOperationsWhenRefusedOnCreate(t *testing.T) {
+	donor := api.User{ID: 1, DisplayName: "Автор"}
+	leaver := api.User{ID: 2, DisplayName: "Гость"}
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor: &donor, Status: draft, CreateAt: time.Now(),
+		RecipientsWithSum: []api.RecipientWithSum{{User: donor, Sum: 50}, {User: leaver, Sum: 50}},
+	}
+	h, os, room := activateFixture(t, []api.User{donor}, op)
+
+	h.OnMessage(context.Background(), addedOperationUpdate(room, op, &donor))
+
+	if len(os.updated) != 0 {
+		t.Fatalf("операция переписана при отказе создания: %+v", os.updated)
+	}
+}

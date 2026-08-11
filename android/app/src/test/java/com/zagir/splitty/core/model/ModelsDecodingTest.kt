@@ -334,6 +334,36 @@ class ModelsDecodingTest {
     }
 
     @Test
+    fun `decodes NotifySettings with all three categories`() {
+        val settings = SplittyJson.decodeFromString<NotifySettings>(
+            """
+            {
+              "operations": {"telegram": true, "push": true},
+              "debts": {"telegram": false, "push": false},
+              "invites": {"telegram": false, "push": true}
+            }
+            """.trimIndent()
+        )
+        assertTrue(settings.operations.push)
+        assertFalse(settings.debts.telegram)
+        assertFalse(settings.invites.telegram)
+        assertTrue(settings.invites.push)
+    }
+
+    /**
+     * PATCH /me/notifications частичный: категорию, которой нет в теле, сервер
+     * оставляет как есть. Пропусти клиент `invites` — её тумблеры «немели» бы
+     * так же, как это уже было с дефолтами ChannelPrefs.
+     */
+    @Test
+    fun `NotifySettings sends every category in PATCH body`() {
+        val body = SplittyJson.encodeToString(NotifySettings.serializer(), NotifySettings())
+        assertTrue("operations" in body)
+        assertTrue("debts" in body)
+        assertTrue("invites" in body)
+    }
+
+    @Test
     fun `OperationBody serializes exactly one split mode`() {
         val equally = SplittyJson.encodeToString(
             OperationBody.serializer(),

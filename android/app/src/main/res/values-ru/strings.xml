@@ -150,6 +150,8 @@
     <string name="notifications_operations_footer">Кто-то добавил или изменил расход в вашей группе</string>
     <string name="notifications_debts">Долги</string>
     <string name="notifications_debts_footer">Вам вернули долг</string>
+    <string name="notifications_invites">Приглашения</string>
+    <string name="notifications_invites_footer">Вас пригласили или добавили в группу</string>
     <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">Приложение</string>
     <string name="profile_theme">Тема</string>

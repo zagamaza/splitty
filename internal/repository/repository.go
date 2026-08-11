@@ -655,7 +655,7 @@ func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operat
 // расход СВЯЗЫВАЕТ, обязаны быть участниками комнаты.
 //
 // Переход draft → active это рождение долга, и на него правило «состав важнее
-// снимка» распространяется так же, как на вставку (см. membersFilter). Своего
+// снимка» распространяется так же, как на вставку (см. boundMembersFilter). Своего
 // условия он требует отдельно, потому что черновик живёт долго: бот создаёт его
 // на первом экране, а активируют его тапом «Готово» через минуты — и всё это
 // время черновик НИКОГО не держит в комнате (api.HasOperations смотрит только
@@ -714,6 +714,18 @@ var ErrParticipantLeft = errors.New("operation participant is not a room member"
 // Требуя членства по нему, мы запретили бы активировать правку старого расхода
 // в комнате, откуда такой «получатель» вышел, — то есть чинили бы гонку ценой
 // неработающего редактирования.
+//
+// Тем же условием проверяется и ВСТАВКА (CreateOperation, CreateOperationIfAbsent) —
+// это вторая половина защиты от гонки «выход × расход», первая в LeaveRoom: rest
+// проверяет членство по прочитанному снимку, а между чтением и вставкой человек
+// успевает выйти. Прежде у вставки был свой, более широкий набор (плюс легаси-
+// recipients целиком), и он ломал правку в боте: черновик правки копирует
+// протухший recipients, поэтому старый расход не заводился вовсе — бот молча
+// возвращался с пустым экраном. Правило обязано быть ОДНО: кого расход держит в
+// комнате, того и требуем при записи.
+//
+// Черновик и архив не связывают никого, поэтому у них условия нет: черновик
+// пройдёт проверку позже, при активации.
 func boundMembersFilter(o *api.Operation) bson.M {
 	if o == nil {
 		return bson.M{}
@@ -744,50 +756,6 @@ func boundMembersFilter(o *api.Operation) bson.M {
 	return bson.M{"users._id": bson.M{"$all": ids}}
 }
 
-// operationParticipants — id всех, кого затрагивает операция: плательщик, доли и
-// легаси-получатели. Именно их членство проверяется при вставке.
-func operationParticipants(o *api.Operation) []int {
-	seen := map[int]bool{}
-	var ids []int
-	add := func(id int) {
-		if id == 0 || seen[id] {
-			return
-		}
-		seen[id] = true
-		ids = append(ids, id)
-	}
-	if o.Donor != nil {
-		add(o.Donor.ID)
-	}
-	for _, r := range o.RecipientsWithSum {
-		add(r.User.ID)
-	}
-	if o.Recipients != nil {
-		for _, r := range *o.Recipients {
-			add(r.ID)
-		}
-	}
-	return ids
-}
-
-// membersFilter — условие «все эти люди сейчас участники комнаты». Вторая
-// половина защиты от гонки «выход × расход» (первая — в LeaveRoom): rest
-// проверяет членство по прочитанному снимку, а между чтением и вставкой человек
-// успевает выйти, и долг ложится на того, кто комнату уже не видит.
-//
-// Стоит только на СОЗДАНИИ операции: у новой записи состав участников только
-// что проверен по комнате, поэтому отказ означает ровно гонку. На правке такого
-// условия нет намеренно — в старых комнатах есть операции с давно вышедшими
-// участниками, и фильтр сделал бы их нередактируемыми (бот, добавляя фото,
-// переписывает операцию целиком, состав не трогая).
-func membersFilter(o *api.Operation) bson.M {
-	ids := operationParticipants(o)
-	if len(ids) == 0 {
-		return bson.M{}
-	}
-	return bson.M{"users._id": bson.M{"$all": ids}}
-}
-
 // CreateOperation добавляет новую операцию одним $push (операции всегда создаются
 // с новым ObjectID, прежний $pull был no-op). MatchedCount == 0 — комнаты нет
 // (mongo.ErrNoDocuments) или участник операции успел выйти (ErrParticipantLeft)
@@ -797,7 +765,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 		return err
 	}
 	filter := bson.M{"_id": hex}
-	for k, v := range membersFilter(o) {
+	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
 	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
@@ -822,7 +790,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 // — $push выполняется, только если ни одна операция комнаты не несёт этот ключ,
 // проверка и вставка атомарны (конкурентные повторы не создают дубль).
 // MatchedCount == 0 означает «комнаты нет», «дубль уже есть» ЛИБО «участник
-// операции вышел» (см. membersFilter) — различаем дополнительным чтением:
+// операции вышел» (см. boundMembersFilter) — различаем дополнительным чтением:
 // комнаты нет — mongo.ErrNoDocuments, дубль есть — (false, nil) и существующую
 // операцию вычитывает вызывающий, иначе — ErrParticipantLeft
 func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *api.Operation, roomId string) (bool, error) {
@@ -834,7 +802,7 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 		return false, err
 	}
 	filter := bson.M{"_id": hex, "operations.client_op_id": bson.M{"$ne": o.ClientOpId}}
-	for k, v := range membersFilter(o) {
+	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
 	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})

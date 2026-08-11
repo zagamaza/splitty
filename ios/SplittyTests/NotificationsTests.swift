@@ -549,3 +549,73 @@ final class ActivityEmptyStateTests: XCTestCase {
         XCTAssertFalse(activityFeedIsEmpty(items: feedItems, invites: []))
     }
 }
+
+/// Настройки уведомлений (GET/PATCH /me/notifications): матрица категория ×
+/// канал. Категория `invites` появилась на сервере позже двух других — без неё
+/// в модели приглашения не показывались бы в настройках, а PATCH клиента,
+/// частичный по контракту, молча возвращал бы её к серверному значению.
+final class NotifySettingsTests: XCTestCase {
+    private static let settingsJSON = #"""
+    {
+      "operations": {"telegram": true, "push": true},
+      "debts": {"telegram": false, "push": false},
+      "invites": {"telegram": false, "push": true}
+    }
+    """#
+
+    private var client: APIClient!
+
+    override func setUp() {
+        super.setUp()
+        StubURLProtocol.handler = nil
+        StubURLProtocol.lastRequest = nil
+        StubURLProtocol.lastBody = nil
+        StubURLProtocol.responseDelay = nil
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        client = APIClient(
+            baseURL: URL(string: "https://api.example.test"),
+            token: "jwt",
+            urlSession: URLSession(configuration: configuration)
+        )
+    }
+
+    override func tearDown() {
+        client = nil
+        StubURLProtocol.handler = nil
+        StubURLProtocol.lastRequest = nil
+        StubURLProtocol.lastBody = nil
+        super.tearDown()
+    }
+
+    func testNotificationSettingsDecodeAllThreeCategories() async throws {
+        StubURLProtocol.handler = { _ in (200, Data(Self.settingsJSON.utf8)) }
+
+        let settings = try await client.notifications()
+
+        XCTAssertTrue(settings.operations.push)
+        XCTAssertFalse(settings.debts.telegram)
+        XCTAssertFalse(settings.invites.telegram)
+        XCTAssertTrue(settings.invites.push)
+        XCTAssertEqual(StubURLProtocol.lastRequest?.url?.path, "/api/v1/me/notifications")
+    }
+
+    /// PATCH частичный: категорию, которой нет в теле, сервер оставляет как
+    /// есть. Пропусти клиент `invites` — её тумблеры были бы немыми.
+    func testUpdateNotificationsSendsEveryCategory() async throws {
+        StubURLProtocol.handler = { _ in (200, Data(Self.settingsJSON.utf8)) }
+        let current = try await client.notifications()
+
+        _ = try await client.updateNotifications(current)
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "PATCH")
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try XCTUnwrap(StubURLProtocol.lastBody)) as? [String: Any]
+        )
+        XCTAssertNotNil(json["operations"])
+        XCTAssertNotNil(json["debts"])
+        XCTAssertNotNil(json["invites"], "категория приглашений не уезжает в PATCH — тумблер немой")
+    }
+}

@@ -596,3 +596,69 @@ func TestAddMemberReconcileKeepsFresherInvite(t *testing.T) {
 		t.Fatalf("примирение затёрло свежее приглашение: %+v", inv)
 	}
 }
+
+// TestAddMemberRequiresConsentWhenAddedRecordOutlivedMembership — головной
+// случай седьмого круга ревью и корень целого класса гонок.
+//
+// Членство и запись отношения лежат в РАЗНЫХ документах, а mongo развёрнут
+// одним узлом — транзакции недоступны, значит связать две записи атомарно
+// нельзя. Поэтому Upsert(added) после JoinToRoom всегда может лечь уже ПОСЛЕ
+// того, как человека убрали из комнаты: итог — не участник со статусом added.
+// Пока повторное приглашение решало по СТАТУСУ (left или declined), такая
+// запись проваливалась в шаг добавления и молча возвращала человека в группу,
+// из которой он вышел. Решение принимает КОМНАТА: запись есть, участником не
+// является — значит нужно согласие.
+func TestAddMemberRequiresConsentWhenAddedRecordOutlivedMembership(t *testing.T) {
+	f := newInviteFixture(t, true)
+	// исход гонки «добавили × вышел»: в комнате человека нет, а запись added
+	if err := f.invites.Upsert(context.Background(), f.room.ID, testUser2.ID,
+		testUser1.ID, api.InviteAdded, time.Now()); err != nil {
+		t.Fatalf("подготовка не удалась: %v", err)
+	}
+
+	got := f.addMember(t, testUser2.ID).expect(http.StatusAccepted)
+	if got.Status != api.InvitePending {
+		t.Fatalf("ответ %q: протухший added вернул человека в группу без согласия", got.Status)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("человека затащили в комнату молча — согласия никто не спрашивал")
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status != api.InvitePending {
+		t.Fatalf("запись осталась %q — карточки с выбором человек не увидит", inv.Status)
+	}
+	waitInvited(t, f.notifier)
+}
+
+// TestDeclineInviteRefusedForMember — отказаться от членства, которое уже есть,
+// нельзя: «Отклонить» из комнаты не выводит (для этого отдельная кнопка), а
+// declined на участнике — противоречивое состояние.
+//
+// Состояние «участник + pending» возникает штатно: и откат неудавшегося accept,
+// и примирение после входа по ссылке решают по снимку комнаты, а тот стареет.
+// Раньше такой человек мог тапнуть «Отклонить» и получить declined, оставаясь
+// участником.
+func TestDeclineInviteRefusedForMember(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	if err := f.roomRepo.JoinToRoom(context.Background(), testUser2, f.room.ID.Hex()); err != nil {
+		t.Fatalf("подготовка не удалась: %v", err)
+	}
+
+	if code := f.act(t, testUser2.ID, "decline"); code != http.StatusConflict {
+		t.Fatalf("отказ участника должен давать 409, получен %d", code)
+	}
+	inv, err := f.invites.Find(context.Background(), f.room.ID, testUser2.ID)
+	if err != nil {
+		t.Fatalf("запись приглашения пропала: %v", err)
+	}
+	if inv.Status == api.InviteDeclined {
+		t.Fatal("участник помечен отказавшимся — состояние противоречит членству")
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("отказ вывел человека из комнаты — этого он не просил")
+	}
+}
