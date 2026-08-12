@@ -225,3 +225,85 @@ final class OutboxStoreTests: XCTestCase {
         )
     }
 }
+
+// MARK: - 403 не должен запирать очередь
+
+/// Фейк, отвечающий заданным статусом на конкретную комнату.
+private final class RejectingAPI: OperationAPI {
+    let failingRoomId: String
+    let status: Int
+    private(set) var attemptedRooms: [String] = []
+
+    init(failingRoomId: String, status: Int) {
+        self.failingRoomId = failingRoomId
+        self.status = status
+    }
+
+    func addOperation(
+        roomId: String,
+        description: String,
+        sum: Int,
+        donorId: Int,
+        split: ExpenseSplit,
+        items: [OperationItem]?,
+        clientOpId: String?
+    ) async throws -> Splitty.Operation {
+        attemptedRooms.append(roomId)
+        if roomId == failingRoomId {
+            throw APIError.server(status: status, code: "forbidden", message: "вы не участник этой комнаты")
+        }
+        return Splitty.Operation(
+            id: clientOpId ?? "op",
+            description: description,
+            sum: sum,
+            isDebtRepayment: false,
+            donor: User(id: donorId, username: nil, displayName: "u\(donorId)"),
+            recipients: [],
+            splitType: .byExactAmount,
+            createdAt: Date(timeIntervalSince1970: 1_780_000_000),
+            files: nil
+        )
+    }
+
+    func updateOperation(
+        roomId: String, operationId: String, description: String, sum: Int,
+        donorId: Int, split: ExpenseSplit, items: [OperationItem]?
+    ) async throws -> Splitty.Operation {
+        throw APIError.server(status: 500, code: "internal", message: "")
+    }
+
+    func deleteOperation(roomId: String, operationId: String) async throws {}
+}
+
+final class OutboxForbiddenTests: XCTestCase {
+
+    /// Человека убрали из группы, пока его расход лежал в очереди. Такой отказ
+    /// сам собой не пройдёт, и раньше он останавливал ВЕСЬ синк: следом
+    /// застревали расходы в других группах.
+    @MainActor
+    func testForbiddenEntryDoesNotBlockTheRestOfTheQueue() async throws {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("outbox-403-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let store = OutboxStore(fileURL: file)
+        _ = store.add(
+            roomId: "closed",
+            payload: OutboxPayload(description: "Такси", sum: 100, donorId: 1, recipientIds: [1, 2])
+        )
+        _ = store.add(
+            roomId: "open",
+            payload: OutboxPayload(description: "Ужин", sum: 200, donorId: 1, recipientIds: [1, 2])
+        )
+
+        let api = RejectingAPI(failingRoomId: "closed", status: 403)
+        _ = await store.sync(api: api)
+
+        XCTAssertTrue(api.attemptedRooms.contains("open"), "синк остановился на 403 и не дошёл до других групп")
+        XCTAssertEqual(store.entries.count, 1, "отвергнутая запись должна остаться помеченной, а прошедшая — уйти")
+        XCTAssertEqual(store.entries.first?.roomId, "closed")
+        if case .failed = store.entries.first?.status {} else {
+            XCTFail("отвергнутая запись должна быть помечена failed, а не висеть pending")
+        }
+    }
+}

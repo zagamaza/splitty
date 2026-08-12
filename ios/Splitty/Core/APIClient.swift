@@ -740,15 +740,26 @@ final class APIClient: OperationAPI {
         )
     }
 
-    func repay(roomId: String, debtorId: Int, lenderId: Int, sum: Int) async throws -> Operation {
+    /// `clientOpId` — идемпотентный ключ: на повтор с тем же ключом сервер
+    /// возвращает уже созданное погашение, а не создаёт второе. Без него
+    /// потерянный ответ на ЧАСТИЧНОЕ погашение приводил к двойному списанию:
+    /// проверка переплаты ловит только возврат сверх долга.
+    func repay(
+        roomId: String,
+        debtorId: Int,
+        lenderId: Int,
+        sum: Int,
+        clientOpId: String
+    ) async throws -> Operation {
         struct Body: Encodable {
             let debtorId: Int
             let lenderId: Int
             let sum: Int
+            let clientOpId: String
         }
         return try await request(
             "POST", "/api/v1/rooms/\(roomId)/repayments",
-            body: Body(debtorId: debtorId, lenderId: lenderId, sum: sum)
+            body: Body(debtorId: debtorId, lenderId: lenderId, sum: sum, clientOpId: clientOpId)
         )
     }
 

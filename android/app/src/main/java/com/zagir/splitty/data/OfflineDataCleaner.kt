@@ -100,9 +100,14 @@ class OfflineDataCleaner @Inject constructor(
                     // владельца null-ом нельзя — см. ниже), поэтому «A вышел →
                     // гость B открыл ссылку → B вошёл» выглядело сменой
                     // аккаунта, и приглашение самого B удалялось.
-                    val keepPendingJoin = switchedAccount ||
-                        sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
-                    if (clearAll(clearPendingJoin = !keepPendingJoin)) {
+                    val expired = sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
+                    val keepPendingJoin = switchedAccount || expired
+                    // Очередь неотправленных расходов переживает ПРОТУХАНИЕ
+                    // сессии: человек добавил расходы офлайн, 90-дневный токен
+                    // истёк, он перелогинился — и очередь исчезала молча,
+                    // так и не доехав до сервера. При явном выходе и при смене
+                    // аккаунта чистим: там очередь принадлежит уходящему.
+                    if (clearAll(clearPendingJoin = !keepPendingJoin, clearOutbox = !expired || switchedAccount)) {
                         hadToken = hasToken
                         // Известного владельца НЕ затираем null-ом: у протухшей
                         // сессии профиль вычищен вместе с токеном (endSession
@@ -145,8 +150,13 @@ class OfflineDataCleaner @Inject constructor(
      *
      * [clearPendingJoin] — стирать ли отложенное вступление по ссылке; при
      * протухшей сессии оно обязано выжить (см. вызов выше).
+     * [clearOutbox] — стирать ли очередь неотправленных расходов; при
+     * протухшей сессии она тоже обязана выжить.
      */
-    private suspend fun clearAll(clearPendingJoin: Boolean = true): Boolean {
+    private suspend fun clearAll(
+        clearPendingJoin: Boolean = true,
+        clearOutbox: Boolean = true,
+    ): Boolean {
         var ok = true
         suspend fun step(name: String, block: suspend () -> Unit) {
             runCatching { block() }.onFailure {
@@ -155,7 +165,11 @@ class OfflineDataCleaner @Inject constructor(
             }
         }
         step("api-cache") { cache.clear() }
-        step("outbox") { outbox.clear() }
+        // При протухшей сессии очередь оставляем: она принадлежит ТОМУ ЖЕ
+        // человеку, который сейчас перелогинится (iOS делает так же).
+        if (clearOutbox) {
+            step("outbox") { outbox.clear() }
+        }
         step("avatars") { avatars.clear() }
         // Отложенное вступление по ссылке-приглашению: без чистки следующий
         // человек, вошедший на этом устройстве, молча вступил бы в чужую группу.

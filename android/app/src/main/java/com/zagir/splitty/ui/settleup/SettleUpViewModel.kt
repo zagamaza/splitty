@@ -165,6 +165,8 @@ class SettleUpViewModel @Inject constructor(
      * синхронно до запуска корутины. 409 conflict (долг уже погашен или
      * стал меньше) — алерт и перечитывание долгов.
      */
+    private val idempotency = RepayIdempotency()
+
     fun repay() {
         val roomId = roomId ?: return
         val form = currentForm() ?: return
@@ -179,7 +181,13 @@ class SettleUpViewModel @Inject constructor(
         updateForm { it.copy(isSaving = true) }
         viewModelScope.launch {
             try {
-                repository.repay(roomId, debtorId = debt.debtor.id, lenderId = debt.lender.id, sum = sum)
+                repository.repay(
+                    roomId,
+                    debtorId = debt.debtor.id,
+                    lenderId = debt.lender.id,
+                    sum = sum,
+                    clientOpId = idempotency.key(debt.debtor.id, debt.lender.id, sum),
+                )
                 sessionStore.noteDataChanged()
                 updateForm { it.copy(isSaving = false, isSaved = true) }
             } catch (e: CancellationException) {
@@ -225,5 +233,31 @@ class SettleUpViewModel @Inject constructor(
         _state.update { state ->
             if (state is UiState.Content) UiState.Content(transform(state.value)) else state
         }
+    }
+}
+
+/**
+ * Ключ идемпотентности погашения.
+ *
+ * Один и тот же для повторов ОДНОЙ попытки: иначе «ошибка сети, жму ещё раз»
+ * списывает дважды — сервер отклоняет только возврат СВЕРХ долга, а два
+ * частичных погашения долг не превышают и проходят оба. Повтор умеет делать и
+ * сам OkHttp (retryOnConnectionFailure включён по умолчанию), то есть дубль
+ * возможен вообще без участия человека.
+ *
+ * И обязательно новый, когда поправили сумму или выбрали другой долг: на повтор
+ * со старым ключом сервер вернёт прежнюю операцию, и правка молча потеряется.
+ */
+internal class RepayIdempotency {
+    private var intent: String? = null
+    private var current: String? = null
+
+    fun key(debtorId: Long, lenderId: Long, sum: Int): String {
+        val next = "$debtorId-$lenderId-$sum"
+        current?.let { if (intent == next) return it }
+        val fresh = java.util.UUID.randomUUID().toString()
+        intent = next
+        current = fresh
+        return fresh
     }
 }

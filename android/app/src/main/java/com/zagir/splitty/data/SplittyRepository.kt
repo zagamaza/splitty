@@ -261,8 +261,14 @@ class SplittyRepository @Inject constructor(
     suspend fun debts(roomId: String, involving: String = "all"): List<Debt> =
         call { api.debts(roomId, involving) }
 
-    suspend fun repay(roomId: String, debtorId: Long, lenderId: Long, sum: Int): Operation =
-        call { api.repay(roomId, RepaymentBody(debtorId = debtorId, lenderId = lenderId, sum = sum)) }
+    suspend fun repay(
+        roomId: String,
+        debtorId: Long,
+        lenderId: Long,
+        sum: Int,
+        clientOpId: String,
+    ): Operation =
+        call { api.repay(roomId, RepaymentBody(debtorId = debtorId, lenderId = lenderId, sum = sum, clientOpId = clientOpId)) }
 
     // --- Друзья, активность, статистика ---
 

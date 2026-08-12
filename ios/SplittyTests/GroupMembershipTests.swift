@@ -180,3 +180,44 @@ final class DeletedUserDecodingTests: XCTestCase {
         XCTAssertTrue(try JSONDecoder().decode(User.self, from: data).deleted)
     }
 }
+
+/// Ключ идемпотентности погашения.
+///
+/// Дороже всего здесь ошибиться в обе стороны: постоянный ключ теряет правку
+/// суммы, меняющийся — списывает дважды.
+final class RepayIdempotencyTests: XCTestCase {
+
+    func testRetryOfTheSameAttemptReusesTheKey() {
+        var keeper = RepayIdempotency()
+        let first = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        let retry = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        // «Ошибка сети, жму ещё раз» обязано прийти с тем же ключом: сервер
+        // отклоняет только возврат СВЕРХ долга, два частичных платежа пройдут оба.
+        XCTAssertEqual(first, retry)
+    }
+
+    func testEditedSumGetsANewKey() {
+        var keeper = RepayIdempotency()
+        let first = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        let edited = keeper.key(debtorId: 1, lenderId: 2, sum: 500)
+        // Иначе сервер вернёт прежнюю операцию на 400, и правка исчезнет молча.
+        XCTAssertNotEqual(first, edited)
+    }
+
+    func testAnotherDebtGetsANewKey() {
+        var keeper = RepayIdempotency()
+        let first = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        let other = keeper.key(debtorId: 3, lenderId: 2, sum: 400)
+        XCTAssertNotEqual(first, other)
+    }
+
+    func testReturningToThePreviousSumDoesNotResurrectTheOldKey() {
+        var keeper = RepayIdempotency()
+        let first = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        _ = keeper.key(debtorId: 1, lenderId: 2, sum: 500)
+        let back = keeper.key(debtorId: 1, lenderId: 2, sum: 400)
+        // Платёж на 500 мог уйти на сервер: вернувшись к 400, старый ключ
+        // получил бы в ответ ту операцию вместо нового платежа.
+        XCTAssertNotEqual(first, back)
+    }
+}

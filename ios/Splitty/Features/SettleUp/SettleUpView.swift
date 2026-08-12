@@ -20,6 +20,8 @@ struct SettleUpView: View {
     @State private var sumText: String
     @State private var isSaving = false
     @State private var alertMessage: String?
+    /// Ключи идемпотентности платежа — см. `RepayIdempotency`.
+    @State private var idempotency = RepayIdempotency()
     @FocusState private var isSumFocused: Bool
 
     // Валюта без дефолта: «RUB по умолчанию» молча показывал рубли
@@ -336,7 +338,8 @@ struct SettleUpView: View {
                 roomId: roomId,
                 debtorId: debt.debtor.id,
                 lenderId: debt.lender.id,
-                sum: sum
+                sum: sum,
+                clientOpId: idempotency.key(debtorId: debt.debtor.id, lenderId: debt.lender.id, sum: sum)
             )
             Haptics.success()
             // Единая инвалидация: списки и экран группы перезагрузятся по dataVersion.
@@ -375,5 +378,30 @@ struct SettleUpView: View {
             selectedDebt = nil
             sumText = ""
         }
+    }
+}
+
+/// Ключ идемпотентности погашения.
+///
+/// Один и тот же для повторов ОДНОЙ попытки: иначе «ошибка сети, жму ещё раз»
+/// списывает дважды — сервер отклоняет только возврат СВЕРХ долга, а два
+/// частичных погашения долг не превышают и проходят оба.
+///
+/// И обязательно новый, когда поправили сумму или выбрали другой долг: на
+/// повтор со старым ключом сервер вернёт прежнюю операцию, и правка молча
+/// потеряется.
+struct RepayIdempotency {
+    private var intent: String?
+    private var current: String?
+
+    mutating func key(debtorId: Int, lenderId: Int, sum: Int) -> String {
+        let next = "\(debtorId)-\(lenderId)-\(sum)"
+        if intent == next, let current {
+            return current
+        }
+        let fresh = UUID().uuidString
+        intent = next
+        current = fresh
+        return fresh
     }
 }
