@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.money.MoneyLocale
+import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import com.zagir.splitty.core.model.SplitType
 import com.zagir.splitty.core.model.User
 import kotlin.test.Test
@@ -12,6 +16,20 @@ import kotlin.test.assertTrue
  * `AddExpenseDistributionTests` на чистые вычисления [AddExpenseForm].
  */
 class AddExpenseDistributionTest {
+
+    /**
+     * Локаль фиксируется: суммы форматирует системный форматтер, и без этого
+     * тест проверял бы настройки машины, а не код.
+     */
+    @BeforeTest
+    fun setUpLocale() {
+        MoneyLocale.override = Locale("ru", "RU")
+    }
+
+    @AfterTest
+    fun tearDownLocale() {
+        MoneyLocale.override = null
+    }
 
     private val members = (1L..3L).map { User(it, null, "U$it") }
 
@@ -85,8 +103,8 @@ class AddExpenseDistributionTest {
     @Test
     fun `distribution hint shows remainder balanced overspent`() {
         val f = byAmounts("1000", setOf(1L), mapOf(1L to "400"))
-        assertEquals("Осталось распределить: 600 ₽", f.distributionHint)
+        assertEquals("Осталось распределить: 600 ₽", f.distributionHint)
         assertEquals("Сумма распределена полностью", f.copy(amountTexts = mapOf(1L to "1000")).distributionHint)
-        assertEquals("Перерасход: 100 ₽", f.copy(amountTexts = mapOf(1L to "1100")).distributionHint)
+        assertEquals("Перерасход: 100 ₽", f.copy(amountTexts = mapOf(1L to "1100")).distributionHint)
     }
 }

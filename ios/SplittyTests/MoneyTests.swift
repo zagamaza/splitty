@@ -2,63 +2,82 @@ import SwiftUI
 import XCTest
 @testable import Splitty
 
+/// Форматирование сумм.
+///
+/// Разделитель тысяч и место символа валюты берёт системный форматтер: раньше
+/// они склеивались руками по русскому образцу, и человек с английским
+/// интерфейсом видел «1 234 567 $» вместо «$1,234,567».
+///
+/// Пробелы в ожиданиях — НЕРАЗРЫВНЫЕ (U+00A0), как их ставит система: обычный
+/// пробел позволил бы перенести строку между числом и символом валюты.
 final class MoneyTests: XCTestCase {
+
+    /// Локаль фиксируется: иначе тест проверял бы настройки машины, а не код.
+    override func setUp() {
+        super.setUp()
+        MoneyLocale.override = Locale(identifier: "ru_RU")
+    }
+
+    override func tearDown() {
+        MoneyLocale.override = nil
+        super.tearDown()
+    }
     // MARK: rubles(_:) — формат «1 200 ₽», пробел — разделитель тысяч
 
     func testRublesZero() {
-        XCTAssertEqual(rubles(0), "0 ₽")
+        XCTAssertEqual(rubles(0), "0 ₽")
     }
 
     func testRublesSingleDigit() {
-        XCTAssertEqual(rubles(5), "5 ₽")
+        XCTAssertEqual(rubles(5), "5 ₽")
     }
 
     func testRublesThousand() {
-        XCTAssertEqual(rubles(1000), "1 000 ₽")
+        XCTAssertEqual(rubles(1000), "1 000 ₽")
     }
 
     func testRublesMillions() {
-        XCTAssertEqual(rubles(1234567), "1 234 567 ₽")
+        XCTAssertEqual(rubles(1234567), "1 234 567 ₽")
     }
 
     // MARK: money(_:currency:) — формат единый с рублями: «1 234 $»
 
     func testMoneyRub() {
-        XCTAssertEqual(money(1200, currency: "RUB"), "1 200 ₽")
+        XCTAssertEqual(money(1200, currency: "RUB"), "1 200 ₽")
     }
 
     func testMoneyUsd() {
-        XCTAssertEqual(money(1234, currency: "USD"), "1 234 $")
+        XCTAssertEqual(money(1234, currency: "USD"), "1 234 $")
     }
 
     func testMoneyEur() {
-        XCTAssertEqual(money(5, currency: "EUR"), "5 €")
+        XCTAssertEqual(money(5, currency: "EUR"), "5 €")
     }
 
     func testMoneyIdr() {
-        XCTAssertEqual(money(1500000, currency: "IDR"), "1 500 000 Rp")
+        XCTAssertEqual(money(1500000, currency: "IDR"), "1 500 000 Rp")
     }
 
     func testMoneyUnknownCurrencyShowsCode() {
         // Незнакомый код — сам код вместо символа.
-        XCTAssertEqual(money(700, currency: "GBP"), "700 GBP")
+        XCTAssertEqual(money(700, currency: "GBP"), "700 GBP")
     }
 
     func testMoneyKztUzs() {
-        XCTAssertEqual(money(700, currency: "KZT"), "700 ₸")
-        XCTAssertEqual(money(12000, currency: "UZS"), "12 000 сум")
+        XCTAssertEqual(money(700, currency: "KZT"), "700 ₸")
+        XCTAssertEqual(money(12000, currency: "UZS"), "12 000 сум")
     }
 
     func testMoneyNegative() {
-        XCTAssertEqual(money(-4300, currency: "USD"), "-4 300 $")
+        XCTAssertEqual(money(-4300, currency: "USD"), "-4 300 $")
     }
 
     func testMoneyZero() {
-        XCTAssertEqual(money(0, currency: "EUR"), "0 €")
+        XCTAssertEqual(money(0, currency: "EUR"), "0 €")
     }
 
     func testMoneyRangeInCurrency() {
-        XCTAssertEqual(moneyRange(333, 334, currency: "USD"), "333–334 $")
+        XCTAssertEqual(moneyRange(333, 334, currency: "USD"), "333–334 $")
     }
 
     func testCurrencySymbol() {
@@ -140,6 +159,33 @@ final class MoneyTests: XCTestCase {
     }
 
     func testMoneyRangeKeepsSignOfLowerBound() {
-        XCTAssertEqual(moneyRange(-100, 50, currency: "RUB"), "-100–50 ₽")
+        XCTAssertEqual(moneyRange(-100, 50, currency: "RUB"), "-100–50 ₽")
+    }
+}
+
+// MARK: - Формат следует локали
+
+extension MoneyTests {
+    /// Разделитель тысяч и место символа валюты меняются вместе с языком.
+    func testFormatFollowsLocale() {
+        MoneyLocale.override = Locale(identifier: "en_US")
+        let english = money(1_234_567, currency: "USD")
+        XCTAssertTrue(english.hasPrefix("$"), "в английском символ валюты стоит перед суммой: \(english)")
+        XCTAssertTrue(english.contains(","), "в английском разделитель тысяч — запятая: \(english)")
+
+        MoneyLocale.override = Locale(identifier: "ru_RU")
+        let russian = money(1_234_567, currency: "RUB")
+        XCTAssertTrue(russian.hasSuffix("₽"), "в русском символ валюты стоит после суммы: \(russian)")
+        XCTAssertFalse(russian.contains(","), "в русском запятая — это дробная часть, а не тысячи: \(russian)")
+    }
+
+    /// Сумма не должна переноситься посередине: пробел перед символом валюты
+    /// неразрывный.
+    func testMoneyUsesNonBreakingSpace() {
+        MoneyLocale.override = Locale(identifier: "ru_RU")
+        XCTAssertTrue(
+            money(1_000, currency: "RUB").contains("\u{00A0}"),
+            "обычный пробел позволил бы разорвать «1 000 ₽» переносом строки"
+        )
     }
 }

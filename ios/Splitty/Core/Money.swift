@@ -1,16 +1,46 @@
 import SwiftUI
 
-/// Цифры суммы с пробелами-разделителями тысяч, без знака и «₽»: `1234567` → `"1 234 567"`.
-private func thousandsGrouped(_ sum: Int) -> String {
-    let digits = Array(String(sum.magnitude))
-    var reversed: [Character] = []
-    for (index, char) in digits.reversed().enumerated() {
-        if index > 0 && index % 3 == 0 {
-            reversed.append(" ")
-        }
-        reversed.append(char)
+/// Форматтеры сумм по паре «локаль + валюта».
+///
+/// Раньше разделитель тысяч и место символа валюты склеивались руками: всегда
+/// пробел и всегда символ справа. Это русский формат — человек с английским
+/// интерфейсом видел «1 234 567 $» вместо «$1,234,567».
+private enum MoneyFormat {
+    private static var cache: [String: NumberFormatter] = [:]
+    private static let lock = NSLock()
+
+    /// Шов для тестов: подменяемая локаль. nil — текущая локаль системы.
+    static var localeOverride: Locale?
+
+    static var locale: Locale { localeOverride ?? Locale.current }
+
+    static func formatter(currency: String) -> NumberFormatter {
+        let key = "\(locale.identifier)|\(currency)"
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = cache[key] { return cached }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = locale
+        formatter.currencyCode = currency
+        // Копеек в продукте нет: суммы всегда целые
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        // Символ — свой: у системы для IDR это «IDR», для KZT «KZT», а незнакомый
+        // код она подменяет символом чужой валюты (GBP → «£»). От системы берём
+        // только разделитель тысяч и СТОРОНУ, с которой стоит символ
+        formatter.currencySymbol = currencySymbol(currency)
+        cache[key] = formatter
+        return formatter
     }
-    return String(reversed.reversed())
+}
+
+/// Локаль форматирования сумм (шов для тестов).
+enum MoneyLocale {
+    static var override: Locale? {
+        get { MoneyFormat.localeOverride }
+        set { MoneyFormat.localeOverride = newValue }
+    }
 }
 
 /// Символ валюты по коду: RUB → «₽», USD → «$», EUR → «€», IDR → «Rp»,
@@ -31,7 +61,9 @@ func currencySymbol(_ currency: String) -> String {
 /// Формат единый с рублями: разделитель тысяч — обычный пробел,
 /// символ валюты после суммы, суммы всегда целые.
 func money(_ sum: Int, currency: String) -> String {
-    (sum < 0 ? "-" : "") + thousandsGrouped(sum) + " " + currencySymbol(currency)
+    let formatter = MoneyFormat.formatter(currency: currency)
+    return formatter.string(from: NSNumber(value: sum))
+        ?? "\(sum) \(currencySymbol(currency))"
 }
 
 /// Форматирует сумму в рублях: `1234567` → `"1 234 567 ₽"` (обёртка money(_, "RUB")).
@@ -41,9 +73,14 @@ func rubles(_ sum: Int) -> String {
 
 /// Диапазон сумм для неровного деления: `moneyRange(333, 334, currency: "RUB")` → `"333–334 ₽"`.
 func moneyRange(_ minSum: Int, _ maxSum: Int, currency: String) -> String {
-    // thousandsGrouped печатает модуль, поэтому знак нижней границы возвращаем
-    // руками — иначе долг «-100–50 ₽» выглядел как «100–50 ₽».
-    "\(minSum < 0 ? "-" : "")\(thousandsGrouped(minSum))–\(money(maxSum, currency: currency))"
+    // Нижняя граница — голое число в формате локали (без символа валюты):
+    // символ печатается один раз, у верхней границы
+    let plain = NumberFormatter()
+    plain.numberStyle = .decimal
+    plain.locale = MoneyFormat.locale
+    plain.maximumFractionDigits = 0
+    let lower = plain.string(from: NSNumber(value: minSum)) ?? "\(minSum)"
+    return "\(lower)–\(money(maxSum, currency: currency))"
 }
 
 /// Рублёвый диапазон (обёртка moneyRange(_, _, "RUB") — для тестов и легаси).

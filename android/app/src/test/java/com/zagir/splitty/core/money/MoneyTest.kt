@@ -1,39 +1,58 @@
 package com.zagir.splitty.core.money
 
 import com.zagir.splitty.core.model.CurrencySum
+import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /** Денежная арифметика и формат — канонические правила проекта (docs/API.md). */
 class MoneyTest {
 
+    /**
+     * Локаль фиксируется: иначе тест проверял бы настройки машины, а не код.
+     * Разделитель тысяч и место символа валюты теперь берёт системный форматтер.
+     */
+    @BeforeTest
+    fun setUp() {
+        MoneyLocale.override = Locale("ru", "RU")
+    }
+
+    @AfterTest
+    fun tearDown() {
+        MoneyLocale.override = null
+    }
+
     // --- money(): формат «1 234 567 ₽» ---
 
     @Test
     fun `money formats thousands with spaces and currency symbol after`() {
-        assertEquals("1 234 567 ₽", money(1_234_567, "RUB"))
-        assertEquals("1 200 $", money(1_200, "USD"))
-        assertEquals("999 €", money(999, "EUR"))
-        assertEquals("15 000 Rp", money(15_000, "IDR"))
-        assertEquals("0 ₽", money(0, "RUB"))
+        assertEquals("1 234 567 ₽", money(1_234_567, "RUB"))
+        assertEquals("1 200 $", money(1_200, "USD"))
+        assertEquals("999 €", money(999, "EUR"))
+        assertEquals("15 000 Rp", money(15_000, "IDR"))
+        assertEquals("0 ₽", money(0, "RUB"))
     }
 
     @Test
     fun `money keeps minus sign and unknown currency code as is`() {
-        assertEquals("-4 300 ₽", money(-4_300, "RUB"))
-        assertEquals("500 GBP", money(500, "GBP"))
+        assertEquals("-4 300 ₽", money(-4_300, "RUB"))
+        assertEquals("500 GBP", money(500, "GBP"))
     }
 
     @Test
     fun `money renders tenge and sum symbols`() {
-        assertEquals("500 ₸", money(500, "KZT"))
-        assertEquals("12 000 сум", money(12_000, "UZS"))
+        assertEquals("500 ₸", money(500, "KZT"))
+        assertEquals("12 000 сум", money(12_000, "UZS"))
     }
 
     @Test
     fun `moneyRange formats uneven split hint`() {
-        assertEquals("333–334 ₽", moneyRange(333, 334, "RUB"))
-        assertEquals("1 000–1 001 $", moneyRange(1_000, 1_001, "USD"))
+        assertEquals("333–334 ₽", moneyRange(333, 334, "RUB"))
+        assertEquals("1 000–1 001 $", moneyRange(1_000, 1_001, "USD"))
     }
 
     @Test
@@ -148,7 +167,7 @@ class MoneyTest {
 
     @Test
     fun `moneyRange keeps sign of lower bound`() {
-        assertEquals("-100–50 \u20BD", moneyRange(-100L, 50L, "RUB"))
+        assertEquals("-100–50\u00A0\u20BD", moneyRange(-100L, 50L, "RUB"))
     }
 
     /**
@@ -188,7 +207,34 @@ class MoneyTest {
      */
     @Test
     fun `money keeps every digit of a large rupiah sum`() {
-        assertEquals("3 600 000 000 Rp", money(3_600_000_000L, "IDR"))
-        assertEquals("-3 600 000 000 Rp", money(-3_600_000_000L, "IDR"))
+        assertEquals("3 600 000 000 Rp", money(3_600_000_000L, "IDR"))
+        assertEquals("-3 600 000 000 Rp", money(-3_600_000_000L, "IDR"))
+    }
+
+    /**
+     * Разделитель тысяч и место символа валюты меняются вместе с языком.
+     * Раньше они склеивались руками по русскому образцу, и человек с
+     * английским интерфейсом видел «1 234 567 $» вместо «$1,234,567».
+     */
+    @Test
+    fun `format follows the locale`() {
+        MoneyLocale.override = Locale("en", "US")
+        val english = money(1_234_567L, "USD")
+        assertTrue(english.startsWith("$"), "в английском символ валюты стоит перед суммой: $english")
+        assertTrue(english.contains(","), "в английском разделитель тысяч — запятая: $english")
+
+        MoneyLocale.override = Locale("ru", "RU")
+        val russian = money(1_234_567L, "RUB")
+        assertTrue(russian.endsWith("\u20BD"), "в русском символ валюты стоит после суммы: $russian")
+        assertFalse(russian.contains(","), "в русском запятая — это дробная часть, а не тысячи: $russian")
+    }
+
+    /** Сумма не должна переноситься посередине: пробелы неразрывные. */
+    @Test
+    fun `money uses non-breaking spaces`() {
+        assertTrue(
+            money(1_000L, "RUB").contains("\u00A0"),
+            "обычный пробел позволил бы разорвать «1 000 ₽» переносом строки",
+        )
     }
 }

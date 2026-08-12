@@ -30,6 +30,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.res.stringResource
+import com.zagir.splitty.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -258,7 +260,7 @@ fun ItemSheetBody(
         // Заголовок + «Готово».
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = if (isSurcharge) "Сбор" else "Позиция",
+                text = stringResource(if (isSurcharge) R.string.item_sheet_title_surcharge else R.string.item_sheet_title_item),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.ink,
@@ -269,7 +271,7 @@ fun ItemSheetBody(
                 enabled = isCommittable,
             ) {
                 Text(
-                    text = "Готово",
+                    text = stringResource(R.string.item_sheet_done),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (isCommittable) colors.accent else colors.inkSecondary,
@@ -287,14 +289,14 @@ fun ItemSheetBody(
 
         if (!isSurcharge) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SoftChip(text = "Долями", onClick = { byAmount = false }, isSelected = !byAmount)
-                SoftChip(text = "Суммами", onClick = { byAmount = true }, isSelected = byAmount)
+                SoftChip(text = stringResource(R.string.item_sheet_mode_shares), onClick = { byAmount = false }, isSelected = !byAmount)
+                SoftChip(text = stringResource(R.string.item_sheet_mode_amounts), onClick = { byAmount = true }, isSelected = byAmount)
             }
             Text(
                 text = if (byAmount) {
-                    "Впишите точную сумму за человека. Пустое поле — «авто»: остаток делится поровну"
+                    stringResource(R.string.item_sheet_hint_amounts)
                 } else {
-                    "Поровну — у всех по одной доле. Съел больше — добавьте долей"
+                    stringResource(R.string.item_sheet_hint_shares)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 12.sp,
@@ -334,7 +336,7 @@ fun ItemSheetBody(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = if (isSurcharge) "Удалить сбор" else "Удалить позицию",
+                text = stringResource(if (isSurcharge) R.string.item_sheet_delete_surcharge else R.string.item_sheet_delete_item),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.negative,
@@ -345,8 +347,8 @@ fun ItemSheetBody(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text(if (isSurcharge) "Удалить сбор?" else "Удалить позицию?") },
-            text = { Text("Строка исчезнет из чека, итог пересчитается") },
+            title = { Text(stringResource(if (isSurcharge) R.string.item_sheet_delete_surcharge_q else R.string.item_sheet_delete_item_q)) },
+            text = { Text(stringResource(R.string.item_sheet_delete_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     haptics.tap()
@@ -354,11 +356,11 @@ fun ItemSheetBody(
                     onDelete()
                     onDismiss()
                 }) {
-                    Text("Удалить", color = colors.negative)
+                    Text(stringResource(R.string.item_sheet_delete_confirm), color = colors.negative)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -387,7 +389,7 @@ private fun FieldsCard(
             decorationBox = { inner ->
                 Box {
                     if (name.isEmpty()) {
-                        Text("Название", fontSize = 17.sp, color = colors.inkSecondary)
+                        Text(stringResource(R.string.item_sheet_name_label), fontSize = 17.sp, color = colors.inkSecondary)
                     }
                     inner()
                 }
@@ -397,7 +399,7 @@ private fun FieldsCard(
         HorizontalDivider(color = colors.hairline, thickness = 1.dp)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Цена", fontSize = 15.sp, color = colors.inkSecondary, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.item_sheet_price_label), fontSize = 15.sp, color = colors.inkSecondary, modifier = Modifier.weight(1f))
             BasicTextField(
                 value = priceText,
                 onValueChange = onPriceChange,
@@ -473,7 +475,7 @@ private fun ParticipantsCard(
                 ) {
                     Text(
                         text = if (meId != null && member.id == meId) {
-                            "${member.displayName} (вы)"
+                            stringResource(R.string.member_you_suffix, member.displayName)
                         } else {
                             member.displayName
                         },
@@ -537,6 +539,7 @@ private fun ParticipantsCard(
  * Живая подпись под именем: «×3 · 150 ₽» («Долями») или «авто · 1 250 ₽»
  * у не-зафиксированных («Суммами»). null — не участвует или фикс введён.
  */
+@Composable
 private fun rowCaption(
     userId: Long,
     isOn: Boolean,
@@ -549,9 +552,17 @@ private fun rowCaption(
     if (!isOn) return null
     if (byAmount) {
         if (fixedEntered) return null
-        return if (liveAmount == null) "авто" else "авто · ${money(liveAmount, currency)}"
+        return if (liveAmount == null) {
+            stringResource(R.string.item_sheet_auto)
+        } else {
+            stringResource(R.string.item_sheet_auto_with_sum, money(liveAmount, currency))
+        }
     }
-    return if (liveAmount == null) "×$weight" else "×$weight · ${money(liveAmount, currency)}"
+    return if (liveAmount == null) {
+        stringResource(R.string.item_sheet_weight_caption, weight)
+    } else {
+        stringResource(R.string.item_sheet_weight_with_sum, weight, money(liveAmount, currency))
+    }
 }
 
 @Composable
@@ -576,7 +587,7 @@ private fun AmountField(text: String, currency: String, onChange: (String) -> Un
                 Box(contentAlignment = Alignment.CenterEnd) {
                     if (text.isEmpty()) {
                         Text(
-                            "авто",
+                            stringResource(R.string.item_sheet_auto),
                             modifier = Modifier.fillMaxWidth(),
                             fontSize = 15.sp,
                             color = colors.inkSecondary,
@@ -637,11 +648,11 @@ private fun StepperButton(
 private fun SplitStatusLine(status: ItemSplitStatus, currency: String) {
     val colors = Splitty.colors
     val (text, color) = when (status) {
-        is ItemSplitStatus.Ok -> "Сумма распределена полностью" to colors.accent
-        ItemSplitStatus.NoPrice -> "Укажите цену позиции" to colors.inkSecondary
-        ItemSplitStatus.NoParticipants -> "Выберите хотя бы одного участника" to colors.negative
-        is ItemSplitStatus.Under -> "Осталось распределить: ${money(status.rest, currency)}" to colors.negative
-        is ItemSplitStatus.Over -> "Перерасход: ${money(status.extra, currency)}" to colors.negative
+        is ItemSplitStatus.Ok -> stringResource(R.string.item_sheet_split_ok) to colors.accent
+        ItemSplitStatus.NoPrice -> stringResource(R.string.item_sheet_split_no_price) to colors.inkSecondary
+        ItemSplitStatus.NoParticipants -> stringResource(R.string.item_sheet_split_no_participants) to colors.negative
+        is ItemSplitStatus.Under -> stringResource(R.string.item_sheet_split_under, money(status.rest, currency)) to colors.negative
+        is ItemSplitStatus.Over -> stringResource(R.string.item_sheet_split_over, money(status.extra, currency)) to colors.negative
     }
     Text(
         text = text,
@@ -680,7 +691,7 @@ fun UnknownPickerSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),
         ) {
-            SectionHeader("Кто это — «$name»?")
+            SectionHeader(stringResource(R.string.item_sheet_unknown_title, name))
             Spacer(Modifier.height(12.dp))
             members.forEach { member ->
                 Row(

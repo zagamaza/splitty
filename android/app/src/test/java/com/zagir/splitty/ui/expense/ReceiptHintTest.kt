@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.money.MoneyLocale
+import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.OperationItem
 import org.junit.Assert.assertEquals
@@ -9,7 +13,25 @@ import org.junit.Test
 
 // Чистые JVM-тесты подсказок чек-строки (ReceiptCard) — зеркало iOS shareHint/
 // perPersonText/isEven. Логика без Android-зависимостей.
+//
+// Проверяем ТИП подсказки, а не её текст: текст зависит от языка приложения, а
+// правило деления — нет. Раньше тест сравнивал русские строки и тем самым
+// закреплял то, что экран чека переведён не был.
 class ReceiptHintTest {
+
+    /**
+     * Локаль фиксируется: суммы форматирует системный форматтер, и без этого
+     * тест проверял бы настройки машины, а не код.
+     */
+    @BeforeTest
+    fun setUpLocale() {
+        MoneyLocale.override = Locale("ru", "RU")
+    }
+
+    @AfterTest
+    fun tearDownLocale() {
+        MoneyLocale.override = null
+    }
 
     private fun item(
         name: String = "Позиция",
@@ -32,47 +54,47 @@ class ReceiptHintTest {
     private fun share(id: Long, weight: Int = 1, amount: Long? = null) = ItemShare(id, weight, amount)
 
     @Test fun singleShare_wholeItem() {
-        assertEquals("целиком", shareHint(item(price = 500, shares = listOf(share(1))), "RUB"))
+        assertEquals(ShareHint.Whole, shareHint(item(price = 500, shares = listOf(share(1)))))
     }
 
     @Test fun evenSplit_exact() {
         val it = item(price = 800, shares = listOf(share(1), share(2)))
-        assertEquals("по 400 ₽ × 2", shareHint(it, "RUB"))
+        assertEquals(ShareHint.PerPerson(price = 800, people = 2), shareHint(it))
     }
 
     @Test fun evenSplit_range_whenNotDivisible() {
         // 100 на троих: 33–34, честный диапазон (иначе «по 33 × 3» не сходится с 100).
         val it = item(price = 100, shares = listOf(share(1), share(2), share(3)))
-        assertEquals("по 33–34 ₽ × 3", shareHint(it, "RUB"))
+        assertEquals(ShareHint.PerPerson(price = 100, people = 3), shareHint(it))
     }
 
     @Test fun pricelessWithShares() {
-        assertEquals("укажите цену", shareHint(item(price = 0, shares = listOf(share(1))), "RUB"))
+        assertEquals(ShareHint.NoPrice, shareHint(item(price = 0, shares = listOf(share(1)))))
     }
 
     @Test fun pricelessNoShares() {
-        assertEquals("", shareHint(item(price = 0, shares = emptyList()), "RUB"))
+        assertEquals(ShareHint.None, shareHint(item(price = 0, shares = emptyList())))
     }
 
     @Test fun unknownName() {
         val it = item(price = 500, shares = listOf(share(1)), unknown = listOf("Саня"))
-        assertEquals("кто это — выберите", shareHint(it, "RUB"))
+        assertEquals(ShareHint.Unknown, shareHint(it))
     }
 
     @Test fun exactAmounts_onlyFixed() {
         val it = item(price = 300, shares = listOf(share(1, amount = 100), share(2, amount = 200)))
-        assertEquals("точные суммы", shareHint(it, "RUB"))
+        assertEquals(ShareHint.ExactAmounts, shareHint(it))
     }
 
     @Test fun fixedPlusWeighted() {
         val it = item(price = 300, shares = listOf(share(1, amount = 100), share(2)))
-        assertEquals("100 ₽ фиксом · остальное поровну", shareHint(it, "RUB"))
+        assertEquals(ShareHint.FixedThenEven(fixed = 100), shareHint(it))
     }
 
     @Test fun weightedUneven_perUnit() {
         // Вова съел вдвое больше: 3 доли, 90 / 3 = 30 за штуку.
         val it = item(price = 90, shares = listOf(share(1, weight = 1), share(2, weight = 2)))
-        assertEquals("3 шт · 30 ₽ за шт", shareHint(it, "RUB"))
+        assertEquals(ShareHint.PerUnit(price = 90, units = 3), shareHint(it))
     }
 
     @Test fun isEven_equalWeights_true() {
@@ -89,7 +111,7 @@ class ReceiptHintTest {
     }
 
     @Test fun perPersonText_exactAndRange() {
-        assertEquals("50 ₽", perPersonText(100, 2, "RUB"))
-        assertEquals("33–34 ₽", perPersonText(100, 3, "RUB"))
+        assertEquals("50 ₽", perPersonText(100, 2, "RUB"))
+        assertEquals("33–34 ₽", perPersonText(100, 3, "RUB"))
     }
 }

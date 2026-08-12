@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.zagir.splitty.R
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -122,7 +124,7 @@ fun ReceiptCard(
             }
             if (surcharges.isNotEmpty()) {
                 RowDivider()
-                FooterLine("Подытог", subtotal, currency, total = false)
+                FooterLine(stringResource(R.string.receipt_subtotal), subtotal, currency, total = false)
                 surcharges.forEach { (index, item) ->
                     SurchargeRow(index, item, currency, onToggleSurchargeRule, onEditItem)
                 }
@@ -131,7 +133,7 @@ fun ReceiptCard(
             // При позициях без цены итог неполный — «≥» честно говорит, что число
             // вырастет, когда цены будут указаны.
             FooterLine(
-                title = if (hasPriceless) "Итого ≥" else "Итого",
+                title = stringResource(if (hasPriceless) R.string.receipt_total_at_least else R.string.receipt_total),
                 amount = subtotal + surchargeTotal,
                 currency = currency,
                 total = true,
@@ -153,7 +155,7 @@ private fun Header(count: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "ПОЗИЦИИ",
+            text = stringResource(R.string.receipt_items_header),
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.4.sp,
@@ -161,7 +163,7 @@ private fun Header(count: Int) {
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = "$count поз.",
+            text = stringResource(R.string.receipt_items_count, count),
             fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             color = colors.ink.copy(alpha = 0.6f),
@@ -203,7 +205,7 @@ private fun ItemRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = item.name.ifEmpty { "Позиция" },
+                text = item.name.ifEmpty { stringResource(R.string.receipt_item_fallback) },
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.ink,
@@ -224,7 +226,7 @@ private fun ItemRow(
                 // Цена не определена (модель услышала блюдо, но не цену): метка ведёт
                 // в шит позиции. В интерактиве мягко пульсирует, чтобы глаз нашёл ответ.
                 DashedCapsuleChip(
-                    text = "цена?",
+                    text = stringResource(R.string.receipt_price_missing),
                     pulsing = onEditItem != null,
                 )
             } else {
@@ -242,7 +244,7 @@ private fun ItemRow(
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Text(
-                text = shareHint(item, currency),
+                text = shareHintText(shareHint(item), currency),
                 fontSize = 11.5.sp,
                 fontFamily = FontFamily.Monospace,
                 color = colors.ink.copy(alpha = 0.6f),
@@ -366,7 +368,7 @@ private fun SurchargeRow(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = item.name.ifEmpty { "Сбор" },
+                text = item.name.ifEmpty { stringResource(R.string.receipt_surcharge_fallback) },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.ink,
@@ -420,7 +422,7 @@ private fun SurchargeRule(index: Int, item: OperationItem, onToggle: ((Int) -> U
                 modifier = Modifier.size(12.dp),
             )
             Text(
-                text = if (equally) "Поровну на всех" else "Пропорционально съеденному",
+                text = stringResource(if (equally) R.string.receipt_surcharge_equally else R.string.receipt_surcharge_proportional),
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.ink,
@@ -428,7 +430,7 @@ private fun SurchargeRule(index: Int, item: OperationItem, onToggle: ((Int) -> U
         }
     } else {
         Text(
-            text = if (equally) "делится поровну" else "делится пропорционально съеденному",
+            text = stringResource(if (equally) R.string.receipt_surcharge_equally_short else R.string.receipt_surcharge_proportional_short),
             fontSize = 11.5.sp,
             fontFamily = FontFamily.Monospace,
             color = colors.ink.copy(alpha = 0.6f),
@@ -597,27 +599,67 @@ internal fun isEven(item: OperationItem): Boolean {
 /**
  * Подсказка деления строки: «целиком» / «по 33–34 ₽ × 3» / «точные суммы» /
  * «укажите цену» / «кто это — выберите». Зеркало iOS `shareHint`.
+ *
+ * Возвращает ТИП, а не готовый текст: текст зависит от языка приложения, а
+ * правило деления — нет. Раньше строки были вшиты по-русски, и человек с
+ * английским интерфейсом читал подсказки чека на чужом языке.
  */
-internal fun shareHint(item: OperationItem, currency: String): String {
-    if (item.hasUnknown) return "кто это — выберите"
+sealed interface ShareHint {
+    /** Подсказки нет (нет долей и цены). */
+    object None : ShareHint
+    /** Есть нераспознанные имена — сначала сопоставить. */
+    object Unknown : ShareHint
+    /** Доли есть, цены нет. */
+    object NoPrice : ShareHint
+    /** Один человек — вся строка на него. */
+    object Whole : ShareHint
+    /** Часть суммы зафиксирована, остальное делится поровну. */
+    data class FixedThenEven(val fixed: Long) : ShareHint
+    /** Все доли заданы точными суммами. */
+    object ExactAmounts : ShareHint
+    /** Поровну между [people]. */
+    data class PerPerson(val price: Long, val people: Int) : ShareHint
+    /** По весам: [units] «штук» цены. */
+    data class PerUnit(val price: Long, val units: Int) : ShareHint
+}
+
+internal fun shareHint(item: OperationItem): ShareHint {
+    if (item.hasUnknown) return ShareHint.Unknown
     val n = item.shareList.size
-    if (item.price < 1) return if (n > 0) "укажите цену" else ""
-    if (n == 0) return ""
-    if (n == 1) return "целиком"
+    if (item.price < 1) return if (n > 0) ShareHint.NoPrice else ShareHint.None
+    if (n == 0) return ShareHint.None
+    if (n == 1) return ShareHint.Whole
     if (item.shareList.any { it.amount != null }) {
         val fixed = item.shareList.sumOf { it.amount ?: 0 }
         val weighted = item.shareList.count { it.amount == null }
-        return if (weighted > 0) {
-            "${money(fixed, currency)} фиксом · остальное поровну"
-        } else {
-            "точные суммы"
-        }
+        return if (weighted > 0) ShareHint.FixedThenEven(fixed) else ShareHint.ExactAmounts
     }
-    if (isEven(item)) {
-        return "по ${perPersonText(item.price, n, currency)} × $n"
-    }
-    val units = item.shareList.sumOf { it.weight }
-    return "$units шт · ${perPersonText(item.price, units, currency)} за шт"
+    if (isEven(item)) return ShareHint.PerPerson(item.price, n)
+    return ShareHint.PerUnit(item.price, item.shareList.sumOf { it.weight })
+}
+
+/** Текст подсказки на языке приложения. */
+@Composable
+internal fun shareHintText(hint: ShareHint, currency: String): String = when (hint) {
+    ShareHint.None -> ""
+    ShareHint.Unknown -> stringResource(R.string.receipt_hint_unknown)
+    ShareHint.NoPrice -> stringResource(R.string.receipt_hint_no_price)
+    ShareHint.Whole -> stringResource(R.string.receipt_hint_whole)
+    is ShareHint.FixedThenEven ->
+        stringResource(R.string.receipt_hint_fixed_then_even, money(hint.fixed, currency))
+    ShareHint.ExactAmounts -> stringResource(R.string.receipt_hint_exact)
+    is ShareHint.PerPerson ->
+        stringResource(
+            R.string.receipt_hint_per_person,
+            perPersonText(hint.price, hint.people, currency),
+            hint.people,
+        )
+    is ShareHint.PerUnit ->
+        stringResource(
+            R.string.receipt_hint_per_unit,
+            hint.units,
+            perPersonText(hint.price, hint.units, currency),
+        )
 }
 
 /**

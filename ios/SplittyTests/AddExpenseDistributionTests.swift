@@ -99,13 +99,13 @@ final class AddExpenseDistributionTests: XCTestCase {
 
     func testDistributionHintShowsRemainder() {
         let model = makeModel(sum: "1000", recipientIds: [1], amounts: [1: "400"])
-        XCTAssertEqual(model.distributionHint, "Осталось распределить: 600 ₽")
+        XCTAssertEqual(model.distributionHint, "Осталось распределить: 600 ₽")
 
         model.amountTexts = [1: "1000"]
         XCTAssertEqual(model.distributionHint, "Сумма распределена полностью")
 
         model.amountTexts = [1: "1100"]
-        XCTAssertEqual(model.distributionHint, "Перерасход: 100 ₽")
+        XCTAssertEqual(model.distributionHint, "Перерасход: 100 ₽")
     }
 
     // MARK: Формы тела запроса (контракт v2)

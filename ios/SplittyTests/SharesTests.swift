@@ -49,7 +49,7 @@ final class SharesTests: XCTestCase {
     // MARK: rublesRange — подпись неровного деления
 
     func testRublesRange() {
-        XCTAssertEqual(rublesRange(333, 334), "333–334 ₽")
-        XCTAssertEqual(rublesRange(1333, 1334), "1 333–1 334 ₽")
+        XCTAssertEqual(rublesRange(333, 334), "333–334 ₽")
+        XCTAssertEqual(rublesRange(1333, 1334), "1 333–1 334 ₽")
     }
 }

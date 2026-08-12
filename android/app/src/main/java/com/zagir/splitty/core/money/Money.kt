@@ -1,6 +1,9 @@
 package com.zagir.splitty.core.money
 
 import com.zagir.splitty.core.model.CurrencySum
+import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -9,18 +12,49 @@ import kotlin.math.abs
  * float в денежных расчётах запрещён.
  */
 
-/** Цифры суммы с пробелами-разделителями тысяч, без знака и валюты: 1234567 -> "1 234 567". */
-private fun thousandsGrouped(sum: Long): String {
-    // abs на Long без сужения: у Long.MIN_VALUE модуля нет, но такие суммы не
-    // существуют — переполнение здесь означало бы битые данные, а не большую
-    // покупку
-    val digits = abs(sum).toString()
-    val sb = StringBuilder()
-    for ((index, char) in digits.reversed().withIndex()) {
-        if (index > 0 && index % 3 == 0) sb.append(' ')
-        sb.append(char)
+/**
+ * Форматтеры сумм по паре «локаль + валюта».
+ *
+ * Раньше разделитель тысяч и место символа валюты склеивались руками: всегда
+ * пробел и всегда символ справа. Это русский формат — человек с английским
+ * интерфейсом видел «1 234 567 $» вместо «$1,234,567».
+ */
+private object MoneyFormat {
+    private val cache = HashMap<String, NumberFormat>()
+
+    /** Шов для тестов: подменяемая локаль. null — текущая локаль системы. */
+    var localeOverride: Locale? = null
+
+    val locale: Locale get() = localeOverride ?: Locale.getDefault()
+
+    @Synchronized
+    fun formatter(currency: String): NumberFormat {
+        val key = "${locale.toLanguageTag()}|$currency"
+        cache[key]?.let { return it }
+        val formatter = NumberFormat.getCurrencyInstance(locale)
+        // Копеек в продукте нет: суммы всегда целые
+        formatter.maximumFractionDigits = 0
+        formatter.minimumFractionDigits = 0
+        val symbols = (formatter as? DecimalFormat)?.decimalFormatSymbols
+        if (symbols != null) {
+            // Символ — свой: у системы для IDR это «IDR», для KZT «KZT», а
+            // незнакомый код она подменяет символом чужой валюты. От системы
+            // берём только разделитель тысяч и СТОРОНУ, с которой стоит символ
+            symbols.currencySymbol = currencySymbol(currency)
+            formatter.decimalFormatSymbols = symbols
+        }
+        cache[key] = formatter
+        return formatter
     }
-    return sb.reverse().toString()
+}
+
+/** Локаль форматирования сумм (шов для тестов). */
+object MoneyLocale {
+    var override: Locale?
+        get() = MoneyFormat.localeOverride
+        set(value) {
+            MoneyFormat.localeOverride = value
+        }
 }
 
 /**
@@ -42,11 +76,15 @@ fun currencySymbol(currency: String): String = when (currency) {
  * Разделитель тысяч — обычный пробел, символ валюты ПОСЛЕ суммы, суммы целые.
  */
 fun money(sum: Long, currency: String): String =
-    (if (sum < 0) "-" else "") + thousandsGrouped(sum) + " " + currencySymbol(currency)
+    MoneyFormat.formatter(currency).format(sum)
 
 /** Диапазон сумм для неровного деления: moneyRange(333, 334, "RUB") -> "333–334 ₽". */
-fun moneyRange(minSum: Long, maxSum: Long, currency: String): String =
-    (if (minSum < 0) "-" else "") + thousandsGrouped(minSum) + "–" + money(maxSum, currency)
+fun moneyRange(minSum: Long, maxSum: Long, currency: String): String {
+    // Нижняя граница — голое число в формате локали (без символа валюты):
+    // символ печатается один раз, у верхней границы
+    val plain = NumberFormat.getIntegerInstance(MoneyFormat.locale)
+    return plain.format(minSum) + "–" + money(maxSum, currency)
+}
 
 /**
  * Складывает суммы ПОВАЛЮТНО: суммы в разных валютах никогда не смешиваются.

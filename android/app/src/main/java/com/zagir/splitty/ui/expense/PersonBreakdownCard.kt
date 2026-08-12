@@ -17,6 +17,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
+import com.zagir.splitty.R
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +57,7 @@ fun PersonBreakdownCard(
     val colors = Splitty.colors
     val maxTotal = max(shares.maxOfOrNull { it.total } ?: 1, 1)
     SurfaceCard(modifier = modifier.fillMaxWidth()) {
-        SectionHeader(text = "С кого сколько", modifier = Modifier.padding(bottom = 6.dp))
+        SectionHeader(text = stringResource(R.string.breakdown_title), modifier = Modifier.padding(bottom = 6.dp))
         shares.forEachIndexed { index, share ->
             if (index > 0) {
                 Box(
@@ -101,7 +103,7 @@ fun PersonBreakdownCard(
                     MoneyText(share.total, role = MoneyRole.NEUTRAL, size = 15.sp, currency = currency)
                     if (share.surchargePart > 0) {
                         Text(
-                            text = "+${money(share.surchargePart, currency)} сбор",
+                            text = stringResource(R.string.breakdown_surcharge_part, money(share.surchargePart, currency)),
                             fontSize = 11.sp,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                             color = colors.inkSecondary,
@@ -163,7 +165,7 @@ private fun BalancedLine() {
             )
             Spacer(Modifier.width(6.dp))
             Text(
-                text = "Сумма распределена полностью",
+                text = stringResource(R.string.breakdown_allocated),
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.accent,
@@ -172,7 +174,8 @@ private fun BalancedLine() {
     }
 }
 
+@Composable
 private fun personName(id: Long, members: List<User>, meId: Long?): String {
     val user = members.firstOrNull { it.id == id } ?: return "…"
-    return if (id == meId) "${user.displayName} (вы)" else user.displayName
+    return if (id == meId) stringResource(R.string.member_you_suffix, user.displayName) else user.displayName
 }
