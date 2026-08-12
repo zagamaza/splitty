@@ -238,12 +238,15 @@ class GroupDetailViewModel @Inject constructor(
             fun name(id: Long) = names[id] ?: id.toString()
 
             val pending = mutableListOf<String>()
+            val added = mutableListOf<String>()
             val failed = mutableListOf<String>()
             var invited = 0
             userIds.forEach { id ->
                 try {
                     if (repository.addMember(detail.id, id) == InviteStatus.PENDING) {
                         pending += name(id)
+                    } else {
+                        added += name(id)
                     }
                     invited++
                 } catch (e: ApiException) {
@@ -256,11 +259,15 @@ class GroupDetailViewModel @Inject constructor(
                 refresh()
             }
             // Сбои важнее ожидания согласия: они требуют повтора, а pending — нет.
+            // Успех тоже говорим вслух: раньше шит просто закрывался, и человек
+            // не знал, добавил он кого-то или нет
             _alertMessage.value = when {
                 failed.isNotEmpty() ->
                     UiText.res(R.string.invite_friends_failed, failed.joinToString(", "))
                 pending.isNotEmpty() ->
                     UiText.res(R.string.invite_friends_pending, pending.joinToString(", "))
+                added.isNotEmpty() ->
+                    UiText.res(R.string.invite_friends_added, added.joinToString(", "))
                 else -> null
             }
             // Шит закрываем, только если приглашены все: иначе человеку нужно

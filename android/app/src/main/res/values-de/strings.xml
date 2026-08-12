@@ -516,8 +516,8 @@
     <string name="invite_friends_link_footer">Ein Link ist für Leute, mit denen du noch keine Ausgaben geteilt hast.</string>
     <string name="invite_friends_pending">%1$s hat diese Gruppe verlassen — wir haben eine Einladung geschickt, die Entscheidung liegt bei ihnen</string>
     <string name="invite_friends_section">Aus deinen Gruppen</string>
-    <string name="invite_friends_send">Einladen</string>
-    <string name="invite_friends_title">Einladen</string>
+    <string name="invite_friends_send">Hinzufügen</string>
+    <string name="invite_friends_title">Zur Gruppe hinzufügen</string>
     <string name="invite_leave">Verlassen</string>
     <string name="invite_open">Öffnen</string>
     <string name="invite_someone">Jemand</string>
@@ -575,4 +575,8 @@
     <string name="profile_privacy_policy">Datenschutzerklärung</string>
     <string name="expense_recognized_title_photo">Vom Beleg erkannt</string>
     <string name="expense_recognized_hint_photo">Nicht richtig? Fotografiere den Beleg erneut oder halte das Mikrofon unten gedrückt</string>
+    <string name="invite_friends_confirm_title">%1$s zur Gruppe hinzufügen?</string>
+    <string name="invite_friends_confirm_title_many">%1$d Personen hinzufügen?</string>
+    <string name="invite_friends_confirm_message">Sie sind sofort in der Gruppe und sehen alle Ausgaben, auch die bisherigen. Die App fragt sie nicht.</string>
+    <string name="invite_friends_added">Hinzugefügt: %1$s</string>
 </resources>

@@ -1747,11 +1747,42 @@ private fun InviteFriendsSheet(
                         }
                     }
                 }
+                // Подтверждение называет последствие: друг из списка попадает
+                // в группу сразу, без своего согласия, и видит все прошлые
+                // расходы. Кнопка «Пригласить» обещала шаг, которого нет
+                var isConfirmVisible by remember { mutableStateOf(false) }
                 PrimaryPillButton(
                     text = stringResource(R.string.invite_friends_send),
-                    onClick = { viewModel.inviteFriends(selected) { onDismiss() } },
+                    onClick = { isConfirmVisible = true },
                     enabled = selected.isNotEmpty(),
                 )
+                if (isConfirmVisible) {
+                    val names = candidates.filter { it.user.id in selected }.map { it.user.displayName }
+                    AlertDialog(
+                        onDismissRequest = { isConfirmVisible = false },
+                        title = {
+                            Text(
+                                if (names.size == 1) {
+                                    stringResource(R.string.invite_friends_confirm_title, names.first())
+                                } else {
+                                    stringResource(R.string.invite_friends_confirm_title_many, names.size)
+                                }
+                            )
+                        },
+                        text = { Text(stringResource(R.string.invite_friends_confirm_message)) },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                isConfirmVisible = false
+                                viewModel.inviteFriends(selected) { onDismiss() }
+                            }) { Text(stringResource(R.string.invite_friends_send)) }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { isConfirmVisible = false }) {
+                                Text(stringResource(R.string.common_cancel))
+                            }
+                        },
+                    )
+                }
             }
 
             SoftChip(

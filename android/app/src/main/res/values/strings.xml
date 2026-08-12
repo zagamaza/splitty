@@ -102,10 +102,10 @@
     <string name="group_leave_action">Leave group</string>
     <string name="group_leave_blocked">Expenses recorded on you: %1$d. Remove yourself from them — and if you paid, hand the expense to another payer or delete it. Any member can edit expenses</string>
     <string name="group_leave_footer">While expenses are recorded on you, you can\'t leave — remove yourself from them first.</string>
-    <string name="invite_friends_title">Invite</string>
+    <string name="invite_friends_title">Add to the group</string>
     <string name="invite_friends_section">From your groups</string>
     <string name="invite_friends_empty">No one to invite yet: people you\'ve shared groups with will appear here.</string>
-    <string name="invite_friends_send">Invite</string>
+    <string name="invite_friends_send">Add</string>
     <string name="invite_friends_link">Send a link</string>
     <string name="invite_friends_link_footer">A link is for people you haven\'t split expenses with yet.</string>
     <string name="invite_friends_failed">Couldn\'t invite: %1$s. Try again</string>
@@ -591,4 +591,8 @@
     <string name="profile_privacy_policy">Privacy policy</string>
     <string name="expense_recognized_title_photo">Recognized from the receipt</string>
     <string name="expense_recognized_hint_photo">Not quite right? Take the receipt again or hold the mic below</string>
+    <string name="invite_friends_confirm_title">Add %1$s to the group?</string>
+    <string name="invite_friends_confirm_title_many">Add %1$d people?</string>
+    <string name="invite_friends_confirm_message">They join the group right away and see every expense, including the past ones. The app will not ask them.</string>
+    <string name="invite_friends_added">Added: %1$s</string>
 </resources>

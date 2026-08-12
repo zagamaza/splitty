@@ -17,6 +17,7 @@ struct InviteFriendView: View {
 
     @State private var friends: [FriendBalance] = []
     @State private var selected: Set<Int> = []
+    @State private var isConfirmPresented = false
     @State private var isLoading = true
     @State private var isSending = false
     @State private var alertMessage: String?
@@ -29,20 +30,35 @@ struct InviteFriendView: View {
         NavigationStack {
             content
                 .background(Color.bg)
-                .navigationTitle("Пригласить")
+                .navigationTitle("Добавить в группу")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Отмена") { dismiss() }
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Пригласить") {
-                            Task { await invite() }
+                        // «Добавить», а не «Пригласить»: друг из списка
+                        // попадает в группу сразу, без своего согласия. Слово
+                        // не должно обещать шаг, которого нет
+                        Button("Добавить") {
+                            isConfirmPresented = true
                         }
                         .disabled(selected.isEmpty || isSending)
                     }
                 }
                 .task { await load() }
+                // Подтверждение называет последствие: человек окажется в группе
+                // сразу и увидит все расходы, включая прошлые
+                .confirmationDialog(
+                    confirmTitle,
+                    isPresented: $isConfirmPresented,
+                    titleVisibility: .visible
+                ) {
+                    Button("Добавить") { Task { await invite() } }
+                    Button("Отмена", role: .cancel) {}
+                } message: {
+                    Text("Они окажутся в группе сразу и увидят все расходы, включая прошлые. Спрашивать их приложение не будет.")
+                }
                 .errorAlert($alertMessage)
                 .alert(
                     "Приглашение",
@@ -157,6 +173,17 @@ struct InviteFriendView: View {
 
     /// Приглашения уходят по одному, и часть может не дойти. Раньше любой сбой
     /// считался общим провалом: показывалась первая ошибка, а уже позванные
+    /// Заголовок подтверждения: сколько человек и в какую группу.
+    private var confirmTitle: String {
+        let names = selected.sorted().compactMap { id in
+            friends.first { $0.user.id == id }?.user.displayName
+        }
+        if names.count == 1 {
+            return String(localized: "Добавить \(names[0]) в группу?")
+        }
+        return String(localized: "Добавить участников: \(names.count)?")
+    }
+
     /// люди не доезжали до списка — экран закрывался, не обновив ничего.
     private func invite() async {
         isSending = true

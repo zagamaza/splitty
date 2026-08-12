@@ -516,8 +516,8 @@
     <string name="invite_friends_link_footer">El enlace es para quienes aún no han compartido gastos contigo.</string>
     <string name="invite_friends_pending">%1$s salió de este grupo, así que enviamos una invitación: volver depende de esa persona</string>
     <string name="invite_friends_section">De tus grupos</string>
-    <string name="invite_friends_send">Invitar</string>
-    <string name="invite_friends_title">Invitar</string>
+    <string name="invite_friends_send">Añadir</string>
+    <string name="invite_friends_title">Añadir al grupo</string>
     <string name="invite_leave">Salir</string>
     <string name="invite_open">Abrir</string>
     <string name="invite_someone">Alguien</string>
@@ -575,4 +575,8 @@
     <string name="profile_privacy_policy">Política de privacidad</string>
     <string name="expense_recognized_title_photo">Reconocido del recibo</string>
     <string name="expense_recognized_hint_photo">¿No es correcto? Vuelve a fotografiar el recibo o mantén pulsado el micrófono</string>
+    <string name="invite_friends_confirm_title">¿Añadir a %1$s al grupo?</string>
+    <string name="invite_friends_confirm_title_many">¿Añadir a %1$d personas?</string>
+    <string name="invite_friends_confirm_message">Entrarán en el grupo enseguida y verán todos los gastos, incluidos los anteriores. La app no les preguntará.</string>
+    <string name="invite_friends_added">Añadidos: %1$s</string>
 </resources>

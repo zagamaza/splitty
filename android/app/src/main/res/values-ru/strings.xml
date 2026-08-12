@@ -104,10 +104,10 @@
     <string name="group_leave_action">Выйти из группы</string>
     <string name="group_leave_blocked">На вас записано расходов: %1$d. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник</string>
     <string name="group_leave_footer">Пока на вас записаны расходы, выйти нельзя — сначала уберите себя из них.</string>
-    <string name="invite_friends_title">Пригласить</string>
+    <string name="invite_friends_title">Добавить в группу</string>
     <string name="invite_friends_section">Из ваших групп</string>
     <string name="invite_friends_empty">Пока некого пригласить: здесь появятся люди, с которыми у вас были общие группы.</string>
-    <string name="invite_friends_send">Пригласить</string>
+    <string name="invite_friends_send">Добавить</string>
     <string name="invite_friends_link">Отправить ссылку</string>
     <string name="invite_friends_link_footer">Ссылка нужна тем, с кем вы ещё не делили расходы.</string>
     <string name="invite_friends_failed">Не удалось позвать: %1$s. Попробуйте ещё раз</string>
@@ -618,4 +618,8 @@
     <string name="profile_privacy_policy">Политика конфиденциальности</string>
     <string name="expense_recognized_title_photo">Распознано с чека</string>
     <string name="expense_recognized_hint_photo">Не то? Снимите чек ещё раз или зажмите микрофон внизу</string>
+    <string name="invite_friends_confirm_title">Добавить %1$s в группу?</string>
+    <string name="invite_friends_confirm_title_many">Добавить участников: %1$d?</string>
+    <string name="invite_friends_confirm_message">Они окажутся в группе сразу и увидят все расходы, включая прошлые. Спрашивать их приложение не будет.</string>
+    <string name="invite_friends_added">Добавлены: %1$s</string>
 </resources>
