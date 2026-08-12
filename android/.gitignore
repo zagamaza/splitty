@@ -14,3 +14,6 @@ keystore.properties
 firebase.properties
 # Service-account ключ Play Developer API (заливка в треки) — секрет
 play-sa.json
+
+# Служебный каталог компилятора Kotlin (живёт только на время сборки)
+.kotlin/
