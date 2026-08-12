@@ -662,3 +662,85 @@ func TestDeclineInviteRefusedForMember(t *testing.T) {
 		t.Fatal("отказ вывел человека из комнаты — этого он не просил")
 	}
 }
+
+// Вступление по ссылке и запись отношения.
+//
+// Ссылка на комнату вечная и расходится по перепискам: у вышедшего она остаётся
+// навсегда. Пока /join смотрел только на членство, убранный участник
+// возвращался одним тапом — удаление из группы не значило ничего.
+
+// joinByLink — вход по ссылке от имени указанного человека.
+func (f *inviteFixture) joinByLink(t *testing.T, userId int) int {
+	t.Helper()
+	token := mustToken(t, f.srv, userId)
+	target := fmt.Sprintf("/api/v1/rooms/%s/join", f.room.ID.Hex())
+	return doRequest(t, f.srv, http.MethodPost, target, token, "").Code
+}
+
+// TestJoinByLinkRefusedAfterRemoval — головной случай: человека убрали из
+// группы, а старая ссылка у него осталась.
+func TestJoinByLinkRefusedAfterRemoval(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.addMember(t, testUser2.ID).expect(http.StatusOK)
+	target := fmt.Sprintf("/api/v1/rooms/%s/members/%d", f.room.ID.Hex(), testUser2.ID)
+	if rec := doRequest(t, f.srv, http.MethodDelete, target, f.token, ""); rec.Code != http.StatusNoContent {
+		t.Fatalf("подготовка: удаление участника дало %d (%s)", rec.Code, rec.Body.String())
+	}
+
+	if code := f.joinByLink(t, testUser2.ID); code != http.StatusConflict {
+		t.Fatalf("вход по старой ссылке после удаления дал %d, ожидался 409", code)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("убранный участник вернулся в комнату по старой ссылке")
+	}
+}
+
+// TestJoinByLinkRefusedAfterDecline — человек отказался от приглашения, но
+// ссылка у него есть. Отказ обязан значить то, что означает.
+func TestJoinByLinkRefusedAfterDecline(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.invitePending(t, testUser2.ID)
+	if code := f.act(t, testUser2.ID, "decline"); code != http.StatusOK {
+		t.Fatalf("подготовка: отказ дал %d", code)
+	}
+
+	if code := f.joinByLink(t, testUser2.ID); code != http.StatusConflict {
+		t.Fatalf("вход по ссылке после отказа дал %d, ожидался 409", code)
+	}
+	if isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("отказавшийся оказался в комнате")
+	}
+}
+
+// TestJoinByLinkAllowedAfterReinvite — позвали заново: ссылка снова работает и
+// равна кнопке «Принять». Иначе исправить собственную ошибку («убрал не того»)
+// было бы нечем.
+func TestJoinByLinkAllowedAfterReinvite(t *testing.T) {
+	f := newInviteFixture(t, true)
+	f.addMember(t, testUser2.ID).expect(http.StatusOK)
+	target := fmt.Sprintf("/api/v1/rooms/%s/members/%d", f.room.ID.Hex(), testUser2.ID)
+	if rec := doRequest(t, f.srv, http.MethodDelete, target, f.token, ""); rec.Code != http.StatusNoContent {
+		t.Fatalf("подготовка: удаление участника дало %d", rec.Code)
+	}
+	f.invitePending(t, testUser2.ID)
+
+	if code := f.joinByLink(t, testUser2.ID); code != http.StatusOK {
+		t.Fatalf("вход по ссылке после нового приглашения дал %d, ожидался 200", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("приглашённый заново так и не попал в комнату")
+	}
+}
+
+// TestJoinByLinkAllowedForStranger — у постороннего записи отношения нет вовсе.
+// Вход по ссылке для таких людей работал всегда, и ломать его нельзя.
+func TestJoinByLinkAllowedForStranger(t *testing.T) {
+	f := newInviteFixture(t, true)
+
+	if code := f.joinByLink(t, testUser2.ID); code != http.StatusOK {
+		t.Fatalf("посторонний по ссылке получил %d, ожидался 200", code)
+	}
+	if !isRoomMember(f.room, testUser2.ID) {
+		t.Fatal("посторонний не попал в комнату по ссылке")
+	}
+}

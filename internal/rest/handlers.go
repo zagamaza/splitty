@@ -420,6 +420,10 @@ func (s *Server) handleJoinRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isRoomMember(room, user.ID) {
+		if hErr = s.checkJoinAllowed(ctx, room.ID, user.ID); hErr != nil {
+			hErr.write(w)
+			return
+		}
 		if err := s.roomRepo.JoinToRoom(ctx, *user, roomId); err != nil {
 			log.Error().Err(err).Msg("cannot join to room")
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось присоединиться к комнате")
