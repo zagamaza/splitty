@@ -126,6 +126,8 @@ private fun GroupsListContent(
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
     val pendingRoomIds by viewModel.pendingRoomIds.collectAsStateWithLifecycle()
     val freshness by viewModel.freshness.collectAsStateWithLifecycle()
+    val archivedState by viewModel.archived.collectAsStateWithLifecycle()
+    val hasArchived = (archivedState as? UiState.Content)?.value?.isNotEmpty() == true
     var isCreatePresented by rememberSaveable { mutableStateOf(false) }
     var isJoinPresented by rememberSaveable { mutableStateOf(false) }
     val colors = Splitty.colors
@@ -173,6 +175,7 @@ private fun GroupsListContent(
             is UiState.Content -> RoomsList(
                 rooms = current.value,
                 freshness = freshness,
+                hasArchived = hasArchived,
                 pendingRoomIds = pendingRoomIds,
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
@@ -199,6 +202,7 @@ private fun GroupsListContent(
 private fun RoomsList(
     rooms: List<RoomSummary>,
     freshness: DataFreshness,
+    hasArchived: Boolean,
     pendingRoomIds: Set<String>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -236,7 +240,13 @@ private fun RoomsList(
                         )
                     }
                 }
-                // Без строки «Архив»: в пустом состоянии она отвлекает от первого шага.
+                // В пустом состоянии «Архив» отвлекает от первого шага. Но если
+                // архив НЕ пуст, строка обязана остаться: заархивировав
+                // последнюю группу, человек терял единственный вход в архив и
+                // не мог достать её обратно
+                if (hasArchived) {
+                    item(key = "archive") { ArchiveRow(onOpenArchive) }
+                }
             } else {
                 item(key = "summary") { SummaryCard(rooms, freshness) }
                 items(rooms, key = { it.id }) { room ->

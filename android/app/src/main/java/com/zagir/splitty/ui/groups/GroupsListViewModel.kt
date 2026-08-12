@@ -166,6 +166,10 @@ class GroupsListViewModel @Inject constructor(
         try {
             val fetched = repository.rooms(archived = false)
             _rooms.value = UiState.Content(fetched.value)
+            // Список пуст — проверяем архив: заархивировав ПОСЛЕДНЮЮ группу,
+            // человек терял единственный вход в архив, и достать её обратно
+            // было нельзя. Строка «Архив» рисуется по этому списку
+            if (fetched.value.isEmpty()) loadArchive()
             _freshness.value = if (fetched.fromCache) {
                 _freshness.value.copy(fromCache = true)
             } else {

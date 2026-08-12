@@ -32,6 +32,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.res.stringResource
 import com.zagir.splitty.R
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -251,6 +253,10 @@ fun ItemSheetBody(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // Прокрутка: список участников рос вниз без ограничения, и в группе
+            // из десятка человек нижние строки вместе с кнопкой «Готово»
+            // уезжали за экран
+            .verticalScroll(rememberScrollState())
             .navigationBarsPadding()
             .imePadding()
             .padding(horizontal = 20.dp)
@@ -687,6 +693,10 @@ fun UnknownPickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Прокрутка: пока нераспознанное имя не сопоставлено, сохранение
+                // заблокировано — а в большой группе нужный человек оказывался
+                // за нижней кромкой экрана, и выйти из этого было нельзя
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),

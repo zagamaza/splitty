@@ -304,9 +304,13 @@ class ProfileViewModel @Inject constructor(
     /** Выход: чистит токен и профиль — AppRoot сам покажет LoginScreen. */
     fun logout() {
         viewModelScope.launch {
+            // Отвязка push-токена — best-effort и НЕ должна мешать выходу.
+            // Раньше её падение (нет сервисов Google, отозван доступ) выбрасывало
+            // человека в ошибку, а сессия оставалась: выйти было нельзя вообще,
+            // и «Выйти» превращалось в кнопку, которая показывает ошибку
+            runCatching { pushTokenRegistrar.unregisterCurrent() }
+                .onFailure { if (it is CancellationException) throw it }
             try {
-                // Отвязать FCM-токен ПОКА JWT ещё валиден (best-effort, не блокирует выход).
-                pushTokenRegistrar.unregisterCurrent()
                 sessionStore.logout()
             } catch (e: CancellationException) {
                 throw e

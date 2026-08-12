@@ -55,6 +55,12 @@ final class GroupsListViewModel {
             isFromCache = result.isFromCache
             if !result.isFromCache { lastUpdatedAt = Date() }
             state = .loaded
+            // Список пуст — проверяем архив: заархивировав ПОСЛЕДНЮЮ группу,
+            // человек терял единственный вход в архив, и достать её обратно
+            // было нельзя. Строка «Архив» рисуется по этому списку
+            if rooms.isEmpty {
+                await loadArchive(repo: repo)
+            }
         } catch {
             if error.isTaskCancellation {
                 // Отмена .task (ушли с экрана) — не ошибка; из loading

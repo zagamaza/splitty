@@ -45,10 +45,18 @@ struct AccountView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     headerSection
-                    settingsSection
-                    loginMethodsSection
+                    // Профиль не загрузился: показываем это честно и даём
+                    // повтор. Раньше экран навсегда оставался скелетоном, а
+                    // способы входа значились «Не привязан» — то есть врал
+                    // про безопасность аккаунта
+                    if session.profileLoadFailed {
+                        profileLoadFailedCard
+                    } else {
+                        settingsSection
+                        loginMethodsSection
                     // Адрес сервера — отладочная информация, пользователю в
                     // релизе не нужна (менять его всё равно можно только в DEBUG).
+                    }
                     #if DEBUG
                     serverSection
                     #endif
@@ -318,6 +326,29 @@ struct AccountView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// Карточка «профиль не загрузился»: честное состояние вместо скелетона,
+    /// который выглядит как «данных нет» и врёт про способы входа.
+    private var profileLoadFailedCard: some View {
+        VStack(spacing: 10) {
+            Text("Не удалось загрузить профиль")
+                .scaledFont(size: 16, weight: .semibold)
+                .foregroundStyle(Color.ink)
+            Text("Проверьте связь и попробуйте ещё раз. Способы входа и настройки покажем, когда профиль загрузится.")
+                .scaledFont(size: 13, relativeTo: .footnote)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Color.inkSecondary)
+            Button("Повторить") {
+                Task {
+                    await session.refreshMe()
+                    syncFromMe()
+                }
+            }
+            .buttonStyle(.softChip(isSelected: true))
+        }
+        .frame(maxWidth: .infinity)
+        .surfaceCard()
     }
 
     // MARK: - Способы входа

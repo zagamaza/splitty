@@ -1684,6 +1684,11 @@ private fun InviteFriendsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Прокрутка: список друзей рос вниз без ограничения, и уже при
+                // десятке друзей кнопка «Отправить» вместе со ссылкой уезжала
+                // за экран — человек не мог ни позвать, ни закрыть иначе как
+                // свайпом
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 36.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),

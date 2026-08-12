@@ -106,9 +106,15 @@ struct GroupsListView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 if model.rooms.isEmpty {
-                    // Без строки «Архив»: в пустом состоянии она отвлекает
-                    // от первого шага — создать группу или присоединиться.
+                    // В пустом состоянии «Архив» отвлекает от первого шага —
+                    // создать группу или присоединиться. Но если архив не пуст,
+                    // строка обязана остаться: заархивировав ПОСЛЕДНЮЮ группу,
+                    // человек терял единственный вход в архив и не мог достать
+                    // её обратно
                     emptyState
+                    if !model.archivedRooms.isEmpty {
+                        archiveRow
+                    }
                 } else {
                     summaryCard
                     groupCards
