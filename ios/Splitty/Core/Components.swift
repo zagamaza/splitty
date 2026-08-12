@@ -105,3 +105,27 @@ func humanErrorText(_ error: Error) -> String {
 func memberLabel(_ name: String, isMe: Bool) -> String {
     isMe ? String(localized: "\(name) (вы)") : name
 }
+
+/// Подтверждение выполненного действия: тихая плашка внизу экрана.
+///
+/// Ни погашение, ни выход из группы, ни смена пароля ничего не отвечали —
+/// человек не понимал, случилось ли действие, и повторял его.
+struct SuccessToast: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(Color.accent)
+            Text(text)
+                .scaledFont(size: 14, weight: .medium)
+                .foregroundStyle(Color.ink)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.regularMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(Color.hairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        .accessibilityAddTraits(.isStaticText)
+    }
+}

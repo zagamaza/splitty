@@ -31,6 +31,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import com.zagir.splitty.core.ui.UiText
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -223,6 +229,11 @@ class MainScaffoldViewModel @Inject constructor(
     /** Бейдж на табе «Уведомления»; источник — сессия, см. SessionStore. */
     val unreadNotifications: StateFlow<Int> = sessionStore.unreadNotifications
 
+    /** Подтверждение последнего успешного действия (общий снекбар). */
+    val successToast: StateFlow<UiText?> = sessionStore.successToast
+
+    fun dismissToast() = sessionStore.dismissToast()
+
     init {
         // Пуш пришёл в ОТКРЫТОЕ приложение: `ON_START` до следующего
         // сворачивания уже не сработает, и бейдж оставался бы вчерашним —
@@ -320,8 +331,21 @@ fun MainScaffold(
         }
     }
 
+    // Одно место на всё приложение: подтверждение действия («Погашение
+    // записано») вместо пяти разных плашек или, как было, молчания
+    val successToast by viewModel.successToast.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val toastContext = LocalContext.current
+    val toastText = successToast?.resolve(toastContext)
+    LaunchedEffect(successToast) {
+        val text = toastText ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(text, duration = SnackbarDuration.Short)
+        viewModel.dismissToast()
+    }
+
     Scaffold(
         containerColor = colors.bg,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Нижний бар — только на вкладках; на детальных экранах скрыт.
             if (currentRoute in MainRoutes.tabs) {

@@ -622,4 +622,11 @@
     <string name="invite_friends_confirm_title_many">Добавить участников: %1$d?</string>
     <string name="invite_friends_confirm_message">Они окажутся в группе сразу и увидят все расходы, включая прошлые. Спрашивать их приложение не будет.</string>
     <string name="invite_friends_added">Добавлены: %1$s</string>
+    <string name="toast_repayment_saved">Погашение записано</string>
+    <string name="toast_left_group">Вы вышли из группы</string>
+    <string name="toast_member_removed">%1$s убран(а) из группы</string>
+    <string name="toast_password_changed">Пароль изменён</string>
+    <string name="toast_password_set">Пароль задан</string>
+    <string name="toast_expense_saved">Расход сохранён</string>
+    <string name="toast_expense_queued">Расход сохранён — отправим, когда появится связь</string>
 </resources>

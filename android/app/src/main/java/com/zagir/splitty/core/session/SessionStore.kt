@@ -17,7 +17,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import com.zagir.splitty.core.ui.UiText
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -237,6 +239,26 @@ class SessionStore @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Подтверждение последнего успешного действия («Погашение записано»).
+     *
+     * Ни погашение, ни выход из группы, ни смена пароля ничего не отвечали:
+     * человек не понимал, случилось ли действие, и повторял его. Одно место на
+     * всё приложение, а не пять разных плашек.
+     */
+    private val _successToast = MutableStateFlow<UiText?>(null)
+    val successToast: StateFlow<UiText?> = _successToast.asStateFlow()
+
+    /** Показать подтверждение действия. */
+    fun confirm(text: UiText) {
+        _successToast.value = text
+    }
+
+    /** Скрыть подтверждение (после показа). */
+    fun dismissToast() {
+        _successToast.value = null
     }
 
     private val _dataVersion = MutableStateFlow(0)

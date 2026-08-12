@@ -290,6 +290,7 @@ class GroupDetailViewModel @Inject constructor(
             try {
                 repository.leaveRoom(detail.id)
                 sessionStore.noteDataChanged()
+                sessionStore.confirm(UiText.res(R.string.toast_left_group))
                 onDone()
             } catch (e: ApiException) {
                 _alertMessage.value = humanErrorText(e)
@@ -307,8 +308,12 @@ class GroupDetailViewModel @Inject constructor(
         val detail = (_room.value as? UiState.Content)?.value ?: return
         viewModelScope.launch {
             try {
+                val removed = detail.members.firstOrNull { it.id == userId }?.displayName
                 repository.removeMember(detail.id, userId)
                 sessionStore.noteDataChanged()
+                if (removed != null) {
+                    sessionStore.confirm(UiText.res(R.string.toast_member_removed, removed))
+                }
                 refresh()
             } catch (e: ApiException) {
                 _alertMessage.value = humanErrorText(e, isSelf = false)

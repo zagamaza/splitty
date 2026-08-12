@@ -129,6 +129,11 @@ struct ChangePasswordSheet: View {
                     new: newPassword
                 )
                 Haptics.success()
+                session.confirm(
+                    needsCurrent
+                        ? String(localized: "Пароль изменён")
+                        : String(localized: "Пароль задан")
+                )
                 dismiss()
             } catch {
                 errorMessage = identityErrorText(error)

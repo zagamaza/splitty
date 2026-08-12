@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.settleup
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -189,6 +191,7 @@ class SettleUpViewModel @Inject constructor(
                     clientOpId = idempotency.key(debt.debtor.id, debt.lender.id, sum),
                 )
                 sessionStore.noteDataChanged()
+                sessionStore.confirm(UiText.res(R.string.toast_repayment_saved))
                 updateForm { it.copy(isSaving = false, isSaved = true) }
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка

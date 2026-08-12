@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -1273,6 +1274,7 @@ class AddExpenseViewModel @Inject constructor(
                             version = editOperationVersion,
                         )
                         sessionStore.noteDataChanged()
+                        sessionStore.confirm(UiText.res(R.string.toast_expense_saved))
                     }
 
                     else -> createOperation(roomId, description, sum, payerId, split, itemsToSend)
@@ -1325,12 +1327,16 @@ class AddExpenseViewModel @Inject constructor(
             try {
                 repository.addOperation(roomId, description, sum, payerId, split, items = items, clientOpId = localId)
                 sessionStore.noteDataChanged()
+                sessionStore.confirm(UiText.res(R.string.toast_expense_saved))
                 return
             } catch (e: ApiException) {
                 if (!e.deservesOutbox) throw e
                 // Сеть не дошла или сервер ответил 5xx — падаем в офлайн-ветку ниже.
             }
         }
+        // Сохранение в очередь и сохранение на сервер выглядели одинаково: про
+        // очередь человек узнавал, только открыв группу и увидев там пометку
+        sessionStore.confirm(UiText.res(R.string.toast_expense_queued))
         outboxStore.add(
             OutboxEntry(
                 localId = localId,

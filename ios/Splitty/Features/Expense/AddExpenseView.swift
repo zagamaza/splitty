@@ -875,6 +875,14 @@ struct AddExpenseView: View {
                 )
                 if saved {
                     Haptics.success()
+                    // Сохранение в очередь и сохранение на сервер выглядели
+                    // одинаково: про очередь человек узнавал, только открыв
+                    // группу и увидев там пометку
+                    session.confirm(
+                        model.savedOffline
+                            ? String(localized: "Расход сохранён — отправим, когда появится связь")
+                            : String(localized: "Расход сохранён")
+                    )
                     // Единая инвалидация: все экраны-списки
                     // перезагрузятся по dataVersion.
                     session.noteDataChanged()

@@ -355,6 +355,7 @@ struct SettleUpView: View {
             Haptics.success()
             // Единая инвалидация: списки и экран группы перезагрузятся по dataVersion.
             session.noteDataChanged()
+            session.confirm(String(localized: "Погашение записано"))
             onDone?()
             dismiss()
         } catch {

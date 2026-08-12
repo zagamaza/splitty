@@ -579,4 +579,11 @@
     <string name="invite_friends_confirm_title_many">Ajouter %1$d personnes ?</string>
     <string name="invite_friends_confirm_message">Elles rejoignent le groupe immédiatement et voient toutes les dépenses, y compris les précédentes. L’app ne leur demandera rien.</string>
     <string name="invite_friends_added">Ajoutés : %1$s</string>
+    <string name="toast_repayment_saved">Paiement enregistré</string>
+    <string name="toast_left_group">Vous avez quitté le groupe</string>
+    <string name="toast_member_removed">%1$s retiré(e) du groupe</string>
+    <string name="toast_password_changed">Mot de passe modifié</string>
+    <string name="toast_password_set">Mot de passe défini</string>
+    <string name="toast_expense_saved">Dépense enregistrée</string>
+    <string name="toast_expense_queued">Dépense enregistrée — nous l’enverrons dès le retour du réseau</string>
 </resources>

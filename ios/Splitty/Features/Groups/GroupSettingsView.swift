@@ -239,6 +239,7 @@ struct GroupSettingsView: View {
         do {
             try await session.api.leaveRoom(roomId: room.id)
             session.noteDataChanged()
+            session.confirm(String(localized: "Вы вышли из группы"))
             onChange()
             dismiss()
         } catch {
@@ -252,6 +253,7 @@ struct GroupSettingsView: View {
         do {
             try await session.api.removeMember(roomId: room.id, userId: member.id)
             session.noteDataChanged()
+            session.confirm(String(localized: "\(member.displayName) убран(а) из группы"))
             onChange()
         } catch {
             alertMessage = leaveErrorText(error, isSelf: false)

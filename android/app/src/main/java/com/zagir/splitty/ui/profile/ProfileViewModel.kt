@@ -205,7 +205,13 @@ class ProfileViewModel @Inject constructor(
         _isIdentityBusy.value = true
         viewModelScope.launch {
             try {
+                val hadPassword = current != null
                 sessionStore.updateMe(repository.setPassword(current, new).user)
+                sessionStore.confirm(
+                    UiText.res(
+                        if (hadPassword) R.string.toast_password_changed else R.string.toast_password_set
+                    )
+                )
                 onSuccess()
             } catch (e: CancellationException) {
                 throw e

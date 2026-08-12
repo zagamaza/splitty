@@ -35,6 +35,25 @@ struct MainTabView: View {
     @State private var isGlobalAddHidden = false
 
     var body: some View {
+        tabs
+            // Одно место на всё приложение: подтверждение действия («Погашение
+            // записано») вместо пяти разных плашек или, как было, молчания
+            .overlay(alignment: .bottom) {
+                if let toast = session.successToast {
+                    SuccessToast(text: toast)
+                        .padding(.bottom, 92)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .task(id: toast) {
+                            try? await Task.sleep(for: .seconds(2.5))
+                            session.dismissToast()
+                        }
+                        .onTapGesture { session.dismissToast() }
+                }
+            }
+            .animation(.snappy(duration: 0.22), value: session.successToast)
+    }
+
+    private var tabs: some View {
         TabView(selection: $selection) {
             FriendsListView()
                 .tabItem { Label("Друзья", systemImage: "person.2.fill") }

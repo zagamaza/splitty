@@ -68,6 +68,8 @@ final class AddExpenseViewModel {
     /// Форма заполнена распознаванием (голос/фото), а не вручную. Нужно, чтобы
     /// плоский AI-результат (без позиций) не выглядел как обычный ручной ввод.
     private(set) var didRecognize = false
+    /// Расход ушёл в очередь, а не на сервер: экран говорит об этом отдельно.
+    private(set) var savedOffline = false
     /// Чем распознавали в последний раз. Раньше плашка всегда говорила
     /// «Распознано голосом» — даже после фото чека, и следом предлагала
     /// добавить фото, которое только что добавили.
@@ -976,6 +978,9 @@ final class AddExpenseViewModel {
         if editOperationId == nil, !isOnline {
             outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
             didSave = true
+            // Отличается от сохранения на сервер: иначе про очередь человек
+            // узнавал, только открыв группу и увидев там пометку
+            savedOffline = true
             return true
         }
 
@@ -1014,6 +1019,7 @@ final class AddExpenseViewModel {
             if editOperationId == nil, error.deservesOutbox {
                 outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
                 didSave = true
+                savedOffline = true
                 return true
             }
             alertMessage = humanErrorText(error)
