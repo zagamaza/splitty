@@ -370,6 +370,12 @@ internal data class ExpenseDraftSnapshot(
     val draftItems: List<OperationItem> = emptyList(),
     val parseQuestions: List<String> = emptyList(),
     val didRecognize: Boolean = false,
+    /**
+     * Чем распознавали в последний раз. Раньше плашка всегда говорила
+     * «Распознано голосом» — даже после фото чека, и следом предлагала добавить
+     * фото, которое только что добавили.
+     */
+    val lastParseSource: ParseSource = ParseSource.VOICE,
 ) {
     companion object {
         /** Снимок из формы (только поля, которые нужно восстановить). */
@@ -458,6 +464,12 @@ data class AddExpenseForm(
     val parseQuestions: List<String> = emptyList(),
     /** true — форма заполнена распознаванием (голос/фото), а не вручную. */
     val didRecognize: Boolean = false,
+    /**
+     * Чем распознавали в последний раз. Раньше плашка всегда говорила
+     * «Распознано голосом» — даже после фото чека, и следом предлагала добавить
+     * фото, которое только что добавили.
+     */
+    val lastParseSource: ParseSource = ParseSource.VOICE,
     /** Индексы позиций, изменённых последней голосовой правкой (подсветка в чеке). */
     val changedItemIndices: Set<Int> = emptySet(),
     /** true — доступна отмена последней голосовой правки/«Поровну на всех». */
@@ -959,6 +971,9 @@ class AddExpenseViewModel @Inject constructor(
      * цены с чека и распределение из голоса в одном запросе. Запуск — [launchParse].
      */
     fun parseReceiptImage(path: String) {
+        // Источник запоминаем ДО запроса: плашка и подсказка «не то?» обязаны
+        // соответствовать тому, чем человек только что пользовался
+        updateForm { it.copy(lastParseSource = ParseSource.PHOTO) }
         savedStateHandle[KEY_RECEIPT_PATH] = path
         // Экран разбора гасим, ТОЛЬКО если распознавание действительно пошло:
         // иначе (форма ещё грузится или не загрузилась) медиа осталось бы
@@ -973,6 +988,7 @@ class AddExpenseViewModel @Inject constructor(
      * ЗАМЕНЯЕТ предыдущий голос (перезапись KEY_AUDIO_PATH).
      */
     fun parseVoice(audioPath: String) {
+        updateForm { it.copy(lastParseSource = ParseSource.VOICE) }
         savedStateHandle[KEY_AUDIO_PATH] = audioPath
         // Гасим экран разбора, только если распознавание реально стартовало
         // (см. [parseReceiptImage]).
@@ -1444,3 +1460,6 @@ internal class CreateIdempotency {
         return fresh
     }
 }
+
+/** Источник последнего распознавания: голос или фото чека. */
+enum class ParseSource { VOICE, PHOTO }

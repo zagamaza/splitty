@@ -589,4 +589,6 @@
     <string name="groups_cached_updated">Saved data, updated %1$s</string>
     <string name="groups_cached_no_connection">Saved data: no connection to the server</string>
     <string name="profile_privacy_policy">Privacy policy</string>
+    <string name="expense_recognized_title_photo">Recognized from the receipt</string>
+    <string name="expense_recognized_hint_photo">Not quite right? Take the receipt again or hold the mic below</string>
 </resources>

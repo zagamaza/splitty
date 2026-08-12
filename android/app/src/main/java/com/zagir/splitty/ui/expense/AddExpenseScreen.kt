@@ -58,6 +58,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -728,8 +729,11 @@ private fun ExpenseFormContent(
                     viewModel.dismissUndo()
                 }
                 CorrectionBanner(hasItems = form.hasDraftItems, onUndo = viewModel::undoParse)
-            } else if (form.didRecognize && !form.hasDraftItems) {
-                RecognizedBanner(onAddPhoto = onTakePhoto)
+            } else if (form.didRecognize) {
+                // Плашка показывается и для чека: самый сложный и самый
+                // вероятный к ошибке результат оставался без пометки и без
+                // предложения исправить
+                RecognizedBanner(source = form.lastParseSource, onAddPhoto = onTakePhoto)
             }
             ExpenseCard(form = form, viewModel = viewModel)
             if (form.hasDraftItems) {
@@ -985,7 +989,7 @@ private fun CorrectionBanner(hasItems: Boolean, onUndo: () -> Unit) {
 
 /** Плашка «Распознано голосом» для плоского AI-результата: справа — «+ фото чека». */
 @Composable
-private fun RecognizedBanner(onAddPhoto: () -> Unit) {
+private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
     val colors = Splitty.colors
     Row(
         modifier = Modifier
@@ -996,21 +1000,28 @@ private fun RecognizedBanner(onAddPhoto: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        val fromPhoto = source == ParseSource.PHOTO
         Icon(
-            imageVector = Icons.Filled.GraphicEq,
+            imageVector = if (fromPhoto) Icons.Filled.ReceiptLong else Icons.Filled.GraphicEq,
             contentDescription = null,
             tint = colors.accent,
             modifier = Modifier.size(18.dp),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = stringResource(R.string.expense_recognized_title),
+                text = stringResource(
+                    if (fromPhoto) R.string.expense_recognized_title_photo
+                    else R.string.expense_recognized_title
+                ),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = colors.ink,
             )
             Text(
-                text = stringResource(R.string.expense_recognized_hint),
+                text = stringResource(
+                    if (fromPhoto) R.string.expense_recognized_hint_photo
+                    else R.string.expense_recognized_hint
+                ),
                 fontSize = 12.sp,
                 color = colors.inkSecondary,
             )

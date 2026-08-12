@@ -573,4 +573,6 @@
     <string name="groups_cached_updated">Gespeicherte Daten, aktualisiert %1$s</string>
     <string name="groups_cached_no_connection">Gespeicherte Daten: keine Verbindung zum Server</string>
     <string name="profile_privacy_policy">Datenschutzerklärung</string>
+    <string name="expense_recognized_title_photo">Vom Beleg erkannt</string>
+    <string name="expense_recognized_hint_photo">Nicht richtig? Fotografiere den Beleg erneut oder halte das Mikrofon unten gedrückt</string>
 </resources>

@@ -549,7 +549,10 @@ struct AddExpenseView: View {
                 } else {
                     if model.canUndoParse {
                         correctionBanner
-                    } else if model.didRecognize, !model.hasDraftItems {
+                    } else if model.didRecognize {
+                        // Плашка показывается и для чека: самый сложный и самый
+                        // вероятный к ошибке результат оставался без пометки и
+                        // без предложения исправить
                         recognizedBanner
                     }
                     expenseCard(description: $model.descriptionText, sum: $model.sumText)
@@ -579,19 +582,34 @@ struct AddExpenseView: View {
         .scrollDismissesKeyboard(.interactively)
     }
 
+    /// Заголовок плашки по источнику распознавания.
+    private var recognizedTitle: String {
+        model.lastParseSource == .photo
+            ? String(localized: "Распознано с чека")
+            : String(localized: "Распознано голосом")
+    }
+
+    /// Подсказка «не то?» — по тому же источнику: предлагать добавить фото
+    /// сразу после фото было бессмысленно.
+    private var recognizedHint: String {
+        model.lastParseSource == .photo
+            ? String(localized: "Не то? Снимите чек ещё раз или зажмите микрофон внизу")
+            : String(localized: "Не то? Зажмите микрофон внизу или добавьте фото чека")
+    }
+
     /// Плашка «распознано голосом» для ПЛОСКОГО AI-результата (без позиций):
     /// чтобы такой экран не читался как обычный ручной ввод. Справа — камера:
     /// фото чека уточнит распознанное (цены с чека, распределение из голоса).
     private var recognizedBanner: some View {
         HStack(spacing: 10) {
-            Image(systemName: "waveform")
+            Image(systemName: model.lastParseSource == .photo ? "doc.text.viewfinder" : "waveform")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.accentText)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Распознано голосом")
+                Text(recognizedTitle)
                     .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Color.ink)
-                Text("Не то? Зажмите микрофон внизу или добавьте фото чека")
+                Text(recognizedHint)
                     .scaledFont(size: 12, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
             }

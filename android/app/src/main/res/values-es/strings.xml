@@ -573,4 +573,6 @@
     <string name="groups_cached_updated">Datos guardados, actualizados %1$s</string>
     <string name="groups_cached_no_connection">Datos guardados: sin conexión con el servidor</string>
     <string name="profile_privacy_policy">Política de privacidad</string>
+    <string name="expense_recognized_title_photo">Reconocido del recibo</string>
+    <string name="expense_recognized_hint_photo">¿No es correcto? Vuelve a fotografiar el recibo o mantén pulsado el micrófono</string>
 </resources>

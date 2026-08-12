@@ -573,4 +573,6 @@
     <string name="groups_cached_updated">Données enregistrées, mises à jour %1$s</string>
     <string name="groups_cached_no_connection">Données enregistrées : pas de connexion au serveur</string>
     <string name="profile_privacy_policy">Politique de confidentialité</string>
+    <string name="expense_recognized_title_photo">Reconnu depuis le reçu</string>
+    <string name="expense_recognized_hint_photo">Pas tout à fait ? Reprenez le reçu en photo ou maintenez le micro en bas</string>
 </resources>

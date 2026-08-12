@@ -68,6 +68,16 @@ final class AddExpenseViewModel {
     /// Форма заполнена распознаванием (голос/фото), а не вручную. Нужно, чтобы
     /// плоский AI-результат (без позиций) не выглядел как обычный ручной ввод.
     private(set) var didRecognize = false
+    /// Чем распознавали в последний раз. Раньше плашка всегда говорила
+    /// «Распознано голосом» — даже после фото чека, и следом предлагала
+    /// добавить фото, которое только что добавили.
+    private(set) var lastParseSource: ParseSource = .voice
+
+    /// Источник последнего распознавания.
+    enum ParseSource {
+        case voice
+        case photo
+    }
     /// Уточняющие вопросы модели из последнего ответа («кто платил?») — показываем
     /// подсказкой под чеком; пусто — вопросов нет.
     var parseQuestions: [String] = []
@@ -496,6 +506,13 @@ final class AddExpenseViewModel {
         guard let roomId = selectedRoomId else {
             alertMessage = String(localized: "Выберите группу")
             return
+        }
+        // Источник запоминаем ДО запроса: плашка и подсказка «не то?» обязаны
+        // соответствовать тому, чем человек только что пользовался
+        if image != nil {
+            lastParseSource = .photo
+        } else if audio != nil {
+            lastParseSource = .voice
         }
         parseGeneration += 1
         let generation = parseGeneration

@@ -616,4 +616,6 @@
     <string name="groups_cached_updated">Данные сохранённые, обновлялись %1$s</string>
     <string name="groups_cached_no_connection">Данные сохранённые: связи с сервером нет</string>
     <string name="profile_privacy_policy">Политика конфиденциальности</string>
+    <string name="expense_recognized_title_photo">Распознано с чека</string>
+    <string name="expense_recognized_hint_photo">Не то? Снимите чек ещё раз или зажмите микрофон внизу</string>
 </resources>
