@@ -3,8 +3,10 @@ package main
 import "github.com/caarlos0/env/v6"
 
 type config struct {
-	Listen   string `env:"LISTEN" envDefault:"localhost:7171"`
-	LogLevel string `env:"LOG_LEVEL" envDefault:"debug"`
+	Listen string `env:"LISTEN" envDefault:"localhost:7171"`
+	// info, а не debug: на debug в лог прода уходили тела входящих сообщений —
+	// имена, суммы и текст переписки людей
+	LogLevel string `env:"LOG_LEVEL" envDefault:"info"`
 	LogFmt   string `env:"LOG_FMT" envDefault:"console"`
 
 	DbAddr          string   `env:"DB_HOST" envDefault:"mongodb://localhost:27017/"`
@@ -14,8 +16,12 @@ type config struct {
 	TgDebug         bool     `env:"TG_DEBUG" envDefault:"false"`
 	DefaultLanguage string   `env:"DEFAULT_LANGUAGE" envDefault:"en"`
 
-	DailyExpensesUrl   string `env:"DAILY_EXPENSES_URL" envDefault:"http://pet.zagirnur.dev:19090/from-splitty"`
-	DailyExpensesUsers []int  `env:"DAILY_EXPENSES_USERS" envSeparator:":" envDefault:"147181773:369575379:172261383:304898122:360624984:373160631"`
+	// Выгрузка расходов на сторонний хост. БЕЗ значений по умолчанию: с ними
+	// любая сборка, поднятая где угодно, начинала отправлять расходы живых
+	// людей на чужой адрес, никого не спросив. Пустой URL — планировщик не
+	// стартует вовсе
+	DailyExpensesUrl   string `env:"DAILY_EXPENSES_URL" envDefault:""`
+	DailyExpensesUsers []int  `env:"DAILY_EXPENSES_USERS" envSeparator:":" envDefault:""`
 
 	// ApiJwtSecret намеренно без envDefault: вшитый в исходники секрет позволял бы
 	// подделывать JWT любому, кто читал репозиторий. Политика: пустой секрет —
@@ -89,6 +95,11 @@ type config struct {
 	// значением на каждый запрос. Поставить 1 нужно ровно тогда, когда перед
 	// сервером появится TLS-терминатор (он же появится вместе с PUBLIC_BASE_URL)
 	TrustedProxyCount int `env:"TRUSTED_PROXY_COUNT" envDefault:"0"`
+	// TrustedProxies — адреса/подсети прокси, которым можно верить.
+	// Пусто — петля и приватные диапазоны. Одного счётчика хопов мало: порт
+	// сервера бывает доступен и напрямую, а прямому запросу никто не мешает
+	// прислать свой X-Forwarded-For (см. rest.clientIP)
+	TrustedProxies []string `env:"TRUSTED_PROXIES" envSeparator:"," envDefault:""`
 
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.

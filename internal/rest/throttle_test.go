@@ -105,10 +105,58 @@ func TestClientIP(t *testing.T) {
 			if tt.fwd != "" {
 				r.Header.Set("X-Forwarded-For", tt.fwd)
 			}
-			if got := clientIP(r, tt.trustedProxies); got != tt.want {
+			if got := clientIP(r, tt.trustedProxies, defaultTrustedProxyNets); got != tt.want {
 				t.Errorf("got %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// Заголовок с ПРЯМОГО соединения не читается никогда.
+//
+// Порт сервера бывает доступен и напрямую — health-check по IP, забытое
+// правило файрвола. Пока доверие определялось только числом хопов, такому
+// запросу достаточно было прислать свой X-Forwarded-For, чтобы любой per-IP
+// лимит считался по адресу, который выбрал сам перебирающий.
+func TestClientIPIgnoresHeaderFromDirectConnection(t *testing.T) {
+	r, _ := http.NewRequest("POST", "/", nil)
+	r.RemoteAddr = "203.0.113.99:53124" // адрес из интернета, не прокси
+	r.Header.Set("X-Forwarded-For", "1.1.1.1, 2.2.2.2")
+
+	got := clientIP(r, 1, defaultTrustedProxyNets)
+	if got != "203.0.113.99" {
+		t.Fatalf("адрес клиента %q — подделанный заголовок с прямого соединения приняли", got)
+	}
+}
+
+// Запрос через прокси считается по адресу конечного клиента, а не общим ведром.
+func TestClientIPUsesRealAddressBehindProxy(t *testing.T) {
+	r, _ := http.NewRequest("POST", "/", nil)
+	r.RemoteAddr = "172.18.0.3:40000" // docker-сеть: наш реверс-прокси
+	r.Header.Set("X-Forwarded-For", "1.2.3.4, 203.0.113.7")
+
+	if got := clientIP(r, 1, defaultTrustedProxyNets); got != "203.0.113.7" {
+		t.Fatalf("адрес клиента %q — лимиты считались бы одним ведром на всех", got)
+	}
+}
+
+// Явно заданные подсети сужают доверие: прокси в docker-сети, а не любой
+// приватный адрес.
+func TestParseTrustedProxyNetsNarrowsTrust(t *testing.T) {
+	nets := ParseTrustedProxyNets([]string{"172.18.0.0/16"})
+
+	behindProxy, _ := http.NewRequest("POST", "/", nil)
+	behindProxy.RemoteAddr = "172.18.0.3:40000"
+	behindProxy.Header.Set("X-Forwarded-For", "203.0.113.7")
+	if got := clientIP(behindProxy, 1, nets); got != "203.0.113.7" {
+		t.Fatalf("свой прокси не распознан: %q", got)
+	}
+
+	other, _ := http.NewRequest("POST", "/", nil)
+	other.RemoteAddr = "10.9.9.9:40000" // приватный, но не наш
+	other.Header.Set("X-Forwarded-For", "203.0.113.7")
+	if got := clientIP(other, 1, nets); got != "10.9.9.9" {
+		t.Fatalf("заголовок принят от чужого адреса: %q", got)
 	}
 }
 

@@ -136,7 +136,7 @@ func (b MultiBot) OnMessage(ctx context.Context, update *api.Update) (response a
 
 	message := &api.TelegramMessage{Chattable: []tgbotapi.Chattable{}}
 	for r := range resps {
-		log.Debug().Msgf("collect %v", r)
+		log.Trace().Msgf("collect %v", r)
 		message.Chattable = append(message.Chattable, r.Chattable...)
 		message.InlineConfig = r.InlineConfig
 		message.CallbackConfig = r.CallbackConfig

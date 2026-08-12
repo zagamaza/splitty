@@ -135,7 +135,9 @@ func (l *TelegramListener) handleUpdate(ctx context.Context, update tbapi.Update
 		log.Error().Err(err).Stack().Msgf("failed to populateChatState")
 	}
 
-	log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
+	// Trace, а не Debug: тут текст сообщения человека, имена и суммы. На проде
+	// уровень никогда не опускается до trace, поэтому переписка в лог не попадёт
+	log.Trace().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
 
 	l.processUpdate(ctx, upd)
 }
@@ -230,7 +232,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 			if err != nil {
 				log.Error().Err(err).Msgf("can't send message to telegram %v", v)
 			}
-			log.Debug().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
+			log.Trace().Msgf("bot response chat - %v, text - %v, messageId - %v", response.Chat, response.Text, response.MessageID)
 		}
 	}
 	if resp.CallbackConfig != nil {
@@ -238,7 +240,7 @@ func (l *TelegramListener) sendBotResponse(ctx context.Context, resp api.Telegra
 		if err != nil {
 			log.Error().Err(err).Msgf("can't send calback to telegram %v", resp.CallbackConfig)
 		}
-		log.Debug().Msgf("bot response - %+v", response)
+		log.Trace().Msgf("bot response - %+v", response)
 	}
 }
 

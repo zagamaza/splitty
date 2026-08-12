@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -126,6 +127,10 @@ type Config struct {
 	// считаются по RemoteAddr. Ненулевое значение включает разбор заголовка с
 	// хвоста — подробности и обоснование в clientIP
 	TrustedProxies int
+	// TrustedProxyNets — адреса и подсети, с которых заголовку X-Forwarded-For
+	// можно верить. Пусто — петля и приватные диапазоны (реверс-прокси стоит
+	// рядом). Прямому запросу из интернета заголовок не читается никогда
+	TrustedProxyNets []*net.IPNet
 }
 
 // Server REST API сервер со всеми зависимостями.

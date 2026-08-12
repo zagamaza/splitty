@@ -119,8 +119,17 @@ func (t *throttle) release(key string) {
 // нужный нам адрес стоит перед ними. Всё, что левее, пишет клиент, и оно
 // игнорируется. Список короче ожидаемого (запрос пришёл в обход прокси) —
 // откат к RemoteAddr
-func clientIP(r *http.Request, trustedProxies int) string {
-	if trustedProxies > 0 {
+// ⚠️ Числа хопов НЕДОСТАТОЧНО. Порт сервера доступен и напрямую (health-check
+// по IP, забытое правило файрвола), а прямому запросу никто не мешает прислать
+// свой X-Forwarded-For: сервер считал бы хопы и брал оттуда любой адрес,
+// который пожелает перебирающий. Поэтому заголовок читается ТОЛЬКО когда
+// соединение пришло с адреса прокси
+func clientIP(r *http.Request, trustedProxies int, trustedNets []*net.IPNet) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if trustedProxies > 0 && isTrustedPeer(host, trustedNets) {
 		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
 			parts := strings.Split(fwd, ",")
 			if i := len(parts) - trustedProxies; i >= 0 && i < len(parts) {
@@ -130,14 +139,74 @@ func clientIP(r *http.Request, trustedProxies int) string {
 			}
 		}
 	}
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
 	return host
 }
 
-// clientIP — адрес клиента с учётом настроенного числа доверенных прокси
+// isTrustedPeer — пришло ли соединение с адреса нашего прокси.
+func isTrustedPeer(host string, trustedNets []*net.IPNet) bool {
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	for _, n := range trustedNets {
+		if n != nil && n.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultTrustedProxyNets — кого считаем прокси, если сети не заданы явно:
+// петля и приватные диапазоны. Реверс-прокси стоит на том же хосте или в той же
+// docker-сети, а из интернета такой адрес не приходит
+var defaultTrustedProxyNets = mustParseCIDRs(
+	"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7",
+)
+
+func mustParseCIDRs(cidrs ...string) []*net.IPNet {
+	out := make([]*net.IPNet, 0, len(cidrs))
+	for _, c := range cidrs {
+		if _, n, err := net.ParseCIDR(c); err == nil {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// ParseTrustedProxyNets разбирает список адресов/подсетей прокси. Пустой список
+// означает «по умолчанию»: петля и приватные диапазоны
+func ParseTrustedProxyNets(values []string) []*net.IPNet {
+	out := make([]*net.IPNet, 0, len(values))
+	for _, v := range values {
+		v = strings.TrimSpace(v)
+		if v == "" {
+			continue
+		}
+		if !strings.Contains(v, "/") {
+			if ip := net.ParseIP(v); ip != nil {
+				bits := 32
+				if ip.To4() == nil {
+					bits = 128
+				}
+				out = append(out, &net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+				continue
+			}
+		}
+		if _, n, err := net.ParseCIDR(v); err == nil {
+			out = append(out, n)
+		}
+	}
+	if len(out) == 0 {
+		return defaultTrustedProxyNets
+	}
+	return out
+}
+
+// clientIP — адрес клиента с учётом настроенных доверенных прокси
 func (s *Server) clientIP(r *http.Request) string {
-	return clientIP(r, s.cfg.TrustedProxies)
+	nets := s.cfg.TrustedProxyNets
+	if len(nets) == 0 {
+		nets = defaultTrustedProxyNets
+	}
+	return clientIP(r, s.cfg.TrustedProxies, nets)
 }

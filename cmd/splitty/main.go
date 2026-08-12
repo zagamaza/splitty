@@ -157,6 +157,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		AndroidCertSha256: nonEmptyValues(cfg.AndroidCertSha256),
 		IosStoreUrl:       cfg.IosStoreUrl,
 		TrustedProxies:    cfg.TrustedProxyCount,
+		TrustedProxyNets:  rest.ParseTrustedProxyNets(cfg.TrustedProxies),
 	}
 	if cfg.PublicBaseUrl == "" {
 		log.Info().Msg("deep links disabled (PUBLIC_BASE_URL empty): /join and .well-known return 404")

@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -53,6 +54,13 @@ func sendPostRequest(url string, jsonData []byte) {
 
 // StartPostScheduler запускает горутину, которая каждую минуту отправляет POST запрос.
 func (i *IntegrationService) StartPostScheduler() {
+	// Пустой адрес — выгрузки нет. Раньше он был вшит в значение по умолчанию,
+	// и любая поднятая сборка начинала отправлять расходы живых людей на
+	// сторонний хост, никого не спросив
+	if strings.TrimSpace(i.config.Url) == "" || len(i.config.Users) == 0 {
+		log.Info().Msg("выгрузка расходов выключена: не задан DAILY_EXPENSES_URL или DAILY_EXPENSES_USERS")
+		return
+	}
 
 	//тут настраиваются пользователи
 	userIds := i.config.Users
