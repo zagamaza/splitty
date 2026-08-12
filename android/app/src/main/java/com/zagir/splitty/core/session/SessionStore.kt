@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -136,6 +137,7 @@ class SessionStore @Inject constructor(
 
         /** Незавершённая после tombstone чистка — см. [Session.purgePending]. */
         private val KEY_PURGE_PENDING = booleanPreferencesKey("purge_pending")
+        private val KEY_AI_DISCLOSURE_SEEN = booleanPreferencesKey("ai_disclosure_seen")
 
         /** Повторы чтения DataStore при транзиентной ошибке ввода-вывода. */
         private const val RETRY_DELAY_MS = 200L
@@ -344,6 +346,17 @@ class SessionStore @Inject constructor(
     /** Сменить тему приложения (system / light / dark, персистится). */
     suspend fun setTheme(theme: String) {
         dataStore.edit { prefs -> prefs[KEY_THEME] = theme }
+    }
+
+    /**
+     * Показано ли разовое пояснение о том, что распознавание идёт на сервере.
+     * Флаг устройства, а не аккаунта: правило одно для всех, кто им пользуется.
+     */
+    val aiDisclosureSeen: Flow<Boolean> =
+        dataStore.data.map { prefs -> prefs[KEY_AI_DISCLOSURE_SEEN] ?: false }
+
+    suspend fun markAiDisclosureSeen() {
+        dataStore.edit { prefs -> prefs[KEY_AI_DISCLOSURE_SEEN] = true }
     }
 
     /** Сменить адрес сервера (персистится; действует на все последующие запросы). */

@@ -46,6 +46,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -659,6 +661,18 @@ class AddExpenseViewModel @Inject constructor(
 
     /** Ключ идемпотентности создания: переживает повтор после сбоя. */
     private val createIdempotency = CreateIdempotency()
+
+    /**
+     * Показано ли разовое пояснение о том, что распознавание идёт на сервере.
+     * Дальше не спрашиваем: повторять на каждом расходе значит приучить
+     * закрывать не читая.
+     */
+    val aiDisclosureSeen: StateFlow<Boolean> = sessionStore.aiDisclosureSeen
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    fun markAiDisclosureSeen() {
+        viewModelScope.launch { sessionStore.markAiDisclosureSeen() }
+    }
 
     /**
      * Исходный порядок получателей редактируемой операции — от него зависит

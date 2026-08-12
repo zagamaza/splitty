@@ -8,6 +8,16 @@ import UIKit
 /// по центру, строка «Заплатили вы и разделено поровну» с чипами выбора,
 /// CTA «Сохранить» — pill внизу экрана.
 struct AddExpenseView: View {
+    /// Пояснение про отправку на сервер показано хотя бы раз (на аккаунт-независимом
+    /// уровне: правило одно для устройства).
+    @AppStorage(AddExpenseView.aiDisclosureKey) private var aiDisclosureSeen = false
+    @State private var isAiDisclosurePresented = false
+    /// Снимок, ждущий отправки, пока человек читает пояснение.
+    @State private var pendingParseImage: Data?
+
+    /// Ключ флага «пояснение про распознавание показано».
+    static let aiDisclosureKey = "aiDisclosureSeen"
+
     private let roomId: String?
     private let editOperation: Operation?
     /// Локальная (неотправленная) запись outbox для правки; сохранение
@@ -224,6 +234,16 @@ struct AddExpenseView: View {
                     .scaledFont(size: 15, weight: .medium)
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.top, 12)
+                // Куда уходит запись — говорим до отправки, а не в политике,
+                // которую никто не открывает
+                Text(reviewIsPhoto
+                     ? "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания"
+                     : "Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания")
+                    .scaledFont(size: 12.5, relativeTo: .footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.65))
+                    .padding(.top, 8)
+                    .padding(.horizontal, 32)
                 Spacer(minLength: 24)
 
                 // Иерархия: главное действие — «Распознать» (основной путь),
@@ -409,6 +429,18 @@ struct AddExpenseView: View {
                     Button("ОК", role: .cancel) {}
                 } message: {
                     Text(model.alertMessage ?? "")
+                }
+                // Разовое пояснение перед первой отправкой на распознавание
+                .alert("Распознавание идёт на сервере", isPresented: $isAiDisclosurePresented) {
+                    Button("Понятно") {
+                        aiDisclosureSeen = true
+                        let image = pendingParseImage
+                        pendingParseImage = nil
+                        performParse(image: image)
+                    }
+                    Button("Отмена", role: .cancel) { pendingParseImage = nil }
+                } message: {
+                    Text("Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.")
                 }
                 // Ошибка распознавания: запись сохранена (lastAudio) —
                 // «Повторить» отправляет её же, диктовка не теряется.
@@ -1177,6 +1209,18 @@ struct AddExpenseView: View {
     /// ОСТАЁТСЯ в форме (`capture`) и прикладывается к последующим голосовым
     /// правкам до закрытия формы.
     private func sendParse(image: Data? = nil) {
+        // Первый раз объясняем, куда уйдут запись и снимок, и только потом
+        // отправляем. Дальше не спрашиваем: повторять на каждом расходе значит
+        // приучить закрывать не читая
+        if !aiDisclosureSeen {
+            pendingParseImage = image
+            isAiDisclosurePresented = true
+            return
+        }
+        performParse(image: image)
+    }
+
+    private func performParse(image: Data?) {
         isReviewPresented = false
         model.startParse(api: session.api, audio: lastAudio, image: image) {
             recorder.reset()

@@ -462,6 +462,11 @@
     <string name="rec_device_lost_toast">Запись прервалась. Распознаю, что успели сказать</string>
     <string name="rec_review_title">Записано</string>
     <string name="rec_review_subtitle">Голосовая запись · %1$d сек</string>
+    <string name="ai_disclosure_title">Распознавание идёт на сервере</string>
+    <string name="ai_disclosure_message">Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.</string>
+    <string name="ai_disclosure_ok">Понятно</string>
+    <string name="rec_review_privacy_voice">Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания</string>
+    <string name="rec_review_privacy_photo">Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания</string>
     <string name="rec_review_recognize">Распознать</string>
     <string name="rec_review_add_photo">Добавить фото чека</string>
     <string name="rec_review_add_photo_hint">цены возьмём с чека — точнее</string>

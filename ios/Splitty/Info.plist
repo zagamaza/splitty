@@ -58,11 +58,11 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
-	<string>Камера нужна, чтобы сфотографировать чек</string>
+	<string>Камера нужна, чтобы сфотографировать чек. Снимок уходит на сервер Splitty и в стороннюю модель для распознавания</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Микрофон нужен, чтобы надиктовать расход голосом</string>
+	<string>Микрофон нужен, чтобы надиктовать расход голосом. Запись уходит на сервер Splitty и в стороннюю модель для распознавания</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Доступ к фото нужен, чтобы выбрать фото чека</string>
+	<string>Доступ к фото нужен, чтобы выбрать фото чека. Снимок уходит на сервер Splitty и в стороннюю модель для распознавания</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Распознавание речи показывает текст надиктовки прямо во время записи</string>
 	<key>UIBackgroundModes</key>

@@ -399,6 +399,11 @@
     <string name="rec_device_lost_toast">Die Aufnahme wurde unterbrochen. Ich erkenne, was du sagen konntest</string>
     <string name="rec_review_title">Aufgenommen</string>
     <string name="rec_review_subtitle">Sprachaufnahme · %1$d s</string>
+    <string name="ai_disclosure_title">Die Erkennung läuft auf dem Server</string>
+    <string name="ai_disclosure_message">Sprachaufnahme und Belegfoto gehen an den Splitty-Server und an ein Modell eines Drittanbieters, das daraus eine Ausgabe macht. Die Ausgabe selbst bleibt in deiner Gruppe.</string>
+    <string name="ai_disclosure_ok">Verstanden</string>
+    <string name="rec_review_privacy_voice">Die Aufnahme geht an den Splitty-Server und an ein Modell eines Drittanbieters zur Erkennung</string>
+    <string name="rec_review_privacy_photo">Das Foto geht an den Splitty-Server und an ein Modell eines Drittanbieters zur Erkennung</string>
     <string name="rec_review_recognize">Erkennen</string>
     <string name="rec_review_add_photo">Beleg-Foto hinzufügen</string>
     <string name="rec_review_add_photo_hint">Preise vom Beleg sind genauer</string>

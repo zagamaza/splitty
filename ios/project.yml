@@ -119,10 +119,10 @@ targets:
             CFBundleURLSchemes:
               - splitty
         # Разрешения для AI-добавления расхода (голос + фото чека).
-        NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом
+        NSMicrophoneUsageDescription: Микрофон нужен, чтобы надиктовать расход голосом. Запись уходит на сервер Splitty и в стороннюю модель для распознавания
         NSSpeechRecognitionUsageDescription: Распознавание речи показывает текст надиктовки прямо во время записи
-        NSCameraUsageDescription: Камера нужна, чтобы сфотографировать чек
-        NSPhotoLibraryUsageDescription: Доступ к фото нужен, чтобы выбрать фото чека
+        NSCameraUsageDescription: Камера нужна, чтобы сфотографировать чек. Снимок уходит на сервер Splitty и в стороннюю модель для распознавания
+        NSPhotoLibraryUsageDescription: Доступ к фото нужен, чтобы выбрать фото чека. Снимок уходит на сервер Splitty и в стороннюю модель для распознавания
         # NSAppTransportSecurity здесь НЕТ намеренно: бэкенд на
         # https://splitor.zagirnur.dev, послаблений ATS не требуется. Не
         # возвращать NSAllowsArbitraryLoads — каждый запрос несёт

@@ -441,6 +441,11 @@
     <string name="rec_device_lost_toast">Recording was interrupted. Recognizing what you managed to say</string>
     <string name="rec_review_title">Recorded</string>
     <string name="rec_review_subtitle">Voice recording · %1$d s</string>
+    <string name="ai_disclosure_title">Recognition happens on the server</string>
+    <string name="ai_disclosure_message">Your voice recording and receipt photo go to the Splitty server and to a third-party model that turns them into an expense. The expense itself stays in your group.</string>
+    <string name="ai_disclosure_ok">Got it</string>
+    <string name="rec_review_privacy_voice">The recording goes to the Splitty server and to a third-party model for recognition</string>
+    <string name="rec_review_privacy_photo">The photo goes to the Splitty server and to a third-party model for recognition</string>
     <string name="rec_review_recognize">Recognize</string>
     <string name="rec_review_add_photo">Add receipt photo</string>
     <string name="rec_review_add_photo_hint">prices from the receipt are more accurate</string>

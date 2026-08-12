@@ -399,6 +399,11 @@
     <string name="rec_device_lost_toast">La grabación se interrumpió. Reconozco lo que te dio tiempo a decir</string>
     <string name="rec_review_title">Grabado</string>
     <string name="rec_review_subtitle">Grabación de voz · %1$d s</string>
+    <string name="ai_disclosure_title">El reconocimiento ocurre en el servidor</string>
+    <string name="ai_disclosure_message">La grabación de voz y la foto del recibo se envían al servidor de Splitty y a un modelo de terceros que las convierte en un gasto. El gasto se queda en tu grupo.</string>
+    <string name="ai_disclosure_ok">Entendido</string>
+    <string name="rec_review_privacy_voice">La grabación se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento</string>
+    <string name="rec_review_privacy_photo">La foto se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento</string>
     <string name="rec_review_recognize">Reconocer</string>
     <string name="rec_review_add_photo">Añadir foto del recibo</string>
     <string name="rec_review_add_photo_hint">los precios del recibo son más exactos</string>

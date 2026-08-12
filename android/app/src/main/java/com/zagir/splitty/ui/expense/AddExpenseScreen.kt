@@ -64,7 +64,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
@@ -470,16 +472,23 @@ fun AddExpenseScreen(
     // (KEY_PENDING_AUDIO / KEY_PENDING_RECEIPT).
     val pendingAudio = pendingAudioPath
     val pendingReceipt = pendingReceiptPath
+    val aiDisclosureSeen by viewModel.aiDisclosureSeen.collectAsStateWithLifecycle()
+    var isAiDisclosureVisible by rememberSaveable { mutableStateOf(false) }
+    val startRecognize = {
+        // Оба пути уже лежат в SavedStateHandle — распознавание заберёт и
+        // голос, и фото, каким бы из них ни открылся экран.
+        if (pendingAudio != null) viewModel.parseVoice(pendingAudio)
+        else if (pendingReceipt != null) viewModel.parseReceiptImage(pendingReceipt)
+    }
     if (!voice.isActive && (pendingAudio != null || pendingReceipt != null) &&
         form != null && !form.isParsing && form.selectedRoomId != null
     ) {
         RecordedReviewOverlay(
             audioPath = pendingAudio,
             onRecognize = {
-                // Оба пути уже лежат в SavedStateHandle — распознавание заберёт
-                // и голос, и фото, каким бы из них ни открылся экран.
-                if (pendingAudio != null) viewModel.parseVoice(pendingAudio)
-                else viewModel.parseReceiptImage(pendingReceipt!!)
+                // Первый раз объясняем, куда уйдут запись и снимок, и только
+                // потом отправляем
+                if (!aiDisclosureSeen) isAiDisclosureVisible = true else startRecognize()
             },
             onAddPhoto = {
                 // Голос уже приложен (attachAudio) — фото уйдёт вместе с ним.
@@ -502,6 +511,17 @@ fun AddExpenseScreen(
                 }
             },
             modifier = Modifier.fillMaxSize(),
+        )
+    }
+
+    if (isAiDisclosureVisible) {
+        AiDisclosureDialog(
+            onConfirm = {
+                isAiDisclosureVisible = false
+                viewModel.markAiDisclosureSeen()
+                startRecognize()
+            },
+            onDismiss = { isAiDisclosureVisible = false },
         )
     }
 
@@ -2112,6 +2132,18 @@ private fun RecordedReviewOverlay(
                 fontWeight = FontWeight.Medium,
                 color = Color.White.copy(alpha = 0.75f),
             )
+            Spacer(Modifier.height(8.dp))
+            // Куда уходит запись — говорим до отправки, а не в политике,
+            // которую никто не открывает
+            Text(
+                text = stringResource(
+                    if (isPhoto) R.string.rec_review_privacy_photo else R.string.rec_review_privacy_voice
+                ),
+                fontSize = 12.5.sp,
+                textAlign = TextAlign.Center,
+                color = Color.White.copy(alpha = 0.65f),
+                modifier = Modifier.padding(horizontal = 32.dp),
+            )
             Spacer(Modifier.height(28.dp))
             // Иерархия: главное — «Распознать», второй источник вторичен,
             // отмена третья.
@@ -2175,4 +2207,29 @@ private fun RecordedReviewOverlay(
             )
         }
     }
+}
+
+/**
+ * Разовое пояснение перед первой отправкой на распознавание.
+ *
+ * Куда уходят запись и снимок, человек узнавал только из политики, которую
+ * никто не открывает. Показываем один раз: повторять на каждом расходе значит
+ * приучить закрывать не читая.
+ */
+@Composable
+internal fun AiDisclosureDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.ai_disclosure_title)) },
+        text = { Text(stringResource(R.string.ai_disclosure_message)) },
+        confirmButton = {
+            TextButton(
+                modifier = Modifier.testTag("ai_disclosure_ok"),
+                onClick = onConfirm,
+            ) { Text(stringResource(R.string.ai_disclosure_ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+        },
+    )
 }

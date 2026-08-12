@@ -399,6 +399,11 @@
     <string name="rec_device_lost_toast">L\'enregistrement a été interrompu. Je reconnais ce que vous avez eu le temps de dire</string>
     <string name="rec_review_title">Enregistré</string>
     <string name="rec_review_subtitle">Enregistrement vocal · %1$d s</string>
+    <string name="ai_disclosure_title">La reconnaissance se fait sur le serveur</string>
+    <string name="ai_disclosure_message">L’enregistrement vocal et la photo du reçu partent vers le serveur Splitty et vers un modèle tiers qui les transforme en dépense. La dépense reste dans votre groupe.</string>
+    <string name="ai_disclosure_ok">Compris</string>
+    <string name="rec_review_privacy_voice">L’enregistrement part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance</string>
+    <string name="rec_review_privacy_photo">La photo part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance</string>
     <string name="rec_review_recognize">Reconnaître</string>
     <string name="rec_review_add_photo">Ajouter une photo du ticket</string>
     <string name="rec_review_add_photo_hint">les prix du ticket sont plus précis</string>
