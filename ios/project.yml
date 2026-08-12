@@ -35,10 +35,29 @@ targets:
       # Только Messaging: тянет FirebaseCore транзитивно, без Analytics и пр.
       - package: Firebase
         product: FirebaseMessaging
+      # Отчёты о падениях. До этого их не было вовсе: падение у человека не
+      # оставляло следа нигде, и узнать о нём можно было только с его слов
+      - package: Firebase
+        product: FirebaseCrashlytics
       # Только GoogleSignIn: GoogleSignInSwift не берём — кнопка своя,
       # в оформлении экрана входа (.primaryPill/.softChip).
       - package: GoogleSignIn
         product: GoogleSignIn
+    postBuildScripts:
+      # Символы релизной сборки: без них стек падения состоит из адресов и
+      # не говорит ничего. Скрипт лежит внутри самого SDK (SPM-checkout).
+      - name: Upload Crashlytics dSYMs
+        script: |
+          SDK_ROOT="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk"
+          if [ -x "$SDK_ROOT/Crashlytics/run" ]; then
+            "$SDK_ROOT/Crashlytics/run"
+          else
+            echo "warning: Crashlytics/run не найден — символы не загружены"
+          fi
+        inputFiles:
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}
+          - $(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)
+        basedOnDependencyAnalysis: false
     entitlements:
       path: Splitty/Splitty.entitlements
       properties:

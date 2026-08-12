@@ -13,6 +13,9 @@ plugins {
     alias(libs.plugins.play.publisher)
     // Подхватывает google-services.json → BuildConfig/ресурсы Firebase (FCM).
     alias(libs.plugins.google.services)
+    // Отчёты о падениях. До этого их не было вовсе: падение у человека не
+    // оставляло следа нигде, и узнать о нём можно было только с его слов
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -87,6 +90,12 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
 
+            // Карта обфускации уходит в Crashlytics: без неё стек падения из
+            // релиза состоит из a.b.c() и не говорит ничего
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = true
+            }
+
             // Раздача тестерам: ./gradlew :app:assembleRelease
             // appDistributionUploadRelease. Группа и креды — из
             // firebase.properties/переменных окружения (см. android/README).
@@ -153,6 +162,7 @@ dependencies {
     // Firebase Cloud Messaging (native-пуши). BoM держит версии согласованными.
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.firebase.crashlytics)
 
     implementation(libs.androidx.core.ktx)
     // Custom Tabs: вход через Telegram Login Widget открывается в них,

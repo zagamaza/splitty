@@ -80,6 +80,20 @@
                 <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
             </array>
         </dict>
+        <!-- Отчёты о падениях: стек, модель устройства, версия ОС. Не связаны
+             с личностью — Crashlytics шлём без идентификатора пользователя. -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeCrashData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+            </array>
+        </dict>
         <!-- Идентификатор устройства для push-уведомлений. -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
