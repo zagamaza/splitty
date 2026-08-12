@@ -613,4 +613,6 @@
     <string name="breakdown_title">С кого сколько</string>
     <string name="breakdown_surcharge_part">+%1$s сбор</string>
     <string name="breakdown_allocated">Сумма распределена полностью</string>
+    <string name="groups_cached_updated">Данные сохранённые, обновлялись %1$s</string>
+    <string name="groups_cached_no_connection">Данные сохранённые: связи с сервером нет</string>
 </resources>

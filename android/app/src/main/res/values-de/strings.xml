@@ -570,4 +570,6 @@
     <string name="breakdown_title">Wer zahlt was</string>
     <string name="breakdown_surcharge_part">+%1$s Aufschlag</string>
     <string name="breakdown_allocated">Der Betrag ist vollständig verteilt</string>
+    <string name="groups_cached_updated">Gespeicherte Daten, aktualisiert %1$s</string>
+    <string name="groups_cached_no_connection">Gespeicherte Daten: keine Verbindung zum Server</string>
 </resources>

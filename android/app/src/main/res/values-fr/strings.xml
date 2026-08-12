@@ -570,4 +570,6 @@
     <string name="breakdown_title">Qui doit combien</string>
     <string name="breakdown_surcharge_part">+%1$s supplément</string>
     <string name="breakdown_allocated">Le montant est entièrement réparti</string>
+    <string name="groups_cached_updated">Données enregistrées, mises à jour %1$s</string>
+    <string name="groups_cached_no_connection">Données enregistrées : pas de connexion au serveur</string>
 </resources>

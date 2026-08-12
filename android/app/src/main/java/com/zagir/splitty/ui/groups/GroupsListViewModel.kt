@@ -14,6 +14,7 @@ import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import java.time.Instant
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,6 +42,15 @@ class GroupsListViewModel @Inject constructor(
 
     /** Активные (неархивные) группы. */
     val rooms: StateFlow<UiState<List<RoomSummary>>> = _rooms.asStateFlow()
+
+    /**
+     * Показан офлайн-кеш и когда данные последний раз приходили с сервера.
+     * Признак «из кеша» вычислялся и раньше, но никуда не попадал — человек
+     * смотрел на старые суммы, ничего об этом не зная, и «неправильный» баланс
+     * выглядел как ошибка расчёта.
+     */
+    private val _freshness = MutableStateFlow(DataFreshness())
+    val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
 
     private val _archived = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
 
@@ -154,7 +164,13 @@ class GroupsListViewModel @Inject constructor(
 
     private suspend fun loadRooms() {
         try {
-            _rooms.value = UiState.Content(repository.rooms(archived = false).value)
+            val fetched = repository.rooms(archived = false)
+            _rooms.value = UiState.Content(fetched.value)
+            _freshness.value = if (fetched.fromCache) {
+                _freshness.value.copy(fromCache = true)
+            } else {
+                DataFreshness(fromCache = false, updatedAt = Instant.now())
+            }
         } catch (e: CancellationException) {
             throw e // отмена (ушли с экрана / новая версия данных) — не ошибка
         } catch (e: ApiException) {
@@ -243,3 +259,12 @@ private fun hexCode(tail: String): String? {
     // чтобы один и тот же код не выглядел двумя разными.
     return if (hex.length == ROOM_CODE_LENGTH) hex.lowercase() else null
 }
+
+/**
+ * Свежесть показанных данных: пришли ли они из офлайн-кеша и когда последний
+ * раз обновлялись с сервера.
+ */
+data class DataFreshness(
+    val fromCache: Boolean = false,
+    val updatedAt: Instant? = null,
+)

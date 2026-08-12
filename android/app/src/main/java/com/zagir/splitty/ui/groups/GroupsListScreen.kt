@@ -47,6 +47,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
+import com.zagir.splitty.ui.activity.relativeTimeText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -124,6 +125,7 @@ private fun GroupsListContent(
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
     val pendingRoomIds by viewModel.pendingRoomIds.collectAsStateWithLifecycle()
+    val freshness by viewModel.freshness.collectAsStateWithLifecycle()
     var isCreatePresented by rememberSaveable { mutableStateOf(false) }
     var isJoinPresented by rememberSaveable { mutableStateOf(false) }
     val colors = Splitty.colors
@@ -170,6 +172,7 @@ private fun GroupsListContent(
 
             is UiState.Content -> RoomsList(
                 rooms = current.value,
+                freshness = freshness,
                 pendingRoomIds = pendingRoomIds,
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
@@ -195,6 +198,7 @@ private fun GroupsListContent(
 @Composable
 private fun RoomsList(
     rooms: List<RoomSummary>,
+    freshness: DataFreshness,
     pendingRoomIds: Set<String>,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
@@ -234,7 +238,7 @@ private fun RoomsList(
                 }
                 // Без строки «Архив»: в пустом состоянии она отвлекает от первого шага.
             } else {
-                item(key = "summary") { SummaryCard(rooms) }
+                item(key = "summary") { SummaryCard(rooms, freshness) }
                 items(rooms, key = { it.id }) { room ->
                     GroupCard(
                         room = room,
@@ -253,7 +257,7 @@ private fun RoomsList(
  * валюты не складываются: основная крупно, остальные — вторичной строкой.
  */
 @Composable
-private fun SummaryCard(rooms: List<RoomSummary>) {
+private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
     val totals = remember(rooms) {
         // Комнаты с неисчислимыми долгами не участвуют: их myBalance=0 —
         // заглушка, а не «в расчёте», и складывать её в итог нельзя.
@@ -278,6 +282,19 @@ private fun SummaryCard(rooms: List<RoomSummary>) {
             fontSize = 15.sp,
             color = Splitty.colors.inkSecondary,
         )
+        // Подпись о свежести: без неё человек смотрел на старые суммы, ничего
+        // об этом не зная, — и «неправильный» баланс выглядел как ошибка расчёта
+        if (freshness.fromCache) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = freshness.updatedAt?.let {
+                    stringResource(R.string.groups_cached_updated, relativeTimeText(it))
+                } ?: stringResource(R.string.groups_cached_no_connection),
+                fontSize = 12.5.sp,
+                color = Splitty.colors.inkSecondary,
+                modifier = Modifier.testTag("groups_cache_note"),
+            )
+        }
     }
 }
 

@@ -23,6 +23,10 @@ final class GroupsListViewModel {
     private(set) var isArchiveLoading = false
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
     private(set) var isFromCache = false
+    /// Когда данные последний раз пришли С СЕРВЕРА. Нужен подписи о свежести:
+    /// признак «из кеша» вычислялся и раньше, но никуда не попадал — человек
+    /// смотрел на старые суммы, ничего об этом не зная.
+    private(set) var lastUpdatedAt: Date?
     /// Текст ошибки для alert (обновления поверх загруженного списка, мутации).
     var alertMessage: String?
 
@@ -49,6 +53,7 @@ final class GroupsListViewModel {
             }
             rooms = result.value
             isFromCache = result.isFromCache
+            if !result.isFromCache { lastUpdatedAt = Date() }
             state = .loaded
         } catch {
             if error.isTaskCancellation {
