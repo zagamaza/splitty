@@ -267,7 +267,7 @@ private final class RejectingAPI: OperationAPI {
 
     func updateOperation(
         roomId: String, operationId: String, description: String, sum: Int,
-        donorId: Int, split: ExpenseSplit, items: [OperationItem]?
+        donorId: Int, split: ExpenseSplit, items: [OperationItem]?, version: Int?
     ) async throws -> Splitty.Operation {
         throw APIError.server(status: 500, code: "internal", message: "")
     }

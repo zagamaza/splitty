@@ -88,6 +88,9 @@ type RoomRepository interface {
 	FindArchivedRoomsByUserId(ctx context.Context, id int) (*[]api.Room, error)
 	FindRoomsByLikeName(ctx context.Context, userId int, name string) (*[]api.Room, error)
 	UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error
+	// UpdateOperationIfUnchanged записывает правку, только если с момента чтения
+	// операции её никто не менял (ErrStaleOperation — меняли)
+	UpdateOperationIfUnchanged(ctx context.Context, o *api.Operation, roomId string) error
 	// ActivateOperation переводит черновик в действующий расход и требует, чтобы
 	// связываемые им люди были участниками комнаты. ErrParticipantLeft — кто-то
 	// вышел, пока черновик собирали
@@ -643,19 +646,60 @@ func (rr MongoRoomRepository) SetNotificationSent(ctx context.Context, roomId st
 	return nil
 }
 
+// ErrStaleOperation — расход изменили с тех пор, как его прочитал редактирующий.
+// Записать поверх нельзя: чужая правка исчезла бы молча.
+var ErrStaleOperation = errors.New("operation was changed by someone else")
+
+// UpdateOperation записывает операцию безусловно, растя версию. Так пишет бот и
+// клиенты, которые про версию ещё не знают: у них на руках сборки, где поля нет
+// вовсе, и требовать его — значит сломать установленное.
 func (rr MongoRoomRepository) UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	return rr.updateOperation(ctx, o, roomId, false)
+}
+
+// UpdateOperationIfUnchanged записывает операцию, ТОЛЬКО если с момента её
+// чтения никто не писал: o.Version — версия, которую видел редактирующий.
+// ErrStaleOperation — писали, и правку нужно пересобрать по свежим данным.
+func (rr MongoRoomRepository) UpdateOperationIfUnchanged(ctx context.Context, o *api.Operation, roomId string) error {
+	return rr.updateOperation(ctx, o, roomId, true)
+}
+
+func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operation, roomId string, conditional bool) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
-	filter := bson.M{"_id": hex, "operations._id": o.ID}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(o)}})
+	elem := bson.M{"_id": o.ID}
+	if conditional {
+		// versionFilter, а не равенство: version: 0 НЕ находит документ, где поля
+		// версии нет вовсе (отсутствующее поле mongo сравнивает только с null)
+		elem["version"] = versionFilter(o.Version)
+	}
+	filter := bson.M{"_id": hex, "operations": bson.M{"$elemMatch": elem}}
+
+	next := *o
+	next.Version = o.Version + 1
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next)}})
 	if err != nil {
 		return err
 	}
 	if res.MatchedCount == 0 {
+		if conditional {
+			// операция на месте, не совпала только версия — это конфликт правок,
+			// а не пропавшая операция: человеку про них говорят разное
+			n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex, "operations._id": o.ID})
+			if cErr != nil {
+				return cErr
+			}
+			if n > 0 {
+				return ErrStaleOperation
+			}
+		}
 		return mongo.ErrNoDocuments
 	}
+	// версия ушла вперёд — вызывающий отдаёт её клиенту, иначе следующая правка
+	// оказалась бы конфликтной сразу же
+	o.Version = next.Version
 	return nil
 }
 

@@ -325,6 +325,11 @@ data class Operation(
      * «Идемпотентность создания»); есть только у операций, созданных клиентами.
      */
     val clientOpId: String? = null,
+    /**
+     * Версия расхода: возвращается в PUT, чтобы правка по устаревшим данным
+     * была отклонена, а не затёрла чужую. null — сервер старой версии.
+     */
+    val version: Int? = null,
 ) {
     val hasFiles: Boolean get() = !files.isNullOrEmpty()
 

@@ -500,7 +500,7 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		operation.Status = archive
 		if err := s.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 			log.Error().Err(err).Stack().Msg("save buttons failed")
-			return
+			return operationGoneMessage(u)
 		}
 		operation = newOp
 		OperationId = newOp.ID
@@ -525,7 +525,7 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 
 	if err = s.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
+		return operationGoneMessage(u)
 	}
 	s.css.CleanChatState(ctx, u.ChatState)
 
@@ -796,7 +796,7 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	}
 	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
+		return operationGoneMessage(u)
 	}
 
 	h.css.CleanChatState(ctx, u.ChatState)
@@ -983,7 +983,7 @@ func (h ChangedPayerHandler) OnMessage(ctx context.Context, u *api.Update) (resp
 	operation.Donor = &payer
 	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
+		return operationGoneMessage(u)
 	}
 	u.Button.Action = addingOperation
 	return api.TelegramMessage{
@@ -1032,7 +1032,7 @@ func (h DisableEnableAllDonorHandler) OnMessage(ctx context.Context, u *api.Upda
 
 	if err = h.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
+		return operationGoneMessage(u)
 	}
 	u.Button.Action = addingOperation
 	return api.TelegramMessage{
@@ -1924,7 +1924,7 @@ func (s AddFileToOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 
 	if err = s.os.UpdateOperation(ctx, &operation, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Msg("upsert operation failed")
-		return
+		return operationGoneMessage(u)
 	}
 	defer s.css.CleanChatState(ctx, u.ChatState)
 	u.Button = api.NewButton(addingOperation, u.ChatState.CallbackData)
@@ -2574,6 +2574,20 @@ func (bot ViewOperationsWithMe) OnMessage(ctx context.Context, u *api.Update) (r
 	screen := createScreen(u, I18n(u.User, "scrn_operations_with_me"), &keyboard)
 	return api.TelegramMessage{
 		Chattable: []tgbotapi.Chattable{screen},
+		Send:      true,
+	}
+}
+
+// operationGoneMessage — расход исчез из комнаты, пока его правили: его удалили
+// или заменили новой версией. Раньше на этом месте был молчаливый выход: человек
+// жал кнопку, и не происходило ровно ничего, без единого слова о причине.
+func operationGoneMessage(u *api.Update) api.TelegramMessage {
+	text := I18n(u.User, "msg_operation_gone")
+	if u.CallbackQuery != nil {
+		return api.TelegramMessage{CallbackConfig: createCallback(u, text, true), Send: true}
+	}
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{tgbotapi.NewMessage(getChatID(u), text)},
 		Send:      true,
 	}
 }

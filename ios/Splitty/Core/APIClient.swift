@@ -90,6 +90,8 @@ enum APIError: LocalizedError {
             return String(localized: "Не найдено")
         case "conflict":
             return String(localized: "Действие сейчас невозможно")
+        case "stale_operation":
+            return String(localized: "Расход изменил кто-то другой. Откройте его заново и повторите правку")
         // Коды распознавания и троттлинга. Сюда попадаем, только когда тело
         // пустое (ответил прокси, а не приложение), но «Ошибка сервера (429)»
         // не говорит человеку ничего. Тексты — те же, что на Android: одна
@@ -158,6 +160,9 @@ struct OperationBody: Encodable {
     /// плоские `recipientSums`. nil — обычная (плоская) операция (не сериализуется).
     let items: [OperationItem]?
     let clientOpId: String?
+    /// Версия расхода, которую видел редактирующий (только PUT). nil — поле не
+    /// отправляется, и сервер правит безусловно, как до появления версий.
+    let version: Int?
 
     init(
         description: String,
@@ -165,13 +170,15 @@ struct OperationBody: Encodable {
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]? = nil,
-        clientOpId: String? = nil
+        clientOpId: String? = nil,
+        version: Int? = nil
     ) {
         self.description = description
         self.sum = sum
         self.donorId = donorId
         self.items = items
         self.clientOpId = clientOpId
+        self.version = version
         switch split {
         case .equally(let ids):
             recipientIds = ids
@@ -207,7 +214,8 @@ protocol OperationAPI {
         sum: Int,
         donorId: Int,
         split: ExpenseSplit,
-        items: [OperationItem]?
+        items: [OperationItem]?,
+        version: Int?
     ) async throws -> Operation
 
     func deleteOperation(roomId: String, operationId: String) async throws
@@ -613,6 +621,9 @@ final class APIClient: OperationAPI {
         )
     }
 
+    /// `version` — версия расхода, с которой человек открывал правку: сервер
+    /// отклонит запись, если расход успели изменить (409 `stale_operation`).
+    /// nil — правка идёт безусловно (офлайн-очередь, см. OutboxStore).
     func updateOperation(
         roomId: String,
         operationId: String,
@@ -620,7 +631,8 @@ final class APIClient: OperationAPI {
         sum: Int,
         donorId: Int,
         split: ExpenseSplit,
-        items: [OperationItem]? = nil
+        items: [OperationItem]? = nil,
+        version: Int? = nil
     ) async throws -> Operation {
         try await request(
             "PUT", "/api/v1/rooms/\(roomId)/operations/\(operationId)",
@@ -629,7 +641,8 @@ final class APIClient: OperationAPI {
                 sum: sum,
                 donorId: donorId,
                 split: split,
-                items: items
+                items: items,
+                version: version
             )
         )
     }

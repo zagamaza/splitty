@@ -189,6 +189,10 @@ class SplittyRepository @Inject constructor(
      * PUT операции. [items] — позиции чека itemized-операции: проносятся в тело
      * НЕТРОНУТЫМИ (passthrough), иначе плоский PUT затрёт чек на сервере.
      * У обычных расходов null.
+     *
+     * [version] — версия расхода, с которой человек открывал правку: сервер
+     * отклонит запись, если расход успели изменить (409 stale_operation).
+     * null — правка идёт безусловно (офлайн-очередь).
      */
     suspend fun updateOperation(
         roomId: String,
@@ -198,8 +202,13 @@ class SplittyRepository @Inject constructor(
         donorId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>? = null,
+        version: Int? = null,
     ): Operation = call {
-        api.updateOperation(roomId, operationId, OperationBody.of(description, sum, donorId, split, items))
+        api.updateOperation(
+            roomId,
+            operationId,
+            OperationBody.of(description, sum, donorId, split, items, version = version),
+        )
     }
 
     suspend fun deleteOperation(roomId: String, operationId: String) =

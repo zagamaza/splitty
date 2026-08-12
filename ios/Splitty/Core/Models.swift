@@ -299,6 +299,9 @@ struct Operation: Codable, Identifiable, Hashable {
     /// `default = nil` — старый memberwise-инициализатор (тесты) остаётся валиден,
     /// а декодер читает поле опционально (сервер шлёт его только для itemized).
     var items: [OperationItem]? = nil
+    /// Версия расхода: возвращается в PUT, чтобы правка по устаревшим данным
+    /// была отклонена, а не затёрла чужую. nil — сервер старой версии.
+    var version: Int? = nil
 
     var hasFiles: Bool { !(files ?? []).isEmpty }
 

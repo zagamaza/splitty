@@ -303,6 +303,10 @@ final class OutboxStore {
             guard let payload = entry.payload, let operationId = entry.targetOperationId else {
                 throw OutboxError()
             }
+            // Версия НЕ отправляется намеренно: правку сделали офлайн, и
+            // пересобрать её по свежим данным человек не может — он давно ушёл
+            // с экрана. Отказ по конфликту здесь означал бы потерянную работу,
+            // поэтому очередь пишет безусловно, как раньше.
             _ = try await api.updateOperation(
                 roomId: entry.roomId,
                 operationId: operationId,
@@ -310,7 +314,8 @@ final class OutboxStore {
                 sum: payload.sum,
                 donorId: payload.donorId,
                 split: payload.split,
-                items: payload.items
+                items: payload.items,
+                version: nil
             )
         case .delete:
             guard let operationId = entry.targetOperationId else { throw OutboxError() }

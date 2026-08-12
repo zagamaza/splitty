@@ -50,6 +50,12 @@ type Operation struct {
 	// операций — старые клиенты (бот, Android) про Items не знают и работают
 	// на плоских RecipientsWithSum
 	Items []OperationItem `json:"items,omitempty" bson:"items,omitempty"`
+	// Version растёт на каждую запись операции. По ней правка отличает «с
+	// момента чтения никто не писал» от «писали»: без этого две одновременные
+	// правки одного расхода затирали друг друга по last-write-wins, и человек
+	// узнавал об этом, только увидев чужую сумму вместо своей.
+	// omitempty ради старых документов — там поля нет вовсе, и это значит 0
+	Version int `json:"version,omitempty" bson:"version,omitempty"`
 }
 
 type RecipientWithSum struct {

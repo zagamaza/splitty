@@ -413,6 +413,9 @@ private final class FakeOperationAPI: OperationAPI {
 
     private(set) var addCalls: [AddCall] = []
     private(set) var updateCalls: [UpdateCall] = []
+    /// Версии, с которыми уходили правки: из формы — версия открытого расхода,
+    /// из офлайн-очереди — nil (пересобрать правку человек уже не может).
+    private(set) var updateVersions: [Int?] = []
     private(set) var deletedOperationIds: [String] = []
 
     func addOperation(
@@ -435,8 +438,10 @@ private final class FakeOperationAPI: OperationAPI {
         sum: Int,
         donorId: Int,
         split: ExpenseSplit,
-        items: [OperationItem]?
+        items: [OperationItem]?,
+        version: Int?
     ) async throws -> Splitty.Operation {
+        updateVersions.append(version)
         updateCalls.append(UpdateCall(roomId: roomId, operationId: operationId, items: items))
         return Self.stubOperation(id: operationId, description: description, sum: sum, donorId: donorId)
     }

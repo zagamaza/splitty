@@ -103,6 +103,9 @@ type operationDto struct {
 	// ClientOpId клиентский идемпотентный ключ (см. docs/API.md «Идемпотентность»):
 	// по нему офлайн-клиент сопоставляет локальные операции outbox с серверными
 	ClientOpId string `json:"clientOpId,omitempty"`
+	// Version версия расхода: клиент возвращает её в PUT, и правка по устаревшей
+	// версии отклоняется вместо того, чтобы затереть чужую (см. docs/API.md)
+	Version int `json:"version,omitempty"`
 }
 
 type debtDto struct {
@@ -293,6 +296,7 @@ func toOperationDto(o *api.Operation) operationDto {
 		Recipients:      recipients,
 		CreatedAt:       o.CreateAt,
 		ClientOpId:      o.ClientOpId,
+		Version:         o.Version,
 	}
 	for _, f := range o.Files {
 		dto.Files = append(dto.Files, fileDto{Type: string(f.Type), FileId: f.FileId})

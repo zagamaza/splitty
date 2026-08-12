@@ -114,6 +114,11 @@ data class OperationBody(
      * защита от дублей при досылке офлайн-операций. В PUT игнорируется.
      */
     val clientOpId: String? = null,
+    /**
+     * Версия расхода, которую видел редактирующий (только PUT). null — поле не
+     * отправляется, и сервер правит безусловно, как до появления версий.
+     */
+    val version: Int? = null,
 ) {
     companion object {
         fun of(
@@ -123,6 +128,7 @@ data class OperationBody(
             split: ExpenseSplit,
             items: List<OperationItem>? = null,
             clientOpId: String? = null,
+            version: Int? = null,
         ): OperationBody =
             when (split) {
                 is ExpenseSplit.Equally -> OperationBody(
@@ -132,6 +138,7 @@ data class OperationBody(
                     recipientIds = split.recipientIds,
                     items = items,
                     clientOpId = clientOpId,
+                    version = version,
                 )
 
                 is ExpenseSplit.ByExactAmount -> OperationBody(
@@ -141,6 +148,7 @@ data class OperationBody(
                     recipientSums = split.recipientSums,
                     items = items,
                     clientOpId = clientOpId,
+                    version = version,
                 )
             }
     }

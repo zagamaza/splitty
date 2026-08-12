@@ -826,18 +826,35 @@ func (f *fakeRoomRepo) SetNotificationSent(_ context.Context, roomId string, ope
 
 // UpdateOperation как атомарная mongo-реализация: заменяет операцию по _id,
 // mongo.ErrNoDocuments если комнаты или операции нет
-func (f *fakeRoomRepo) UpdateOperation(_ context.Context, o *api.Operation, roomId string) error {
+func (f *fakeRoomRepo) UpdateOperation(ctx context.Context, o *api.Operation, roomId string) error {
+	return f.updateOperation(ctx, o, roomId, false)
+}
+
+func (f *fakeRoomRepo) UpdateOperationIfUnchanged(ctx context.Context, o *api.Operation, roomId string) error {
+	return f.updateOperation(ctx, o, roomId, true)
+}
+
+// updateOperation повторяет боевую семантику: версия растёт на каждой записи, а
+// условная правка не проходит по чужой версии
+func (f *fakeRoomRepo) updateOperation(_ context.Context, o *api.Operation, roomId string, conditional bool) error {
 	room, ok := f.rooms[roomId]
 	if !ok {
 		return mongo.ErrNoDocuments
 	}
 	ops := roomOperations(room)
 	for i := range ops {
-		if ops[i].ID == o.ID {
-			ops[i] = *o
-			room.Operations = &ops
-			return nil
+		if ops[i].ID != o.ID {
+			continue
 		}
+		if conditional && ops[i].Version != o.Version {
+			return repository.ErrStaleOperation
+		}
+		next := *o
+		next.Version = o.Version + 1
+		ops[i] = next
+		room.Operations = &ops
+		o.Version = next.Version
+		return nil
 	}
 	return mongo.ErrNoDocuments
 }

@@ -568,6 +568,11 @@ type operationRequest struct {
 	// наличии сервер САМ выводит RecipientsWithSum/Sum из позиций и игнорирует
 	// плоские RecipientIds/RecipientSums (см. validateItemizedRequest)
 	Items []ai.DraftItem `json:"items,omitempty"`
+	// Version версия расхода, которую клиент видел, когда открывал правку.
+	// Указатель, а не число: отсутствие поля и ноль значат разное. Отсутствие —
+	// сборка про версии не знает, и правка идёт как раньше, last-write-wins;
+	// ноль — расход ни разу не правился с тех пор, как версии появились
+	Version *int `json:"version,omitempty"`
 }
 
 // validateOperationRequest валидирует тело операции, резолвит участников комнаты.
@@ -947,8 +952,23 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 	operation.Items = items
 	// легаси-поле обнуляется: доли теперь только в recipients_with_sum
 	operation.Recipients = nil
-	if err := s.operationSrv.UpdateOperation(ctx, operation, roomId); err != nil {
-		if err == mongo.ErrNoDocuments {
+	// Версию прислал клиент — правим условно: расход, изменившийся с тех пор,
+	// как человек его открыл, перезаписывать нельзя. Версии нет — сборка о ней
+	// не знает, и правка идёт как раньше (см. operationRequest.Version)
+	var err error
+	if req.Version != nil {
+		operation.Version = *req.Version
+		err = s.operationSrv.UpdateOperationIfUnchanged(ctx, operation, roomId)
+	} else {
+		err = s.operationSrv.UpdateOperation(ctx, operation, roomId)
+	}
+	if err != nil {
+		if errors.Is(err, repository.ErrStaleOperation) {
+			writeError(w, http.StatusConflict, "stale_operation",
+				"Расход изменил кто-то другой. Откройте его заново и повторите правку")
+			return
+		}
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			// комната или операция исчезла между чтением и атомарным обновлением
 			writeError(w, http.StatusNotFound, "not_found", "операция не найдена")
 			return

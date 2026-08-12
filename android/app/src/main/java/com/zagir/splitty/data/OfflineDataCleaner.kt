@@ -7,6 +7,7 @@ import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.di.ApplicationScope
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -160,6 +161,11 @@ class OfflineDataCleaner @Inject constructor(
         var ok = true
         suspend fun step(name: String, block: suspend () -> Unit) {
             runCatching { block() }.onFailure {
+                // Отмену не глотаем: чистку прерывает уход процесса или закрытие
+                // области, и превращать это в «шаг не удался» нельзя — иначе
+                // прерванная чистка ещё и логируется как сбой, а сам лог в
+                // отменённой корутине рвёт structured concurrency
+                if (it is CancellationException) throw it
                 ok = false
                 Log.e(TAG, "не удалось очистить $name", it)
             }

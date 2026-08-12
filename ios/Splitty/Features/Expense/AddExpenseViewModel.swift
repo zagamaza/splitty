@@ -85,6 +85,9 @@ final class AddExpenseViewModel {
 
     /// id редактируемой СИНХРОНИЗИРОВАННОЙ операции (nil — создание/локальная).
     private(set) var editOperationId: String?
+    /// Версия расхода на момент открытия правки: сервер отклонит запись, если
+    /// расход успели изменить, — чужая правка не исчезнет молча.
+    private(set) var editOperationVersion: Int?
     /// Редактируемая ЛОКАЛЬНАЯ запись outbox (ещё не отправленная на сервер);
     /// сохранение правит саму запись outbox, сеть не нужна.
     private(set) var editEntry: OutboxEntry?
@@ -709,6 +712,7 @@ final class AddExpenseViewModel {
 
         if let editOperation {
             editOperationId = editOperation.id
+            editOperationVersion = editOperation.version
             descriptionText = editOperation.description
             sumText = String(editOperation.sum)
             payerId = editOperation.donor.id
@@ -964,7 +968,8 @@ final class AddExpenseViewModel {
                     sum: sum,
                     donorId: payerId,
                     split: split,
-                    items: itemsToSend
+                    items: itemsToSend,
+                    version: editOperationVersion
                 )
             } else {
                 _ = try await api.addOperation(

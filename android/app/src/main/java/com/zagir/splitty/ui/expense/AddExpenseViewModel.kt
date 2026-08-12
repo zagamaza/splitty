@@ -652,6 +652,12 @@ class AddExpenseViewModel @Inject constructor(
     private var editLocalId: String? = null
 
     /**
+     * Версия расхода на момент открытия правки: сервер отклонит запись, если
+     * расход успели изменить, — чужая правка не исчезнет молча.
+     */
+    private var editOperationVersion: Int? = null
+
+    /**
      * Исходный порядок получателей редактируемой операции — от него зависит
      * раздача остатка equally-деления на сервере, поэтому при сохранении
      * правки порядок сохраняется, новые участники добавляются в конец.
@@ -710,6 +716,7 @@ class AddExpenseViewModel @Inject constructor(
                         _state.value = UiState.Error("Операция не найдена")
                         return@launch
                     }
+                    editOperationVersion = operation?.version
                     val form = fixedRoomForm(room, operation, meId)
                     // Создание (не правка) — восстанавливаем черновик после process death.
                     _state.value = UiState.Content(
@@ -1230,6 +1237,7 @@ class AddExpenseViewModel @Inject constructor(
                         repository.updateOperation(
                             roomId, operationId, description, sum, payerId, split,
                             items = itemsToSend,
+                            version = editOperationVersion,
                         )
                         sessionStore.noteDataChanged()
                     }
