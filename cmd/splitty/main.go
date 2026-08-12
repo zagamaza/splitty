@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -73,6 +75,8 @@ func main() {
 	} else {
 		closer.Bind(cl)
 		tgSender = app.TbAPI
+		// Молчащий цикл обновлений снаружи ничем не отличался от работающего
+		restServer.SetBotHeartbeat(app.LastUpdate)
 		go app.DeIntegrationService.StartPostScheduler()
 		go func() {
 			if err := app.Do(ctx); err != nil {
@@ -179,6 +183,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// Нужны и REST-эндпоинтам, и удалению аккаунта (там своя PII).
 	inviteRepository := repository.NewInviteRepository(db)
 	server.SetInvites(inviteRepository)
+
+	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
+	// снаружи выглядел рабочим
+	server.SetDBPing(func(ctx context.Context) error { return db.Client().Ping(ctx, nil) })
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
@@ -399,7 +407,21 @@ func (i *tgLogger) Println(v ...interface{}) { i.Print(v...) }
 
 func initTelegramApi(cfg *config, bcfg *bot.Config) (*tbapi.BotAPI, error) {
 	_ = tbapi.SetLogger(&tgLogger{log.Output(zerolog.ConsoleWriter{Out: os.Stdout})})
-	tbAPI, err := tbapi.NewBotAPI(cfg.TgToken)
+	// Свой клиент вместо http.DefaultClient: у того нет таймаутов вовсе, и
+	// зависший запрос к telegram держал бы цикл обновлений бесконечно.
+	// Общий таймаут заведомо больше окна длинного опроса (60 секунд) — иначе
+	// он рвал бы КАЖДЫЙ опрос, а не только зависший
+	httpClient := &http.Client{
+		Timeout: 120 * time.Second,
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			DialContext:           (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			IdleConnTimeout:       90 * time.Second,
+		},
+	}
+	tbAPI, err := tbapi.NewBotAPIWithClient(cfg.TgToken, httpClient)
 	if err != nil {
 		log.Error().Err(err).Msg("can't make telegram bot")
 		return nil, err

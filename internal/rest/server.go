@@ -156,6 +156,13 @@ type Server struct {
 	// комната» для приглашений и раздела уведомлений
 	invites inviteStore
 
+	// dbPing проверяет доступность базы для /health; nil — проверять нечем
+	// (тесты, запуск без mongo)
+	dbPing func(ctx context.Context) error
+	// botHeartbeat отдаёт время последнего успешно принятого обновления
+	// telegram; нулевое время — бот не запущен в этом процессе
+	botHeartbeat func() time.Time
+
 	// accounts кеширует «жив ли аккаунт» для auth-middleware: без него проверка
 	// tombstone стоила бы запроса в mongo на КАЖДЫЙ авторизованный запрос
 	accounts *accountCache
@@ -406,8 +413,53 @@ func (s *Server) Shutdown() {
 	}
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+// SetDBPing задаёт проверку доступности базы для /health.
+func (s *Server) SetDBPing(ping func(ctx context.Context) error) { s.dbPing = ping }
+
+// SetBotHeartbeat задаёт источник времени последнего обновления telegram.
+func (s *Server) SetBotHeartbeat(beat func() time.Time) { s.botHeartbeat = beat }
+
+// healthTimeout — сколько ждём базу в проверке здоровья. Короткий: /health
+// дёргают часто, и висеть он не имеет права
+const healthTimeout = 2 * time.Second
+
+// botSilenceLimit — после какого молчания бота считаем, что цикл обновлений
+// встал. Длинный опрос телеграма — 60 секунд, поэтому запас втрое
+const botSilenceLimit = 3 * time.Minute
+
+// handleHealth отвечает 503, когда база недоступна.
+//
+// Раньше проверка отвечала «ok» всегда: сервис с упавшей базой выглядел живым,
+// и снаружи это было неотличимо от рабочего состояния — ни перезапуска, ни
+// сигнала. Состояние бота показывается отдельным полем, но на код ответа не
+// влияет: REST работает и без него.
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	body := map[string]any{"status": "ok"}
+
+	if s.dbPing != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), healthTimeout)
+		defer cancel()
+		if err := s.dbPing(ctx); err != nil {
+			log.Error().Err(err).Msg("health: база недоступна")
+			writeJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"status": "unavailable",
+				"db":     "down",
+			})
+			return
+		}
+		body["db"] = "ok"
+	}
+
+	if s.botHeartbeat != nil {
+		last := s.botHeartbeat()
+		body["botLastUpdate"] = last
+		body["bot"] = "ok"
+		if last.IsZero() || s.now().Sub(last) > botSilenceLimit {
+			body["bot"] = "silent"
+		}
+	}
+
+	writeJSON(w, http.StatusOK, body)
 }
 
 // recoverMiddleware превращает панику в 500 с json-телом

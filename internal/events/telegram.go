@@ -8,6 +8,8 @@ import (
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"sync/atomic"
+	"time"
 )
 
 type ChatStateService interface {
@@ -43,6 +45,21 @@ type TelegramListener struct {
 	UserService      UserService
 
 	DeIntegrationService DeIntegrationService
+
+	// lastUpdate — время последнего принятого обновления (unix-наносекунды).
+	// Читается проверкой здоровья: молчащий цикл обновлений снаружи ничем не
+	// отличался от работающего
+	lastUpdate atomic.Int64
+}
+
+// LastUpdate — когда цикл обновлений в последний раз что-то принял.
+// Нулевое время — не принимал ещё ничего.
+func (l *TelegramListener) LastUpdate() time.Time {
+	ns := l.lastUpdate.Load()
+	if ns == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, ns)
 }
 
 type tbAPI interface {
@@ -90,6 +107,7 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 // приложение — все теряли доступ из-за одного отправителя.
 func (l *TelegramListener) handleUpdate(ctx context.Context, update tbapi.Update) {
 	defer safe.Recover("обработка обновления telegram")
+	l.lastUpdate.Store(time.Now().UnixNano())
 
 	upd := transformUpdate(update)
 

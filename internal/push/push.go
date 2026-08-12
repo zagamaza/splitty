@@ -90,6 +90,9 @@ func (s *queueSender) SendToUser(ctx context.Context, user api.User, n Notificat
 	}
 }
 
+// sendTimeout — окно на одну отправку в FCM.
+const sendTimeout = 15 * time.Second
+
 // Worker доставляет пуши из очереди через FCM с ретраями.
 type Worker struct {
 	client  *messaging.Client
@@ -175,7 +178,11 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		})
 	}
 
-	resp, err := w.client.SendEach(ctx, messages)
+	// Своё окно на отправку: ctx живёт столько же, сколько процесс, и зависший
+	// вызов FCM держал бы очередь пушей до перезапуска
+	sendCtx, cancel := context.WithTimeout(ctx, sendTimeout)
+	defer cancel()
+	resp, err := w.client.SendEach(sendCtx, messages)
 	if err != nil {
 		log.Warn().Err(err).Int("user", p.UserID).Msg("push: SendEach failed, retrying")
 		w.retry(ctx, p)
