@@ -436,9 +436,9 @@
     <string name="settleup_your_debts">Tus deudas</string>
     <string name="settleup_no_debts_title">Sin deudas</string>
     <string name="settleup_no_debts_message">No tienes deudas en este grupo</string>
-    <string name="settleup_you_owe">Debes a %1$s</string>
-    <string name="settleup_owes_you">%1$s te debe</string>
-    <string name="settleup_owes">%1$s le debe a %2$s</string>
+    <string name="settleup_you_owe">Le diste a %1$s</string>
+    <string name="settleup_owes_you">%1$s te dio</string>
+    <string name="settleup_owes">%1$s le dio a %2$s</string>
     <string name="settleup_you_pay">Pagas — %1$s</string>
     <string name="settleup_pays_you">%1$s te paga</string>
     <string name="settleup_pays">%1$s paga — %2$s</string>
@@ -447,6 +447,7 @@
     <string name="settleup_submit">Registrar pago</string>
     <string name="settleup_already_settled">Esta deuda ya está saldada</string>
     <string name="settleup_back_to_list">Volver a las deudas</string>
+    <string name="settleup_records_only">Splitty solo lo anota: el dinero se entrega en efectivo o por transferencia</string>
     <string name="settleup_offline_caption">Saldar solo funciona en línea</string>
     <string name="profile_app_version">Versión %1$s (%2$d)</string>
 

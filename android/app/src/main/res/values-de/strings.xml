@@ -436,9 +436,9 @@
     <string name="settleup_your_debts">Deine Schulden</string>
     <string name="settleup_no_debts_title">Keine Schulden</string>
     <string name="settleup_no_debts_message">Du hast in dieser Gruppe keine Schulden</string>
-    <string name="settleup_you_owe">Du schuldest %1$s</string>
-    <string name="settleup_owes_you">%1$s schuldet dir</string>
-    <string name="settleup_owes">%1$s schuldet %2$s</string>
+    <string name="settleup_you_owe">Du hast %1$s gegeben</string>
+    <string name="settleup_owes_you">%1$s hat dir gegeben</string>
+    <string name="settleup_owes">%1$s hat %2$s gegeben</string>
     <string name="settleup_you_pay">Du zahlst — %1$s</string>
     <string name="settleup_pays_you">%1$s zahlt dir</string>
     <string name="settleup_pays">%1$s zahlt — %2$s</string>
@@ -447,6 +447,7 @@
     <string name="settleup_submit">Zahlung erfassen</string>
     <string name="settleup_already_settled">Diese Schuld ist bereits beglichen</string>
     <string name="settleup_back_to_list">Zurück zu den Schulden</string>
+    <string name="settleup_records_only">Splitty hält es nur fest — das Geld gibst du bar oder per Überweisung</string>
     <string name="settleup_offline_caption">Begleichen geht nur online</string>
     <string name="profile_app_version">Version %1$s (%2$d)</string>
 

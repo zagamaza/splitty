@@ -436,9 +436,9 @@
     <string name="settleup_your_debts">Vos dettes</string>
     <string name="settleup_no_debts_title">Aucune dette</string>
     <string name="settleup_no_debts_message">Vous n\'avez pas de dette dans ce groupe</string>
-    <string name="settleup_you_owe">Vous devez à %1$s</string>
-    <string name="settleup_owes_you">%1$s vous doit</string>
-    <string name="settleup_owes">%1$s doit à %2$s</string>
+    <string name="settleup_you_owe">Vous avez donné à %1$s</string>
+    <string name="settleup_owes_you">%1$s vous a donné</string>
+    <string name="settleup_owes">%1$s a donné à %2$s</string>
     <string name="settleup_you_pay">Vous payez — %1$s</string>
     <string name="settleup_pays_you">%1$s vous paie</string>
     <string name="settleup_pays">%1$s paie — %2$s</string>
@@ -447,6 +447,7 @@
     <string name="settleup_submit">Enregistrer le paiement</string>
     <string name="settleup_already_settled">Cette dette est déjà réglée</string>
     <string name="settleup_back_to_list">Retour aux dettes</string>
+    <string name="settleup_records_only">Splitty ne fait que l’enregistrer — l’argent se donne en espèces ou par virement</string>
     <string name="settleup_offline_caption">Le règlement ne fonctionne qu\'en ligne</string>
     <string name="profile_app_version">Version %1$s (%2$d)</string>
 

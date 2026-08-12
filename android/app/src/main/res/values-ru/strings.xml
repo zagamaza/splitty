@@ -503,9 +503,9 @@
     <string name="settleup_your_debts">Ваши долги</string>
     <string name="settleup_no_debts_title">Нет долгов</string>
     <string name="settleup_no_debts_message">У вас нет долгов в этой группе</string>
-    <string name="settleup_you_owe">Вы должны %1$s</string>
-    <string name="settleup_owes_you">%1$s должен(на) вам</string>
-    <string name="settleup_owes">%1$s должен(на) %2$s</string>
+    <string name="settleup_you_owe">Вы отдали %1$s</string>
+    <string name="settleup_owes_you">%1$s отдал(а) вам</string>
+    <string name="settleup_owes">%1$s отдал(а) %2$s</string>
     <string name="settleup_you_pay">Вы платите — %1$s</string>
     <string name="settleup_pays_you">%1$s платит вам</string>
     <string name="settleup_pays">%1$s платит — %2$s</string>
@@ -514,6 +514,7 @@
     <string name="settleup_submit">Записать платёж</string>
     <string name="settleup_already_settled">Долг уже погашен</string>
     <string name="settleup_back_to_list">К списку долгов</string>
+    <string name="settleup_records_only">Splitty только записывает: деньги передайте наличными или переводом</string>
     <string name="settleup_offline_caption">Погашение доступно только онлайн</string>
     <string name="profile_app_version">Версия %1$s (%2$d)</string>
 

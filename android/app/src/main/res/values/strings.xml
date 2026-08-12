@@ -478,9 +478,9 @@
     <string name="settleup_your_debts">Your debts</string>
     <string name="settleup_no_debts_title">No debts</string>
     <string name="settleup_no_debts_message">You have no debts in this group</string>
-    <string name="settleup_you_owe">You owe %1$s</string>
-    <string name="settleup_owes_you">%1$s owes you</string>
-    <string name="settleup_owes">%1$s owes %2$s</string>
+    <string name="settleup_you_owe">You paid %1$s</string>
+    <string name="settleup_owes_you">%1$s paid you</string>
+    <string name="settleup_owes">%1$s paid %2$s</string>
     <string name="settleup_you_pay">You pay — %1$s</string>
     <string name="settleup_pays_you">%1$s pays you</string>
     <string name="settleup_pays">%1$s pays — %2$s</string>
@@ -489,6 +489,7 @@
     <string name="settleup_submit">Record payment</string>
     <string name="settleup_already_settled">This debt is already settled</string>
     <string name="settleup_back_to_list">Back to debts</string>
+    <string name="settleup_records_only">Splitty only records it — hand the money over in cash or by transfer</string>
     <string name="settleup_offline_caption">Settling up works only online</string>
     <string name="profile_app_version">Version %1$s (%2$d)</string>
 

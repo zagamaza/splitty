@@ -209,6 +209,15 @@ struct SettleUpView: View {
                 // а не alert по тапу (кнопка «работала», но ругалась).
                 .disabled(!isSumValid(debt: debt) || isSaving || !session.isOnline)
 
+                // Приложение только ведёт счёт: деньги оно не переводит.
+                // Без этой строки «Записать платёж» читается как перевод,
+                // и человек ждёт, что деньги уйдут сами
+                Text("Splitty только записывает: деньги передайте наличными или переводом")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Color.inkSecondary)
+                    .frame(maxWidth: .infinity)
+
                 if !session.isOnline {
                     Text("Погашение доступно только онлайн")
                         .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
@@ -240,13 +249,15 @@ struct SettleUpView: View {
     }
 
     private func paymentTitle(debt: Debt) -> String {
+        // Прошедшее время: экран записывает состоявшийся факт, а не начинает
+        // перевод. «Вы платите» обещало действие, которого приложение не делает
         if debt.debtor.id == meId {
-            return String(localized: "Вы платите — \(debt.lender.displayName)")
+            return String(localized: "Вы отдали — \(debt.lender.displayName)")
         }
         if debt.lender.id == meId {
-            return String(localized: "\(debt.debtor.displayName) платит вам")
+            return String(localized: "\(debt.debtor.displayName) отдал(а) вам")
         }
-        return String(localized: "\(debt.debtor.displayName) платит — \(debt.lender.displayName)")
+        return String(localized: "\(debt.debtor.displayName) отдал(а) — \(debt.lender.displayName)")
     }
 
     /// Карточка суммы: hero-поле rounded + monospacedDigit по центру,

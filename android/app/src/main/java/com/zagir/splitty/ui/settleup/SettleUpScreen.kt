@@ -366,6 +366,16 @@ private fun PaymentStep(
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            // Приложение только ведёт счёт: деньги оно не переводит. Без этой
+            // строки «Записать платёж» читается как перевод, и человек ждёт,
+            // что деньги уйдут сами
+            Text(
+                text = stringResource(R.string.settleup_records_only),
+                fontSize = 13.sp,
+                color = Splitty.colors.inkSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
