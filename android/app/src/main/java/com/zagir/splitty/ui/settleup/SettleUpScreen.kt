@@ -128,7 +128,7 @@ fun SettleUpScreen(
                         Text(
                             text = stringResource(R.string.common_cancel),
                             fontSize = 17.sp,
-                            color = colors.accent,
+                            color = colors.accentText,
                         )
                     }
                 },
@@ -361,7 +361,7 @@ private fun PaymentStep(
                     text = stringResource(R.string.settleup_offline_caption),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Splitty.colors.negative,
+                    color = Splitty.colors.negativeText,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

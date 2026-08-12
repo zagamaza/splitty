@@ -314,7 +314,7 @@ struct AddExpenseView: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                 Text(text)
                     .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Color.bg)
@@ -586,7 +586,7 @@ struct AddExpenseView: View {
         HStack(spacing: 10) {
             Image(systemName: "waveform")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Распознано голосом")
                     .scaledFont(size: 14, weight: .semibold)
@@ -605,7 +605,7 @@ struct AddExpenseView: View {
             } label: {
                 Image(systemName: "camera.fill")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                     .frame(width: 38, height: 38)
                     .background(Color.accent.opacity(0.12), in: Circle())
             }
@@ -656,7 +656,7 @@ struct AddExpenseView: View {
         } label: {
             Label("Заполнить голосом", systemImage: "waveform")
                 .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
@@ -725,7 +725,7 @@ struct AddExpenseView: View {
         } label: {
             Label("Удалить", systemImage: "trash")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.negative)
+                .foregroundStyle(Color.negativeText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
@@ -900,7 +900,7 @@ struct AddExpenseView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "waveform")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.accentText)
                     Text("Надиктуйте расход")
                         .scaledFont(size: 16, weight: .semibold)
                         .foregroundStyle(Color.ink)
@@ -934,7 +934,7 @@ struct AddExpenseView: View {
             } label: {
                 Label("Сфотографировать чек", systemImage: "camera.fill")
                     .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.accent.opacity(0.12), in: Capsule())
@@ -1267,14 +1267,14 @@ struct AddExpenseView: View {
                 Label("Выберите, кто это — «\(name)»: коснитесь красной метки в чеке",
                       systemImage: "exclamationmark.triangle.fill")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                    .foregroundStyle(Color.negative)
+                    .foregroundStyle(Color.negativeText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if model.hasPricelessItems {
                 Label("Укажите цену — коснитесь позиции с меткой «цена?». Или продиктуйте: «пицца стоила 600»",
                       systemImage: "exclamationmark.triangle.fill")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                    .foregroundStyle(Color.negative)
+                    .foregroundStyle(Color.negativeText)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if !model.parseQuestions.isEmpty {
@@ -1311,7 +1311,7 @@ struct AddExpenseView: View {
         } label: {
             Label("Добавить позицию", systemImage: "plus.circle.fill")
                 .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
@@ -1326,7 +1326,7 @@ struct AddExpenseView: View {
         HStack(spacing: 10) {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Правка применена")
                     .scaledFont(size: 14, weight: .semibold)
@@ -1342,7 +1342,7 @@ struct AddExpenseView: View {
             } label: {
                 Text("Отменить")
                     .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(Color.accent.opacity(0.12), in: Capsule())
@@ -2133,7 +2133,7 @@ struct RecordingOverlay: View {
                     Text("· осталось \(remaining) с")
                         .scaledFont(size: 14, weight: .semibold)
                         .monospacedDigit()
-                        .foregroundStyle(Color.negative)
+                        .foregroundStyle(Color.negativeText)
                 }
             }
         }
@@ -2178,7 +2178,7 @@ struct RecordingOverlay: View {
                 .scaledFont(size: 11, weight: .bold, relativeTo: .footnote)
                 .tracking(1.2)
                 .textCase(.uppercase)
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
             ForEach(hints, id: \.self) { hint in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Circle().fill(Color.accent).frame(width: 5, height: 5)
@@ -2407,7 +2407,7 @@ struct ItemSheetView: View {
             } label: {
                 Label(isSurcharge ? "Удалить сбор" : "Удалить позицию", systemImage: "trash")
                     .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
-                    .foregroundStyle(Color.negative)
+                    .foregroundStyle(Color.negativeText)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }

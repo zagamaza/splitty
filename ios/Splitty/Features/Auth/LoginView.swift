@@ -331,7 +331,7 @@ struct LoginView: View {
             if let emailErrorMessage {
                 Text(emailErrorMessage)
                     .scaledFont(size: 14, relativeTo: .footnote)
-                    .foregroundStyle(Color.negative)
+                    .foregroundStyle(Color.negativeText)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -350,7 +350,7 @@ struct LoginView: View {
             } label: {
                 Text(isRegistering ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться")
                     .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
             }
             .frame(maxWidth: .infinity)
             .disabled(isLoggingIn)

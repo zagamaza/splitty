@@ -706,7 +706,7 @@ private fun TimerLabel(
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.rec_remaining, remaining),
-                color = colors.negative,
+                color = colors.negativeText,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.Monospace,
@@ -827,7 +827,7 @@ private fun HintsCard(hints: List<String>, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = stringResource(R.string.rec_hints_title).uppercase(),
-            color = colors.accent,
+            color = colors.accentText,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.2.sp,

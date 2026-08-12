@@ -428,10 +428,13 @@ internal fun InviteBanner(onClick: () -> Unit) {
             text = stringResource(R.string.invite_banner_action),
             fontSize = 13.5.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.White,
+            // Белый текст на полупрозрачной подложке поверх градиента давал
+            // 2.6:1 — на ярком фоне надпись просто пропадала. Плашка
+            // непрозрачная, текст — тёмный акцент
+            color = colors.accentText,
             modifier = Modifier
                 .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = 0.22f))
+                .background(Color.White)
                 .padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
@@ -1429,7 +1432,7 @@ private fun GroupSettingsTab(
                             text = stringResource(R.string.group_settings_members_invite),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.accent,
+                            color = colors.accentText,
                         )
                     }
                 }
@@ -1470,7 +1473,7 @@ private fun GroupSettingsTab(
                                     Text(
                                         text = stringResource(R.string.group_remove_member_confirm),
                                         fontSize = 13.sp,
-                                        color = colors.negative,
+                                        color = colors.negativeText,
                                     )
                                 }
                             }
@@ -1621,7 +1624,7 @@ private fun GroupSettingsTab(
                             text = stringResource(R.string.group_leave_action),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Medium,
-                            color = colors.negative,
+                            color = colors.negativeText,
                         )
                     }
                 }

@@ -658,7 +658,7 @@ private fun JoinGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Unit
                 Text(
                     text = stringResource(R.string.groups_join_paste),
                     fontSize = 15.sp,
-                    color = colors.accent,
+                    color = colors.accentText,
                 )
             }
         }

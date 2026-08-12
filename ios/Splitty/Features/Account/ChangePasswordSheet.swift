@@ -69,7 +69,7 @@ struct ChangePasswordSheet: View {
                     isResetConfirmPresented = true
                 }
                 .scaledFont(size: 15, weight: .medium)
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.accentText)
                 .disabled(isSaving)
             }
 

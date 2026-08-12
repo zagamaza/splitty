@@ -567,7 +567,7 @@ private fun DashedCapsuleChip(
             text = text,
             fontSize = 11.5.sp,
             fontWeight = FontWeight.Bold,
-            color = colors.negative,
+            color = colors.negativeText,
         )
     }
 }

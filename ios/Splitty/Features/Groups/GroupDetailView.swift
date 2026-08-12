@@ -218,12 +218,15 @@ struct GroupDetailView: View {
                             .foregroundStyle(.white.opacity(0.9))
                     }
                     Spacer(minLength: 8)
+                    // Белый текст на полупрозрачной подложке поверх градиента
+                    // давал 2.6:1 — на ярком фоне надпись просто пропадала.
+                    // Плашка непрозрачная, текст — тёмный акцент
                     Text("Пригласить")
                         .scaledFont(size: 13.5, weight: .semibold, relativeTo: .footnote)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.accentText)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.22), in: Capsule())
+                        .background(.white, in: Capsule())
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -480,7 +480,7 @@ struct AccountView: View {
         } label: {
             Text("Выйти")
                 .scaledFont(size: 16, weight: .semibold)
-                .foregroundStyle(Color.negative)
+                .foregroundStyle(Color.negativeText)
                 .frame(maxWidth: .infinity)
                 .surfaceCard()
         }
@@ -505,7 +505,7 @@ struct AccountView: View {
                     }
                     Text("Удалить аккаунт")
                         .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(Color.negative)
+                        .foregroundStyle(Color.negativeText)
                 }
                 .frame(maxWidth: .infinity)
                 .surfaceCard()

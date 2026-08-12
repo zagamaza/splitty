@@ -567,7 +567,7 @@ private fun OperationActionsCard(
                     text = stringResource(R.string.op_edit),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = colors.accent,
+                    color = colors.accentText,
                 )
             }
             HairlineDivider(startIndent = 16.dp)

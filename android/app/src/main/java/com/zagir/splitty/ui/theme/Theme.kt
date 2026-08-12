@@ -33,6 +33,16 @@ data class SplittyColors(
     val accentPressed: Color,
     /** Негатив (приглушённый коралл): долги, «вы должны». */
     val negative: Color,
+    /**
+     * Акцент ДЛЯ ТЕКСТА мелким кеглем.
+     *
+     * [accent] на белом даёт 3.39:1 — этого хватает крупной сумме и заливке
+     * кнопки, но не подписи в 12–15 sp: минимум для такого текста 4.5:1.
+     * В тёмной теме совпадает с [accent] — там контраст и так проходит.
+     */
+    val accentText: Color,
+    /** Негатив ДЛЯ ТЕКСТА мелким кеглем: [negative] на белом даёт 3.79:1. */
+    val negativeText: Color,
     /** Тонкие разделители внутри карточек и hairline-бордеры в тёмной теме. */
     val hairline: Color,
     /**
@@ -57,6 +67,9 @@ data class SplittyColors(
     val isDark: Boolean,
 )
 
+/** Светлая палитра для тестов контраста (сама палитра приватна). */
+internal fun splittyLightColorsForTest(): SplittyColors = LightColors
+
 private val LightColors = SplittyColors(
     bg = Color(0xFFF6F7F9),
     surface = Color(0xFFFFFFFF),
@@ -65,6 +78,8 @@ private val LightColors = SplittyColors(
     accent = Color(0xFF0E9F6E),
     accentPressed = Color(0xFF0B7C56),
     negative = Color(0xFFDC5A2E),
+    accentText = Color(0xFF0A6E4C),
+    negativeText = Color(0xFFAF3F1C),
     hairline = Color(0xFFEAECF0),
     receiptPaper = Color(0xFFFDFCF9),
     chartAccent = Color(0xFF0E9F6E),
@@ -87,6 +102,8 @@ private val DarkColors = SplittyColors(
     accent = Color(0xFF34D399),
     accentPressed = Color(0xFF2BB985),
     negative = Color(0xFFFB923C),
+    accentText = Color(0xFF34D399),
+    negativeText = Color(0xFFFB923C),
     hairline = Color(0xFF232A33),
     receiptPaper = Color(0xFF1B2129),
     chartAccent = Color(0xFF0EA97A),

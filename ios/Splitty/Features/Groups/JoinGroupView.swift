@@ -51,7 +51,7 @@ struct JoinGroupView: View {
                                 Label("Вставить", systemImage: "doc.on.clipboard")
                                     .labelStyle(.titleAndIcon)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.accent)
+                                    .foregroundStyle(Color.accentText)
                             }
                             .fixedSize()
                         }
@@ -62,7 +62,7 @@ struct JoinGroupView: View {
                     if !trimmedCode.isEmpty, roomId.isEmpty {
                         Text("Не похоже на код или ссылку группы")
                             .font(.footnote)
-                            .foregroundStyle(Color.negative)
+                            .foregroundStyle(Color.negativeText)
                             .padding(.horizontal, 4)
                     }
                     // Форматов ссылки два (страница приглашения и легаси-ссылка

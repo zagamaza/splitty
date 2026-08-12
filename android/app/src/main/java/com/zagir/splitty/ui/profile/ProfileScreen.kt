@@ -526,7 +526,7 @@ private fun DeleteAccountSection(isDeleting: Boolean, onClick: () -> Unit) {
                     text = stringResource(R.string.profile_delete_account),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Splitty.colors.negative,
+                    color = Splitty.colors.negativeText,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -879,7 +879,7 @@ private fun LogoutSection(onClick: () -> Unit) {
                 .padding(16.dp),
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Splitty.colors.negative,
+            color = Splitty.colors.negativeText,
             textAlign = TextAlign.Center,
         )
     }
@@ -968,7 +968,7 @@ private fun PasswordDialog(
                         ),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Splitty.colors.accent,
+                        color = Splitty.colors.accentText,
                     )
                 }
                 PasswordField(

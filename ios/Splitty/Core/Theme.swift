@@ -58,6 +58,14 @@ extension Color {
     static let receiptPaper = Color(light: 0xFDFCF9, dark: 0x1B2129)
     /// Нажатое состояние акцента (тёмный изумруд): pressed CTA, градиенты.
     static let accentPressed = Color(light: 0x0B7C56, dark: 0x2BB985)
+    /// Акцент ДЛЯ ТЕКСТА мелким кеглем.
+    ///
+    /// `accent` на белом даёт 3.39:1 — этого хватает крупной сумме и заливке
+    /// кнопки, но не подписи в 12–15 пунктов: минимум для такого текста 4.5:1.
+    /// Тёмная тема не трогается — там `accent` на тёмном фоне и так проходит.
+    static let accentText = Color(light: 0x0A6E4C, dark: 0x34D399)
+    /// Негатив ДЛЯ ТЕКСТА мелким кеглем: `negative` на белом даёт 3.79:1.
+    static let negativeText = Color(light: 0xAF3F1C, dark: 0xFB923C)
     /// Цвет бренда Telegram — не токен темы, одинаков в обеих.
     static let telegramBlue = Color(light: 0x2AABEE, dark: 0x2AABEE)
 

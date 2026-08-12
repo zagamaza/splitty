@@ -269,7 +269,7 @@ private fun EmailDisclosure(enabled: Boolean, onClick: () -> Unit) {
             text = stringResource(R.string.login_email_disclosure_action),
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Splitty.colors.accent,
+            color = Splitty.colors.accentText,
         )
     }
 }

@@ -67,7 +67,7 @@ struct InviteGroupView: View {
                         Spacer(minLength: 8)
                         Image(systemName: copied == .code ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color.accent)
+                            .foregroundStyle(Color.accentText)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)

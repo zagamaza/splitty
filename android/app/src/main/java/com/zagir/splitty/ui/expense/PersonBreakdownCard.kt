@@ -168,7 +168,7 @@ private fun BalancedLine() {
                 text = stringResource(R.string.breakdown_allocated),
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accent,
+                color = colors.accentText,
             )
         }
     }

@@ -196,7 +196,7 @@ struct GroupTotalsView: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .scaledFont(size: 13, weight: .semibold, design: .default, relativeTo: .footnote)
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                     .frame(width: 18, height: 18)
                 Text(title)
                     .sectionHeaderStyle()

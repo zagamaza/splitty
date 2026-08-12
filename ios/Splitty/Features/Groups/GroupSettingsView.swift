@@ -138,7 +138,7 @@ struct GroupSettingsView: View {
                     // назывались одинаково, а вели в разные места
                     Label("Добавить", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.accentText)
                 }
             }
             .padding(.horizontal, 4)
@@ -195,7 +195,7 @@ struct GroupSettingsView: View {
                 HStack {
                     Label("Выйти из группы", systemImage: "rectangle.portrait.and.arrow.right")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.negative)
+                        .foregroundStyle(Color.negativeText)
                     Spacer(minLength: 0)
                     if isMutating {
                         ProgressView()

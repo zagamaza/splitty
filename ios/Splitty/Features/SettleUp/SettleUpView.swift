@@ -221,7 +221,7 @@ struct SettleUpView: View {
                 if !session.isOnline {
                     Text("Погашение доступно только онлайн")
                         .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                        .foregroundStyle(Color.negative)
+                        .foregroundStyle(Color.negativeText)
                 }
             }
             .padding(20)
@@ -236,7 +236,7 @@ struct SettleUpView: View {
                 UserAvatarView(user: debt.debtor, size: 64)
                 Image(systemName: "arrow.right")
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.accentText)
                 UserAvatarView(user: debt.lender, size: 64)
             }
             Text(paymentTitle(debt: debt))
@@ -296,7 +296,7 @@ struct SettleUpView: View {
                 Text("Не больше долга: \(money(debt.sum, currency: currency))")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .monospacedDigit()
-                    .foregroundStyle(Color.negative)
+                    .foregroundStyle(Color.negativeText)
             } else {
                 Text("Долг: \(money(debt.sum, currency: currency))")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)

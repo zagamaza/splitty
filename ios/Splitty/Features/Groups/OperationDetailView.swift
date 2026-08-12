@@ -309,7 +309,7 @@ struct OperationDetailView: View {
                 } label: {
                     Label("Изменить", systemImage: "pencil")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.accentText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
@@ -335,7 +335,7 @@ struct OperationDetailView: View {
                     }
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.negative)
+                .foregroundStyle(Color.negativeText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)

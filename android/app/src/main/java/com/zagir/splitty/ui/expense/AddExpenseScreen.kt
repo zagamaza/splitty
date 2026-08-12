@@ -326,7 +326,7 @@ fun AddExpenseScreen(
                         Text(
                             text = stringResource(R.string.common_cancel),
                             fontSize = 17.sp,
-                            color = colors.accent,
+                            color = colors.accentText,
                         )
                     }
                 },
@@ -896,7 +896,7 @@ private fun ReceiptSection(
                 text = stringResource(R.string.expense_add_item),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accent,
+                color = colors.accentText,
             )
         }
         SplitOverrideCard(onCollapse = onCollapseToEqual)
@@ -1092,7 +1092,7 @@ private fun DeleteLocalCard(enabled: Boolean, onDelete: () -> Unit) {
                 .padding(14.dp),
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = colors.negative,
+            color = colors.negativeText,
             textAlign = TextAlign.Center,
         )
     }
@@ -1854,7 +1854,7 @@ private fun ComposerCard(
                 text = stringResource(R.string.expense_composer_photo),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accent,
+                color = colors.accentText,
             )
         }
         // Галерея остаётся доступной и в композере — снимок бывает уже сделан.

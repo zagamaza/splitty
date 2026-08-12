@@ -105,7 +105,7 @@ struct ReceiptView: View {
                     // метка ведёт в шит позиции — там поле цены.
                     Text("цена?")
                         .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.negative)
+                        .foregroundStyle(Color.negativeText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color.negative.opacity(0.1), in: Capsule())
@@ -188,7 +188,7 @@ struct ReceiptView: View {
             Text(verbatim: "?")
         }
         .font(.system(size: 11.5, weight: .bold, design: .rounded))
-        .foregroundStyle(Color.negative)
+        .foregroundStyle(Color.negativeText)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(Color.negative.opacity(0.1), in: Capsule())
@@ -487,7 +487,7 @@ struct PersonBreakdownCard: View {
             Text("Сумма распределена полностью")
                 .font(.system(size: 12.5, weight: .semibold, design: .rounded))
         }
-        .foregroundStyle(Color.accent)
+        .foregroundStyle(Color.accentText)
         .padding(.top, 10)
         .overlay(alignment: .top) {
             Rectangle().fill(Color.hairline).frame(height: 1)
