@@ -27,7 +27,9 @@ type OperationService interface {
 	ActivateOperation(ctx context.Context, o *api.Operation, roomId string) error
 	SetNotificationSent(ctx context.Context, roomId string, operationId primitive.ObjectID, sent []int) error
 	CreateOperation(ctx context.Context, o *api.Operation, roomId string) error
-	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
+	// DeleteOperation помечает операцию архивной; bool — было ли что архивировать
+	// (боту неважно: он удаляет по кнопке, повтор безобиден)
+	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) (bool, error)
 	GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
 	GetAllSpendOperations(ctx context.Context, roomId string) (*[]api.Operation, error)
@@ -1299,7 +1301,7 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	var oldOp api.Operation
 	if oldOperationId != nil {
 		oldOp = findOperationByID(room, *oldOperationId)
-		if err := s.os.DeleteOperation(ctx, room.ID.Hex(), oldOp.ID); err != nil {
+		if _, err := s.os.DeleteOperation(ctx, room.ID.Hex(), oldOp.ID); err != nil {
 			log.Error().Err(err).Msg("upsert operation failed")
 			return
 		}
@@ -1797,13 +1799,13 @@ func (s DeleteDonorOperation) OnMessage(ctx context.Context, u *api.Update) (res
 		operation.RecipientsWithSum = []api.RecipientWithSum{}
 		buttons, messages = notificationWhenUpdateOperation(canonical(ctx, s.us), u, oldOperation, operation, room, buttons, messages)
 
-		if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, oldOperation.ID); err != nil {
+		if _, err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, oldOperation.ID); err != nil {
 			log.Error().Err(err).Msg("delete operation failed")
 			return api.TelegramMessage{}
 		}
 	}
 
-	if err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, u.Button.CallbackData.OperationId); err != nil {
+	if _, err := s.os.DeleteOperation(ctx, u.Button.CallbackData.RoomId, u.Button.CallbackData.OperationId); err != nil {
 		log.Error().Err(err).Msg("delete operation failed")
 		return
 	}

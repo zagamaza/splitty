@@ -99,7 +99,13 @@ type RoomRepository interface {
 	// Возвращает true, если операция вставлена; false — если дубль уже существует;
 	// mongo.ErrNoDocuments — если комнаты нет
 	CreateOperationIfAbsent(ctx context.Context, o *api.Operation, roomId string) (bool, error)
-	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
+	// DeleteOperation переводит операцию в статус archive (мягкое удаление).
+	// false — архивировать было нечего: нет комнаты, нет операции или её уже
+	// заархивировали
+	DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) (bool, error)
+	// PurgeOperation вырезает операцию из документа физически. Только для отката
+	// вставки, которой не должно было быть (см. компенсацию переплаты)
+	PurgeOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error
 	ArchiveRoom(ctx context.Context, userId int, roomId string) error
 	UnArchiveRoom(ctx context.Context, userId int, roomId string) error
 	FinishedAddOperation(ctx context.Context, userId int, roomId string) error
@@ -834,17 +840,52 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	return false, ErrParticipantLeft
 }
 
-func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error {
+// DeleteOperation помечает операцию архивной, а не вырезает её из документа:
+// физическое удаление невосстановимо, а поводов вернуть расход хватает — от
+// промаха по кнопке до чужого удаления в общей группе. Статус archive уже
+// понимают и бот, и нормализация (api.ActiveOperations), поэтому скрытие
+// получается само собой.
+//
+// Возвращает false, когда архивировать было нечего: комнаты нет, операции нет
+// либо её успели заархивировать конкурентно. Условие живости стоит в фильтре, а
+// не проверяется отдельным чтением, — иначе между чтением и записью остаётся
+// зазор. Позиционный `$` берёт элемент, найденный $elemMatch: operations —
+// единственный массив в фильтре, привязка однозначна.
+//
+// Легаси-операции без поля status условие проходят: $ne матчит и отсутствующее
+// поле
+func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) (bool, error) {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return false, err
+	}
+	filter := bson.M{
+		"_id": hex,
+		"operations": bson.M{"$elemMatch": bson.M{
+			"_id":    operationId,
+			"status": bson.M{"$ne": api.StatusArchive},
+		}},
+	}
+	update := bson.M{"$set": bson.M{"operations.$.status": api.StatusArchive}}
+	res, err := rr.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return false, err
+	}
+	return res.MatchedCount > 0, nil
+}
+
+// PurgeOperation вырезает операцию из документа насовсем. Единственный законный
+// повод — откат только что вставленной записи, которой не должно было быть
+// (компенсация переплаты в погашении): следа от неё не остаётся нигде, включая
+// историю. Для пользовательского удаления есть DeleteOperation
+func (rr MongoRoomRepository) PurgeOperation(ctx context.Context, roomId string, operationId primitive.ObjectID) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"operations": bson.M{"_id": operationId}}})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string, currency string) error {

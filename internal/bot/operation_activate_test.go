@@ -54,9 +54,9 @@ func (s *activateOperationService) UpdateOperation(_ context.Context, o *api.Ope
 	return nil
 }
 
-func (s *activateOperationService) DeleteOperation(_ context.Context, _ string, id primitive.ObjectID) error {
+func (s *activateOperationService) DeleteOperation(_ context.Context, _ string, id primitive.ObjectID) (bool, error) {
 	s.deleted = append(s.deleted, id)
-	return nil
+	return true, nil
 }
 
 func roomHasMember(r *api.Room, id int) bool {

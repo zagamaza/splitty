@@ -99,13 +99,25 @@ func (css *ChatStateService) CleanChatState(ctx context.Context, state *api.Chat
 	}
 }
 
+// GetAllOperations отдаёт операции комнаты без архивных: удалённый расход не
+// должен возвращаться наружу (в том числе в интеграцию с внешним хостом) — до
+// мягкого удаления его в документе просто не было
 func (s *OperationService) GetAllOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
 	room, err := s.RoomRepository.FindById(ctx, roomId)
 	if err != nil {
 		log.Err(err).Msgf("cannot find room id:%s", roomId)
 		return nil, err
 	}
-	return room.Operations, nil
+	if room.Operations == nil {
+		return room.Operations, nil
+	}
+	ops := make([]api.Operation, 0, len(*room.Operations))
+	for _, o := range *room.Operations {
+		if o.Status != api.StatusArchive {
+			ops = append(ops, o)
+		}
+	}
+	return &ops, nil
 }
 
 func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId string) (*[]api.Operation, error) {
@@ -116,7 +128,9 @@ func (s *OperationService) GetAllDebtOperations(ctx context.Context, roomId stri
 	}
 	var debtOperations []api.Operation
 	for _, o := range *room.Operations {
-		if o.IsDebtRepayment {
+		// archive — удалённое погашение: до мягкого удаления его здесь не было,
+		// потому что запись вырезали из документа
+		if o.IsDebtRepayment && o.Status != api.StatusArchive {
 			debtOperations = append(debtOperations, o)
 		}
 	}

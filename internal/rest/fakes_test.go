@@ -624,6 +624,9 @@ type fakeRoomRepo struct {
 	// атомарной проверки+вставки — симулирует конкурентный запрос, успевший
 	// вставить операцию с тем же client_op_id раньше нас
 	beforeCreateIfAbsent func(roomId string)
+	// beforeDelete вызывается в начале DeleteOperation — симулирует конкурента,
+	// успевшего удалить ту же операцию между чтением комнаты и записью
+	beforeDelete func(roomId string, operationId primitive.ObjectID)
 	// anonymizeErr — одноразовый сбой AnonymizeUser: имитирует падение
 	// удаления аккаунта ПОСЛЕ tombstone, чтобы проверить, что аккаунт уже
 	// недоступен, а повторный вызов доводит анонимизацию до конца
@@ -916,7 +919,30 @@ func allParticipantsAreMembers(room *api.Room, o *api.Operation) bool {
 	return true
 }
 
-func (f *fakeRoomRepo) DeleteOperation(_ context.Context, roomId string, operationId primitive.ObjectID) error {
+// DeleteOperation повторяет мягкое удаление боевого репозитория: операция
+// остаётся в документе со статусом archive. Тесты обязаны видеть ту же
+// семантику, иначе они проверяют не то, что работает на проде
+func (f *fakeRoomRepo) DeleteOperation(_ context.Context, roomId string, operationId primitive.ObjectID) (bool, error) {
+	if f.beforeDelete != nil {
+		f.beforeDelete(roomId, operationId)
+	}
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return false, mongo.ErrNoDocuments
+	}
+	ops := roomOperations(room)
+	for i := range ops {
+		if ops[i].ID != operationId || ops[i].Status == api.StatusArchive {
+			continue
+		}
+		ops[i].Status = api.StatusArchive
+		room.Operations = &ops
+		return true, nil
+	}
+	return false, nil
+}
+
+func (f *fakeRoomRepo) PurgeOperation(_ context.Context, roomId string, operationId primitive.ObjectID) error {
 	room, ok := f.rooms[roomId]
 	if !ok {
 		return mongo.ErrNoDocuments

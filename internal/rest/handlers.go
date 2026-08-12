@@ -979,9 +979,16 @@ func (s *Server) handleDeleteOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Удалить расход может любой участник комнаты (Splitwise-семантика).
-	if err := s.operationSrv.DeleteOperation(ctx, roomId, operation.ID); err != nil {
+	// Операция помечается архивной, а не вырезается: удаление обратимо.
+	deleted, err := s.operationSrv.DeleteOperation(ctx, roomId, operation.ID)
+	if err != nil {
 		log.Error().Err(err).Msg("delete operation failed")
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось удалить операцию")
+		return
+	}
+	if !deleted {
+		// операцию удалили между чтением комнаты и записью
+		writeError(w, http.StatusNotFound, "not_found", "операция не найдена")
 		return
 	}
 	// удаление погашения не уведомляет: у бота нет такого сценария/текста
@@ -1175,7 +1182,9 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 			log.Warn().Msgf("cannot verify repayment for room %s: reread failed", roomId)
 		}
 	} else if overpaid {
-		if delErr := s.operationSrv.DeleteOperation(ctx, roomId, operation.ID); delErr != nil {
+		// Purge, а не архив: погашения не было — оно проиграло гонку и не должно
+		// остаться даже архивной записью в истории комнаты
+		if delErr := s.operationSrv.PurgeOperation(ctx, roomId, operation.ID); delErr != nil {
 			log.Error().Err(delErr).Msgf("cannot rollback overpaid repayment %s", operation.ID.Hex())
 			writeError(w, http.StatusInternalServerError, "internal", "не удалось сохранить погашение")
 			return
