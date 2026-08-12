@@ -96,6 +96,7 @@ import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.RoomDetail
+import com.zagir.splitty.core.model.operationsBlockingLeave
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.money.money
 import com.zagir.splitty.data.OutboxEntry
@@ -1598,11 +1599,14 @@ private fun GroupSettingsTab(
 
             // Выход из группы
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Кнопка гаснет ЗАРАНЕЕ: расходы видно в самой комнате, и ждать
+                // отказа сервера, чтобы сообщить об этом, незачем
+                val blocking = meId?.let { room.operationsBlockingLeave(it) }.orEmpty()
                 SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isLeaveConfirmVisible = true }
+                            .clickable(enabled = blocking.isEmpty()) { isLeaveConfirmVisible = true }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1622,7 +1626,11 @@ private fun GroupSettingsTab(
                     }
                 }
                 Text(
-                    text = stringResource(R.string.group_leave_footer),
+                    text = if (blocking.isEmpty()) {
+                        stringResource(R.string.group_leave_message)
+                    } else {
+                        stringResource(R.string.group_leave_blocked, blocking.size)
+                    },
                     fontSize = 12.sp,
                     color = colors.inkSecondary,
                     modifier = Modifier.padding(horizontal = 4.dp),

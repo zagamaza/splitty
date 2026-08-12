@@ -344,6 +344,13 @@ data class Operation(
         donor.id == userId || recipients.any { it.user.id == userId }
 
     /**
+     * Держит ли расход человека в группе: погашения не держат (они не
+     * перестают быть верными после ухода), остальное — держит.
+     * Зеркало серверного правила `api.HasOperations`.
+     */
+    fun blocksLeaving(userId: Long): Boolean = !isDebtRepayment && involves(userId)
+
+    /**
      * Доля пользователя по ХРАНИМЫМ суммам получателей (не пересчёт!);
      * null — не участвует в делении.
      */
@@ -497,6 +504,14 @@ data class RoomDetail(
      */
     val seenThrough: Instant? = null,
 )
+
+
+/**
+ * Расходы, которые держат человека в группе: пока они есть, сервер выхода не
+ * даст. Считаем на клиенте, чтобы сказать это ДО нажатия, а не отказом.
+ */
+fun RoomDetail.operationsBlockingLeave(userId: Long): List<Operation> =
+    operations.filter { it.blocksLeaving(userId) }
 
 /** Баланс с другом по одной группе (только ненулевые) — в валюте этой группы. */
 @Serializable

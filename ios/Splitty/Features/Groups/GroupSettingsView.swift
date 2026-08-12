@@ -206,13 +206,31 @@ struct GroupSettingsView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(isMutating)
+            // Кнопка гаснет ЗАРАНЕЕ: расходы видно в самой комнате, и ждать
+            // отказа сервера, чтобы сообщить об этом, незачем
+            .disabled(isMutating || !blockingOperations.isEmpty)
             .surfaceCard(padding: 0)
-            Text("Пока на вас записаны расходы, выйти нельзя — сначала уберите себя из них.")
+            Text(leaveFooterText)
                 .font(.caption)
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.horizontal, 4)
         }
+    }
+
+    /// Расходы, которые держат человека в группе (считаются по комнате в памяти).
+    private var blockingOperations: [Operation] {
+        guard let meId = session.me?.id else { return [] }
+        return room.operationsBlockingLeave(for: meId)
+    }
+
+    /// Подпись под кнопкой выхода: пока расходы есть, говорим сколько их и что
+    /// с ними делать. Раньше человек узнавал об этом отказом сервера после тапа
+    private var leaveFooterText: String {
+        let count = blockingOperations.count
+        if count == 0 {
+            return String(localized: "Группа исчезнет из вашего списка. Вернуться можно только по приглашению участника")
+        }
+        return String(localized: "На вас записано расходов: \(count). Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник")
     }
 
     private func leaveRoom() async {

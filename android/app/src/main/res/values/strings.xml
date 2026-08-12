@@ -100,6 +100,7 @@
     <string name="group_leave_message">The group disappears from your list. You can only come back if a member invites you</string>
     <string name="group_leave_confirm">Leave</string>
     <string name="group_leave_action">Leave group</string>
+    <string name="group_leave_blocked">Expenses recorded on you: %1$d. Remove yourself from them — and if you paid, hand the expense to another payer or delete it. Any member can edit expenses</string>
     <string name="group_leave_footer">While expenses are recorded on you, you can\'t leave — remove yourself from them first.</string>
     <string name="invite_friends_title">Invite</string>
     <string name="invite_friends_section">From your groups</string>

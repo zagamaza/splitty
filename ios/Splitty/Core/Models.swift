@@ -316,6 +316,13 @@ extension Operation {
         donor.id == userId || recipients.contains { $0.user.id == userId }
     }
 
+    /// Держит ли расход человека в группе: погашения не держат (они не
+    /// перестают быть верными после ухода), остальное — держит.
+    /// Зеркало серверного правила `api.HasOperations`.
+    func blocksLeaving(_ userId: Int) -> Bool {
+        !isDebtRepayment && involves(userId)
+    }
+
     /// Доля пользователя по ХРАНИМЫМ суммам получателей (не пересчёт!);
     /// nil — не участвует в делении.
     func recipientSum(of userId: Int) -> Int? {
@@ -597,6 +604,12 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     /// nil/пусто — публичный домен на сервере ещё не настроен; экран
     /// приглашения тогда откатывается на легаси-ссылку бота (`InviteGroupView`).
     var inviteUrl: String?
+    /// Расходы, которые держат человека в группе: пока они есть, сервер выхода
+    /// не даст. Считаем на клиенте, чтобы сказать это ДО нажатия, а не отказом.
+    func operationsBlockingLeave(for userId: Int) -> [Operation] {
+        operations.filter { $0.blocksLeaving(userId) }
+    }
+
     /// Время формирования ЭТОГО ответа сервером — его и надо вернуть в
     /// `POST /rooms/{id}/notifications-seen`, чтобы погасить счётчик группы.
     /// Своё локальное «сейчас» гасило бы и расход, пришедший между ответом и
