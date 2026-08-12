@@ -91,9 +91,16 @@ struct GroupDetailView: View {
                     )
                 }
             }
+            // Выбор друзей, а не шит со ссылкой: главный призыв группы вёл мимо
+            // основного способа позвать человека. Ссылка осталась внутри
+            // пикера — она нужна тем, с кем расходы ещё не делили
             .sheet(isPresented: $isInvitePresented) {
                 if let room = model.room {
-                    InviteGroupView(room: room)
+                    InviteFriendView(
+                        roomId: room.id,
+                        existingMemberIds: Set(room.members.map(\.id)),
+                        onInvited: { Task { await model.load(repo: session.repo, roomId: roomId) } }
+                    )
                 }
             }
             .errorAlert($model.alertMessage)

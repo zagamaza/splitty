@@ -35,10 +35,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,6 +92,9 @@ fun ActivityScreen(
     val myUserId by viewModel.myUserId.collectAsStateWithLifecycle()
     val invites by viewModel.invites.collectAsStateWithLifecycle()
 
+    /** Карточка, выход из которой ждёт подтверждения; null — диалога нет. */
+    var leaveConfirmCard by remember { mutableStateOf<InviteCard?>(null) }
+
     // Раздел открыт — значит человек всё это увидел. Сообщаем именно факт
     // показа, а не «отметь сейчас»: на первом визите ленты ещё нет, и отметку
     // отправит сама VM, когда придёт ответ с seenThrough.
@@ -118,7 +127,14 @@ fun ActivityScreen(
                     when (action) {
                         InviteAction.ACCEPT -> viewModel.acceptInvite(card)
                         InviteAction.DECLINE -> viewModel.declineInvite(card)
-                        InviteAction.LEAVE -> viewModel.leaveFromCard(card)
+                        // Выход спрашивают: он необратим (вернуться можно только
+                        // по новому приглашению), а кнопка стоит рядом с
+                        // «Открыть» — промах стоил человеку группы
+                        InviteAction.LEAVE -> if (inviteActionNeedsConfirm(action)) {
+                            leaveConfirmCard = card
+                        } else {
+                            viewModel.leaveFromCard(card)
+                        }
                     }
                 },
                 myUserId = myUserId,
@@ -129,6 +145,17 @@ fun ActivityScreen(
                 onOpenRoom = onOpenRoom,
             )
         }
+    }
+
+    leaveConfirmCard?.let { card ->
+        InviteLeaveConfirmDialog(
+            card = card,
+            onConfirm = {
+                leaveConfirmCard = null
+                viewModel.leaveFromCard(card)
+            },
+            onDismiss = { leaveConfirmCard = null },
+        )
     }
 
     val message = errorMessage
@@ -461,9 +488,13 @@ private fun InviteCardView(
                     onClick = onOpen,
                     isSelected = true,
                 )
+                // Отступ отделяет необратимое действие от обычного: рядом
+                // стоящие кнопки ловили промах, и человек выходил из группы
+                Spacer(Modifier.width(16.dp))
                 SoftChip(
                     text = stringResource(R.string.invite_leave),
                     onClick = { onAction(InviteAction.LEAVE) },
+                    modifier = Modifier.testTag("invite_leave"),
                 )
             }
         }
@@ -479,3 +510,34 @@ private fun inviteTitle(card: InviteCard): String {
         stringResource(R.string.invite_added_you, who, card.roomName)
     }
 }
+
+/**
+ * Подтверждение выхода из группы с карточки приглашения.
+ *
+ * Выход необратим — вернуться можно только по новому приглашению, — а кнопка
+ * стоит рядом с «Открыть»: промах стоил человеку группы. Текст тот же, что в
+ * настройках группы: правило одно, и узнавать его в двух формулировках человек
+ * не должен.
+ */
+@Composable
+internal fun InviteLeaveConfirmDialog(card: InviteCard, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.group_leave_title, card.roomName)) },
+        text = { Text(stringResource(R.string.group_leave_message)) },
+        confirmButton = {
+            TextButton(
+                modifier = Modifier.testTag("invite_leave_confirm"),
+                onClick = onConfirm,
+            ) { Text(stringResource(R.string.group_leave_confirm)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.common_cancel))
+            }
+        },
+    )
+}
+
+/** Действие карточки, требующее подтверждения. Выход — единственное необратимое. */
+internal fun inviteActionNeedsConfirm(action: InviteAction): Boolean = action == InviteAction.LEAVE

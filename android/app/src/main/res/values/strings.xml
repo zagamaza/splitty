@@ -267,7 +267,7 @@
     <string name="group_settings_currency">Currency</string>
     <string name="group_settings_currency_footer">All of the group\'s amounts are shown in its currency: expenses, debts and totals.</string>
     <string name="group_settings_invite">Invite to group</string>
-    <string name="group_settings_members_invite">Invite</string>
+    <string name="group_settings_members_invite">Add</string>
     <string name="group_settings_code">Group code</string>
     <string name="group_settings_invite_footer">Share the link or the code — your friend joins with it via “Join”.</string>
     <!-- Приглашение: шит и баннер -->

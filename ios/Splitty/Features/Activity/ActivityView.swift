@@ -10,6 +10,8 @@ import SwiftUI
 /// (`notifiesUser`), и тумблер «Только мои» — переключавший ленту между
 /// «мне» и «всё подряд» — противоречил этому, да ещё и без подписи.
 struct ActivityView: View {
+    /// Карточка, выход из которой ждёт подтверждения; nil — диалога нет.
+    @State private var leaveConfirmCard: InviteCard?
     @Environment(SessionStore.self) private var session
     @State private var model = ActivityViewModel()
     /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
@@ -47,7 +49,32 @@ struct ActivityView: View {
                 } message: {
                     Text(model.errorMessage ?? "")
                 }
+                // Тот же текст, что в настройках группы: правило одно, и
+                // человек не должен узнавать его в двух разных формулировках
+                .confirmationDialog(
+                    leaveConfirmTitle,
+                    isPresented: Binding(
+                        get: { leaveConfirmCard != nil },
+                        set: { if !$0 { leaveConfirmCard = nil } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    Button("Выйти", role: .destructive) {
+                        guard let card = leaveConfirmCard else { return }
+                        leaveConfirmCard = nil
+                        Task { await model.leaveFromCard(card, session: session) }
+                    }
+                    Button("Отмена", role: .cancel) { leaveConfirmCard = nil }
+                } message: {
+                    Text("Группа исчезнет из вашего списка. Вернуться можно только по приглашению участника")
+                }
         }
+    }
+
+    /// Заголовок подтверждения выхода с карточки.
+    private var leaveConfirmTitle: String {
+        guard let card = leaveConfirmCard else { return "" }
+        return "Выйти из «\(card.roomName)»?"
     }
 
     @ViewBuilder
@@ -84,11 +111,18 @@ struct ActivityView: View {
             LazyVStack(spacing: 12) {
                 ForEach(model.invites) { card in
                     InviteCardView(card: card) { action in
+                        // Выход спрашивают: он необратим (вернуться можно только
+                        // по новому приглашению), а кнопка стоит рядом с
+                        // «Открыть» — промах стоил человеку группы
+                        if case .leave = action {
+                            leaveConfirmCard = card
+                            return
+                        }
                         Task {
                             switch action {
                             case .accept: await model.acceptInvite(card, session: session)
                             case .decline: await model.declineInvite(card, session: session)
-                            case .leave: await model.leaveFromCard(card, session: session)
+                            case .leave: break
                             }
                         }
                     }
@@ -323,10 +357,12 @@ private struct InviteCardView: View {
                     GroupDetailView(roomId: card.roomId)
                 }
                 .buttonStyle(.softChip(isSelected: true))
+                // Отступ отделяет необратимое действие от обычного: рядом
+                // стоящие кнопки ловили промах, и человек выходил из группы
+                Spacer(minLength: 24)
                 Button("Выйти") { onAction(.leave) }
                     .buttonStyle(.softChip)
             }
-            Spacer(minLength: 0)
         }
     }
 }

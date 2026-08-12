@@ -283,7 +283,7 @@
     <string name="group_settings_currency">Валюта</string>
     <string name="group_settings_currency_footer">В валюте группы показываются все её суммы: расходы, долги и итоги.</string>
     <string name="group_settings_invite">Пригласить в группу</string>
-    <string name="group_settings_members_invite">Пригласить</string>
+    <string name="group_settings_members_invite">Добавить</string>
     <string name="group_settings_code">Код группы</string>
     <string name="group_settings_invite_footer">Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».</string>
     <!-- Приглашение: шит и баннер -->

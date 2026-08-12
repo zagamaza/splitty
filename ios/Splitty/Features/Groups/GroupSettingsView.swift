@@ -11,7 +11,6 @@ struct GroupSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isArchiving = false
     @State private var alertMessage: String?
-    @State private var isInvitePresented = false
     /// Выбор друзей — основной путь приглашения; ссылка осталась запасным.
     @State private var isInviteFriendsPresented = false
     /// Участник, которого собираются убрать (подтверждение).
@@ -63,7 +62,6 @@ struct GroupSettingsView: View {
             VStack(alignment: .leading, spacing: 20) {
                 membersSection
                 currencySection
-                inviteSection
                 archiveSection
                 leaveSection
             }
@@ -72,9 +70,6 @@ struct GroupSettingsView: View {
         .background(Color.bg)
         .task { await loadCurrencies() }
         .errorAlert($alertMessage)
-        .sheet(isPresented: $isInvitePresented) {
-            InviteGroupView(room: room)
-        }
         .sheet(isPresented: $isInviteFriendsPresented) {
             InviteFriendView(
                 roomId: room.id,
@@ -139,7 +134,9 @@ struct GroupSettingsView: View {
                 Button {
                     isInviteFriendsPresented = true
                 } label: {
-                    Label("Пригласить", systemImage: "person.badge.plus")
+                    // «Добавить», а не «Пригласить»: раньше два пункта экрана
+                    // назывались одинаково, а вели в разные места
+                    Label("Добавить", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.accent)
                 }
@@ -323,33 +320,6 @@ struct GroupSettingsView: View {
         }
         .buttonStyle(.plain)
         .disabled(savingCurrency != nil)
-    }
-
-    private var inviteSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button {
-                isInvitePresented = true
-            } label: {
-                HStack {
-                    Label("Пригласить в группу", systemImage: "person.badge.plus")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.accent)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .surfaceCard(padding: 0)
-            Text("Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».")
-                .font(.caption)
-                .foregroundStyle(Color.inkSecondary)
-                .padding(.horizontal, 4)
-        }
     }
 
     private var archiveSection: some View {

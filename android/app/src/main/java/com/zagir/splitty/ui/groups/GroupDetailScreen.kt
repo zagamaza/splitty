@@ -266,7 +266,11 @@ fun GroupDetailScreen(
                         onRefresh = viewModel::refresh,
                         onSettleUp = settleUp,
                         onAddExpense = { onAddExpense(roomId) },
-                        onInvite = { isInvitePresented = true },
+                        // Выбор друзей, а не шит со ссылкой: главный призыв
+                        // группы вёл мимо основного способа позвать человека.
+                        // Ссылка осталась внутри пикера — она нужна тем, с кем
+                        // расходы ещё не делили
+                        onInvite = { isInviteFriendsPresented = true },
                         onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
                         onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
                         modifier = Modifier.padding(innerPadding),
@@ -383,7 +387,7 @@ private fun InviteBottomSheet(room: RoomDetail, onDismiss: () -> Unit) {
 
 /** Баннер «В группе только вы»: зовёт добавить друзей. Порт iOS inviteBanner. */
 @Composable
-private fun InviteBanner(onClick: () -> Unit) {
+internal fun InviteBanner(onClick: () -> Unit) {
     val colors = Splitty.colors
     Row(
         modifier = Modifier
@@ -1535,46 +1539,6 @@ private fun GroupSettingsTab(
                 }
                 Text(
                     text = stringResource(R.string.group_settings_currency_footer),
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-            }
-
-            // Приглашение — строка открывает шит (ссылка + код).
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(onClick = onInvite)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.PersonAddAlt,
-                            contentDescription = null,
-                            tint = colors.accent,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.group_settings_invite),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.accent,
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = colors.inkSecondary.copy(alpha = 0.6f),
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
-                Text(
-                    text = stringResource(R.string.group_settings_invite_footer),
                     fontSize = 12.sp,
                     color = colors.inkSecondary,
                     modifier = Modifier.padding(horizontal = 4.dp),

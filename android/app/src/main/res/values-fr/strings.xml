@@ -226,7 +226,7 @@
     <string name="group_settings_currency">Devise</string>
     <string name="group_settings_currency_footer">Tous les montants du groupe sont affichés dans sa devise : dépenses, dettes et bilans.</string>
     <string name="group_settings_invite">Inviter dans le groupe</string>
-    <string name="group_settings_members_invite">Inviter</string>
+    <string name="group_settings_members_invite">Ajouter</string>
     <string name="group_settings_code">Code du groupe</string>
     <string name="group_settings_invite_footer">Partagez le lien ou le code — votre ami rejoint le groupe avec, via « Rejoindre ».</string>
     <string name="invite_sheet_title">Inviter dans le groupe</string>

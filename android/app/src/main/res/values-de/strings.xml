@@ -226,7 +226,7 @@
     <string name="group_settings_currency">Währung</string>
     <string name="group_settings_currency_footer">Alle Beträge der Gruppe werden in ihrer Währung angezeigt: Ausgaben, Schulden und Auswertungen.</string>
     <string name="group_settings_invite">In die Gruppe einladen</string>
-    <string name="group_settings_members_invite">Einladen</string>
+    <string name="group_settings_members_invite">Hinzufügen</string>
     <string name="group_settings_code">Gruppencode</string>
     <string name="group_settings_invite_footer">Teile den Link oder den Code — damit tritt deine Freundin oder dein Freund über „Beitreten“ bei.</string>
     <string name="invite_sheet_title">In die Gruppe einladen</string>

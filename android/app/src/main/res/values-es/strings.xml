@@ -226,7 +226,7 @@
     <string name="group_settings_currency">Moneda</string>
     <string name="group_settings_currency_footer">Todos los importes del grupo se muestran en su moneda: gastos, deudas y totales.</string>
     <string name="group_settings_invite">Invitar al grupo</string>
-    <string name="group_settings_members_invite">Invitar</string>
+    <string name="group_settings_members_invite">Añadir</string>
     <string name="group_settings_code">Código del grupo</string>
     <string name="group_settings_invite_footer">Comparte el enlace o el código: con él tu amigo entra desde «Unirse».</string>
     <string name="invite_sheet_title">Invitar al grupo</string>
