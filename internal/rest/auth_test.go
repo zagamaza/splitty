@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -1069,4 +1070,59 @@ func TestAuthAppleRetriesExhausted(t *testing.T) {
 	if repo.creates != identityAuthAttempts {
 		t.Fatalf("попыток вставки %d, ожидалось %d", repo.creates, identityAuthAttempts)
 	}
+}
+
+// Отсечка по дате выпуска токена.
+//
+// Сборки, ходившие по открытому HTTP, раздали токены на 90 дней: перехваченный
+// тогда токен живёт до ноября, и обновление приложения его не отзывает.
+// Единственный способ прекратить это — перестать принимать всё, что выпущено
+// раньше выбранной даты.
+
+func TestTokenIssuedBeforeCutoffRejected(t *testing.T) {
+	cutoff := time.Date(2026, 8, 13, 0, 0, 0, 0, time.UTC)
+	s := newTestServer(Config{TokenMinIssuedAt: cutoff}, newFakeUserRepo(testUser1), newFakeRoomRepo(newTestRoom()))
+
+	old := mustTokenIssuedAt(t, s, testUser1.ID, cutoff.Add(-time.Hour))
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/me", old, "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401 — токен из-до отсечки продолжает работать", rec.Code)
+	}
+}
+
+func TestTokenIssuedAfterCutoffAccepted(t *testing.T) {
+	cutoff := time.Date(2026, 8, 13, 0, 0, 0, 0, time.UTC)
+	s := newTestServer(Config{TokenMinIssuedAt: cutoff}, newFakeUserRepo(testUser1), newFakeRoomRepo(newTestRoom()))
+
+	fresh := mustTokenIssuedAt(t, s, testUser1.ID, cutoff.Add(time.Hour))
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/me", fresh, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 — свежий токен отвергнут; body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Без настройки поведение прежнее: старые токены работают до истечения срока.
+func TestTokenCutoffDisabledByDefault(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo(newTestRoom()))
+
+	old := mustTokenIssuedAt(t, s, testUser1.ID, time.Now().Add(-30*24*time.Hour))
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/me", old, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 — без отсечки старый токен обязан работать", rec.Code)
+	}
+}
+
+// mustTokenIssuedAt выпускает токен с заданной датой выпуска.
+func mustTokenIssuedAt(t *testing.T, s *Server, userId int, issuedAt time.Time) string {
+	t.Helper()
+	claims := jwt.RegisteredClaims{
+		Subject:   strconv.Itoa(userId),
+		IssuedAt:  jwt.NewNumericDate(issuedAt),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+	}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JwtSecret))
+	if err != nil {
+		t.Fatalf("не удалось выпустить токен: %v", err)
+	}
+	return token
 }

@@ -55,8 +55,19 @@ func (s *Server) parseToken(tokenStr string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	// Отсечка по дате выпуска: токены старше её недействительны, даже если срок
+	// ещё не вышел. Перехваченный у HTTP-сборок токен иначе жил бы до ноября, и
+	// обновление приложения этого не отменяло
+	if !s.cfg.TokenMinIssuedAt.IsZero() {
+		if claims.IssuedAt == nil || claims.IssuedAt.Time.Before(s.cfg.TokenMinIssuedAt) {
+			return 0, errTokenTooOld
+		}
+	}
 	return strconv.Atoi(claims.Subject)
 }
+
+// errTokenTooOld — токен выпущен раньше отсечки (см. Config.TokenMinIssuedAt).
+var errTokenTooOld = errors.New("token issued before the configured cutoff")
 
 // accountTTL сколько auth-middleware помнит вердикт «аккаунт жив/удалён».
 // Компромисс: за минуту токен удалённого перестаёт работать везде, а обычный

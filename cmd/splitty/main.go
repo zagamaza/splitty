@@ -135,6 +135,19 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	operationService := service.NewOperationService(roomRepository)
 	buttonService := service.NewButtonService(repository.NewButtonRepository(db))
 
+	// Отсечка по дате выпуска токена. Кривое значение — фатально: молча
+	// проигнорировать её значит оставить действующими те самые токены, ради
+	// которых настройку и задали
+	var tokenCutoff time.Time
+	if v := strings.TrimSpace(cfg.TokenMinIssuedAt); v != "" {
+		parsed, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("TOKEN_MIN_ISSUED_AT: %w", err)
+		}
+		tokenCutoff = parsed
+		log.Warn().Msgf("токены, выпущенные до %s, отвергаются: все, кто вошёл раньше, разлогинены", parsed)
+	}
+
 	restCfg := rest.Config{
 		Listen:          cfg.Listen,
 		JwtSecret:       jwtSecret,
@@ -157,6 +170,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		AndroidCertSha256: nonEmptyValues(cfg.AndroidCertSha256),
 		IosStoreUrl:       cfg.IosStoreUrl,
 		TrustedProxies:    cfg.TrustedProxyCount,
+		TokenMinIssuedAt:  tokenCutoff,
 		TrustedProxyNets:  rest.ParseTrustedProxyNets(cfg.TrustedProxies),
 	}
 	if cfg.PublicBaseUrl == "" {

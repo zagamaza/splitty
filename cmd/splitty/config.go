@@ -29,6 +29,13 @@ type config struct {
 	// случайный эфемерный секрет (см. resolveJwtSecret в main.go)
 	ApiJwtSecret string `env:"API_JWT_SECRET" envDefault:""`
 	ApiDevAuth   bool   `env:"API_DEV_AUTH" envDefault:"false"`
+	// TokenMinIssuedAt — дата в RFC3339 (например 2026-08-13T00:00:00Z): токены,
+	// выпущенные раньше, перестают работать. Пусто — отсечки нет.
+	//
+	// ⚠️ Включение разлогинивает всех, кто вошёл до этой даты. Ради этого она и
+	// существует: сборки 23 июля — 5 августа ходили по открытому HTTP, и
+	// перехваченные тогда токены живут до ноября
+	TokenMinIssuedAt string `env:"TOKEN_MIN_ISSUED_AT" envDefault:""`
 	// Многоразовый код входа для ревьюеров App Store + id демо-аккаунта.
 	//
 	// int64, а не int: caarlos0/env v6 разбирает поле типа int через
