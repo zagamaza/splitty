@@ -4,7 +4,9 @@ services:
     image: mongo:7
     restart: always
     ports:
-      - "27017:27017"
+      # Только петля: тестовая база без пароля не должна быть видна из сети.
+      # Порт нужен интеграционным тестам репозитория (localhost:27017)
+      - "127.0.0.1:27017:27017"
     environment:
       - MONGO_INITDB_DATABASE=splitty
 
