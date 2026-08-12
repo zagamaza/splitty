@@ -4,6 +4,8 @@ import SwiftUI
 /// Вкладка «Профиль»: профиль-шапка с большим аватаром, секции настроек
 /// карточками, способы входа, сервер, выход и удаление аккаунта.
 struct AccountView: View {
+    @State private var isRevokeConfirmPresented = false
+    @State private var isRevoking = false
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @Environment(SessionStore.self) private var session
     @Environment(\.colorScheme) private var colorScheme
@@ -61,6 +63,7 @@ struct AccountView: View {
                     serverSection
                     #endif
                     logoutSection
+                    revokeSessionsSection
                     legalSection
                     deleteAccountSection
                 }
@@ -524,6 +527,60 @@ struct AccountView: View {
     /// Требование Apple Guideline 5.1.1(v): удаление обязано быть доступно
     /// внутри приложения — вкладка «Профиль» → прокрутка вниз → подтверждение,
     /// без переписки с поддержкой и без похода на сайт.
+    /// «Выйти на всех устройствах»: единственный способ отозвать доступ с
+    /// потерянного телефона. До него токен жил 90 дней и не отзывался ничем,
+    /// кроме смены общего секрета — то есть разлогина всех.
+    private var revokeSessionsSection: some View {
+        VStack(spacing: 8) {
+            Button {
+                isRevokeConfirmPresented = true
+            } label: {
+                HStack {
+                    Label("Выйти на всех устройствах", systemImage: "iphone.and.arrow.forward")
+                        .scaledFont(size: 15, weight: .medium)
+                        .foregroundStyle(Color.accentText)
+                    Spacer(minLength: 0)
+                    if isRevoking { ProgressView() }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isRevoking)
+            .surfaceCard(padding: 0)
+            Text("Пригодится, если телефон потерян: доступ закроется везде, включая это устройство.")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.horizontal, 4)
+        }
+        .confirmationDialog(
+            "Выйти на всех устройствах?",
+            isPresented: $isRevokeConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Выйти везде", role: .destructive) {
+                Task { await revokeSessions() }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут.")
+        }
+    }
+
+    private func revokeSessions() async {
+        isRevoking = true
+        defer { isRevoking = false }
+        do {
+            try await session.api.revokeTokens()
+            // Текущий токен тоже отозван — сессию закрываем сами, не дожидаясь
+            // 401 на следующем запросе
+            session.logout()
+        } catch {
+            errorMessage = humanErrorText(error)
+        }
+    }
+
     /// Строка со ссылкой на политику: единственное место в приложении, где
     /// человек может прочитать, куда уходят голос и фото чека и что остаётся
     /// после удаления аккаунта.

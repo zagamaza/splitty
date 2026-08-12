@@ -105,6 +105,10 @@ type User struct {
 	// Пополняются при логине/refresh, чистятся на logout и при отбраковке FCM
 	// (UNREGISTERED). Дедуп по token (см. UserRepository.AddPushToken).
 	PushTokens []PushToken `json:"-" bson:"push_tokens,omitempty"`
+	// TokensValidFrom — отсечка отзыва: токены, выпущенные раньше, не работают.
+	// Ставится «выйти на всех устройствах». Пусто — не отзывали никогда, и
+	// установленные сборки продолжают работать
+	TokensValidFrom *time.Time `json:"-" bson:"tokens_valid_from,omitempty"`
 	// TelegramID — telegram user id, если аккаунт связан с telegram. nil у
 	// пользователей, вошедших через Google/Apple. Unique sparse в mongo.
 	TelegramID *int `json:"-" bson:"telegram_id,omitempty"`
@@ -193,6 +197,10 @@ func (u User) Snapshot() User {
 	u.NotificationsSeenAt = nil
 	u.RoomsSeenAt = nil
 	u.DevAuth = false
+	// Отсечка отзыва токенов — состояние аккаунта, а не личность: в снимках
+	// внутри комнат ей делать нечего, а тащить её туда значило бы размножить
+	// её по документам и однажды прочитать устаревшую копию
+	u.TokensValidFrom = nil
 	return u
 }
 

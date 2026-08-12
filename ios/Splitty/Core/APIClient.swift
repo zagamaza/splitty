@@ -518,6 +518,13 @@ final class APIClient: OperationAPI {
         try await send("DELETE", "/api/v1/me")
     }
 
+    /// «Выйти на всех устройствах»: сервер перестаёт принимать все ранее
+    /// выданные токены, включая текущий, и снимает push-токены устройств.
+    /// Нужно, когда телефон потерян: до этого отозвать доступ было нечем.
+    func revokeTokens() async throws {
+        try await send("POST", "/api/v1/me/revoke-tokens")
+    }
+
     // MARK: Устройства (push-токены)
 
     /// POST /api/v1/me/devices — привязать FCM-токен этого устройства к аккаунту

@@ -602,4 +602,9 @@
     <string name="toast_password_set">Password set</string>
     <string name="toast_expense_saved">Expense saved</string>
     <string name="toast_expense_queued">Expense saved — we’ll send it when you’re back online</string>
+    <string name="profile_revoke_action">Sign out everywhere</string>
+    <string name="profile_revoke_title">Sign out everywhere?</string>
+    <string name="profile_revoke_message">You will have to sign in again — here too. Notifications stop going to the old devices.</string>
+    <string name="profile_revoke_confirm">Sign out everywhere</string>
+    <string name="profile_revoke_caption">Useful if the phone is lost: access closes on every device, including this one.</string>
 </resources>

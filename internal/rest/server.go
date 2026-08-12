@@ -342,6 +342,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/me/notifications", s.auth(s.handleGetNotifications))
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
 	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))
+	// «Выйти на всех устройствах»: единственный способ отозвать украденный
+	// токен, не разлогинивая заодно всех остальных сменой общего секрета
+	mux.Handle("POST /api/v1/me/revoke-tokens", s.auth(s.handleRevokeTokens))
 	mux.Handle("DELETE /api/v1/me/devices", s.auth(s.handleUnregisterDevice))
 	mux.Handle("POST /api/v1/me/password", s.auth(s.handleSetPassword))
 	mux.Handle("POST /api/v1/me/link/{provider}", s.auth(s.handleLinkIdentity))

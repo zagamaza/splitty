@@ -583,6 +583,18 @@ func (f *fakeUserRepo) AddPushToken(_ context.Context, userId int, token api.Pus
 	return nil
 }
 
+// RevokeTokens как боевая: ставит отсечку и снимает push-токены всех устройств
+func (f *fakeUserRepo) RevokeTokens(_ context.Context, userId int, at time.Time) error {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return mongo.ErrNoDocuments
+	}
+	moment := at
+	u.TokensValidFrom = &moment
+	u.PushTokens = nil
+	return nil
+}
+
 func (f *fakeUserRepo) RemovePushToken(_ context.Context, userId int, token string) error {
 	u, ok := f.users[userId]
 	if !ok {

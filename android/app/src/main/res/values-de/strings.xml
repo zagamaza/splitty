@@ -586,4 +586,9 @@
     <string name="toast_password_set">Passwort gesetzt</string>
     <string name="toast_expense_saved">Ausgabe gespeichert</string>
     <string name="toast_expense_queued">Ausgabe gespeichert — wir senden sie, sobald du wieder online bist</string>
+    <string name="profile_revoke_action">Überall abmelden</string>
+    <string name="profile_revoke_title">Überall abmelden?</string>
+    <string name="profile_revoke_message">Du musst dich neu anmelden — auch hier. Benachrichtigungen gehen nicht mehr an die alten Geräte.</string>
+    <string name="profile_revoke_confirm">Überall abmelden</string>
+    <string name="profile_revoke_caption">Nützlich bei verlorenem Telefon: der Zugang wird überall geschlossen, auch auf diesem Gerät.</string>
 </resources>

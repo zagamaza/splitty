@@ -48,22 +48,34 @@ func (s *Server) issueToken(userId int) (string, error) {
 
 // parseToken валидирует JWT и возвращает userId из claim sub
 func (s *Server) parseToken(tokenStr string) (int, error) {
+	userId, _, err := s.parseTokenWithIssuedAt(tokenStr)
+	return userId, err
+}
+
+// parseTokenWithIssuedAt — то же, но отдаёт и дату выпуска: по ней middleware
+// сверяется с отсечкой отзыва конкретного пользователя.
+func (s *Server) parseTokenWithIssuedAt(tokenStr string) (int, time.Time, error) {
 	claims := &jwt.RegisteredClaims{}
 	_, err := jwt.ParseWithClaims(tokenStr, claims, func(_ *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JwtSecret), nil
 	}, jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}), jwt.WithExpirationRequired())
 	if err != nil {
-		return 0, err
+		return 0, time.Time{}, err
 	}
 	// Отсечка по дате выпуска: токены старше её недействительны, даже если срок
 	// ещё не вышел. Перехваченный у HTTP-сборок токен иначе жил бы до ноября, и
 	// обновление приложения этого не отменяло
 	if !s.cfg.TokenMinIssuedAt.IsZero() {
 		if claims.IssuedAt == nil || claims.IssuedAt.Time.Before(s.cfg.TokenMinIssuedAt) {
-			return 0, errTokenTooOld
+			return 0, time.Time{}, errTokenTooOld
 		}
 	}
-	return strconv.Atoi(claims.Subject)
+	var issuedAt time.Time
+	if claims.IssuedAt != nil {
+		issuedAt = claims.IssuedAt.Time
+	}
+	userId, err := strconv.Atoi(claims.Subject)
+	return userId, issuedAt, err
 }
 
 // errTokenTooOld — токен выпущен раньше отсечки (см. Config.TokenMinIssuedAt).
@@ -97,6 +109,10 @@ type accountCache struct {
 type accountEntry struct {
 	alive bool
 	until time.Time
+	// validFrom — отсечка отзыва токенов пользователя (nil — не отзывал).
+	// Лежит в том же кеше: иначе проверка стоила бы похода в mongo на КАЖДЫЙ
+	// авторизованный запрос
+	validFrom *time.Time
 }
 
 func newAccountCache() *accountCache {
@@ -105,28 +121,38 @@ func newAccountCache() *accountCache {
 
 // get возвращает вердикт и признак попадания в кеш
 func (c *accountCache) get(userId int) (alive, hit bool) {
+	e, _, hit := c.entry(userId)
+	return e, hit
+}
+
+// entry возвращает вердикт вместе с отсечкой отзыва токенов.
+func (c *accountCache) entry(userId int) (alive bool, validFrom *time.Time, hit bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	e, ok := c.entries[userId]
 	if !ok {
-		return false, false
+		return false, nil, false
 	}
 	if c.now().After(e.until) {
 		delete(c.entries, userId)
-		return false, false
+		return false, nil, false
 	}
-	return e.alive, true
+	return e.alive, e.validFrom, true
 }
 
 func (c *accountCache) put(userId int, alive bool) {
+	c.putState(userId, alive, nil)
+}
+
+func (c *accountCache) putState(userId int, alive bool, validFrom *time.Time) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if len(c.entries) >= c.max {
 		c.entries = map[int]accountEntry{}
 	}
-	c.entries[userId] = accountEntry{alive: alive, until: c.now().Add(c.ttl)}
+	c.entries[userId] = accountEntry{alive: alive, until: c.now().Add(c.ttl), validFrom: validFrom}
 }
 
 // forget убирает запись немедленно. Нужен handleDeleteMe: сам запрос DELETE /me
@@ -158,19 +184,26 @@ func (s *Server) authenticate(next http.HandlerFunc, allowDeleted bool) http.Han
 			writeError(w, http.StatusUnauthorized, "unauthorized", "требуется авторизация")
 			return
 		}
-		userId, err := s.parseToken(strings.TrimPrefix(header, "Bearer "))
+		userId, issuedAt, err := s.parseTokenWithIssuedAt(strings.TrimPrefix(header, "Bearer "))
 		if err != nil {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "невалидный токен")
 			return
 		}
 		if !allowDeleted {
-			alive, hErr := s.accountAlive(r.Context(), userId)
+			alive, validFrom, hErr := s.accountState(r.Context(), userId)
 			if hErr != nil {
 				hErr.write(w)
 				return
 			}
 			if !alive {
 				writeError(w, http.StatusUnauthorized, "unauthorized", "аккаунт удалён")
+				return
+			}
+			// «Выйти на всех устройствах»: токены, выпущенные до отсечки,
+			// больше не работают — украденный телефон переставал открывать
+			// чужие расходы только сменой общего секрета, то есть разлогином всех
+			if validFrom != nil && issuedAt.Before(*validFrom) {
+				writeError(w, http.StatusUnauthorized, "unauthorized", "сессия завершена")
 				return
 			}
 		}
@@ -184,21 +217,29 @@ func (s *Server) authenticate(next http.HandlerFunc, allowDeleted bool) http.Han
 // Fail-open здесь ничего бы не спас (хендлеры всё равно ходят в ту же mongo),
 // а fail-closed не даёт лежащей базе стать обходом инвалидации токена
 func (s *Server) accountAlive(ctx context.Context, userId int) (bool, *httpError) {
-	if alive, hit := s.accounts.get(userId); hit {
-		return alive, nil
+	alive, _, hErr := s.accountState(ctx, userId)
+	return alive, hErr
+}
+
+// accountState — вердикт «жив» плюс отсечка отзыва токенов. Оба факта берутся
+// из одного документа и живут в одном кеше: разделять их значило бы ходить в
+// mongo дважды на каждый авторизованный запрос
+func (s *Server) accountState(ctx context.Context, userId int) (bool, *time.Time, *httpError) {
+	if alive, validFrom, hit := s.accounts.entry(userId); hit {
+		return alive, validFrom, nil
 	}
 	user, err := s.userRepo.FindById(ctx, userId)
 	if err == mongo.ErrNoDocuments {
 		s.accounts.put(userId, false)
-		return false, nil
+		return false, nil, nil
 	}
 	if err != nil {
 		log.Error().Err(err).Int("userId", userId).Msg("cannot check account status")
-		return false, &httpError{http.StatusInternalServerError, "internal", "не удалось проверить аккаунт"}
+		return false, nil, &httpError{http.StatusInternalServerError, "internal", "не удалось проверить аккаунт"}
 	}
 	alive := !user.IsDeleted()
-	s.accounts.put(userId, alive)
-	return alive, nil
+	s.accounts.putState(userId, alive, user.TokensValidFrom)
+	return alive, user.TokensValidFrom, nil
 }
 
 // userIdFromCtx возвращает userId, положенный auth-middleware

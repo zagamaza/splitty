@@ -1835,3 +1835,30 @@ func (s *Server) userHasFile(ctx context.Context, userId int, fileId string) (bo
 	}
 	return false, nil
 }
+
+// handleRevokeTokens POST /api/v1/me/revoke-tokens — «выйти на всех устройствах».
+//
+// Токен живёт 90 дней и до сих пор не отзывался ничем, кроме смены общего
+// секрета, то есть разлогина ВСЕХ. Украденный телефон означал три месяца
+// доступа к чужим расходам. Здесь отсечка ставится точечно, одному человеку.
+//
+// Текущий токен тоже перестаёт работать — это и есть смысл: человек заходит
+// заново там, где хочет остаться.
+func (s *Server) handleRevokeTokens(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	userId := userIdFromCtx(ctx)
+
+	if err := s.userRepo.RevokeTokens(ctx, userId, s.now()); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			writeError(w, http.StatusNotFound, "not_found", "аккаунт не найден")
+			return
+		}
+		log.Error().Err(err).Int("userId", userId).Msg("cannot revoke tokens")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось завершить сессии")
+		return
+	}
+	// Кеш аккаунта помнит прежнее состояние минуту: без явной чистки отозванный
+	// токен ещё минуту работал бы — ровно там, где это важнее всего
+	s.accounts.forget(userId)
+	w.WriteHeader(http.StatusNoContent)
+}

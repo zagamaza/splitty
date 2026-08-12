@@ -586,4 +586,9 @@
     <string name="toast_password_set">Contraseña establecida</string>
     <string name="toast_expense_saved">Gasto guardado</string>
     <string name="toast_expense_queued">Gasto guardado: lo enviaremos cuando vuelva la conexión</string>
+    <string name="profile_revoke_action">Cerrar sesión en todos los dispositivos</string>
+    <string name="profile_revoke_title">¿Cerrar sesión en todos los dispositivos?</string>
+    <string name="profile_revoke_message">Tendrás que iniciar sesión de nuevo, también aquí. Las notificaciones dejarán de llegar a los dispositivos anteriores.</string>
+    <string name="profile_revoke_confirm">Cerrar en todos</string>
+    <string name="profile_revoke_caption">Útil si pierdes el teléfono: el acceso se cierra en todas partes, incluido este dispositivo.</string>
 </resources>

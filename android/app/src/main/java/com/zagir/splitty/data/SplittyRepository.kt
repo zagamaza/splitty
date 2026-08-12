@@ -136,6 +136,9 @@ class SplittyRepository @Inject constructor(
      */
     suspend fun deleteAccount() = call { api.deleteAccount() }
 
+    /** «Выйти на всех устройствах» — отзыв всех выданных токенов. */
+    suspend fun revokeTokens() = call { api.revokeTokens() }
+
     // --- Комнаты (группы) ---
 
     suspend fun rooms(archived: Boolean = false): Fetched<List<RoomSummary>> =

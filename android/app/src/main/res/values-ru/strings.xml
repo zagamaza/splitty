@@ -629,4 +629,9 @@
     <string name="toast_password_set">Пароль задан</string>
     <string name="toast_expense_saved">Расход сохранён</string>
     <string name="toast_expense_queued">Расход сохранён — отправим, когда появится связь</string>
+    <string name="profile_revoke_action">Выйти на всех устройствах</string>
+    <string name="profile_revoke_title">Выйти на всех устройствах?</string>
+    <string name="profile_revoke_message">Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут.</string>
+    <string name="profile_revoke_confirm">Выйти везде</string>
+    <string name="profile_revoke_caption">Пригодится, если телефон потерян: доступ закроется везде, включая это устройство.</string>
 </resources>

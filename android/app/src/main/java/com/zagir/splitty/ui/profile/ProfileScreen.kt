@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.outlined.PhonelinkErase
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -92,6 +93,7 @@ fun ProfileScreen(
     var isEditNamePresented by remember { mutableStateOf(false) }
     var nameDraft by remember { mutableStateOf("") }
     var isLogoutConfirmPresented by remember { mutableStateOf(false) }
+    var isRevokeConfirmPresented by remember { mutableStateOf(false) }
     var isDeleteConfirmPresented by remember { mutableStateOf(false) }
     var providerToUnlink by remember { mutableStateOf<LoginProvider?>(null) }
     var isPasswordDialogPresented by remember { mutableStateOf(false) }
@@ -163,6 +165,9 @@ fun ProfileScreen(
             if (BuildConfig.DEBUG) {
                 ServerSection(baseUrl)
             }
+            // Пригодится, если телефон потерян: до этого отозвать доступ было
+            // нечем — токен жил 90 дней
+            RevokeSessionsSection(onClick = { isRevokeConfirmPresented = true })
             // Единственное место в приложении, где можно прочитать, куда уходят
             // голос и фото чека и что остаётся после удаления аккаунта
             PolicyLinkSection(baseUrl = baseUrl)
@@ -176,6 +181,25 @@ fun ProfileScreen(
             // Запас снизу — под центральную кнопку «+» таб-бара.
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (isRevokeConfirmPresented) {
+        AlertDialog(
+            onDismissRequest = { isRevokeConfirmPresented = false },
+            title = { Text(stringResource(R.string.profile_revoke_title)) },
+            text = { Text(stringResource(R.string.profile_revoke_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    isRevokeConfirmPresented = false
+                    viewModel.revokeAllSessions()
+                }) { Text(stringResource(R.string.profile_revoke_confirm)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { isRevokeConfirmPresented = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
     }
 
     if (isEditNamePresented) {
@@ -1072,5 +1096,42 @@ private fun PolicyLinkSection(baseUrl: String) {
                 modifier = Modifier.size(16.dp),
             )
         }
+    }
+}
+
+/** Строка «Выйти на всех устройствах» с пояснением, зачем она нужна. */
+@Composable
+private fun RevokeSessionsSection(onClick: () -> Unit) {
+    val colors = Splitty.colors
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.PhonelinkErase,
+                    contentDescription = null,
+                    tint = colors.accentText,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.profile_revoke_action),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.accentText,
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.profile_revoke_caption),
+            fontSize = 12.sp,
+            color = colors.inkSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
     }
 }

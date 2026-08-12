@@ -133,6 +133,13 @@ interface SplittyApi {
     @DELETE("api/v1/me")
     suspend fun deleteAccount()
 
+    /**
+     * «Выйти на всех устройствах»: сервер перестаёт принимать все ранее выданные
+     * токены, включая текущий, и снимает push-токены устройств.
+     */
+    @POST("api/v1/me/revoke-tokens")
+    suspend fun revokeTokens()
+
     // --- Комнаты (группы) ---
 
     @GET("api/v1/rooms")

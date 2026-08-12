@@ -76,6 +76,10 @@ type UserRepository interface {
 	AddAlias(ctx context.Context, userId int, alias string) error
 	AddPushToken(ctx context.Context, userId int, token api.PushToken) error
 	RemovePushToken(ctx context.Context, userId int, token string) error
+	// RevokeTokens ставит отсечку отзыва и убирает push-токены всех устройств:
+	// после неё старые JWT не работают, а уведомления не уходят на потерянный
+	// телефон
+	RevokeTokens(ctx context.Context, userId int, at time.Time) error
 }
 
 type RoomRepository interface {
@@ -1713,6 +1717,30 @@ func (r MongoUserRepository) SetNotifySettings(ctx context.Context, userId int, 
 // Только ВПЕРЁД: запоздавший запрос со старым временем (ретрай, второй экран)
 // иначе откатил бы отметку назад, и уже прочитанное всплыло бы снова. Поэтому
 // условие $lt стоит в фильтре, а не в коде вызывающего.
+// RevokeTokens — «выйти на всех устройствах».
+//
+// Токен живёт 90 дней и не отзывался ничем, кроме смены общего секрета (то есть
+// разлогина ВСЕХ). Украденный телефон означал три месяца доступа к чужим
+// расходам. Отсечка по дате выпуска решает это точечно, для одного человека.
+//
+// Push-токены убираются той же записью: иначе уведомления продолжали бы уходить
+// на устройство, доступ которому только что закрыли
+func (r MongoUserRepository) RevokeTokens(ctx context.Context, userId int, at time.Time) error {
+	filter := bson.M{"_id": userId, "deleted_at": bson.M{"$exists": false}}
+	update := bson.M{
+		"$set":   bson.M{"tokens_valid_from": at},
+		"$unset": bson.M{"push_tokens": ""},
+	}
+	res, err := r.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
+		return mongo.ErrNoDocuments
+	}
+	return nil
+}
+
 func (r MongoUserRepository) SetNotificationsSeenAt(ctx context.Context, userId int, at time.Time) error {
 	filter := bson.M{
 		"_id":        userId,

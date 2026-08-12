@@ -586,4 +586,9 @@
     <string name="toast_password_set">Mot de passe défini</string>
     <string name="toast_expense_saved">Dépense enregistrée</string>
     <string name="toast_expense_queued">Dépense enregistrée — nous l’enverrons dès le retour du réseau</string>
+    <string name="profile_revoke_action">Se déconnecter partout</string>
+    <string name="profile_revoke_title">Se déconnecter partout ?</string>
+    <string name="profile_revoke_message">Vous devrez vous reconnecter — ici aussi. Les notifications cesseront d’arriver sur les anciens appareils.</string>
+    <string name="profile_revoke_confirm">Tout déconnecter</string>
+    <string name="profile_revoke_caption">Utile si le téléphone est perdu : l’accès est coupé partout, y compris sur cet appareil.</string>
 </resources>

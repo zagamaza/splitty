@@ -307,6 +307,26 @@ class ProfileViewModel @Inject constructor(
         _noticeMessage.value = null
     }
 
+    /**
+     * «Выйти на всех устройствах»: отзывает ВСЕ выданные токены, включая
+     * текущий. До этого токен жил 90 дней и не отзывался ничем, кроме смены
+     * общего секрета — то есть разлогина всех.
+     */
+    fun revokeAllSessions() {
+        viewModelScope.launch {
+            try {
+                repository.revokeTokens()
+                // Текущий токен тоже отозван — закрываем сессию сами, не
+                // дожидаясь 401 на следующем запросе
+                sessionStore.logout()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                _errorMessage.value = humanErrorText(e)
+            }
+        }
+    }
+
     /** Выход: чистит токен и профиль — AppRoot сам покажет LoginScreen. */
     fun logout() {
         viewModelScope.launch {
