@@ -356,7 +356,7 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
                     fontSize = 13.sp,
                     color = colors.inkSecondary,
                 )
-            } else if (room.myBalance == 0) {
+            } else if (room.myBalance == 0L) {
                 Text(
                     text = stringResource(R.string.groups_row_settled),
                     fontSize = 14.sp,

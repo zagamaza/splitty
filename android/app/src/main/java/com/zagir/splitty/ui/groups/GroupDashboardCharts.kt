@@ -24,7 +24,7 @@ internal fun memberColorIndices(memberIds: Collection<Long>): Map<Long, Int> =
         .toMap()
 
 /** Строка «Баланса участников»: подпись (уникальная) и net = paid − share. */
-internal data class MemberNetBar(val id: Long, val label: String, val net: Int)
+internal data class MemberNetBar(val id: Long, val label: String, val net: Long)
 
 /**
  * Нетто-балансы участников: net = заплатил − его доля (>0 — вложил больше
@@ -37,17 +37,17 @@ internal fun memberNetBalances(
     shareByMember: List<MemberSum>,
 ): List<MemberNetBar> {
     val names = HashMap<Long, String>()
-    val nets = HashMap<Long, Int>()
+    val nets = HashMap<Long, Long>()
     for (member in paidByMember) {
         names.putIfAbsent(member.user.id, member.user.displayName)
-        nets[member.user.id] = (nets[member.user.id] ?: 0) + member.sum
+        nets[member.user.id] = (nets[member.user.id] ?: 0L) + member.sum
     }
     for (member in shareByMember) {
         names.putIfAbsent(member.user.id, member.user.displayName)
-        nets[member.user.id] = (nets[member.user.id] ?: 0) - member.sum
+        nets[member.user.id] = (nets[member.user.id] ?: 0L) - member.sum
     }
     val sorted = nets.entries.sortedWith(
-        compareByDescending<Map.Entry<Long, Int>> { it.value }.thenBy { it.key }
+        compareByDescending<Map.Entry<Long, Long>> { it.value }.thenBy { it.key }
     )
     val seen = HashMap<String, Int>()
     return sorted.map { (id, net) ->
@@ -62,8 +62,8 @@ internal fun memberNetBalances(
  * Агрегация трат по дням недели: индекс 0 — понедельник … 6 — воскресенье.
  * Даты «2026-07-05»; нераспознанные строки пропускаются.
  */
-internal fun weekdayTotals(byDay: List<DailySum>): List<Int> {
-    val totals = IntArray(7)
+internal fun weekdayTotals(byDay: List<DailySum>): List<Long> {
+    val totals = LongArray(7)
     for (daily in byDay) {
         val date = runCatching { LocalDate.parse(daily.date) }.getOrNull() ?: continue
         totals[date.dayOfWeek.value - 1] += daily.sum
@@ -81,17 +81,17 @@ internal fun weekdayTotals(byDay: List<DailySum>): List<Int> {
 internal fun foldDonutBars(
     bars: List<MemberBar>,
     maxVisible: Int = MEMBER_COLOR_COUNT,
-): Pair<List<MemberBar>, Int> =
+): Pair<List<MemberBar>, Long> =
     if (bars.size <= maxVisible) {
-        bars to 0
+        bars to 0L
     } else {
         bars.take(maxVisible - 1) to bars.drop(maxVisible - 1).sumOf { it.sum }
     }
 
 /** Средний чек: totalSpent / operationCount целочисленно; 0 без операций. */
-internal fun averageCheck(totalSpent: Int, operationCount: Int): Int =
-    if (operationCount > 0) totalSpent / operationCount else 0
+internal fun averageCheck(totalSpent: Long, operationCount: Int): Long =
+    if (operationCount > 0) totalSpent / operationCount else 0L
 
 /** Процент доли для легенды доната (целочисленное округление). */
-internal fun percentOf(sum: Int, total: Int): Int =
-    if (total > 0) ((sum * 100L + total / 2) / total).toInt() else 0
+internal fun percentOf(sum: Long, total: Long): Int =
+    if (total > 0) ((sum * 100 + total / 2) / total).toInt() else 0

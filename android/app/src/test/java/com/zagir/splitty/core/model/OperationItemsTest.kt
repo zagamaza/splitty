@@ -98,8 +98,8 @@ class OperationItemsTest {
     fun `splitItem перебор фиксов на Int-краях — null`() {
         // Int-поля не дают переполнить сумму фиксов в Long, но два Int.MAX над
         // меньшей ценой — over-allocated → null (то же наблюдаемое поведение).
-        val big = Int.MAX_VALUE
-        assertNull(splitItem(big.toLong(), listOf(shareAmount(1, big), shareAmount(2, big))))
+        val big = Int.MAX_VALUE.toLong()
+        assertNull(splitItem(big, listOf(shareAmount(1, big), shareAmount(2, big))))
     }
 
     @Test(timeout = 2000L)
@@ -156,8 +156,8 @@ class OperationItemsTest {
             surcharge("Сервисный сбор", 470, OperationItem.SPLIT_PROPORTIONAL, percent = 10),
         )
         val result = assertNotNull(items.derivedShares())
-        assertEquals(5170, result.total)
-        assertEquals(mapOf(1L to 1980, 2L to 2090, 3L to 440, 4L to 660), result.shares)
+        assertEquals(5170L, result.total)
+        assertEquals(mapOf(1L to 1980L, 2L to 2090L, 3L to 440L, 4L to 660L), result.shares)
         assertEquals(result.total, result.shares.values.sum())
     }
 
@@ -171,23 +171,23 @@ class OperationItemsTest {
             surcharge("Сервисный сбор", 470, OperationItem.SPLIT_PROPORTIONAL, percent = 10),
         )
         val result = assertNotNull(items.derivedShares())
-        assertEquals(5170, result.total)
-        assertEquals(mapOf(1L to 1980, 2L to 2090, 3L to 1100), result.shares)
+        assertEquals(5170L, result.total)
+        assertEquals(mapOf(1L to 1980L, 2L to 2090L, 3L to 1100L), result.shares)
     }
 
     @Test
     fun `derivedShares неровный остаток — меньший userId`() {
         val items = listOf(item("Такси", 100, share(1, 1), share(2, 1), share(3, 1)))
         val result = assertNotNull(items.derivedShares())
-        assertEquals(mapOf(1L to 34, 2L to 33, 3L to 33), result.shares)
-        assertEquals(100, result.total)
+        assertEquals(mapOf(1L to 34L, 2L to 33L, 3L to 33L), result.shares)
+        assertEquals(100L, result.total)
     }
 
     @Test
     fun `derivedShares фикс плюс вес`() {
         val items = listOf(item("Вино", 3000, shareAmount(3, 500), share(1, 1), share(2, 1)))
         val result = assertNotNull(items.derivedShares())
-        assertEquals(mapOf(1L to 1250, 2L to 1250, 3L to 500), result.shares)
+        assertEquals(mapOf(1L to 1250L, 2L to 1250L, 3L to 500L), result.shares)
     }
 
     @Test
@@ -204,8 +204,8 @@ class OperationItemsTest {
             surcharge("Сбор", 200, OperationItem.SPLIT_EQUALLY, percent = 999),
         )
         val result = assertNotNull(items.derivedShares())
-        assertEquals(mapOf(1L to 600, 2L to 600), result.shares)
-        assertEquals(1200, result.total)
+        assertEquals(mapOf(1L to 600L, 2L to 600L), result.shares)
+        assertEquals(1200L, result.total)
     }
 
     @Test
@@ -226,7 +226,7 @@ class OperationItemsTest {
     @Test
     fun `derivedShares пустой список — пустой результат`() {
         val result = assertNotNull(emptyList<OperationItem>().derivedShares())
-        assertEquals(0, result.total)
+        assertEquals(0L, result.total)
         assertTrue(result.shares.isEmpty())
     }
 
@@ -259,31 +259,35 @@ class OperationItemsTest {
             surcharge("Сбор", 1, OperationItem.SPLIT_PROPORTIONAL),
         )
         val result = assertNotNull(items.derivedShares())
-        assertEquals(11, result.total)
+        assertEquals(11L, result.total)
         assertEquals(0, result.shares[1L]!!, "нулевой участник заплатил надбавку")
     }
 
     @Test
-    fun `total over Int MAX_VALUE returns null instead of wrapping`() {
-        // Поле ввода пропускает 9 цифр на позицию, позиций до 50 — сумма легко
-        // перебирает Int. Kotlin'ский toInt() заворачивается молча: пользователь
-        // видел отрицательный итог при активной кнопке «Сохранить» и получал
-        // невнятный 400 от сервера. Ожидаем честный null.
+    fun `total over Int MAX_VALUE is calculated, not refused`() {
+        // Поле ввода пропускает 9 цифр на позицию, позиций до 50 — итог легко
+        // перебирает 32 бита. Раньше клиент на этом сдавался (сначала молча
+        // заворачивал сумму в минус, потом честно отказывался считать), хотя
+        // счёт в рупиях на несколько миллиардов — обычное дело. Теперь суммы
+        // 64-битные, и чек считается целиком.
         val items = List(4) { i ->
             item("Позиция $i", 900_000_000, share(1L, 1), share(2L, 1))
         }
-        assertNull(items.derivedShares())
+        val result = assertNotNull(items.derivedShares())
+        assertEquals(3_600_000_000L, result.total)
+        assertEquals(mapOf(1L to 1_800_000_000L, 2L to 1_800_000_000L), result.shares)
+        assertEquals(result.total, result.shares.values.sum())
     }
 
     // --- Фикстуры ---
 
     private fun share(userId: Long, weight: Int) = ItemShare(userId = userId, weight = weight)
-    private fun shareAmount(userId: Long, amount: Int) = ItemShare(userId = userId, amount = amount)
+    private fun shareAmount(userId: Long, amount: Long) = ItemShare(userId = userId, amount = amount)
 
-    private fun item(name: String, price: Int, vararg shares: ItemShare, qty: Int = 1) =
+    private fun item(name: String, price: Long, vararg shares: ItemShare, qty: Int = 1) =
         OperationItem(name = name, price = price, qty = qty, shares = shares.toList())
 
-    private fun surcharge(name: String, price: Int, split: String, percent: Int? = null) =
+    private fun surcharge(name: String, price: Long, split: String, percent: Int? = null) =
         OperationItem(
             name = name,
             price = price,

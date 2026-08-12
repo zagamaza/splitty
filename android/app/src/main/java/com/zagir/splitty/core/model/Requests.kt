@@ -76,7 +76,7 @@ data class SetCurrencyBody(val currency: String)
 @Serializable
 data class RecipientSum(
     val userId: Long,
-    val sum: Int,
+    val sum: Long,
 )
 
 /** Способ деления расхода в теле POST/PUT операции. */
@@ -98,7 +98,7 @@ sealed interface ExpenseSplit {
 @Serializable
 data class OperationBody(
     val description: String,
-    val sum: Int,
+    val sum: Long,
     val donorId: Long,
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
@@ -123,7 +123,7 @@ data class OperationBody(
     companion object {
         fun of(
             description: String,
-            sum: Int,
+            sum: Long,
             donorId: Long,
             split: ExpenseSplit,
             items: List<OperationItem>? = null,
@@ -159,7 +159,7 @@ data class OperationBody(
 data class RepaymentBody(
     val debtorId: Long,
     val lenderId: Long,
-    val sum: Int,
+    val sum: Long,
     /**
      * Идемпотентный ключ: на повтор с тем же ключом сервер возвращает уже
      * созданное погашение. Без него потерянный ответ на ЧАСТИЧНОЕ погашение

@@ -1173,7 +1173,7 @@ private fun OperationRow(
                 currency = currency,
             )
 
-            net != null && net != 0 -> Column(
+            net != null && net != 0L -> Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {

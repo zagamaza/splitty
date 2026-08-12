@@ -384,4 +384,31 @@ class ModelsDecodingTest {
         assertTrue("recipientSums" in exact)
         assertFalse("recipientIds" in exact)
     }
+
+    /**
+     * Счёт в рупиях на несколько миллиардов — обычное дело, а сервер считает
+     * суммы 64-битными. Пока клиентские поля были 32-битными, такой ответ либо
+     * не разбирался вовсе, либо число молча заворачивалось в отрицательное:
+     * человек видел, что должен минус два миллиарда.
+     */
+    @Test
+    fun `decodes sums beyond 32 bits without distortion`() {
+        val huge = 3_600_000_000L
+        val operation = SplittyJson.decodeFromString<Operation>(
+            """{"id":"op1","description":"Вилла на месяц","sum":$huge,
+               "donor":{"id":1,"displayName":"Загир"},
+               "recipients":[{"user":{"id":1,"displayName":"Загир"},"sum":$huge}],
+               "createdAt":"2026-08-12T10:00:00Z"}"""
+        )
+        assertEquals(huge, operation.sum)
+        assertEquals(huge, operation.recipients.single().sum)
+        assertEquals(huge, operation.recipientSum(1L))
+
+        val room = SplittyJson.decodeFromString<RoomSummary>(
+            """{"id":"r1","name":"Бали","createdAt":"2026-08-12T10:00:00Z",
+               "memberCount":3,"currency":"IDR","totalSpent":$huge,"myBalance":${-huge}}"""
+        )
+        assertEquals(huge, room.totalSpent)
+        assertEquals(-huge, room.myBalance)
+    }
 }

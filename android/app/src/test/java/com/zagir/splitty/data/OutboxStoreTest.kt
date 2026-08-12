@@ -32,7 +32,7 @@ class OutboxStoreTest {
         localId: String,
         roomId: String = "room1",
         description: String = "Такси",
-        sum: Int = 100,
+        sum: Long = 100,
         createdAt: Instant = Instant.parse("2026-07-05T12:00:00Z"),
     ): OutboxEntry = OutboxEntry(
         localId = localId,

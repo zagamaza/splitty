@@ -74,18 +74,18 @@ import com.zagir.splitty.ui.theme.Splitty
 /** Итог деления позиции по текущему состоянию шита. */
 sealed interface ItemSplitStatus {
     /** Деление сходится: userId → сумма (зеркало серверного расчёта). */
-    data class Ok(val shares: Map<Long, Int>) : ItemSplitStatus
+    data class Ok(val shares: Map<Long, Long>) : ItemSplitStatus
     object NoPrice : ItemSplitStatus
     object NoParticipants : ItemSplitStatus
     /** Все фиксы, до цены не хватает [rest] (некому отдать остаток). */
-    data class Under(val rest: Int) : ItemSplitStatus
+    data class Under(val rest: Long) : ItemSplitStatus
     /** Фиксы превышают цену на [extra]. */
-    data class Over(val extra: Int) : ItemSplitStatus
+    data class Over(val extra: Long) : ItemSplitStatus
 }
 
 /** Фикс участника из режима «Суммами»; null — «авто» (пустое/нулевое поле). */
-private fun fixedAmountOf(byAmount: Boolean, amounts: Map<Long, String>, id: Long): Int? =
-    if (byAmount) amounts[id]?.toIntOrNull()?.takeIf { it > 0 } else null
+private fun fixedAmountOf(byAmount: Boolean, amounts: Map<Long, String>, id: Long): Long? =
+    if (byAmount) amounts[id]?.toLongOrNull()?.takeIf { it > 0 } else null
 
 /** Доли из состояния шита — ровно та же сборка, что в commit. */
 internal fun itemSheetShares(
@@ -115,7 +115,7 @@ internal fun itemSheetShares(
  * нет цены/участников, перебор/недобор фиксов или сошедшееся деление с картой сумм.
  */
 internal fun computeItemSplitStatus(
-    price: Int,
+    price: Long,
     members: List<User>,
     participating: Set<Long>,
     byAmount: Boolean,
@@ -124,7 +124,7 @@ internal fun computeItemSplitStatus(
 ): ItemSplitStatus {
     if (price < 1) return ItemSplitStatus.NoPrice
     if (participating.isEmpty()) return ItemSplitStatus.NoParticipants
-    val fixed = participating.sumOf { fixedAmountOf(byAmount, amounts, it) ?: 0 }
+    val fixed = participating.sumOf { fixedAmountOf(byAmount, amounts, it) ?: 0L }
     if (fixed > price) return ItemSplitStatus.Over(fixed - price)
     val hasAuto = participating.any { fixedAmountOf(byAmount, amounts, it) == null }
     if (!hasAuto && fixed < price) return ItemSplitStatus.Under(price - fixed)
@@ -218,7 +218,7 @@ fun ItemSheetBody(
     var confirmDelete by remember(item) { mutableStateOf(false) }
 
     val participatingSet = participating.filterValues { it }.keys
-    val price = priceText.toIntOrNull() ?: 0
+    val price = priceText.toLongOrNull() ?: 0L
     val status = computeItemSplitStatus(
         price = price,
         members = members,
@@ -230,7 +230,7 @@ fun ItemSheetBody(
     val isCommittable = if (isSurcharge) price >= 1 else status is ItemSplitStatus.Ok
 
     fun commit() {
-        val finalPrice = priceText.toIntOrNull() ?: item.price
+        val finalPrice = priceText.toLongOrNull() ?: item.price
         val trimmedName = name.trim()
         val newShares = if (isSurcharge) {
             null
@@ -543,7 +543,7 @@ private fun rowCaption(
     byAmount: Boolean,
     weight: Int,
     fixedEntered: Boolean,
-    liveAmount: Int?,
+    liveAmount: Long?,
     currency: String,
 ): String? {
     if (!isOn) return null

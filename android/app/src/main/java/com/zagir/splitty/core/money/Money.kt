@@ -10,8 +10,11 @@ import kotlin.math.abs
  */
 
 /** Цифры суммы с пробелами-разделителями тысяч, без знака и валюты: 1234567 -> "1 234 567". */
-private fun thousandsGrouped(sum: Int): String {
-    val digits = abs(sum.toLong()).toString()
+private fun thousandsGrouped(sum: Long): String {
+    // abs на Long без сужения: у Long.MIN_VALUE модуля нет, но такие суммы не
+    // существуют — переполнение здесь означало бы битые данные, а не большую
+    // покупку
+    val digits = abs(sum).toString()
     val sb = StringBuilder()
     for ((index, char) in digits.reversed().withIndex()) {
         if (index > 0 && index % 3 == 0) sb.append(' ')
@@ -38,11 +41,11 @@ fun currencySymbol(currency: String): String = when (currency) {
  * Форматирует сумму в валюте: money(1234567, "USD") -> "1 234 567 $".
  * Разделитель тысяч — обычный пробел, символ валюты ПОСЛЕ суммы, суммы целые.
  */
-fun money(sum: Int, currency: String): String =
+fun money(sum: Long, currency: String): String =
     (if (sum < 0) "-" else "") + thousandsGrouped(sum) + " " + currencySymbol(currency)
 
 /** Диапазон сумм для неровного деления: moneyRange(333, 334, "RUB") -> "333–334 ₽". */
-fun moneyRange(minSum: Int, maxSum: Int, currency: String): String =
+fun moneyRange(minSum: Long, maxSum: Long, currency: String): String =
     (if (minSum < 0) "-" else "") + thousandsGrouped(minSum) + "–" + money(maxSum, currency)
 
 /**
@@ -57,20 +60,11 @@ fun aggregateByCurrency(amounts: List<CurrencySum>): List<CurrencySum> {
     }
     return totals.entries
         .filter { it.value != 0L }
-        // coerceIn, а не toInt(): при переполнении Int «должен» превратился бы
-        // в «должны вам» (знак меняется) — насыщаем вместо заворота
-        .map {
-            CurrencySum(
-                currency = it.key,
-                sum = it.value.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt(),
-            )
-        }
-        .sortedWith(
-            // abs на Long, а не на Int: насыщение выше может дать ровно
-            // Int.MIN_VALUE, а abs(Int.MIN_VALUE) отрицателен — крупнейший долг
-            // уезжал в конец списка, и «основной» показывалась не та валюта
-            compareByDescending<CurrencySum> { abs(it.sum.toLong()) }.thenBy { it.currency }
-        )
+        // Сужения больше нет: суммы 64-битные на всём пути. Раньше здесь стояло
+        // насыщение, потому что итог в рупиях не помещался в Int и «должен»
+        // превращался в «должны вам»
+        .map { CurrencySum(currency = it.key, sum = it.value) }
+        .sortedWith(compareByDescending<CurrencySum> { abs(it.sum) }.thenBy { it.currency })
 }
 
 /**
@@ -83,7 +77,7 @@ fun aggregateByCurrency(amounts: List<CurrencySum>): List<CurrencySum> {
  * (Operation.recipientSum/netPosition). Этот хелпер — только для подсказки
  * предпросмотра в форме добавления расхода, пока операция ещё не создана.
  */
-fun shares(sum: Int, count: Int): List<Int> {
+fun shares(sum: Long, count: Int): List<Long> {
     if (count <= 0) return emptyList()
     val base = sum / count
     val remainder = sum % count

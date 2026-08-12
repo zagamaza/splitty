@@ -176,7 +176,7 @@ class SplittyRepository @Inject constructor(
     suspend fun addOperation(
         roomId: String,
         description: String,
-        sum: Int,
+        sum: Long,
         donorId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>? = null,
@@ -198,7 +198,7 @@ class SplittyRepository @Inject constructor(
         roomId: String,
         operationId: String,
         description: String,
-        sum: Int,
+        sum: Long,
         donorId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>? = null,
@@ -274,7 +274,7 @@ class SplittyRepository @Inject constructor(
         roomId: String,
         debtorId: Long,
         lenderId: Long,
-        sum: Int,
+        sum: Long,
         clientOpId: String,
     ): Operation =
         call { api.repay(roomId, RepaymentBody(debtorId = debtorId, lenderId = lenderId, sum = sum, clientOpId = clientOpId)) }

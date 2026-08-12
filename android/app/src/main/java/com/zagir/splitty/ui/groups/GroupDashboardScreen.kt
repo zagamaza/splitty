@@ -209,7 +209,7 @@ internal fun GroupDashboardContent(
 
         is UiState.Content -> {
             val stats = state.value
-            if (stats.totalSpent == 0 && stats.topOperations.isEmpty()) {
+            if (stats.totalSpent == 0L && stats.topOperations.isEmpty()) {
                 // Пустая комната: дружелюбное состояние вместо нулевых графиков.
                 Box(modifier = modifier, contentAlignment = Alignment.Center) {
                     DashboardEmptyState()
@@ -309,9 +309,9 @@ private fun DashboardEmptyState() {
 @Composable
 private fun MyTiles(stats: Statistics, meId: Long?) {
     meId ?: return
-    val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.sum ?: 0
-    val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.sum ?: 0
-    if (paid == 0 && share == 0) return
+    val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.sum ?: 0L
+    val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.sum ?: 0L
+    if (paid == 0L && share == 0L) return
     val colors = Splitty.colors
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         StatTile(
@@ -478,7 +478,7 @@ private fun ChartAnnotationBadge(label: String, value: String) {
 // MARK: - «Траты по дням» (Canvas, 30 дней)
 
 /** Точка графика: день и сумма трат (дни без трат — нули). */
-internal data class DayPoint(val date: LocalDate, val sum: Int)
+internal data class DayPoint(val date: LocalDate, val sum: Long)
 
 /**
  * Ряд из ровно 30 дней (по сегодняшний): дни без трат = 0;
@@ -488,14 +488,14 @@ internal fun lastThirtyDays(
     byDay: List<DailySum>,
     today: LocalDate = LocalDate.now(),
 ): List<DayPoint> {
-    val sums = HashMap<LocalDate, Int>()
+    val sums = HashMap<LocalDate, Long>()
     for (daily in byDay) {
         val date = runCatching { LocalDate.parse(daily.date) }.getOrNull() ?: continue
-        sums[date] = (sums[date] ?: 0) + daily.sum
+        sums[date] = (sums[date] ?: 0L) + daily.sum
     }
     return (29 downTo 0).map { offset ->
         val date = today.minusDays(offset.toLong())
-        DayPoint(date = date, sum = sums[date] ?: 0)
+        DayPoint(date = date, sum = sums[date] ?: 0L)
     }
 }
 
@@ -511,7 +511,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
     var selectedIndex by remember(byDay) { mutableStateOf<Int?>(null) }
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 11.sp, color = colors.inkSecondary)
-    val allZero = points.all { it.sum == 0 }
+    val allZero = points.all { it.sum == 0L }
 
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(stringResource(R.string.totals_by_day))
@@ -551,7 +551,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
             ) {
                 val labelArea = 18.dp.toPx()
                 val chartHeight = size.height - labelArea
-                val maxSum = max(points.maxOf { it.sum }, 1)
+                val maxSum = max(points.maxOf { it.sum }, 1L)
 
                 // Сетка тише данных: hairline-линии на 0, ⅓, ⅔ и полной высоте.
                 for (step in 0..3) {
@@ -627,12 +627,12 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
 private fun WhoPaidDonutCard(
     bars: List<MemberBar>,
     colorIndices: Map<Long, Int>,
-    totalSpent: Int,
+    totalSpent: Long,
     currency: String,
 ) {
     val colors = Splitty.colors
     val (visible, othersSum) = remember(bars) { foldDonutBars(bars) }
-    val total = max(bars.sumOf { it.sum }, 1)
+    val total = max(bars.sumOf { it.sum }, 1L)
     val othersLabel = stringResource(R.string.totals_others)
     // Сегменты доната и строки легенды — один список (подпись, сумма, цвет).
     val segments = remember(bars, colors) {
@@ -727,7 +727,7 @@ private fun WhoPaidDonutCard(
 // MARK: - «Чья доля» (горизонтальные бары личных цветов)
 
 /** Строка графика: подпись участника (уникальная) и сумма. */
-internal data class MemberBar(val id: Long, val label: String, val sum: Int)
+internal data class MemberBar(val id: Long, val label: String, val sum: Long)
 
 /**
  * Готовит бары: убирает нули, сортирует по убыванию, делает подписи
@@ -735,7 +735,7 @@ internal data class MemberBar(val id: Long, val label: String, val sum: Int)
  */
 internal fun preparedMemberBars(members: List<MemberSum>): List<MemberBar> {
     val sorted = members
-        .filter { it.sum != 0 }
+        .filter { it.sum != 0L }
         .sortedByDescending { it.sum }
     val seen = mutableMapOf<String, Int>()
     return sorted.map { member ->
@@ -764,7 +764,7 @@ private fun MemberBarsCard(
     colorIndices: Map<Long, Int>,
 ) {
     val colors = Splitty.colors
-    val maxSum = max(bars.maxOf { it.sum }, 1)
+    val maxSum = max(bars.maxOf { it.sum }, 1L)
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(title)
         Spacer(Modifier.height(12.dp))
@@ -864,7 +864,7 @@ private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
                             end = Offset(center, size.height + 2.dp.toPx()),
                             strokeWidth = 1.dp.toPx(),
                         )
-                        if (bar.net != 0) {
+                        if (bar.net != 0L) {
                             val length = max(
                                 size.width / 2f * abs(bar.net) / maxAbs,
                                 2.dp.toPx(),
@@ -906,7 +906,7 @@ private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
  * подписи без чисел — правило selective direct labels).
  */
 @Composable
-private fun WeekdayCard(totals: List<Int>, currency: String) {
+private fun WeekdayCard(totals: List<Long>, currency: String) {
     val colors = Splitty.colors
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 11.sp, color = colors.inkSecondary)
@@ -916,7 +916,7 @@ private fun WeekdayCard(totals: List<Int>, currency: String) {
         color = colors.ink,
         fontFeatureSettings = "tnum",
     )
-    val maxSum = max(totals.max(), 1)
+    val maxSum = max(totals.max(), 1L)
     val maxIndex = totals.indexOf(totals.max())
 
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {

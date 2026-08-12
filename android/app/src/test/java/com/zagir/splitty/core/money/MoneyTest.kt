@@ -49,23 +49,23 @@ class MoneyTest {
 
     @Test
     fun `shares 1000 by 3 gives 334 333 333`() {
-        assertEquals(listOf(334, 333, 333), shares(1_000, 3))
+        assertEquals(listOf(334L, 333L, 333L), shares(1_000, 3))
     }
 
     @Test
     fun `shares divides exactly when no remainder`() {
-        assertEquals(listOf(400, 400, 400), shares(1_200, 3))
+        assertEquals(listOf(400L, 400L, 400L), shares(1_200, 3))
     }
 
     @Test
     fun `shares remainder goes to first recipients in order`() {
-        assertEquals(listOf(3, 3, 2, 2), shares(10, 4))
-        assertEquals(listOf(1, 1, 1, 0, 0), shares(3, 5))
+        assertEquals(listOf(3L, 3L, 2L, 2L), shares(10, 4))
+        assertEquals(listOf(1L, 1L, 1L, 0L, 0L), shares(3, 5))
     }
 
     @Test
     fun `shares sum always equals total`() {
-        for (sum in listOf(1, 7, 100, 999, 1_000_003)) {
+        for (sum in listOf(1L, 7L, 100L, 999L, 1_000_003L)) {
             for (count in 1..7) {
                 assertEquals(sum, shares(sum, count).sum(), "sum=$sum count=$count")
             }
@@ -139,7 +139,7 @@ class MoneyTest {
      */
     @Test
     fun `shares conserves negative sums`() {
-        for (sum in listOf(0, -1, -5, -10, -100, -999)) {
+        for (sum in listOf(0L, -1L, -5L, -10L, -100L, -999L)) {
             for (count in 1..7) {
                 assertEquals(sum, shares(sum, count).sum(), "shares($sum, $count)")
             }
@@ -148,35 +148,47 @@ class MoneyTest {
 
     @Test
     fun `moneyRange keeps sign of lower bound`() {
-        assertEquals("-100–50 \u20BD", moneyRange(-100, 50, "RUB"))
+        assertEquals("-100–50 \u20BD", moneyRange(-100L, 50L, "RUB"))
     }
 
     /**
-     * Итог по валюте копится в Long: заворот в Int менял знак и «вы должны»
-     * превращалось в «вам должны». Насыщаем, а не заворачиваем.
+     * Суммы 64-битные на всём пути, поэтому итог по валюте больше не насыщается
+     * и не заворачивается: в рупиях счёт за поездку легко переваливает за
+     * 2.1 миллиарда, и раньше на этом «вы должны» превращалось в «вам должны».
      */
     @Test
-    fun `aggregateByCurrency saturates instead of overflowing`() {
+    fun `aggregateByCurrency keeps totals beyond 32 bits`() {
         val huge = listOf(
-            CurrencySum("IDR", Int.MAX_VALUE),
-            CurrencySum("IDR", Int.MAX_VALUE),
+            CurrencySum("IDR", Int.MAX_VALUE.toLong()),
+            CurrencySum("IDR", Int.MAX_VALUE.toLong()),
         )
-        assertEquals(Int.MAX_VALUE, aggregateByCurrency(huge).single().sum)
+        assertEquals(Int.MAX_VALUE.toLong() * 2, aggregateByCurrency(huge).single().sum)
     }
 
     /**
-     * Насыщение при переполнении Int может дать ровно Int.MIN_VALUE, а
-     * abs(Int.MIN_VALUE) отрицателен: крупнейший долг уезжал в конец списка,
-     * и «основной» валютой показывалась не та.
+     * Крупнейший по модулю долг — «основной»: он показывается крупно. Раньше
+     * насыщение давало ровно Int.MIN_VALUE, abs от него отрицателен, и самый
+     * большой долг уезжал в конец списка.
      */
     @Test
-    fun `saturated negative total sorts first`() {
+    fun `largest debt sorts first even beyond 32 bits`() {
         val got = aggregateByCurrency(
             listOf(
                 CurrencySum(currency = "USD", sum = 100),
-                CurrencySum(currency = "RUB", sum = Int.MIN_VALUE),
+                CurrencySum(currency = "RUB", sum = Int.MIN_VALUE.toLong() * 4),
             )
         )
         assertEquals("RUB", got.first().currency)
+    }
+
+    /**
+     * Крупная сумма в рупиях не должна терять разряды: раньше она не помещалась
+     * в 32 бита и показывалась отрицательной, то есть человек видел долг вместо
+     * траты.
+     */
+    @Test
+    fun `money keeps every digit of a large rupiah sum`() {
+        assertEquals("3 600 000 000 Rp", money(3_600_000_000L, "IDR"))
+        assertEquals("-3 600 000 000 Rp", money(-3_600_000_000L, "IDR"))
     }
 }

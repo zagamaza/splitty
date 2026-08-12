@@ -13,7 +13,7 @@ class ReceiptHintTest {
 
     private fun item(
         name: String = "Позиция",
-        price: Int,
+        price: Long,
         qty: Int = 1,
         shares: List<ItemShare>? = null,
         kind: String = OperationItem.KIND_ITEM,
@@ -29,7 +29,7 @@ class ReceiptHintTest {
         unknown = unknown,
     )
 
-    private fun share(id: Long, weight: Int = 1, amount: Int? = null) = ItemShare(id, weight, amount)
+    private fun share(id: Long, weight: Int = 1, amount: Long? = null) = ItemShare(id, weight, amount)
 
     @Test fun singleShare_wholeItem() {
         assertEquals("целиком", shareHint(item(price = 500, shares = listOf(share(1))), "RUB"))

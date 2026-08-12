@@ -209,7 +209,7 @@ enum class MoneyRole {
  */
 @Composable
 fun MoneyText(
-    amount: Int,
+    amount: Long,
     modifier: Modifier = Modifier,
     role: MoneyRole = MoneyRole.AUTO,
     size: TextUnit = 17.sp,
@@ -264,7 +264,7 @@ fun MoneyText(
  */
 @Composable
 fun AnimatedMoneyText(
-    amount: Int,
+    amount: Long,
     modifier: Modifier = Modifier,
     role: MoneyRole = MoneyRole.AUTO,
     size: TextUnit = 17.sp,

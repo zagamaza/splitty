@@ -20,7 +20,7 @@ class GroupDashboardChartsTest {
     private fun user(id: Long, name: String = "U$id") =
         User(id = id, username = null, displayName = name)
 
-    private fun member(id: Long, sum: Int, name: String = "U$id") =
+    private fun member(id: Long, sum: Long, name: String = "U$id") =
         MemberSum(user = user(id, name), sum = sum)
 
     // MARK: Назначение цветов
@@ -67,7 +67,7 @@ class GroupDashboardChartsTest {
         val share = listOf(member(1, 2000), member(2, 2000), member(3, 2000))
         val nets = memberNetBalances(paid, share)
         assertEquals(listOf(1L, 2L, 3L), nets.map { it.id })
-        assertEquals(listOf(2000, -1000, -1000), nets.map { it.net })
+        assertEquals(listOf(2000L, -1000L, -1000L), nets.map { it.net })
         // Ничья по net (участники 2 и 3) — стабильный порядок по id.
         assertEquals("U2", nets[1].label)
     }
@@ -104,10 +104,10 @@ class GroupDashboardChartsTest {
             )
         )
         assertEquals(7, totals.size)
-        assertEquals(140, totals[0]) // пн
-        assertEquals(7, totals[1]) // вт
-        assertEquals(300, totals[6]) // вс
-        assertEquals(listOf(0, 0, 0, 0), totals.subList(2, 6)) // ср–сб пустые
+        assertEquals(140L, totals[0]) // пн
+        assertEquals(7L, totals[1]) // вт
+        assertEquals(300L, totals[6]) // вс
+        assertEquals(listOf(0L, 0L, 0L, 0L), totals.subList(2, 6)) // ср–сб пустые
     }
 
     // MARK: Динамика по месяцам
@@ -118,20 +118,20 @@ class GroupDashboardChartsTest {
 
     @Test
     fun `donut keeps six or fewer bars as is`() {
-        val bars = (1L..6L).map { MemberBar(id = it, label = "U$it", sum = 100 * it.toInt()) }
+        val bars = (1L..6L).map { MemberBar(id = it, label = "U$it", sum = 100 * it) }
         val (visible, othersSum) = foldDonutBars(bars)
         assertEquals(bars, visible)
-        assertEquals(0, othersSum)
+        assertEquals(0L, othersSum)
     }
 
     @Test
     fun `donut folds more than six bars into top five plus others`() {
         // Уже по убыванию (как из preparedMemberBars): 800, 700, … 100.
-        val bars = (8 downTo 1).map { MemberBar(id = it.toLong(), label = "U$it", sum = it * 100) }
+        val bars = (8 downTo 1).map { MemberBar(id = it.toLong(), label = "U$it", sum = it * 100L) }
         val (visible, othersSum) = foldDonutBars(bars)
         assertEquals(5, visible.size)
-        assertEquals(listOf(800, 700, 600, 500, 400), visible.map { it.sum })
-        assertEquals(300 + 200 + 100, othersSum)
+        assertEquals(listOf(800L, 700L, 600L, 500L, 400L), visible.map { it.sum })
+        assertEquals(300L + 200L + 100L, othersSum)
     }
 
     // MARK: Плитки

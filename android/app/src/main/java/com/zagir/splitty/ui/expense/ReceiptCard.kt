@@ -439,7 +439,7 @@ private fun SurchargeRule(index: Int, item: OperationItem, onToggle: ((Int) -> U
 // MARK: footer
 
 @Composable
-private fun FooterLine(title: String, amount: Int, currency: String, total: Boolean) {
+private fun FooterLine(title: String, amount: Long, currency: String, total: Boolean) {
     val colors = Splitty.colors
     Row(
         modifier = Modifier
@@ -624,8 +624,8 @@ internal fun shareHint(item: OperationItem, currency: String): String {
  * «По сколько с носа»: при неделящейся нацело цене — честный диапазон «33–34 ₽»
  * (иначе «по 33 ₽ × 3» не сходится с итогом строки 100 ₽). Зеркало iOS.
  */
-internal fun perPersonText(price: Int, parts: Int, currency: String): String {
+internal fun perPersonText(price: Long, parts: Int, currency: String): String {
     val n = max(1, parts)
     val base = price / n
-    return if (price % n == 0) money(base, currency) else moneyRange(base, base + 1, currency)
+    return if (price % n == 0L) money(base, currency) else moneyRange(base, base + 1, currency)
 }

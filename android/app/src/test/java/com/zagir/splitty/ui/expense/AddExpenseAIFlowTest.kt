@@ -32,7 +32,7 @@ class AddExpenseAIFlowTest {
         didRecognize = items.isNotEmpty(),
     )
 
-    private fun surcharge(price: Int, split: String) = OperationItem(
+    private fun surcharge(price: Long, split: String) = OperationItem(
         name = "Сбор", price = price, shares = null,
         kind = OperationItem.KIND_SURCHARGE, split = split, percent = 10,
     )
@@ -241,10 +241,10 @@ class AddExpenseAIFlowTest {
                 surcharge(120, OperationItem.SPLIT_PROPORTIONAL),
             ),
         )
-        assertEquals(listOf(100, 20), next.personShares!!.map { it.surchargePart })
+        assertEquals(listOf(100L, 20L), next.personShares!!.map { it.surchargePart })
         next = next.togglingSurchargeRule(2)
         assertEquals(OperationItem.SPLIT_EQUALLY, next.draftItems[2].split)
-        assertEquals(listOf(60, 60), next.personShares!!.map { it.surchargePart })
+        assertEquals(listOf(60L, 60L), next.personShares!!.map { it.surchargePart })
     }
 
     @Test

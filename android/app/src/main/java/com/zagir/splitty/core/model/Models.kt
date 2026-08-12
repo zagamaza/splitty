@@ -177,7 +177,7 @@ data class NotifySettings(
 data class Debt(
     val debtor: User,
     val lender: User,
-    val sum: Int,
+    val sum: Long,
 )
 
 /** Файл, прикреплённый к операции (чек/фото из Telegram). */
@@ -221,7 +221,7 @@ object SplitTypeSerializer : KSerializer<SplitType> {
 @Serializable
 data class OperationRecipient(
     val user: User,
-    val sum: Int,
+    val sum: Long,
 )
 
 /**
@@ -244,7 +244,7 @@ data class ItemShare(
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val weight: Int = 1,
     /** Фиксированная сумма участника (целые единицы валюты); null — доля по весу. */
-    val amount: Int? = null,
+    val amount: Long? = null,
 )
 
 /**
@@ -257,7 +257,7 @@ data class OperationItem(
     /** Название позиции («Пицца», «Сервисный сбор»). */
     val name: String,
     /** ВСЕГДА суммарная стоимость строки (целые единицы, уже с учётом [qty]). */
-    val price: Int,
+    val price: Long,
     /**
      * Количество — только для показа («×10»); в делении НЕ участвует.
      *
@@ -303,7 +303,7 @@ data class OperationItem(
 data class Operation(
     val id: String,
     val description: String,
-    val sum: Int,
+    val sum: Long,
     val isDebtRepayment: Boolean = false,
     /** Кто заплатил. */
     val donor: User,
@@ -347,7 +347,7 @@ data class Operation(
      * Доля пользователя по ХРАНИМЫМ суммам получателей (не пересчёт!);
      * null — не участвует в делении.
      */
-    fun recipientSum(userId: Long): Int? =
+    fun recipientSum(userId: Long): Long? =
         recipients.firstOrNull { it.user.id == userId }?.sum
 
     /**
@@ -355,10 +355,10 @@ data class Operation(
      * >0 — одолжил, <0 — должен, 0 — расчёт, null — не участвует.
      * Донор: одолжил = [sum] − своя доля (если сам среди получателей).
      */
-    fun netPosition(userId: Long): Int? {
+    fun netPosition(userId: Long): Long? {
         val myShare = recipientSum(userId)
         return when {
-            donor.id == userId -> sum - (myShare ?: 0)
+            donor.id == userId -> sum - (myShare ?: 0L)
             myShare != null -> -myShare
             else -> null
         }
@@ -373,7 +373,7 @@ data class Operation(
 @Serializable
 data class ParseDraft(
     val description: String,
-    val sum: Int,
+    val sum: Long,
     /** Кто платил; null — модель не определила донора. */
     val donorId: Long? = null,
     /** Позиции чека; item с непустым `unknown` требует сопоставления перед сохранением. */
@@ -407,7 +407,7 @@ data class ParseResponse(
 @Serializable
 data class CurrencySum(
     val currency: String,
-    val sum: Int,
+    val sum: Long,
 )
 
 /** Валюта из справочника GET /currencies: код, символ и флаг для пикера. */
@@ -430,9 +430,9 @@ data class RoomSummary(
     /** Валюта комнаты («RUB»/«USD»/«EUR»/«IDR») — в ней все суммы комнаты. */
     val currency: String,
     /** Сумма всех расходов комнаты (без погашений). */
-    val totalSpent: Int,
+    val totalSpent: Long,
     /** >0 — мне должны, <0 — я должен, 0 — расчёт. */
-    val myBalance: Int,
+    val myBalance: Long,
     /**
      * Долги комнаты неисчислимы (легаси-данные бота). Сервер шлёт флаг и в
      * списке комнат тоже; без него myBalance=0 читался как «все в расчёте» —
@@ -460,10 +460,10 @@ data class RoomDetail(
     val members: List<User> = emptyList(),
     /** Валюта комнаты — в ней показываются ВСЕ суммы экрана группы. */
     val currency: String,
-    val totalSpent: Int,
+    val totalSpent: Long,
     /** Моя доля расходов. */
     val mySpent: Int,
-    val myBalance: Int,
+    val myBalance: Long,
     /** Все долги комнаты. */
     val debts: List<Debt> = emptyList(),
     /** Все операции, новые первыми. */
@@ -505,7 +505,7 @@ data class FriendRoomBalance(
     val roomName: String,
     /** Валюта комнаты. */
     val currency: String,
-    val balance: Int,
+    val balance: Long,
 )
 
 /**
@@ -587,7 +587,7 @@ data class AddMemberResponse(val status: InviteStatus)
 @Serializable
 data class DailySum(
     val date: String,
-    val sum: Int,
+    val sum: Long,
 )
 
 /**
@@ -598,14 +598,14 @@ data class DailySum(
 @Serializable
 data class MonthlySum(
     val month: String,
-    val sum: Int,
+    val sum: Long,
 )
 
 /** Сумма участника («Кто платил» / «Чья доля»). */
 @Serializable
 data class MemberSum(
     val user: User,
-    val sum: Int,
+    val sum: Long,
 )
 
 /** Строка «Топ расходов». */
@@ -613,7 +613,7 @@ data class MemberSum(
 data class TopOperation(
     val id: String,
     val description: String,
-    val sum: Int,
+    val sum: Long,
     val donor: User,
     val createdAt: Instant,
 )
@@ -625,11 +625,11 @@ data class TopOperation(
 @Serializable
 data class Statistics(
     val currency: String,
-    val totalSpent: Int,
+    val totalSpent: Long,
     /** Число всех расходов комнаты за всё время (без погашений); 0 у старых серверов. */
     val operationCount: Int = 0,
     /** Потрачено за текущий календарный месяц. */
-    val monthSpent: Int,
+    val monthSpent: Long,
     /** Траты по дням (дни без трат сервер может опускать — клиент дополняет нулями). */
     val byDay: List<DailySum> = emptyList(),
     /** Траты по месяцам: 6 календарных месяцев включая текущий, по возрастанию. */

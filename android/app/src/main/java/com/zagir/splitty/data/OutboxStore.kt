@@ -63,7 +63,7 @@ enum class OutboxStatus {
 @Serializable
 data class OutboxPayload(
     val description: String,
-    val sum: Int,
+    val sum: Long,
     val donorId: Long,
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
@@ -90,7 +90,7 @@ data class OutboxPayload(
     companion object {
         fun of(
             description: String,
-            sum: Int,
+            sum: Long,
             donorId: Long,
             split: ExpenseSplit,
             items: List<OperationItem>? = null,

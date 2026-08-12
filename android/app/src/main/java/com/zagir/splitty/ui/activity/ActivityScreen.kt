@@ -327,7 +327,7 @@ private fun ActivityPosition(item: ActivityItem, myUserId: Long?) {
 
         else -> when (val net = op.netPosition(myUserId)) {
             null -> Triple(stringResource(R.string.activity_not_involved), null, MoneyRole.NEUTRAL)
-            0 -> Triple(stringResource(R.string.activity_settled), null, MoneyRole.NEUTRAL)
+            0L -> Triple(stringResource(R.string.activity_settled), null, MoneyRole.NEUTRAL)
             else -> if (net > 0) {
                 Triple(stringResource(R.string.activity_you_lent), net, MoneyRole.POSITIVE)
             } else {

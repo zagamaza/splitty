@@ -90,8 +90,8 @@ internal fun stopsAtReview(isEmptyForm: Boolean, hasOtherCapture: Boolean): Bool
  * снимается тупик «чек распознан, общей суммы нет»: sumText пуст, а исправить
  * его негде. null — сохранять нечего. Чистая функция — под JVM-тест.
  */
-internal fun effectiveSum(form: AddExpenseForm, itemSums: List<RecipientSum>?): Int? =
-    (itemSums?.sumOf { it.sum } ?: form.sum)?.takeIf { it >= 1 }
+internal fun effectiveSum(form: AddExpenseForm, itemSums: List<RecipientSum>?): Long? =
+    (itemSums?.sumOf { it.sum } ?: form.sum)?.takeIf { it >= 1L }
 
 /**
  * Снапшот формы до последней голосовой правки/«Поровну на всех» — для отмены
@@ -475,7 +475,7 @@ data class AddExpenseForm(
     val isSaved: Boolean = false,
 ) {
     /** Введённая сумма расхода; null — поле пустое/невалидное. */
-    val sum: Int? get() = sumText.toIntOrNull()
+    val sum: Long? get() = sumText.toLongOrNull()
 
     val payer: User? get() = members.firstOrNull { it.id == payerId }
 
@@ -483,13 +483,13 @@ data class AddExpenseForm(
     val selectedMembers: List<User> get() = members.filter { it.id in recipientIds }
 
     /** Введённая доля участника (пустое/невалидное поле = 0). */
-    fun enteredAmount(userId: Long): Int = amountTexts[userId]?.toIntOrNull() ?: 0
+    fun enteredAmount(userId: Long): Long = amountTexts[userId]?.toLongOrNull() ?: 0L
 
     /** Σ введённых долей ВЫБРАННЫХ участников (снятые с выбора не считаются). */
-    val distributedTotal: Int get() = recipientIds.sumOf { enteredAmount(it) }
+    val distributedTotal: Long get() = recipientIds.sumOf { enteredAmount(it) }
 
     /** Остаток нераспределённой суммы; < 0 — перерасход. */
-    val remainingToDistribute: Int get() = (sum ?: 0) - distributedTotal
+    val remainingToDistribute: Long get() = (sum ?: 0L) - distributedTotal
 
     /** true — суммы участников сходятся с суммой расхода (Σ == sum, sum >= 1). */
     val isDistributionBalanced: Boolean
@@ -520,23 +520,23 @@ data class AddExpenseForm(
     val itemizedUserIds: List<Long> get() = draftItems.itemizedUserIds()
 
     /** Клиентское превью долей по позициям (userId→сумма); null — позиции невалидны. */
-    val itemizedShares: Map<Long, Int>? get() = draftItems.derivedShares()?.shares
+    val itemizedShares: Map<Long, Long>? get() = draftItems.derivedShares()?.shares
 
     /** Итог чека: подытог позиций + сборы; null — позиции невалидны. */
-    val itemizedTotal: Int? get() = draftItems.derivedShares()?.total
+    val itemizedTotal: Long? get() = draftItems.derivedShares()?.total
 
     /** Подытог обычных позиций (без надбавок). */
-    val itemizedSubtotal: Int get() = draftItems.filter { !it.isSurcharge }.sumOf { it.price }
+    val itemizedSubtotal: Long get() = draftItems.filter { !it.isSurcharge }.sumOf { it.price }
 
     /** Сумма всех надбавок (сборов/чаевых/доставки). */
-    val itemizedSurcharges: Int get() = draftItems.filter { it.isSurcharge }.sumOf { it.price }
+    val itemizedSurcharges: Long get() = draftItems.filter { it.isSurcharge }.sumOf { it.price }
 
     /** Разбивка «С кого сколько» по позициям; null — позиций нет или они невалидны. */
     val personShares: List<PersonShare>? get() = draftItems.personShares()
 
     /** true — форма пуста (нет позиций/описания/суммы и это не правка). */
     val isEmptyForm: Boolean
-        get() = !hasDraftItems && !isEditing && description.isBlank() && (sum ?: 0) == 0
+        get() = !hasDraftItems && !isEditing && description.isBlank() && (sum ?: 0L) == 0L
 
     /**
      * «Что осталось уточнить» для экрана диктовки (Task 12): нераспознанные имена,
@@ -1276,7 +1276,7 @@ class AddExpenseViewModel @Inject constructor(
     private suspend fun createOperation(
         roomId: String,
         description: String,
-        sum: Int,
+        sum: Long,
         payerId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>?,

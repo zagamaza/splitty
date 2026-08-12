@@ -10,11 +10,10 @@ package com.zagir.splitty.core.model
  * и они обязаны совпасть с теми, что сервер запишет в плоские recipients — иначе
  * пользователь увидит одно, а в группе появится другое.
  *
- * Про переполнение: цены/веса/фиксы в модели — Int, а вся арифметика ниже идёт
- * в Long, поэтому произведение price*weight (макс. 2.1e9 × 2.1e9 ≈ 4.6e18) в Long
- * (макс. 9.2e18) не переполняется — публичный путь [derivedShares] всегда сходится.
- * Overflow-защита серверного алгоритма сохранена во внутренних Long-функциях
- * (для точного паритета и независимого теста краёв), но на Int-входах не срабатывает.
+ * Про переполнение: цены и суммы 64-битные, как на сервере, поэтому сужения на
+ * выходе больше нет. Произведение price*weight по-прежнему может переполнить
+ * Long — на этот случай во внутренних функциях осталась защита, отдающая null
+ * вместо завёрнутого числа.
  */
 
 /** true — надбавка (сбор/чаевые/доставка), делится по базе, а не по своим долям. */
@@ -30,7 +29,7 @@ val OperationItem.shareList: List<ItemShare> get() = shares ?: emptyList()
 val OperationItem.hasUnknown: Boolean get() = !unknown.isNullOrEmpty()
 
 /** Результат превью долей: карта userId→сумма и общий итог (обе — целые единицы). */
-data class DerivedShares(val shares: Map<Long, Int>, val total: Int)
+data class DerivedShares(val shares: Map<Long, Long>, val total: Long)
 
 /**
  * Строка разбивки «С кого сколько» itemized-черновика: итог участника и сколько
@@ -39,9 +38,9 @@ data class DerivedShares(val shares: Map<Long, Int>, val total: Int)
 data class PersonShare(
     val userId: Long,
     /** Полная доля: позиции + сборы (ровно то, что сохранит сервер). */
-    val total: Int,
+    val total: Long,
     /** Часть итога, пришедшая от сборов/чаевых; 0 — сборов нет. */
-    val surchargePart: Int,
+    val surchargePart: Long,
 )
 
 /**
@@ -55,7 +54,7 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     var total = 0L
     for (item in this) {
         if (item.isSurcharge) continue
-        val split = splitItem(item.price.toLong(), item.shareList) ?: return null
+        val split = splitItem(item.price, item.shareList) ?: return null
         for ((id, value) in split) base[id] = (base[id] ?: 0L) + value
         total += item.price
     }
@@ -64,7 +63,7 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     for (item in this) {
         if (!item.isSurcharge) continue
         if (item.price <= 0) return null
-        val surcharge = splitSurcharge(item.price.toLong(), item.split, base) ?: return null
+        val surcharge = splitSurcharge(item.price, item.split, base) ?: return null
         for ((id, value) in surcharge) out[id] = (out[id] ?: 0L) + value
         total += item.price
     }
@@ -73,16 +72,7 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     for (value in out.values) sum += value
     if (sum != total) return null
 
-    // Считали в Long, отдаём в Int: toInt() в Kotlin молча заворачивается, и
-    // 50 позиций по 9 цифр (столько пропускает поле ввода) давали отрицательный
-    // итог при зелёной кнопке «Сохранить» и невнятном 400 от сервера.
-    if (total > Int.MAX_VALUE) return null
-    val shares = HashMap<Long, Int>(out.size)
-    for ((id, value) in out) {
-        if (value > Int.MAX_VALUE) return null
-        shares[id] = value.toInt()
-    }
-    return DerivedShares(shares, total.toInt())
+    return DerivedShares(HashMap(out), total)
 }
 
 /**
@@ -109,7 +99,7 @@ fun List<OperationItem>.personShares(): List<PersonShare>? {
     val base = this.filter { !it.isSurcharge }.derivedShares()?.shares ?: emptyMap()
     return itemizedUserIds().mapNotNull { id ->
         val total = derived.shares[id] ?: return@mapNotNull null
-        PersonShare(userId = id, total = total, surchargePart = total - (base[id] ?: 0))
+        PersonShare(userId = id, total = total, surchargePart = total - (base[id] ?: 0L))
     }
 }
 

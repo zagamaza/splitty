@@ -29,7 +29,7 @@ object Glossary {
      * тернарник «>0 ? вам : вы» при нуле врал (показывал «вы должны» на расчёте).
      */
     @StringRes
-    fun balanceCaption(sum: Int): Int = when {
+    fun balanceCaption(sum: Long): Int = when {
         sum > 0 -> R.string.groups_row_owed
         sum < 0 -> R.string.groups_row_owes
         else -> SETTLED

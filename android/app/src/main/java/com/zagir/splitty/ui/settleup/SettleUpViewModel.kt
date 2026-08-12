@@ -63,7 +63,7 @@ data class SettleUpForm(
     /** true — платёж записан, экран пора закрывать (onDone). */
     val isSaved: Boolean = false,
 ) {
-    val sum: Int? get() = sumText.toIntOrNull()
+    val sum: Long? get() = sumText.toLongOrNull()
 
     /** Кнопка «назад к списку» видна, когда на шаг 2 пришли из списка. */
     val showsBackToList: Boolean get() = selectedDebt != null && debts.size > 1
@@ -252,7 +252,7 @@ internal class RepayIdempotency {
     private var intent: String? = null
     private var current: String? = null
 
-    fun key(debtorId: Long, lenderId: Long, sum: Int): String {
+    fun key(debtorId: Long, lenderId: Long, sum: Long): String {
         val next = "$debtorId-$lenderId-$sum"
         current?.let { if (intent == next) return it }
         val fresh = java.util.UUID.randomUUID().toString()
