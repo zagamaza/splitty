@@ -657,6 +657,9 @@ class AddExpenseViewModel @Inject constructor(
      */
     private var editOperationVersion: Int? = null
 
+    /** Ключ идемпотентности создания: переживает повтор после сбоя. */
+    private val createIdempotency = CreateIdempotency()
+
     /**
      * Исходный порядок получателей редактируемой операции — от него зависит
      * раздача остатка equally-деления на сервере, поэтому при сохранении
@@ -1270,8 +1273,10 @@ class AddExpenseViewModel @Inject constructor(
 
     /**
      * Создание: офлайн — сразу в outbox; онлайн — POST с clientOpId, а при
-     * транспортной ошибке (сеть пропала/таймаут) — в outbox с тем же ключом.
-     * Ошибки сервера (4xx/5xx) пробрасываются наверх — алерт формы.
+     * транспортной ошибке или 5xx — в outbox с тем же ключом. 5xx важен
+     * отдельно: сервер мог записать расход и не успеть ответить, и очередь
+     * разрешит это по ключу вместо дубля или потери. 4xx пробрасывается наверх
+     * (алерт формы) — это отказ по данным, очередь его не исправит.
      */
     private suspend fun createOperation(
         roomId: String,
@@ -1281,22 +1286,26 @@ class AddExpenseViewModel @Inject constructor(
         split: ExpenseSplit,
         items: List<OperationItem>?,
     ) {
-        val localId = UUID.randomUUID().toString()
+        val payload = OutboxPayload.of(description, sum, payerId, split, items = items)
+        // Ключ живёт, пока не меняется содержимое расхода: повтор после сбоя
+        // обязан уйти с тем же, иначе сервер, записавший первую попытку, заведёт
+        // второй такой же расход.
+        val localId = createIdempotency.key(payload)
         if (isOnline.value) {
             try {
                 repository.addOperation(roomId, description, sum, payerId, split, items = items, clientOpId = localId)
                 sessionStore.noteDataChanged()
                 return
             } catch (e: ApiException) {
-                if (e.code != ApiException.CODE_TRANSPORT) throw e
-                // Транспортная ошибка — падаем в офлайн-ветку ниже.
+                if (!e.deservesOutbox) throw e
+                // Сеть не дошла или сервер ответил 5xx — падаем в офлайн-ветку ниже.
             }
         }
         outboxStore.add(
             OutboxEntry(
                 localId = localId,
                 roomId = roomId,
-                payload = OutboxPayload.of(description, sum, payerId, split, items = items),
+                payload = payload,
                 createdAt = Instant.now(),
             )
         )
@@ -1396,5 +1405,28 @@ class AddExpenseViewModel @Inject constructor(
 
         /** Путь фото чека, ожидающего решения на экране разбора (см. [pendingReceiptPath]). */
         const val KEY_PENDING_RECEIPT = "expense_pending_receipt"
+    }
+}
+
+/**
+ * Ключ идемпотентности создания расхода.
+ *
+ * Повтор сохранения после сбоя обязан уйти с ТЕМ ЖЕ ключом: сервер мог записать
+ * первую попытку и не успеть ответить. Смена содержимого расхода — это уже
+ * другой расход, и ключ обновляется, иначе исправленная сумма вернулась бы
+ * человеку в виде первой, «уже созданной» операции. Зеркало iOS
+ * `CreateIdempotency`.
+ */
+internal class CreateIdempotency {
+    private var content: OutboxPayload? = null
+    private var current: String? = null
+
+    fun key(payload: OutboxPayload): String {
+        val existing = current
+        if (content == payload && existing != null) return existing
+        val fresh = UUID.randomUUID().toString()
+        content = payload
+        current = fresh
+        return fresh
     }
 }

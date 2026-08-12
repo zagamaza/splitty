@@ -57,6 +57,14 @@ class ApiException(
      */
     val isPurgeIncomplete: Boolean get() = code == CODE_PURGE_INCOMPLETE
 
+    /**
+     * Ошибку стоит пережить в очереди неотправленных расходов: сеть не дошла
+     * либо сервер ответил 5xx. 4xx сюда не входит — это отказ по данным, и
+     * очередь его не исправит, она только спрятала бы его от человека.
+     */
+    val deservesOutbox: Boolean
+        get() = code == CODE_TRANSPORT || (status ?: 0) >= 500
+
     companion object {
         const val CODE_TRANSPORT = "transport"
         const val CODE_DECODING = "decoding"

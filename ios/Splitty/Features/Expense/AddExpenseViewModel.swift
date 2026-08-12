@@ -88,6 +88,8 @@ final class AddExpenseViewModel {
     /// Версия расхода на момент открытия правки: сервер отклонит запись, если
     /// расход успели изменить, — чужая правка не исчезнет молча.
     private(set) var editOperationVersion: Int?
+    /// Ключ идемпотентности создания: переживает повтор после сбоя.
+    private var createIdempotency = CreateIdempotency()
     /// Редактируемая ЛОКАЛЬНАЯ запись outbox (ещё не отправленная на сервер);
     /// сохранение правит саму запись outbox, сеть не нужна.
     private(set) var editEntry: OutboxEntry?
@@ -946,9 +948,12 @@ final class AddExpenseViewModel {
             recipientSums: exactSums,
             items: itemsToSend
         )
-        // localId создаётся заранее и служит clientOpId прямого POST:
-        // если ответ потеряется, досылка из outbox не создаст дубль.
-        let localId = UUID()
+        // localId служит clientOpId прямого POST: если ответ потеряется,
+        // досылка из outbox не создаст дубль. Ключ живёт, пока не меняется
+        // содержимое расхода, — иначе повтор после сбоя уходил бы с новым
+        // ключом, и сервер, успевший записать первую попытку, завёл бы второй
+        // такой же расход.
+        let localId = createIdempotency.key(for: payload)
 
         // Офлайн-создание: в outbox, отправится при появлении сети.
         if editOperationId == nil, !isOnline {
@@ -985,9 +990,11 @@ final class AddExpenseViewModel {
             didSave = true
             return true
         } catch let error as APIError {
-            // Сервер недоступен при живой сети (обслуживание, упал бэкенд):
-            // создание не теряем — кладём в outbox с ТЕМ ЖЕ localId (идемпотентно).
-            if editOperationId == nil, case .transport = error {
+            // Сервер недоступен или ответил 5xx: создание не теряем — кладём в
+            // outbox с ТЕМ ЖЕ localId (идемпотентно). 5xx особенно важен: запись
+            // на сервере могла состояться, а ответ потеряться, и очередь
+            // разрешит это по ключу вместо дубля или потери.
+            if editOperationId == nil, error.deservesOutbox {
                 outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
                 didSave = true
                 return true
@@ -996,6 +1003,50 @@ final class AddExpenseViewModel {
             return false
         } catch {
             alertMessage = humanErrorText(error)
+            return false
+        }
+    }
+}
+
+/// Ключ идемпотентности создания расхода.
+///
+/// Повтор сохранения после сбоя обязан уйти с ТЕМ ЖЕ ключом: сервер мог
+/// записать первую попытку и не успеть ответить. Смена содержимого расхода —
+/// это уже другой расход, и ключ обновляется, иначе исправленная сумма
+/// вернулась бы человеку в виде первой, «уже созданной» операции.
+struct CreateIdempotency {
+    private var content: Data?
+    private var current: UUID?
+
+    mutating func key(for payload: OutboxPayload) -> UUID {
+        let next = Self.fingerprint(payload)
+        if content == next, let current {
+            return current
+        }
+        let fresh = UUID()
+        content = next
+        current = fresh
+        return fresh
+    }
+
+    private static func fingerprint(_ payload: OutboxPayload) -> Data? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try? encoder.encode(payload)
+    }
+}
+
+extension APIError {
+    /// Ошибку стоит пережить в очереди: сеть не дошла либо сервер ответил 5xx.
+    /// 4xx сюда не попадает — это отказ по данным, и очередь его не исправит,
+    /// она только пряталa бы его от человека.
+    var deservesOutbox: Bool {
+        switch self {
+        case .transport:
+            return true
+        case .server(let status, _, _):
+            return status >= 500
+        default:
             return false
         }
     }
