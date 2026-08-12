@@ -98,6 +98,19 @@ final class OutboxStore {
         return base.appendingPathComponent("outbox.json")
     }
 
+    /// Формат файла очереди: версия схемы плюс записи.
+    ///
+    /// Версия нужна, чтобы будущая смена модели не выглядела как «файл битый».
+    /// Пока запись разбирается — она разбирается: неизвестные поля Codable
+    /// игнорирует, а новые поля модели обязаны иметь значение по умолчанию.
+    private struct OutboxFile: Codable {
+        var schemaVersion: Int
+        var entries: [OutboxEntry]
+    }
+
+    /// Текущая версия схемы файла очереди.
+    static let schemaVersion = 1
+
     /// `fileURL` переопределяется в тестах (временный файл).
     init(fileURL: URL = OutboxStore.defaultFileURL) {
         self.fileURL = fileURL
@@ -113,18 +126,42 @@ final class OutboxStore {
         // запись затирала очередь неотправленных расходов начисто.
         if FileManager.default.fileExists(atPath: fileURL.path) {
             if let data = try? Data(contentsOf: fileURL) {
-                // Файл прочитан — писать безопасно. Битый JSON (обрыв записи,
-                // смена схемы) восстановлению не подлежит: если оставить
-                // didLoad = false, persist навсегда замолкает и офлайн-очередь
-                // живёт только в памяти, пропадая при закрытии приложения.
+                // Файл прочитан — писать безопасно. Оставить didLoad = false
+                // нельзя: persist навсегда замолкает, и очередь живёт только в
+                // памяти, пропадая при закрытии приложения.
                 didLoad = true
-                if let loaded = try? self.decoder.decode([OutboxEntry].self, from: data) {
+                if let loaded = Self.decodeEntries(data, decoder: decoder) {
                     entries = loaded
+                } else {
+                    // Разобрать не удалось. Затирать эти байты нечем оправдать:
+                    // в них могут лежать неотправленные расходы. Уносим файл в
+                    // сторону — данные остаются на диске, а очередь начинает с
+                    // чистого листа и умеет писать.
+                    Self.setAside(fileURL)
                 }
             }
         } else {
             didLoad = true // очереди ещё не было — писать безопасно
         }
+    }
+
+    /// Разбирает файл очереди: сначала как контейнер с версией, затем как
+    /// «голый» массив — так читаются файлы, записанные до появления версии.
+    private static func decodeEntries(_ data: Data, decoder: JSONDecoder) -> [OutboxEntry]? {
+        if let file = try? decoder.decode(OutboxFile.self, from: data) {
+            return file.entries
+        }
+        return try? decoder.decode([OutboxEntry].self, from: data)
+    }
+
+    /// Уносит неразобранный файл в сторону, чтобы его содержимое можно было
+    /// достать руками, а очередь могла работать дальше.
+    private static func setAside(_ fileURL: URL) {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let broken = fileURL.deletingLastPathComponent()
+            .appendingPathComponent("outbox-unreadable-\(stamp).json")
+        try? FileManager.default.moveItem(at: fileURL, to: broken)
     }
 
     /// Очередь успешно прочитана (или её ещё не существовало). Пока false —
@@ -330,7 +367,10 @@ final class OutboxStore {
         guard !didLoad else { return }
         guard let data = try? Data(contentsOf: fileURL) else { return }
         didLoad = true
-        guard let loaded = try? decoder.decode([OutboxEntry].self, from: data) else { return }
+        guard let loaded = Self.decodeEntries(data, decoder: decoder) else {
+            Self.setAside(fileURL)
+            return
+        }
         let known = Set(entries.map(\.localId))
         entries = loaded.filter { !known.contains($0.localId) } + entries
     }
@@ -343,7 +383,8 @@ final class OutboxStore {
         // Снимок на вызывающем потоке, encode и запись — в фоне.
         let snapshot = entries
         io.async { [encoder, fileURL] in
-            guard let data = try? encoder.encode(snapshot) else { return }
+            let file = OutboxFile(schemaVersion: OutboxStore.schemaVersion, entries: snapshot)
+            guard let data = try? encoder.encode(file) else { return }
             let directory = fileURL.deletingLastPathComponent()
             try? FileManager.default.createDirectory(
                 at: directory,

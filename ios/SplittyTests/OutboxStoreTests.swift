@@ -200,6 +200,62 @@ final class OutboxStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().entries.count, 1, "запись после битого файла не сохранилась")
     }
 
+    /// Неразобранный файл не стирается: в нём могут лежать неотправленные
+    /// расходы, а причина сбоя — от обрыва записи до смены модели. Файл уносится
+    /// в сторону, откуда его содержимое ещё можно достать.
+    func testUnreadableFileIsSetAsideNotErased() throws {
+        let dir = fileURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try Data("не json".utf8).write(to: fileURL)
+
+        _ = makeStore()
+
+        let leftovers = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+            .filter { $0.hasPrefix("outbox-unreadable-") }
+        XCTAssertEqual(leftovers.count, 1, "неразобранный файл исчез вместе с содержимым")
+        let saved = try String(contentsOf: dir.appendingPathComponent(leftovers[0]), encoding: .utf8)
+        XCTAssertEqual(saved, "не json")
+    }
+
+    /// Файл со старым форматом (голый массив, без версии схемы) обязан
+    /// читаться: он лежит на устройствах у всех, кто ставил прошлые сборки.
+    func testLegacyFileWithoutSchemaVersionStillLoads() throws {
+        let seeded = makeStore()
+        seeded.add(roomId: "room1", payload: payload("Такси"))
+        seeded.waitForPendingWrites()
+
+        // Разворачиваем файл обратно в формат прошлых сборок: голый массив.
+        let data = try Data(contentsOf: fileURL)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let entries = try XCTUnwrap(object["entries"])
+        try JSONSerialization.data(withJSONObject: entries).write(to: fileURL)
+
+        let store = makeStore()
+        XCTAssertEqual(store.entries.count, 1, "очередь прошлой сборки не прочиталась")
+        XCTAssertEqual(store.entries.first?.payload?.description, "Такси")
+    }
+
+    /// Незнакомое поле в файле не должно терять записи: так выглядит откат на
+    /// прошлую версию приложения после того, как новая дописала своё поле.
+    func testUnknownFieldDoesNotDropEntries() throws {
+        let seeded = makeStore()
+        seeded.add(roomId: "room1", payload: payload("Ужин", sum: 900))
+        seeded.waitForPendingWrites()
+
+        // Файл «из будущего»: версия схемы выше и в записи есть лишнее поле.
+        let data = try Data(contentsOf: fileURL)
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var entries = try XCTUnwrap(object["entries"] as? [[String: Any]])
+        entries[0]["somethingNew"] = true
+        object["entries"] = entries
+        object["schemaVersion"] = 99
+        try JSONSerialization.data(withJSONObject: object).write(to: fileURL)
+
+        let store = makeStore()
+        XCTAssertEqual(store.entries.count, 1, "запись потерялась из-за незнакомого поля")
+        XCTAssertEqual(store.entries.first?.payload?.description, "Ужин")
+    }
+
     /// Логаут не должен вернуть на диск очередь ПРЕДЫДУЩЕГО аккаунта: если
     /// первое чтение провалилось (залоченное устройство), retryLoadIfNeeded
     /// внутри persist поднимал её обратно, и следующий вошедший отправлял чужие
