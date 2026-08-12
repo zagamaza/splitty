@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/almaznur91/splitty/internal/safe"
 	"github.com/almaznur91/splitty/internal/sdk"
 	"github.com/enescakir/emoji"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
@@ -377,6 +378,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 
 	//async calculate paidOfDebtsUserIds for room, after added operation
 	go func() {
+		defer safe.Recover("пересчёт погашенных долгов после расхода")
 		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, room)
 		if err != nil {
 			log.Error().Err(err).Msg("calculate paidOfDebtsUserIds failed")
@@ -2274,6 +2276,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 
 	//async calculate paidOfDebtsUserIds for room, after debt operation
 	go func() {
+		defer safe.Recover("пересчёт погашенных долгов после погашения")
 		err := s.rss.DefinePaidOfDebtsUserIdsAndSave(ctx, room)
 		if err != nil {
 			log.Error().Err(err).Msg("DefinePaidOfDebtsUserIdsAndSave failed")

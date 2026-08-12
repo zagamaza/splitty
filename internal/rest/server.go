@@ -14,6 +14,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/repository"
+	"github.com/almaznur91/splitty/internal/safe"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -274,6 +275,7 @@ func (s *Server) notifyAsync(ctx context.Context, notify func(ctx context.Contex
 	nctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), notifyTimeout)
 	go func() {
 		defer cancel()
+		defer safe.Recover("фоновая отправка уведомления")
 		notify(nctx, s.notifier)
 	}()
 }

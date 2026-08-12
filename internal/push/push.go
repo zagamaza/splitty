@@ -12,6 +12,7 @@ import (
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/messaging"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/safe"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/api/option"
 )
@@ -123,6 +124,7 @@ func (w *Worker) Run(ctx context.Context) {
 	if w == nil {
 		return
 	}
+	defer safe.Recover("воркер доставки пушей")
 	t := time.NewTicker(w.tick)
 	defer t.Stop()
 	for {

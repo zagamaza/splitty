@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/safe"
 	"github.com/almaznur91/splitty/internal/service"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -81,6 +82,7 @@ func (i *IntegrationService) StartPostScheduler() {
 
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
+		defer safe.Recover("планировщик выгрузки расходов")
 		for range ticker.C {
 			var operations []api.Operation
 			for _, rId := range roomIds {

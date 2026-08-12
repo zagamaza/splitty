@@ -38,7 +38,7 @@ func (s *leaveRoomService) LeaveRoom(_ context.Context, userId int, _ string) (b
 func (s *leaveRoomService) CreateRoom(context.Context, *api.Room) (*api.Room, error) {
 	return nil, nil
 }
-func (s *leaveRoomService) FindById(context.Context, string) (*api.Room, error) { return s.room, nil }
+func (s *leaveRoomService) FindById(context.Context, string) (*api.Room, error)  { return s.room, nil }
 func (s *leaveRoomService) UpdateCurrency(context.Context, string, string) error { return nil }
 func (s *leaveRoomService) FindRoomsByUserId(context.Context, int) (*[]api.Room, error) {
 	return nil, nil

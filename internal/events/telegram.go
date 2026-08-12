@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/bot"
+	"github.com/almaznur91/splitty/internal/safe"
 	tbapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -78,37 +79,47 @@ func (l *TelegramListener) Do(ctx context.Context) (err error) {
 				return errors.Errorf("telegram update chan closed")
 			}
 
-			upd := transformUpdate(update)
-
-			user, err := getFrom(upd)
-			if err != nil {
-				log.Error().Err(err).Stack().Msg("failed define user")
-				break
-			}
-
-			// user — СЫРОЙ пользователь из апдейта, его ID это telegram id.
-			// Дальше по коду бота законен только upd.User: у него ID — номер
-			// Splitty, который у google-первого аккаунта с привязанным telegram
-			// telegram-овскому id не равен
-			upd.User, err = l.UserService.UpsertTelegramUser(ctx, user.ID, user.Username, user.DisplayName, user.UserLang)
-			if err != nil {
-				log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
-				break
-			}
-
-			if err := l.populateBtn(ctx, upd); err != nil {
-				log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
-			}
-
-			if err := l.populateChatState(ctx, upd); err != nil {
-				log.Error().Err(err).Stack().Msgf("failed to populateChatState")
-			}
-
-			log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
-
-			l.processUpdate(ctx, upd)
+			l.handleUpdate(ctx, update)
 		}
 	}
+}
+
+// handleUpdate обрабатывает ОДНО обновление. Паника внутри не выходит наружу:
+// бот и REST живут в одном процессе, и одно кривое сообщение (пост в канале,
+// анонимный админ, неожиданная форма апдейта) уносило вместе с собой и
+// приложение — все теряли доступ из-за одного отправителя.
+func (l *TelegramListener) handleUpdate(ctx context.Context, update tbapi.Update) {
+	defer safe.Recover("обработка обновления telegram")
+
+	upd := transformUpdate(update)
+
+	user, err := getFrom(upd)
+	if err != nil {
+		log.Error().Err(err).Stack().Msg("failed define user")
+		return
+	}
+
+	// user — СЫРОЙ пользователь из апдейта, его ID это telegram id.
+	// Дальше по коду бота законен только upd.User: у него ID — номер
+	// Splitty, который у google-первого аккаунта с привязанным telegram
+	// telegram-овскому id не равен
+	upd.User, err = l.UserService.UpsertTelegramUser(ctx, user.ID, user.Username, user.DisplayName, user.UserLang)
+	if err != nil {
+		log.Error().Err(err).Stack().Msgf("failed to upsert user, %v", err)
+		return
+	}
+
+	if err := l.populateBtn(ctx, upd); err != nil {
+		log.Error().Err(err).Stack().Msgf("failed to populateBtn, %v", err)
+	}
+
+	if err := l.populateChatState(ctx, upd); err != nil {
+		log.Error().Err(err).Stack().Msgf("failed to populateChatState")
+	}
+
+	log.Debug().Msgf("incoming msg: %+v; btn:%+v", upd.Message, upd.Button)
+
+	l.processUpdate(ctx, upd)
 }
 
 func (l *TelegramListener) processUpdate(ctx context.Context, upd *api.Update) {
@@ -223,9 +234,13 @@ func transform(msg *tbapi.Message) *api.Message {
 		Text: msg.Text,
 	}
 
-	message.Chat = &api.Chat{
-		ID:   msg.Chat.ID,
-		Type: msg.Chat.Type,
+	// Chat у сообщения бывает пустым: telegram отдаёт такие апдейты, а разыменование
+	// роняло весь процесс
+	if msg.Chat != nil {
+		message.Chat = &api.Chat{
+			ID:   msg.Chat.ID,
+			Type: msg.Chat.Type,
+		}
 	}
 
 	if msg.From != nil {
@@ -298,7 +313,13 @@ func transformUpdate(u tbapi.Update) *api.Update {
 	return update
 }
 
+// transformUser переносит отправителя. Пустой From — не исключение: посты в
+// канале и анонимные админы приходят без него, и разыменование здесь роняло
+// процесс целиком
 func transformUser(i *tbapi.User) api.User {
+	if i == nil {
+		return api.User{}
+	}
 	return api.User{
 		ID:          i.ID,
 		Username:    i.UserName,
@@ -343,6 +364,12 @@ func getFrom(update *api.Update) (*api.User, error) {
 		user = update.InlineQuery.From
 	} else {
 		return nil, errors.Errorf("Not define user, update - %v", update)
+	}
+	// Нулевой id — отправителя не было вовсе (пост в канале, анонимный админ).
+	// Раньше такой апдейт заводил пользователя с telegram id 0 и шёл дальше по
+	// экранам от его имени
+	if user.ID == 0 {
+		return nil, errors.Errorf("update without sender - %v", update)
 	}
 	return &user, nil
 }
