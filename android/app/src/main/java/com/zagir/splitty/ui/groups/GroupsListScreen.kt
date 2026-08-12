@@ -31,6 +31,9 @@ import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ContentPaste
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -140,11 +143,6 @@ private fun GroupsListContent(
                         fontWeight = FontWeight.Bold,
                     )
                 },
-                // Кнопки «Присоединиться» здесь больше нет: основной путь в
-                // группу — приглашение от участника (оно приходит уведомлением
-                // и ждёт в разделе). Ввод кода остался в пустом состоянии
-                // списка ниже — он нужен тем, кому прислали ссылку в
-                // мессенджере, а диплинк не сработал.
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = colors.bg,
                     scrolledContainerColor = colors.bg,
@@ -153,17 +151,10 @@ private fun GroupsListContent(
                     actionIconContentColor = colors.accent,
                 ),
                 actions = {
-                    OutlinedIconButton(
-                        onClick = { isCreatePresented = true },
-                        border = BorderStroke(1.dp, colors.accent),
-                        colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.accent),
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = stringResource(R.string.groups_create_group),
-                        )
-                    }
+                    GroupsAddMenu(
+                        onCreate = { isCreatePresented = true },
+                        onJoinByCode = { isJoinPresented = true },
+                    )
                 },
             )
         },
@@ -716,6 +707,52 @@ private fun GroupFormSheet(
             )
             Spacer(Modifier.height(16.dp))
             content()
+        }
+    }
+}
+
+/**
+ * Меню кнопки «+» в списке групп: создать группу или войти по коду.
+ *
+ * Меню, а не одна кнопка: ввод кода жил ТОЛЬКО в пустом состоянии списка, и
+ * человек с одной группой попасть в него не мог никак — приглашение по коду
+ * переставало работать ровно после первой группы. А приходит оно как раз к
+ * тем, у кого группы уже есть.
+ */
+@Composable
+internal fun GroupsAddMenu(onCreate: () -> Unit, onJoinByCode: () -> Unit) {
+    val colors = Splitty.colors
+    var isMenuOpen by rememberSaveable { mutableStateOf(false) }
+    Box {
+        OutlinedIconButton(
+            onClick = { isMenuOpen = true },
+            border = BorderStroke(1.dp, colors.accent),
+            colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.accent),
+            modifier = Modifier
+                .padding(end = 8.dp)
+                .testTag("groups_add_menu"),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(R.string.groups_create_group),
+            )
+        }
+        DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.groups_create_group)) },
+                onClick = {
+                    isMenuOpen = false
+                    onCreate()
+                },
+            )
+            DropdownMenuItem(
+                modifier = Modifier.testTag("groups_join_by_code"),
+                text = { Text(stringResource(R.string.groups_join_by_code)) },
+                onClick = {
+                    isMenuOpen = false
+                    onJoinByCode()
+                },
+            )
         }
     }
 }

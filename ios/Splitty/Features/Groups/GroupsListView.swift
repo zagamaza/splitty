@@ -44,12 +44,25 @@ struct GroupsListView: View {
                 .navigationTitle("Группы")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            isCreatePresented = true
+                        // Меню, а не кнопка: вход по коду был доступен ТОЛЬКО из
+                        // пустого состояния, и человек с одной группой попасть
+                        // в него не мог никак — приглашение по коду становилось
+                        // нерабочим ровно после первой группы
+                        Menu {
+                            Button {
+                                isCreatePresented = true
+                            } label: {
+                                Label("Создать группу", systemImage: "plus")
+                            }
+                            Button {
+                                isJoinPresented = true
+                            } label: {
+                                Label("Присоединиться по коду", systemImage: "number")
+                            }
                         } label: {
                             Image(systemName: "plus")
                         }
-                        .accessibilityLabel("Создать группу")
+                        .accessibilityLabel("Создать группу или присоединиться по коду")
                     }
                 }
                 .sheet(isPresented: $isCreatePresented) {
