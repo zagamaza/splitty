@@ -90,6 +90,8 @@ enum APIError: LocalizedError {
             return String(localized: "Не найдено")
         case "conflict":
             return String(localized: "Действие сейчас невозможно")
+        case "room_too_large":
+            return String(localized: "В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения")
         case "stale_operation":
             return String(localized: "Расход изменил кто-то другой. Откройте его заново и повторите правку")
         // Коды распознавания и троттлинга. Сюда попадаем, только когда тело

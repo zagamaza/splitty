@@ -203,6 +203,11 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// снаружи выглядел рабочим
 	server.SetDBPing(func(ctx context.Context) error { return db.Client().Ping(ctx, nil) })
 
+	// Потолок документа mongo — 16 МБ, а операции лежат ВНУТРИ документа
+	// комнаты. Никто не знал, насколько мы к нему близко: печатаем самые
+	// крупные комнаты один раз при старте
+	roomRepository.LogLargestRooms(ctx, 5)
+
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
 	}

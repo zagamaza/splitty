@@ -591,4 +591,6 @@
     <string name="profile_revoke_message">Du musst dich neu anmelden — auch hier. Benachrichtigungen gehen nicht mehr an die alten Geräte.</string>
     <string name="profile_revoke_confirm">Überall abmelden</string>
     <string name="profile_revoke_caption">Nützlich bei verlorenem Telefon: der Zugang wird überall geschlossen, auch auf diesem Gerät.</string>
+    <string name="error_room_too_large">In dieser Gruppe haben sich zu viele Ausgaben angesammelt. Leg eine neue an — die alte bleibt lesbar</string>
+    <string name="error_stale_operation">Jemand anderes hat die Ausgabe geändert. Öffne sie neu und wiederhole deine Änderung</string>
 </resources>

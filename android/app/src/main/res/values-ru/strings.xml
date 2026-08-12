@@ -634,4 +634,6 @@
     <string name="profile_revoke_message">Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут.</string>
     <string name="profile_revoke_confirm">Выйти везде</string>
     <string name="profile_revoke_caption">Пригодится, если телефон потерян: доступ закроется везде, включая это устройство.</string>
+    <string name="error_room_too_large">В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения</string>
+    <string name="error_stale_operation">Расход изменил кто-то другой. Откройте его заново и повторите правку</string>
 </resources>

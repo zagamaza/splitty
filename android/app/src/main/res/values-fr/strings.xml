@@ -591,4 +591,6 @@
     <string name="profile_revoke_message">Vous devrez vous reconnecter — ici aussi. Les notifications cesseront d’arriver sur les anciens appareils.</string>
     <string name="profile_revoke_confirm">Tout déconnecter</string>
     <string name="profile_revoke_caption">Utile si le téléphone est perdu : l’accès est coupé partout, y compris sur cet appareil.</string>
+    <string name="error_room_too_large">Ce groupe a accumulé trop de dépenses. Créez-en un nouveau — l’ancien reste consultable</string>
+    <string name="error_stale_operation">Quelqu’un d’autre a modifié cette dépense. Rouvrez-la et refaites votre modification</string>
 </resources>

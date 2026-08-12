@@ -607,4 +607,6 @@
     <string name="profile_revoke_message">You will have to sign in again — here too. Notifications stop going to the old devices.</string>
     <string name="profile_revoke_confirm">Sign out everywhere</string>
     <string name="profile_revoke_caption">Useful if the phone is lost: access closes on every device, including this one.</string>
+    <string name="error_room_too_large">This group has collected too many expenses. Start a new one — the old stays readable</string>
+    <string name="error_stale_operation">Someone else changed this expense. Open it again and repeat your edit</string>
 </resources>

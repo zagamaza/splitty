@@ -85,6 +85,10 @@ class ApiException(
             "forbidden" -> R.string.error_forbidden
             "not_found" -> R.string.error_not_found
             "conflict" -> R.string.error_conflict
+            // Документ комнаты упёрся в потолок mongo: «что-то пошло не так»
+            // означало бы, что человек жмёт «Сохранить» снова и снова
+            "room_too_large" -> R.string.error_room_too_large
+            "stale_operation" -> R.string.error_stale_operation
             "too_large" -> R.string.error_too_large
             // AI-распознавание (parse): сервер обычно шлёт свой message,
             // но при пустом теле подставляем текст по коду.

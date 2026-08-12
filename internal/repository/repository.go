@@ -650,6 +650,98 @@ func (rr MongoRoomRepository) SetNotificationSent(ctx context.Context, roomId st
 	return nil
 }
 
+// Потолок документа в mongo — 16 МБ, и участники с операциями лежат ВНУТРИ
+// документа комнаты. Долгоживущая группа однажды упрётся в него, и добавить
+// расход станет нельзя вообще — не ошибка сети, а необратимое состояние.
+// Смена схемы (вынос операций в отдельную коллекцию) — отдельная работа; здесь
+// потолок хотя бы перестаёт быть невидимым.
+const (
+	// mongoDocumentLimit — жёсткий предел mongo на документ.
+	mongoDocumentLimit = 16 * 1024 * 1024
+	// roomSizeWarnAt — с какого размера пишем предупреждение в лог (половина).
+	roomSizeWarnAt = mongoDocumentLimit / 2
+	// roomSizeRejectAt — с какого размера отказываемся дописывать. Запас в 1 МБ
+	// от предела: между проверкой и записью в комнату может лечь чужой расход,
+	// и упереться в потолок ровно на границе — значит отдать невнятную ошибку
+	// mongo вместо понятного текста
+	roomSizeRejectAt = mongoDocumentLimit - 1024*1024
+)
+
+// ErrRoomTooLarge — документ комнаты у потолка: дописывать в него нельзя.
+var ErrRoomTooLarge = errors.New("room document is close to the mongo size limit")
+
+// checkRoomSize смотрит, сколько места занимает комната, и решает, можно ли
+// дописывать. Ошибку измерения не превращаем в отказ: не смочь посчитать размер
+// — не повод запретить человеку вносить расход.
+func (rr MongoRoomRepository) checkRoomSize(ctx context.Context, hex primitive.ObjectID) error {
+	size, err := rr.roomSize(ctx, hex)
+	if err != nil || size == 0 {
+		return nil
+	}
+	if size >= roomSizeRejectAt {
+		log.Error().Str("room", hex.Hex()).Int("bytes", size).
+			Msg("документ комнаты у потолка mongo: запись отклонена")
+		return ErrRoomTooLarge
+	}
+	if size >= roomSizeWarnAt {
+		log.Warn().Str("room", hex.Hex()).Int("bytes", size).
+			Msg("документ комнаты перевалил половину потолка mongo")
+	}
+	return nil
+}
+
+// roomSize — размер документа комнаты в байтах ($bsonSize считает на сервере,
+// без пересылки самого документа).
+func (rr MongoRoomRepository) roomSize(ctx context.Context, hex primitive.ObjectID) (int, error) {
+	cur, err := rr.col.Aggregate(ctx, []bson.M{
+		{"$match": bson.M{"_id": hex}},
+		{"$project": bson.M{"size": bson.M{"$bsonSize": "$$ROOT"}}},
+	})
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+	var rows []struct {
+		Size int `bson:"size"`
+	}
+	if err := cur.All(ctx, &rows); err != nil || len(rows) == 0 {
+		return 0, err
+	}
+	return rows[0].Size, nil
+}
+
+// LogLargestRooms пишет в лог самые крупные комнаты. Зовётся один раз при
+// старте: до этого никто не знал, насколько мы близко к потолку.
+func (rr MongoRoomRepository) LogLargestRooms(ctx context.Context, top int) {
+	cur, err := rr.col.Aggregate(ctx, []bson.M{
+		{"$project": bson.M{"name": 1, "size": bson.M{"$bsonSize": "$$ROOT"}}},
+		{"$sort": bson.M{"size": -1}},
+		{"$limit": top},
+	})
+	if err != nil {
+		log.Warn().Err(err).Msg("не удалось измерить размеры комнат")
+		return
+	}
+	defer func() { _ = cur.Close(ctx) }()
+	var rows []struct {
+		ID   primitive.ObjectID `bson:"_id"`
+		Name string             `bson:"name"`
+		Size int                `bson:"size"`
+	}
+	if err := cur.All(ctx, &rows); err != nil || len(rows) == 0 {
+		return
+	}
+	for _, r := range rows {
+		event := log.Info()
+		if r.Size >= roomSizeWarnAt {
+			event = log.Warn()
+		}
+		event.Str("room", r.ID.Hex()).Int("bytes", r.Size).
+			Float64("percentOfLimit", float64(r.Size)*100/float64(mongoDocumentLimit)).
+			Msg("размер документа комнаты")
+	}
+}
+
 // ErrStaleOperation — расход изменили с тех пор, как его прочитал редактирующий.
 // Записать поверх нельзя: чужая правка исчезла бы молча.
 var ErrStaleOperation = errors.New("operation was changed by someone else")
@@ -820,6 +912,9 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	if err != nil {
 		return err
 	}
+	if err := rr.checkRoomSize(ctx, hex); err != nil {
+		return err
+	}
 	filter := bson.M{"_id": hex}
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
@@ -855,6 +950,9 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	}
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
+		return false, err
+	}
+	if err := rr.checkRoomSize(ctx, hex); err != nil {
 		return false, err
 	}
 	filter := bson.M{"_id": hex, "operations.client_op_id": bson.M{"$ne": o.ClientOpId}}

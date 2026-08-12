@@ -720,6 +720,12 @@ func findOperationByClientOpId(room *api.Room, clientOpId string) *api.Operation
 // участников операции успели убрать (см. repository.ErrParticipantLeft).
 // Отдельный ответ, а не 404 «комната не найдена»: чинится он по-другому —
 // обновить группу и пересобрать расход.
+// errRoomTooLarge — документ комнаты упёрся в потолок mongo. Текст свой:
+// «что-то пошло не так» здесь означало бы, что человек будет жать «Сохранить»
+// снова и снова, а расход не появится никогда
+var errRoomTooLarge = &httpError{http.StatusConflict, "room_too_large",
+	"В этой группе накопилось слишком много расходов. Заведите новую группу — старая останется доступной для чтения"}
+
 var errParticipantLeft = &httpError{http.StatusConflict, "conflict",
 	"Состав группы изменился: участник вышел. Обновите группу и повторите"}
 
@@ -736,6 +742,9 @@ func (s *Server) createOperationIdempotent(ctx context.Context, operation *api.O
 			}
 			if errors.Is(err, repository.ErrParticipantLeft) {
 				return nil, false, errParticipantLeft
+			}
+			if errors.Is(err, repository.ErrRoomTooLarge) {
+				return nil, false, errRoomTooLarge
 			}
 			log.Error().Err(err).Msg("create operation failed")
 			return nil, false, &httpError{http.StatusInternalServerError, "internal", "не удалось сохранить операцию"}
@@ -873,6 +882,10 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, repository.ErrParticipantLeft) {
 			errParticipantLeft.write(w)
+			return
+		}
+		if errors.Is(err, repository.ErrRoomTooLarge) {
+			errRoomTooLarge.write(w)
 			return
 		}
 		log.Error().Err(err).Msg("create operation failed")
@@ -1175,6 +1188,10 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, repository.ErrParticipantLeft) {
 			errParticipantLeft.write(w)
+			return
+		}
+		if errors.Is(err, repository.ErrRoomTooLarge) {
+			errRoomTooLarge.write(w)
 			return
 		}
 		log.Error().Err(err).Msg("create operation failed")

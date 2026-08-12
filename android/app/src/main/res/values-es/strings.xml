@@ -591,4 +591,6 @@
     <string name="profile_revoke_message">Tendrás que iniciar sesión de nuevo, también aquí. Las notificaciones dejarán de llegar a los dispositivos anteriores.</string>
     <string name="profile_revoke_confirm">Cerrar en todos</string>
     <string name="profile_revoke_caption">Útil si pierdes el teléfono: el acceso se cierra en todas partes, incluido este dispositivo.</string>
+    <string name="error_room_too_large">Este grupo acumuló demasiados gastos. Crea uno nuevo: el anterior seguirá disponible para leer</string>
+    <string name="error_stale_operation">Otra persona cambió este gasto. Ábrelo de nuevo y repite tu edición</string>
 </resources>
