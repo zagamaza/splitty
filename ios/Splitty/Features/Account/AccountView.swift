@@ -53,6 +53,7 @@ struct AccountView: View {
                     serverSection
                     #endif
                     logoutSection
+                    legalSection
                     deleteAccountSection
                 }
                 .padding(.horizontal, 16)
@@ -492,6 +493,38 @@ struct AccountView: View {
     /// Требование Apple Guideline 5.1.1(v): удаление обязано быть доступно
     /// внутри приложения — вкладка «Профиль» → прокрутка вниз → подтверждение,
     /// без переписки с поддержкой и без похода на сайт.
+    /// Строка со ссылкой на политику: единственное место в приложении, где
+    /// человек может прочитать, куда уходят голос и фото чека и что остаётся
+    /// после удаления аккаунта.
+    private var legalSection: some View {
+        VStack(spacing: 8) {
+            Link(destination: policyURL) {
+                HStack {
+                    Label("Политика конфиденциальности", systemImage: "hand.raised")
+                        .scaledFont(size: 15, weight: .medium)
+                        .foregroundStyle(Color.accentText)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .surfaceCard(padding: 0)
+        }
+    }
+
+    /// Адрес страницы политики: на том же сервере, что и API, — домен один и
+    /// меняется вместе с настройкой сервера.
+    private var policyURL: URL {
+        let base = session.serverURL?.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        return URL(string: "\(base ?? "https://splitor.zagirnur.dev")/privacy")
+            ?? URL(string: "https://splitor.zagirnur.dev/privacy")!
+    }
+
     private var deleteAccountSection: some View {
         VStack(spacing: 8) {
             Button(role: .destructive) {

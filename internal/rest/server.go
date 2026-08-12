@@ -321,6 +321,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /.well-known/apple-app-site-association", s.handleAppleAppSiteAssociation)
 	mux.HandleFunc("GET /.well-known/assetlinks.json", s.handleAssetLinks)
 	mux.HandleFunc("GET /join/{roomId}", s.handleJoinPage)
+	// Политика и удаление аккаунта: оба магазина требуют ссылку, открываемую
+	// БЕЗ входа в приложение. Публичность здесь не послабление, а требование —
+	// страницу читает ревьюер, у которого аккаунта нет
+	mux.HandleFunc("GET /privacy", s.handlePrivacyPolicy)
+	mux.HandleFunc("GET /account-deletion", s.handleAccountDeletion)
 	// Вход через Telegram Login Widget для нативных клиентов: /tg-auth уводит
 	// на oauth.telegram.org с нашим origin, /tg-callback возвращает результат
 	// в приложение через splitty:// (см. tg_callback.go). Оба публичные:

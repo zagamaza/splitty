@@ -103,11 +103,12 @@ struct MainTabView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
+                // Пока приложение было в фоне, в группах могли появиться
+                // расходы и погашения: обновляем не только бейдж, но и сами
+                // экраны — иначе человек возвращался к устаревшим суммам
+                session.noteDataChanged()
                 Task {
                     await session.syncOutbox()
-                    // Пока приложение было в фоне, пуши могли прийти без тапа —
-                    // бейдж иначе врал бы до открытия раздела (Android делает
-                    // то же по LifecycleEventEffect(ON_START)).
                     await session.refreshUnreadCount()
                 }
             }

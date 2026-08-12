@@ -30,6 +30,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -160,6 +163,9 @@ fun ProfileScreen(
             if (BuildConfig.DEBUG) {
                 ServerSection(baseUrl)
             }
+            // Единственное место в приложении, где можно прочитать, куда уходят
+            // голос и фото чека и что остаётся после удаления аккаунта
+            PolicyLinkSection(baseUrl = baseUrl)
             LogoutSection(onClick = { isLogoutConfirmPresented = true })
             // «Удалить аккаунт» — последним пунктом экрана: и Apple Guideline
             // 5.1.1(v), и Google Play требуют удаление в пару тапов от профиля.
@@ -1029,4 +1035,42 @@ private fun HairlineDivider() {
             .height(1.dp)
             .background(Splitty.colors.hairline),
     )
+}
+
+/** Строка со ссылкой на политику конфиденциальности (открывается в браузере). */
+@Composable
+private fun PolicyLinkSection(baseUrl: String) {
+    val colors = Splitty.colors
+    val uriHandler = LocalUriHandler.current
+    val url = remember(baseUrl) { baseUrl.trimEnd('/') + "/privacy" }
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { uriHandler.openUri(url) }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Shield,
+                contentDescription = null,
+                tint = colors.accentText,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = stringResource(R.string.profile_privacy_policy),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.accentText,
+            )
+            Spacer(Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = colors.inkSecondary.copy(alpha = 0.6f),
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
 }

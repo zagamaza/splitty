@@ -70,9 +70,15 @@ struct SplittyApp: App {
                 // тап — разные события: по первому бейдж обязан обновиться, не
                 // дожидаясь, пока человек тапнет.
                 .onReceive(NotificationCenter.default.publisher(for: .splittyPushTapped)) { _ in
+                    // Не только счётчик: пуш означает, что данные на сервере
+                    // изменились — расход добавили, долг погасили. Раньше
+                    // менялся бейдж, а открытый экран продолжал показывать
+                    // старые суммы, пока человек не потянет список
+                    session.noteDataChanged()
                     Task { await session.refreshUnreadCount() }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .splittyPushReceived)) { _ in
+                    session.noteDataChanged()
                     Task { await session.refreshUnreadCount() }
                 }
                 // ЕДИНСТВЕННЫЙ onOpenURL сцены: второй такой модификатор не

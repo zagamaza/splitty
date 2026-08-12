@@ -615,4 +615,5 @@
     <string name="breakdown_allocated">Сумма распределена полностью</string>
     <string name="groups_cached_updated">Данные сохранённые, обновлялись %1$s</string>
     <string name="groups_cached_no_connection">Данные сохранённые: связи с сервером нет</string>
+    <string name="profile_privacy_policy">Политика конфиденциальности</string>
 </resources>

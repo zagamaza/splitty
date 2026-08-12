@@ -229,7 +229,14 @@ class MainScaffoldViewModel @Inject constructor(
         // человек видит баннер о новом расходе, а на колоколе прежнее число
         // (порт iOS .splittyPushReceived).
         viewModelScope.launch {
-            pushEventBus.received.collect { refreshUnreadCount() }
+            pushEventBus.received.collect {
+                // Не только счётчик: пуш означает, что данные на сервере
+                // изменились — расход добавили, долг погасили. Раньше менялся
+                // бейдж, а открытый экран продолжал показывать старые суммы,
+                // пока человек не потянет список
+                sessionStore.noteDataChanged()
+                refreshUnreadCount()
+            }
         }
     }
 
@@ -238,6 +245,12 @@ class MainScaffoldViewModel @Inject constructor(
      * бейдж обязан появляться ДО открытия раздела, иначе он показывался бы
      * ровно в момент, когда раздел его гасит. Тихо: сбой ничем не мигает.
      */
+    /** Возврат из фона: данные могли измениться, пока приложение не смотрело. */
+    fun onReturnedToForeground() {
+        sessionStore.noteDataChanged()
+        refreshUnreadCount()
+    }
+
     fun refreshUnreadCount() {
         if (sessionStore.currentToken() == null) return
         viewModelScope.launch {
@@ -272,7 +285,11 @@ fun MainScaffold(
 
     // Старт и каждый возврат из фона: бейдж обязан быть виден до того, как
     // человек откроет раздел (порт iOS .task + scenePhase в SplittyApp).
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.refreshUnreadCount() }
+    LifecycleEventEffect(Lifecycle.Event.ON_START) {
+        // Пока приложение было в фоне, в группах могли появиться расходы и
+        // погашения: обновляем не только бейдж, но и сами экраны
+        viewModel.onReturnedToForeground()
+    }
 
     // Вступили в группу по ссылке-приглашению — открываем её.
     LaunchedEffect(openRoomId) {
