@@ -14,6 +14,11 @@ import Speech
 @MainActor
 @Observable
 final class AudioRecorder {
+    /// Язык, для которого на устройстве нет распознавания речи; nil — всё в
+    /// порядке. Транскрипт по ходу записи в этом случае не показывается, сама
+    /// запись и разбор на сервере работают.
+    private(set) var speechUnsupportedLocale: String?
+
     /// true — идёт запись (для подсветки кнопки-микрофона и оверлея).
     private(set) var isRecording = false
     /// Момент старта записи — для кольца-прогресса лимита и автостопа.
@@ -276,8 +281,17 @@ final class AudioRecorder {
             }
         }
         guard speechAllowed == true else { return }
-        guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "ru-RU")),
-              recognizer.isAvailable else { return }
+        // Локаль текущая, а не русская: человек, выбравший другой язык, диктовал
+        // на нём, а распознаватель слышал русский и выдавал бессмыслицу.
+        // Если язык не поддерживается устройством — молчим, но говорим об этом
+        // (транскрипт по ходу записи пропадёт, сама запись и разбор на сервере
+        // работают и без него)
+        guard let recognizer = SFSpeechRecognizer(locale: DateFmt.locale) ?? SFSpeechRecognizer(),
+              recognizer.isAvailable else {
+            speechUnsupportedLocale = DateFmt.locale.identifier
+            return
+        }
+        speechUnsupportedLocale = nil
         speechRecognizer = recognizer
         finalizedTranscript = ""
         speechSegmentFailures = 0

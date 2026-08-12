@@ -552,11 +552,13 @@ private struct LocalOperationRow: View {
 
     // Колонка даты — в стиле строк операций («июл» сверху, «5» снизу).
     private var dateColumn: some View {
-        let parts = DateFmt.dayMonth(entry.createdAt).split(separator: " ")
-        return VStack(spacing: 0) {
-            Text(parts.count > 1 ? String(parts[1]) : "")
+        // День и месяц берём по отдельности: разбор «5 июл» по пробелу
+        // предполагал русский порядок, и на английском колонка показывала
+        // месяц вместо числа
+        VStack(spacing: 0) {
+            Text(DateFmt.month(entry.createdAt))
                 .font(.caption2)
-            Text(parts.first.map(String.init) ?? "")
+            Text(DateFmt.day(entry.createdAt))
                 .scaledFont(size: 16, weight: .semibold)
                 .monospacedDigit()
         }
@@ -611,11 +613,10 @@ private struct OperationRow: View {
 
     // Колонка даты: «июл» сверху, «5» снизу, вторичным цветом.
     private var dateColumn: some View {
-        let parts = DateFmt.dayMonth(operation.createdAt).split(separator: " ")
-        return VStack(spacing: 0) {
-            Text(parts.count > 1 ? String(parts[1]) : "")
+        VStack(spacing: 0) {
+            Text(DateFmt.month(operation.createdAt))
                 .font(.caption2)
-            Text(parts.first.map(String.init) ?? "")
+            Text(DateFmt.day(operation.createdAt))
                 .scaledFont(size: 16, weight: .semibold)
                 .monospacedDigit()
         }

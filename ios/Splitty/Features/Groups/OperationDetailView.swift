@@ -36,12 +36,14 @@ struct OperationDetailView: View {
     }
 
 
-    private static let fullDate: DateFormatter = {
+    /// Локаль текущая, а не русская: приложение переведено на пять языков, и
+    /// человек, выбравший английский, видел здесь дату по-русски
+    private static var fullDate: DateFormatter {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "ru_RU")
-        formatter.dateFormat = "d MMMM yyyy"
+        formatter.locale = DateFmt.locale
+        formatter.setLocalizedDateFormatFromTemplate("d MMMM yyyy")
         return formatter
-    }()
+    }
 
     var body: some View {
         ScrollView {
