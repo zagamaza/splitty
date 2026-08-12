@@ -23,8 +23,10 @@ android {
         applicationId = "com.zagir.splitty"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.4"
+        // Публикация с уже занятым номером отклоняется как дубль — поднимаем
+        // ЗАРАНЕЕ, а не в момент выкладки
+        versionCode = 14
+        versionName = "1.5"
 
         // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный
         // SpeechRecognizer (API 33+) → Vosk-модель on-demand → без караоке.
@@ -267,6 +269,17 @@ val verifyReleaseShrinking by tasks.registering {
             "com.zagir.splitty.core.model.MarkSeenBody",
             "com.zagir.splitty.core.model.AddMemberBody",
             "com.zagir.splitty.core.model.AddMemberResponse",
+            // Очередь неотправленных расходов лежит на диске в JSON: выброшенный
+            // сериализатор означал бы, что после обновления приложения человек
+            // теряет всё, что вносил офлайн
+            "com.zagir.splitty.data.OutboxEntry",
+            "com.zagir.splitty.data.OutboxPayload",
+            // Тела запросов авторизации: без них вход ломается ТОЛЬКО в релизе,
+            // то есть у всех, кроме разработчика
+            "com.zagir.splitty.core.model.RegisterBody",
+            "com.zagir.splitty.core.model.PasswordLoginBody",
+            "com.zagir.splitty.core.model.SetPasswordBody",
+            "com.zagir.splitty.core.model.DeviceBody",
         )
         val missing = requiredSerializers.filterNot { "$it\$\$serializer" in survivors }
         require(missing.isEmpty()) {
@@ -288,7 +301,9 @@ val verifyReleaseShrinking by tasks.registering {
     }
 }
 
-tasks.matching { it.name == "assembleRelease" }.configureEach {
+// Проверка вешается и на bundleRelease: в магазин уезжает именно бандл, а на
+// нём она не выполнялась вовсе — то есть проверялось не то, что публикуется
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
     finalizedBy(verifyReleaseShrinking)
 }
 
