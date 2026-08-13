@@ -1,1 +1,8 @@
-Tester build. See git log for changes.
+Post-audit fixes.
+
+• A deleted expense is no longer lost for good, and simultaneous edits no longer overwrite each other
+• Leaving a group explains which expenses hold you back and shows them in one tap
+• You can see when data comes from cache — on groups, friends and activity
+• Amounts and dates follow your language and region; receipt screens are translated
+• An expense from the offline queue is no longer duplicated on retry
+• Small text contrast raised to a readable level
