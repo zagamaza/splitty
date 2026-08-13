@@ -12,6 +12,34 @@ enum GroupsRoute: Hashable {
     case archive
 }
 
+/// Пункт меню «+» на списке групп.
+enum GroupsAddAction: CaseIterable {
+    case create, joinByCode
+
+    var title: String {
+        switch self {
+        case .create: return "Создать группу"
+        case .joinByCode: return "Присоединиться по коду"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .create: return "plus"
+        case .joinByCode: return "number"
+        }
+    }
+}
+
+/// Что предлагает меню «+».
+///
+/// Вход по коду жил ТОЛЬКО в пустом состоянии: человек с одной группой попасть
+/// в него не мог никак — а код присылают как раз тем, у кого группы уже есть.
+/// Отсюда параметр: набор пунктов не зависит от того, пуст ли список.
+func groupsAddMenuActions(hasGroups: Bool) -> [GroupsAddAction] {
+    GroupsAddAction.allCases
+}
+
 /// Вкладка «Группы»: hero-карточка общего баланса, карточки групп, архив.
 struct GroupsListView: View {
     @Environment(SessionStore.self) private var session
@@ -49,15 +77,15 @@ struct GroupsListView: View {
                         // в него не мог никак — приглашение по коду становилось
                         // нерабочим ровно после первой группы
                         Menu {
-                            Button {
-                                isCreatePresented = true
-                            } label: {
-                                Label("Создать группу", systemImage: "plus")
-                            }
-                            Button {
-                                isJoinPresented = true
-                            } label: {
-                                Label("Присоединиться по коду", systemImage: "number")
+                            ForEach(groupsAddMenuActions(hasGroups: !model.rooms.isEmpty), id: \.self) { action in
+                                Button {
+                                    switch action {
+                                    case .create: isCreatePresented = true
+                                    case .joinByCode: isJoinPresented = true
+                                    }
+                                } label: {
+                                    Label(action.title, systemImage: action.systemImage)
+                                }
                             }
                         } label: {
                             Image(systemName: "plus")

@@ -1,5 +1,25 @@
 import SwiftUI
 
+/// Действия на карточке приглашения.
+enum InviteAction {
+    case accept, decline, leave
+}
+
+/// Спрашивать ли подтверждение перед действием.
+///
+/// Выход необратим — вернуться можно только по новому приглашению участника, —
+/// а кнопка стоит вплотную к «Открыть»: один промах, и человек вне группы.
+/// Принять и отклонить приглашение и стоят дешевле, и отменяются сами собой.
+///
+/// Вынесено из вью, чтобы правило проверялось тестом: у Android оно живёт
+/// отдельной функцией `inviteActionNeedsConfirm` ровно по той же причине.
+func inviteActionNeedsConfirm(_ action: InviteAction) -> Bool {
+    switch action {
+    case .leave: return true
+    case .accept, .decline: return false
+    }
+}
+
 /// Вкладка «Уведомления»: карточки приглашений и лента операций всех групп
 /// с пагинацией. Заголовок экрана обязан совпадать с подписью таба (и с
 /// Android, где заголовок берётся из той же строки tab_activity): раздел
@@ -111,10 +131,7 @@ struct ActivityView: View {
             LazyVStack(spacing: 12) {
                 ForEach(model.invites) { card in
                     InviteCardView(card: card) { action in
-                        // Выход спрашивают: он необратим (вернуться можно только
-                        // по новому приглашению), а кнопка стоит рядом с
-                        // «Открыть» — промах стоил человеку группы
-                        if case .leave = action {
+                        if inviteActionNeedsConfirm(action) {
                             leaveConfirmCard = card
                             return
                         }
@@ -308,10 +325,8 @@ func inviteCardTitle(_ card: InviteCard) -> String {
 /// «Выйти» на карточке `added` обязательна: человека добавили, не спросив, и
 /// без неё отказаться можно было бы только разыскав настройки группы.
 private struct InviteCardView: View {
-    enum Action { case accept, decline, leave }
-
     let card: InviteCard
-    let onAction: (Action) -> Void
+    let onAction: (InviteAction) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
