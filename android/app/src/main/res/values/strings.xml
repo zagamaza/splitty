@@ -101,6 +101,9 @@
     <string name="group_leave_confirm">Leave</string>
     <string name="group_leave_action">Leave group</string>
     <string name="group_leave_blocked">Expenses recorded on you: %1$d. Remove yourself from them — and if you paid, hand the expense to another payer or delete it. Any member can edit expenses</string>
+    <string name="group_leave_show_blocking">Show these expenses</string>
+    <string name="group_blocking_filter_note">Only the expenses that keep you in the group</string>
+    <string name="group_blocking_filter_reset">Show all</string>
     <string name="group_leave_footer">While expenses are recorded on you, you can\'t leave — remove yourself from them first.</string>
     <string name="invite_friends_title">Add to the group</string>
     <string name="invite_friends_section">From your groups</string>

@@ -500,6 +500,9 @@
     <string name="group_leave_action">Salir del grupo</string>
     <string name="group_leave_confirm">Salir</string>
     <string name="group_leave_blocked">Gastos a tu nombre: %1$d. Quítate de ellos y, si pagaste tú, cambia el pagador o borra el gasto. Cualquier miembro puede editar los gastos</string>
+    <string name="group_leave_show_blocking">Ver estos gastos</string>
+    <string name="group_blocking_filter_note">Solo los gastos que te retienen en el grupo</string>
+    <string name="group_blocking_filter_reset">Ver todos</string>
     <string name="group_leave_footer">Mientras haya gastos a tu nombre no puedes salir: quítate de ellos primero.</string>
     <string name="group_leave_message">El grupo desaparece de tu lista. Solo puedes volver si un miembro te invita</string>
     <string name="group_leave_title">¿Salir de «%1$s»?</string>

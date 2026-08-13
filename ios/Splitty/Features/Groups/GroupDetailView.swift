@@ -20,6 +20,8 @@ struct GroupDetailView: View {
     /// Фильтр списка операций: только те, где я донор или в получателях
     /// (аналог фильтра «Мои операции» в телеграм-боте).
     @State private var isMineOnly = false
+    /// Фильтр «только мешающие выходу»: включается из отказа в настройках.
+    @State private var isBlockingOnly = false
     /// Локальная запись outbox, открытая на редактирование (sheet).
     @State private var editingEntry: OutboxEntry?
     /// Задача перезагрузки по dataVersion: держим ссылку и отменяем прежнюю —
@@ -154,7 +156,11 @@ struct GroupDetailView: View {
             LazyVStack(alignment: .leading, spacing: 16) {
                 headerCard(room: room, meId: meId)
                 inviteBanner(room: room)
-                mineSegment
+                if isBlockingOnly {
+                    blockingFilterNote
+                } else {
+                    mineSegment
+                }
                 // Локальные (неотправленные) операции — СВЕРХУ списка.
                 if !localEntries.isEmpty {
                     localOperationsSection(currency: room.currency)
@@ -186,8 +192,27 @@ struct GroupDetailView: View {
         }
     }
 
-    /// Секции операций с учётом фильтра «Со мной»: пустые месяцы скрываются.
+    /// Плашка фильтра «только мешающие выходу» с выходом из него.
+    private var blockingFilterNote: some View {
+        HStack(spacing: 10) {
+            Text("Показаны только расходы, которые держат вас в группе")
+                .scaledFont(size: 13)
+                .foregroundStyle(Color.inkSecondary)
+            Spacer(minLength: 0)
+            Button("Показать все") { isBlockingOnly = false }
+                .scaledFont(size: 13, weight: .semibold)
+                .foregroundStyle(Color.accentText)
+        }
+    }
+
+    /// Секции операций с учётом фильтров: пустые месяцы скрываются.
     private func displaySections(meId: Int) -> [GroupDetailViewModel.MonthSection] {
+        // Пришли из отказа в выходе: показываем ровно то, что держит, — совет
+        // «уберите себя из расходов» невыполним, пока непонятно, из каких
+        if isBlockingOnly, let room = model.room {
+            let ids = Set(room.operationsBlockingLeave(for: meId).map(\.id))
+            return GroupDetailViewModel.sectionsKeepingOnly(model.sections, ids: ids)
+        }
         guard isMineOnly else { return model.sections }
         return model.sections.compactMap { section in
             let ops = section.operations.filter { $0.involves(meId) }
@@ -410,7 +435,14 @@ struct GroupDetailView: View {
                 .tabItem { Label("Итоги", systemImage: "chart.pie") }
                 .tag(TusaTab.totals)
 
-            GroupSettingsView(room: room, embedded: true) {}
+            GroupSettingsView(
+                room: room,
+                embedded: true,
+                onShowBlocking: {
+                    isBlockingOnly = true
+                    tusaTab = .operations
+                }
+            ) {}
                 .tabItem { Label("Настройки", systemImage: "gearshape") }
                 .tag(TusaTab.settings)
         }

@@ -21,6 +21,17 @@ final class GroupDetailViewModel {
         let operations: [Operation]
     }
 
+    /// Секции, суженные до перечисленных операций; пустые месяцы выпадают.
+    ///
+    /// Отдельной функцией — ради теста: фильтр включается с другой вкладки, и
+    /// «показали не то» заметить глазами тем труднее, чем длиннее список.
+    nonisolated static func sectionsKeepingOnly(_ sections: [MonthSection], ids: Set<String>) -> [MonthSection] {
+        sections.compactMap { section in
+            let ops = section.operations.filter { ids.contains($0.id) }
+            return ops.isEmpty ? nil : MonthSection(id: section.id, title: section.title, operations: ops)
+        }
+    }
+
     private(set) var state: State = .loading
     private(set) var room: RoomDetail?
     private(set) var sections: [MonthSection] = []

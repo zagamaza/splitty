@@ -500,6 +500,9 @@
     <string name="group_leave_action">Gruppe verlassen</string>
     <string name="group_leave_confirm">Verlassen</string>
     <string name="group_leave_blocked">Auf dich laufen %1$d Ausgaben. Nimm dich aus ihnen heraus — und wenn du bezahlt hast, gib die Ausgabe an eine andere Person ab oder lösche sie. Ausgaben darf jedes Mitglied bearbeiten</string>
+    <string name="group_leave_show_blocking">Diese Ausgaben zeigen</string>
+    <string name="group_blocking_filter_note">Nur die Ausgaben, die dich in der Gruppe halten</string>
+    <string name="group_blocking_filter_reset">Alle zeigen</string>
     <string name="group_leave_footer">Solange Ausgaben auf dich laufen, kannst du nicht austreten — nimm dich zuerst aus ihnen heraus.</string>
     <string name="group_leave_message">Die Gruppe verschwindet aus deiner Liste. Zurück kommst du nur, wenn dich ein Mitglied einlädt</string>
     <string name="group_leave_title">„%1$s“ verlassen?</string>

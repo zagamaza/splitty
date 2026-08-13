@@ -103,6 +103,9 @@
     <string name="group_leave_confirm">Выйти</string>
     <string name="group_leave_action">Выйти из группы</string>
     <string name="group_leave_blocked">На вас записано расходов: %1$d. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник</string>
+    <string name="group_leave_show_blocking">Показать эти расходы</string>
+    <string name="group_blocking_filter_note">Показаны только расходы, которые держат вас в группе</string>
+    <string name="group_blocking_filter_reset">Показать все</string>
     <string name="group_leave_footer">Пока на вас записаны расходы, выйти нельзя — сначала уберите себя из них.</string>
     <string name="invite_friends_title">Добавить в группу</string>
     <string name="invite_friends_section">Из ваших групп</string>

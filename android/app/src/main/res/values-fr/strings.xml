@@ -500,6 +500,9 @@
     <string name="group_leave_action">Quitter le groupe</string>
     <string name="group_leave_confirm">Quitter</string>
     <string name="group_leave_blocked">Dépenses à votre nom : %1$d. Retirez-vous de ces dépenses — et si c’est vous qui avez payé, confiez la dépense à quelqu’un d’autre ou supprimez-la. N’importe quel membre peut modifier les dépenses</string>
+    <string name="group_leave_show_blocking">Voir ces dépenses</string>
+    <string name="group_blocking_filter_note">Uniquement les dépenses qui vous retiennent dans le groupe</string>
+    <string name="group_blocking_filter_reset">Tout afficher</string>
     <string name="group_leave_footer">Tant que des dépenses sont à ton nom, tu ne peux pas partir — retire-toi d\'abord.</string>
     <string name="group_leave_message">Le groupe disparaît de ta liste. Tu ne pourras revenir que si un membre t\'invite</string>
     <string name="group_leave_title">Quitter « %1$s » ?</string>

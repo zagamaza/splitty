@@ -5,6 +5,8 @@ import SwiftUI
 struct GroupSettingsView: View {
     private let room: RoomDetail
     private let embedded: Bool
+    /// Переход к расходам, которые держат в группе; nil — вкладки нет (sheet).
+    private let onShowBlocking: (() -> Void)?
     private let onChange: () -> Void
 
     @Environment(SessionStore.self) private var session
@@ -33,9 +35,15 @@ struct GroupSettingsView: View {
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
-    init(room: RoomDetail, embedded: Bool = false, onChange: @escaping () -> Void) {
+    init(
+        room: RoomDetail,
+        embedded: Bool = false,
+        onShowBlocking: (() -> Void)? = nil,
+        onChange: @escaping () -> Void
+    ) {
         self.room = room
         self.embedded = embedded
+        self.onShowBlocking = onShowBlocking
         self.onChange = onChange
         _selectedCurrency = State(initialValue: room.currency)
     }
@@ -214,6 +222,14 @@ struct GroupSettingsView: View {
                 .font(.caption)
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.horizontal, 4)
+            // Совет «уберите себя из расходов» невыполним, пока непонятно, из
+            // каких именно: расходов в группе бывают сотни
+            if !blockingOperations.isEmpty, let onShowBlocking {
+                Button("Показать эти расходы", action: onShowBlocking)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.accentText)
+                    .padding(.horizontal, 4)
+            }
         }
     }
 

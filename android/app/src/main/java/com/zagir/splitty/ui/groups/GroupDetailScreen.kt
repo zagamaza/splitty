@@ -71,6 +71,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
@@ -156,6 +157,9 @@ fun GroupDetailScreen(
 
     // Вкладка нижнего бара тусы: операции / балансы / итоги / настройки.
     var tusaTab by rememberSaveable { mutableStateOf(TUSA_TAB_OPS) }
+    // Фильтр «только мешающие выходу»: включается из отказа в настройках и
+    // живёт на уровне экрана — вкладки при переключении пересоздаются
+    var isBlockingOnly by rememberSaveable { mutableStateOf(false) }
     // Шит приглашения — открывается из баннера, участников и настроек.
     var isInvitePresented by rememberSaveable { mutableStateOf(false) }
     var isInviteFriendsPresented by rememberSaveable { mutableStateOf(false) }
@@ -254,6 +258,10 @@ fun GroupDetailScreen(
                         viewModel = viewModel,
                         onInvite = { isInvitePresented = true },
                         onInviteFriends = { isInviteFriendsPresented = true },
+                        onShowBlocking = {
+                            isBlockingOnly = true
+                            tusaTab = TUSA_TAB_OPS
+                        },
                         onLeft = onBack,
                         modifier = Modifier.padding(innerPadding),
                     )
@@ -263,6 +271,8 @@ fun GroupDetailScreen(
                         sections = sections,
                         localOperations = localOperations,
                         meId = meId,
+                        isBlockingOnly = isBlockingOnly,
+                        onClearBlockingFilter = { isBlockingOnly = false },
                         isRefreshing = isRefreshing,
                         onRefresh = viewModel::refresh,
                         onSettleUp = settleUp,
@@ -449,6 +459,8 @@ private fun GroupDetailContent(
     sections: List<MonthSection>,
     localOperations: List<OutboxEntry>,
     meId: Long,
+    isBlockingOnly: Boolean,
+    onClearBlockingFilter: () -> Unit,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onSettleUp: () -> Unit,
@@ -461,13 +473,15 @@ private fun GroupDetailContent(
     // Фильтр «Со мной»: только операции, где я донор или в получателях
     // (аналог фильтра «Мои операции» в телеграм-боте).
     var isMineOnly by rememberSaveable { mutableStateOf(false) }
-    val displaySections = if (isMineOnly) {
-        sections.mapNotNull { section ->
+    val displaySections = when {
+        // Пришли из отказа в выходе: показываем ровно то, что держит, — совет
+        // «уберите себя из расходов» невыполним, пока непонятно, из каких
+        isBlockingOnly -> sectionsKeepingOnly(sections, room.operationsBlockingLeave(meId).map { it.id }.toSet())
+        isMineOnly -> sections.mapNotNull { section ->
             val ops = section.operations.filter { it.involves(meId) }
             if (ops.isEmpty()) null else section.copy(operations = ops)
         }
-    } else {
-        sections
+        else -> sections
     }
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -495,7 +509,11 @@ private fun GroupDetailContent(
                 }
             }
             item(key = "mine-segment") {
-                MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
+                if (isBlockingOnly) {
+                    BlockingFilterNote(onClear = onClearBlockingFilter)
+                } else {
+                    MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
+                }
             }
             // Неотправленные (локальные) операции — всегда сверху списка.
             if (localOperations.isNotEmpty()) {
@@ -920,6 +938,28 @@ private fun TusaAddFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
 }
 
 /** Сегмент фильтра операций: «Все | Со мной». */
+/** Плашка «показаны только мешающие расходы» с выходом из фильтра. */
+@Composable
+private fun BlockingFilterNote(onClear: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.group_blocking_filter_note),
+            fontSize = 13.sp,
+            color = Splitty.colors.inkSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        SoftChip(
+            text = stringResource(R.string.group_blocking_filter_reset),
+            onClick = onClear,
+            modifier = Modifier.testTag("group_blocking_filter_reset"),
+        )
+    }
+}
+
 @Composable
 private fun MineSegment(isMineOnly: Boolean, onChange: (Boolean) -> Unit) {
     val colors = Splitty.colors
@@ -1315,6 +1355,7 @@ private fun GroupSettingsTab(
     viewModel: GroupDetailViewModel,
     onInvite: () -> Unit,
     onInviteFriends: () -> Unit,
+    onShowBlocking: () -> Unit,
     onLeft: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1638,9 +1679,32 @@ private fun GroupSettingsTab(
                     color = colors.inkSecondary,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
+                // Совет «уберите себя из расходов» невыполним, пока непонятно,
+                // из каких именно: расходов в группе бывают сотни
+                if (blocking.isNotEmpty()) {
+                    SoftChip(
+                        text = stringResource(R.string.group_leave_show_blocking),
+                        onClick = onShowBlocking,
+                        modifier = Modifier
+                            .padding(horizontal = 4.dp)
+                            .testTag("group_leave_show_blocking"),
+                    )
+                }
             }
         }
 }
+
+/**
+ * Секции, суженные до перечисленных операций; пустые месяцы выпадают.
+ *
+ * Отдельной функцией — ради теста: фильтр приходит из другой вкладки, и
+ * «показали не то» заметить глазами тем труднее, чем длиннее список.
+ */
+internal fun sectionsKeepingOnly(sections: List<MonthSection>, ids: Set<String>): List<MonthSection> =
+    sections.mapNotNull { section ->
+        val ops = section.operations.filter { it.id in ids }
+        if (ops.isEmpty()) null else section.copy(operations = ops)
+    }
 
 /**
  * Кого можно позвать в комнату из списка друзей.
