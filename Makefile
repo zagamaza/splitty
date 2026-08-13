@@ -8,10 +8,11 @@ GOENV      := GOTOOLCHAIN=local
 BINARY     := ./bin/splitty
 
 # --- Деплой (docker-compose на сервере) ---
-# Пароль SSH вводится интерактивно и в Makefile НЕ хранится. Секреты живут в
-# файле .env НА СЕРВЕРЕ рядом с docker-compose.yml (шаблон — .env.example).
+# Вход по ключу (~/.ssh/config, Host splitty). Секреты живут ИНЛАЙНОМ в
+# docker-compose.yaml на сервере, файла .env там нет.
 SSH_HOST    ?= root@138.124.18.189
-REMOTE_DIR  ?= /root/splitty                # каталог с docker-compose.yml на сервере (поправь под свой)
+REMOTE_DIR  ?= /home/splitit/app
+SERVICE     ?= telegram-bot-prod
 FIREBASE_SA := firebase-service-account.json
 
 # --- Раздача сборок тестерам ---
@@ -26,7 +27,7 @@ PLAY_TRACK  ?= internal
 .DEFAULT_GOAL := help
 
 .PHONY: help wire build test vet tidy run docker-build push-secret deploy logs \
-        android-publish ios-publish
+        deploy-script android-publish ios-publish
 
 help: ## список целей
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -59,14 +60,22 @@ docker-build: ## локальная сборка docker-образа (прове
 push-secret: ## залить firebase-креды на сервер (scp спросит пароль)
 	scp $(FIREBASE_SA) $(SSH_HOST):$(REMOTE_DIR)/$(FIREBASE_SA)
 
-deploy: ## сервер: git pull + пересборка контейнера (ssh спросит пароль)
-	ssh $(SSH_HOST) 'cd $(REMOTE_DIR) && git pull && \
-	  set -a && . ./.env && set +a && \
-	  docker-compose up -d --build telegram-bot && \
-	  docker-compose logs --tail=50 telegram-bot'
+# Обычный путь выкатки — пуш в develop: GitHub Actions прогоняет тесты,
+# собирает образ и зовёт $(REMOTE_DIR)/deploy.sh (см. .github/workflows/ci.yml).
+# Цель ниже — ручной дубль того же самого, когда Actions недоступны.
+deploy: ## сервер: собрать образ локально и выкатить (тот же deploy.sh, что у CI)
+	@tag=sha-$$(git rev-parse --short=7 HEAD); \
+	  echo "собираю splitty:$$tag"; \
+	  docker build --platform linux/amd64 -t splitty:$$tag . && \
+	  docker save splitty:$$tag | ssh $(SSH_HOST) 'docker load' && \
+	  ssh $(SSH_HOST) "SSH_ORIGINAL_COMMAND='deploy $$tag' $(REMOTE_DIR)/deploy.sh"
+
+deploy-script: ## обновить $(REMOTE_DIR)/deploy.sh на сервере из deploy/deploy.sh
+	scp deploy/deploy.sh $(SSH_HOST):$(REMOTE_DIR)/deploy.sh
+	ssh $(SSH_HOST) 'chmod 700 $(REMOTE_DIR)/deploy.sh && sh -n $(REMOTE_DIR)/deploy.sh && echo синтаксис ок'
 
 logs: ## логи контейнера на сервере (follow)
-	ssh $(SSH_HOST) 'cd $(REMOTE_DIR) && docker-compose logs -f --tail=100 telegram-bot'
+	ssh $(SSH_HOST) 'cd $(REMOTE_DIR) && docker-compose logs -f --tail=100 $(SERVICE)'
 
 android-publish: ## Android → Google Play (PLAY_TRACK=internal по умолчанию)
 	cd android && ./gradlew :app:publishReleaseBundle --track $(PLAY_TRACK)

@@ -1,62 +1,149 @@
 name: Go
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
+# Пуш за пушем: старый прогон отменяем, но выкатку — нет (см. deploy).
+concurrency:
+  group: go-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
-    name: Build
+    name: Build & test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Тесты репозитория работают против ЖИВОЙ mongo: они проверяют то, чего мок
+    # не умеет — unique/sparse-индексы, атомарность $inc, поведение upsert. Без
+    # этого сервиса они МОЛЧА скипаются, и зелёный прогон ничего не значит.
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
-      - name: Set up Go 1.22
-        uses: actions/setup-go@v1
+      - uses: actions/checkout@v4
+
+      # Версия берётся из go.mod: разъехаться им нельзя по определению.
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.22
-        id: go
+          go-version-file: go.mod
+          cache: true
 
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v1
+      - name: Download deps
+        run: go mod download
 
-      - name: Get dependencies
-        run: go get -v -t -d ./...
+      - name: Vet
+        run: go vet ./...
 
       - name: Build
-        run: make build
+        run: go build -o bin/splitty ./cmd/splitty
 
       - name: Test
-        run: make test
+        env:
+          MONGO_TEST_URI: mongodb://localhost:27017
+        run: go test ./internal/... -count=1
 
-#      - name: Lint
-#        run: |
-#          go run github.com/golangci/golangci-lint/cmd/golangci-lint run
-#          go get -u golang.org/x/lint/golint
-#          /home/runner/go/bin/golint
+      # Страховка от главного самообмана этого набора: если mongo недоступна,
+      # пакет репозитория скипается целиком, а прогон остаётся зелёным.
+      - name: Тесты репозитория не должны скипаться
+        env:
+          MONGO_TEST_URI: mongodb://localhost:27017
+        run: |
+          go test ./internal/repository/ -count=1 -v > repo.log || { cat repo.log; exit 1; }
+          skipped=$(grep -c '^--- SKIP' repo.log || true)
+          passed=$(grep -c '^--- PASS' repo.log || true)
+          echo "репозиторий: PASS=$passed SKIP=$skipped"
+          if [ "$skipped" -gt 0 ] || [ "$passed" -lt 50 ]; then
+            echo "::error::тесты репозитория не прогнались против живой mongo"
+            exit 1
+          fi
 
-  publish:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master')
+  image:
+    name: Docker image
+    needs: [build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
-    needs: [ build ]
-    name: Push docker image
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
     steps:
-       - name: Set up QEMU
-         uses: docker/setup-qemu-action@v1
-       - name: Docker meta adapter
-         id: docker_meta
-         uses: crazy-max/ghaction-docker-meta@v1
-         with:
-           tag-match: \d{1,3}.\d{1,3}.\d{1,3}
-           images: zagamaza/splitty
-           tag-sha: true # add git short SHA as Docker tag
-       - name: Set up Docker Buildx
-         uses: docker/setup-buildx-action@v1
-       - name: Login to DockerHub
-         uses: docker/login-action@v1
-         with:
-           username: ${{ secrets.DOCKER_LOGIN }}
-           password: ${{ secrets.DOCKER_PASSWORD }}
-       - name: Build and push
-         id: docker_build
-         uses: docker/build-push-action@v2
-         with:
-           push: true
-           tags: ${{ steps.docker_meta.outputs.tags }}
-           labels: ${{ steps.docker_meta.outputs.labels }}
-       - name: Image digest
-         run: echo ${{ steps.docker_build.outputs.digest }}
+      - uses: actions/checkout@v4
+
+      - name: Тег образа
+        id: meta
+        run: echo "tag=sha-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Образ не уходит в реестр: сервер получает его тем же ssh-каналом, что и
+      # команду выкатки. Реестр потребовал бы отдельной учётки на сервере, а
+      # выигрыш на сорока мегабайтах — никакой.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: splitty:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Save image
+        run: docker save splitty:${{ steps.meta.outputs.tag }} | gzip > image.tgz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: splitty-image
+          path: image.tgz
+          retention-days: 7
+
+  deploy:
+    name: Deploy to prod
+    needs: [image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Выкатки не отменяем и не параллелим: прерванная посередине оставила бы
+    # сервер на полпути между двумя образами.
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    env:
+      TAG: ${{ needs.image.outputs.tag }}
+      HOST: ${{ vars.DEPLOY_HOST }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: splitty-image
+
+      # Ключ форсирован на стороне сервера (command= в authorized_keys): им
+      # нельзя выполнить ничего, кроме deploy.sh, — ни шелла, ни проброса портов.
+      - name: Подготовить ssh
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+
+      - name: Доставить образ
+        run: gunzip -c image.tgz | ssh -i ~/.ssh/deploy -o BatchMode=yes "root@$HOST" load
+
+      - name: Переключить прод
+        run: ssh -i ~/.ssh/deploy -o BatchMode=yes "root@$HOST" "deploy $TAG"
+
+      # Отдельно и снаружи: deploy.sh проверяет health изнутри сервера, а людям
+      # важно, что сервис виден через Caddy и TLS.
+      - name: Проверить снаружи
+        run: |
+          body=$(curl -fsS -m 20 https://splitor.zagirnur.dev/health)
+          echo "$body"
+          echo "$body" | grep -q '"db":"ok"'
