@@ -684,47 +684,69 @@ fun UnknownPickerSheet(
     onDismiss: () -> Unit,
 ) {
     val colors = Splitty.colors
-    val haptics = rememberHaptics()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.bg,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // Прокрутка: пока нераспознанное имя не сопоставлено, сохранение
-                // заблокировано — а в большой группе нужный человек оказывался
-                // за нижней кромкой экрана, и выйти из этого было нельзя
-                .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 20.dp),
-        ) {
-            SectionHeader(stringResource(R.string.item_sheet_unknown_title, name))
-            Spacer(Modifier.height(12.dp))
-            members.forEach { member ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            haptics.tap()
-                            onPick(member.id)
-                            onDismiss()
-                        }
-                        .padding(vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    GradientAvatar(user = member, size = 36.dp)
-                    Text(
-                        text = member.displayName,
-                        fontSize = 15.sp,
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+        UnknownPickerBody(
+            name = name,
+            members = members,
+            onPick = { id ->
+                onPick(id)
+                onDismiss()
+            },
+        )
+    }
+}
+
+/**
+ * Содержимое пикера без модального обрамления.
+ *
+ * Вынесено отдельно ради теста прокрутки: внутри `ModalBottomSheet` содержимое
+ * живёт в собственном окне, и из compose-теста до него не дотянуться.
+ */
+@Composable
+internal fun UnknownPickerBody(
+    name: String,
+    members: List<User>,
+    onPick: (Long) -> Unit,
+) {
+    val colors = Splitty.colors
+    val haptics = rememberHaptics()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Прокрутка: пока нераспознанное имя не сопоставлено, сохранение
+            // заблокировано — а в большой группе нужный человек оказывался
+            // за нижней кромкой экрана, и выйти из этого было нельзя
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 20.dp),
+    ) {
+        SectionHeader(stringResource(R.string.item_sheet_unknown_title, name))
+        Spacer(Modifier.height(12.dp))
+        members.forEach { member ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        haptics.tap()
+                        onPick(member.id)
+                    }
+                    .padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                GradientAvatar(user = member, size = 36.dp)
+                Text(
+                    text = member.displayName,
+                    fontSize = 15.sp,
+                    color = colors.ink,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }

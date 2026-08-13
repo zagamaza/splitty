@@ -1674,127 +1674,149 @@ private fun InviteFriendsSheet(
     val friends by viewModel.friends.collectAsStateWithLifecycle()
     val memberIds = remember(room) { room.members.map { it.id }.toSet() }
     val candidates = inviteCandidates(friends, memberIds)
-    var selected by remember { mutableStateOf(emptySet<Long>()) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.surface,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // Прокрутка: список друзей рос вниз без ограничения, и уже при
-                // десятке друзей кнопка «Отправить» вместе со ссылкой уезжала
-                // за экран — человек не мог ни позвать, ни закрыть иначе как
-                // свайпом
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.invite_friends_title),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.ink,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
+        InviteFriendsSheetBody(
+            candidates = candidates,
+            onInvite = { selected -> viewModel.inviteFriends(selected) { onDismiss() } },
+            onLink = onLink,
+        )
+    }
+}
 
-            if (candidates.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.invite_friends_empty),
-                    fontSize = 14.sp,
-                    color = colors.inkSecondary,
-                )
-            } else {
-                SectionHeader(stringResource(R.string.invite_friends_section))
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    candidates.forEachIndexed { index, friend ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selected = if (selected.contains(friend.user.id)) {
-                                        selected - friend.user.id
-                                    } else {
-                                        selected + friend.user.id
-                                    }
-                                }
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            GradientAvatar(user = friend.user, size = 36.dp)
-                            Text(
-                                text = friend.user.displayName,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.ink,
-                            )
-                            Spacer(Modifier.weight(1f))
-                            if (selected.contains(friend.user.id)) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = null,
-                                    tint = colors.accent,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        }
-                        if (index < candidates.lastIndex) {
-                            HairlineDivider(startIndent = 64.dp)
-                        }
-                    }
-                }
-                // Подтверждение называет последствие: друг из списка попадает
-                // в группу сразу, без своего согласия, и видит все прошлые
-                // расходы. Кнопка «Пригласить» обещала шаг, которого нет
-                var isConfirmVisible by remember { mutableStateOf(false) }
-                PrimaryPillButton(
-                    text = stringResource(R.string.invite_friends_send),
-                    onClick = { isConfirmVisible = true },
-                    enabled = selected.isNotEmpty(),
-                )
-                if (isConfirmVisible) {
-                    val names = candidates.filter { it.user.id in selected }.map { it.user.displayName }
-                    AlertDialog(
-                        onDismissRequest = { isConfirmVisible = false },
-                        title = {
-                            Text(
-                                if (names.size == 1) {
-                                    stringResource(R.string.invite_friends_confirm_title, names.first())
-                                } else {
-                                    stringResource(R.string.invite_friends_confirm_title_many, names.size)
-                                }
-                            )
-                        },
-                        text = { Text(stringResource(R.string.invite_friends_confirm_message)) },
-                        confirmButton = {
-                            TextButton(onClick = {
-                                isConfirmVisible = false
-                                viewModel.inviteFriends(selected) { onDismiss() }
-                            }) { Text(stringResource(R.string.invite_friends_send)) }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { isConfirmVisible = false }) {
-                                Text(stringResource(R.string.common_cancel))
-                            }
-                        },
-                    )
-                }
-            }
+/**
+ * Содержимое шита приглашения без модального обрамления.
+ *
+ * Вынесено отдельно, чтобы прокрутку можно было проверить тестом: внутри
+ * `ModalBottomSheet` содержимое живёт в собственном окне, и до него из
+ * compose-теста не дотянуться.
+ */
+@Composable
+internal fun InviteFriendsSheetBody(
+    candidates: List<FriendBalance>,
+    onInvite: (Set<Long>) -> Unit,
+    onLink: () -> Unit,
+) {
+    val colors = Splitty.colors
+    var selected by remember { mutableStateOf(emptySet<Long>()) }
 
-            SoftChip(
-                text = stringResource(R.string.invite_friends_link),
-                onClick = onLink,
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            // Прокрутка: список друзей рос вниз без ограничения, и уже при
+            // десятке друзей кнопка «Отправить» вместе со ссылкой уезжала
+            // за экран — человек не мог ни позвать, ни закрыть иначе как
+            // свайпом
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 36.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.invite_friends_title),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.ink,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+
+        if (candidates.isEmpty()) {
             Text(
-                text = stringResource(R.string.invite_friends_link_footer),
-                fontSize = 12.sp,
+                text = stringResource(R.string.invite_friends_empty),
+                fontSize = 14.sp,
                 color = colors.inkSecondary,
             )
+        } else {
+            SectionHeader(stringResource(R.string.invite_friends_section))
+            SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                candidates.forEachIndexed { index, friend ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selected = if (selected.contains(friend.user.id)) {
+                                    selected - friend.user.id
+                                } else {
+                                    selected + friend.user.id
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        GradientAvatar(user = friend.user, size = 36.dp)
+                        Text(
+                            text = friend.user.displayName,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.ink,
+                        )
+                        Spacer(Modifier.weight(1f))
+                        if (selected.contains(friend.user.id)) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                    if (index < candidates.lastIndex) {
+                        HairlineDivider(startIndent = 64.dp)
+                    }
+                }
+            }
+            // Подтверждение называет последствие: друг из списка попадает
+            // в группу сразу, без своего согласия, и видит все прошлые
+            // расходы. Кнопка «Пригласить» обещала шаг, которого нет
+            var isConfirmVisible by remember { mutableStateOf(false) }
+            PrimaryPillButton(
+                text = stringResource(R.string.invite_friends_send),
+                onClick = { isConfirmVisible = true },
+                enabled = selected.isNotEmpty(),
+            )
+            if (isConfirmVisible) {
+                val names = candidates.filter { it.user.id in selected }.map { it.user.displayName }
+                AlertDialog(
+                    onDismissRequest = { isConfirmVisible = false },
+                    title = {
+                        Text(
+                            if (names.size == 1) {
+                                stringResource(R.string.invite_friends_confirm_title, names.first())
+                            } else {
+                                stringResource(R.string.invite_friends_confirm_title_many, names.size)
+                            }
+                        )
+                    },
+                    text = { Text(stringResource(R.string.invite_friends_confirm_message)) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            isConfirmVisible = false
+                            onInvite(selected)
+                        }) { Text(stringResource(R.string.invite_friends_send)) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { isConfirmVisible = false }) {
+                            Text(stringResource(R.string.common_cancel))
+                        }
+                    },
+                )
+            }
         }
+
+        SoftChip(
+            text = stringResource(R.string.invite_friends_link),
+            onClick = onLink,
+        )
+        Text(
+            text = stringResource(R.string.invite_friends_link_footer),
+            fontSize = 12.sp,
+            color = colors.inkSecondary,
+        )
     }
 }
 
