@@ -6,6 +6,8 @@ import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
+import java.time.Instant
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.FriendBalance
@@ -104,6 +106,10 @@ class GroupDetailViewModel @Inject constructor(
 
     private val _alertMessage = MutableStateFlow<UiText?>(null)
     val alertMessage: StateFlow<UiText?> = _alertMessage.asStateFlow()
+
+    /** Свежесть показанных данных — для подписи «данные сохранённые…». */
+    private val _freshness = MutableStateFlow(DataFreshness())
+    val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
 
     // --- Настройки группы ---
 
@@ -391,6 +397,12 @@ class GroupDetailViewModel @Inject constructor(
             _sections.value = groupOperationsByMonth(detail.operations)
             _selectedCurrencyOverride.value = null // источник истины снова сервер
             if (!fetched.fromCache) markSeen(detail)
+            _freshness.value = if (fetched.fromCache) {
+                _freshness.value.copy(fromCache = true)
+            } else {
+                DataFreshness(fromCache = false, updatedAt = Instant.now())
+            }
+
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiException) {

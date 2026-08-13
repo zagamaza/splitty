@@ -17,4 +17,31 @@ final class DataFreshnessTests: XCTestCase {
         XCTAssertFalse(model.isFromCache, "свежая модель выглядит как кеш")
         XCTAssertNil(model.lastUpdatedAt, "время обновления взялось из ниоткуда")
     }
+
+    /// Подпись видна не только в списке групп: на карточке группы, друзьях и
+    /// активности признак считался, но человеку не доставался.
+    func testEveryCachedScreenCarriesTheUpdateTime() {
+        XCTAssertNil(GroupDetailViewModel().lastUpdatedAt)
+        XCTAssertNil(FriendsViewModel().lastUpdatedAt)
+        XCTAssertNil(ActivityViewModel().lastUpdatedAt)
+
+        XCTAssertFalse(GroupDetailViewModel().isFromCache)
+        XCTAssertFalse(FriendsViewModel().isFromCache)
+        XCTAssertFalse(ActivityViewModel().isFromCache)
+    }
+
+    /// Текст без времени обновления не притворяется свежим: кеш из прошлого
+    /// запуска — это «связи нет», а не «обновлялось только что».
+    func testCacheNoteWithoutTimeSaysThereIsNoConnection() {
+        let text = cacheNoteText(updatedAt: nil)
+
+        XCTAssertTrue(text.contains("связи с сервером нет"), text)
+    }
+
+    func testCacheNoteWithTimeMentionsIt() {
+        let text = cacheNoteText(updatedAt: Date(timeIntervalSinceNow: -3600))
+
+        XCTAssertTrue(text.contains("обновлялись"), text)
+        XCTAssertFalse(text.contains("связи с сервером нет"), text)
+    }
 }

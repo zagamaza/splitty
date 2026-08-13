@@ -37,6 +37,8 @@ final class GroupDetailViewModel {
     private(set) var sections: [MonthSection] = []
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
     private(set) var isFromCache = false
+    /// Когда данные последний раз пришли С СЕРВЕРА — для подписи о свежести.
+    private(set) var lastUpdatedAt: Date?
     /// Текст ошибки для alert (обновления поверх загруженных данных).
     var alertMessage: String?
 
@@ -61,6 +63,7 @@ final class GroupDetailViewModel {
             guard generation == loadGeneration else { return }
             apply(result.value, isFromCache: result.isFromCache)
             if !result.isFromCache {
+                lastUpdatedAt = Date()
                 await markSeen(repo: repo, room: result.value)
             }
         } catch {

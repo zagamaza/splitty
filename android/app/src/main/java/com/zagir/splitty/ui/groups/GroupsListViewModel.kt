@@ -6,6 +6,7 @@ import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
@@ -264,11 +265,3 @@ private fun hexCode(tail: String): String? {
     return if (hex.length == ROOM_CODE_LENGTH) hex.lowercase() else null
 }
 
-/**
- * Свежесть показанных данных: пришли ли они из офлайн-кеша и когда последний
- * раз обновлялись с сервера.
- */
-data class DataFreshness(
-    val fromCache: Boolean = false,
-    val updatedAt: Instant? = null,
-)

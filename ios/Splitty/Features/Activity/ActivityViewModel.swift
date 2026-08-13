@@ -31,6 +31,8 @@ final class ActivityViewModel {
     private var seenThrough: Date?
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
     private(set) var isFromCache = false
+    /// Когда данные последний раз пришли С СЕРВЕРА — для подписи о свежести.
+    private(set) var lastUpdatedAt: Date?
     /// Ошибка обновления/подгрузки, когда лента уже показана (для alert).
     var errorMessage: String?
     private(set) var isLoadingMore = false
@@ -171,6 +173,7 @@ final class ActivityViewModel {
             unreadCount = feed.unreadCount
             seenThrough = feed.seenThrough
             isFromCache = result.isFromCache
+            if !result.isFromCache { lastUpdatedAt = Date() }
             // Из кеша дальше не листаем (следующие страницы не кешируются) —
             // иначе офлайн-прокрутка до конца ленты давала бы ложный алерт.
             hasMore = result.isFromCache ? false : page.count == Self.pageSize

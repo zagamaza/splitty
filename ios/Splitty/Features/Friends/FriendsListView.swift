@@ -128,6 +128,7 @@ struct FriendsListView: View {
             Text(totalCaption)
                 .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
+            CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard(padding: 20)

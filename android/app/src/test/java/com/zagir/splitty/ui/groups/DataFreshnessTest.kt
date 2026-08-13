@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.model.DataFreshness
 import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertNotNull

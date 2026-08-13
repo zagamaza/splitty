@@ -92,6 +92,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.pluralStringResource
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.CurrencyInfo
 import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.model.FriendBalance
@@ -101,6 +102,7 @@ import com.zagir.splitty.core.model.operationsBlockingLeave
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.money.money
 import com.zagir.splitty.data.OutboxEntry
+import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
@@ -138,6 +140,7 @@ fun GroupDetailScreen(
     val sections by viewModel.sections.collectAsStateWithLifecycle()
     val meIdState by viewModel.meId.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val freshness by viewModel.freshness.collectAsStateWithLifecycle()
     val alertMessage by viewModel.alertMessage.collectAsStateWithLifecycle()
     val localOperations by viewModel.localOperations.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
@@ -271,6 +274,7 @@ fun GroupDetailScreen(
                         sections = sections,
                         localOperations = localOperations,
                         meId = meId,
+                        freshness = freshness,
                         isBlockingOnly = isBlockingOnly,
                         onClearBlockingFilter = { isBlockingOnly = false },
                         isRefreshing = isRefreshing,
@@ -459,6 +463,7 @@ private fun GroupDetailContent(
     sections: List<MonthSection>,
     localOperations: List<OutboxEntry>,
     meId: Long,
+    freshness: DataFreshness,
     isBlockingOnly: Boolean,
     onClearBlockingFilter: () -> Unit,
     isRefreshing: Boolean,
@@ -499,6 +504,7 @@ private fun GroupDetailContent(
                     room = room,
                     meId = meId,
                     pendingCount = localOperations.size,
+                    freshness = freshness,
                     onSettleUp = onSettleUp,
                 )
             }
@@ -573,6 +579,7 @@ private fun DebtHeroCard(
     room: RoomDetail,
     meId: Long,
     pendingCount: Int = 0,
+    freshness: DataFreshness = DataFreshness(),
     onSettleUp: (() -> Unit)? = null,
 ) {
     val colors = Splitty.colors
@@ -681,6 +688,10 @@ private fun DebtHeroCard(
                 fontSize = 13.sp,
                 color = colors.inkSecondary,
             )
+        }
+        if (freshness.fromCache) {
+            Spacer(Modifier.height(6.dp))
+            CacheNote(freshness = freshness, tag = "group_cache_note")
         }
     }
 }

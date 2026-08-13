@@ -6,6 +6,8 @@ import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
+import java.time.Instant
 import com.zagir.splitty.core.model.ActivityItem
 import com.zagir.splitty.core.model.InviteCard
 import com.zagir.splitty.core.model.InviteStatus
@@ -79,6 +81,10 @@ class ActivityViewModel @Inject constructor(
 
     private val _errorMessage = MutableStateFlow<UiText?>(null)
     val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
+
+    /** Свежесть показанных данных — для подписи «данные сохранённые…». */
+    private val _freshness = MutableStateFlow(DataFreshness())
+    val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
 
     /** id текущего пользователя — для позиций «Вы одолжили/должны/получили». */
     val myUserId: StateFlow<Long?> = sessionStore.state
@@ -224,6 +230,12 @@ class ActivityViewModel @Inject constructor(
             // и попытка её взять офлайн заканчивалась алертом «нет соединения»
             // поверх нормально показанной ленты (порт iOS ActivityViewModel).
             hasMore = !fetched.fromCache && page.size == PAGE_SIZE
+            _freshness.value = if (fetched.fromCache) {
+                _freshness.value.copy(fromCache = true)
+            } else {
+                DataFreshness(fromCache = false, updatedAt = Instant.now())
+            }
+
             // Первый визит: экран открылся раньше, чем приехал ответ, и отметить
             // прочитанное до этой строки было нечем.
             if (isScreenVisible) markSeen()

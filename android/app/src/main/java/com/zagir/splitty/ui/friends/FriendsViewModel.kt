@@ -6,6 +6,8 @@ import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
+import java.time.Instant
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
@@ -40,6 +42,10 @@ class FriendsViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<UiText?>(null)
     val errorMessage: StateFlow<UiText?> = _errorMessage.asStateFlow()
 
+    /** Свежесть показанных данных — для подписи «данные сохранённые…». */
+    private val _freshness = MutableStateFlow(DataFreshness())
+    val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
+
     init {
         viewModelScope.launch {
             sessionStore.dataVersion.collect { reload() }
@@ -71,7 +77,14 @@ class FriendsViewModel @Inject constructor(
 
     private suspend fun reload() {
         try {
-            _state.value = UiState.Content(repository.friends().value)
+            val fetched = repository.friends()
+            _state.value = UiState.Content(fetched.value)
+            _freshness.value = if (fetched.fromCache) {
+                _freshness.value.copy(fromCache = true)
+            } else {
+                DataFreshness(fromCache = false, updatedAt = Instant.now())
+            }
+
         } catch (e: ApiException) {
             // Контент уже есть — тихая ошибка в alert; нет — полноэкранная.
             if (_state.value is UiState.Content) {

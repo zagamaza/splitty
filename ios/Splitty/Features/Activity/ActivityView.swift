@@ -129,6 +129,11 @@ struct ActivityView: View {
     private var feed: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
+                // Лента не имеет сводки, к которой крепится подпись, — поэтому
+                // отдельной строкой сверху: старые события молча выглядят как
+                // «ничего нового»
+                CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(model.invites) { card in
                     InviteCardView(card: card) { action in
                         if inviteActionNeedsConfirm(action) {

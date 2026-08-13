@@ -203,27 +203,9 @@ struct GroupsListView: View {
         .surfaceCard(padding: 20)
     }
 
-    /// Подпись о свежести: когда данные приходили с сервера, и явная пометка,
-    /// если показан кеш. Без неё человек смотрел на старые суммы, ничего об
-    /// этом не зная, — и «неправильный» баланс выглядел как ошибка расчёта.
-    @ViewBuilder
+    /// Подпись о свежести — общая с карточкой группы, друзьями и активностью.
     private var freshnessNote: some View {
-        if model.isFromCache {
-            Label {
-                Text(cacheNoteText)
-            } icon: {
-                Image(systemName: "wifi.slash")
-            }
-            .scaledFont(size: 12.5, relativeTo: .footnote)
-            .foregroundStyle(Color.inkSecondary)
-        }
-    }
-
-    private var cacheNoteText: String {
-        guard let updated = model.lastUpdatedAt else {
-            return String(localized: "Данные сохранённые: связи с сервером нет")
-        }
-        return String(localized: "Данные сохранённые, обновлялись \(DateFmt.relative(updated))")
+        CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
     }
 
     /// Подпись под hero-суммой — по знаку основной валюты

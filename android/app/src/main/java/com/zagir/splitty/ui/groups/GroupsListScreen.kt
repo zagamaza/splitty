@@ -74,9 +74,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.CurrencySum
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.money.aggregateByCurrency
+import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.MoneyTotalsText
 import com.zagir.splitty.ui.components.PrimaryPillButton
@@ -296,14 +298,7 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
         // об этом не зная, — и «неправильный» баланс выглядел как ошибка расчёта
         if (freshness.fromCache) {
             Spacer(Modifier.height(6.dp))
-            Text(
-                text = freshness.updatedAt?.let {
-                    stringResource(R.string.groups_cached_updated, relativeTimeText(it))
-                } ?: stringResource(R.string.groups_cached_no_connection),
-                fontSize = 12.5.sp,
-                color = Splitty.colors.inkSecondary,
-                modifier = Modifier.testTag("groups_cache_note"),
-            )
+            CacheNote(freshness = freshness, tag = "groups_cache_note")
         }
     }
 }

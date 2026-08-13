@@ -42,12 +42,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.CurrencySum
 import com.zagir.splitty.core.model.FriendBalance
 import com.zagir.splitty.core.money.aggregateByCurrency
 import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.Glossary
 import com.zagir.splitty.ui.components.GradientAvatar
+import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.MoneyTotalsText
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.components.SectionHeader
@@ -67,6 +69,7 @@ fun FriendsListScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val freshness by viewModel.freshness.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -85,6 +88,7 @@ fun FriendsListScreen(
             is UiState.Error -> FriendsErrorView(current.message, onRetry = viewModel::retry)
             is UiState.Content -> FriendsList(
                 friends = current.value,
+                freshness = freshness,
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
                 onOpenFriend = onOpenFriend,
@@ -113,6 +117,7 @@ fun FriendsListScreen(
 @Composable
 private fun FriendsList(
     friends: List<FriendBalance>,
+    freshness: DataFreshness,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenFriend: (FriendBalance) -> Unit,
@@ -144,7 +149,7 @@ private fun FriendsList(
                     )
                 }
             } else {
-                item { TotalHeader(totals) }
+                item { TotalHeader(totals, freshness) }
                 items(friends, key = { it.user.id }) { friend ->
                     FriendRow(friend = friend, onClick = { onOpenFriend(friend) })
                 }
@@ -158,7 +163,7 @@ private fun FriendsList(
  * вторичной строкой; подпись — по знаку основной валюты.
  */
 @Composable
-private fun TotalHeader(totals: List<CurrencySum>) {
+private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness) {
     SurfaceCard(
         modifier = Modifier.fillMaxWidth(),
         padding = 20.dp,
@@ -178,6 +183,10 @@ private fun TotalHeader(totals: List<CurrencySum>) {
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.inkSecondary,
         )
+        if (freshness.fromCache) {
+            Spacer(Modifier.height(6.dp))
+            CacheNote(freshness = freshness, tag = "friends_cache_note")
+        }
     }
 }
 

@@ -17,8 +17,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.PersonAddAlt
+import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.InviteCard
 import com.zagir.splitty.core.model.InviteStatus
+import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.SoftChip
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -91,6 +93,7 @@ fun ActivityScreen(
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val myUserId by viewModel.myUserId.collectAsStateWithLifecycle()
     val invites by viewModel.invites.collectAsStateWithLifecycle()
+    val freshness by viewModel.freshness.collectAsStateWithLifecycle()
 
     /** Карточка, выход из которой ждёт подтверждения; null — диалога нет. */
     var leaveConfirmCard by remember { mutableStateOf<InviteCard?>(null) }
@@ -123,6 +126,7 @@ fun ActivityScreen(
             is UiState.Content -> ActivityFeed(
                 items = current.value,
                 invites = invites,
+                freshness = freshness,
                 onInviteAction = { card, action ->
                     when (action) {
                         InviteAction.ACCEPT -> viewModel.acceptInvite(card)
@@ -179,6 +183,7 @@ fun ActivityScreen(
 private fun ActivityFeed(
     items: List<ActivityItem>,
     invites: List<InviteCard>,
+    freshness: DataFreshness,
     onInviteAction: (InviteCard, InviteAction) -> Unit,
     myUserId: Long?,
     isRefreshing: Boolean,
@@ -207,6 +212,14 @@ private fun ActivityFeed(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // У ленты нет сводки, к которой крепится подпись, — поэтому
+            // отдельной строкой сверху: старые события молча выглядят как
+            // «ничего нового»
+            if (freshness.fromCache) {
+                item(key = "cache-note") {
+                    CacheNote(freshness = freshness, tag = "activity_cache_note")
+                }
+            }
             items(invites, key = { "invite-" + it.roomId }) { card ->
                 InviteCardView(
                     card = card,

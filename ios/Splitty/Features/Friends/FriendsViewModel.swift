@@ -19,6 +19,8 @@ final class FriendsViewModel {
     var friends: [FriendBalance] = []
     /// true — показан офлайн-кеш (сеть недоступна), не свежие данные.
     private(set) var isFromCache = false
+    /// Когда данные последний раз пришли С СЕРВЕРА — для подписи о свежести.
+    private(set) var lastUpdatedAt: Date?
     /// Ошибка обновления, когда список уже показан (для alert).
     var errorMessage: String?
 
@@ -58,6 +60,7 @@ final class FriendsViewModel {
             }
             friends = result.value
             isFromCache = result.isFromCache
+            if !result.isFromCache { lastUpdatedAt = Date() }
             state = .loaded
         } catch {
             if error.isTaskCancellation {
