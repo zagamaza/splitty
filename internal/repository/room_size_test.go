@@ -1,10 +1,13 @@
 package repository
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -99,4 +102,53 @@ func TestLargeRoomIsRejectedWithDomainError(t *testing.T) {
 	if err := repo.checkRoomSize(testCtx(t), hex); err != ErrRoomTooLarge {
 		t.Fatalf("комната у потолка не отклонена: %v", err)
 	}
+}
+
+// TestHalfwayRoomWarnsButStillWrites — половина потолка: единственный момент,
+// когда о приближении к пределу вообще можно узнать заранее. Предупреждение
+// обязано попасть в лог, а запись — пройти: отказ на половине означал бы, что
+// группу похоронили за 8 МБ до настоящего предела.
+func TestHalfwayRoomWarnsButStillWrites(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+	donor := api.User{ID: 1, DisplayName: "Хозяин"}
+	roomID := seedLeaveRoom(t, db, donor)
+	hex, err := primitive.ObjectIDFromHex(roomID)
+	if err != nil {
+		t.Fatalf("плохой id комнаты: %v", err)
+	}
+
+	// Девять мегабайтов: выше порога предупреждения (8 МБ) и заметно ниже
+	// порога отказа (15 МБ).
+	for i := 0; i < 9; i++ {
+		if _, err := db.Collection("room").UpdateOne(testCtx(t),
+			bson.M{"_id": hex},
+			bson.M{"$push": bson.M{"ballast": strings.Repeat("x", 1024*1024)}}); err != nil {
+			t.Fatalf("не удалось раздуть комнату: %v", err)
+		}
+	}
+
+	logs := captureLogs(t)
+
+	if err := repo.checkRoomSize(testCtx(t), hex); err != nil {
+		t.Fatalf("комната на половине потолка отклонена: %v", err)
+	}
+	line := logs.String()
+	if !strings.Contains(line, "половину потолка") {
+		t.Fatalf("предупреждения о половине потолка нет в логе: %q", line)
+	}
+	if !strings.Contains(line, hex.Hex()) {
+		t.Fatalf("в предупреждении не видно, какая комната распухла: %q", line)
+	}
+}
+
+// captureLogs подменяет глобальный логгер буфером на время теста. Способ грубый,
+// но иначе предупреждение — единственный наблюдаемый эффект — проверить нечем.
+func captureLogs(t *testing.T) *bytes.Buffer {
+	t.Helper()
+	buf := &bytes.Buffer{}
+	prev := log.Logger
+	log.Logger = zerolog.New(buf)
+	t.Cleanup(func() { log.Logger = prev })
+	return buf
 }
