@@ -61,8 +61,8 @@
     <string name="friends_you_owe_short">debes</string>
     <string name="glossary_mutual_debts">deudas mutuas</string>
     <string name="friends_settlement">saldado</string>
-    <string name="friends_empty_title">Aún no tienes amigos</string>
-    <string name="friends_empty_description">Los amigos aparecen cuando comparten un grupo con gastos</string>
+    <string name="friends_empty_title">Los amigos son con quienes ya compartiste una cuenta</string>
+    <string name="friends_empty_description">Puedes invitarlos a nuevos grupos con un toque, sin código</string>
     <string name="friend_owed_caption">Te debe</string>
     <string name="friend_settled_caption">Están en paz</string>
     <string name="friend_groups_section">Por grupo</string>
@@ -73,8 +73,8 @@
     <string name="friends_create_group">Crear grupo</string>
 
     <!-- Активность -->
-    <string name="activity_empty_title">Aún no hay actividad</string>
-    <string name="activity_empty_description">Aquí aparecerán los gastos y pagos de tus grupos</string>
+    <string name="activity_empty_title">Aquí aparecerán los eventos de tus grupos</string>
+    <string name="activity_empty_description">Nuevos gastos, pagos e invitaciones — todo lo que hacen los participantes</string>
     <string name="activity_added">añadió «%1$s»</string>
     <string name="activity_paid">pagó</string>
     <string name="activity_paid_you">te pagó</string>
@@ -169,8 +169,8 @@
     <string name="groups_archive_empty_title">El archivo está vacío</string>
     <string name="groups_archive_empty_subtitle">Aquí aparecerán los grupos archivados</string>
     <string name="groups_unarchive">Desarchivar</string>
-    <string name="groups_empty_title">Aún no tienes grupos</string>
-    <string name="groups_empty_subtitle">Crea un grupo o únete a uno con un código de invitación</string>
+    <string name="groups_empty_title">Empieza por un grupo</string>
+    <string name="groups_empty_subtitle">Un viaje, un piso compartido o una cena — todo lo que repartes con alguien</string>
     <string name="groups_create_title">Grupo nuevo</string>
     <string name="groups_create_placeholder">Nombre</string>
     <string name="groups_create_hint">Por ejemplo: «Viaje a Estambul» o «Casa».</string>
@@ -206,8 +206,8 @@
     <string name="group_fab_expense">Gasto</string>
     <string name="group_add_expense">Añadir gasto</string>
     <string name="group_settings">Ajustes del grupo</string>
-    <string name="group_empty_ops_title">Aún no hay gastos</string>
-    <string name="group_empty_ops_subtitle">Añade el primer gasto y aparecerá en esta lista</string>
+    <string name="group_empty_ops_title">Añade el primer gasto</string>
+    <string name="group_empty_ops_subtitle">El botón + de abajo: dilo en voz alta, fotografía el recibo o escríbelo</string>
     <string name="group_op_fallback">Gasto</string>
     <string name="group_op_you_paid_sum">Pagaste %1$s</string>
     <string name="group_op_paid_sum">%1$s pagó %2$s</string>
@@ -632,4 +632,7 @@
     <string name="welcome_one_transfer">1 transferencia</string>
     <string name="welcome_without">Sin Splitty</string>
     <string name="welcome_with">Con Splitty</string>
+
+    <string name="invite_friends_hint">Puedes invitar a quien ya compartió un grupo contigo. A alguien nuevo — por enlace o código de invitación.</string>
+    <string name="group_alone_hint">Los gastos se reparten entre los participantes — mientras estés solo, no hay nada que repartir.</string>
 </resources>

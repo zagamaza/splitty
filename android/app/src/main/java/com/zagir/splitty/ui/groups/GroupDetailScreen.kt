@@ -511,7 +511,17 @@ private fun GroupDetailContent(
             // Пока в группе только вы — зовём добавить друзей.
             if (room.members.size <= 1 && !room.isArchived) {
                 item(key = "invite-banner") {
-                    InviteBanner(onClick = onInvite)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        InviteBanner(onClick = onInvite)
+                        // Почему это вообще важно: без второго участника делить нечего.
+                        Text(
+                            text = stringResource(R.string.group_alone_hint),
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            color = Splitty.colors.inkSecondary,
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                        )
+                    }
                 }
             }
             item(key = "mine-segment") {
@@ -1806,6 +1816,15 @@ internal fun InviteFriendsSheetBody(
                 color = colors.inkSecondary,
             )
         } else {
+            // Правило неочевидно и всплывает ровно там, где в него упираются:
+            // человек ищет в списке того, кого там быть не может.
+            Text(
+                text = stringResource(R.string.invite_friends_hint),
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                color = colors.inkSecondary,
+                modifier = Modifier.testTag("invite_friends_hint"),
+            )
             SectionHeader(stringResource(R.string.invite_friends_section))
             SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
                 candidates.forEachIndexed { index, friend ->

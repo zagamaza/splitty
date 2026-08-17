@@ -265,6 +265,12 @@ struct GroupDetailView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            // Почему это вообще важно: без второго участника делить нечего.
+            Text("Расходы делятся между участниками — пока в группе только вы, делить не с кем")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.horizontal, 4)
         }
     }
 
@@ -481,9 +487,9 @@ struct GroupDetailView: View {
 
     private var emptyOperations: some View {
         ContentUnavailableView {
-            Label("Пока нет расходов", systemImage: "doc.plaintext")
+            Label("Добавьте первый расход", systemImage: "doc.plaintext")
         } description: {
-            Text("Добавьте первый расход — он появится в этом списке")
+            Text("Кнопка + внизу: продиктуйте, снимите чек или впишите руками")
         } actions: {
             Button("Добавить расход") {
                 isAddExpensePresented = true

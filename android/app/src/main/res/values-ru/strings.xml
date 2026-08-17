@@ -73,8 +73,8 @@
     <string name="friends_you_owe_short">вы должны</string>
     <string name="glossary_mutual_debts">взаимные долги</string>
     <string name="friends_settlement">расчёт</string>
-    <string name="friends_empty_title">Пока нет друзей</string>
-    <string name="friends_empty_description">Друзья появятся, когда у вас будут общие группы с расходами</string>
+    <string name="friends_empty_title">Друзья — те, с кем уже был общий счёт</string>
+    <string name="friends_empty_description">Их можно звать в новые группы одним тапом, без кода</string>
     <string name="friend_owed_caption">Должен(на) вам</string>
     <string name="friend_settled_caption">Вы рассчитались</string>
     <string name="friend_groups_section">По группам</string>
@@ -85,8 +85,8 @@
     <string name="friends_create_group">Создать группу</string>
 
     <!-- Активность -->
-    <string name="activity_empty_title">Пока нет активности</string>
-    <string name="activity_empty_description">Здесь появятся расходы и платежи ваших групп</string>
+    <string name="activity_empty_title">Здесь появятся события ваших групп</string>
+    <string name="activity_empty_description">Новые расходы, погашения и приглашения — всё, что делают участники</string>
     <string name="activity_added">добавил(а) «%1$s»</string>
     <string name="activity_paid">заплатил(а)</string>
     <string name="activity_paid_you">заплатил(а) вам</string>
@@ -224,8 +224,8 @@
     <string name="groups_archive_empty_title">Архив пуст</string>
     <string name="groups_archive_empty_subtitle">Архивные группы появятся здесь</string>
     <string name="groups_unarchive">Разархивировать</string>
-    <string name="groups_empty_title">Пока нет групп</string>
-    <string name="groups_empty_subtitle">Создайте группу или присоединитесь по коду приглашения</string>
+    <string name="groups_empty_title">Начните с группы</string>
+    <string name="groups_empty_subtitle">Поездка, общая квартира или один ужин — всё, что вы с кем-то делите</string>
     <string name="groups_create_title">Новая группа</string>
     <string name="groups_create_placeholder">Название</string>
     <string name="groups_create_hint">Например: «Поездка в Стамбул» или «Квартира».</string>
@@ -267,8 +267,8 @@
     <string name="group_fab_expense">Расход</string>
     <string name="group_add_expense">Добавить расход</string>
     <string name="group_settings">Настройки группы</string>
-    <string name="group_empty_ops_title">Пока нет расходов</string>
-    <string name="group_empty_ops_subtitle">Добавьте первый расход — он появится в этом списке</string>
+    <string name="group_empty_ops_title">Добавьте первый расход</string>
+    <string name="group_empty_ops_subtitle">Кнопка + внизу: продиктуйте, снимите чек или впишите руками</string>
     <string name="group_op_fallback">Расход</string>
     <string name="group_op_you_paid_sum">Вы заплатили %1$s</string>
     <string name="group_op_paid_sum">%1$s заплатил(а) %2$s</string>
@@ -675,4 +675,7 @@
     <string name="welcome_one_transfer">1 перевод</string>
     <string name="welcome_without">Без Splitty</string>
     <string name="welcome_with">Со Splitty</string>
+
+    <string name="invite_friends_hint">Позвать можно того, с кем уже была общая группа. Нового человека — по ссылке или коду приглашения.</string>
+    <string name="group_alone_hint">Расходы делятся между участниками — пока в группе только вы, делить не с кем.</string>
 </resources>

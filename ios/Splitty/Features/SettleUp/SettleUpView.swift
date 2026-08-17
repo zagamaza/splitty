@@ -123,7 +123,7 @@ struct SettleUpView: View {
         } else if let debts {
             if debts.isEmpty {
                 ContentUnavailableView {
-                    Label("Нет долгов", systemImage: "checkmark.circle")
+                    Label("Все в расчёте", systemImage: "checkmark.circle")
                 } description: {
                     Text("У вас нет долгов в этой группе")
                 }

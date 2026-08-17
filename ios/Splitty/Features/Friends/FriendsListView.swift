@@ -99,9 +99,9 @@ struct FriendsListView: View {
         .overlay {
             if model.friends.isEmpty {
                 ContentUnavailableView {
-                    Label("Пока нет друзей", systemImage: "person.2")
+                    Label("Друзья — те, с кем уже был общий счёт", systemImage: "person.2")
                 } description: {
-                    Text("Друзья появятся, когда у вас будут общие группы с расходами")
+                    Text("Их можно звать в новые группы одним тапом, без кода")
                 } actions: {
                     Button("Создать группу") {
                         isCreateGroupPresented = true

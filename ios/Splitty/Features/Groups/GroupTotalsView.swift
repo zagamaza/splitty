@@ -85,7 +85,7 @@ struct GroupTotalsView: View {
     /// Пустая комната: дружелюбное состояние вместо нулевых графиков.
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Пока нет расходов", systemImage: "chart.bar")
+            Label("Итоги появятся с первым расходом", systemImage: "chart.bar")
         } description: {
             Text("Добавьте первый расход — здесь появится статистика группы")
         }

@@ -86,6 +86,13 @@ struct InviteFriendView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    // Правило неочевидно и всплывает там, где в него упираются:
+                    // человек ищет в списке того, кого там быть не может.
+                    Text("Позвать можно того, с кем уже была общая группа. Нового человека — по ссылке или коду приглашения")
+                        .scaledFont(size: 12, relativeTo: .footnote)
+                        .foregroundStyle(Color.inkSecondary)
+                        .padding(.horizontal, 4)
+
                     if candidates.isEmpty {
                         emptyState
                     } else {

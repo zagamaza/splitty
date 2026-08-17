@@ -56,7 +56,7 @@ struct GroupBalancesView: View {
                     }
                 } else if room.debts.isEmpty {
                     ContentUnavailableView {
-                        Label("Нет долгов", systemImage: "checkmark.circle")
+                        Label("Все в расчёте", systemImage: "checkmark.circle")
                     } description: {
                         Text("Все участники в расчёте")
                     }

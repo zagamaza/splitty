@@ -178,9 +178,9 @@ struct ActivityView: View {
         .overlay {
             if activityFeedIsEmpty(items: model.items, invites: model.invites) {
                 ContentUnavailableView {
-                    Label("Пока нет активности", systemImage: "clock")
+                    Label("Здесь появятся события ваших групп", systemImage: "clock")
                 } description: {
-                    Text("Здесь появятся расходы и платежи ваших групп")
+                    Text("Новые расходы, погашения и приглашения — всё, что делают участники")
                 }
             }
         }

@@ -182,9 +182,9 @@ struct GroupsListView: View {
     /// оба первых шага доступны прямо отсюда, не только из тулбара.
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Пока нет групп", systemImage: "person.3")
+            Label("Начните с группы", systemImage: "person.3")
         } description: {
-            Text("Создайте группу или присоединитесь по коду приглашения")
+            Text("Поездка, общая квартира или один ужин — всё, что вы с кем-то делите")
         } actions: {
             Button("Создать группу") {
                 isCreatePresented = true
