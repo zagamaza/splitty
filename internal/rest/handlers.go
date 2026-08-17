@@ -162,6 +162,7 @@ func (s *Server) buildRoomDetail(room *api.Room, userId int, seenThrough time.Ti
 		MyBalance:        balanceFromDebts(debts, userId),
 		Debts:            toDebtDtos(debts),
 		DebtsUnavailable: !ok,
+		AvatarFileId:     roomAvatarFileId(room),
 		Operations:       toOperationDtos(ops),
 		InviteUrl:        s.inviteURL(room.ID.Hex()),
 	}
@@ -332,6 +333,7 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 				MyBalance:        balanceFromDebts(debts, userId),
 				DebtsUnavailable: !ok,
 				UnreadCount:      roomUnreadCount(room, user),
+				AvatarFileId:     roomAvatarFileId(room),
 			})
 		}
 	}
@@ -1721,6 +1723,19 @@ func (s *Server) handleGetFile(w http.ResponseWriter, r *http.Request) {
 	userId := userIdFromCtx(ctx)
 	fileId := r.PathValue("fileId")
 
+	// Сначала своё хранилище: картинки, загруженные из приложения, лежат в
+	// mongo. Не нашли — значит это телеграмный file_id из бота, дальше старый
+	// путь. Порядок именно такой: id монги короткий и однозначный, а лишний
+	// поход в телеграм за ним стоил бы двух сетевых запросов на промах.
+	served, hErr := s.serveStoredFile(ctx, w, userId, fileId)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+	if served {
+		return
+	}
+
 	if s.cfg.TgToken == "" {
 		writeError(w, http.StatusServiceUnavailable, "unavailable", "telegram-бот не сконфигурирован")
 		return
@@ -1827,6 +1842,54 @@ func redactTgToken(err error) error {
 }
 
 // userHasFile проверяет, что fileId встречается в операциях комнат пользователя (включая архивные)
+// storedFileMaxAge — сколько клиенту держать картинку. Ава неизменяема: замена
+// создаёт новый документ с новым id, поэтому кешировать можно надолго, и список
+// групп перестаёт качать одни и те же байты на каждом скролле.
+const storedFileMaxAge = 30 * 24 * time.Hour
+
+// serveStoredFile отдаёт картинку из mongo. Возвращает false, если файла с
+// таким id в нашем хранилище нет — вызывающий уходит на телеграмный путь.
+func (s *Server) serveStoredFile(ctx context.Context, w http.ResponseWriter, userId int, fileId string) (bool, *httpError) {
+	if s.files == nil {
+		return false, nil
+	}
+	f, err := s.files.Get(ctx, fileId)
+	if err != nil {
+		log.Error().Err(err).Msg("cannot read stored file")
+		return false, &httpError{http.StatusInternalServerError, "internal", "не удалось получить файл"}
+	}
+	if f == nil {
+		return false, nil
+	}
+
+	// Доступ — по комнате файла: одна выборка вместо перебора всех комнат
+	// пользователя, как в телеграмном пути.
+	room, hErr := s.findRoom(ctx, f.RoomId.Hex())
+	if hErr != nil {
+		return false, hErr
+	}
+	if !isRoomMember(room, userId) {
+		return false, &httpError{http.StatusForbidden, "forbidden", "нет доступа к этому файлу"}
+	}
+
+	contentType := f.Mime
+	// Тот же allowlist, что у телеграмных вложений: файл загружает участник
+	// комнаты, а отдаём мы его со своего origin.
+	if !allowedInlineTypes[contentType] {
+		contentType = "application/octet-stream"
+		w.Header().Set("Content-Disposition", "attachment")
+	}
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Length", strconv.Itoa(len(f.Data)))
+	w.Header().Set("Cache-Control", fmt.Sprintf("private, max-age=%d, immutable", int(storedFileMaxAge.Seconds())))
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write(f.Data); err != nil {
+		log.Error().Err(err).Msg("cannot write stored file")
+	}
+	return true, nil
+}
+
 func (s *Server) userHasFile(ctx context.Context, userId int, fileId string) (bool, *httpError) {
 	for _, find := range []func(context.Context, int) (*[]api.Room, error){
 		s.roomRepo.FindRoomsByUserId,

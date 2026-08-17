@@ -119,6 +119,8 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
+	// SetAvatarFileId ставит ссылку на аву комнаты; пустая строка снимает её
+	SetAvatarFileId(ctx context.Context, roomId string, fileId string) error
 	// AnonymizeUser затирает имя пользователя во ВСЕХ встроенных снимках комнат
 	// (users[], operations[].donor, operations[].recipients[],
 	// operations[].recipients_with_sum[].user) и вычищает оттуда поля личности.
@@ -1041,6 +1043,25 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
 	update := bson.D{{Key: "$set", Value: bson.M{"currency": currency}}}
+	_, err = rr.col.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// SetAvatarFileId ставит ссылку на аву комнаты. Пустая строка снимает поле
+// целиком ($unset, а не пустая строка в базе): клиент отличает «фото нет» по
+// отсутствию ключа, а не по его значению.
+func (rr MongoRoomRepository) SetAvatarFileId(ctx context.Context, roomId string, fileId string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
+	var update bson.D
+	if fileId == "" {
+		update = bson.D{{Key: "$unset", Value: bson.M{"avatar_file_id": ""}}}
+	} else {
+		update = bson.D{{Key: "$set", Value: bson.M{"avatar_file_id": fileId}}}
+	}
 	_, err = rr.col.UpdateOne(ctx, filter, update)
 	return err
 }

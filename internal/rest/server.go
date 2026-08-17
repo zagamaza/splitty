@@ -73,6 +73,15 @@ type inviteStore interface {
 	DeleteByUserId(ctx context.Context, userId int) error
 }
 
+// fileStore — картинки, загруженные из приложения (коллекция files). Байты
+// лежат в mongo; телеграм остаётся только для файлов, присланных в бота.
+type fileStore interface {
+	Save(ctx context.Context, f *api.StoredFile) (string, error)
+	Get(ctx context.Context, id string) (*api.StoredFile, error)
+	Delete(ctx context.Context, id string) error
+	DeleteByRoom(ctx context.Context, roomId string) error
+}
+
 // Config конфигурация REST-сервера
 type Config struct {
 	Listen    string // адрес http-сервера, например "localhost:7171"
@@ -168,6 +177,10 @@ type Server struct {
 	// invites опционален (см. SetInvites): хранилище отношений «человек ×
 	// комната» для приглашений и раздела уведомлений
 	invites inviteStore
+	// files опционален (см. SetFiles): хранилище картинок в mongo. nil —
+	// загрузка авы отвечает 503, а отдача файлов работает по-старому, через
+	// телеграм
+	files fileStore
 
 	// dbPing проверяет доступность базы для /health; nil — проверять нечем
 	// (тесты, запуск без mongo)
@@ -272,6 +285,13 @@ func (s *Server) SetInvites(store inviteStore) {
 	s.invites = store
 }
 
+// SetFiles подключает хранилище картинок. Вызывать до Run, nil-безопасно:
+// без него загрузка авы отвечает 503, а старые телеграмные вложения
+// продолжают отдаваться.
+func (s *Server) SetFiles(store fileStore) {
+	s.files = store
+}
+
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
 // nil parser оставляет фичу выключенной (503). Отдельный setter, а не параметр
 // NewServer — не ломает существующие вызовы конструктора в тестах.
@@ -362,6 +382,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/v1/notifications", s.auth(s.handleNotifications))
 	mux.Handle("POST /api/v1/me/notifications-seen", s.auth(s.handleMarkNotificationsSeen))
 	mux.Handle("POST /api/v1/rooms/{roomId}/notifications-seen", s.auth(s.handleMarkRoomSeen))
+	mux.Handle("PUT /api/v1/rooms/{roomId}/avatar", s.auth(s.handleSetRoomAvatar))
+	mux.Handle("DELETE /api/v1/rooms/{roomId}/avatar", s.auth(s.handleDeleteRoomAvatar))
 	mux.Handle("POST /api/v1/rooms/{roomId}/archive", s.auth(s.handleArchiveRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/unarchive", s.auth(s.handleUnarchiveRoom))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/currency", s.auth(s.handleUpdateCurrency))

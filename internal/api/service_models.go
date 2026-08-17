@@ -14,6 +14,10 @@ type Room struct {
 	RoomStates RoomStatesUsers    `json:"roomStates" bson:"room_states"`
 	CreateAt   time.Time          `json:"createAt" bson:"create_at"`
 	Currency   string             `json:"currency" bson:"currency"`
+	// AvatarFileId — ссылка на документ в коллекции files. Сами байты внутри
+	// комнаты не лежат: тут уже все её операции и потолок mongo 16 МБ.
+	// nil — фото не загружали, клиент рисует градиент по хэшу id.
+	AvatarFileId *string `json:"avatarFileId,omitempty" bson:"avatar_file_id,omitempty"`
 }
 
 type CurrencyInfo struct {
@@ -105,6 +109,29 @@ type File struct {
 	FileId string   `json:"fileId" bson:"file_id"`
 }
 type FileType string
+
+// StoredFileKind — зачем файл лежит в базе. Вид пока один, но поле есть с
+// самого начала: чек расхода ляжет рядом без миграции.
+type StoredFileKind string
+
+const StoredFileRoomAvatar StoredFileKind = "room_avatar"
+
+// StoredFile — картинка, загруженная из приложения. Байты лежат ОТДЕЛЬНОЙ
+// коллекцией, а не внутри комнаты: в документе комнаты уже все её операции,
+// потолок mongo 16 МБ, и ава вычитывалась бы при каждом открытии списка групп.
+//
+// RoomId — и владелец, и проверка доступа: файл видит тот, кто состоит в этой
+// комнате.
+type StoredFile struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"`
+	RoomId    primitive.ObjectID `bson:"room_id"`
+	OwnerId   int                `bson:"owner_id"`
+	Kind      StoredFileKind     `bson:"kind"`
+	Mime      string             `bson:"mime"`
+	Size      int                `bson:"size"`
+	Data      []byte             `bson:"data"`
+	CreatedAt time.Time          `bson:"created_at"`
+}
 
 type OperationStatus string
 

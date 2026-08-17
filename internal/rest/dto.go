@@ -114,6 +114,12 @@ type debtDto struct {
 	Sum    int     `json:"sum"`
 }
 
+// roomAvatarDto ответ на загрузку авы: клиенту нужен новый id, чтобы сразу
+// показать картинку, не перечитывая список комнат.
+type roomAvatarDto struct {
+	AvatarFileId string `json:"avatarFileId"`
+}
+
 type roomSummaryDto struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
@@ -122,6 +128,8 @@ type roomSummaryDto struct {
 	Currency    string    `json:"currency"`
 	Members     []userDto `json:"members"`
 	MemberCount int       `json:"memberCount"`
+	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
+	AvatarFileId string `json:"avatarFileId,omitempty"`
 	TotalSpent  int       `json:"totalSpent"`
 	MyBalance   int       `json:"myBalance"`
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
@@ -140,6 +148,8 @@ type roomDetailDto struct {
 	IsArchived bool      `json:"isArchived"`
 	Currency   string    `json:"currency"`
 	Members    []userDto `json:"members"`
+	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
+	AvatarFileId string `json:"avatarFileId,omitempty"`
 	TotalSpent int       `json:"totalSpent"`
 	MySpent    int       `json:"mySpent"`
 	MyBalance  int       `json:"myBalance"`
@@ -394,6 +404,15 @@ func roomMembers(r *api.Room) []api.User {
 }
 
 // roomOperations nil-безопасно возвращает операции комнаты
+// roomAvatarFileId разыменовывает ссылку на фото комнаты. Пустая строка и
+// отсутствие поля для клиента значат одно и то же — фото нет.
+func roomAvatarFileId(r *api.Room) string {
+	if r == nil || r.AvatarFileId == nil {
+		return ""
+	}
+	return *r.AvatarFileId
+}
+
 func roomOperations(r *api.Room) []api.Operation {
 	if r == nil || r.Operations == nil {
 		return nil

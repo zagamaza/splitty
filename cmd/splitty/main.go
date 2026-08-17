@@ -199,6 +199,12 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	inviteRepository := repository.NewInviteRepository(db)
 	server.SetInvites(inviteRepository)
 
+	// Картинки, загруженные из приложения (пока только ава группы), лежат
+	// отдельной коллекцией: в документе комнаты уже все её операции и потолок
+	// mongo 16 МБ
+	fileRepository := repository.NewFileRepository(db)
+	server.SetFiles(fileRepository)
+
 	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
 	// снаружи выглядел рабочим
 	server.SetDBPing(func(ctx context.Context) error { return db.Client().Ping(ctx, nil) })
@@ -210,6 +216,12 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
+	}
+
+	// Индекс files — не фатально: без него удаление файлов комнаты идёт полным
+	// сканом, но загрузка и отдача авы работают
+	if err := fileRepository.EnsureIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create files indexes")
 	}
 
 	// Индексы личностей — фатально, в отличие от login_code: без unique sparse по

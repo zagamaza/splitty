@@ -1054,6 +1054,21 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 	return nil
 }
 
+// SetAvatarFileId как mongo-реализация: пустая строка снимает поле целиком, а
+// не пишет пустое значение.
+func (f *fakeRoomRepo) SetAvatarFileId(_ context.Context, roomId string, fileId string) error {
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	if fileId == "" {
+		room.AvatarFileId = nil
+		return nil
+	}
+	room.AvatarFileId = &fileId
+	return nil
+}
+
 // AnonymizeUser как mongo-реализация: во всех встроенных снимках заменяет
 // display_name плейсхолдером и вычищает PII, не трогая id, суммы и доли.
 // anonymizeErr имитирует сбой посреди удаления аккаунта (одна попытка)
