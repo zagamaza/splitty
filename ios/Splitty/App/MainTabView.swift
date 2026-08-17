@@ -19,11 +19,18 @@ struct MainTabView: View {
     /// Не private: по вкладке проверяется маршрут push (`pushTarget`).
     enum Tab: Hashable {
         case friends, groups, add, activity, account
+
+        /// Вкладка, на которой открывается приложение. Новый аккаунт попадал на
+        /// «Друзей», где по определению пусто, и первым читал отрицание.
+        static let initial: Tab = .groups
     }
 
     @Environment(SessionStore.self) private var session
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selection: Tab = .friends
+    /// Стартовая вкладка — «Группы»: новый аккаунт открывался на «Друзьях»,
+    /// где по определению пусто, и первое, что он читал, было отрицание.
+    /// Диплинки на приглашение и на операцию перебивают это ниже по коду.
+    @State private var selection: Tab = Tab.initial
     /// Путь стека вкладки «Группы» — здесь, а не внутри списка: тап по push
     /// про расход обязан открыть комнату поверх этой вкладки.
     @State private var groupsPath: [GroupsRoute] = []

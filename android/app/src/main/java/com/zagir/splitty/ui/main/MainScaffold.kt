@@ -112,6 +112,9 @@ internal object MainRoutes {
     /** Вкладки: на них виден нижний бар и работает switchTab. */
     val tabs = setOf(FRIENDS, GROUPS, ACTIVITY, ACCOUNT)
 
+    /** Вкладка, на которой открывается приложение (см. комментарий у NavHost). */
+    const val START = GROUPS
+
     fun friendDetail(userId: Long, name: String) = "friend/$userId?name=${Uri.encode(name)}"
     fun room(roomId: String) = "room/$roomId"
     fun operation(roomId: String, operationId: String) = "room/$roomId/operation/$operationId"
@@ -456,7 +459,9 @@ private fun MainNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = MainRoutes.FRIENDS,
+        // Стартовая вкладка — «Группы»: новый аккаунт открывался на «Друзьях»,
+        // где по определению пусто. Диплинки (room/operation) перебивают её.
+        startDestination = MainRoutes.START,
         modifier = modifier,
     ) {
         // --- Вкладки ---
