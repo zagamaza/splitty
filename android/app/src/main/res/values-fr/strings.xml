@@ -8,6 +8,12 @@
 
     <!-- Логин -->
     <string name="login_tagline">Partagez vos dépenses entre amis</string>
+    <string name="login_prop_split_title">Une note pour tout le monde</string>
+    <string name="login_prop_split_body">Un voyage, un appart, un dîner — qui a payé quoi</string>
+    <string name="login_prop_once_title">Payez une seule fois</string>
+    <string name="login_prop_once_body">Les dettes se compensent : un virement au lieu de plusieurs</string>
+    <string name="login_prop_money_title">L\'argent, vous l\'envoyez vous-mêmes</string>
+    <string name="login_prop_money_body">Splitty ne fait que tenir les comptes</string>
     <string name="login_google_button">Continuer avec Google</string>
     <string name="google_sign_in_no_activity">Impossible d\'ouvrir la fenêtre Google. Réessayez</string>
     <string name="login_email_disclosure_prefix">Ou</string>

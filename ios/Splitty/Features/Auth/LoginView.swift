@@ -98,6 +98,7 @@ struct LoginView: View {
                 // ровно по центру блок читается съехавшим к кнопкам.
                 Spacer(minLength: 0)
                 appMark
+                valueProps
                     .padding(.bottom, 28)
                 Spacer(minLength: 0)
 
@@ -147,6 +148,43 @@ struct LoginView: View {
     /// В DEBUG он же — тайная дверь к полю «Сервер» (см. `serverRevealTaps`).
     ///
     /// Иконка — отдельный ресурс `AppMark`, копия `icon-1024`: сам AppIcon
+    /// Три пункта вместо строки «Делите расходы с друзьями»: она описывала любое
+    /// приложение категории и не отвечала ни на один реальный вопрос. Отвечаем
+    /// на три: что я записываю, что это даёт, переводит ли приложение деньги.
+    /// Статичный блок, не карусель: он обязан помещаться на маленьком экране
+    /// вместе с кнопками входа и при увеличенном системном шрифте.
+    private var valueProps: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(LoginValueProp.all) { prop in
+                valueProp(icon: prop.icon, title: prop.title, detail: prop.detail)
+            }
+        }
+        .padding(.top, 22)
+        .padding(.horizontal, 4)
+        .frame(maxWidth: 380)
+    }
+
+    private func valueProp(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.accentText)
+                .frame(width: 30, height: 30)
+                .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .scaledFont(size: 14.5, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                Text(detail)
+                    .scaledFont(size: 12.5, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
     /// из кода недоступен, его забирает система.
     private var appMark: some View {
         VStack(spacing: 14) {
@@ -157,15 +195,9 @@ struct LoginView: View {
                 .shadow(color: .black.opacity(0.14), radius: 14, y: 7)
                 .accessibilityHidden(true)
 
-            VStack(spacing: 6) {
-                Text("Splitty")
-                    .scaledFont(size: 40, weight: .bold, relativeTo: .title)
-                    .foregroundStyle(Color.accent)
-                Text("Делите расходы с друзьями")
-                    .scaledFont(size: 16, weight: .medium)
-                    .foregroundStyle(Color.inkSecondary)
-                    .multilineTextAlignment(.center)
-            }
+            Text("Splitty")
+                .scaledFont(size: 40, weight: .bold, relativeTo: .title)
+                .foregroundStyle(Color.accent)
         }
         #if DEBUG
         // contentShape: тапы ловятся и по пустому месту между строками,
@@ -543,4 +575,34 @@ private struct LoginFieldStyle: ViewModifier {
 #Preview {
     LoginView()
         .environment(SessionStore())
+}
+
+/// Пункты на экране входа. Вынесены из вью: их состав — продуктовое решение,
+/// и оно должно ломаться тестом, а не молча исчезать при следующей правке.
+struct LoginValueProp: Identifiable {
+    let id: String
+    let icon: String
+    let title: String
+    let detail: String
+
+    static let all: [LoginValueProp] = [
+        .init(
+            id: "split",
+            icon: "list.bullet",
+            title: String(localized: "Общий счёт на всех"),
+            detail: String(localized: "Поездка, квартира, ужин — кто за что заплатил")
+        ),
+        .init(
+            id: "once",
+            icon: "arrow.triangle.merge",
+            title: String(localized: "Платите один раз"),
+            detail: String(localized: "Долги сводятся: один перевод вместо нескольких")
+        ),
+        .init(
+            id: "money",
+            icon: "arrow.right",
+            title: String(localized: "Деньги передаёте сами"),
+            detail: String(localized: "Splitty только ведёт учёт")
+        ),
+    ]
 }

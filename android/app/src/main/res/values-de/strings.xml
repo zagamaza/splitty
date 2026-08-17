@@ -8,6 +8,12 @@
 
     <!-- Логин -->
     <string name="login_tagline">Teile Ausgaben mit Freunden</string>
+    <string name="login_prop_split_title">Eine Rechnung für alle</string>
+    <string name="login_prop_split_body">Reise, WG, Abendessen — wer was bezahlt hat</string>
+    <string name="login_prop_once_title">Einmal zahlen statt mehrmals</string>
+    <string name="login_prop_once_body">Schulden werden verrechnet: eine Überweisung statt mehrerer</string>
+    <string name="login_prop_money_title">Das Geld überweist ihr selbst</string>
+    <string name="login_prop_money_body">Splitty führt nur Buch</string>
     <string name="login_google_button">Mit Google anmelden</string>
     <string name="google_sign_in_no_activity">Das Google-Anmeldefenster ließ sich nicht öffnen. Bitte versuche es erneut</string>
     <string name="login_email_disclosure_prefix">Oder</string>

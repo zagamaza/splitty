@@ -15,6 +15,12 @@
 
     <!-- Логин -->
     <string name="login_tagline">Split expenses with friends</string>
+    <string name="login_prop_split_title">One shared bill for everyone</string>
+    <string name="login_prop_split_body">A trip, a flat, a dinner — who paid for what</string>
+    <string name="login_prop_once_title">Pay once, not many times</string>
+    <string name="login_prop_once_body">Debts are netted: one transfer instead of several</string>
+    <string name="login_prop_money_title">You send the money yourself</string>
+    <string name="login_prop_money_body">Splitty only keeps the record</string>
     <string name="login_google_button">Sign in with Google</string>
     <string name="google_sign_in_no_activity">Couldn\'t open the Google sign-in dialog. Please try again</string>
     <string name="login_email_disclosure_prefix">Or</string>

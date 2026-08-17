@@ -76,6 +76,11 @@ import com.zagir.splitty.core.auth.TelegramWebAuth
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.theme.Splitty
+import androidx.compose.material.icons.filled.Merge
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 
 /**
  * Экран входа — паритет iOS LoginView: иконка с названием в верхней половине,
@@ -238,13 +243,60 @@ private fun AppMark(modifier: Modifier = Modifier, onTap: () -> Unit) {
             fontWeight = FontWeight.Bold,
             color = Splitty.colors.accent,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = stringResource(R.string.login_tagline),
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = Splitty.colors.inkSecondary,
+        Spacer(Modifier.height(20.dp))
+        ValueProps()
+    }
+}
+
+/**
+ * Три пункта вместо строки «Делите расходы с друзьями»: она описывала любое
+ * приложение категории. Отвечаем на три реальных вопроса: что я записываю,
+ * что это даёт, переводит ли приложение деньги.
+ *
+ * Статичный блок, не карусель: обязан помещаться на маленьком экране вместе
+ * с кнопками входа и при увеличенном системном шрифте.
+ */
+@Composable
+internal fun ValueProps() {
+    Column(
+        modifier = Modifier.fillMaxWidth().widthIn(max = 380.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        ValueProp(
+            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+            title = stringResource(R.string.login_prop_split_title),
+            body = stringResource(R.string.login_prop_split_body),
         )
+        ValueProp(
+            icon = Icons.Filled.Merge,
+            title = stringResource(R.string.login_prop_once_title),
+            body = stringResource(R.string.login_prop_once_body),
+        )
+        ValueProp(
+            icon = Icons.AutoMirrored.Filled.ArrowForward,
+            title = stringResource(R.string.login_prop_money_title),
+            body = stringResource(R.string.login_prop_money_body),
+        )
+    }
+}
+
+@Composable
+private fun ValueProp(icon: ImageVector, title: String, body: String) {
+    val colors = Splitty.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.accent.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = colors.accentText, modifier = Modifier.size(16.dp))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(text = title, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
+            Text(text = body, fontSize = 12.5.sp, lineHeight = 16.sp, color = colors.inkSecondary)
+        }
     }
 }
 

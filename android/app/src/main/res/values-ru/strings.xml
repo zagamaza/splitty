@@ -10,6 +10,12 @@
 
     <!-- Логин -->
     <string name="login_tagline">Делите расходы с друзьями</string>
+    <string name="login_prop_split_title">Общий счёт на всех</string>
+    <string name="login_prop_split_body">Поездка, квартира, ужин — кто за что заплатил</string>
+    <string name="login_prop_once_title">Платите один раз</string>
+    <string name="login_prop_once_body">Долги сводятся: один перевод вместо нескольких</string>
+    <string name="login_prop_money_title">Деньги передаёте сами</string>
+    <string name="login_prop_money_body">Splitty только ведёт учёт</string>
     <string name="login_google_button">Войти через Google</string>
     <!-- Credential Manager рисует системный лист поверх активити, и без неё
          показывать нечего (findActivity вернул null — экран внутри чужого
