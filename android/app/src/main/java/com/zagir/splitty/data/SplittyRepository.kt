@@ -256,6 +256,23 @@ class SplittyRepository @Inject constructor(
     }
 
     /**
+     * Фото группы: PUT /rooms/{id}/avatar. Сжатие до 1024 px делает вызывающий
+     * (см. ImageCompressor) — сервер режет по 5 МБ и проверяет тип по сигнатуре.
+     * Возвращает id нового файла: его можно показать сразу, не перечитывая список.
+     */
+    suspend fun setRoomAvatar(roomId: String, image: ByteArray): String = call {
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+            .addFormDataPart("image", "avatar.jpg", image.toRequestBody("image/jpeg".toMediaType()))
+            .build()
+        api.setRoomAvatar(roomId, body).avatarFileId
+    }
+
+    /** DELETE /rooms/{id}/avatar — снять фото группы. Идемпотентно. */
+    suspend fun deleteRoomAvatar(roomId: String) = call {
+        api.deleteRoomAvatar(roomId)
+    }
+
+    /**
      * POST /users/{id}/aliases — дозапись прозвища участнику после сопоставления
      * нераспознанного имени. Best-effort: провал (403 «нет общей комнаты», сеть)
      * не рушит поток сохранения расхода — возвращаем false, наверх не бросаем.

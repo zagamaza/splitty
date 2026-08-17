@@ -553,6 +553,9 @@ struct RoomSummary: Codable, Identifiable, Hashable {
     /// группы. `100` означает «больше 99» (см. `MainTabView.badgeLabel`).
     /// omitempty на сервере → у прочитанной группы ключа нет, отсюда default 0.
     var unreadCount: Int = 0
+    /// Фото группы: id файла для `GET /api/v1/files/{id}`. nil — фото не
+    /// загружали, рисуем градиент по хэшу id комнаты.
+    var avatarFileId: String?
 }
 
 // init(from:) в extension, чтобы сохранить memberwise-инициализатор (объявление
@@ -574,6 +577,7 @@ extension RoomSummary {
         // Ключа нет ни у прочитанной группы (omitempty), ни в списках, лежащих
         // в офлайн-кеше с прошлой версии приложения.
         unreadCount = try c.decodeIfPresent(Int.self, forKey: .unreadCount) ?? 0
+        avatarFileId = try c.decodeIfPresent(String.self, forKey: .avatarFileId)
     }
 }
 
@@ -604,6 +608,8 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     /// nil/пусто — публичный домен на сервере ещё не настроен; экран
     /// приглашения тогда откатывается на легаси-ссылку бота (`InviteGroupView`).
     var inviteUrl: String?
+    /// Фото группы — см. `RoomSummary.avatarFileId`.
+    var avatarFileId: String?
     /// Расходы, которые держат человека в группе: пока они есть, сервер выхода
     /// не даст. Считаем на клиенте, чтобы сказать это ДО нажатия, а не отказом.
     func operationsBlockingLeave(for userId: Int) -> [Operation] {

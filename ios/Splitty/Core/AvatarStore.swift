@@ -44,10 +44,58 @@ final class AvatarStore {
         }
     }
 
+    /// Картинки из своего хранилища (`GET /files/{id}`) — фото групп. Ключ
+    /// строковый, а не числовой: id файла и id пользователя живут в разных
+    /// пространствах, и мешать их в одном словаре нельзя.
+    private(set) var fileImages: [String: UIImage] = [:]
+    private var missingFiles: Set<String> = []
+    private var inflightFiles: Set<String> = []
+
+    /// Загружает картинку по id файла, если её ещё нет в кеше. Ава неизменяема:
+    /// замена даёт НОВЫЙ id, поэтому кеш можно держать до конца сессии, а список
+    /// групп не качает одни и те же байты на каждом скролле.
+    func loadFile(_ fileId: String, api: APIClient) async {
+        guard fileImages[fileId] == nil,
+              !missingFiles.contains(fileId),
+              !inflightFiles.contains(fileId) else {
+            return
+        }
+        let started = generation
+        inflightFiles.insert(fileId)
+        defer { inflightFiles.remove(fileId) }
+        do {
+            let data = try await api.fileData(id: fileId)
+            guard started == generation else { return }
+            if let image = UIImage(data: data) {
+                fileImages[fileId] = image
+            } else {
+                missingFiles.insert(fileId)
+            }
+        } catch let error as APIError {
+            guard started == generation else { return }
+            // 403/404 — файла нет или он не наш: повторять незачем. Сетевые
+            // ошибки не кешируем, попробуем ещё раз.
+            if case .server(let status, _, _) = error, status == 404 || status == 403 {
+                missingFiles.insert(fileId)
+            }
+        } catch {
+            // отмена задачи и т.п. — молча
+        }
+    }
+
+    /// Забыть картинку файла: после замены или снятия авы старый кадр не должен
+    /// остаться на экране.
+    func forgetFile(_ fileId: String) {
+        fileImages[fileId] = nil
+        missingFiles.remove(fileId)
+    }
+
     /// Полная очистка (logout).
     func removeAll() {
         generation += 1
         images = [:]
         missing = []
+        fileImages = [:]
+        missingFiles = []
     }
 }

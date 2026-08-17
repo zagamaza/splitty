@@ -333,7 +333,7 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GroupAvatar(roomId = room.id, name = room.name, size = 46.dp)
+            GroupAvatar(roomId = room.id, name = room.name, size = 46.dp, avatarFileId = room.avatarFileId)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(3.dp),
@@ -585,7 +585,7 @@ private fun ArchivedGroupCard(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                GroupAvatar(roomId = room.id, name = room.name, size = 46.dp)
+                GroupAvatar(roomId = room.id, name = room.name, size = 46.dp, avatarFileId = room.avatarFileId)
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp),

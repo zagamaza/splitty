@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 /// Настройки группы: участники, приглашение (ShareLink с кодом и ссылкой),
@@ -32,6 +33,12 @@ struct GroupSettingsView: View {
     /// видна всем участникам группы — без подтверждения слишком легко
     /// сменить случайным тапом.
     @State private var pendingCurrency: CurrencyInfo?
+    /// Фото группы: выбранный в пикере элемент и id уже загруженной картинки.
+    /// Локальная копия id нужна, чтобы фото сменилось сразу после загрузки, не
+    /// дожидаясь перечитывания комнаты.
+    @State private var avatarItem: PhotosPickerItem?
+    @State private var avatarFileId: String?
+    @State private var isAvatarSaving = false
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
@@ -46,6 +53,7 @@ struct GroupSettingsView: View {
         self.onShowBlocking = onShowBlocking
         self.onChange = onChange
         _selectedCurrency = State(initialValue: room.currency)
+        _avatarFileId = State(initialValue: room.avatarFileId)
     }
 
     var body: some View {
@@ -68,6 +76,7 @@ struct GroupSettingsView: View {
     private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                avatarSection
                 membersSection
                 currencySection
                 archiveSection
@@ -132,6 +141,84 @@ struct GroupSettingsView: View {
     }
 
     // MARK: Секции
+
+    /// Фото группы. Крупная ава + два действия: заменить и убрать. Загрузка
+    /// идёт через тот же `ReceiptCapture`, что и снимок чека, — сжатие до
+    /// 1024 px уже написано там, второе такое же заводить незачем.
+    private var avatarSection: some View {
+        VStack(spacing: 12) {
+            GroupAvatarView(roomId: room.id, name: room.name, size: 84, avatarFileId: avatarFileId)
+                .overlay {
+                    if isAvatarSaving {
+                        Circle().fill(.black.opacity(0.35))
+                        ProgressView().tint(.white)
+                    }
+                }
+
+            HStack(spacing: 8) {
+                PhotosPicker(selection: $avatarItem, matching: .images) {
+                    Label(avatarFileId == nil ? "Добавить фото" : "Заменить фото", systemImage: "photo")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.accentText)
+                }
+                .disabled(isAvatarSaving)
+                .accessibilityIdentifier("groupAvatarPick")
+
+                if avatarFileId != nil {
+                    Button("Убрать") { Task { await removeAvatar() } }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Color.inkSecondary)
+                        .disabled(isAvatarSaving)
+                        .accessibilityIdentifier("groupAvatarRemove")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .surfaceCard(padding: 20)
+        .onChange(of: avatarItem) { _, item in
+            guard let item else { return }
+            Task { await uploadAvatar(item) }
+        }
+    }
+
+    /// Грузит выбранное фото. Пикер сбрасывается всегда: без этого повторный
+    /// выбор того же снимка не менял бы `avatarItem` и не запускал загрузку.
+    private func uploadAvatar(_ item: PhotosPickerItem) async {
+        defer { avatarItem = nil }
+        isAvatarSaving = true
+        defer { isAvatarSaving = false }
+
+        let capture = ReceiptCapture()
+        guard await capture.load(from: item), let data = capture.imageData else {
+            alertMessage = String(localized: "Не удалось прочитать фото")
+            return
+        }
+        do {
+            let previous = avatarFileId
+            let fileId = try await session.api.setRoomAvatar(roomId: room.id, image: data)
+            avatarFileId = fileId
+            if let previous { session.avatars.forgetFile(previous) }
+            session.noteDataChanged()
+            onChange()
+        } catch {
+            alertMessage = humanErrorText(error)
+        }
+    }
+
+    private func removeAvatar() async {
+        isAvatarSaving = true
+        defer { isAvatarSaving = false }
+        do {
+            let previous = avatarFileId
+            try await session.api.deleteRoomAvatar(roomId: room.id)
+            avatarFileId = nil
+            if let previous { session.avatars.forgetFile(previous) }
+            session.noteDataChanged()
+            onChange()
+        } catch {
+            alertMessage = humanErrorText(error)
+        }
+    }
 
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: 8) {

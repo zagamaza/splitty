@@ -455,7 +455,16 @@ data class RoomSummary(
      * (иначе разбор всего списка групп падал бы).
      */
     val unreadCount: Int = 0,
+    /**
+     * Фото группы: id файла для `GET /api/v1/files/{id}`. null — фото не
+     * загружали, рисуем градиент по хэшу id комнаты.
+     */
+    val avatarFileId: String? = null,
 )
+
+/** Ответ на загрузку фото группы: id нового файла, чтобы показать его сразу. */
+@Serializable
+data class RoomAvatarResponse(val avatarFileId: String)
 
 /** Экран группы одним запросом. */
 @Serializable
@@ -493,6 +502,8 @@ data class RoomDetail(
      * бота, см. `GroupDetailScreen.InviteBottomSheet`.
      */
     val inviteUrl: String? = null,
+    /** Фото группы — см. [RoomSummary.avatarFileId]. */
+    val avatarFileId: String? = null,
     /**
      * Время формирования ЭТОГО ответа сервером — его и возвращаем в
      * `POST /rooms/{id}/notifications-seen`, чтобы погасить счётчик группы.

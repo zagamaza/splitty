@@ -2,6 +2,12 @@ package com.zagir.splitty.ui.groups
 
 import com.zagir.splitty.core.ui.resolve
 import com.zagir.splitty.core.ui.UiText
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.ImageBitmap
+import com.zagir.splitty.ui.components.LocalAvatarStore
+import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -78,11 +84,26 @@ internal fun GroupAvatar(
     name: String,
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
+    /** Загруженное фото группы; null — рисуем градиент по хэшу id. */
+    avatarFileId: String? = null,
 ) {
+    val store = LocalAvatarStore.current
+    val photo = avatarFileId?.let { id ->
+        val files by (store?.fileImages ?: MutableStateFlow(emptyMap<String, ImageBitmap>()))
+            .collectAsState()
+        files[id]
+    }
+    if (store != null && avatarFileId != null) {
+        LaunchedEffect(avatarFileId) { store.requestFile(avatarFileId) }
+    }
     GradientAvatar(
         user = User(id = groupAvatarSeed(roomId), username = null, displayName = name.take(1)),
         modifier = modifier,
         size = size,
+        // Хэш id комнаты попадает в диапазон настоящих telegram id: запрос
+        // фото по нему нарисовал бы группе аватар постороннего человека.
+        loadsPhoto = false,
+        photo = photo,
     )
 }
 

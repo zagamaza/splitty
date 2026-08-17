@@ -127,10 +127,11 @@ created_at time.Time
 - Modify: `ios/Splitty/Features/Groups/GroupsListView.swift` (`GroupAvatarView`), `GroupSettingsView.swift`
 - Create: тест в `ios/SplittyTests`
 
-- [ ] `GroupAvatarView` грузит фото по `avatarFileId`, иначе прежний градиент
-- [ ] в настройках группы — выбор фото из галереи/камеры и «убрать»; сжатие до ~1024 px перед отправкой
-- [ ] кеш общий с аватарами пользователей, чтобы список групп не дёргал сеть на каждый скролл
-- [ ] тест: комната с `avatarFileId` показывает фото, без него — градиент
+- [x] `GroupAvatarView` грузит фото по `avatarFileId`, иначе прежний градиент
+- [x] в настройках группы — `PhotosPicker` и «Убрать»; сжатие переиспользует `ReceiptCapture` (1024 px / JPEG 0.7), второе такое же не заводил
+- [x] кеш картинок по id файла в том же `AvatarStore` (отдельный словарь: id файла и id пользователя — разные пространства); `forgetFile` после замены, чтобы не остался старый кадр
+- [x] сборка multipart вынесена из `parseOperation` в общий помощник и переиспользована — тест проверяет, что после этого части распознавания не потерялись
+- [x] тесты (`RoomAvatarTests`): разбор с полем и без, PUT с частью `image`, DELETE, целостность multipart распознавания
 
 ### Task 5: Android
 
@@ -139,9 +140,11 @@ created_at time.Time
 - Modify: `android/.../data/**` (модели, api)
 - Create: тесты
 
-- [ ] полный порт задачи 4, включая сжатие перед отправкой
-- [ ] строки в пяти локалях
-- [ ] тесты Robolectric на оба состояния авы
+- [x] полный порт задачи 4: `GroupAvatar` с фото, секция в настройках группы, `PickVisualMedia` + `decodeDownscaledReceipt` (то же сжатие, что у чека)
+- [x] кеш файлов в `AvatarStore` (`requestFile`/`forgetFile`), методы `setAvatar`/`removeAvatar` во вью-модели
+- [x] строки в пяти локалях
+- [x] ➕ починен найденный по пути баг: `GroupAvatar` отдавал хэш id комнаты как id пользователя в `GradientAvatar`, и тот грузил по нему фото из телеграма — при совпадении с реальным id группа показывала аватар постороннего. Добавлен `loadsPhoto`, iOS от этого был защищён, Android нет
+- [x] тесты: разбор с полем и без, страж на `loadsPhoto = false` (проверен откатом — падает)
 
 ## Post-Completion
 

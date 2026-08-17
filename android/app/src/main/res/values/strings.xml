@@ -272,6 +272,9 @@
     <string name="group_debt_settle">Settle up</string>
 
     <!-- Группы: настройки -->
+    <string name="group_avatar_add">Add photo</string>
+    <string name="group_avatar_replace">Replace photo</string>
+    <string name="group_avatar_remove">Remove</string>
     <string name="group_settings_members">Members</string>
     <string name="group_settings_member_you">%1$s (you)</string>
     <string name="group_settings_currency">Currency</string>

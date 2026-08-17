@@ -293,7 +293,7 @@ private struct GroupCardRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            GroupAvatarView(roomId: room.id, name: room.name, size: 46)
+            GroupAvatarView(roomId: room.id, name: room.name, size: 46, avatarFileId: room.avatarFileId)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(room.name)
@@ -377,10 +377,14 @@ private func memberCountText(_ count: Int) -> String {
 /// Круглый аватар группы: детерминированный пастельный градиент по id комнаты
 /// и первая буква названия — через общий UserAvatarView (тот же стиль,
 /// что и у аватаров людей).
-private struct GroupAvatarView: View {
+struct GroupAvatarView: View {
     let roomId: String
     let name: String
     var size: CGFloat = 44
+    /// Загруженное фото группы. nil — рисуем градиент по хэшу id, как раньше.
+    var avatarFileId: String?
+
+    @Environment(SessionStore.self) private var session
 
     /// Стабильный (между запусками) хэш id комнаты — задаёт пару градиента.
     private var stableId: Int {
@@ -388,13 +392,28 @@ private struct GroupAvatarView: View {
     }
 
     var body: some View {
-        UserAvatarView(
-            user: User(id: stableId, username: nil, displayName: String(name.prefix(1))),
-            size: size,
-            // stableId — хэш строки, а НЕ telegram id: фото по нему не грузим,
-            // иначе при совпадении диапазонов группа получала бы чужое фото.
-            avatarUserId: nil
-        )
+        Group {
+            if let avatarFileId, let image = session.avatars.fileImages[avatarFileId] {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                UserAvatarView(
+                    user: User(id: stableId, username: nil, displayName: String(name.prefix(1))),
+                    size: size,
+                    // stableId — хэш строки, а НЕ telegram id: фото по нему не
+                    // грузим, иначе при совпадении диапазонов группа получала бы
+                    // чужое фото.
+                    avatarUserId: nil
+                )
+            }
+        }
+        .task(id: avatarFileId) {
+            guard let avatarFileId else { return }
+            await session.avatars.loadFile(avatarFileId, api: session.api)
+        }
         .accessibilityHidden(true)
     }
 }
@@ -418,7 +437,7 @@ private struct ArchivedGroupsView: View {
                         // (внутри — read-only бейдж «Группа в архиве»).
                         NavigationLink(value: GroupsRoute.room(id: room.id)) {
                             HStack(spacing: 14) {
-                                GroupAvatarView(roomId: room.id, name: room.name, size: 46)
+                                GroupAvatarView(roomId: room.id, name: room.name, size: 46, avatarFileId: room.avatarFileId)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(room.name)
                                         .scaledFont(size: 16, weight: .semibold)

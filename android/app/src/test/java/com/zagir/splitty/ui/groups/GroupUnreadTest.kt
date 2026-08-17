@@ -13,6 +13,7 @@ import com.zagir.splitty.core.network.SplittyApi
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.session.TokenCipher
 import com.zagir.splitty.data.ApiCache
+import com.zagir.splitty.data.AvatarStore
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
@@ -169,6 +170,7 @@ class GroupSeenMarkTest {
             repository,
             session,
             syncer,
+            AvatarStore(repository, scope),
             outbox,
             NetworkMonitor(ApplicationProvider.getApplicationContext()),
         )

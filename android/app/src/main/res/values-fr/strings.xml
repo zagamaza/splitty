@@ -227,6 +227,9 @@
     <string name="group_debt_settle">Régler</string>
 
     <!-- Группы: настройки -->
+    <string name="group_avatar_add">Ajouter une photo</string>
+    <string name="group_avatar_replace">Changer la photo</string>
+    <string name="group_avatar_remove">Retirer</string>
     <string name="group_settings_members">Membres</string>
     <string name="group_settings_member_you">%1$s (vous)</string>
     <string name="group_settings_currency">Devise</string>

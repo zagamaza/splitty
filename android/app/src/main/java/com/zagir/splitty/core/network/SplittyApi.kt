@@ -24,12 +24,14 @@ import com.zagir.splitty.core.model.OperationBody
 import com.zagir.splitty.core.model.PasswordLoginBody
 import com.zagir.splitty.core.model.RegisterBody
 import com.zagir.splitty.core.model.RepaymentBody
+import com.zagir.splitty.core.model.RoomAvatarResponse
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SetCurrencyBody
 import com.zagir.splitty.core.model.SetPasswordBody
 import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
+import okhttp3.MultipartBody
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -280,7 +282,22 @@ interface SplittyApi {
     @GET("api/v1/rooms/{roomId}/statistics")
     suspend fun statistics(@Path("roomId") roomId: String): Statistics
 
-    // --- Файлы (чеки/фото из Telegram) ---
+    // --- Фото группы ---
+
+    /**
+     * Загрузка фото группы. Тело собирается в репозитории: сервер ищет часть с
+     * именем `image` и проверяет тип ПО СИГНАТУРЕ файла, а не по заголовку.
+     */
+    @PUT("api/v1/rooms/{roomId}/avatar")
+    suspend fun setRoomAvatar(
+        @Path("roomId") roomId: String,
+        @Body body: MultipartBody,
+    ): RoomAvatarResponse
+
+    @DELETE("api/v1/rooms/{roomId}/avatar")
+    suspend fun deleteRoomAvatar(@Path("roomId") roomId: String)
+
+    // --- Файлы (своё хранилище и вложения из Telegram) ---
 
     @Streaming
     @GET("api/v1/files/{fileId}")

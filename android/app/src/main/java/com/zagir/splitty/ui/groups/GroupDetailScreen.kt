@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import com.zagir.splitty.ui.expense.decodeDownscaledReceipt
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -1365,6 +1369,87 @@ private fun DebtRow(
 // MARK: - Настройки (bottom sheet)
 
 /**
+ * Фото группы: крупная ава и два действия — заменить и убрать. Картинка
+ * ужимается тем же кодом, что и снимок чека (`decodeDownscaledReceipt`):
+ * второе сжатие с теми же числами заводить незачем.
+ */
+@Composable
+private fun GroupAvatarSection(room: RoomDetail, viewModel: GroupDetailViewModel) {
+    val colors = Splitty.colors
+    val context = LocalContext.current
+    val isSaving by viewModel.isAvatarSaving.collectAsStateWithLifecycle()
+
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val bytes = decodeDownscaledReceipt(context, uri)
+        if (bytes != null) viewModel.setAvatar(bytes)
+    }
+
+    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                GroupAvatar(
+                    roomId = room.id,
+                    name = room.name,
+                    size = 84.dp,
+                    avatarFileId = room.avatarFileId,
+                )
+                if (isSaving) {
+                    Box(
+                        modifier = Modifier
+                            .size(84.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(28.dp))
+                    }
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = stringResource(
+                        if (room.avatarFileId == null) R.string.group_avatar_add else R.string.group_avatar_replace
+                    ),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.accentText,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .clickable(enabled = !isSaving) {
+                            picker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("group_avatar_pick"),
+                )
+                if (room.avatarFileId != null) {
+                    Text(
+                        text = stringResource(R.string.group_avatar_remove),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = colors.inkSecondary,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable(enabled = !isSaving) { viewModel.removeAvatar() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .testTag("group_avatar_remove"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Настройки группы: участники, валюта (GET /currencies + PUT currency),
  * приглашение (share + код), архив/разархив. Вкладка бара тусы
  * (полноэкранная, бывший bottom sheet). Порт iOS GroupSettingsView.
@@ -1465,6 +1550,7 @@ private fun GroupSettingsTab(
             .padding(top = 4.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+            GroupAvatarSection(room = room, viewModel = viewModel)
 
             // Участники
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

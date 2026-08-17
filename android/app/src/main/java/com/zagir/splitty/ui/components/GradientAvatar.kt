@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -83,14 +84,23 @@ fun GradientAvatar(
     user: User,
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
+    /**
+     * Грузить ли фото профиля по [User.id]. false — для НЕчеловеческих аватаров
+     * (группа): её id это хэш строки, он попадает в диапазон настоящих telegram
+     * id, и запрос по нему рисовал бы группе фото ПОСТОРОННЕГО человека.
+     * Так же гейтит загрузку iOS (`UserAvatarView.avatarUserId = nil`).
+     */
+    loadsPhoto: Boolean = true,
+    /** Готовая картинка (фото группы из своего хранилища) — вместо градиента. */
+    photo: ImageBitmap? = null,
 ) {
     val pair = AvatarGradients[avatarGradientIndex(user.id)]
     val store = LocalAvatarStore.current
-    val avatar = store?.let {
+    val avatar = photo ?: store?.takeIf { loadsPhoto }?.let {
         val images by it.images.collectAsState()
         images[user.id]
     }
-    if (store != null) {
+    if (store != null && loadsPhoto) {
         LaunchedEffect(user.id) { store.request(user.id) }
     }
     Box(

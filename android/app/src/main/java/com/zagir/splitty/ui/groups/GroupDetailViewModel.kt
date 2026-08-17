@@ -19,6 +19,7 @@ import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxEntry
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.OutboxSyncer
+import com.zagir.splitty.data.AvatarStore
 import com.zagir.splitty.data.SplittyRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.YearMonth
@@ -66,6 +67,7 @@ class GroupDetailViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val outboxSyncer: OutboxSyncer,
+    private val avatarStore: AvatarStore,
     outboxStore: OutboxStore,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
@@ -323,6 +325,54 @@ class GroupDetailViewModel @Inject constructor(
                 refresh()
             } catch (e: ApiException) {
                 _alertMessage.value = humanErrorText(e, isSelf = false)
+            }
+        }
+    }
+
+    private val _isAvatarSaving = MutableStateFlow(false)
+
+    /** Идёт загрузка/снятие фото группы — на аве крутится спиннер. */
+    val isAvatarSaving: StateFlow<Boolean> = _isAvatarSaving.asStateFlow()
+
+    /**
+     * Ставит фото группы. Прежняя картинка забывается в кеше: без этого на
+     * экране остался бы старый кадр под новым id до перезапуска.
+     */
+    fun setAvatar(image: ByteArray) {
+        val detail = (_room.value as? UiState.Content)?.value ?: return
+        if (_isAvatarSaving.value) return
+        viewModelScope.launch {
+            _isAvatarSaving.value = true
+            try {
+                val previous = detail.avatarFileId
+                repository.setRoomAvatar(detail.id, image)
+                previous?.let { avatarStore.forgetFile(it) }
+                sessionStore.noteDataChanged()
+                refresh()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e, isSelf = false)
+            } finally {
+                _isAvatarSaving.value = false
+            }
+        }
+    }
+
+    /** Снимает фото группы. */
+    fun removeAvatar() {
+        val detail = (_room.value as? UiState.Content)?.value ?: return
+        if (_isAvatarSaving.value) return
+        viewModelScope.launch {
+            _isAvatarSaving.value = true
+            try {
+                val previous = detail.avatarFileId
+                repository.deleteRoomAvatar(detail.id)
+                previous?.let { avatarStore.forgetFile(it) }
+                sessionStore.noteDataChanged()
+                refresh()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e, isSelf = false)
+            } finally {
+                _isAvatarSaving.value = false
             }
         }
     }

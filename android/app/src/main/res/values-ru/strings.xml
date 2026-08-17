@@ -288,6 +288,9 @@
     <string name="group_debt_settle">Погасить</string>
 
     <!-- Группы: настройки -->
+    <string name="group_avatar_add">Добавить фото</string>
+    <string name="group_avatar_replace">Заменить фото</string>
+    <string name="group_avatar_remove">Убрать</string>
     <string name="group_settings_members">Участники</string>
     <string name="group_settings_member_you">%1$s (вы)</string>
     <string name="group_settings_currency">Валюта</string>

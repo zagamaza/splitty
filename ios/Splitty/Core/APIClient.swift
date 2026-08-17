@@ -675,66 +675,28 @@ final class APIClient: OperationAPI {
         text: String? = nil,
         draft: ParseDraft? = nil
     ) async throws -> ParseResponse {
-        guard let baseURL,
-              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
-            throw APIError.invalidURL
-        }
-        let basePath = components.path.hasSuffix("/")
-            ? String(components.path.dropLast())
-            : components.path
-        components.path = basePath + "/api/v1/rooms/\(roomId)/operations/parse"
-        guard let url = components.url else {
-            throw APIError.invalidURL
-        }
-
-        let boundary = "SplittyBoundary-\(UUID().uuidString)"
-        var body = Data()
-        func appendLine(_ string: String) {
-            body.append(Data(string.utf8))
-        }
-        // Поле формы (draft/text).
-        func appendField(name: String, value: String) {
-            appendLine("--\(boundary)\r\n")
-            appendLine("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
-            appendLine(value)
-            appendLine("\r\n")
-        }
-        // Файловая часть (audio/image) — сервер проверяет Content-Type по allowlist.
-        func appendFile(name: String, filename: String, contentType: String, data: Data) {
-            appendLine("--\(boundary)\r\n")
-            appendLine("Content-Disposition: form-data; name=\"\(name)\"; filename=\"\(filename)\"\r\n")
-            appendLine("Content-Type: \(contentType)\r\n\r\n")
-            body.append(data)
-            appendLine("\r\n")
-        }
+        var fields: [(name: String, value: String)] = []
+        var parts: [MultipartFile] = []
 
         if let draft {
             let draftData = try encoder.encode(draft)
-            appendField(name: "draft", value: String(decoding: draftData, as: UTF8.self))
+            fields.append((name: "draft", value: String(decoding: draftData, as: UTF8.self)))
         }
         if let audio {
-            appendFile(name: "audio", filename: "audio.wav", contentType: "audio/wav", data: audio)
+            parts.append(MultipartFile(name: "audio", filename: "audio.wav", contentType: "audio/wav", data: audio))
         }
         if let image {
-            appendFile(name: "image", filename: "image.jpg", contentType: "image/jpeg", data: image)
+            parts.append(MultipartFile(name: "image", filename: "image.jpg", contentType: "image/jpeg", data: image))
         }
         if let text, !text.isEmpty {
-            appendField(name: "text", value: text)
+            fields.append((name: "text", value: text))
         }
-        appendLine("--\(boundary)--\r\n")
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        if let token {
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-        request.setValue(
-            "multipart/form-data; boundary=\(boundary)",
-            forHTTPHeaderField: "Content-Type"
+        let data = try await sendMultipart(
+            "POST",
+            "/api/v1/rooms/\(roomId)/operations/parse",
+            body: multipartBody(fields: fields, parts: parts)
         )
-        request.httpBody = body
-
-        let data = try await perform(request)
         do {
             return try decoder.decode(ParseResponse.self, from: data)
         } catch {
@@ -878,6 +840,27 @@ final class APIClient: OperationAPI {
         try await send("GET", "/api/v1/files/\(id)")
     }
 
+    /// Фото группы: PUT /rooms/{id}/avatar (multipart, поле `image`).
+    /// Возвращает id нового файла — его можно показать сразу, не перечитывая
+    /// список групп. Сервер проверяет тип по сигнатуре, поэтому шлём jpeg.
+    func setRoomAvatar(roomId: String, image: Data) async throws -> String {
+        struct Response: Decodable { let avatarFileId: String }
+        let body = multipartBody(parts: [
+            MultipartFile(name: "image", filename: "avatar.jpg", contentType: "image/jpeg", data: image)
+        ])
+        let data = try await sendMultipart("PUT", "/api/v1/rooms/\(roomId)/avatar", body: body)
+        do {
+            return try decoder.decode(Response.self, from: data).avatarFileId
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// DELETE /rooms/{id}/avatar — снять фото группы. Идемпотентно.
+    func deleteRoomAvatar(roomId: String) async throws {
+        try await send("DELETE", "/api/v1/rooms/\(roomId)/avatar")
+    }
+
     // MARK: - Внутреннее
 
     private struct ErrorEnvelope: Decodable {
@@ -938,6 +921,72 @@ final class APIClient: OperationAPI {
             request.httpBody = try encoder.encode(body)
         }
 
+        return try await perform(request)
+    }
+
+    /// Файловая часть multipart-тела.
+    struct MultipartFile {
+        let name: String
+        let filename: String
+        let contentType: String
+        let data: Data
+    }
+
+    /// Собирает multipart-тело из текстовых полей и файлов. Порядок сохраняется:
+    /// сервер выбирает медиа по приоритету и на порядок частей не смотрит, но
+    /// воспроизводимое тело проще отлаживать.
+    private func multipartBody(
+        boundary: String = "SplittyBoundary-\(UUID().uuidString)",
+        fields: [(name: String, value: String)] = [],
+        parts: [MultipartFile] = []
+    ) -> (body: Data, contentType: String) {
+        var body = Data()
+        func appendLine(_ string: String) { body.append(Data(string.utf8)) }
+
+        for field in fields {
+            appendLine("--\(boundary)\r\n")
+            appendLine("Content-Disposition: form-data; name=\"\(field.name)\"\r\n\r\n")
+            appendLine(field.value)
+            appendLine("\r\n")
+        }
+        for part in parts {
+            appendLine("--\(boundary)\r\n")
+            appendLine("Content-Disposition: form-data; name=\"\(part.name)\"; filename=\"\(part.filename)\"\r\n")
+            appendLine("Content-Type: \(part.contentType)\r\n\r\n")
+            body.append(part.data)
+            appendLine("\r\n")
+        }
+        appendLine("--\(boundary)--\r\n")
+        return (body, "multipart/form-data; boundary=\(boundary)")
+    }
+
+    /// Отправляет готовое multipart-тело. Путь собирается так же, как в `send`:
+    /// префикс baseURL сохраняется (сервер может жить за реверс-прокси).
+    @discardableResult
+    private func sendMultipart(
+        _ method: String,
+        _ path: String,
+        body: (body: Data, contentType: String)
+    ) async throws -> Data {
+        guard let baseURL,
+              var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
+            throw APIError.invalidURL
+        }
+        let basePath = components.path.hasSuffix("/")
+            ? String(components.path.dropLast())
+            : components.path
+        components.path = basePath + path
+        guard let url = components.url else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        request.setValue(body.contentType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.body
         return try await perform(request)
     }
 
