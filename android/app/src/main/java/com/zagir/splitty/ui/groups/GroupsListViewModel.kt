@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.zagir.splitty.ui.onboarding.shouldShowWelcome
+import kotlinx.coroutines.flow.first
 
 /**
  * VM вкладки «Группы»: активные и архивные группы, создание/присоединение,
@@ -52,6 +54,43 @@ class GroupsListViewModel @Inject constructor(
      */
     private val _freshness = MutableStateFlow(DataFreshness())
     val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
+
+    /**
+     * Показывать ли разовое приветствие. Решение живёт здесь, потому что только
+     * этот экран знает, пуст ли список групп, — а без пустого списка приветствие
+     * не показывается (см. [shouldShowWelcome]).
+     */
+    private val _showWelcome = MutableStateFlow(false)
+    val showWelcome: StateFlow<Boolean> = _showWelcome.asStateFlow()
+
+    /** Открыть создание группы: последний шаг приветствия ведёт сюда. */
+    private val _openCreateGroup = MutableStateFlow(false)
+    val openCreateGroup: StateFlow<Boolean> = _openCreateGroup.asStateFlow()
+
+    private suspend fun evaluateWelcome(rooms: List<RoomSummary>) {
+        val userId = sessionStore.state.value?.me?.id ?: return
+        val seen = sessionStore.welcomeSeen(userId).first()
+        _showWelcome.value = shouldShowWelcome(
+            hasSeen = seen,
+            groupCount = rooms.size,
+            // Диплинк на Android уводит с этого экрана сам (MainScaffold
+            // навигирует в комнату), поэтому здесь его учитывать нечем.
+            hasPendingDeeplink = false,
+        )
+    }
+
+    /** Пропуск — это тоже ответ «не показывай больше». */
+    fun dismissWelcome(createGroup: Boolean) {
+        _showWelcome.value = false
+        _openCreateGroup.value = createGroup
+        viewModelScope.launch {
+            sessionStore.state.value?.me?.id?.let { sessionStore.markWelcomeSeen(it) }
+        }
+    }
+
+    fun consumeCreateGroup() {
+        _openCreateGroup.value = false
+    }
 
     private val _archived = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
 
@@ -167,6 +206,7 @@ class GroupsListViewModel @Inject constructor(
         try {
             val fetched = repository.rooms(archived = false)
             _rooms.value = UiState.Content(fetched.value)
+            evaluateWelcome(fetched.value)
             // Список пуст — проверяем архив: заархивировав ПОСЛЕДНЮЮ группу,
             // человек терял единственный вход в архив, и достать её обратно
             // было нельзя. Строка «Архив» рисуется по этому списку

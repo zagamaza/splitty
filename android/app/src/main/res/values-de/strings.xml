@@ -602,4 +602,34 @@
     <string name="profile_revoke_caption">Nützlich bei verlorenem Telefon: der Zugang wird überall geschlossen, auch auf diesem Gerät.</string>
     <string name="error_room_too_large">In dieser Gruppe haben sich zu viele Ausgaben angesammelt. Leg eine neue an — die alte bleibt lesbar</string>
     <string name="error_stale_operation">Jemand anderes hat die Ausgabe geändert. Öffne sie neu und wiederhole deine Änderung</string>
+
+    <string name="welcome_skip">Überspringen</string>
+    <string name="welcome_next">Weiter</string>
+    <string name="welcome_create">Gruppe erstellen</string>
+    <string name="welcome_1_title">Eine Gruppe ist eine gemeinsame Rechnung</string>
+    <string name="welcome_1_body">Eine Reise, eine WG oder ein Abendessen. Einer zahlt, alle teilen.</string>
+    <string name="welcome_bill_tray">Gruppenrechnung</string>
+    <string name="welcome_2_title">Sag es — wir schreiben es auf</string>
+    <string name="welcome_2_body">Sprich die Ausgabe aus, und sie erscheint in der Gruppe. Oder Beleg fotografieren, oder eintippen.</string>
+    <string name="welcome_rec_hint">Loslassen zum Erkennen · nach oben zum Fixieren</string>
+    <string name="welcome_rcpt_items">Positionen</string>
+    <string name="welcome_rcpt_count">2 Pos.</string>
+    <string name="welcome_rcpt_total">Gesamt</string>
+    <string name="welcome_3_title">Wer hat wie viel bezahlt</string>
+    <string name="welcome_3_body">Splitty teilt jede Ausgabe unter den Teilnehmern auf. Abendessen 600 durch drei — je 200, Taxi 300 — je 100.</string>
+    <string name="welcome_paid_anya">Anya hat bezahlt</string>
+    <string name="welcome_paid_borya">Borya hat bezahlt</string>
+    <string name="welcome_split_three">durch drei geteilt</string>
+    <string name="welcome_you_paid_nothing">Du hast nichts bezahlt</string>
+    <string name="welcome_your_share">dein Anteil steht noch aus</string>
+    <string name="welcome_4_title">Einmal zahlen</string>
+    <string name="welcome_4_body">Deine 300 ₽ gehen in einer Überweisung statt in zwei: Splitty verrechnet die Schulden in der Gruppe.</string>
+    <string name="welcome_you_transfer">Du überweist</string>
+    <string name="welcome_to_anya">An Anya</string>
+    <string name="welcome_to_borya">An Borya</string>
+    <string name="welcome_why">Borya hat genau seinen Anteil bezahlt — mit ihm bist du quitt. Seine 100 ₽ gehen zusammen mit deinen an Anya.</string>
+    <string name="welcome_two_transfers">2 Überweisungen</string>
+    <string name="welcome_one_transfer">1 Überweisung</string>
+    <string name="welcome_without">Ohne Splitty</string>
+    <string name="welcome_with">Mit Splitty</string>
 </resources>

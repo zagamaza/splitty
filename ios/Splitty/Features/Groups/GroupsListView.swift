@@ -45,6 +45,9 @@ struct GroupsListView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = GroupsListViewModel()
     @State private var isCreatePresented = false
+    /// Разовое приветствие. Живёт здесь, а не в корне: только этот экран знает,
+    /// пуст ли список групп, — а без пустого списка приветствие не показывается.
+    @State private var isWelcomePresented = false
     @State private var isJoinPresented = false
     /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
     @State private var reloadTask: Task<Void, Never>?
@@ -103,7 +106,18 @@ struct GroupsListView: View {
                 .errorAlert($model.alertMessage)
                 // .task на контенте (не на NavigationStack): срабатывает при первом
                 // показе И при возврате (pop) с экрана группы — балансы обновляются.
-                .task { await model.load(repo: session.repo) }
+                .task {
+                    await model.load(repo: session.repo)
+                    showWelcomeIfNeeded()
+                }
+                .fullScreenCover(isPresented: $isWelcomePresented) {
+                    WelcomeView { createGroup in
+                        // «Пропустить» — это тоже ответ «больше не показывать».
+                        if let id = session.me?.id { session.markWelcomeSeen(userId: id) }
+                        isWelcomePresented = false
+                        if createGroup { isCreatePresented = true }
+                    }
+                }
                 // Единая инвалидация: перезагрузка после любой мутации данных.
                 .onChange(of: session.dataVersion) {
                     reloadTask?.cancel()
@@ -201,6 +215,19 @@ struct GroupsListView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard(padding: 20)
+    }
+
+    /// Приветствие показываем только тому, кто его ещё не видел, у кого нет ни
+    /// одной группы и кто пришёл не по ссылке приглашения (иначе вместо группы
+    /// он получит рассказ о продукте и потеряет переход).
+    private func showWelcomeIfNeeded() {
+        guard let id = session.me?.id else { return }
+        guard case .loaded = model.state else { return }
+        isWelcomePresented = shouldShowWelcome(
+            hasSeen: session.hasSeenWelcome(userId: id),
+            groupCount: model.rooms.count,
+            hasPendingDeeplink: PendingJoin.shared.roomId != nil
+        )
     }
 
     /// Подпись о свежести — общая с карточкой группы, друзьями и активностью.

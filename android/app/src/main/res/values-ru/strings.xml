@@ -645,4 +645,34 @@
     <string name="profile_revoke_caption">Пригодится, если телефон потерян: доступ закроется везде, включая это устройство.</string>
     <string name="error_room_too_large">В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения</string>
     <string name="error_stale_operation">Расход изменил кто-то другой. Откройте его заново и повторите правку</string>
+
+    <string name="welcome_skip">Пропустить</string>
+    <string name="welcome_next">Далее</string>
+    <string name="welcome_create">Создать группу</string>
+    <string name="welcome_1_title">Группа — это общий счёт</string>
+    <string name="welcome_1_body">Поездка, съёмная квартира или один ужин. Платит кто-то один, а расход делят все.</string>
+    <string name="welcome_bill_tray">Общий счёт группы</string>
+    <string name="welcome_2_title">Скажите — запишем</string>
+    <string name="welcome_2_body">Продиктуйте расход вслух, и он появится в группе. Можно снять чек или вписать руками.</string>
+    <string name="welcome_rec_hint">Отпустите — распознать · вверх — закрепить</string>
+    <string name="welcome_rcpt_items">позиции</string>
+    <string name="welcome_rcpt_count">2 поз.</string>
+    <string name="welcome_rcpt_total">Итого</string>
+    <string name="welcome_3_title">Кто сколько заплатил</string>
+    <string name="welcome_3_body">Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.</string>
+    <string name="welcome_paid_anya">Аня заплатила</string>
+    <string name="welcome_paid_borya">Боря заплатил</string>
+    <string name="welcome_split_three">делим на троих</string>
+    <string name="welcome_you_paid_nothing">Вы не платили ничего</string>
+    <string name="welcome_your_share">значит, ваша доля — за вами</string>
+    <string name="welcome_4_title">Платите один раз</string>
+    <string name="welcome_4_body">Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы.</string>
+    <string name="welcome_you_transfer">Вам переводить</string>
+    <string name="welcome_to_anya">Ане</string>
+    <string name="welcome_to_borya">Боре</string>
+    <string name="welcome_why">Боря заплатил ровно свою долю — с ним вы в расчёте. Его 100 ₽ уходят Ане вместе с вашими.</string>
+    <string name="welcome_two_transfers">2 перевода</string>
+    <string name="welcome_one_transfer">1 перевод</string>
+    <string name="welcome_without">Без Splitty</string>
+    <string name="welcome_with">Со Splitty</string>
 </resources>

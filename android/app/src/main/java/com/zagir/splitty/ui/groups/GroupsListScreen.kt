@@ -87,6 +87,7 @@ import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.main.badgeLabel
 import com.zagir.splitty.ui.theme.Splitty
+import com.zagir.splitty.ui.onboarding.WelcomeScreen
 
 /**
  * Вкладка «Группы»: hero-карточка общего баланса, карточки групп, тихая
@@ -187,6 +188,21 @@ private fun GroupsListContent(
                 onJoin = { isJoinPresented = true },
                 modifier = Modifier.padding(innerPadding),
             )
+        }
+    }
+
+    // Разовое приветствие: поверх экрана, пока человек его не закроет.
+    val showWelcome by viewModel.showWelcome.collectAsStateWithLifecycle()
+    val openCreateGroup by viewModel.openCreateGroup.collectAsStateWithLifecycle()
+    if (showWelcome) {
+        Box(Modifier.fillMaxSize().background(Splitty.colors.bg)) {
+            WelcomeScreen(onFinish = { createGroup -> viewModel.dismissWelcome(createGroup) })
+        }
+    }
+    LaunchedEffect(openCreateGroup) {
+        if (openCreateGroup) {
+            isCreatePresented = true
+            viewModel.consumeCreateGroup()
         }
     }
 

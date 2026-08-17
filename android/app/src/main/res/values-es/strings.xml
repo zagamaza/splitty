@@ -602,4 +602,34 @@
     <string name="profile_revoke_caption">Útil si pierdes el teléfono: el acceso se cierra en todas partes, incluido este dispositivo.</string>
     <string name="error_room_too_large">Este grupo acumuló demasiados gastos. Crea uno nuevo: el anterior seguirá disponible para leer</string>
     <string name="error_stale_operation">Otra persona cambió este gasto. Ábrelo de nuevo y repite tu edición</string>
+
+    <string name="welcome_skip">Saltar</string>
+    <string name="welcome_next">Siguiente</string>
+    <string name="welcome_create">Crear un grupo</string>
+    <string name="welcome_1_title">Un grupo es una cuenta común</string>
+    <string name="welcome_1_body">Un viaje, un piso o una cena. Paga uno y el gasto se reparte entre todos.</string>
+    <string name="welcome_bill_tray">Cuenta del grupo</string>
+    <string name="welcome_2_title">Dilo y lo anotamos</string>
+    <string name="welcome_2_body">Di el gasto en voz alta y aparecerá en el grupo. También puedes fotografiar el recibo o escribirlo.</string>
+    <string name="welcome_rec_hint">Suelta para reconocer · arriba para fijar</string>
+    <string name="welcome_rcpt_items">posiciones</string>
+    <string name="welcome_rcpt_count">2 pos.</string>
+    <string name="welcome_rcpt_total">Total</string>
+    <string name="welcome_3_title">Quién pagó cuánto</string>
+    <string name="welcome_3_body">Splitty reparte cada gasto entre los participantes. Cena 600 entre tres — 200 cada uno, taxi 300 — 100 cada uno.</string>
+    <string name="welcome_paid_anya">Anya pagó</string>
+    <string name="welcome_paid_borya">Borya pagó</string>
+    <string name="welcome_split_three">dividimos entre tres</string>
+    <string name="welcome_you_paid_nothing">Tú no pagaste nada</string>
+    <string name="welcome_your_share">tu parte sigue pendiente</string>
+    <string name="welcome_4_title">Paga una sola vez</string>
+    <string name="welcome_4_body">Tus 300 ₽ salen en una transferencia y no en dos: Splitty compensa las deudas dentro del grupo.</string>
+    <string name="welcome_you_transfer">Tú transfieres</string>
+    <string name="welcome_to_anya">A Anya</string>
+    <string name="welcome_to_borya">A Borya</string>
+    <string name="welcome_why">Borya pagó exactamente su parte — con él estáis en paz. Sus 100 ₽ van a Anya junto con los tuyos.</string>
+    <string name="welcome_two_transfers">2 transferencias</string>
+    <string name="welcome_one_transfer">1 transferencia</string>
+    <string name="welcome_without">Sin Splitty</string>
+    <string name="welcome_with">Con Splitty</string>
 </resources>
