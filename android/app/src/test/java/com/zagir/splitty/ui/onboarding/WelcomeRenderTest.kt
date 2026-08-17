@@ -38,11 +38,18 @@ class WelcomeRenderTest {
 
         // Момент съёмки у каждой страницы свой: снимаем кадр, когда её анимация
         // договорила, но ещё не начала следующий круг.
-        val settled = listOf(1_100L, 1_600L, 1_500L, 300L)
+        val settled = listOf(2_600L, 3_500L, 2_800L, 300L)
 
         settled.forEachIndexed { page, wait ->
             composeRule.mainClock.advanceTimeBy(wait)
             composeRule.onRoot().captureRoboImage("build/welcome-renders/welcome-$page.png")
+            if (page == 1) {
+                // У экрана записи три стадии, и все три надо увидеть.
+                composeRule.mainClock.advanceTimeBy(2_400)
+                composeRule.onRoot().captureRoboImage("build/welcome-renders/welcome-1-parsing.png")
+                composeRule.mainClock.advanceTimeBy(2_000)
+                composeRule.onRoot().captureRoboImage("build/welcome-renders/welcome-1-receipt.png")
+            }
             if (page < 3) {
                 composeRule.onNodeWithTag("welcome_primary").performClick()
                 composeRule.mainClock.advanceTimeBy(1_000)
@@ -50,7 +57,7 @@ class WelcomeRenderTest {
         }
 
         // Второе состояние сравнения — то, ради чего последний экран и сделан.
-        composeRule.mainClock.advanceTimeBy(2_000)
+        composeRule.mainClock.advanceTimeBy(2_500)
         composeRule.onRoot().captureRoboImage("build/welcome-renders/welcome-3-with.png")
     }
 }

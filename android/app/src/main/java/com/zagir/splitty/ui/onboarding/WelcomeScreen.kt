@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -195,7 +196,7 @@ private fun PageDots(count: Int, current: Int) {
 private fun Eyebrow(text: String) {
     Text(
         text = text.uppercase(),
-        fontSize = 13.5.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         fontFamily = FontFamily.Monospace,
         color = Splitty.colors.inkSecondary,
@@ -204,7 +205,7 @@ private fun Eyebrow(text: String) {
 }
 
 @Composable
-private fun Avatar(letter: String, color: Color, size: Int = 48) {
+private fun Avatar(letter: String, color: Color, size: Int = 46) {
     Box(
         modifier = Modifier.size(size.dp).clip(CircleShape).background(color),
         contentAlignment = Alignment.Center,
@@ -219,19 +220,19 @@ private fun Avatar(letter: String, color: Color, size: Int = 48) {
 }
 
 @Composable
-private fun ArrowDown() {
+private fun ArrowDown(modifier: Modifier = Modifier) {
     Text(
         "↓",
-        fontSize = 26.sp,
+        fontSize = 20.sp,
         fontWeight = FontWeight.SemiBold,
         color = Splitty.colors.accent.copy(alpha = 0.45f),
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
     )
 }
 
 /** Пунктирная рамка: в Compose нет готовой, а сплошная читается как обычная карточка. */
-private fun Modifier.dashedBorder(color: Color, radius: Dp, width: Dp = 2.dp) = drawBehind {
+private fun Modifier.dashedBorder(color: Color, radius: Dp, width: Dp = 1.5.dp) = drawBehind {
     val stroke = width.toPx()
     drawRoundRect(
         color = color,
@@ -248,7 +249,7 @@ private fun Modifier.dashedBorder(color: Color, radius: Dp, width: Dp = 2.dp) = 
 @Composable
 private fun Card(
     modifier: Modifier = Modifier,
-    radius: Dp = 20.dp,
+    radius: Dp = 18.dp,
     background: Color = Splitty.colors.surface,
     elevation: Dp = 3.dp,
     content: @Composable () -> Unit,
@@ -261,12 +262,45 @@ private fun Card(
     ) { content() }
 }
 
+/** Строка списка ровно тех же размеров, что в самом приложении. */
+@Composable
+private fun AppRow(
+    initial: String?,
+    avatarColor: Color,
+    title: String,
+    subtitle: String?,
+    amount: String,
+    amountColor: Color,
+    titleColor: Color = Splitty.colors.ink,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        if (initial != null) Avatar(initial, avatarColor)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = titleColor)
+            if (subtitle != null) {
+                Text(subtitle, fontSize = 13.sp, color = Splitty.colors.inkSecondary)
+            }
+        }
+        Text(
+            amount,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = FontFamily.Monospace,
+            color = amountColor,
+        )
+    }
+}
+
 // MARK: — экран 1: расходы падают в общий счёт
 
 @Composable
 private fun SharedBillArt(isActive: Boolean) {
     val colors = Splitty.colors
-    val slips = listOf("Ужин" to 600, "Такси" to 300, "Продукты" to 450)
+    val slips = listOf("Ужин" to 600, "Такси" to 300, "Продукты" to 450, "Кофе" to 150)
     var shown by remember { mutableIntStateOf(slips.size) }
 
     LaunchedEffect(isActive) {
@@ -277,77 +311,78 @@ private fun SharedBillArt(isActive: Boolean) {
         while (true) {
             shown = 0
             repeat(slips.size) {
-                delay(320)
+                delay(600)
                 shown = it + 1
             }
-            delay(1900)
+            // Собранный счёт держим долго: это и есть мысль экрана, а не
+            // мельтешение появлений.
+            delay(4500)
             shown = 0
-            delay(400)
+            delay(700)
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+    // Композиция собрана компактно и стоит по центру: тянуть строки распорками
+    // по всей карточке — значит порвать список на куски.
+    Column(
+        modifier = Modifier.fillMaxSize().padding(20.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
         Eyebrow(stringResource(R.string.welcome_bill_eyebrow))
+        Spacer(Modifier.height(14.dp))
 
-        Spacer(Modifier.height(20.dp))
-
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            slips.forEachIndexed { index, slip ->
-                val visible = index < shown
-                val alpha by animateFloatAsState(if (visible) 1f else 0f, label = "slipAlpha")
-                val shift by animateFloatAsState(if (visible) 0f else -26f, label = "slipShift")
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .graphicsLayer {
-                            this.alpha = alpha
-                            translationY = shift * density
-                        },
-                    radius = 18.dp,
+        slips.forEachIndexed { index, slip ->
+            val visible = index < shown
+            val alpha by animateFloatAsState(if (visible) 1f else 0f, label = "slipAlpha")
+            val shift by animateFloatAsState(if (visible) 0f else -22f, label = "slipShift")
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        this.alpha = alpha
+                        translationY = shift * density
+                    },
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        Modifier.fillMaxSize().padding(horizontal = 20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(slip.first, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            "${slip.second} ₽",
-                            fontSize = 21.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = colors.ink,
-                        )
-                    }
+                    Text(slip.first, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "${slip.second} ₽",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = FontFamily.Monospace,
+                        color = colors.ink,
+                    )
                 }
             }
+            if (index < slips.lastIndex) Spacer(Modifier.height(10.dp))
         }
 
-        Spacer(Modifier.weight(1f))
-        ArrowDown()
-        Spacer(Modifier.weight(1f))
+        ArrowDown(Modifier.padding(vertical = 14.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(104.dp)
-                .dashedBorder(colors.accent.copy(alpha = 0.55f), 20.dp),
+                .dashedBorder(colors.accent.copy(alpha = 0.5f), 16.dp)
+                .padding(vertical = 18.dp),
             contentAlignment = Alignment.Center,
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     stringResource(R.string.welcome_bill_tray),
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.accentText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.accentText.copy(alpha = 0.8f),
                 )
                 Text(
                     "${slips.take(shown).sumOf { it.second }} ₽",
-                    fontSize = 30.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     color = colors.accentText,
@@ -357,141 +392,203 @@ private fun SharedBillArt(isActive: Boolean) {
     }
 }
 
-// MARK: — экран 2: запись голоса и мини-чек
+// MARK: — экран 2: запись, распознавание и мини-чек
 
+private enum class DictationStage { RECORDING, PARSING, RECEIPT }
+
+/**
+ * Повторяет живой `RecordingOverlay` и оверлей распознавания с экрана расхода:
+ * тот же микрофон 82 dp, та же волна 240×44, тот же счётчик и те же тексты.
+ * Онбординг обещает ровно тот экран, который человек увидит.
+ */
 @Composable
 private fun DictationArt(isActive: Boolean) {
     val colors = Splitty.colors
     val phrase = listOf("пицца", "за", "восемьсот", "и", "кола", "за", "двести", "пополам", "с", "Саней")
     var words by remember { mutableIntStateOf(phrase.size) }
-    var showReceipt by remember { mutableStateOf(false) }
+    var seconds by remember { mutableIntStateOf(6) }
+    var stage by remember { mutableStateOf(DictationStage.RECORDING) }
     val arc = remember { Animatable(0f) }
 
     LaunchedEffect(isActive) {
         if (!isActive) {
             words = phrase.size
-            showReceipt = false
+            seconds = 6
+            stage = DictationStage.RECORDING
             return@LaunchedEffect
         }
         while (true) {
-            showReceipt = false
+            stage = DictationStage.RECORDING
             words = 0
+            seconds = 0
             arc.snapTo(0f)
-            launch { arc.animateTo(0.62f, tween(3600, easing = LinearEasing)) }
+            launch { arc.animateTo(0.11f, tween(4500, easing = LinearEasing)) }
             repeat(phrase.size) {
-                delay(250)
+                delay(450)
                 words = it + 1
+                if ((it + 1) % 2 == 0) seconds += 1
             }
-            delay(800)
-            showReceipt = true
-            delay(2600)
+            delay(700)
+            stage = DictationStage.PARSING
+            delay(1600)
+            stage = DictationStage.RECEIPT
+            delay(3800)
         }
     }
 
-    // Фон один на оба состояния: чек проявляется поверх той же тёмной записи,
-    // а не подменяет экран вспышкой света.
+    // Фон один на все стадии: распознавание и чек проявляются поверх той же
+    // тёмной записи, а не подменяют экран вспышкой света.
     Box(
         modifier = Modifier.fillMaxSize().background(Color(0xFF2B313A)),
         contentAlignment = Alignment.Center,
     ) {
-        if (showReceipt) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        when (stage) {
+            DictationStage.RECORDING -> RecordingStage(
+                text = phrase.take(words).joinToString(" "),
+                seconds = seconds,
+                arcProgress = arc.value,
+            )
+            DictationStage.PARSING -> ParsingStage()
+            DictationStage.RECEIPT -> Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     "✓ " + stringResource(R.string.welcome_ready),
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White.copy(alpha = 0.85f),
                 )
                 MiniReceipt()
             }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(vertical = 26.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Box(modifier = Modifier.height(104.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                    Text(
-                        text = phrase.take(words).joinToString(" "),
-                        fontSize = 23.sp,
-                        lineHeight = 29.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp),
-                    )
-                }
-
-                Waveform()
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.size(7.dp).clip(CircleShape).background(colors.negative))
-                    Text(
-                        "0:06",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color.White.copy(alpha = 0.9f),
-                    )
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                MicButton(arcProgress = arc.value)
-
-                Text(
-                    stringResource(R.string.welcome_rec_hint),
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.55f),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
+            else -> Unit
         }
     }
 }
 
-/** Микрофон как в самой записи: пульс-кольцо и дуга лимита в 60 с. */
+@Composable
+private fun RecordingStage(text: String, seconds: Int, arcProgress: Float) {
+    val colors = Splitty.colors
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.weight(1f))
+
+        // Окно расшифровки — 21sp, как в живом оверлее записи.
+        Box(modifier = Modifier.height(96.dp).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            Text(
+                text = text,
+                fontSize = 21.sp,
+                lineHeight = 27.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Waveform()
+
+        Spacer(Modifier.height(12.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(colors.negative.copy(alpha = if (seconds % 2 == 0) 1f else 0.25f))
+            )
+            Text(
+                String.format("0:%02d", seconds),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                color = Color.White,
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(R.string.rec_status_recording_title),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.welcome_rec_hint),
+            fontSize = 13.sp,
+            color = Color.White.copy(alpha = 0.75f),
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(Modifier.weight(1f))
+        MicButton(arcProgress = arcProgress)
+    }
+}
+
+/** Стадия распознавания — те же строки, что в живом оверлее. */
+@Composable
+private fun ParsingStage() {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        CircularProgressIndicator(color = Color.White)
+        Text(
+            stringResource(R.string.expense_parsing),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+        )
+        Text(
+            stringResource(R.string.expense_parsing_subtitle),
+            fontSize = 13.sp,
+            color = Color.White.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 40.dp),
+        )
+    }
+}
+
+/** Микрофон 82 dp — ровно кнопка записи из формы расхода. */
 @Composable
 private fun MicButton(arcProgress: Float) {
     val colors = Splitty.colors
     val infinite = rememberInfiniteTransition(label = "mic")
     val pulse by infinite.animateFloat(
         initialValue = 1f,
-        targetValue = 1.55f,
-        animationSpec = infiniteRepeatable(tween(1900, easing = LinearEasing), RepeatMode.Restart),
+        targetValue = 1.5f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         label = "pulse",
     )
     val pulseAlpha by infinite.animateFloat(
         initialValue = 0.8f,
         targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(1900, easing = LinearEasing), RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         label = "pulseAlpha",
     )
 
     Box(contentAlignment = Alignment.Center) {
         Box(
             Modifier
-                .size(104.dp)
+                .size(82.dp)
                 .scale(pulse)
                 .graphicsLayer { alpha = pulseAlpha }
                 .drawBehind {
                     drawCircle(
                         color = colors.accent,
-                        radius = size.minDimension / 2 - 1.5.dp.toPx(),
-                        style = Stroke(width = 3.dp.toPx()),
+                        radius = size.minDimension / 2 - 1.dp.toPx(),
+                        style = Stroke(width = 2.dp.toPx()),
                     )
                 }
         )
-        Canvas(Modifier.size(126.dp)) {
-            val stroke = 5.dp.toPx()
+        Canvas(Modifier.size(98.dp)) {
+            val stroke = 4.dp.toPx()
             drawCircle(
                 color = Color.White.copy(alpha = 0.16f),
                 radius = size.minDimension / 2 - stroke / 2,
@@ -508,14 +605,14 @@ private fun MicButton(arcProgress: Float) {
             )
         }
         Box(
-            modifier = Modifier.size(104.dp).clip(CircleShape).background(colors.accent),
+            modifier = Modifier.size(82.dp).clip(CircleShape).background(colors.accent),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Filled.Mic,
                 contentDescription = null,
                 tint = Color.White,
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier.size(34.dp),
             )
         }
     }
@@ -523,25 +620,25 @@ private fun MicButton(arcProgress: Float) {
 
 @Composable
 private fun Waveform() {
-    val base = listOf(10, 26, 40, 19, 32, 46, 15, 29, 37, 21, 11)
+    val base = listOf(8, 20, 30, 15, 24, 34, 12, 22, 28, 16, 9, 26, 14, 32, 18)
     var phase by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         // Волна живая, но нарочно неспешная: экран объясняет, а не пляшет.
         while (true) {
-            delay(130)
+            delay(150)
             phase++
         }
     }
     Row(
-        modifier = Modifier.height(48.dp),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        modifier = Modifier.size(width = 240.dp, height = 44.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         base.indices.forEach { index ->
             val height by animateDpAsState(base[(index + phase) % base.size].dp, label = "bar")
             Box(
                 Modifier
-                    .width(4.5.dp)
+                    .width(4.dp)
                     .height(height)
                     .clip(CircleShape)
                     .background(Color.White.copy(alpha = 0.92f))
@@ -559,39 +656,39 @@ private fun MiniReceipt(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(4.dp))
             .background(colors.receiptPaper)
-            .padding(20.dp),
+            .padding(16.dp),
     ) {
         Row(Modifier.fillMaxWidth()) {
             Text(
                 stringResource(R.string.welcome_rcpt_items),
-                fontSize = 15.sp,
+                fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
                 color = colors.inkSecondary,
             )
             Spacer(Modifier.weight(1f))
             Text(
                 stringResource(R.string.welcome_rcpt_count),
-                fontSize = 15.sp,
+                fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
                 color = colors.inkSecondary,
             )
         }
         ReceiptItem("Пицца", "800 ₽", "по 400 ₽ × 2")
         ReceiptItem("Кола", "200 ₽", "по 100 ₽ × 2")
-        Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().height(2.dp).background(colors.ink))
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth().height(1.5.dp).background(colors.ink))
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth()) {
             Text(
                 stringResource(R.string.welcome_rcpt_total),
-                fontSize = 20.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.ink,
             )
             Spacer(Modifier.weight(1f))
             Text(
                 "1000 ₽",
-                fontSize = 24.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
                 color = colors.ink,
@@ -603,26 +700,26 @@ private fun MiniReceipt(modifier: Modifier = Modifier) {
 @Composable
 private fun ReceiptItem(name: String, sum: String, each: String) {
     val colors = Splitty.colors
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(9.dp))
     Box(Modifier.fillMaxWidth().height(1.dp).background(colors.hairline))
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(9.dp))
     Row(Modifier.fillMaxWidth()) {
-        Text(name, fontSize = 19.sp, fontWeight = FontWeight.Bold, color = colors.ink)
+        Text(name, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
         Spacer(Modifier.weight(1f))
         Text(
             sum,
-            fontSize = 19.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
             fontFamily = FontFamily.Monospace,
             color = colors.ink,
         )
     }
-    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Avatar("Я", colors.accent, size = 24)
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Avatar("Я", colors.accent, size = 20)
         Spacer(Modifier.width(2.dp))
-        Avatar("С", colors.chartCategorical[1], size = 24)
+        Avatar("С", colors.chartCategorical[1], size = 20)
         Spacer(Modifier.weight(1f))
-        Text(each, fontSize = 14.sp, fontFamily = FontFamily.Monospace, color = colors.inkSecondary)
+        Text(each, fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = colors.inkSecondary)
     }
 }
 
@@ -641,20 +738,23 @@ private fun WhoPaidArt(isActive: Boolean) {
         while (true) {
             shown = 0
             repeat(3) {
-                delay(if (it == 2) 520 else 380)
+                // Каждую карточку надо успеть прочитать: суммы здесь и есть
+                // содержание экрана.
+                delay(if (it == 2) 1400 else 1100)
                 shown = it + 1
             }
-            delay(2400)
+            delay(5000)
             shown = 0
-            delay(400)
+            delay(700)
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().padding(18.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
         Eyebrow(stringResource(R.string.welcome_paid_eyebrow))
+        Spacer(Modifier.height(14.dp))
 
         PaidCard(
             initial = "А",
@@ -665,6 +765,7 @@ private fun WhoPaidArt(isActive: Boolean) {
             color = colors.accent,
             visible = shown > 0,
         )
+        Spacer(Modifier.height(12.dp))
         PaidCard(
             initial = "Б",
             who = stringResource(R.string.welcome_paid_borya),
@@ -675,53 +776,57 @@ private fun WhoPaidArt(isActive: Boolean) {
             visible = shown > 1,
         )
 
-        Spacer(Modifier.weight(1f))
-        Box(Modifier.fillMaxWidth().graphicsLayer { alpha = if (shown > 2) 1f else 0f }) { ArrowDown() }
-        Spacer(Modifier.weight(1f))
+        ArrowDown(
+            Modifier
+                .padding(vertical = 12.dp)
+                .graphicsLayer { alpha = if (shown > 2) 1f else 0f }
+        )
 
         val summaryAlpha by animateFloatAsState(if (shown > 2) 1f else 0f, label = "summary")
-        Card(
-            modifier = Modifier.fillMaxWidth().graphicsLayer { alpha = summaryAlpha },
-            background = colors.accent.copy(alpha = 0.11f),
-            elevation = 0.dp,
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { alpha = summaryAlpha }
+                .clip(RoundedCornerShape(18.dp))
+                .background(colors.accent.copy(alpha = 0.11f))
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Avatar("Я", colors.inkSecondary, size = 44)
-                    Column {
-                        Text(
-                            stringResource(R.string.welcome_you_paid_nothing),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.ink,
-                        )
-                        Text(
-                            stringResource(R.string.welcome_your_share),
-                            fontSize = 15.sp,
-                            color = colors.inkSecondary,
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Avatar("Я", colors.inkSecondary)
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        "300 ₽",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        color = colors.accentText,
+                        stringResource(R.string.welcome_you_paid_nothing),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = colors.ink,
+                    )
+                    Text(
+                        stringResource(R.string.welcome_your_share),
+                        fontSize = 13.sp,
+                        color = colors.inkSecondary,
                     )
                 }
-                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.accent.copy(alpha = 0.25f)))
-                // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
+                Spacer(Modifier.weight(1f))
                 Text(
-                    stringResource(R.string.welcome_share_math),
-                    fontSize = 15.sp,
+                    "300 ₽",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
-                    color = colors.accentText.copy(alpha = 0.75f),
+                    color = colors.accentText,
                 )
             }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.accent.copy(alpha = 0.25f)))
+            // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
+            Text(
+                stringResource(R.string.welcome_share_math),
+                fontSize = 13.sp,
+                fontFamily = FontFamily.Monospace,
+                color = colors.accentText.copy(alpha = 0.75f),
+            )
         }
     }
 }
@@ -742,18 +847,17 @@ private fun PaidCard(
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Avatar(initial, color, size = 44)
-                Column {
-                    Text(who, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
-                    Text(what, fontSize = 14.sp, color = colors.inkSecondary)
+                Avatar(initial, color)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(who, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
+                    Text(what, fontSize = 13.sp, color = colors.inkSecondary)
                 }
-                Spacer(Modifier.weight(1f))
                 Text(
                     sum,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
                     color = colors.ink,
                 )
@@ -765,19 +869,19 @@ private fun PaidCard(
             ) {
                 Text(
                     stringResource(R.string.welcome_split_three),
-                    fontSize = 16.sp,
+                    fontSize = 13.sp,
                     color = colors.inkSecondary,
                 )
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
                         .background(colors.accent.copy(alpha = 0.14f))
-                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                 ) {
                     Text(
                         share,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace,
                         color = colors.accentText,
                     )
@@ -803,88 +907,115 @@ private fun TransfersArt(isActive: Boolean) {
     LaunchedEffect(isActive) {
         if (!isActive || touched) return@LaunchedEffect
         withSplitty = false
-        delay(1700)
+        // Пауза длиннее: сначала надо прочитать «без», иначе переключение
+        // случится раньше, чем человек понял, что сравнивают.
+        delay(2800)
         if (!touched) withSplitty = true
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize().padding(18.dp),
+        verticalArrangement = Arrangement.Center,
     ) {
-        Card(modifier = Modifier.fillMaxWidth().height(68.dp)) {
+        Card(modifier = Modifier.fillMaxWidth()) {
             Row(
-                Modifier.fillMaxSize().padding(horizontal = 18.dp),
+                Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     stringResource(R.string.welcome_evening_share),
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.ink,
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
                     "300 ₽",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
                     color = colors.ink,
                 )
             }
         }
 
+        Spacer(Modifier.height(14.dp))
         Eyebrow(stringResource(R.string.welcome_you_transfer))
+        Spacer(Modifier.height(12.dp))
 
-        PayRow(
-            initial = "А",
-            name = stringResource(R.string.welcome_to_anya),
-            note = stringResource(
-                if (withSplitty) R.string.welcome_anya_note_with else R.string.welcome_for_dinner
-            ),
-            sum = if (withSplitty) "300 ₽" else "200 ₽",
-            avatarColor = colors.accent,
-            sumColor = if (withSplitty) colors.accentText else colors.negative,
-        )
+        Card(modifier = Modifier.fillMaxWidth()) {
+            AppRow(
+                initial = "А",
+                avatarColor = colors.accent,
+                title = stringResource(R.string.welcome_to_anya),
+                subtitle = stringResource(
+                    if (withSplitty) R.string.welcome_anya_note_with else R.string.welcome_for_dinner
+                ),
+                amount = if (withSplitty) "300 ₽" else "200 ₽",
+                amountColor = if (withSplitty) colors.accentText else colors.negative,
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
 
         // Место под вторую строку занято в обоих состояниях: слева перевод,
         // справа объяснение, почему его больше нет. Иначе при переключении низ
         // экрана прыгает, а половина карточки пустует.
-        Box(Modifier.fillMaxWidth().height(140.dp), contentAlignment = Alignment.TopStart) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(122.dp), contentAlignment = Alignment.TopStart) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!withSplitty) {
-                    PayRow(
-                        initial = "Б",
-                        name = stringResource(R.string.welcome_to_borya),
-                        note = stringResource(R.string.welcome_for_taxi),
-                        sum = "100 ₽",
-                        avatarColor = colors.chartCategorical[2],
-                        sumColor = colors.negative,
-                    )
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        AppRow(
+                            initial = "Б",
+                            avatarColor = colors.chartCategorical[2],
+                            title = stringResource(R.string.welcome_to_borya),
+                            subtitle = stringResource(R.string.welcome_for_taxi),
+                            amount = "100 ₽",
+                            amountColor = colors.negative,
+                        )
+                    }
                     SideNote(stringResource(R.string.welcome_note_without), colors.negative)
                 } else {
-                    SettledRow()
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(colors.accent.copy(alpha = 0.12f))
+                    ) {
+                        // Боря заплатил ровно свою долю: его баланс ноль, поэтому
+                        // строка «вам переводить» исчезает — это и есть сведение.
+                        AppRow(
+                            initial = "Б",
+                            avatarColor = colors.chartCategorical[2].copy(alpha = 0.35f),
+                            title = stringResource(R.string.welcome_to_borya),
+                            subtitle = stringResource(R.string.welcome_settled),
+                            amount = "0 ₽",
+                            amountColor = colors.accentText,
+                            titleColor = colors.inkSecondary,
+                        )
+                    }
                     SideNote(stringResource(R.string.welcome_note_with), colors.accentText)
                 }
             }
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(12.dp))
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background((if (withSplitty) colors.accent else colors.negative).copy(alpha = 0.1f))
-                .padding(vertical = 13.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             repeat(2) { index ->
                 val filled = if (withSplitty) index == 0 else true
                 Box(
                     Modifier
-                        .size(width = 15.dp, height = 22.dp)
-                        .clip(RoundedCornerShape(3.dp))
+                        .size(width = 11.dp, height = 15.dp)
+                        .clip(RoundedCornerShape(2.5.dp))
                         .background(
                             when {
                                 !filled -> colors.hairline
@@ -896,11 +1027,13 @@ private fun TransfersArt(isActive: Boolean) {
             }
             Text(
                 stringResource(if (withSplitty) R.string.welcome_one_transfer else R.string.welcome_two_transfers),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = if (withSplitty) colors.accentText else colors.negative,
             )
         }
+
+        Spacer(Modifier.height(12.dp))
 
         CompareSegment(withSplitty = withSplitty) {
             touched = true
@@ -911,80 +1044,7 @@ private fun TransfersArt(isActive: Boolean) {
 
 @Composable
 private fun SideNote(text: String, color: Color) {
-    Text(text, fontSize = 15.sp, color = color, modifier = Modifier.fillMaxWidth())
-}
-
-/**
- * Боря заплатил ровно свою долю: его баланс ноль, поэтому строка «вам
- * переводить» для него исчезает — это и есть сведение долгов.
- */
-@Composable
-private fun SettledRow() {
-    val colors = Splitty.colors
-    Card(
-        modifier = Modifier.fillMaxWidth().height(96.dp),
-        radius = 22.dp,
-        background = colors.accent.copy(alpha = 0.12f),
-        elevation = 0.dp,
-    ) {
-        Row(
-            Modifier.fillMaxSize().padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Avatar("Б", colors.chartCategorical[2].copy(alpha = 0.35f), size = 48)
-            Column {
-                Text(
-                    stringResource(R.string.welcome_to_borya),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.inkSecondary,
-                )
-                Text(stringResource(R.string.welcome_settled), fontSize = 15.sp, color = colors.inkSecondary)
-            }
-            Spacer(Modifier.weight(1f))
-            Text(
-                "0 ₽",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                color = colors.accentText,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PayRow(
-    initial: String,
-    name: String,
-    note: String,
-    sum: String,
-    avatarColor: Color,
-    sumColor: Color,
-) {
-    val colors = Splitty.colors
-    Card(modifier = Modifier.fillMaxWidth().height(96.dp), radius = 22.dp) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Avatar(initial, avatarColor, size = 48)
-            Column {
-                Text(name, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
-                Text(note, fontSize = 15.sp, color = colors.inkSecondary)
-            }
-            Spacer(Modifier.weight(1f))
-            Text(
-                sum,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                color = sumColor,
-            )
-        }
-    }
+    Text(text, fontSize = 13.sp, color = color, modifier = Modifier.fillMaxWidth())
 }
 
 @Composable
@@ -997,7 +1057,7 @@ private fun CompareSegment(withSplitty: Boolean, onChange: (Boolean) -> Unit) {
             .fillMaxWidth()
             .clip(CircleShape)
             .background(colors.ink.copy(alpha = 0.06f))
-            .padding(5.dp)
+            .padding(4.dp)
             .testTag("welcome_compare"),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -1015,12 +1075,12 @@ private fun RowScope.SegmentHalf(text: String, selected: Boolean, onClick: () ->
             .clip(CircleShape)
             .background(if (selected) colors.accent else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
+            .padding(vertical = 11.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
-            fontSize = 17.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             color = if (selected) Color.White else colors.inkSecondary,
         )

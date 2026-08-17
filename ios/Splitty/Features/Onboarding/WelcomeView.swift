@@ -170,61 +170,60 @@ private struct SharedBillArt: View {
     @State private var shown = 3
     @State private var loop: Task<Void, Never>?
 
-    private let slips = [("Ужин", 600), ("Такси", 300), ("Продукты", 450)]
+    private let slips = [("Ужин", 600), ("Такси", 300), ("Продукты", 450), ("Кофе", 150)]
 
     private var total: String {
         "\(slips.prefix(shown).reduce(0) { $0 + $1.1 }) ₽"
     }
 
     var body: some View {
+        // Композиция собрана компактно и стоит по центру: тянуть строки
+        // распорками по всей карточке — значит порвать список на куски.
         VStack(spacing: 0) {
             welcomeEyebrow("РАСХОДЫ ГРУППЫ")
+                .padding(.bottom, 14)
 
-            Spacer(minLength: 16).frame(maxHeight: 26)
-
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 ForEach(Array(slips.enumerated()), id: \.offset) { index, slip in
-                    HStack {
-                        Text(slip.0).scaledFont(size: 20, weight: .semibold)
-                        Spacer()
-                        Text("\(slip.1) ₽").font(.system(size: 21, weight: .bold, design: .monospaced))
+                    HStack(spacing: 14) {
+                        Text(slip.0)
+                            .scaledFont(size: 16, weight: .semibold)
+                            .foregroundStyle(Color.ink)
+                        Spacer(minLength: 8)
+                        Text("\(slip.1) ₽")
+                            .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Color.ink)
                     }
-                    .padding(.horizontal, 20)
-                    .frame(height: 92)
-                    .background(Color.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
+                    .surfaceCard()
                     .opacity(index < shown ? 1 : 0)
-                    .offset(y: index < shown ? 0 : -26)
-                    .scaleEffect(index < shown ? 1 : 0.94)
+                    .offset(y: index < shown ? 0 : -22)
+                    .scaleEffect(index < shown ? 1 : 0.96)
                 }
             }
 
-            Spacer(minLength: 16)
-
             Image(systemName: "arrow.down")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color.accent.opacity(0.45))
+                .padding(.vertical, 14)
 
-            Spacer(minLength: 16)
-
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 Text("Общий счёт группы")
-                    .scaledFont(size: 17, weight: .semibold)
-                    .foregroundStyle(Color.accentText)
+                    .scaledFont(size: 14, weight: .medium)
+                    .foregroundStyle(Color.accentText.opacity(0.8))
                 Text(total)
-                    .font(.system(size: 30, weight: .bold, design: .monospaced))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(Color.accentText)
                     .contentTransition(.numericText())
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 124)
+            .padding(.vertical, 18)
             .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .strokeBorder(Color.accent.opacity(0.55), style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
             )
-            .scaleEffect(shown == slips.count ? 1.03 : 1)
         }
-        .padding(22)
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { restart() }
         .onDisappear { loop?.cancel() }
         .onChange(of: isActive) { restart() }
@@ -240,25 +239,34 @@ private struct SharedBillArt: View {
             while !Task.isCancelled {
                 shown = 0
                 for index in 1...slips.count {
-                    try? await Task.sleep(nanoseconds: 320_000_000)
+                    try? await Task.sleep(nanoseconds: 600_000_000)
                     if Task.isCancelled { return }
                     withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) { shown = index }
                 }
-                try? await Task.sleep(nanoseconds: 1_900_000_000)
+                // Собранный счёт держим долго: это и есть мысль экрана, а не
+                // мельтешение появлений.
+                try? await Task.sleep(nanoseconds: 4_500_000_000)
                 if Task.isCancelled { return }
-                withAnimation(.easeIn(duration: 0.3)) { shown = 0 }
-                try? await Task.sleep(nanoseconds: 400_000_000)
+                withAnimation(.easeIn(duration: 0.35)) { shown = 0 }
+                try? await Task.sleep(nanoseconds: 700_000_000)
             }
         }
     }
 }
 
-// MARK: - Экран 2: запись голоса и мини-чек
+// MARK: - Экран 2: запись голоса, распознавание и мини-чек
 
+/// Повторяет живой `RecordingOverlay` и `parsingOverlay` с экрана расхода:
+/// те же размеры микрофона и волны, тот же счётчик, те же тексты статуса.
+/// Онбординг обещает ровно тот экран, который человек увидит.
 private struct DictationArt: View {
     let isActive: Bool
+
+    enum Stage { case recording, parsing, receipt }
+
+    @State private var stage: Stage = .recording
     @State private var words = 10
-    @State private var showReceipt = false
+    @State private var seconds = 6
     @State private var pulse = false
     @State private var arc: CGFloat = 0
     @State private var loop: Task<Void, Never>?
@@ -266,20 +274,16 @@ private struct DictationArt: View {
     private let phrase = ["пицца", "за", "восемьсот", "и", "кола", "за", "двести", "пополам", "с", "Саней"]
 
     var body: some View {
-        // Фон один на оба состояния: чек проявляется поверх той же тёмной
-        // записи, а не подменяет экран вспышкой света.
+        // Фон один на все стадии: распознавание и чек проявляются поверх той же
+        // тёмной записи, а не подменяют экран вспышкой света.
         ZStack {
-            if showReceipt {
-                VStack(spacing: 20) {
-                    Label("Готово — расход в группе", systemImage: "checkmark.circle.fill")
-                        .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(.white.opacity(0.85))
-                    MiniReceipt()
-                }
-                .padding(.horizontal, 24)
-                .transition(.scale(scale: 0.92).combined(with: .opacity))
-            } else {
+            switch stage {
+            case .recording:
                 recording.transition(.opacity)
+            case .parsing:
+                parsing.transition(.opacity)
+            case .receipt:
+                receipt.transition(.scale(scale: 0.94).combined(with: .opacity))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -289,82 +293,152 @@ private struct DictationArt: View {
         .onChange(of: isActive) { restart() }
     }
 
+    // MARK: Стадии
+
     private var recording: some View {
-        // Раскладка та же, что в живом оверлее записи: расшифровка сверху,
-        // микрофон внизу под большим пальцем.
-        VStack(spacing: 16) {
+        VStack(spacing: 0) {
+            Spacer(minLength: 8)
+
+            // Окно расшифровки: 21pt и маска сверху — как в оверлее записи.
             Text(phrase.prefix(words).joined(separator: " "))
-                .scaledFont(size: 23, weight: .bold)
+                .scaledFont(size: 21, weight: .semibold)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
-                .frame(height: 104, alignment: .bottom)
-                .padding(.horizontal, 20)
+                .lineSpacing(4)
+                .frame(maxWidth: 320)
+                .frame(height: 96, alignment: .bottom)
+                .clipped()
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.4),
+                            .init(color: .black, location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
 
             WelcomeWaveform()
+                .frame(width: 240, height: 44)
+                .padding(.top, 16)
 
-            HStack(spacing: 6) {
-                Circle().fill(Color.negative).frame(width: 7, height: 7)
-                Text("0:06").font(.system(size: 15, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.9))
-            }
-
-            Spacer(minLength: 12)
-
-            // Микрофон как в самой записи: пульс-кольцо и дуга лимита в 60 с.
-            ZStack {
+            HStack(spacing: 8) {
                 Circle()
-                    .strokeBorder(Color.accent.opacity(0.55), lineWidth: 3)
-                    .frame(width: 104, height: 104)
-                    .scaleEffect(pulse ? 1.55 : 1)
-                    .opacity(pulse ? 0 : 0.8)
-
-                Circle()
-                    .stroke(Color.white.opacity(0.16), lineWidth: 5)
-                    .frame(width: 126, height: 126)
-                Circle()
-                    .trim(from: 0, to: arc)
-                    .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 126, height: 126)
-
-                Circle().fill(Color.accent).frame(width: 104, height: 104)
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 40, weight: .semibold))
+                    .fill(Color.negative)
+                    .frame(width: 8, height: 8)
+                    .opacity(seconds % 2 == 0 ? 1 : 0.25)
+                Text(String(format: "0:%02d", seconds))
+                    .scaledFont(size: 18, weight: .bold)
+                    .monospacedDigit()
                     .foregroundStyle(.white)
             }
+            .padding(.top, 12)
 
-            Text("Отпустите — распознать · вверх — закрепить")
-                .scaledFont(size: 14)
-                .foregroundStyle(.white.opacity(0.55))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 16)
+            VStack(spacing: 6) {
+                Text("Говорите…")
+                    .scaledFont(size: 20, weight: .bold)
+                    .foregroundStyle(.white)
+                Text("Отпустите — распознать · вверх — закрепить")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 12)
+
+            Spacer(minLength: 20)
+
+            micCircle
         }
-        .padding(.vertical, 26)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 22)
     }
+
+    /// Микрофон 82 pt — ровно кнопка записи из формы расхода.
+    private var micCircle: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(Color.accent.opacity(0.5), lineWidth: 2)
+                .frame(width: 82, height: 82)
+                .scaleEffect(pulse ? 1.5 : 1)
+                .opacity(pulse ? 0 : 0.8)
+
+            Circle()
+                .stroke(Color.white.opacity(0.16), lineWidth: 4)
+                .frame(width: 98, height: 98)
+            Circle()
+                .trim(from: 0, to: arc)
+                .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .frame(width: 98, height: 98)
+
+            Circle().fill(Color.accent).frame(width: 82, height: 82)
+            Image(systemName: "mic.fill")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    /// Стадия распознавания — тот же текст, что в живом `parsingOverlay`.
+    private var parsing: some View {
+        VStack(spacing: 18) {
+            ProgressView()
+                .controlSize(.large)
+                .tint(.white)
+            Text("Распознаю…")
+                .scaledFont(size: 17, weight: .semibold)
+                .foregroundStyle(.white)
+            Text("Считываю расход и раскладываю по позициям")
+                .scaledFont(size: 13, relativeTo: .footnote)
+                .foregroundStyle(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+    }
+
+    private var receipt: some View {
+        VStack(spacing: 16) {
+            Label("Готово — расход в группе", systemImage: "checkmark.circle.fill")
+                .scaledFont(size: 15, weight: .semibold)
+                .foregroundStyle(.white.opacity(0.85))
+            MiniReceipt()
+        }
+        .padding(.horizontal, 28)
+    }
+
+    // MARK: Цикл
 
     private func restart() {
         loop?.cancel()
         guard isActive else {
             words = phrase.count
+            seconds = 6
+            stage = .recording
             return
         }
-        withAnimation(.easeOut(duration: 1.9).repeatForever(autoreverses: false)) { pulse = true }
+        withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) { pulse = true }
         loop = Task { @MainActor in
             while !Task.isCancelled {
-                withAnimation(.easeOut(duration: 0.25)) { showReceipt = false }
+                withAnimation(.easeOut(duration: 0.25)) { stage = .recording }
                 words = 0
+                seconds = 0
                 arc = 0
-                withAnimation(.linear(duration: 3.6)) { arc = 0.62 }
+                withAnimation(.linear(duration: 4.5)) { arc = 0.11 }
+                // Слова и секунды идут вместе: 4,5 с записи — столько же, сколько
+                // человек реально говорит эту фразу.
                 for index in 1...phrase.count {
-                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    try? await Task.sleep(nanoseconds: 450_000_000)
                     if Task.isCancelled { return }
                     withAnimation(.easeOut(duration: 0.18)) { words = index }
+                    if index % 2 == 0 { seconds += 1 }
                 }
-                try? await Task.sleep(nanoseconds: 800_000_000)
+                try? await Task.sleep(nanoseconds: 700_000_000)
                 if Task.isCancelled { return }
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { showReceipt = true }
-                try? await Task.sleep(nanoseconds: 2_600_000_000)
+                withAnimation(.easeOut(duration: 0.25)) { stage = .parsing }
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                if Task.isCancelled { return }
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { stage = .receipt }
+                try? await Task.sleep(nanoseconds: 3_800_000_000)
             }
         }
     }
@@ -373,22 +447,21 @@ private struct DictationArt: View {
 private struct WelcomeWaveform: View {
     @State private var phase = 0
 
-    private let base: [CGFloat] = [10, 26, 40, 19, 32, 46, 15, 29, 37, 21, 11]
+    private let base: [CGFloat] = [8, 20, 30, 15, 24, 34, 12, 22, 28, 16, 9, 26, 14, 32, 18]
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             ForEach(0..<base.count, id: \.self) { index in
                 Capsule()
                     .fill(Color.white.opacity(0.92))
-                    .frame(width: 4.5, height: base[(index + phase) % base.count])
+                    .frame(width: 4, height: base[(index + phase) % base.count])
             }
         }
-        .frame(height: 48)
         .task {
             // Волна живая, но нарочно неспешная: экран объясняет, а не пляшет.
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 130_000_000)
-                withAnimation(.easeInOut(duration: 0.13)) { phase += 1 }
+                try? await Task.sleep(nanoseconds: 150_000_000)
+                withAnimation(.easeInOut(duration: 0.15)) { phase += 1 }
             }
         }
     }
@@ -399,9 +472,9 @@ private struct MiniReceipt: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("позиции").font(.system(size: 15, design: .monospaced))
+                Text("позиции").font(.system(size: 12, design: .monospaced))
                 Spacer()
-                Text("2 поз.").font(.system(size: 15, design: .monospaced))
+                Text("2 поз.").font(.system(size: 12, design: .monospaced))
             }
             .foregroundStyle(Color.inkSecondary)
 
@@ -410,30 +483,30 @@ private struct MiniReceipt: View {
             dashed
             item(name: "Кола", sum: "200 ₽", each: "по 100 ₽ × 2")
 
-            Rectangle().fill(Color.ink).frame(height: 2).padding(.vertical, 14)
+            Rectangle().fill(Color.ink).frame(height: 1.5).padding(.vertical, 10)
 
             HStack {
-                Text("Итого").scaledFont(size: 20, weight: .bold)
+                Text("Итого").scaledFont(size: 16, weight: .bold)
                 Spacer()
-                Text("1000 ₽").font(.system(size: 24, weight: .bold, design: .monospaced))
+                Text("1000 ₽").font(.system(size: 17, weight: .bold, design: .monospaced))
             }
         }
-        .padding(20)
+        .padding(16)
         .background(Color.receiptPaper)
         .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        .shadow(color: .black.opacity(0.2), radius: 16, y: 8)
+        .shadow(color: .black.opacity(0.25), radius: 16, y: 8)
     }
 
     private var dashed: some View {
-        Rectangle().fill(Color.hairline).frame(height: 1).padding(.vertical, 10)
+        Rectangle().fill(Color.hairline).frame(height: 1).padding(.vertical, 9)
     }
 
     private func item(name: String, sum: String, each: String) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             HStack {
-                Text(name).scaledFont(size: 19, weight: .bold)
+                Text(name).scaledFont(size: 15, weight: .semibold)
                 Spacer()
-                Text(sum).font(.system(size: 19, weight: .bold, design: .monospaced))
+                Text(sum).font(.system(size: 15, weight: .semibold, design: .monospaced))
             }
             HStack {
                 HStack(spacing: -6) {
@@ -441,22 +514,22 @@ private struct MiniReceipt: View {
                     receiptAvatar("С", color: Color(red: 0.55, green: 0.36, blue: 0.96))
                 }
                 Spacer()
-                Text(each).font(.system(size: 14, design: .monospaced)).foregroundStyle(Color.inkSecondary)
+                Text(each).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.inkSecondary)
             }
         }
     }
 
     private func receiptAvatar(_ letter: String, color: Color) -> some View {
         Text(letter)
-            .font(.system(size: 11, weight: .bold))
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(.white)
-            .frame(width: 24, height: 24)
+            .frame(width: 20, height: 20)
             .background(color, in: Circle())
             .overlay(Circle().strokeBorder(Color.receiptPaper, lineWidth: 2))
     }
 }
 
-// MARK: - Экран 3: кто сколько заплатил
+// MARK: - Экран 3: кто за что заплатил
 
 private struct WhoPaidArt: View {
     let isActive: Bool
@@ -464,65 +537,62 @@ private struct WhoPaidArt: View {
     @State private var loop: Task<Void, Never>?
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             welcomeEyebrow("КТО ЗА ЧТО ЗАПЛАТИЛ")
-
-            Spacer(minLength: 10).frame(maxHeight: 22)
+                .padding(.bottom, 2)
 
             paidCard(
                 initial: "А", name: "Аня", what: "за ужин", sum: "600 ₽", share: "по 200 ₽",
                 color: .accent
             )
             .opacity(shown > 0 ? 1 : 0)
-            .offset(y: shown > 0 ? 0 : -18)
+            .offset(y: shown > 0 ? 0 : -16)
 
             paidCard(
                 initial: "Б", name: "Боря", what: "за такси", sum: "300 ₽", share: "по 100 ₽",
                 color: Color(red: 0.18, green: 0.43, blue: 0.89)
             )
             .opacity(shown > 1 ? 1 : 0)
-            .offset(y: shown > 1 ? 0 : -18)
-
-            Spacer(minLength: 12)
+            .offset(y: shown > 1 ? 0 : -16)
 
             Image(systemName: "arrow.down")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(Color.accent.opacity(0.45))
                 .opacity(shown > 2 ? 1 : 0)
+                .padding(.vertical, 2)
 
-            Spacer(minLength: 12)
-
-            VStack(spacing: 14) {
-                HStack(spacing: 12) {
-                    welcomeAvatar("Я", color: Color.inkSecondary, size: 48)
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    welcomeAvatar("Я", color: Color.inkSecondary, size: 46)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Вы").scaledFont(size: 20, weight: .semibold)
+                        Text("Вы").scaledFont(size: 16, weight: .semibold)
                         Text("не платили")
-                            .scaledFont(size: 15)
+                            .font(.system(size: 13))
                             .foregroundStyle(Color.inkSecondary)
                     }
-                    Spacer(minLength: 0)
+                    Spacer(minLength: 8)
                     Text("300 ₽")
-                        .font(.system(size: 26, weight: .bold, design: .monospaced))
+                        .font(.system(size: 17, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.accentText)
                 }
 
                 // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
                 HStack {
                     Text("ваша доля: 200 + 100")
-                        .font(.system(size: 15, design: .monospaced))
+                        .font(.system(size: 13, design: .monospaced))
                         .foregroundStyle(Color.accentText.opacity(0.75))
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 14)
+                .padding(.top, 12)
                 .overlay(alignment: .top) { Rectangle().fill(Color.accent.opacity(0.25)).frame(height: 1) }
             }
-            .padding(20)
-            .background(Color.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .padding(16)
+            .background(Color.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             .opacity(shown > 2 ? 1 : 0)
-            .scaleEffect(shown > 2 ? 1 : 0.96)
+            .scaleEffect(shown > 2 ? 1 : 0.97)
         }
         .padding(18)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { restart() }
         .onDisappear { loop?.cancel() }
         .onChange(of: isActive) { restart() }
@@ -538,14 +608,16 @@ private struct WhoPaidArt: View {
             while !Task.isCancelled {
                 shown = 0
                 for index in 1...3 {
-                    try? await Task.sleep(nanoseconds: index == 3 ? 520_000_000 : 380_000_000)
+                    // Каждую карточку надо успеть прочитать: суммы здесь и есть
+                    // содержание экрана.
+                    try? await Task.sleep(nanoseconds: index == 3 ? 1_400_000_000 : 1_100_000_000)
                     if Task.isCancelled { return }
-                    withAnimation(.spring(response: 0.45, dampingFraction: 0.8)) { shown = index }
+                    withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { shown = index }
                 }
-                try? await Task.sleep(nanoseconds: 2_400_000_000)
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
                 if Task.isCancelled { return }
-                withAnimation(.easeIn(duration: 0.28)) { shown = 0 }
-                try? await Task.sleep(nanoseconds: 400_000_000)
+                withAnimation(.easeIn(duration: 0.35)) { shown = 0 }
+                try? await Task.sleep(nanoseconds: 700_000_000)
             }
         }
     }
@@ -553,33 +625,31 @@ private struct WhoPaidArt: View {
     private func paidCard(
         initial: String, name: String, what: String, sum: String, share: String, color: Color
     ) -> some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 12) {
-                welcomeAvatar(initial, color: color, size: 48)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(name).scaledFont(size: 20, weight: .semibold)
-                    Text(what).scaledFont(size: 15).foregroundStyle(Color.inkSecondary)
+        VStack(spacing: 12) {
+            HStack(spacing: 14) {
+                welcomeAvatar(initial, color: color, size: 46)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(name).scaledFont(size: 16, weight: .semibold)
+                    Text(what).font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
                 }
-                Spacer(minLength: 0)
-                Text(sum).font(.system(size: 26, weight: .bold, design: .monospaced))
+                Spacer(minLength: 8)
+                Text(sum).font(.system(size: 17, weight: .semibold, design: .monospaced))
             }
 
             HStack(spacing: 8) {
-                Text("делим на троих").scaledFont(size: 16).foregroundStyle(Color.inkSecondary)
+                Text("делим на троих").font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
                 Text(share)
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.accentText)
-                    .padding(.horizontal, 13)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                     .background(Color.accent.opacity(0.14), in: Capsule())
                 Spacer(minLength: 0)
             }
-            .padding(.top, 14)
+            .padding(.top, 12)
             .overlay(alignment: .top) { Rectangle().fill(Color.hairline).frame(height: 1) }
         }
-        .padding(20)
-        .background(Color.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
+        .surfaceCard()
     }
 }
 
@@ -594,18 +664,14 @@ private struct TransfersArt: View {
     @State private var demo: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Ваша доля за вечер").scaledFont(size: 17, weight: .semibold)
-                Spacer(minLength: 0)
-                Text("300 ₽").font(.system(size: 24, weight: .bold, design: .monospaced))
+                Text("Ваша доля за вечер").scaledFont(size: 16, weight: .semibold)
+                Spacer(minLength: 8)
+                Text("300 ₽").font(.system(size: 17, weight: .semibold, design: .monospaced))
             }
-            .padding(.horizontal, 18)
-            .frame(height: 76)
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
-
-            Spacer(minLength: 12).frame(maxHeight: 24)
+            .surfaceCard()
+            .padding(.bottom, 6)
 
             welcomeEyebrow("ВАМ ПЕРЕВОДИТЬ")
 
@@ -620,40 +686,39 @@ private struct TransfersArt: View {
             // низ экрана прыгает, а половина карточки пустует.
             ZStack(alignment: .top) {
                 if !withSplitty {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         payRow(initial: "Б", name: "Боре", note: "за такси", sum: "100 ₽",
                                color: Color(red: 0.18, green: 0.43, blue: 0.89))
                         sideNote("Два перевода, два подтверждения", color: .negative)
                     }
                     .transition(.opacity)
                 } else {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         settledRow
                         sideNote("Его 100 ₽ уходят Ане вместе с вашими", color: .accentText)
                     }
                     .transition(.opacity)
                 }
             }
-            .frame(height: 168, alignment: .top)
+            .frame(height: 108, alignment: .top)
+            .padding(.bottom, 6)
 
-            Spacer(minLength: 12)
-
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Spacer(minLength: 0)
                 ForEach(0..<2, id: \.self) { index in
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 2.5)
                         .fill(mark(at: index))
-                        .frame(width: 15, height: 22)
+                        .frame(width: 11, height: 15)
                 }
                 Text(withSplitty ? "1 перевод" : "2 перевода")
-                    .scaledFont(size: 18, weight: .bold)
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(withSplitty ? Color.accentText : Color.negative)
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 16)
+            .padding(.vertical, 12)
             .background(
                 (withSplitty ? Color.accent : Color.negative).opacity(0.1),
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
 
             // Свой сегмент, а не системный Picker: системный тянет чужую
@@ -663,12 +728,13 @@ private struct TransfersArt: View {
                 segmentHalf("Без Splitty", isOn: !withSplitty) { set(false) }
                 segmentHalf("Со Splitty", isOn: withSplitty) { set(true) }
             }
-            .padding(5)
+            .padding(4)
             .background(Color.ink.opacity(0.06), in: Capsule())
             .accessibilityIdentifier("welcomeCompare")
         }
         .padding(18)
-        .animation(.spring(response: 0.42, dampingFraction: 0.82), value: withSplitty)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.spring(response: 0.45, dampingFraction: 0.85), value: withSplitty)
         .onAppear { startDemo() }
         .onDisappear { demo?.cancel() }
         .onChange(of: isActive) { startDemo() }
@@ -684,7 +750,9 @@ private struct TransfersArt: View {
         guard isActive else { return }
         demo = Task { @MainActor in
             withSplitty = false
-            try? await Task.sleep(nanoseconds: 1_700_000_000)
+            // Пауза длиннее: сначала надо прочитать «без», иначе переключение
+            // происходит раньше, чем человек понял, что сравнивают.
+            try? await Task.sleep(nanoseconds: 2_800_000_000)
             if Task.isCancelled { return }
             withSplitty = true
         }
@@ -695,59 +763,54 @@ private struct TransfersArt: View {
         return Color.negative
     }
 
-    /// Боря заплатил ровно свою долю: его баланс ноль, поэтому строка «вам
-    /// переводить» для него исчезает — это и есть сведение долгов.
-    private var settledRow: some View {
-        HStack(spacing: 12) {
-            welcomeAvatar("Б", color: Color(red: 0.18, green: 0.43, blue: 0.89).opacity(0.35), size: 54)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Боре").scaledFont(size: 21, weight: .semibold)
-                    .foregroundStyle(Color.inkSecondary)
-                Text("в расчёте").scaledFont(size: 15).foregroundStyle(Color.inkSecondary)
-            }
-            Spacer(minLength: 0)
-            Text("0 ₽")
-                .font(.system(size: 26, weight: .bold, design: .monospaced))
-                .foregroundStyle(Color.accentText)
-        }
-        .padding(.horizontal, 18)
-        .frame(height: 112)
-        .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-    }
-
     private func sideNote(_ text: String, color: Color) -> some View {
         Text(text)
-            .scaledFont(size: 15)
+            .font(.system(size: 13))
             .foregroundStyle(color)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func payRow(initial: String, name: String, note: String, sum: String, color: Color) -> some View {
-        HStack(spacing: 12) {
-            welcomeAvatar(initial, color: color, size: 54)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name).scaledFont(size: 21, weight: .semibold)
-                Text(note).scaledFont(size: 15).foregroundStyle(Color.inkSecondary)
+    /// Боря заплатил ровно свою долю: его баланс ноль, поэтому строка «вам
+    /// переводить» для него исчезает — это и есть сведение долгов.
+    private var settledRow: some View {
+        HStack(spacing: 14) {
+            welcomeAvatar("Б", color: Color(red: 0.18, green: 0.43, blue: 0.89).opacity(0.35), size: 46)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Боре").scaledFont(size: 16, weight: .semibold).foregroundStyle(Color.inkSecondary)
+                Text("в расчёте").font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: 8)
+            Text("0 ₽")
+                .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                .foregroundStyle(Color.accentText)
+        }
+        .padding(16)
+        .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func payRow(initial: String, name: String, note: String, sum: String, color: Color) -> some View {
+        HStack(spacing: 14) {
+            welcomeAvatar(initial, color: color, size: 46)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name).scaledFont(size: 16, weight: .semibold)
+                Text(note).font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
+            }
+            Spacer(minLength: 8)
             Text(sum)
-                .font(.system(size: 26, weight: .bold, design: .monospaced))
+                .font(.system(size: 17, weight: .semibold, design: .monospaced))
                 .foregroundStyle(withSplitty ? Color.accentText : Color.negative)
                 .contentTransition(.numericText())
         }
-        .padding(.horizontal, 18)
-        .frame(height: 112)
-        .background(Color.surface, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: .black.opacity(0.07), radius: 8, y: 3)
+        .surfaceCard()
     }
 
     private func segmentHalf(_ title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .scaledFont(size: 17, weight: .semibold)
+                .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(isOn ? .white : Color.inkSecondary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 17)
+                .padding(.vertical, 11)
                 .background(isOn ? Color.accent : .clear, in: Capsule())
         }
         .buttonStyle(.plain)
@@ -758,7 +821,7 @@ private struct TransfersArt: View {
 
 private func welcomeEyebrow(_ text: String) -> some View {
     Text(text)
-        .font(.system(size: 13.5, weight: .semibold, design: .monospaced))
+        .font(.system(size: 12, weight: .semibold, design: .monospaced))
         .foregroundStyle(Color.inkSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
 }
