@@ -98,7 +98,7 @@ struct GroupsListView: View {
                 }
                 .sheet(isPresented: $isCreatePresented) {
                     // Список обновится через session.dataVersion (bump внутри).
-                    CreateGroupView {}
+                    CreateGroupView { _ in }
                 }
                 .sheet(isPresented: $isJoinPresented) {
                     JoinGroupView {}

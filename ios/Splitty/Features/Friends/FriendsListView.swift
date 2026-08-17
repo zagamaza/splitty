@@ -7,6 +7,11 @@ struct FriendsListView: View {
     /// Sheet создания группы из empty state: друзья появляются только
     /// через общие группы, поэтому действие ведёт именно туда.
     @State private var isCreateGroupPresented = false
+    /// Созданная группа: в неё уходим сразу после закрытия шита. Без этого
+    /// экран не менялся вообще — новая группа без участников не даёт друзей,
+    /// и человек создавал её снова и снова, думая, что кнопка не работает.
+    @State private var createdRoomId: String?
+    @State private var openedRoomId: String?
     /// Задача перезагрузки по dataVersion (отменяем прежнюю — см. GroupDetailView).
     @State private var reloadTask: Task<Void, Never>?
 
@@ -111,10 +116,20 @@ struct FriendsListView: View {
                 }
             }
         }
+        // Пуш только после закрытия шита: одновременный dismiss и push SwiftUI
+        // иногда съедает.
         .sheet(isPresented: $isCreateGroupPresented) {
+            if let roomId = createdRoomId {
+                createdRoomId = nil
+                openedRoomId = roomId
+            }
+        } content: {
             // Список обновится через session.dataVersion (bump внутри),
             // как при создании из GroupsListView.
-            CreateGroupView {}
+            CreateGroupView { createdRoomId = $0.id }
+        }
+        .navigationDestination(item: $openedRoomId) { roomId in
+            GroupDetailView(roomId: roomId)
         }
     }
 

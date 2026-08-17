@@ -2,7 +2,10 @@ import SwiftUI
 
 /// Создание группы: поле «Название», CTA «Создать».
 struct CreateGroupView: View {
-    private let onCreated: () -> Void
+    /// Созданная группа отдаётся вызвавшему экрану: в списке групп она видна
+    /// сразу, а с «Друзей» без этого не менялось ничего — группу создавали по
+    /// нескольку раз, не понимая, сработало ли.
+    private let onCreated: (RoomDetail) -> Void
 
     @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
@@ -11,7 +14,7 @@ struct CreateGroupView: View {
     @State private var alertMessage: String?
     @FocusState private var isNameFocused: Bool
 
-    init(onCreated: @escaping () -> Void) {
+    init(onCreated: @escaping (RoomDetail) -> Void) {
         self.onCreated = onCreated
     }
 
@@ -73,11 +76,11 @@ struct CreateGroupView: View {
         isSaving = true
         defer { isSaving = false }
         do {
-            _ = try await session.api.createRoom(name: trimmedName)
+            let room = try await session.api.createRoom(name: trimmedName)
             // Единая инвалидация: список групп перезагрузится по dataVersion.
             session.noteDataChanged()
             Haptics.success()
-            onCreated()
+            onCreated(room)
             dismiss()
         } catch {
             alertMessage = humanErrorText(error)
