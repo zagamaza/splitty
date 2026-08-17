@@ -418,12 +418,22 @@ func (s *Server) Handler() http.Handler {
 // (в т.ч. на неаутентифицированном /auth/telegram). Превышение decodeJSON отдаёт как 413
 const maxRequestBodyBytes = 1 << 20
 
+// bigBodyPaths — маршруты, которым мало общего мегабайта: загрузка медиа. Свой,
+// больший лимит они ставят сами в хендлере, а re-wrap ЗДЕСЬ внешний ридер не
+// снял бы — потому и исключение, а не переопределение.
+var bigBodyPaths = []string{"/operations/parse", "/avatar"}
+
 // maxBodyMiddleware ограничивает размер тела всех запросов через http.MaxBytesReader.
-// Исключение — /operations/parse (загрузка аудио/фото чека): там свой, больший
-// лимит выставляется в самом хендлере (re-wrap здесь не снял бы внешний 1 МБ-ридер).
 func maxBodyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, "/operations/parse") {
+		big := false
+		for _, suffix := range bigBodyPaths {
+			if strings.HasSuffix(r.URL.Path, suffix) {
+				big = true
+				break
+			}
+		}
+		if !big {
 			r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 		}
 		next.ServeHTTP(w, r)

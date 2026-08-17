@@ -1,7 +1,11 @@
 package rest
 
 import (
+	"bytes"
 	"context"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -12,12 +16,18 @@ import (
 // отправкой; лимит нужен на случай, когда не сжал.
 const maxAvatarFileBytes = 5 << 20
 
+// maxAvatarSide — потолок на сторону картинки в пикселях. Клиенты ужимают аву
+// до 1024, запас взят на случай чужого клиента; всё, что больше, — либо ошибка,
+// либо попытка положить остальных участников декодированием.
+const maxAvatarSide = 4096
+
 // allowedAvatarUploadTypes — что принимаем как аву. Уже, чем список инлайновых
-// типов отдачи: сюда не должны попадать ни gif, ни видео.
+// типов отдачи: ни gif, ни видео, ни webp. Webp нет намеренно — в stdlib нет
+// его декодера, а без разбора заголовка нельзя проверить размеры картинки
+// (см. maxAvatarSide). Оба клиента шлют JPEG, тащить зависимость не за чем.
 var allowedAvatarUploadTypes = map[string]bool{
 	"image/jpeg": true,
 	"image/png":  true,
-	"image/webp": true,
 }
 
 // handleSetRoomAvatar PUT /api/v1/rooms/{roomId}/avatar — загрузка фото группы
@@ -62,10 +72,24 @@ func (s *Server) handleSetRoomAvatar(w http.ResponseWriter, r *http.Request) {
 	// будем со своего origin.
 	sniffed := http.DetectContentType(data)
 	if !allowedAvatarUploadTypes[sniffed] {
-		writeError(w, http.StatusUnsupportedMediaType, "unsupported_media", "это не картинка")
+		writeError(w, http.StatusUnsupportedMediaType, "unsupported_media", "нужна картинка JPEG или PNG")
 		return
 	}
 	mime = sniffed
+
+	// Размера тела мало: одноцветный PNG на 30000×30000 сжимается в считаные
+	// килобайты, а на клиенте разворачивается в гигабайты пикселей и роняет
+	// приложение остальных участников. Разбираем только заголовок картинки —
+	// сами пиксели декодировать не нужно.
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		writeError(w, http.StatusUnsupportedMediaType, "unsupported_media", "не удалось прочитать картинку")
+		return
+	}
+	if cfg.Width > maxAvatarSide || cfg.Height > maxAvatarSide {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large", "картинка слишком большая")
+		return
+	}
 
 	fileId, err := s.files.Save(ctx, &api.StoredFile{
 		RoomId:  room.ID,
@@ -80,8 +104,11 @@ func (s *Server) handleSetRoomAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	previous := room.AvatarFileId
-	if err := s.roomRepo.SetAvatarFileId(ctx, roomId, fileId); err != nil {
+	// Прежнюю ссылку отдаёт сама запись — не читаем её из снимка комнаты:
+	// две одновременные загрузки увидели бы один и тот же снимок и удалили один
+	// и тот же файл, а проигравший гонку остался бы в базе навсегда.
+	previous, err := s.roomRepo.SetAvatarFileId(ctx, roomId, fileId)
+	if err != nil {
 		// Ссылку поставить не удалось — убираем только что загруженные байты,
 		// иначе они останутся в базе никем не адресуемые.
 		if delErr := s.files.Delete(ctx, fileId); delErr != nil {
@@ -107,14 +134,13 @@ func (s *Server) handleDeleteRoomAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	room, hErr := s.roomForMember(ctx, roomId, userIdFromCtx(ctx))
-	if hErr != nil {
+	if _, hErr := s.roomForMember(ctx, roomId, userIdFromCtx(ctx)); hErr != nil {
 		hErr.write(w)
 		return
 	}
 
-	previous := room.AvatarFileId
-	if err := s.roomRepo.SetAvatarFileId(ctx, roomId, ""); err != nil {
+	previous, err := s.roomRepo.SetAvatarFileId(ctx, roomId, "")
+	if err != nil {
 		log.Error().Err(err).Msgf("cannot clear avatar for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось убрать фото")
 		return
@@ -126,11 +152,11 @@ func (s *Server) handleDeleteRoomAvatar(w http.ResponseWriter, r *http.Request) 
 
 // dropPreviousAvatar удаляет прежнюю картинку комнаты. Ошибка не валит запрос:
 // ссылки на файл уже нет, и худшее последствие — лишние байты в базе.
-func (s *Server) dropPreviousAvatar(ctx context.Context, previous *string) {
-	if previous == nil || *previous == "" {
+func (s *Server) dropPreviousAvatar(ctx context.Context, previous string) {
+	if previous == "" {
 		return
 	}
-	if err := s.files.Delete(ctx, *previous); err != nil {
+	if err := s.files.Delete(ctx, previous); err != nil {
 		log.Error().Err(err).Msg("cannot delete previous avatar")
 	}
 }

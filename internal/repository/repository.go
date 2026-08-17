@@ -119,8 +119,9 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
-	// SetAvatarFileId ставит ссылку на аву комнаты; пустая строка снимает её
-	SetAvatarFileId(ctx context.Context, roomId string, fileId string) error
+	// SetAvatarFileId ставит ссылку на аву комнаты (пустая строка снимает её) и
+	// возвращает ПРЕЖНЮЮ ссылку — ту, которую этот вызов вытеснил
+	SetAvatarFileId(ctx context.Context, roomId string, fileId string) (string, error)
 	// AnonymizeUser затирает имя пользователя во ВСЕХ встроенных снимках комнат
 	// (users[], operations[].donor, operations[].recipients[],
 	// operations[].recipients_with_sum[].user) и вычищает оттуда поля личности.
@@ -1047,13 +1048,18 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 	return err
 }
 
-// SetAvatarFileId ставит ссылку на аву комнаты. Пустая строка снимает поле
-// целиком ($unset, а не пустая строка в базе): клиент отличает «фото нет» по
-// отсутствию ключа, а не по его значению.
-func (rr MongoRoomRepository) SetAvatarFileId(ctx context.Context, roomId string, fileId string) error {
+// SetAvatarFileId ставит ссылку на аву комнаты и возвращает прежнюю. Пустая
+// строка снимает поле целиком ($unset, а не пустая строка в базе): клиент
+// отличает «фото нет» по отсутствию ключа, а не по его значению.
+//
+// Прежнее значение берётся ИЗ ТОГО ЖЕ запроса (FindOneAndUpdate с pre-image), а
+// не читается заранее: при двух одновременных загрузках в одну комнату оба
+// запроса видели бы один и тот же снимок, удалили бы один и тот же файл, а
+// проигравший гонку остался бы в базе навсегда — никем не адресуемый.
+func (rr MongoRoomRepository) SetAvatarFileId(ctx context.Context, roomId string, fileId string) (string, error) {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
-		return err
+		return "", err
 	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
 	var update bson.D
@@ -1062,8 +1068,23 @@ func (rr MongoRoomRepository) SetAvatarFileId(ctx context.Context, roomId string
 	} else {
 		update = bson.D{{Key: "$set", Value: bson.M{"avatar_file_id": fileId}}}
 	}
-	_, err = rr.col.UpdateOne(ctx, filter, update)
-	return err
+
+	opts := options.FindOneAndUpdate().
+		SetReturnDocument(options.Before).
+		SetProjection(bson.M{"avatar_file_id": 1})
+	var before struct {
+		AvatarFileId *string `bson:"avatar_file_id"`
+	}
+	if err := rr.col.FindOneAndUpdate(ctx, filter, update, opts).Decode(&before); err != nil {
+		if err == mongo.ErrNoDocuments {
+			return "", nil
+		}
+		return "", err
+	}
+	if before.AvatarFileId == nil {
+		return "", nil
+	}
+	return *before.AvatarFileId, nil
 }
 
 // DeletedUserPlaceholder — имя, которое остаётся от удалённого пользователя: и

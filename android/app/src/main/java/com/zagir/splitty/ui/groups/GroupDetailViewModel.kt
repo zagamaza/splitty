@@ -345,8 +345,12 @@ class GroupDetailViewModel @Inject constructor(
             _isAvatarSaving.value = true
             try {
                 val previous = detail.avatarFileId
-                repository.setRoomAvatar(detail.id, image)
+                val fileId = repository.setRoomAvatar(detail.id, image)
                 previous?.let { avatarStore.forgetFile(it) }
+                // Новый id ставим сразу, не дожидаясь refresh(): тот при сбое
+                // сети отдаёт КЕШ комнаты, и экран продолжал бы уверять, что
+                // фото нет, хотя сервер его уже принял.
+                applyAvatar(fileId)
                 sessionStore.noteDataChanged()
                 refresh()
             } catch (e: ApiException) {
@@ -367,6 +371,7 @@ class GroupDetailViewModel @Inject constructor(
                 val previous = detail.avatarFileId
                 repository.deleteRoomAvatar(detail.id)
                 previous?.let { avatarStore.forgetFile(it) }
+                applyAvatar(null)
                 sessionStore.noteDataChanged()
                 refresh()
             } catch (e: ApiException) {
@@ -375,6 +380,12 @@ class GroupDetailViewModel @Inject constructor(
                 _isAvatarSaving.value = false
             }
         }
+    }
+
+    /** Ставит ссылку на фото в уже показанную комнату, не перечитывая её. */
+    private fun applyAvatar(fileId: String?) {
+        val current = _room.value as? UiState.Content ?: return
+        _room.value = UiState.Content(current.value.copy(avatarFileId = fileId))
     }
 
     /** Архивирует/разархивирует группу; успех — dataVersion bump и [onDone]. */

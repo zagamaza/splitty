@@ -1056,17 +1056,21 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 
 // SetAvatarFileId как mongo-реализация: пустая строка снимает поле целиком, а
 // не пишет пустое значение.
-func (f *fakeRoomRepo) SetAvatarFileId(_ context.Context, roomId string, fileId string) error {
+func (f *fakeRoomRepo) SetAvatarFileId(_ context.Context, roomId string, fileId string) (string, error) {
 	room, ok := f.rooms[roomId]
 	if !ok {
-		return mongo.ErrNoDocuments
+		return "", mongo.ErrNoDocuments
+	}
+	previous := ""
+	if room.AvatarFileId != nil {
+		previous = *room.AvatarFileId
 	}
 	if fileId == "" {
 		room.AvatarFileId = nil
-		return nil
+		return previous, nil
 	}
 	room.AvatarFileId = &fileId
-	return nil
+	return previous, nil
 }
 
 // AnonymizeUser как mongo-реализация: во всех встроенных снимках заменяет

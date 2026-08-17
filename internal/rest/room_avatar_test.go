@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"image/png"
 	"mime/multipart"
 	"net/http/httptest"
@@ -45,6 +46,29 @@ func avatarBody(t *testing.T, contentType string, data []byte) (*bytes.Buffer, s
 		t.Fatalf("multipart close: %v", err)
 	}
 	return &body, w.FormDataContentType()
+}
+
+// bigJpeg — шумная картинка side×side: шум не сжимается, поэтому тело
+// гарантированно перевалит за мегабайт.
+func bigJpeg(t *testing.T, side int) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, side, side))
+	seed := 1
+	for y := 0; y < side; y++ {
+		for x := 0; x < side; x++ {
+			seed = seed*1103515245 + 12345
+			v := uint8(seed >> 16)
+			img.Set(x, y, color.RGBA{R: v, G: v << 1, B: v >> 1, A: 255})
+		}
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 95}); err != nil {
+		t.Fatalf("jpeg: %v", err)
+	}
+	if buf.Len() < 1<<20 {
+		t.Fatalf("картинка вышла %d байт — меньше мегабайта, тест ничего не проверит", buf.Len())
+	}
+	return buf.Bytes()
 }
 
 func doAvatarUpload(t *testing.T, s *Server, roomId, token, contentType string, data []byte) *httptest.ResponseRecorder {
@@ -178,6 +202,44 @@ func TestSetRoomAvatarRejectsNonImage(t *testing.T) {
 	}
 	if room.AvatarFileId != nil {
 		t.Error("комната сослалась на не-картинку")
+	}
+}
+
+// Ава крупнее 1 МБ обязана проходить: документированный лимит — 5 МБ. Общий
+// потолок тела (1 МБ) стоит middleware, и повторный MaxBytesReader в хендлере
+// его НЕ снимает — маршрут должен быть из него исключён.
+func TestSetRoomAvatarAllowsLargeImage(t *testing.T) {
+	room := newTestRoom()
+	s, store := avatarServer(t, room)
+
+	rec := doAvatarUpload(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), "image/jpeg", bigJpeg(t, 1600))
+	assertStatus(t, rec, 200)
+	if store.count() != 1 {
+		t.Error("файл не сохранён")
+	}
+}
+
+// Картинка-бомба: тело крошечное, а развернётся в гигабайты пикселей и положит
+// приложение остальных участников. Размера тела для защиты мало — нужен разбор
+// заголовка картинки.
+func TestSetRoomAvatarRejectsHugeDimensions(t *testing.T) {
+	room := newTestRoom()
+	s, store := avatarServer(t, room)
+
+	// Одноцветный PNG 12000×12000 сжимается в считаные килобайты.
+	img := image.NewRGBA(image.Rect(0, 0, 12000, 12000))
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("png: %v", err)
+	}
+	if buf.Len() > maxAvatarFileBytes {
+		t.Fatalf("бомба вышла на %d байт — её отсечёт лимит размера, тест ничего не проверит", buf.Len())
+	}
+
+	rec := doAvatarUpload(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), "image/png", buf.Bytes())
+	assertErrorCode(t, rec, 413, "too_large")
+	if store.count() != 0 {
+		t.Error("бомба сохранилась")
 	}
 }
 
