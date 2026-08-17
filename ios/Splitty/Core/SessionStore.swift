@@ -47,6 +47,7 @@ final class SessionStore {
     private static let tokenKey = "splitty.apiToken"
     private static let userIdKey = "splitty.userId"
     private static let purgePendingKey = "splitty.purgePending"
+    private static let welcomeSeenKey = "splitty.welcomeSeenAccounts"
 
     /// Профиль текущего пользователя (nil до первого refreshMe/login).
     var me: Me?
@@ -560,4 +561,27 @@ final class SessionStore {
             if me == nil { profileLoadFailed = true }
         }
     }
+    // MARK: Приветствие
+
+    /// Видел ли этот аккаунт разовое приветствие.
+    ///
+    /// Ключ по НОМЕРУ аккаунта, а не на устройство: вход другим человеком на том
+    /// же телефоне обязан показать приветствие снова — иначе новый пользователь
+    /// молча теряет единственное объяснение продукта.
+    func hasSeenWelcome(userId: Int) -> Bool {
+        seenWelcomeIds().contains(String(userId))
+    }
+
+    /// Отметить приветствие показанным. Вызывается и по «Пропустить»: пропуск —
+    /// это ответ «не показывай больше», а не «покажи в следующий раз».
+    func markWelcomeSeen(userId: Int) {
+        var ids = seenWelcomeIds()
+        ids.insert(String(userId))
+        UserDefaults.standard.set(Array(ids), forKey: Self.welcomeSeenKey)
+    }
+
+    private func seenWelcomeIds() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: Self.welcomeSeenKey) ?? [])
+    }
+
 }

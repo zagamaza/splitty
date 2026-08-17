@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.zagir.splitty.BuildConfig
@@ -140,6 +141,7 @@ class SessionStore @Inject constructor(
         /** Незавершённая после tombstone чистка — см. [Session.purgePending]. */
         private val KEY_PURGE_PENDING = booleanPreferencesKey("purge_pending")
         private val KEY_AI_DISCLOSURE_SEEN = booleanPreferencesKey("ai_disclosure_seen")
+        private val KEY_WELCOME_SEEN = stringSetPreferencesKey("welcome_seen_accounts")
 
         /** Повторы чтения DataStore при транзиентной ошибке ввода-вывода. */
         private const val RETRY_DELAY_MS = 200L
@@ -379,6 +381,23 @@ class SessionStore @Inject constructor(
 
     suspend fun markAiDisclosureSeen() {
         dataStore.edit { prefs -> prefs[KEY_AI_DISCLOSURE_SEEN] = true }
+    }
+
+    /**
+     * Видел ли этот аккаунт разовое приветствие.
+     *
+     * Храним НАБОР номеров аккаунтов, а не один флаг на устройство: вход другим
+     * человеком на том же телефоне обязан показать приветствие снова — иначе
+     * новый пользователь молча теряет единственное объяснение продукта.
+     */
+    fun welcomeSeen(userId: Long): Flow<Boolean> =
+        dataStore.data.map { prefs -> prefs[KEY_WELCOME_SEEN]?.contains(userId.toString()) == true }
+
+    /** Пропуск — это ответ «не показывай больше», поэтому зовётся и из «Пропустить». */
+    suspend fun markWelcomeSeen(userId: Long) {
+        dataStore.edit { prefs ->
+            prefs[KEY_WELCOME_SEEN] = (prefs[KEY_WELCOME_SEEN] ?: emptySet()) + userId.toString()
+        }
     }
 
     /** Сменить адрес сервера (персистится; действует на все последующие запросы). */
