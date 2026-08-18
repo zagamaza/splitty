@@ -38,11 +38,16 @@ type pushOutboxDoc struct {
 //   - по next_attempt_at: воркер каждые 5 секунд фильтрует и сортирует по нему.
 //     Без индекса это скан и сортировка всей очереди, а суточная рассылка
 //     напоминаний кладёт в неё пачку записей разом.
+//
+// Имя idx_next_attempt — не опечатка и не выдумка: ровно такой индекс уже
+// заведён на проде руками. Любое другое имя даёт IndexOptionsConflict и warn в
+// логе на каждом старте, а предупреждения, которые всегда горят, перестают
+// читать.
 func (r *MongoPushOutboxRepository) EnsureIndexes(ctx context.Context) error {
 	_, err := r.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		{
 			Keys:    bson.D{{Key: "next_attempt_at", Value: ascParameter}},
-			Options: options.Index().SetName("idx_next_attempt_at"),
+			Options: options.Index().SetName("idx_next_attempt"),
 		},
 	})
 	return err
