@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1227,6 +1228,60 @@ func (rr MongoRoomRepository) RoomSizeBytes(ctx context.Context, roomId string) 
 		return 0, err
 	}
 	return rr.roomSize(ctx, hex)
+}
+
+// SearchUsers ищет людей для админки: по номеру, @нику или отображаемому имени.
+// Пустой запрос — последние заведённые (по убыванию номера: у telegram-аккаунтов
+// это порядок регистрации, у остальных — порядок выдачи из аллокатора).
+//
+// Как и поиск комнат, ходит регулярным выражением по неиндексированным полям —
+// это полный проход по коллекции, и место такому только в админке
+func (r MongoUserRepository) SearchUsers(ctx context.Context, query string, limit int) ([]api.User, error) {
+	if limit <= 0 || limit > adminSearchLimit {
+		limit = adminSearchLimit
+	}
+
+	filter := bson.M{}
+	if q := strings.TrimSpace(query); q != "" {
+		if id, err := strconv.Atoi(q); err == nil {
+			filter["_id"] = id
+		} else {
+			like := bson.M{"$regex": regexp.QuoteMeta(strings.TrimPrefix(q, "@")), "$options": "i"}
+			filter["$or"] = bson.A{bson.M{"user_name": like}, bson.M{"display_name": like}}
+		}
+	}
+
+	cur, err := r.col.Find(ctx, filter, options.Find().
+		SetSort(bson.M{"_id": descParameter}).
+		SetLimit(int64(limit)))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	users := []api.User{}
+	if err := cur.All(ctx, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// AllRoomsOfUser отдаёт ВСЕ комнаты человека, включая спрятанные им у себя:
+// FindRoomsByUserId такие отфильтровывает, а админке нужно видеть всё —
+// «у меня пропала группа» чаще всего означает именно архив
+func (rr MongoRoomRepository) AllRoomsOfUser(ctx context.Context, userId int) ([]api.Room, error) {
+	cur, err := rr.col.Find(ctx, bson.M{"users._id": userId},
+		getOrderOptions("create_at", descParameter))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	rooms := []api.Room{}
+	if err := cur.All(ctx, &rooms); err != nil {
+		return nil, err
+	}
+	return rooms, nil
 }
 
 // user_name — часть отображаемой личности (@ник виден всем участникам).

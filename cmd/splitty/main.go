@@ -267,6 +267,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// Поиск комнат для админской панели. Включён всегда — доступ к нему решает
 	// токен (см. rest.Config.AdminToken), а не наличие зависимости
 	server.SetAdminRooms(roomRepository)
+	server.SetAdminUsers(userRepository)
 
 	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
 	// снаружи выглядел рабочим

@@ -187,6 +187,8 @@ type Server struct {
 	// adminRooms опционален (см. SetAdminRooms): поиск комнат для админской
 	// панели. nil — поиск отвечает 503, остальной сервер работает как раньше
 	adminRooms adminRoomStore
+	// adminUsers опционален (см. SetAdminUsers): поиск людей для админской панели
+	adminUsers adminUserStore
 	// files опционален (см. SetFiles): хранилище картинок в mongo. nil —
 	// загрузка авы отвечает 503, а отдача файлов работает по-старому, через
 	// телеграм

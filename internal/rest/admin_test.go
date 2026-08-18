@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +18,7 @@ const testAdminToken = "admin-token"
 
 type fakeAdminRooms struct {
 	rooms     []repository.RoomBrief
+	ofUser    []api.Room
 	lastQuery string
 	lastLimit int
 	size      int
@@ -31,11 +34,26 @@ func (f *fakeAdminRooms) RoomSizeBytes(_ context.Context, _ string) (int, error)
 	return f.size, nil
 }
 
+func (f *fakeAdminRooms) AllRoomsOfUser(_ context.Context, _ int) ([]api.Room, error) {
+	return f.ofUser, nil
+}
+
+type fakeAdminUsers struct {
+	users     []api.User
+	lastQuery string
+}
+
+func (f *fakeAdminUsers) SearchUsers(_ context.Context, query string, _ int) ([]api.User, error) {
+	f.lastQuery = query
+	return f.users, nil
+}
+
 func adminServer(t *testing.T, room *api.Room) (*Server, *fakeAdminRooms) {
 	t.Helper()
 	s := newTestServer(Config{AdminToken: testAdminToken}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-	store := &fakeAdminRooms{size: 4096}
+	store := &fakeAdminRooms{size: 4096, ofUser: []api.Room{*room}}
 	s.SetAdminRooms(store)
+	s.SetAdminUsers(&fakeAdminUsers{users: []api.User{testUser1, testUser2}})
 	return s, store
 }
 
@@ -230,4 +248,86 @@ func TestAdminRoomCardWithoutSearchStore(t *testing.T) {
 
 	assertStatus(t, doAdmin(t, s, "/admin/rooms/"+room.ID.Hex(), testAdminToken), 200)
 	assertErrorCode(t, doAdmin(t, s, "/admin/rooms", testAdminToken), 503, "unavailable")
+}
+
+// Карточка человека отвечает на вопросы поддержки: чем он входит, сколько у
+// него устройств и что у него с деньгами по тусам.
+func TestAdminUserCard(t *testing.T) {
+	room := newTestRoom()
+	room.RoomStates.Archived = []int{testUser2.ID}
+	telegram := 777001
+	user := testUser2
+	user.TelegramID = &telegram
+	user.PasswordHash = "$2a$10$очень-секретно"
+	user.LoginEmail = "almaz@example.test"
+	user.PushTokens = []api.PushToken{{Token: "секретный-токен", Platform: "ios"}, {Token: "другой", Platform: "ios"}}
+
+	s := newTestServer(Config{AdminToken: testAdminToken}, newFakeUserRepo(testUser1, user), newFakeRoomRepo(room))
+	s.SetAdminRooms(&fakeAdminRooms{ofUser: []api.Room{*room}})
+
+	rec := doAdmin(t, s, "/admin/users/"+strconv.Itoa(user.ID), testAdminToken)
+	assertStatus(t, rec, 200)
+
+	body := rec.Body.String()
+	// Секреты наружу не уходят ни под каким видом: по ним человеку не помочь,
+	// а утечь они могут
+	for _, secret := range []string{"секретно", "секретный-токен", "777001"} {
+		if strings.Contains(body, secret) {
+			t.Errorf("в карточке человека утёк секрет %q", secret)
+		}
+	}
+
+	var card adminUserDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &card); err != nil {
+		t.Fatalf("ответ: %v", err)
+	}
+	if card.ID != user.ID || card.DisplayName != user.DisplayName {
+		t.Errorf("карточка не про того человека: %+v", card)
+	}
+	// Факт привязки нужен, значение — нет
+	if strings.Join(card.Logins, ",") != "telegram,password" {
+		t.Errorf("способы входа: %v", card.Logins)
+	}
+	if card.Devices != 2 || strings.Join(card.Platforms, ",") != "ios" {
+		t.Errorf("устройства: %d %v", card.Devices, card.Platforms)
+	}
+	if card.LoginEmail != user.LoginEmail {
+		t.Errorf("адрес входа потерялся: %q", card.LoginEmail)
+	}
+
+	if len(card.Rooms) != 1 {
+		t.Fatalf("тус в карточке: %d", len(card.Rooms))
+	}
+	line := card.Rooms[0]
+	// Легаси-расход на 100 пополам: второй должен первому 50
+	if line.Balance != -50 || line.Spent != 50 {
+		t.Errorf("деньги по тусе: баланс %d, доля %d", line.Balance, line.Spent)
+	}
+	// Спрятанная у себя туса обязана быть видна админке — «у меня пропала
+	// группа» чаще всего означает именно архив
+	if !line.Archived {
+		t.Error("архив у себя не показан")
+	}
+}
+
+func TestAdminUsersSearch(t *testing.T) {
+	s, _ := adminServer(t, newTestRoom())
+
+	rec := doAdmin(t, s, "/admin/users?q=zagir", testAdminToken)
+	assertStatus(t, rec, 200)
+
+	var items []adminUserBriefDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &items); err != nil {
+		t.Fatalf("ответ: %v", err)
+	}
+	if len(items) != 2 || items[0].ID != testUser1.ID {
+		t.Fatalf("выдача поиска: %+v", items)
+	}
+}
+
+func TestAdminUserNotFound(t *testing.T) {
+	s, _ := adminServer(t, newTestRoom())
+
+	assertErrorCode(t, doAdmin(t, s, "/admin/users/999999", testAdminToken), 404, "not_found")
+	assertErrorCode(t, doAdmin(t, s, "/admin/users/не-число", testAdminToken), 404, "not_found")
 }

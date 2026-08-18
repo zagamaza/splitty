@@ -27,7 +27,20 @@ import (
 type adminRoomStore interface {
 	SearchRooms(ctx context.Context, query string, limit int) ([]repository.RoomBrief, error)
 	RoomSizeBytes(ctx context.Context, roomId string) (int, error)
+	// AllRoomsOfUser — включая спрятанные человеком у себя: «у меня пропала
+	// группа» чаще всего означает именно архив
+	AllRoomsOfUser(ctx context.Context, userId int) ([]api.Room, error)
 }
+
+// adminUserStore — поиск людей для админки. Отдельно от adminRoomStore: это
+// другая коллекция и другая реализация (repository.MongoUserRepository)
+type adminUserStore interface {
+	SearchUsers(ctx context.Context, query string, limit int) ([]api.User, error)
+}
+
+// SetAdminUsers включает поиск людей. nil — поиск отвечает 503, карточка
+// человека работает: ей хватает обычного userRepo
+func (s *Server) SetAdminUsers(store adminUserStore) { s.adminUsers = store }
 
 // SetAdminRooms включает поиск комнат в админском API. nil (метод не вызван) —
 // поиск отвечает 503, карточка комнаты работает: она обходится FindById
@@ -99,6 +112,8 @@ func (s *Server) AdminHandler() http.Handler {
 
 	mux.Handle("GET /admin/rooms", s.adminAuth(s.handleAdminRooms))
 	mux.Handle("GET /admin/rooms/{roomId}", s.adminAuth(s.handleAdminRoom))
+	mux.Handle("GET /admin/users", s.adminAuth(s.handleAdminUsers))
+	mux.Handle("GET /admin/users/{userId}", s.adminAuth(s.handleAdminUser))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")
@@ -197,6 +212,189 @@ func (s *Server) handleAdminRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, card)
+}
+
+// adminUserBriefDto строка списка людей
+type adminUserBriefDto struct {
+	ID          int    `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Deleted     bool   `json:"deleted,omitempty"`
+}
+
+// adminUserRoomDto туса человека глазами админки: только то, что о ней нужно
+// знать в его карточке
+type adminUserRoomDto struct {
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	Currency string    `json:"currency"`
+	Balance  int       `json:"balance"`
+	Spent    int       `json:"spent"`
+	Members  int       `json:"members"`
+	Archived bool      `json:"archived"`
+	LastAt   time.Time `json:"lastActivityAt"`
+	// DebtsUnavailable — долги этой комнаты не считаются, баланс отдан нулём
+	DebtsUnavailable bool `json:"debtsUnavailable,omitempty"`
+}
+
+// adminUserDto карточка человека. Никаких секретов: sub-ы провайдеров, хэш
+// пароля и сами push-токены наружу не отдаются — по ним человеку помочь нельзя,
+// а утечь они могут. Отдаём ФАКТЫ: чем входит, сколько устройств, жив ли
+type adminUserDto struct {
+	ID          int    `json:"id"`
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
+	Lang        string `json:"lang,omitempty"`
+	Deleted     bool   `json:"deleted,omitempty"`
+	// Logins — чем человек входит: telegram, google, apple, password
+	Logins     []string `json:"logins"`
+	LoginEmail string   `json:"loginEmail,omitempty"`
+	// Devices — сколько устройств ждёт пуши, и на каких платформах
+	Devices   int      `json:"devices"`
+	Platforms []string `json:"platforms,omitempty"`
+	// PushOff — человек выключил уведомления целиком
+	PushOff bool `json:"pushOff,omitempty"`
+	// TokensRevokedAt — когда он в последний раз выходил на всех устройствах
+	TokensRevokedAt *time.Time         `json:"tokensRevokedAt,omitempty"`
+	Rooms           []adminUserRoomDto `json:"rooms"`
+}
+
+// handleAdminUsers GET /admin/users?q=&limit= — поиск человека
+func (s *Server) handleAdminUsers(w http.ResponseWriter, r *http.Request) {
+	if s.adminUsers == nil {
+		writeError(w, http.StatusServiceUnavailable, "unavailable", "поиск людей недоступен")
+		return
+	}
+
+	limit, err := strconv.Atoi(r.URL.Query().Get("limit"))
+	if err != nil {
+		limit = 30
+	}
+
+	users, err := s.adminUsers.SearchUsers(r.Context(), r.URL.Query().Get("q"), limit)
+	if err != nil {
+		log.Error().Err(err).Msg("админский api: поиск людей")
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось найти людей")
+		return
+	}
+
+	items := make([]adminUserBriefDto, 0, len(users))
+	for i := range users {
+		items = append(items, adminUserBriefDto{
+			ID:          users[i].ID,
+			Username:    users[i].Username,
+			DisplayName: users[i].DisplayName,
+			Deleted:     users[i].DeletedAt != nil,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, items)
+}
+
+// handleAdminUser GET /admin/users/{userId} — карточка человека и его тусы
+func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	userId, err := strconv.Atoi(r.PathValue("userId"))
+	if err != nil {
+		writeError(w, http.StatusNotFound, "not_found", "не найдено")
+		return
+	}
+
+	user, err := s.userRepo.FindById(ctx, userId)
+	if err != nil || user == nil {
+		writeError(w, http.StatusNotFound, "not_found", "нет такого человека")
+		return
+	}
+
+	card := adminUserDto{
+		ID:              user.ID,
+		Username:        user.Username,
+		DisplayName:     user.DisplayName,
+		Lang:            user.UserLang,
+		Deleted:         user.DeletedAt != nil,
+		Logins:          userLogins(user),
+		LoginEmail:      user.LoginEmail,
+		Devices:         len(user.PushTokens),
+		Platforms:       devicePlatforms(user),
+		PushOff:         user.NotificationOn != nil && !*user.NotificationOn,
+		TokensRevokedAt: user.TokensValidFrom,
+		Rooms:           []adminUserRoomDto{},
+	}
+
+	// Тусы читаем, только если есть чем: без них карточка всё равно полезна —
+	// «чем входит» и «сколько устройств» отвечают на большую часть вопросов
+	if s.adminRooms != nil {
+		rooms, err := s.adminRooms.AllRoomsOfUser(ctx, userId)
+		if err != nil {
+			log.Error().Err(err).Msg("админский api: тусы человека")
+		} else {
+			for i := range rooms {
+				card.Rooms = append(card.Rooms, s.userRoomLine(&rooms[i], userId))
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, card)
+}
+
+func (s *Server) userRoomLine(room *api.Room, userId int) adminUserRoomDto {
+	debts, ok := s.roomDebtsSafe(room)
+	active := activeOperations(room)
+
+	var last time.Time
+	for i := range active {
+		if active[i].CreateAt.After(last) {
+			last = active[i].CreateAt
+		}
+	}
+
+	return adminUserRoomDto{
+		ID:               room.ID.Hex(),
+		Name:             room.Name,
+		Currency:         roomCurrencyCode(room),
+		Balance:          balanceFromDebts(debts, userId),
+		Spent:            userSpentSum(active, userId),
+		Members:          len(roomMembers(room)),
+		Archived:         isRoomArchived(room, userId),
+		LastAt:           last,
+		DebtsUnavailable: !ok,
+	}
+}
+
+// userLogins — чем человек может войти. Значения личностей (sub, telegram id)
+// наружу не идут: помочь по ним нельзя, а утечь они могут
+func userLogins(u *api.User) []string {
+	logins := []string{}
+	if u.TelegramID != nil {
+		logins = append(logins, "telegram")
+	}
+	if u.GoogleSub != "" {
+		logins = append(logins, "google")
+	}
+	if u.AppleSub != "" {
+		logins = append(logins, "apple")
+	}
+	if u.PasswordHash != "" {
+		logins = append(logins, "password")
+	}
+	return logins
+}
+
+func devicePlatforms(u *api.User) []string {
+	seen := map[string]bool{}
+	platforms := []string{}
+	for _, token := range u.PushTokens {
+		name := token.Platform
+		if name == "" {
+			name = "неизвестно"
+		}
+		if !seen[name] {
+			seen[name] = true
+			platforms = append(platforms, name)
+		}
+	}
+	return platforms
 }
 
 func (s *Server) buildAdminRoom(room *api.Room) *adminRoomDto {
