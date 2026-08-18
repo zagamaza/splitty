@@ -2,6 +2,7 @@ package rest
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"image"
 	"image/color"
@@ -109,7 +110,7 @@ func TestSetRoomAvatar(t *testing.T) {
 		t.Fatalf("комната не ссылается на файл: %v", room.AvatarFileId)
 	}
 
-	stored, _ := store.Get(t.Context(), resp.AvatarFileId)
+	stored, _ := store.Get(context.Background(), resp.AvatarFileId)
 	if stored == nil {
 		t.Fatal("файл не сохранён")
 	}
@@ -150,7 +151,7 @@ func TestReplaceRoomAvatarDropsPrevious(t *testing.T) {
 	if store.count() != 1 {
 		t.Errorf("в хранилище %d файлов, ожидался один — старая ава не удалена", store.count())
 	}
-	if got, _ := store.Get(t.Context(), firstResp.AvatarFileId); got != nil {
+	if got, _ := store.Get(context.Background(), firstResp.AvatarFileId); got != nil {
 		t.Error("прежняя ава осталась в базе")
 	}
 }
