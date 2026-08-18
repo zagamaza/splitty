@@ -69,10 +69,10 @@ func TestNormalizedRoomDropsInactive(t *testing.T) {
 // это паника джоба на первой же кривой комнате.
 func TestNormalizedRoomNeverReturnsNilSlices(t *testing.T) {
 	cases := map[string]*Room{
-		"пустая комната":  {},
-		"без операций":    {Members: &[]User{{ID: 1}}},
-		"без участников":  {Operations: &[]Operation{}},
-		"nil вместо комнаты":  nil,
+		"пустая комната":     {},
+		"без операций":       {Members: &[]User{{ID: 1}}},
+		"без участников":     {Operations: &[]Operation{}},
+		"nil вместо комнаты": nil,
 	}
 	for name, room := range cases {
 		norm := NormalizedRoom(room)

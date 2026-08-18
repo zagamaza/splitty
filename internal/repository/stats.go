@@ -12,11 +12,11 @@ import (
 // каждый scrape: часть чисел требует прохода по комнатам, и дёргать это каждые
 // 15 секунд значило бы греть базу ради графика.
 type Stats struct {
-	Rooms          int64
-	RoomsActive7d  int64
-	Users          int64
-	PushOutbox     int64
-	DebtReminders  int64
+	Rooms         int64
+	RoomsActive7d int64
+	Users         int64
+	PushOutbox    int64
+	DebtReminders int64
 }
 
 // MongoStatsRepository считает сводные числа по коллекциям.

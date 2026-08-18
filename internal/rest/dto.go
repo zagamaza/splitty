@@ -130,8 +130,8 @@ type roomSummaryDto struct {
 	MemberCount int       `json:"memberCount"`
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
 	AvatarFileId string `json:"avatarFileId,omitempty"`
-	TotalSpent  int       `json:"totalSpent"`
-	MyBalance   int       `json:"myBalance"`
+	TotalSpent   int    `json:"totalSpent"`
+	MyBalance    int    `json:"myBalance"`
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
 	// (см. roomDebtsSafe): myBalance отдан нулём, клиент может показать бейдж
 	DebtsUnavailable bool `json:"debtsUnavailable,omitempty"`
@@ -149,11 +149,11 @@ type roomDetailDto struct {
 	Currency   string    `json:"currency"`
 	Members    []userDto `json:"members"`
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
-	AvatarFileId string `json:"avatarFileId,omitempty"`
-	TotalSpent int       `json:"totalSpent"`
-	MySpent    int       `json:"mySpent"`
-	MyBalance  int       `json:"myBalance"`
-	Debts      []debtDto `json:"debts"`
+	AvatarFileId string    `json:"avatarFileId,omitempty"`
+	TotalSpent   int       `json:"totalSpent"`
+	MySpent      int       `json:"mySpent"`
+	MyBalance    int       `json:"myBalance"`
+	Debts        []debtDto `json:"debts"`
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
 	// (см. roomDebtsSafe): debts=[] и myBalance=0, остальное поле комнаты
 	// (операции, участники, траты) отдаётся как обычно

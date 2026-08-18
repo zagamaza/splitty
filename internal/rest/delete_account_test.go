@@ -31,17 +31,17 @@ const (
 // deleteTestSetup — сервер удаления со всеми подключёнными побочными
 // коллекциями и ссылками на фейки, чтобы тест мог заглянуть внутрь
 type deleteTestSetup struct {
-	s           *Server
-	users       *fakeUserRepo
-	rooms       *fakeRoomRepo
-	codes       *fakeLoginCodeRepo
-	chatStates  *fakeChatStates
-	bugReports  *fakeChatStates
+	s             *Server
+	users         *fakeUserRepo
+	rooms         *fakeRoomRepo
+	codes         *fakeLoginCodeRepo
+	chatStates    *fakeChatStates
+	bugReports    *fakeChatStates
 	pushOutbox    *fakeChatStates
 	debtReminders *fakeChatStates
-	invites     *fakeInviteStore
-	appleTokens *fakeAppleTokens
-	room        *api.Room
+	invites       *fakeInviteStore
+	appleTokens   *fakeAppleTokens
+	room          *api.Room
 }
 
 // deleteTestUser — удаляемый: telegram, google и apple разом, плюс refresh
@@ -109,8 +109,8 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 		s: s, users: users, rooms: rooms, codes: codes,
 		chatStates: &fakeChatStates{}, bugReports: &fakeChatStates{}, pushOutbox: &fakeChatStates{},
 		debtReminders: &fakeChatStates{},
-		invites:     newFakeInviteStore(),
-		appleTokens: apple, room: room,
+		invites:       newFakeInviteStore(),
+		appleTokens:   apple, room: room,
 	}
 	s.SetChatStates(set.chatStates)
 	s.SetBugReports(set.bugReports)
