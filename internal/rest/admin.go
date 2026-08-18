@@ -225,14 +225,16 @@ type adminUserBriefDto struct {
 // adminUserRoomDto туса человека глазами админки: только то, что о ней нужно
 // знать в его карточке
 type adminUserRoomDto struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	Currency string    `json:"currency"`
-	Balance  int       `json:"balance"`
-	Spent    int       `json:"spent"`
-	Members  int       `json:"members"`
-	Archived bool      `json:"archived"`
-	LastAt   time.Time `json:"lastActivityAt"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Currency string `json:"currency"`
+	Balance  int    `json:"balance"`
+	Spent    int    `json:"spent"`
+	Members  int    `json:"members"`
+	Archived bool   `json:"archived"`
+	// LastAt — nil у тусы без единого расхода. Нулевое время уехало бы наружу
+	// как «1 января 1 года» и выглядело бы данными
+	LastAt *time.Time `json:"lastActivityAt,omitempty"`
 	// DebtsUnavailable — долги этой комнаты не считаются, баланс отдан нулём
 	DebtsUnavailable bool `json:"debtsUnavailable,omitempty"`
 }
@@ -342,10 +344,11 @@ func (s *Server) userRoomLine(room *api.Room, userId int) adminUserRoomDto {
 	debts, ok := s.roomDebtsSafe(room)
 	active := activeOperations(room)
 
-	var last time.Time
+	var last *time.Time
 	for i := range active {
-		if active[i].CreateAt.After(last) {
-			last = active[i].CreateAt
+		if last == nil || active[i].CreateAt.After(*last) {
+			at := active[i].CreateAt
+			last = &at
 		}
 	}
 
