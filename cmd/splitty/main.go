@@ -15,6 +15,7 @@ import (
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/almaznur91/splitty/internal/oidc"
+	"github.com/almaznur91/splitty/internal/metrics"
 	"github.com/almaznur91/splitty/internal/push"
 	"github.com/almaznur91/splitty/internal/reminders"
 	"github.com/almaznur91/splitty/internal/repository"
@@ -85,6 +86,16 @@ func main() {
 			}
 		}()
 	}
+	// Сводные числа для админки и графиков. Слушатель отдельный и наружу не
+	// опубликован; пересчёт по расписанию, а не на каждый scrape — часть чисел
+	// требует прохода по комнатам
+	if cfg.MetricsListen != "" {
+		metricsServer := metrics.NewServer(
+			repository.NewStatsRepository(restDeps.db), cfg.MetricsInterval)
+		go metricsServer.Refresh(ctx)
+		go metricsServer.Listen(ctx, cfg.MetricsListen)
+	}
+
 	// REST-мутации участникам: те же telegram-уведомления, что и экраны бота
 	// (когда бот включён), + native-пуши FCM (по WantsPush).
 	restServer.SetNotifier(bot.NewNotifier(tgSender, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo, restDeps.pushSender))
@@ -105,6 +116,9 @@ type restNotifierDeps struct {
 	// pushSender — доставка native-пушей (FCM) по outbox-подходу; NoopSender,
 	// когда FCM не сконфигурирован.
 	pushSender push.Sender
+	// db — подключение к mongo: нужно сводным метрикам, которые считают по
+	// коллекциям напрямую, а не через доменные репозитории
+	db *mongo.Database
 }
 
 // initRestServer собирает REST-сервер: mongo-подключение + репозитории + сервисы
@@ -333,6 +347,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		buttonSrv:    buttonService,
 		userRepo:     userRepository,
 		pushSender:   pushSender,
+		db:           db,
 	}, cleanup, nil
 }
 

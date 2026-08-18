@@ -1,6 +1,10 @@
 package main
 
-import "github.com/caarlos0/env/v6"
+import (
+	"time"
+
+	"github.com/caarlos0/env/v6"
+)
 
 type config struct {
 	Listen string `env:"LISTEN" envDefault:"localhost:7171"`
@@ -124,6 +128,11 @@ type config struct {
 	// Напоминания о невозвращённом долге. По умолчанию ВЫКЛЮЧЕНЫ: это рассылка
 	// по живым людям, и включаться сама она не должна. "dry" — посчитать и
 	// записать в лог агрегаты, ничего не отправляя.
+	// Метрики Prometheus на ОТДЕЛЬНОМ слушателе: наружу он не публикуется,
+	// до него дотягивается только сборщик по сети docker. Пусто — метрик нет.
+	MetricsListen   string        `env:"METRICS_LISTEN" envDefault:":18003"`
+	MetricsInterval time.Duration `env:"METRICS_INTERVAL" envDefault:"5m"`
+
 	DebtReminders     string `env:"DEBT_REMINDERS" envDefault:"off"`
 	DebtRemindersHour int    `env:"DEBT_REMINDERS_HOUR" envDefault:"15"` // 18:00 МСК
 }

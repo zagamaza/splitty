@@ -32,6 +32,10 @@ services:
       # проверяют охват на живых данных перед включением
       - DEBT_REMINDERS
       - DEBT_REMINDERS_HOUR
+      # Метрики Prometheus. Слушатель отдельный и наружу НЕ публикуется:
+      # до него дотягивается только сборщик по сети docker
+      - METRICS_LISTEN=:18003
+      - METRICS_INTERVAL
       # FCM push: путь к service-account JSON Firebase Admin ВНУТРИ контейнера.
       # Файл монтируется ниже с хоста (сам секрет в git не коммитится — см.
       # .gitignore). Отсутствует/битый — сервер стартует, пуши просто выключены
