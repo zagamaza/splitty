@@ -72,6 +72,17 @@ type Users interface {
 	FindById(ctx context.Context, id int) (*api.User, error)
 }
 
+// Telegram — запасной канал доставки. Пуш умеет только приложение, а
+// подавляющее большинство должников живёт в боте: без этого канала рассылка
+// проходит мимо девяти человек из десяти (замерено на проде: из 47 должников
+// приложение стоит у пятерых).
+//
+// Ошибку возвращает наружу: джобу она нужна, чтобы вернуть человеку попытку —
+// списывать её за нашу неудачу нельзя
+type Telegram interface {
+	SendDebtReminder(ctx context.Context, user *api.User, text string, roomId string) error
+}
+
 // Queue — очередь пушей. Именно очередь, а не push.Sender: Sender глотает
 // ошибку постановки, а джобу она нужна — иначе он спишет попытку человеку,
 // которому ничего не ушло.
@@ -86,20 +97,32 @@ type Job struct {
 	state State
 	users Users
 	queue Queue
+	// telegram опционален: nil — бот не запущен в этом процессе, и канал
+	// недоступен. Тогда рассылка работает как раньше, только по пушам
+	telegram Telegram
 }
 
 func NewJob(cfg Config, rooms Rooms, state State, users Users, queue Queue) *Job {
 	return &Job{cfg: cfg, rooms: rooms, state: state, users: users, queue: queue}
 }
 
+// SetTelegram включает запасной канал. Зовётся только когда бот ДЕЙСТВИТЕЛЬНО
+// поднят: с заглушкой отправки джоб считал бы недоставленное доставленным
+func (j *Job) SetTelegram(t Telegram) { j.telegram = t }
+
 // Run — один прогон рассылки. Возвращает сводку (её же печатает dry-режим).
 type Stats struct {
-	Rooms       int
-	Debtors     int
-	Sent        int
+	Rooms   int
+	Debtors int
+	Sent    int
+	// ByPush/ByTelegram — каким каналом ушло. Разбивка нужна не для красоты:
+	// пуш и телеграм расходятся по охвату в разы, и «отправлено 5» без неё
+	// выглядит нормальной рассылкой
+	ByPush      int
+	ByTelegram  int
 	SkippedRoom int
-	// SkippedUser — не подошли: выключены уведомления, нет токенов, удалён
-	// аккаунт или ещё не остыл предыдущий пуш.
+	// SkippedUser — не подошли: выключены уведомления, нет ни одного канала,
+	// удалён аккаунт или ещё не остыло предыдущее напоминание.
 	SkippedUser int
 }
 
@@ -121,15 +144,20 @@ func (j *Job) Run(ctx context.Context, now time.Time) (Stats, error) {
 	stats.Debtors = len(targets)
 
 	for _, target := range targets {
-		sent, err := j.remind(ctx, target, now)
+		channel, err := j.remind(ctx, target, now)
 		if err != nil {
 			// Один человек не должен ронять всю рассылку.
 			log.Error().Err(err).Int("user", target.UserId).Msg("debt reminder failed")
 			continue
 		}
-		if sent {
+		switch channel {
+		case channelPush:
 			stats.Sent++
-		} else {
+			stats.ByPush++
+		case channelTelegram:
+			stats.Sent++
+			stats.ByTelegram++
+		default:
 			stats.SkippedUser++
 		}
 	}
@@ -141,6 +169,8 @@ func (j *Job) Run(ctx context.Context, now time.Time) (Stats, error) {
 		Int("rooms", stats.Rooms).
 		Int("debtors", stats.Debtors).
 		Int("sent", stats.Sent).
+		Int("by_push", stats.ByPush).
+		Int("by_telegram", stats.ByTelegram).
 		Int("skipped_rooms", stats.SkippedRoom).
 		Int("skipped_users", stats.SkippedUser).
 		Msg("debt reminders")
@@ -148,47 +178,82 @@ func (j *Job) Run(ctx context.Context, now time.Time) (Stats, error) {
 	return stats, nil
 }
 
-// remind обрабатывает одного человека. true — напоминание ушло в очередь.
-func (j *Job) remind(ctx context.Context, target Target, now time.Time) (bool, error) {
+// channel — каким каналом ушло напоминание.
+type channel int
+
+const (
+	channelNone channel = iota
+	channelPush
+	channelTelegram
+)
+
+// pickChannel выбирает канал доставки. Пуш первым, телеграм запасным — а НЕ
+// оба сразу: уведомление о расходе продублировать не жалко, а напоминание о
+// долге, пришедшее дважды, читается как претензия.
+//
+// Телеграм берётся и тогда, когда пуши человек выключил сам, а телеграм
+// оставил: это его выбор канала, а не отказ от напоминаний
+func (j *Job) pickChannel(user *api.User) channel {
+	if user.WantsPush(api.NotifyDebts) && len(user.PushTokens) > 0 {
+		return channelPush
+	}
+	if j.telegram != nil && user.HasTelegram() && user.AllowsTelegram(api.NotifyDebts) {
+		return channelTelegram
+	}
+	return channelNone
+}
+
+// remind обрабатывает одного человека и возвращает канал, которым ушло
+// напоминание (channelNone — не ушло).
+func (j *Job) remind(ctx context.Context, target Target, now time.Time) (channel, error) {
 	user, err := j.users.FindById(ctx, target.UserId)
 	if err != nil {
-		return false, err
+		return channelNone, err
 	}
-	if user == nil || user.IsDeleted() || !user.WantsPush(api.NotifyDebts) || len(user.PushTokens) == 0 {
-		return false, nil
+	if user == nil || user.IsDeleted() {
+		return channelNone, nil
+	}
+
+	via := j.pickChannel(user)
+	if via == channelNone {
+		return channelNone, nil
 	}
 
 	if j.cfg.Mode == ModeDry {
 		// Считаем, но не трогаем ни очередь, ни состояние: иначе «холостой»
 		// прогон сжёг бы людям попытки.
-		return true, nil
+		return via, nil
 	}
 
-	// Право забирается ДО постановки в очередь и одной операцией: два инстанса
-	// или перекрывающийся деплой иначе прислали бы два одинаковых пуша.
+	// Право забирается ДО отправки и одной операцией: два инстанса или
+	// перекрывающийся деплой иначе прислали бы два одинаковых напоминания.
 	claimed, previous, err := j.state.Claim(ctx, target.UserId, target.Key, now, j.cfg.Cooldown, j.cfg.MaxStreak)
 	if err != nil {
-		return false, err
+		return channelNone, err
 	}
 	if !claimed {
-		return false, nil
+		return channelNone, nil
 	}
 
 	lang := api.DefineLang(user)
-	notification := push.Notification{
-		Title: Title(lang),
-		Body:  Body(target, lang),
-		Data:  PushData(target),
+	if via == channelPush {
+		err = j.queue.Enqueue(ctx, target.UserId, push.Notification{
+			Title: Title(lang),
+			Body:  Body(target, lang),
+			Data:  PushData(target),
+		})
+	} else {
+		err = j.telegram.SendDebtReminder(ctx, user, Body(target, lang), target.RoomId)
 	}
-	if err := j.queue.Enqueue(ctx, target.UserId, notification); err != nil {
-		// В очередь не попало — возвращаем право: списывать человеку попытку
-		// за нашу же неудачу нельзя, иначе серия из четырёх выгорит вхолостую.
+	if err != nil {
+		// Не ушло — возвращаем право: списывать человеку попытку за нашу же
+		// неудачу нельзя, иначе серия из четырёх выгорит вхолостую.
 		if rErr := j.state.Release(ctx, target.UserId, previous); rErr != nil {
 			log.Error().Err(rErr).Int("user", target.UserId).Msg("cannot release debt reminder claim")
 		}
-		return false, err
+		return channelNone, err
 	}
-	return true, nil
+	return via, nil
 }
 
 // Start запускает суточный цикл. Блокирующий вызов — звать из горутины.

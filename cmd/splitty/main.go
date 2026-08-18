@@ -70,6 +70,10 @@ func main() {
 	// telegram-отправитель — реальный (бот поднят) либо noop; push-канал Notifier'а
 	// работает независимо от бота (FCM по REST-мутациям iOS/Android).
 	var tgSender bot.TelegramSender = bot.NoopTelegramSender{}
+	// botLive — поднялся ли telegram-бот на самом деле. Заглушка отправки
+	// молча «доставляет» что угодно, и напоминание о долге считалось бы
+	// отправленным, никуда не уйдя
+	botLive := false
 	if cfg.TgToken == "" {
 		log.Warn().Msg("TG_TOKEN is empty, telegram bot disabled, serving rest api only")
 	} else if app, cl, err := initApp(ctx, cfg); err != nil {
@@ -77,6 +81,7 @@ func main() {
 	} else {
 		closer.Bind(cl)
 		tgSender = app.TbAPI
+		botLive = true
 		// Молчащий цикл обновлений снаружи ничем не отличался от работающего
 		restServer.SetBotHeartbeat(app.LastUpdate)
 		go app.DeIntegrationService.StartPostScheduler()
@@ -109,7 +114,18 @@ func main() {
 
 	// REST-мутации участникам: те же telegram-уведомления, что и экраны бота
 	// (когда бот включён), + native-пуши FCM (по WantsPush).
-	restServer.SetNotifier(bot.NewNotifier(tgSender, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo, restDeps.pushSender))
+	notifier := bot.NewNotifier(tgSender, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo, restDeps.pushSender)
+	restServer.SetNotifier(notifier)
+
+	// Напоминания о долге. Телеграм подключаем только при живом боте: пуш умеет
+	// одно приложение, а девять должников из десяти сидят в боте — без этого
+	// канала рассылка проходит мимо почти всех
+	if botLive {
+		restDeps.reminderJob.SetTelegram(notifier)
+	} else {
+		log.Warn().Msg("бот не поднят: напоминания о долге пойдут только пушами")
+	}
+	go restDeps.reminderJob.Start(ctx)
 
 	if err := restServer.Run(ctx); err != nil {
 		log.Error().Err(err).Msg("rest api failed")
@@ -149,6 +165,9 @@ type restNotifierDeps struct {
 	// db — подключение к mongo: нужно сводным метрикам, которые считают по
 	// коллекциям напрямую, а не через доменные репозитории
 	db *mongo.Database
+	// reminderJob — рассылка напоминаний о долге. Собран, но не запущен:
+	// запасной telegram-канал ему выдаёт main, когда бот действительно поднят
+	reminderJob *reminders.Job
 }
 
 // initRestServer собирает REST-сервер: mongo-подключение + репозитории + сервисы
@@ -261,8 +280,9 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	reminderCfg := reminders.DefaultConfig()
 	reminderCfg.Mode = reminders.Mode(cfg.DebtReminders)
 	reminderCfg.Hour = cfg.DebtRemindersHour
+	// Запускается НЕ здесь, а в main: сперва нужно понять, поднялся ли бот —
+	// от этого зависит, доступен ли телеграм как запасной канал доставки
 	reminderJob := reminders.NewJob(reminderCfg, roomRepository, debtReminderRepository, userRepository, pushOutbox)
-	go reminderJob.Start(ctx)
 
 	// Поиск комнат для админской панели. Включён всегда — доступ к нему решает
 	// токен (см. rest.Config.AdminToken), а не наличие зависимости
@@ -384,6 +404,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		userRepo:     userRepository,
 		pushSender:   pushSender,
 		db:           db,
+		reminderJob:  reminderJob,
 	}, cleanup, nil
 }
 

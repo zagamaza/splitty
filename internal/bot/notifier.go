@@ -9,6 +9,7 @@ import (
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/push"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -349,4 +350,39 @@ func (n *Notifier) send(messages []tgbotapi.Chattable) {
 			log.Error().Err(err).Msgf("notifier: can't send message to telegram %v", m)
 		}
 	}
+}
+
+// SendDebtReminder — напоминание о невозвращённом долге в telegram
+// (reminders.Telegram). Запасной канал рассылки: пуш умеет только приложение,
+// а подавляющее большинство должников живёт в боте.
+//
+// В отличие от остальных методов Notifier, ошибку возвращает наружу: джобу она
+// нужна, чтобы вернуть человеку попытку. Молча проглотив её, мы списали бы одно
+// из четырёх напоминаний за сообщение, которого человек не видел.
+func (n *Notifier) SendDebtReminder(ctx context.Context, user *api.User, text string, roomId string) error {
+	if !user.HasTelegram() {
+		return fmt.Errorf("у пользователя %d нет telegram", user.ID)
+	}
+
+	// Кнопка ведёт в ту комнату, где долг крупнее всего, — ровно туда, куда
+	// уводит и тап по пушу (см. reminders.PushData).
+	var keyboard [][]tgbotapi.InlineKeyboardButton
+	if roomId != "" {
+		rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
+		if _, err := n.bs.SaveAll(ctx, rb); err != nil {
+			return errors.Wrap(err, "не сохранил кнопку напоминания")
+		}
+		keyboard = [][]tgbotapi.InlineKeyboardButton{
+			{tgbotapi.NewInlineKeyboardButtonData(I18n(user, "btn_view_room"), rb.ID.Hex())},
+		}
+	}
+
+	// Текст собран джобом на языке человека (reminders.Body), экранируем его
+	// целиком: в нём есть название группы, которое писал человек, а сообщения
+	// бота уходят с ParseMode=HTML.
+	message := NewMessage(int64(*user.TelegramID), html.EscapeString(text), keyboard)
+	if _, err := n.tg.Send(message); err != nil {
+		return errors.Wrap(err, "не отправил напоминание в telegram")
+	}
+	return nil
 }
