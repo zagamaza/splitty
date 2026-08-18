@@ -107,7 +107,7 @@
     <string name="notifications_operations">Operaciones</string>
     <string name="notifications_operations_footer">Alguien añadió o cambió un gasto en tu grupo</string>
     <string name="notifications_debts">Deudas</string>
-    <string name="notifications_debts_footer">Alguien te devolvió dinero</string>
+    <string name="notifications_debts_footer">Alguien te devolvió dinero, y recordatorios de lo que debes</string>
     <string name="notifications_invites">Invitaciones</string>
     <string name="notifications_invites_footer">Alguien te invitó o te añadió a un grupo</string>
     <string name="notifications_channel_push">Aplicación</string>

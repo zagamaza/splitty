@@ -34,6 +34,20 @@ type pushOutboxDoc struct {
 	CreatedAt     time.Time          `bson:"created_at"`
 }
 
+// EnsureIndexes создаёт индексы очереди. Идемпотентно; вызывать при старте.
+//   - по next_attempt_at: воркер каждые 5 секунд фильтрует и сортирует по нему.
+//     Без индекса это скан и сортировка всей очереди, а суточная рассылка
+//     напоминаний кладёт в неё пачку записей разом.
+func (r *MongoPushOutboxRepository) EnsureIndexes(ctx context.Context) error {
+	_, err := r.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "next_attempt_at", Value: ascParameter}},
+			Options: options.Index().SetName("idx_next_attempt_at"),
+		},
+	})
+	return err
+}
+
 func (r *MongoPushOutboxRepository) Enqueue(ctx context.Context, userID int, n push.Notification) error {
 	now := time.Now()
 	_, err := r.col.InsertOne(ctx, pushOutboxDoc{

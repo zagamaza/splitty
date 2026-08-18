@@ -120,6 +120,12 @@ type config struct {
 	// account.json, в .gitignore). Пусто — пуши выключены (NoopSender), сервер
 	// работает как раньше.
 	FirebaseCredentialsFile string `env:"FIREBASE_CREDENTIALS_FILE" envDefault:""`
+
+	// Напоминания о невозвращённом долге. По умолчанию ВЫКЛЮЧЕНЫ: это рассылка
+	// по живым людям, и включаться сама она не должна. "dry" — посчитать и
+	// записать в лог агрегаты, ничего не отправляя.
+	DebtReminders     string `env:"DEBT_REMINDERS" envDefault:"off"`
+	DebtRemindersHour int    `env:"DEBT_REMINDERS_HOUR" envDefault:"15"` // 18:00 МСК
 }
 
 func initConfig() (*config, error) {

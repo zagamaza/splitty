@@ -87,7 +87,7 @@ struct NotificationSettingsView: View {
                     )
                     section(
                         title: "Долги",
-                        footer: "Вам вернули долг",
+                        footer: "Вам вернули долг, и напоминания о ваших долгах",
                         telegram: Binding(
                             get: { current.debts.telegram },
                             set: { newValue in

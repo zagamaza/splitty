@@ -16,6 +16,7 @@ import (
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/push"
+	"github.com/almaznur91/splitty/internal/reminders"
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/rest"
 	"github.com/almaznur91/splitty/internal/service"
@@ -209,6 +210,15 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	debtReminderRepository := repository.NewDebtReminderRepository(db)
 	server.SetDebtReminders(debtReminderRepository)
 
+	// Напоминания о невозвращённом долге. Очередь берём напрямую, а не через
+	// push.Sender: тот глотает ошибку постановки, а джобу она нужна — иначе он
+	// спишет человеку попытку, которой не было
+	reminderCfg := reminders.DefaultConfig()
+	reminderCfg.Mode = reminders.Mode(cfg.DebtReminders)
+	reminderCfg.Hour = cfg.DebtRemindersHour
+	reminderJob := reminders.NewJob(reminderCfg, roomRepository, debtReminderRepository, userRepository, pushOutbox)
+	go reminderJob.Start(ctx)
+
 	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
 	// снаружи выглядел рабочим
 	server.SetDBPing(func(ctx context.Context) error { return db.Client().Ping(ctx, nil) })
@@ -220,6 +230,18 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 
 	if err := loginCodeRepository.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create login_code indexes")
+	}
+
+	// Индекс очереди пушей — не фатально: без него доставка работает, но
+	// воркер сканирует и сортирует очередь целиком каждые 5 секунд
+	if err := pushOutbox.EnsureIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create push_outbox indexes")
+	}
+
+	// Индекс комнат по дате создания — не фатально, но без него суточный джоб
+	// напоминаний сканирует всю коллекцию комнат
+	if err := roomRepository.EnsureRoomIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create room indexes")
 	}
 
 	// Индекс files — не фатально: без него удаление файлов комнаты идёт полным

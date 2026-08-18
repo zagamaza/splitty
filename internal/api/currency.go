@@ -1,5 +1,10 @@
 package api
 
+import (
+	"strconv"
+	"strings"
+)
+
 // DefaultCurrency валюта комнат, у которых валюта не выбрана
 // (пустая строка в базе): исторический дефолт бота — рубль
 const DefaultCurrency = "RUB"
@@ -22,4 +27,32 @@ var CurrencyCodes = []string{"RUB", "USD", "EUR", "IDR", "KZT", "UZS"}
 func IsSupportedCurrency(code string) bool {
 	_, ok := Currencies[code]
 	return ok
+}
+
+// MoneyWithSymbol форматирует целые единицы валюты с разделением тысяч узким
+// пробелом и символом валюты: 1200, "RUB" → "1 200 ₽".
+//
+// Живёт здесь, а не в боте: тексты пушей собирает и джоб напоминаний, а
+// одинаковые суммы обязаны выглядеть одинаково во всех каналах.
+func MoneyWithSymbol(sum int, currency string) string {
+	digits := strconv.Itoa(sum)
+	negative := strings.HasPrefix(digits, "-")
+	digits = strings.TrimPrefix(digits, "-")
+
+	var grouped strings.Builder
+	for i, r := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			grouped.WriteRune(' ')
+		}
+		grouped.WriteRune(r)
+	}
+
+	info, ok := Currencies[currency]
+	if !ok {
+		info = Currencies[DefaultCurrency]
+	}
+	if negative {
+		return "-" + grouped.String() + " " + info.Symbol
+	}
+	return grouped.String() + " " + info.Symbol
 }

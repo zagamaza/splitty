@@ -149,7 +149,7 @@
     <string name="notifications_operations">Operations</string>
     <string name="notifications_operations_footer">Someone added or changed an expense in your group</string>
     <string name="notifications_debts">Debts</string>
-    <string name="notifications_debts_footer">Someone paid you back</string>
+    <string name="notifications_debts_footer">Someone paid you back, and reminders about debts you owe</string>
     <string name="notifications_invites">Invites</string>
     <string name="notifications_invites_footer">Someone invited or added you to a group</string>
     <string name="notifications_channel_telegram">Telegram</string>
