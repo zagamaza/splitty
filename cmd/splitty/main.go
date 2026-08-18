@@ -14,8 +14,8 @@ import (
 
 	"github.com/almaznur91/splitty/internal/ai"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
-	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/metrics"
+	"github.com/almaznur91/splitty/internal/oidc"
 	"github.com/almaznur91/splitty/internal/push"
 	"github.com/almaznur91/splitty/internal/reminders"
 	"github.com/almaznur91/splitty/internal/repository"
@@ -96,12 +96,42 @@ func main() {
 		go metricsServer.Listen(ctx, cfg.MetricsListen)
 	}
 
+	// Админский API. Слушатель отдельный и наружу не опубликован: до него
+	// дотягивается только соседний контейнер по сети docker. Без токена не
+	// поднимается вовсе — открытым этот порт быть не может
+	if cfg.AdminApiToken == "" {
+		log.Info().Msg("админский api выключен (ADMIN_API_TOKEN пуст)")
+	} else if cfg.AdminApiListen == "" {
+		log.Info().Msg("админский api выключен (ADMIN_API_LISTEN пуст)")
+	} else {
+		go serveAdminAPI(ctx, cfg.AdminApiListen, restServer.AdminHandler())
+	}
+
 	// REST-мутации участникам: те же telegram-уведомления, что и экраны бота
 	// (когда бот включён), + native-пуши FCM (по WantsPush).
 	restServer.SetNotifier(bot.NewNotifier(tgSender, restDeps.operationSrv, restDeps.buttonSrv, restDeps.userRepo, restDeps.pushSender))
 
 	if err := restServer.Run(ctx); err != nil {
 		log.Error().Err(err).Msg("rest api failed")
+	}
+}
+
+// serveAdminAPI поднимает слушатель админского API. Блокирующий вызов — звать
+// из горутины. Падение слушателя логируется и не роняет сервис: без админки
+// приложение работает, без приложения админка бессмысленна
+func serveAdminAPI(ctx context.Context, addr string, handler http.Handler) {
+	server := &http.Server{Addr: addr, Handler: handler, ReadHeaderTimeout: 5 * time.Second}
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = server.Shutdown(shutdownCtx)
+	}()
+
+	log.Info().Msgf("админский api на %s", addr)
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Error().Err(err).Msg("слушатель админского api упал")
 	}
 }
 
@@ -186,6 +216,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		IosStoreUrl:       cfg.IosStoreUrl,
 		TrustedProxies:    cfg.TrustedProxyCount,
 		TokenMinIssuedAt:  tokenCutoff,
+		AdminToken:        cfg.AdminApiToken,
 		TrustedProxyNets:  rest.ParseTrustedProxyNets(cfg.TrustedProxies),
 	}
 	if cfg.PublicBaseUrl == "" {
@@ -232,6 +263,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	reminderCfg.Hour = cfg.DebtRemindersHour
 	reminderJob := reminders.NewJob(reminderCfg, roomRepository, debtReminderRepository, userRepository, pushOutbox)
 	go reminderJob.Start(ctx)
+
+	// Поиск комнат для админской панели. Включён всегда — доступ к нему решает
+	// токен (см. rest.Config.AdminToken), а не наличие зависимости
+	server.SetAdminRooms(roomRepository)
 
 	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
 	// снаружи выглядел рабочим

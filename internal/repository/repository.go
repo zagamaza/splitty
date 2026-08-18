@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"time"
 
@@ -1152,6 +1153,82 @@ const DeletedUserPlaceholder = "Удалённый пользователь"
 
 // snapshotPIIFields — поля снимка, которые вычищаются при анонимизации.
 //
+// RoomBrief — строка списка комнат для админки. Операций и участников здесь
+// нет намеренно: в документе комнаты лежат ВСЕ её расходы (потолок 16 МБ), и
+// вытянуть сотню таких ради списка нельзя. Числа считает сам mongo.
+type RoomBrief struct {
+	ID              primitive.ObjectID `bson:"_id"`
+	Name            string             `bson:"name"`
+	CreateAt        time.Time          `bson:"create_at"`
+	Currency        string             `bson:"currency"`
+	MemberCount     int                `bson:"member_count"`
+	OperationCount  int                `bson:"operation_count"`
+	LastOperationAt *time.Time         `bson:"last_operation_at"`
+	SizeBytes       int                `bson:"size_bytes"`
+}
+
+// adminSearchLimit — потолок выдачи поиска, сколько бы ни просили: ответ
+// собирается в памяти, и «покажи все» не должно означать «прочитай всю базу»
+const adminSearchLimit = 100
+
+// SearchRooms ищет комнаты по имени (без учёта регистра) либо по точному id.
+// Пустой запрос — последние созданные.
+//
+// Имя ищется регулярным выражением по НЕиндексированному полю: это полный
+// проход по коллекции, поэтому метод и живёт только в админке — на горячем
+// пути такому не место
+func (rr MongoRoomRepository) SearchRooms(ctx context.Context, query string, limit int) ([]RoomBrief, error) {
+	if limit <= 0 || limit > adminSearchLimit {
+		limit = adminSearchLimit
+	}
+
+	match := bson.M{}
+	if q := strings.TrimSpace(query); q != "" {
+		if hex, err := primitive.ObjectIDFromHex(q); err == nil {
+			match["_id"] = hex
+		} else {
+			// Экранируем: имя комнаты пишет человек, и «(» из него не должно
+			// становиться синтаксисом регулярного выражения
+			match["name"] = bson.M{"$regex": regexp.QuoteMeta(q), "$options": "i"}
+		}
+	}
+
+	cur, err := rr.col.Aggregate(ctx, []bson.M{
+		{"$match": match},
+		{"$sort": bson.M{"create_at": descParameter}},
+		{"$limit": limit},
+		{"$project": bson.M{
+			"name":              1,
+			"create_at":         1,
+			"currency":          1,
+			"member_count":      bson.M{"$size": bson.M{"$ifNull": bson.A{"$users", bson.A{}}}},
+			"operation_count":   bson.M{"$size": bson.M{"$ifNull": bson.A{"$operations", bson.A{}}}},
+			"last_operation_at": bson.M{"$max": "$operations.create_at"},
+			"size_bytes":        bson.M{"$bsonSize": "$$ROOT"},
+		}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	rooms := []RoomBrief{}
+	if err := cur.All(ctx, &rooms); err != nil {
+		return nil, err
+	}
+	return rooms, nil
+}
+
+// RoomSizeBytes — вес документа комнаты. Наружу нужен админке: приближение к
+// потолку mongo видно только так, а узнать о нём хочется до отказа записи
+func (rr MongoRoomRepository) RoomSizeBytes(ctx context.Context, roomId string) (int, error) {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return 0, err
+	}
+	return rr.roomSize(ctx, hex)
+}
+
 // user_name — часть отображаемой личности (@ник виден всем участникам).
 // Остальные попали бы в снимок только у документов, записанных ДО санитайза
 // (см. Snapshot и sanitizeUsers): там telegram_id/google_sub/apple_sub/email и

@@ -130,7 +130,13 @@ type config struct {
 	// записать в лог агрегаты, ничего не отправляя.
 	// Метрики Prometheus на ОТДЕЛЬНОМ слушателе: наружу он не публикуется,
 	// до него дотягивается только сборщик по сети docker. Пусто — метрик нет.
-	MetricsListen   string        `env:"METRICS_LISTEN" envDefault:":18003"`
+	MetricsListen string `env:"METRICS_LISTEN" envDefault:":18003"`
+	// Админский API: чтение комнат панелью администратора. Слушатель отдельный
+	// и наружу не публикуется — как и метрики. Пустой токен выключает его
+	// целиком: отдавать чужие суммы и долги без токена нельзя ни в каком режиме,
+	// поэтому значения по умолчанию у него нет и быть не может
+	AdminApiListen  string        `env:"ADMIN_API_LISTEN" envDefault:":18004"`
+	AdminApiToken   string        `env:"ADMIN_API_TOKEN" envDefault:""`
 	MetricsInterval time.Duration `env:"METRICS_INTERVAL" envDefault:"5m"`
 
 	DebtReminders     string `env:"DEBT_REMINDERS" envDefault:"off"`
