@@ -219,3 +219,15 @@ func NewButton(action Action, data *CallbackData) *Button {
 		CreateAt:     time.Now(),
 	}
 }
+
+// DebtReminder — память о напоминаниях про долг: кому, когда и о чём.
+//
+// DebtsKey — отпечаток набора долгов на момент отправки. Без него серия
+// «максимум N напоминаний» молчала бы навсегда: человек вернул старый долг,
+// взял новый, а счётчик всё ещё исчерпан.
+type DebtReminder struct {
+	UserId   int       `bson:"_id"`
+	LastSent time.Time `bson:"last_sent"`
+	Streak   int       `bson:"streak"`
+	DebtsKey string    `bson:"debts_key"`
+}

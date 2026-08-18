@@ -76,3 +76,34 @@ func HasOperations(r *Room, userId int) bool {
 	}
 	return false
 }
+
+// RoomMembers nil-безопасно возвращает участников комнаты.
+func RoomMembers(r *Room) []User {
+	if r == nil || r.Members == nil {
+		return nil
+	}
+	return *r.Members
+}
+
+// NormalizedRoom — копия комнаты с нормализованными АКТИВНЫМИ операциями: вход
+// для расчёта долгов (service.GetRoomDebts).
+//
+// Живёт здесь, а не в rest: расчёт долгов зовёт не только REST, и на сырой
+// комнате он врёт. Легаси-операции бота лежат с пустым status, и без
+// нормализации ActiveOperations их отбрасывает — комната с долгами выглядела бы
+// рассчитанной. Пустые срезы вместо nil — GetRoomDebts разыменовывает указатели
+// без проверок.
+func NormalizedRoom(r *Room) Room {
+	ops := ActiveOperations(r)
+	if ops == nil {
+		ops = []Operation{}
+	}
+	members := RoomMembers(r)
+	if members == nil {
+		members = []User{}
+	}
+	if r == nil {
+		return Room{Members: &members, Operations: &ops}
+	}
+	return Room{ID: r.ID, Name: r.Name, Members: &members, Operations: &ops}
+}

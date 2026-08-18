@@ -177,6 +177,9 @@ type Server struct {
 	// invites опционален (см. SetInvites): хранилище отношений «человек ×
 	// комната» для приглашений и раздела уведомлений
 	invites inviteStore
+	// debtReminders — память о напоминаниях про долг. Обязателен для удаления
+	// аккаунта: без него id человека и история напоминаний пережили бы tombstone
+	debtReminders userDataCleaner
 	// files опционален (см. SetFiles): хранилище картинок в mongo. nil —
 	// загрузка авы отвечает 503, а отдача файлов работает по-старому, через
 	// телеграм
@@ -283,6 +286,12 @@ func (s *Server) SetPushOutbox(c userDataCleaner) {
 // без него эндпоинты приглашений отвечают 503, остальной сервер работает.
 func (s *Server) SetInvites(store inviteStore) {
 	s.invites = store
+}
+
+// SetDebtReminders подключает память о напоминаниях про долг. Нужна удалению
+// аккаунта (там своя PII) и джобу напоминаний.
+func (s *Server) SetDebtReminders(c userDataCleaner) {
+	s.debtReminders = c
 }
 
 // SetFiles подключает хранилище картинок. Вызывать до Run, nil-безопасно:

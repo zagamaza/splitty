@@ -37,7 +37,8 @@ type deleteTestSetup struct {
 	codes       *fakeLoginCodeRepo
 	chatStates  *fakeChatStates
 	bugReports  *fakeChatStates
-	pushOutbox  *fakeChatStates
+	pushOutbox    *fakeChatStates
+	debtReminders *fakeChatStates
 	invites     *fakeInviteStore
 	appleTokens *fakeAppleTokens
 	room        *api.Room
@@ -107,6 +108,7 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	set := &deleteTestSetup{
 		s: s, users: users, rooms: rooms, codes: codes,
 		chatStates: &fakeChatStates{}, bugReports: &fakeChatStates{}, pushOutbox: &fakeChatStates{},
+		debtReminders: &fakeChatStates{},
 		invites:     newFakeInviteStore(),
 		appleTokens: apple, room: room,
 	}
@@ -114,6 +116,7 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	s.SetBugReports(set.bugReports)
 	s.SetPushOutbox(set.pushOutbox)
 	s.SetInvites(set.invites)
+	s.SetDebtReminders(set.debtReminders)
 	return set
 }
 
@@ -402,7 +405,7 @@ func TestDeleteMePurgesSideCollections(t *testing.T) {
 		}
 	}
 
-	for name, cleaner := range map[string]*fakeChatStates{"bug_report": d.bugReports, "push_outbox": d.pushOutbox} {
+	for name, cleaner := range map[string]*fakeChatStates{"bug_report": d.bugReports, "push_outbox": d.pushOutbox, "debt_reminder": d.debtReminders} {
 		if len(cleaner.deleted) != 1 || cleaner.deleted[0] != deletedUserID {
 			t.Errorf("%s: DeleteByUserId вызван с %v, want [%d]", name, cleaner.deleted, deletedUserID)
 		}

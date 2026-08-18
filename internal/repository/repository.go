@@ -122,6 +122,11 @@ type RoomRepository interface {
 	// SetAvatarFileId ставит ссылку на аву комнаты (пустая строка снимает её) и
 	// возвращает ПРЕЖНЮЮ ссылку — ту, которую этот вызов вытеснил
 	SetAvatarFileId(ctx context.Context, roomId string, fileId string) (string, error)
+	// EachRoomCreatedAfter отдаёт комнаты, созданные после since, ПОРЦИЯМИ:
+	// комнаты не помещаются в память все разом (в каждой лежат все её операции)
+	EachRoomCreatedAfter(ctx context.Context, since time.Time, batch int, fn func([]api.Room) error) error
+	// EnsureRoomIndexes создаёт индексы коллекции room. Идемпотентно
+	EnsureRoomIndexes(ctx context.Context) error
 	// AnonymizeUser затирает имя пользователя во ВСЕХ встроенных снимках комнат
 	// (users[], operations[].donor, operations[].recipients[],
 	// operations[].recipients_with_sum[].user) и вычищает оттуда поля личности.
@@ -1046,6 +1051,58 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 	update := bson.D{{Key: "$set", Value: bson.M{"currency": currency}}}
 	_, err = rr.col.UpdateOne(ctx, filter, update)
 	return err
+}
+
+// EnsureRoomIndexes создаёт индексы коллекции room. Идемпотентно; вызывать при старте.
+//   - по create_at: джоб напоминаний раз в сутки выбирает комнаты за последние
+//     два месяца, и без индекса это полный скан коллекции, которая растёт
+//     навсегда. Он же обслуживает сортировку списков комнат.
+func (rr MongoRoomRepository) EnsureRoomIndexes(ctx context.Context) error {
+	_, err := rr.col.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "create_at", Value: ascParameter}},
+			Options: options.Index().SetName("idx_create_at"),
+		},
+	})
+	return err
+}
+
+// EachRoomCreatedAfter вызывает fn для каждой порции комнат, созданных после
+// since. Порциями, а не одним срезом: документ комнаты содержит ВСЕ её
+// операции и подбирается к 16 МБ, поэтому «выбрать все за два месяца» — это
+// пиковая память и долгая пауза до первого действия.
+func (rr MongoRoomRepository) EachRoomCreatedAfter(ctx context.Context, since time.Time, batch int, fn func([]api.Room) error) error {
+	if batch <= 0 {
+		batch = 50
+	}
+	cur, err := rr.col.Find(ctx, bson.M{"create_at": bson.M{"$gte": since}},
+		options.Find().SetSort(bson.D{{Key: "create_at", Value: ascParameter}}).SetBatchSize(int32(batch)))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	chunk := make([]api.Room, 0, batch)
+	for cur.Next(ctx) {
+		var room api.Room
+		if err := cur.Decode(&room); err != nil {
+			return err
+		}
+		chunk = append(chunk, room)
+		if len(chunk) == batch {
+			if err := fn(chunk); err != nil {
+				return err
+			}
+			chunk = chunk[:0]
+		}
+	}
+	if err := cur.Err(); err != nil {
+		return err
+	}
+	if len(chunk) > 0 {
+		return fn(chunk)
+	}
+	return nil
 }
 
 // SetAvatarFileId ставит ссылку на аву комнаты и возвращает прежнюю. Пустая

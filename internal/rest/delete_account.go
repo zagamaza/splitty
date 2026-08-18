@@ -199,6 +199,7 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 		{name: "bug_report", repo: s.bugReports, ids: []int{u.ID}},
 		{name: "push_outbox", repo: s.pushOutbox, ids: []int{u.ID}},
 		{name: "room_invite", repo: s.invites, ids: []int{u.ID}},
+		{name: "debt_reminder", repo: s.debtReminders, ids: []int{u.ID}},
 	} {
 		if cleaner.repo == nil {
 			return errors.Errorf("коллекция %s не подключена: PII удалённого пользователя осталась бы в базе", cleaner.name)

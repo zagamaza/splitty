@@ -1054,6 +1054,32 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 	return nil
 }
 
+// EachRoomCreatedAfter как mongo-реализация: порциями, только свежие комнаты.
+func (f *fakeRoomRepo) EachRoomCreatedAfter(ctx context.Context, since time.Time, batch int, fn func([]api.Room) error) error {
+	if batch <= 0 {
+		batch = 50
+	}
+	chunk := make([]api.Room, 0, batch)
+	for _, room := range f.rooms {
+		if room.CreateAt.Before(since) {
+			continue
+		}
+		chunk = append(chunk, *room)
+		if len(chunk) == batch {
+			if err := fn(chunk); err != nil {
+				return err
+			}
+			chunk = chunk[:0]
+		}
+	}
+	if len(chunk) > 0 {
+		return fn(chunk)
+	}
+	return nil
+}
+
+func (f *fakeRoomRepo) EnsureRoomIndexes(context.Context) error { return nil }
+
 // SetAvatarFileId как mongo-реализация: пустая строка снимает поле целиком, а
 // не пишет пустое значение.
 func (f *fakeRoomRepo) SetAvatarFileId(_ context.Context, roomId string, fileId string) (string, error) {

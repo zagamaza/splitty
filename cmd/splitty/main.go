@@ -205,6 +205,10 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	fileRepository := repository.NewFileRepository(db)
 	server.SetFiles(fileRepository)
 
+	// Память о напоминаниях про долг: нужна и джобу, и удалению аккаунта
+	debtReminderRepository := repository.NewDebtReminderRepository(db)
+	server.SetDebtReminders(debtReminderRepository)
+
 	// Проверка здоровья ходит в базу: сервис с упавшей mongo отвечал «ok» и
 	// снаружи выглядел рабочим
 	server.SetDBPing(func(ctx context.Context) error { return db.Client().Ping(ctx, nil) })

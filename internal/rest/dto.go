@@ -430,15 +430,10 @@ func activeOperations(r *api.Room) []api.Operation {
 	return api.ActiveOperations(r)
 }
 
-// normalizedRoom копия комнаты с нормализованными активными операциями —
-// вход для расчёта долгов develop (service.GetRoomDebts)
+// normalizedRoom см. api.NormalizedRoom — тот же вход для расчёта долгов, но
+// доступный и джобу напоминаний, а не только REST
 func normalizedRoom(r *api.Room) api.Room {
-	ops := activeOperations(r)
-	if ops == nil {
-		ops = []api.Operation{}
-	}
-	members := roomMembers(r)
-	return api.Room{ID: r.ID, Name: r.Name, Members: &members, Operations: &ops}
+	return api.NormalizedRoom(r)
 }
 
 // roomCurrencyCode валюта комнаты для API: пустая строка в базе
