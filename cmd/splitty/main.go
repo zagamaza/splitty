@@ -280,6 +280,11 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	reminderCfg := reminders.DefaultConfig()
 	reminderCfg.Mode = reminders.Mode(cfg.DebtReminders)
 	reminderCfg.Hour = cfg.DebtRemindersHour
+	// Демо-аккаунт ревьюеров App Store — витрина, а не человек: долги в нём
+	// показательные, и напоминать о них некому
+	if cfg.ReviewUserId != 0 {
+		reminderCfg.SkipUsers = []int{int(cfg.ReviewUserId)}
+	}
 	// Запускается НЕ здесь, а в main: сперва нужно понять, поднялся ли бот —
 	// от этого зависит, доступен ли телеграм как запасной канал доставки
 	reminderJob := reminders.NewJob(reminderCfg, roomRepository, debtReminderRepository, userRepository, pushOutbox)

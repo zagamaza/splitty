@@ -229,3 +229,76 @@ func TestDryRunCountsChannels(t *testing.T) {
 			len(tg.sent), len(queue.sent), len(state.claims))
 	}
 }
+
+// Долг не крупнее числа расходов неотличим от погрешности деления: доли режутся
+// с усечением копеек, и каждый расход оставляет до единицы валюты. Напоминать
+// по такому — прислать человеку «верните 3 ₽».
+func TestJobIgnoresRoundingNoise(t *testing.T) {
+	now := time.Now().UTC()
+	// Комната с одним расходом на 3 единицы: долг выйдет 1–2, то есть в
+	// пределах погрешности
+	tiny := room("Мелочь", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)
+	(*tiny.Operations)[0].Sum = 3
+	for i := range (*tiny.Operations)[0].RecipientsWithSum {
+		(*tiny.Operations)[0].RecipientsWithSum[i].Sum = 1.5
+	}
+
+	job, state, queue, tg := jobWithTelegram(t, []api.Room{tiny}, map[int]api.User{
+		zagir.ID: pushable(zagir),
+		almaz.ID: inTelegram(almaz),
+	})
+
+	stats, err := job.Run(context.Background(), now)
+	if err != nil {
+		t.Fatalf("прогон: %v", err)
+	}
+	if stats.Debtors != 0 || stats.Sent != 0 {
+		t.Fatalf("напомнили про остаток от округления: %+v", stats)
+	}
+	if len(tg.sent) != 0 || len(queue.sent) != 0 || len(state.claims) != 0 {
+		t.Errorf("что-то ушло: tg %d, push %d", len(tg.sent), len(queue.sent))
+	}
+}
+
+// Настоящий долг порог не съедает: он отсекает единицы, а не сотни.
+func TestJobKeepsRealDebtAboveNoise(t *testing.T) {
+	now := time.Now().UTC()
+	rooms := []api.Room{room("Стамбул", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)}
+
+	job, _, _, tg := jobWithTelegram(t, rooms, map[int]api.User{
+		zagir.ID: pushable(zagir),
+		almaz.ID: inTelegram(almaz),
+	})
+
+	stats, _ := job.Run(context.Background(), now)
+	if stats.Sent != 1 || len(tg.sent) != 1 {
+		t.Fatalf("настоящий долг потерялся: %+v", stats)
+	}
+}
+
+// Демо-аккаунт ревьюеров App Store — витрина, а не человек: напоминать ему не о
+// чем, и попытку он тратить не должен.
+func TestJobSkipsExcludedUsers(t *testing.T) {
+	now := time.Now().UTC()
+	rooms := []api.Room{room("Стамбул", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)}
+
+	cfg := onConfig()
+	cfg.SkipUsers = []int{almaz.ID}
+	job, state, queue := jobFor(t, cfg, rooms, map[int]api.User{
+		zagir.ID: pushable(zagir),
+		almaz.ID: pushable(almaz),
+	})
+	tg := &fakeTelegram{}
+	job.SetTelegram(tg)
+
+	stats, _ := job.Run(context.Background(), now)
+	if stats.Sent != 0 || stats.SkippedUser != 1 {
+		t.Fatalf("сводка: %+v", stats)
+	}
+	if len(queue.sent) != 0 || len(tg.sent) != 0 {
+		t.Errorf("демо-аккаунту всё-таки написали")
+	}
+	if state.claims[almaz.ID] != 0 {
+		t.Errorf("право взяли зря")
+	}
+}

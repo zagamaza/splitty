@@ -11,9 +11,15 @@ import (
 	"github.com/almaznur91/splitty/internal/push"
 )
 
-type fakeRooms struct{ rooms []api.Room }
+type fakeRooms struct {
+	rooms []api.Room
+	// since — граница, которую джоб попросил у хранилища: правило «только тусы
+	// моложе двух месяцев» держится именно на ней
+	since time.Time
+}
 
 func (f *fakeRooms) EachRoomCreatedAfter(_ context.Context, since time.Time, batch int, fn func([]api.Room) error) error {
+	f.since = since
 	var fresh []api.Room
 	for _, r := range f.rooms {
 		if !r.CreateAt.Before(since) {
@@ -260,5 +266,50 @@ func TestUntilNextRun(t *testing.T) {
 		if got := untilNextRun(now, c.hour); got != c.want {
 			t.Errorf("%s: ждём %v, ожидалось %v", c.now, got, c.want)
 		}
+	}
+}
+
+// Тусы старше двух месяцев не трогаем вовсе — это исходное условие рассылки:
+// напоминать о поездке, с которой все давно разъехались, поздно и неуместно.
+//
+// Отсечка живёт в запросе к базе (EachRoomCreatedAfter), поэтому проверяем и
+// сам результат, и границу, которую джоб просит у хранилища: без этого правило
+// держалось на одной строке, которую нечем было защитить.
+func TestJobIgnoresOldRooms(t *testing.T) {
+	now := time.Now().UTC()
+	rooms := []api.Room{
+		room("Прошлогодняя", "RUB", now.AddDate(0, 0, -70), zagir, zagir, almaz),
+		room("Свежая", "RUB", now.AddDate(0, 0, -3), zagir, zagir, sanya),
+	}
+
+	store := &fakeRooms{rooms: rooms}
+	state := newFakeState()
+	queue := &fakeQueue{}
+	job := NewJob(onConfig(), store, state, &fakeUsers{users: map[int]api.User{
+		zagir.ID: pushable(zagir),
+		almaz.ID: pushable(almaz),
+		sanya.ID: pushable(sanya),
+	}}, queue)
+
+	stats, err := job.Run(context.Background(), now)
+	if err != nil {
+		t.Fatalf("прогон: %v", err)
+	}
+
+	if stats.Rooms != 1 {
+		t.Errorf("в обход попало %d тус, ожидалась одна свежая", stats.Rooms)
+	}
+	// Должник старой тусы молчит, должник свежей — получает
+	if state.claims[almaz.ID] != 0 {
+		t.Errorf("напомнили про тусу семидесятидневной давности")
+	}
+	if state.claims[sanya.ID] != 1 {
+		t.Errorf("должник свежей тусы остался без напоминания")
+	}
+
+	// Граница — ровно два месяца назад, а не «примерно»
+	want := now.Add(-60 * 24 * time.Hour)
+	if diff := store.since.Sub(want); diff > time.Second || diff < -time.Second {
+		t.Errorf("у базы попросили тусы с %v, ожидалось %v", store.since, want)
 	}
 }

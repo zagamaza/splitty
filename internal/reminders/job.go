@@ -39,6 +39,9 @@ type Config struct {
 	MaxStreak int
 	// Batch — размер порции комнат.
 	Batch int
+	// SkipUsers — кого не трогаем вовсе. Сюда идёт демо-аккаунт ревьюеров App
+	// Store: это не человек, а витрина, и напоминание о долге ему бессмысленно
+	SkipUsers []int
 }
 
 // DefaultConfig — значения по умолчанию: рассылка выключена.
@@ -187,6 +190,16 @@ const (
 	channelTelegram
 )
 
+// skipped — аккаунт, которому рассылка не адресована вовсе.
+func (j *Job) skipped(userId int) bool {
+	for _, id := range j.cfg.SkipUsers {
+		if id == userId {
+			return true
+		}
+	}
+	return false
+}
+
 // pickChannel выбирает канал доставки. Пуш первым, телеграм запасным — а НЕ
 // оба сразу: уведомление о расходе продублировать не жалко, а напоминание о
 // долге, пришедшее дважды, читается как претензия.
@@ -211,6 +224,10 @@ func (j *Job) remind(ctx context.Context, target Target, now time.Time) (channel
 		return channelNone, err
 	}
 	if user == nil || user.IsDeleted() {
+		return channelNone, nil
+	}
+
+	if j.skipped(user.ID) {
 		return channelNone, nil
 	}
 
