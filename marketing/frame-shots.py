@@ -41,7 +41,7 @@ PROFILES = {
         "W": 1320, "H": 2868,
         "pad": "132px 96px 0", "eyebrow": 40, "title": 104, "chip_gap": 40,
         "chip_ico": 118, "chip_font": 34, "chips_top": 76, "chip_w": 300,
-        "device_w": 1040, "device_h": 2200, "device_top": 812,
+        "device_w": 1060, "device_h": int(1060 * 2082 / 1022), "device_top": 800,
         "radius_out": 86, "radius_in": 72,
         "device_style": "ios", "island_w": 250, "island_h": 74, "island_top": 34,
     },
@@ -58,6 +58,14 @@ PROFILES = {
 }
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+# Готовый мокап iPhone с обмеренным экраном. Рисовать корпус CSS не вышло:
+# скруглениями и градиентом получается «просто телефон», а не айфон —
+# силуэт задают пропорции корпуса, кант и расположение кнопок.
+MOCKUP = ROOT / "marketing" / "iphone-mockup.png"
+MOCKUP_W, MOCKUP_H = 1022, 2082
+SCREEN_L, SCREEN_T, SCREEN_W, SCREEN_H = 52, 46, 918, 1990
+SCREEN_R = 126  # радиус скругления экрана в пикселях мокапа
 
 TEMPLATE = """<!doctype html>
 <meta charset="utf-8">
@@ -100,35 +108,32 @@ TEMPLATE = """<!doctype html>
      продолжается, и не тратит высоту на пустую рамку. */
   .device {
     position: absolute; left: 50%%; transform: translateX(-50%%);
-    top: %(DEVICE_TOP)dpx;
-    width: %(DEVICE_W)dpx; height: %(DEVICE_H)dpx;
-    border-radius: %(RADIUS_OUT)dpx;
-    padding: 16px;
-    box-shadow: 0 44px 90px rgba(0,0,0,.42);
+    top: %(DEVICE_TOP)dpx; width: %(DEVICE_W)dpx; height: %(DEVICE_H)dpx;
+    filter: drop-shadow(0 44px 80px rgba(0,0,0,.42));
   }
-  /* Титановый кант iPhone: тёмная основа плюс светлые блики по бокам —
-     плоская чёрная плашка читалась «просто телефоном», а не айфоном. */
-  .device.ios {
-    background:
-      linear-gradient(100deg, #d9d5cf 0%%, #8f8b85 8%%, #45423e 22%%,
-                      #2b2926 50%%, #45423e 78%%, #8f8b85 92%%, #d9d5cf 100%%);
+  /* iPhone — корпус картинкой, снимок кладётся поверх чёрного экрана
+     по обмеренным координатам мокапа. */
+  .device .bezel { width: 100%%; height: 100%%; display: block; }
+  .device.ios .screen {
+    position: absolute;
+    left: %(SCREEN_L)f%%; top: %(SCREEN_T)f%%;
+    width: %(SCREEN_W)f%%; height: %(SCREEN_H)f%%;
+    border-radius: %(SCREEN_RX)f%% / %(SCREEN_RY)f%%;
+    overflow: hidden; background: #F3F4F7;
   }
-  .device.android { background: #1b1b1d; }
-  .screen {
-    width: 100%%; height: 100%%; border-radius: %(RADIUS_IN)dpx; overflow: hidden;
-    background: #F3F4F7; position: relative;
+  /* Android — своя плашка: у него другой силуэт, и подсовывать айфон нечестно. */
+  .device.android {
+    background: #1b1b1d; border-radius: %(RADIUS_OUT)dpx; padding: 16px;
   }
-  /* Динамический остров: в снимке симулятора его нет — статус-бар туда не
-     рисуется, — поэтому кладём поверх экрана. */
-  .island {
+  .device.android .screen {
+    width: 100%%; height: 100%%; border-radius: %(RADIUS_IN)dpx;
+    overflow: hidden; background: #F3F4F7; position: relative;
+  }
+  .device.android .hole {
     position: absolute; left: 50%%; transform: translateX(-50%%);
     top: %(ISLAND_TOP)dpx; width: %(ISLAND_W)dpx; height: %(ISLAND_H)dpx;
-    background: #000; border-radius: %(ISLAND_H)dpx;
+    background: #000; border-radius: 50%%;
   }
-  /* Кнопки на канте: без них силуэт не читается как телефон. */
-  .btn { position: absolute; background: rgba(255,255,255,.30); border-radius: 4px; }
-  .btn.l { left: -5px; width: 7px; }
-  .btn.r { right: -5px; width: 7px; }
   .screen img { width: 100%%; display: block; }
 </style>
 <div class="pad">
@@ -136,9 +141,8 @@ TEMPLATE = """<!doctype html>
   <h1>%(TITLE)s</h1>
   <div class="chips">%(CHIPS)s</div>
 </div>
-<div class="device %(DEVICE_STYLE)s">
-  %(BUTTONS)s
-  <div class="screen"><img src="%(SHOT)s"><div class="island"></div></div>
+<div class="device %(DEVICE_STYLE)s">%(BEZEL)s
+  <div class="screen"><img src="%(SHOT)s">%(HOLE)s</div>
 </div>
 """
 
@@ -149,17 +153,7 @@ CHIP = ('<div class="chip"><div class="ico" style="background:%(color)s">%(icon)
 # Telegram, янтарный из аватарок.
 CHIP_COLORS = ["#00A870", "#29A9EB", "#F2A93B"]
 
-# Кнопки на канте: слева беззвучный режим и качелька громкости, справа питание.
-IOS_BUTTONS = (
-    '<div class="btn l" style="top:14%; height:5%"></div>'
-    '<div class="btn l" style="top:23%; height:9%"></div>'
-    '<div class="btn l" style="top:34%; height:9%"></div>'
-    '<div class="btn r" style="top:26%; height:13%"></div>'
-)
-ANDROID_BUTTONS = (
-    '<div class="btn r" style="top:16%; height:7%"></div>'
-    '<div class="btn r" style="top:26%; height:12%"></div>'
-)
+
 
 
 def render(html: str, out: pathlib.Path, W: int, H: int) -> None:
@@ -209,6 +203,11 @@ def frame(lang: str, profile: str) -> None:
         shutil.rmtree(dst_dir)
     dst_dir.mkdir(parents=True)
 
+    bezel_tag = ""
+    if cfg["device_style"] == "ios":
+        raw = base64.b64encode(MOCKUP.read_bytes()).decode()
+        bezel_tag = f'<img class="bezel" src="data:image/png;base64,{raw}">'
+
     chips = "".join(
         CHIP % dict(c, color=CHIP_COLORS[i % len(CHIP_COLORS)])
         for i, c in enumerate(spec["chips"])
@@ -230,7 +229,11 @@ def frame(lang: str, profile: str) -> None:
             "CHIP_ICO": cfg["chip_ico"], "CHIP_ICO_FONT": int(cfg["chip_ico"] * 0.5),
             "CHIP_FONT": cfg["chip_font"], "CHIP_W": cfg["chip_w"],
             "DEVICE_STYLE": cfg["device_style"],
-            "BUTTONS": IOS_BUTTONS if cfg["device_style"] == "ios" else ANDROID_BUTTONS,
+            "BEZEL": bezel_tag if cfg["device_style"] == "ios" else "",
+            "HOLE": "" if cfg["device_style"] == "ios" else '<div class="hole"></div>',
+            "SCREEN_L": SCREEN_L / MOCKUP_W * 100, "SCREEN_T": SCREEN_T / MOCKUP_H * 100,
+            "SCREEN_W": SCREEN_W / MOCKUP_W * 100, "SCREEN_H": SCREEN_H / MOCKUP_H * 100,
+            "SCREEN_RX": SCREEN_R / SCREEN_W * 100, "SCREEN_RY": SCREEN_R / SCREEN_H * 100,
             "ISLAND_W": cfg["island_w"], "ISLAND_H": cfg["island_h"],
             "ISLAND_TOP": cfg["island_top"],
             "RADIUS_OUT": cfg["radius_out"], "RADIUS_IN": cfg["radius_in"],
