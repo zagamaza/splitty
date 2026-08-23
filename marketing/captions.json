@@ -1,0 +1,114 @@
+{
+  "ru": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Делите",
+        "line2": "поровну"
+      },
+      {
+        "icon": "∑",
+        "line1": "Считает",
+        "line2": "само"
+      },
+      {
+        "icon": "✈",
+        "line1": "Работает",
+        "line2": "офлайн"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "ГРУППЫ",
+        "title": "Все общие траты\nв одном месте",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "РАСХОДЫ",
+        "title": "Видно, кто платил\nи кто сколько должен",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "РАСЧЁТ",
+        "title": "Один перевод\nвместо пяти",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "БАЛАНСЫ",
+        "title": "Кто кому должен —\nбез калькулятора",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "ИТОГИ",
+        "title": "Куда ушли деньги\nза месяц",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "ДРУЗЬЯ",
+        "title": "Долги с друзьями\nсводятся сами",
+        "screen": "friends"
+      },
+      {
+        "eyebrow": "ГОЛОСОМ",
+        "title": "Скажите вслух —\nрасход запишется",
+        "screen": "add"
+      }
+    ]
+  },
+  "en": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Split",
+        "line2": "evenly"
+      },
+      {
+        "icon": "∑",
+        "line1": "Adds up",
+        "line2": "for you"
+      },
+      {
+        "icon": "✈",
+        "line1": "Works",
+        "line2": "offline"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "GROUPS",
+        "title": "Every shared expense\nin one place",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "EXPENSES",
+        "title": "See who paid\nand who owes what",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "SETTLE UP",
+        "title": "One transfer\ninstead of five",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "BALANCES",
+        "title": "Who owes whom —\nno calculator",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "TOTALS",
+        "title": "Where the money went\nthis month",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "FRIENDS",
+        "title": "Balances with friends\nadd up by themselves",
+        "screen": "friends"
+      },
+      {
+        "eyebrow": "VOICE",
+        "title": "Say it out loud —\nthe expense writes itself",
+        "screen": "add"
+      }
+    ]
+  }
+}

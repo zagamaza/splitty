@@ -21,3 +21,9 @@ ios/asc/keys/
 ios/asc/profiles/
 ios/asc/certs/
 ios/asc/__pycache__/
+
+# Сырые кадры витрины — промежуточный продукт: их пересобирает
+# StoreShotsUITests / marketing/android-shots.py из демо-данных. В репозитории
+# держим только оформленные (screenshots-framed*), их и заливают в магазины.
+metadata/screenshots/
+metadata/screenshots-android/
