@@ -25,10 +25,14 @@ PKG = "com.zagir.splitty"
 LABELS = {
     "ru": {"locale": "ru", "email": "shots-ru@splitty.test", "room": "Поездка в Стамбул",
            "groups": "Группы", "friends": "Друзья", "totals": "Итоги",
-           "balances": "Балансы", "disclosure": "войдите по email"},
+           "balances": "Балансы", "disclosure": "войдите по email",
+           "settle": "Погасить",
+           "rooms": ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"]},
     "en": {"locale": "en", "email": "shots-en@splitty.test", "room": "Trip to Lisbon",
            "groups": "Groups", "friends": "Friends", "totals": "Totals",
-           "balances": "Balances", "disclosure": "sign in with email"},
+           "balances": "Balances", "disclosure": "sign in with email",
+           "settle": "Settle up",
+           "rooms": ["Weekend cabin", "Flat share", "Trip to Lisbon"]},
 }
 PASSWORD = "20260806"
 
@@ -137,6 +141,20 @@ def point_at_local_backend():
     time.sleep(1.2)
 
 
+def tap_add_tab():
+    """Тапает центральную вкладку «+»: у неё нет текстовой подписи."""
+    nodes = [n for n in dump().iter("node")
+             if n.get("bounds") and (n.get("content-desc") or "").strip()]
+    # Нижняя панель — самые низкие кликабельные элементы экрана.
+    bottom = sorted(nodes, key=lambda n: center(n)[1])[-5:]
+    bottom.sort(key=lambda n: center(n)[0])
+    if not bottom:
+        raise RuntimeError("не нашёл нижнюю панель")
+    x, y = center(bottom[len(bottom) // 2])
+    sh("shell", "input", "tap", str(x), str(y))
+    time.sleep(1.2)
+
+
 def capture(lang: str):
     cfg = LABELS[lang]
     dst = ROOT / "metadata" / "screenshots-android" / lang
@@ -196,6 +214,13 @@ def capture(lang: str):
     time.sleep(1.5)
     shoot(dst, "group", index)
 
+    # Погашение — с экрана группы: кнопка живёт в шапке, со списка её не видно.
+    if tap_text(cfg["settle"], required=False):
+        time.sleep(1.5)
+        shoot(dst, "settle", index)
+        sh("shell", "input", "keyevent", "4")
+        time.sleep(1.5)
+
     if tap_text(cfg["balances"], required=False):
         time.sleep(1.0)
         shoot(dst, "balances", index)
@@ -209,6 +234,17 @@ def capture(lang: str):
     tap_text(cfg["friends"])
     time.sleep(1.5)
     shoot(dst, "friends", index)
+
+    # Голосовой композер — самый непохожий на конкурентов экран, и в витрине
+    # Play его не хватало. Центральная вкладка «+» подписи не имеет, поэтому
+    # берём среднюю кнопку нижней панели.
+    tap_add_tab()
+    time.sleep(2.0)
+    for room in cfg["rooms"]:
+        if tap_text(room, required=False):
+            break
+    time.sleep(1.5)
+    shoot(dst, "add", index)
 
     print(f"[{lang}] кадров: {index[0]} → {dst.relative_to(ROOT)}")
 

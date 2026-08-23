@@ -40,18 +40,20 @@ PROFILES = {
         "out": ROOT / "metadata" / "screenshots-framed",
         "W": 1320, "H": 2868,
         "pad": "132px 96px 0", "eyebrow": 40, "title": 104, "chip_gap": 40,
-        "chip_ico": 92, "chip_font": 33, "chips_top": 74,
+        "chip_ico": 118, "chip_font": 34, "chips_top": 76, "chip_w": 300,
         "device_w": 1040, "device_h": 2200, "device_top": 812,
         "radius_out": 86, "radius_in": 72,
+        "device_style": "ios", "island_w": 250, "island_h": 74, "island_top": 34,
     },
     "play": {
         "raw": ROOT / "metadata" / "screenshots-android",
         "out": ROOT / "metadata" / "screenshots-framed-android",
         "W": 1080, "H": 1920,
         "pad": "88px 76px 0", "eyebrow": 30, "title": 72, "chip_gap": 26,
-        "chip_ico": 64, "chip_font": 23, "chips_top": 44,
+        "chip_ico": 88, "chip_font": 25, "chips_top": 46, "chip_w": 240,
         "device_w": 820, "device_h": 1560, "device_top": 520,
         "radius_out": 64, "radius_in": 54,
+        "device_style": "android", "island_w": 30, "island_h": 30, "island_top": 22,
     },
 }
 
@@ -70,7 +72,7 @@ TEMPLATE = """<!doctype html>
     color: #fff;
     position: relative;
   }
-  .pad { padding: %(PAD)s; }
+  .pad { padding: %(PAD)s; text-align: center; }
   .eyebrow {
     font-size: %(EYEBROW_SIZE)dpx; font-weight: 800; letter-spacing: .18em;
     color: rgba(255,255,255,.62); margin-bottom: 26px;
@@ -79,15 +81,20 @@ TEMPLATE = """<!doctype html>
     font-size: %(TITLE_SIZE)dpx; line-height: 1.04; font-weight: 800; letter-spacing: -.028em;
     white-space: pre-line; text-wrap: balance;
   }
-  .chips { display: flex; gap: %(CHIP_GAP)dpx; margin-top: %(CHIPS_TOP)dpx; }
-  .chip { display: flex; align-items: center; gap: 18px; }
+  /* Чипы по центру и в цвет: белые кружки сливались с текстом в один
+     серо-белый ряд, а прижатые влево спорили с центрованным заголовком. */
+  .chips {
+    display: flex; gap: %(CHIP_GAP)dpx; margin-top: %(CHIPS_TOP)dpx;
+    justify-content: center; align-items: flex-start;
+  }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 14px; width: %(CHIP_W)dpx; }
   .chip .ico {
     width: %(CHIP_ICO)dpx; height: %(CHIP_ICO)dpx; border-radius: 50%%;
-    background: #fff; color: #046B4C;
     display: flex; align-items: center; justify-content: center;
-    font-size: %(CHIP_ICO_FONT)dpx; font-weight: 700; flex: 0 0 %(CHIP_ICO)dpx;
+    font-size: %(CHIP_ICO_FONT)dpx; font-weight: 700; color: #fff;
+    box-shadow: 0 10px 26px rgba(0,0,0,.28);
   }
-  .chip .txt { font-size: %(CHIP_FONT)dpx; font-weight: 700; line-height: 1.2; }
+  .chip .txt { font-size: %(CHIP_FONT)dpx; font-weight: 700; line-height: 1.18; }
 
   /* Устройство срезано нижней кромкой: кадр показывает, что интерфейс
      продолжается, и не тратит высоту на пустую рамку. */
@@ -95,15 +102,33 @@ TEMPLATE = """<!doctype html>
     position: absolute; left: 50%%; transform: translateX(-50%%);
     top: %(DEVICE_TOP)dpx;
     width: %(DEVICE_W)dpx; height: %(DEVICE_H)dpx;
-    background: #1b1b1d;
     border-radius: %(RADIUS_OUT)dpx;
-    padding: 15px;
-    box-shadow: 0 44px 90px rgba(0,0,0,.42), 0 0 0 3px rgba(255,255,255,.10);
+    padding: 16px;
+    box-shadow: 0 44px 90px rgba(0,0,0,.42);
   }
+  /* Титановый кант iPhone: тёмная основа плюс светлые блики по бокам —
+     плоская чёрная плашка читалась «просто телефоном», а не айфоном. */
+  .device.ios {
+    background:
+      linear-gradient(100deg, #d9d5cf 0%%, #8f8b85 8%%, #45423e 22%%,
+                      #2b2926 50%%, #45423e 78%%, #8f8b85 92%%, #d9d5cf 100%%);
+  }
+  .device.android { background: #1b1b1d; }
   .screen {
     width: 100%%; height: 100%%; border-radius: %(RADIUS_IN)dpx; overflow: hidden;
     background: #F3F4F7; position: relative;
   }
+  /* Динамический остров: в снимке симулятора его нет — статус-бар туда не
+     рисуется, — поэтому кладём поверх экрана. */
+  .island {
+    position: absolute; left: 50%%; transform: translateX(-50%%);
+    top: %(ISLAND_TOP)dpx; width: %(ISLAND_W)dpx; height: %(ISLAND_H)dpx;
+    background: #000; border-radius: %(ISLAND_H)dpx;
+  }
+  /* Кнопки на канте: без них силуэт не читается как телефон. */
+  .btn { position: absolute; background: rgba(255,255,255,.30); border-radius: 4px; }
+  .btn.l { left: -5px; width: 7px; }
+  .btn.r { right: -5px; width: 7px; }
   .screen img { width: 100%%; display: block; }
 </style>
 <div class="pad">
@@ -111,11 +136,30 @@ TEMPLATE = """<!doctype html>
   <h1>%(TITLE)s</h1>
   <div class="chips">%(CHIPS)s</div>
 </div>
-<div class="device"><div class="screen"><img src="%(SHOT)s"></div></div>
+<div class="device %(DEVICE_STYLE)s">
+  %(BUTTONS)s
+  <div class="screen"><img src="%(SHOT)s"><div class="island"></div></div>
+</div>
 """
 
-CHIP = ('<div class="chip"><div class="ico">%(icon)s</div>'
+CHIP = ('<div class="chip"><div class="ico" style="background:%(color)s">%(icon)s</div>'
         '<div class="txt">%(line1)s<br>%(line2)s</div></div>')
+
+# Свой цвет каждому чипу — из палитры приложения: зелёный акцент, синий
+# Telegram, янтарный из аватарок.
+CHIP_COLORS = ["#00A870", "#29A9EB", "#F2A93B"]
+
+# Кнопки на канте: слева беззвучный режим и качелька громкости, справа питание.
+IOS_BUTTONS = (
+    '<div class="btn l" style="top:14%; height:5%"></div>'
+    '<div class="btn l" style="top:23%; height:9%"></div>'
+    '<div class="btn l" style="top:34%; height:9%"></div>'
+    '<div class="btn r" style="top:26%; height:13%"></div>'
+)
+ANDROID_BUTTONS = (
+    '<div class="btn r" style="top:16%; height:7%"></div>'
+    '<div class="btn r" style="top:26%; height:12%"></div>'
+)
 
 
 def render(html: str, out: pathlib.Path, W: int, H: int) -> None:
@@ -165,7 +209,10 @@ def frame(lang: str, profile: str) -> None:
         shutil.rmtree(dst_dir)
     dst_dir.mkdir(parents=True)
 
-    chips = "".join(CHIP % c for c in spec["chips"])
+    chips = "".join(
+        CHIP % dict(c, color=CHIP_COLORS[i % len(CHIP_COLORS)])
+        for i, c in enumerate(spec["chips"])
+    )
     # Кадр ищется по ИМЕНИ ЭКРАНА, а не по имени файла: у iOS и Android разные
     # наборы (в Android-съёмке нет «Записать платёж» и голосового композера) и
     # своя нумерация. Отсутствие кадра — не ошибка, просто его нет.
@@ -181,7 +228,11 @@ def frame(lang: str, profile: str) -> None:
             "EYEBROW_SIZE": cfg["eyebrow"], "TITLE_SIZE": cfg["title"],
             "CHIP_GAP": cfg["chip_gap"], "CHIPS_TOP": cfg["chips_top"],
             "CHIP_ICO": cfg["chip_ico"], "CHIP_ICO_FONT": int(cfg["chip_ico"] * 0.5),
-            "CHIP_FONT": cfg["chip_font"],
+            "CHIP_FONT": cfg["chip_font"], "CHIP_W": cfg["chip_w"],
+            "DEVICE_STYLE": cfg["device_style"],
+            "BUTTONS": IOS_BUTTONS if cfg["device_style"] == "ios" else ANDROID_BUTTONS,
+            "ISLAND_W": cfg["island_w"], "ISLAND_H": cfg["island_h"],
+            "ISLAND_TOP": cfg["island_top"],
             "RADIUS_OUT": cfg["radius_out"], "RADIUS_IN": cfg["radius_in"],
             # Ширина устройства и отступ сверху подобраны так, чтобы под
             # текстом осталась ровно верхняя половина экрана телефона.

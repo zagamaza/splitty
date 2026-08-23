@@ -37,14 +37,14 @@ final class StoreShotsUITests: XCTestCase {
             tabGroups: "Группы", tabFriends: "Друзья", tabAdd: "Добавить расход",
             totals: "Итоги", settle: "Погасить", firstRoom: "Поездка в Стамбул",
             balances: "Балансы",
-            rooms: ["Поездка в Стамбул", "Квартира на Тверской", "Дача на выходные"]
+            rooms: ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"]
         ),
         "en": Labels(
             appleLanguage: "en", locale: "en_US",
             tabGroups: "Groups", tabFriends: "Friends", tabAdd: "Add expense",
             totals: "Totals", settle: "Settle up", firstRoom: "Trip to Lisbon",
             balances: "Balances",
-            rooms: ["Trip to Lisbon", "Flat share", "Weekend cabin"]
+            rooms: ["Weekend cabin", "Flat share", "Trip to Lisbon"]
         ),
     ]
 
@@ -122,8 +122,9 @@ final class StoreShotsUITests: XCTestCase {
         print("СКРИНЫ: \(shotsDir.path), кадров: \(index)")
     }
 
-    /// Выбирает любую доступную группу в композере расхода: конкретная не
-    /// важна, а список чипов прокручен и нужной может не быть на экране.
+    /// Выбирает группу в композере расхода. Порядок в [Labels.rooms] — как на
+    /// экране: тап по дальнему чипу прокручивает ряд, и левый край режет слово
+    /// пополам прямо в кадре витрины.
     private func pickAnyGroupChip(_ app: XCUIApplication) {
         for name in labels.rooms {
             let chip = app.buttons[name].firstMatch
