@@ -72,6 +72,34 @@ services:
       # Адреса/подсети реверс-прокси через запятую. Пусто — петля и приватные
       # диапазоны: заголовку X-Forwarded-For из интернета не верим никогда
       - TRUSTED_PROXIES
+      # Подписка Splitor Plus. Пустые ключи = покупки выключены: эндпоинты
+      # подписки отдают 503, все считаются бесплатными, остальной сервер
+      # работает как раньше.
+      #
+      # ⚠️ APPLE_IAP_KEY_ID — ключ In-App Purchase, ОТДЕЛЬНЫЙ и от ключа
+      # выкладки сборок, и от APPLE_KEY_ID для Sign in with Apple.
+      # APPLE_IAP_PRIVATE_KEY — содержимое .p8 (многострочное, в .env
+      # кавычится), не путь.
+      - APPLE_IAP_ISSUER_ID
+      - APPLE_IAP_KEY_ID
+      - APPLE_IAP_PRIVATE_KEY
+      - APPLE_IAP_BUNDLE_ID
+      - GOOGLE_PLAY_SA_JSON
+      - GOOGLE_PLAY_PACKAGE
+      # Суточный лимит распознаваний. LEGACY — для сборок, которые про экран
+      # оплаты ещё не знают: обрезать их до пяти значит сломать работающее.
+      - AI_FREE_DAILY_QUOTA
+      - AI_PLUS_DAILY_QUOTA
+      - AI_LEGACY_DAILY_QUOTA
+      # Plus без покупки: владелец проекта и демо-аккаунт ревьюера магазина.
+      - PLUS_COMP_USER_IDS
+      - PLUS_PRODUCT_IDS
+      - PLUS_DELIVERY_SLACK
+      - PLUS_TIER_CACHE_TTL
+      # Какие чеки принимает прод. Только Production: sandbox-подписки
+      # бесплатны и продлеваются каждые несколько минут — то есть дали бы
+      # вечный Plus даром.
+      - STORE_ALLOWED_ENVIRONMENT
     volumes:
       # Секрет кладётся рядом с docker-compose.yml на хосте и монтируется ro.
       - ./firebase-service-account.json:/app/firebase-service-account.json:ro
