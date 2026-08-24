@@ -36,11 +36,17 @@ final class PaywallShotUITests: XCTestCase {
               email: env["SHOTS_EMAIL"] ?? "shots-ru@splitty.test",
               password: env["SHOTS_PASSWORD"] ?? "20260806")
 
-        let groups = app.tabBars.buttons["Группы"]
+        // Язык симулятора между прогонами меняется (витринные кадры снимаются
+        // и по-английски), поэтому таб ищем на обоих языках.
+        let groups = app.tabBars.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Группы", "Groups"])
+        ).firstMatch
         XCTAssertTrue(groups.waitForExistence(timeout: 25), "вход не прошёл")
 
         // Композер расхода — центральная кнопка таб-бара.
-        let addExpense = app.buttons["Добавить расход"]
+        let addExpense = app.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Добавить расход", "Add expense"])
+        ).firstMatch
         XCTAssertTrue(addExpense.waitForExistence(timeout: 15), "нет кнопки композера")
         addExpense.tap()
         settle(2)
@@ -50,7 +56,7 @@ final class PaywallShotUITests: XCTestCase {
         // показывается, только когда распознаваний мало, — при квоте 1 это
         // ровно наш случай.
         let remainingHint = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS %@", "Осталось")
+            NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "Осталось", "left")
         ).firstMatch
         XCTAssertTrue(remainingHint.waitForExistence(timeout: 15),
                       "подпись остатка не показалась, хотя распознаваний мало")
@@ -59,7 +65,9 @@ final class PaywallShotUITests: XCTestCase {
 
         // Экран оплаты узнаём по обязательной кнопке восстановления покупок:
         // без неё подписку не пропустят на ревью, и её отсутствие — сразу баг.
-        let restore = app.buttons["Восстановить покупки"]
+        let restore = app.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Восстановить покупки", "Restore purchases"])
+        ).firstMatch
         XCTAssertTrue(restore.waitForExistence(timeout: 15),
                       "экран оплаты не открылся: суточный лимит не привёл к paywall")
         settle()

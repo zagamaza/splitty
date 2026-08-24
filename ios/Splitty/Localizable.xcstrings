@@ -421,6 +421,35 @@
         }
       }
     },
+    "%@ за %@. Подписка продлевается автоматически, отменить можно в настройках Apple ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ per %2$@. Renews automatically; cancel anytime in your Apple ID settings"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ por %2$@. Se renueva automáticamente; cancela en los ajustes de tu Apple ID"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ pro %2$@. Verlängert sich automatisch, Kündigung in den Apple-ID-Einstellungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ par %2$@. Renouvellement automatique, résiliable dans les réglages Apple ID"
+          }
+        }
+      }
+    },
     "%@ заплатил(а) %@": {
       "extractionState": "manual",
       "localizations": {
@@ -950,6 +979,35 @@
         }
       }
     },
+    "3 200 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$32.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32,00 €"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32,00 €"
+          }
+        }
+      }
+    },
     "Apple не вернул данные для входа. Попробуйте ещё раз": {
       "extractionState": "manual",
       "localizations": {
@@ -1265,6 +1323,70 @@
         }
       }
     },
+    "Splitor": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
+        }
+      }
+    },
+    "Splitor Plus": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        }
+      }
+    },
     "Telegram": {
       "extractionState": "manual",
       "localizations": {
@@ -1436,6 +1558,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»"
+          }
+        }
+      }
+    },
+    "«Ужин 3200, делим на четверых»": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Dinner 32, split four ways”"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Cena 32, dividida entre cuatro»"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Abendessen 32, durch vier geteilt“"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« Dîner 32, partagé en quatre »"
           }
         }
       }
@@ -2595,6 +2746,35 @@
         }
       }
     },
+    "Восстановить покупки": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore purchases"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar compras"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käufe wiederherstellen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurer les achats"
+          }
+        }
+      }
+    },
     "Впишите точную сумму за человека. Пустое поле — «авто»: остаток делится поровну": {
       "extractionState": "manual",
       "localizations": {
@@ -3680,6 +3860,35 @@
         }
       }
     },
+    "Голосом или фото чека — как удобно": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By voice or from a photo of the receipt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por voz o desde una foto del recibo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per Sprache oder Foto des Belegs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À la voix ou depuis une photo du reçu"
+          }
+        }
+      }
+    },
     "Готово": {
       "extractionState": "manual",
       "localizations": {
@@ -3991,6 +4200,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Группы"
+          }
+        }
+      }
+    },
+    "Группы, расходы и долги остаются бесплатными": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groups, expenses and balances stay free"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos, gastos y deudas siguen siendo gratis"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppen, Ausgaben und Schulden bleiben kostenlos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupes, dépenses et dettes restent gratuits"
           }
         }
       }
@@ -4341,6 +4579,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Добавить расход"
+          }
+        }
+      }
+    },
+    "Добавить расход вручную": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add expense manually"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir gasto manualmente"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgabe manuell hinzufügen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une dépense manuellement"
           }
         }
       }
@@ -6202,6 +6469,35 @@
         }
       }
     },
+    "Конфиденциальность": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidad"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidentialité"
+          }
+        }
+      }
+    },
     "Кто в плюсе, кто в минусе": {
       "extractionState": "manual",
       "localizations": {
@@ -6657,6 +6953,35 @@
         }
       }
     },
+    "На год": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yearly"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anual"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jährlich"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuel"
+          }
+        }
+      }
+    },
     "На кого потрачено": {
       "extractionState": "manual",
       "localizations": {
@@ -6688,6 +7013,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "На кого потрачено"
+          }
+        }
+      }
+    },
+    "На месяц": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monthly"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensual"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monatlich"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensuel"
           }
         }
       }
@@ -7322,6 +7676,35 @@
         }
       }
     },
+    "Не удалось загрузить тарифы. Проверьте связь и попробуйте ещё раз": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t load plans. Check your connection and try again"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudieron cargar los planes. Revisa la conexión e inténtalo de nuevo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarife konnten nicht geladen werden. Verbindung prüfen und erneut versuchen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de charger les offres. Vérifiez la connexion et réessayez"
+          }
+        }
+      }
+    },
     "Не удалось начать вход через Apple. Попробуйте ещё раз": {
       "extractionState": "manual",
       "localizations": {
@@ -7668,6 +8051,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось распознать. Скажите ещё раз — с блюдами и ценами"
+          }
+        }
+      }
+    },
+    "Не удалось совершить покупку": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t complete the purchase"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo completar la compra"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kauf konnte nicht abgeschlossen werden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de finaliser l’achat"
           }
         }
       }
@@ -8722,6 +9134,249 @@
         }
       }
     },
+    "Оплата прошла, но подтвердить её пока не удалось. Проверьте связь — доступ появится сам": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment went through, but we couldn’t confirm it yet. Check your connection — access will appear on its own"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El pago se realizó, pero aún no pudimos confirmarlo. Revisa la conexión: el acceso aparecerá solo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zahlung ist erfolgt, konnte aber noch nicht bestätigt werden. Verbindung prüfen — der Zugang erscheint von selbst"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le paiement est passé, mais nous n’avons pas encore pu le confirmer. Vérifiez la connexion : l’accès apparaîtra tout seul"
+          }
+        }
+      }
+    },
+    "Осталось %lld из %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %1$lld из %2$lld"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %1$lld из %2$lld"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %1$lld из %2$lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %1$lld из %2$lld"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld of %2$lld left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld of %2$lld left"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Queda %1$lld de %2$lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Quedan %1$lld de %2$lld"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noch %1$lld von %2$lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noch %1$lld von %2$lld"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Il reste %1$lld sur %2$lld"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Il reste %1$lld sur %2$lld"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Осталось %lld распознаваний": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %lld распознавание"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %lld распознавания"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %lld распознаваний"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Осталось %lld распознаваний"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recognition left"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld recognitions left"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Queda %lld reconocimiento"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Quedan %lld reconocimientos"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noch %lld Erkennung"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Noch %lld Erkennungen"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld analyse restante"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld analyses restantes"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Осталось распределить: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -9317,6 +9972,64 @@
         }
       }
     },
+    "Оформить": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscribe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suscribirse"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abonnieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’abonner"
+          }
+        }
+      }
+    },
+    "Оформить за %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscribe for %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suscribirse por %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für %@ abonnieren"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’abonner pour %@"
+          }
+        }
+      }
+    },
     "Ошибка": {
       "extractionState": "manual",
       "localizations": {
@@ -9842,6 +10555,35 @@
         }
       }
     },
+    "Подписка продлевается автоматически. Отменить можно в настройках Apple ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renews automatically. Cancel anytime in your Apple ID settings"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se renueva automáticamente. Cancela en los ajustes de tu Apple ID"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlängert sich automatisch. Kündigung in den Apple-ID-Einstellungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renouvellement automatique. Résiliation dans les réglages Apple ID"
+          }
+        }
+      }
+    },
     "Подытог": {
       "extractionState": "manual",
       "localizations": {
@@ -10227,6 +10969,122 @@
         }
       }
     },
+    "Покупка": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compra"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kauf"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Achat"
+          }
+        }
+      }
+    },
+    "Покупка ждёт подтверждения": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchase is awaiting approval"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La compra está pendiente de aprobación"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kauf wartet auf Bestätigung"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’achat est en attente d’approbation"
+          }
+        }
+      }
+    },
+    "Покупки сейчас недоступны": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchases are unavailable right now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las compras no están disponibles ahora"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käufe sind derzeit nicht verfügbar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les achats sont indisponibles pour le moment"
+          }
+        }
+      }
+    },
+    "Покупок для восстановления не нашлось": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No purchases to restore"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay compras para restaurar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Käufe zum Wiederherstellen gefunden"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun achat à restaurer"
+          }
+        }
+      }
+    },
     "Понятно": {
       "extractionState": "manual",
       "localizations": {
@@ -10363,6 +11221,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Поровну на всех"
+          }
+        }
+      }
+    },
+    "Поровну на четверых": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split evenly four ways"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A partes iguales entre cuatro"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gleichmäßig durch vier"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À parts égales entre quatre"
           }
         }
       }
@@ -10962,6 +11849,41 @@
         }
       }
     },
+    "Присоединяйся к группе «%@» в Splitor: %@\nКод группы: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tritt der Gruppe „%1$@“ auf Splitor bei: %2$@\nGruppencode: %3$@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the group “%1$@” on Splitor: %2$@\nGroup code: %3$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Únete al grupo «%1$@» en Splitor: %2$@\nCódigo del grupo: %3$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rejoins le groupe « %1$@ » sur Splitor : %2$@\nCode du groupe : %3$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Присоединяйся к группе «%@» в Splitor: %@\nКод группы: %@"
+          }
+        }
+      }
+    },
     "Проверьте позиции чека — доли не сходятся": {
       "extractionState": "manual",
       "localizations": {
@@ -11413,6 +12335,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "Распознавание сейчас недоступно"
+          }
+        }
+      }
+    },
+    "Распознаваний в день — сколько нужно": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As many recognitions a day as you need"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tantos reconocimientos al día como necesites"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So viele Erkennungen pro Tag, wie du brauchst"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autant de reconnaissances par jour que nécessaire"
+          }
+        }
+      }
+    },
+    "Распознавания на сегодня закончились": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’ve used today’s recognitions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se acabaron los reconocimientos de hoy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die heutigen Erkennungen sind aufgebraucht"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez utilisé vos analyses du jour"
           }
         }
       }
@@ -12148,6 +13128,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Системная"
+          }
+        }
+      }
+    },
+    "Сказанная фраза превращается в готовый расход, разделённый на четверых": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A spoken phrase turns into a finished expense split four ways"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una frase hablada se convierte en un gasto dividido entre cuatro"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein gesprochener Satz wird zu einer fertigen Ausgabe, durch vier geteilt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une phrase dite devient une dépense partagée en quatre"
           }
         }
       }
@@ -14182,6 +15191,35 @@
         }
       }
     },
+    "Ужин": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dinner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cena"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abendessen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dîner"
+          }
+        }
+      }
+    },
     "Укажите цену позиции": {
       "extractionState": "manual",
       "localizations": {
@@ -14283,6 +15321,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Укажите цены позиций — без них не посчитать доли"
+          }
+        }
+      }
+    },
+    "Условия": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Términos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bedingungen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conditions"
           }
         }
       }
@@ -14567,6 +15634,35 @@
         }
       }
     },
+    "Эта подписка оформлена на другой аккаунт Splitor": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This subscription belongs to another Splitor account"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta suscripción pertenece a otra cuenta de Splitor"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Abo gehört zu einem anderen Splitor-Konto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet abonnement appartient à un autre compte Splitor"
+          }
+        }
+      }
+    },
     "Этот аккаунт удалить нельзя": {
       "extractionState": "manual",
       "localizations": {
@@ -14598,6 +15694,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Этот аккаунт удалить нельзя"
+          }
+        }
+      }
+    },
+    "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Konto ist bereits mit einem anderen Splitor-Profil verknüpft. Melde dich damit an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account is already linked to another Splitor profile. Sign in with that one"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta cuenta ya está vinculada a otro perfil de Splitor. Entra con ese"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce compte est déjà lié à un autre profil Splitor. Connectez-vous avec celui-là"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него"
           }
         }
       }
@@ -15269,6 +16400,35 @@
         }
       }
     },
+    "год": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "year"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "año"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jahr"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "an"
+          }
+        }
+      }
+    },
     "делится поровну": {
       "extractionState": "manual",
       "localizations": {
@@ -15654,6 +16814,35 @@
         }
       }
     },
+    "месяц": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "month"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mes"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mois"
+          }
+        }
+      }
+    },
     "не все цены указаны": {
       "extractionState": "manual",
       "localizations": {
@@ -15825,6 +17014,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "по %@ × %lld"
+          }
+        }
+      }
+    },
+    "по 800 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$8.00 each"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8,00 € c/u"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "je 8,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8,00 € chacun"
           }
         }
       }
@@ -16455,992 +17673,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "чт"
-          }
-        }
-      }
-    },
-    "Осталось %lld распознаваний": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %lld распознавание"
-                }
-              },
-              "few": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %lld распознавания"
-                }
-              },
-              "many": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %lld распознаваний"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %lld распознаваний"
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld recognition left"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld recognitions left"
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Queda %lld reconocimiento"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Quedan %lld reconocimientos"
-                }
-              }
-            }
-          }
-        },
-        "de": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noch %lld Erkennung"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noch %lld Erkennungen"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld analyse restante"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld analyses restantes"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Осталось %lld из %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %1$lld из %2$lld"
-                }
-              },
-              "few": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %1$lld из %2$lld"
-                }
-              },
-              "many": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %1$lld из %2$lld"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Осталось %1$lld из %2$lld"
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld of %2$lld left"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%1$lld of %2$lld left"
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Queda %1$lld de %2$lld"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Quedan %1$lld de %2$lld"
-                }
-              }
-            }
-          }
-        },
-        "de": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noch %1$lld von %2$lld"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Noch %1$lld von %2$lld"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Il reste %1$lld sur %2$lld"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Il reste %1$lld sur %2$lld"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Splitor Plus": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor Plus"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor Plus"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor Plus"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor Plus"
-          }
-        }
-      }
-    },
-    "«Ужин 3200, делим на четверых»": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Dinner 3200, split four ways”"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "«Cena 3200, dividida entre cuatro»"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "„Abendessen 3200, durch vier geteilt“"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "« Dîner 3200, partagé en quatre »"
-          }
-        }
-      }
-    },
-    "Поровну на четверых": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Split evenly four ways"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A partes iguales entre cuatro"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gleichmäßig durch vier"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À parts égales entre quatre"
-          }
-        }
-      }
-    },
-    "Распознавания на сегодня закончились": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You’ve used today’s recognitions"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se acabaron los reconocimientos de hoy"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die heutigen Erkennungen sind aufgebraucht"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vous avez utilisé vos analyses du jour"
-          }
-        }
-      }
-    },
-    "Восстановить покупки": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restore purchases"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restaurar compras"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Käufe wiederherstellen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restaurer les achats"
-          }
-        }
-      }
-    },
-    "Условия": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Terms"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Términos"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bedingungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conditions"
-          }
-        }
-      }
-    },
-    "Конфиденциальность": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Privacy"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Privacidad"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Datenschutz"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confidentialité"
-          }
-        }
-      }
-    },
-    "Добавить расход вручную": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add expense manually"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir gasto manualmente"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgabe manuell hinzufügen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter une dépense manuellement"
-          }
-        }
-      }
-    },
-    "Оформить": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subscribe"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suscribirse"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abonnieren"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S’abonner"
-          }
-        }
-      }
-    },
-    "Оформить за %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Subscribe for %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suscribirse por %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für %@ abonnieren"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "S’abonner pour %@"
-          }
-        }
-      }
-    },
-    "Не удалось загрузить тарифы. Проверьте связь и попробуйте ещё раз": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn’t load plans. Check your connection and try again"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron cargar los planes. Revisa la conexión e inténtalo de nuevo"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tarife konnten nicht geladen werden. Verbindung prüfen und erneut versuchen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible de charger les offres. Vérifiez la connexion et réessayez"
-          }
-        }
-      }
-    },
-    "Подписка продлевается автоматически. Отменить можно в настройках Apple ID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renews automatically. Cancel anytime in your Apple ID settings"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se renueva automáticamente. Cancela en los ajustes de tu Apple ID"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verlängert sich automatisch. Kündigung in den Apple-ID-Einstellungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Renouvellement automatique. Résiliation dans les réglages Apple ID"
-          }
-        }
-      }
-    },
-    "%@ за %@. Подписка продлевается автоматически, отменить можно в настройках Apple ID": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ per %2$@. Renews automatically; cancel anytime in your Apple ID settings"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ por %2$@. Se renueva automáticamente; cancela en los ajustes de tu Apple ID"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ pro %2$@. Verlängert sich automatisch, Kündigung in den Apple-ID-Einstellungen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ par %2$@. Renouvellement automatique, résiliable dans les réglages Apple ID"
-          }
-        }
-      }
-    },
-    "год": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "year"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "año"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jahr"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "an"
-          }
-        }
-      }
-    },
-    "месяц": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "month"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mes"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Monat"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mois"
-          }
-        }
-      }
-    },
-    "Покупка": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Purchase"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compra"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kauf"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Achat"
-          }
-        }
-      }
-    },
-    "Оплата прошла, но подтвердить её пока не удалось. Проверьте связь — доступ появится сам": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Payment went through, but we couldn’t confirm it yet. Check your connection — access will appear on its own"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El pago se realizó, pero aún no pudimos confirmarlo. Revisa la conexión: el acceso aparecerá solo"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zahlung ist erfolgt, konnte aber noch nicht bestätigt werden. Verbindung prüfen — der Zugang erscheint von selbst"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le paiement est passé, mais nous n’avons pas encore pu le confirmer. Vérifiez la connexion : l’accès apparaîtra tout seul"
-          }
-        }
-      }
-    },
-    "Покупка ждёт подтверждения": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Purchase is awaiting approval"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La compra está pendiente de aprobación"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kauf wartet auf Bestätigung"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’achat est en attente d’approbation"
-          }
-        }
-      }
-    },
-    "Не удалось совершить покупку": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn’t complete the purchase"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo completar la compra"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kauf konnte nicht abgeschlossen werden"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossible de finaliser l’achat"
-          }
-        }
-      }
-    },
-    "Покупок для восстановления не нашлось": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No purchases to restore"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay compras para restaurar"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Keine Käufe zum Wiederherstellen gefunden"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun achat à restaurer"
-          }
-        }
-      }
-    },
-    "Эта подписка оформлена на другой аккаунт Splitor": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This subscription belongs to another Splitor account"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta suscripción pertenece a otra cuenta de Splitor"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Abo gehört zu einem anderen Splitor-Konto"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cet abonnement appartient à un autre compte Splitor"
-          }
-        }
-      }
-    },
-    "Покупки сейчас недоступны": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Purchases are unavailable right now"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las compras no están disponibles ahora"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Käufe sind derzeit nicht verfügbar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les achats sont indisponibles pour le moment"
-          }
-        }
-      }
-    },
-    "Сказанная фраза превращается в готовый расход, разделённый на четверых": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A spoken phrase turns into a finished expense split four ways"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una frase hablada se convierte en un gasto dividido entre cuatro"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein gesprochener Satz wird zu einer fertigen Ausgabe, durch vier geteilt"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Une phrase dite devient une dépense partagée en quatre"
-          }
-        }
-      }
-    },
-    "Splitor": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitor"
-          }
-        }
-      }
-    },
-    "Присоединяйся к группе «%@» в Splitor: %@\nКод группы: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tritt der Gruppe „%1$@“ auf Splitor bei: %2$@\nGruppencode: %3$@"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Join the group “%1$@” on Splitor: %2$@\nGroup code: %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Únete al grupo «%1$@» en Splitor: %2$@\nCódigo del grupo: %3$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rejoins le groupe « %1$@ » sur Splitor : %2$@\nCode du groupe : %3$@"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Присоединяйся к группе «%@» в Splitor: %@\nКод группы: %@"
-          }
-        }
-      }
-    },
-    "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Konto ist bereits mit einem anderen Splitor-Profil verknüpft. Melde dich damit an"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This account is already linked to another Splitor profile. Sign in with that one"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta cuenta ya está vinculada a otro perfil de Splitor. Entra con ese"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce compte est déjà lié à un autre profil Splitor. Connectez-vous avec celui-là"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него"
           }
         }
       }
