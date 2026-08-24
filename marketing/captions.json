@@ -120,5 +120,188 @@
         "screen": "friends"
       }
     ]
+  },
+  "es": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Reparte",
+        "line2": "a partes iguales"
+      },
+      {
+        "icon": "∑",
+        "line1": "Calcula",
+        "line2": "solo"
+      },
+      {
+        "icon": "✈",
+        "line1": "Funciona",
+        "line2": "sin conexión"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "POR VOZ",
+        "title": "Dilo en voz alta —\nel gasto ya está",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "LA CUENTA",
+        "title": "Cada uno paga\nlo que pidió",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "GRUPOS",
+        "title": "Todos los gastos\nen un solo sitio",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "GASTOS",
+        "title": "Quién pagó\ny quién debe qué",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "SALDAR",
+        "title": "Una transferencia\nen vez de cinco",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "SALDOS",
+        "title": "Quién debe a quién,\nsin calculadora",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "TOTALES",
+        "title": "En qué se fue\nel dinero del mes",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "AMIGOS",
+        "title": "Las deudas se\ncompensan solas",
+        "screen": "friends"
+      }
+    ]
+  },
+  "de": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Teilt",
+        "line2": "gerecht"
+      },
+      {
+        "icon": "∑",
+        "line1": "Rechnet",
+        "line2": "von selbst"
+      },
+      {
+        "icon": "✈",
+        "line1": "Läuft",
+        "line2": "offline"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "PER SPRACHE",
+        "title": "Einfach sagen —\ndie Ausgabe steht",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "DIE RECHNUNG",
+        "title": "Jeder zahlt,\nwas er bestellt hat",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "GRUPPEN",
+        "title": "Alle gemeinsamen\nKosten an einem Ort",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "AUSGABEN",
+        "title": "Wer bezahlt hat\nund wer was schuldet",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "AUSGLEICH",
+        "title": "Eine Überweisung\nstatt fünf",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "SALDEN",
+        "title": "Wer wem schuldet —\nohne Taschenrechner",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "AUSWERTUNG",
+        "title": "Wohin das Geld\ndiesen Monat ging",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "FREUNDE",
+        "title": "Schulden gleichen\nsich von selbst aus",
+        "screen": "friends"
+      }
+    ]
+  },
+  "fr": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Partagez",
+        "line2": "à parts égales"
+      },
+      {
+        "icon": "∑",
+        "line1": "Calcule",
+        "line2": "tout seul"
+      },
+      {
+        "icon": "✈",
+        "line1": "Marche",
+        "line2": "hors ligne"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "À LA VOIX",
+        "title": "Dites-le —\nla dépense est prête",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "L'ADDITION",
+        "title": "Chacun paie\nce qu'il a commandé",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "GROUPES",
+        "title": "Toutes les dépenses\nau même endroit",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "DÉPENSES",
+        "title": "Qui a payé\net qui doit quoi",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "RÉGLER",
+        "title": "Un virement\nau lieu de cinq",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "SOLDES",
+        "title": "Qui doit à qui,\nsans calculette",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "BILAN",
+        "title": "Où est parti\nl'argent du mois",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "AMIS",
+        "title": "Les dettes se\ncompensent seules",
+        "screen": "friends"
+      }
+    ]
   }
 }

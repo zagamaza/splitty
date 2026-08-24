@@ -27,7 +27,7 @@ SHOTS = ROOT / "metadata" / "screenshots-framed"
 DISPLAY_TYPE = "APP_IPHONE_67"
 
 # Каталог витрины и каталог скриншотов называют локали по-разному.
-LOCALE_DIR = {"en-US": "en", "ru": "ru"}
+LOCALE_DIR = {"en-US": "en", "ru": "ru", "es-ES": "es", "de-DE": "de", "fr-FR": "fr"}
 
 
 def editable_version():
@@ -117,4 +117,4 @@ def main(locales):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["en-US", "ru"])
+    main(sys.argv[1:] or list(LOCALE_DIR))

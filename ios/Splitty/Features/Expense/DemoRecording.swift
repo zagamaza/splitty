@@ -30,15 +30,32 @@ struct DemoRecording {
     Mussels fourteen fifty, that's Marina and Kirill
     """
 
+    private static let es = """
+    Cena en el Born. Pulpo a la gallega veinticuatro euros — Lucía y yo. \
+    Pan con tomate nueve, eso es de Lucía y Pablo
+    """
+
+    private static let de = """
+    Abendessen in Kreuzberg. Wiener Schnitzel sechsundzwanzig Euro — Lena und ich. \
+    Currywurst zwölf, das waren Lena und Felix
+    """
+
+    private static let fr = """
+    Dîner à la Croix-Rousse. Quenelle de brochet vingt-trois euros — Léa et moi. \
+    Salade lyonnaise quatorze, c'est Léa et Hugo
+    """
+
+    private static let byLanguage = ["ru": ru, "en": en, "es": es, "de": de, "fr": fr]
+
     /// Стартовое время считается один раз: пересчёт на каждой перерисовке
     /// обнулял бы таймер и кольцо прямо в момент съёмки.
     private static let stored: DemoRecording? = {
         guard ProcessInfo.processInfo.environment["SPLITTY_DEMO_RECORDING"] != nil else {
             return nil
         }
-        let isRussian = Locale.current.language.languageCode?.identifier == "ru"
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
         return DemoRecording(
-            transcript: isRussian ? ru : en,
+            transcript: byLanguage[code] ?? en,
             startedAt: Date().addingTimeInterval(-elapsed)
         )
     }()

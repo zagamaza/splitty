@@ -70,6 +70,36 @@ final class StoreShotsUITests: XCTestCase {
             pickRoomWarning: "Pick a group first",
             manualEntry: "Enter manually"
         ),
+        "es": Labels(
+            appleLanguage: "es", locale: "es_ES",
+            tabGroups: "Grupos", tabFriends: "Amigos", tabAdd: "Añadir gasto",
+            totals: "Totales", settle: "Saldar", firstRoom: "Viaje a Barcelona",
+            balances: "Saldos",
+            rooms: ["Finca el finde", "Piso compartido", "Viaje a Barcelona"],
+            receiptExpense: "Cena en el Born",
+            pickRoomWarning: "Elige primero un grupo",
+            manualEntry: "Introducir a mano"
+        ),
+        "de": Labels(
+            appleLanguage: "de", locale: "de_DE",
+            tabGroups: "Gruppen", tabFriends: "Freunde", tabAdd: "Hinzufügen",
+            totals: "Auswertung", settle: "Begleichen", firstRoom: "Städtetrip Berlin",
+            balances: "Salden",
+            rooms: ["Wochenende am See", "WG Prenzlauer Berg", "Städtetrip Berlin"],
+            receiptExpense: "Abendessen in Kreuzberg",
+            pickRoomWarning: "Wähle zuerst eine Gruppe",
+            manualEntry: "Manuell eingeben"
+        ),
+        "fr": Labels(
+            appleLanguage: "fr", locale: "fr_FR",
+            tabGroups: "Groupes", tabFriends: "Amis", tabAdd: "Ajouter",
+            totals: "Bilan", settle: "Régler", firstRoom: "Week-end à Lyon",
+            balances: "Soldes",
+            rooms: ["Chalet en montagne", "Coloc rue Vieille", "Week-end à Lyon"],
+            receiptExpense: "Dîner à la Croix-Rousse",
+            pickRoomWarning: "Choisissez d'abord un groupe",
+            manualEntry: "Saisir manuellement"
+        ),
     ]
 
     private var labels: Labels!
@@ -224,7 +254,9 @@ final class StoreShotsUITests: XCTestCase {
         guard disclosure.waitForExistence(timeout: 15) else { return } // уже вошли
         disclosure.tap()
 
-        let emailField = app.textFields["Email"]
+        // Поле ищем позицией, а не подписью: плейсхолдер локализован
+        // («Correo», «E-Mail»), и поиск по «Email» ронял испанский прогон.
+        let emailField = app.textFields.element(boundBy: 0)
         XCTAssertTrue(emailField.waitForExistence(timeout: 10), "шторка входа не открылась")
         emailField.tap()
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 10)

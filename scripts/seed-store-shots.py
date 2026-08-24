@@ -61,11 +61,50 @@ ITEMIZED = {
         ],
         "surcharge": ("Service charge", 10, 10),
     },
+    "es": {
+        "room": "Viaje a Barcelona",
+        "description": "Cena en el Born",
+        "donor": "me",
+        "items": [
+            ("Pulpo a la gallega", 24, 1, ["me", 0]),
+            ("Pan con tomate", 9, 1, [0, 1]),
+            ("Tabla de ibéricos", 22, 1, "all"),
+            ("Vermut de la casa", 18, 2, ["me", 1]),
+            ("Crema catalana", 12, 4, "all"),
+        ],
+        "surcharge": ("Servicio", 9, 10),
+    },
+    "de": {
+        "room": "Städtetrip Berlin",
+        "description": "Abendessen in Kreuzberg",
+        "donor": "me",
+        "items": [
+            ("Wiener Schnitzel", 26, 1, ["me", 0]),
+            ("Currywurst mit Pommes", 12, 1, [0, 1]),
+            ("Vorspeisenplatte", 19, 1, "all"),
+            ("Weißbier", 21, 3, ["me", 1]),
+            ("Kaffee und Kuchen", 10, 4, "all"),
+        ],
+        "surcharge": ("Trinkgeld", 9, 10),
+    },
+    "fr": {
+        "room": "Week-end à Lyon",
+        "description": "Dîner à la Croix-Rousse",
+        "donor": "me",
+        "items": [
+            ("Quenelle de brochet", 23, 1, ["me", 0]),
+            ("Salade lyonnaise", 14, 1, [0, 1]),
+            ("Planche de charcuterie", 21, 1, "all"),
+            ("Côtes-du-Rhône", 26, 2, ["me", 1]),
+            ("Café gourmand", 12, 4, "all"),
+        ],
+        "surcharge": ("Service", 10, 10),
+    },
 }
 
 # Валюта комнат по языку витрины. Скриншоты для американского App Store с
 # рублёвыми ценами выглядят так, будто приложение не для этого рынка.
-CURRENCY = {"ru": "RUB", "en": "EUR"}
+CURRENCY = {"ru": "RUB", "en": "EUR", "es": "EUR", "de": "EUR", "fr": "EUR"}
 
 DATA = {
     "ru": {
@@ -148,6 +187,132 @@ DATA = {
                 "ops": [
                     ("Firewood and food", 48, 2, "all"),
                     ("Gas", 34, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "es": {
+        "email": "shots-es@splitty.test",
+        "me": "Álvaro",
+        "peers": [(9301, "Lucía", "lucia"), (9302, "Pablo", "pablo"), (9303, "Nuria", "nuria")],
+        "rooms": [
+            {
+                "name": "Viaje a Barcelona",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("Apartamento, tres noches", 390, "me", "all"),
+                    ("Cena en la Barceloneta", 78, 0, "all"),
+                    ("Taxi desde el aeropuerto", 34, 1, "all"),
+                    ("Entradas a la Sagrada Familia", 104, "me", "all"),
+                    ("Café en el Gòtic", 14, 2, "all"),
+                    ("Metro, bonos de tres días", 33, 0, "all"),
+                    ("Mercado de la Boqueria", 46, "me", "all"),
+                    ("Noche de tapas en Gràcia", 62, 1, "all"),
+                ],
+            },
+            {
+                "name": "Piso compartido",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("Suministros de agosto", 104, "me", "all"),
+                    ("Internet", 32, 0, "all"),
+                    ("Compra semanal", 68, "me", "all"),
+                    ("Limpieza", 45, 0, "all"),
+                ],
+            },
+            {
+                "name": "Finca el finde",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("Carne y carbón", 52, 2, "all"),
+                    ("Gasolina", 38, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "de": {
+        "email": "shots-de@splitty.test",
+        "me": "Jonas",
+        "peers": [(9401, "Lena", "lena"), (9402, "Felix", "felix"), (9403, "Marie", "marie")],
+        "rooms": [
+            {
+                "name": "Städtetrip Berlin",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("Ferienwohnung, drei Nächte", 420, "me", "all"),
+                    ("Abendessen am Schlesischen Tor", 86, 0, "all"),
+                    ("Taxi vom Flughafen", 38, 1, "all"),
+                    ("Museumsinsel, Tageskarten", 76, "me", "all"),
+                    ("Kaffee in Mitte", 16, 2, "all"),
+                    ("BVG-Tickets für drei Tage", 42, 0, "all"),
+                    ("Markthalle Neun", 54, "me", "all"),
+                    ("Konzert im Berghain-Vorprogramm", 72, 1, "all"),
+                ],
+            },
+            {
+                "name": "WG Prenzlauer Berg",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("Nebenkosten August", 112, "me", "all"),
+                    ("Internet", 35, 0, "all"),
+                    ("Wocheneinkauf", 74, "me", "all"),
+                    ("Putzdienst", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "Wochenende am See",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("Grillgut und Kohle", 56, 2, "all"),
+                    ("Benzin", 41, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "fr": {
+        "email": "shots-fr@splitty.test",
+        "me": "Camille",
+        "peers": [(9501, "Léa", "lea"), (9502, "Hugo", "hugo"), (9503, "Sarah", "sarah")],
+        "rooms": [
+            {
+                "name": "Week-end à Lyon",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("Appartement, trois nuits", 405, "me", "all"),
+                    ("Dîner aux Halles Bocuse", 92, 0, "all"),
+                    ("Taxi depuis l'aéroport", 36, 1, "all"),
+                    ("Funiculaire et musées", 64, "me", "all"),
+                    ("Café sur la presqu'île", 15, 2, "all"),
+                    ("Tickets TCL, trois jours", 39, 0, "all"),
+                    ("Marché Saint-Antoine", 48, "me", "all"),
+                    ("Bouchon lyonnais", 78, 1, "all"),
+                ],
+            },
+            {
+                "name": "Coloc rue Vieille",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("Charges d'août", 108, "me", "all"),
+                    ("Internet", 31, 0, "all"),
+                    ("Courses de la semaine", 71, "me", "all"),
+                    ("Ménage", 46, 0, "all"),
+                ],
+            },
+            {
+                "name": "Chalet en montagne",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("Viande et charbon", 54, 2, "all"),
+                    ("Essence", 39, "me", "all"),
                 ],
             },
         ],

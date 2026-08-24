@@ -7,7 +7,10 @@
 //
 //   docker exec splitty-app-mongo-1 mongosh splitty --quiet --file /tmp/backdate.js
 const ROOMS = ["Поездка в Стамбул", "Квартира на Тверской", "Дача на выходные",
-               "Trip to Lisbon", "Flat share", "Weekend cabin"];
+               "Trip to Lisbon", "Flat share", "Weekend cabin",
+               "Viaje a Barcelona", "Piso compartido", "Finca el finde",
+               "Städtetrip Berlin", "WG Prenzlauer Berg", "Wochenende am See",
+               "Week-end à Lyon", "Coloc rue Vieille", "Chalet en montagne"];
 
 // Дни назад для i-й операции комнаты. Не равномерно: реальные траты идут
 // сгустками — поездка за несколько дней, квартира растянута на месяц.
