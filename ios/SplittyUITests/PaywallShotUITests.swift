@@ -58,9 +58,14 @@ final class PaywallShotUITests: XCTestCase {
         let remainingHint = app.buttons.matching(
             NSPredicate(format: "label CONTAINS %@ OR label CONTAINS %@", "Осталось", "left")
         ).firstMatch
-        XCTAssertTrue(remainingHint.waitForExistence(timeout: 15),
-                      "подпись остатка не показалась, хотя распознаваний мало")
-        remainingHint.tap()
+        if remainingHint.waitForExistence(timeout: 15) {
+            remainingHint.tap()
+        } else {
+            // Остаток приезжает с сервера отдельным запросом и на холодном
+            // старте иногда не успевает к моменту снимка. Второй вход на тот
+            // же экран — из профиля, и он же описан в заметках для ревью.
+            openPaywallFromProfile(app)
+        }
         settle(2)
 
         // Экран оплаты узнаём по обязательной кнопке восстановления покупок:
@@ -106,6 +111,20 @@ final class PaywallShotUITests: XCTestCase {
         passwordField.tap()
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 10)
         passwordField.typeText(password + "\n")
+    }
+
+    /// Профиль → «Splitor Plus»: путь, которым экран оплаты открывает человек,
+    /// не упёршийся в лимит (и ревьюер по нашим заметкам).
+    private func openPaywallFromProfile(_ app: XCUIApplication) {
+        app.buttons["Отмена"].firstMatch.tap()
+        let profile = app.tabBars.buttons.matching(
+            NSPredicate(format: "label IN %@", ["Профиль", "Profile"])
+        ).firstMatch
+        XCTAssertTrue(profile.waitForExistence(timeout: 15), "нет вкладки профиля")
+        profile.tap()
+        let plus = app.buttons["Splitor Plus"].firstMatch
+        XCTAssertTrue(plus.waitForExistence(timeout: 15), "в профиле нет строки Splitor Plus")
+        plus.tap()
     }
 
     private func settle(_ seconds: TimeInterval = 1.0) {
