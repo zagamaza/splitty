@@ -205,3 +205,68 @@ func TestReviewUserIdFitsAllocatorNumbers(t *testing.T) {
 		t.Fatalf("ReviewUserId = %d, ожидалось %d", cfg.ReviewUserId, allocated)
 	}
 }
+
+// Конфигурация тарифов. Все три проверки — про деньги: ошибка в любую сторону
+// либо раздаёт платное бесплатно, либо ломает распознавание всем сразу.
+
+func TestQuotaConfigDefaults(t *testing.T) {
+	t.Setenv("API_JWT_SECRET", "x")
+	cfg, err := initConfig()
+	if err != nil {
+		t.Fatalf("initConfig: %v", err)
+	}
+	if cfg.AiFreeDailyQuota != 5 {
+		t.Errorf("AiFreeDailyQuota = %d, хотели 5", cfg.AiFreeDailyQuota)
+	}
+	if cfg.AiPlusDailyQuota != -1 {
+		t.Errorf("AiPlusDailyQuota = %d, хотели -1 (безлимит)", cfg.AiPlusDailyQuota)
+	}
+	if cfg.AiLegacyDailyQuota != 50 {
+		t.Errorf("AiLegacyDailyQuota = %d, хотели 50", cfg.AiLegacyDailyQuota)
+	}
+}
+
+// Прежнее имя переменной побеждает новый дефолт: окружение, задеплоенное до
+// введения тарифов, не должно молча провалиться с 50 на 5.
+func TestLegacyQuotaEnvNameStillHonored(t *testing.T) {
+	t.Setenv("API_JWT_SECRET", "x")
+	t.Setenv("AI_PARSE_DAILY_QUOTA", "42")
+
+	cfg, err := initConfig()
+	if err != nil {
+		t.Fatalf("initConfig: %v", err)
+	}
+	if cfg.AiFreeDailyQuota != 42 {
+		t.Errorf("AiFreeDailyQuota = %d, хотели 42 из старого имени переменной", cfg.AiFreeDailyQuota)
+	}
+}
+
+// Ноль отвергается на старте. Если бы ноль означал безлимит, любая пустая или
+// битая переменная тихо раздавала бы платное всем — и платил бы за это проект.
+func TestZeroQuotaRefusesToStart(t *testing.T) {
+	vars := []string{"AI_FREE_DAILY_QUOTA", "AI_PLUS_DAILY_QUOTA", "AI_LEGACY_DAILY_QUOTA"}
+	for _, name := range vars {
+		t.Run(name+"=0", func(t *testing.T) {
+			t.Setenv("API_JWT_SECRET", "x")
+			t.Setenv(name, "0")
+			if _, err := initConfig(); err == nil {
+				t.Errorf("%s=0 принят — ошибка конфигурации осталась бы незамеченной", name)
+			}
+		})
+		t.Run(name+"=-2", func(t *testing.T) {
+			t.Setenv("API_JWT_SECRET", "x")
+			t.Setenv(name, "-2")
+			if _, err := initConfig(); err == nil {
+				t.Errorf("%s=-2 принят", name)
+			}
+		})
+	}
+}
+
+func TestRatePerMinMustBePositive(t *testing.T) {
+	t.Setenv("API_JWT_SECRET", "x")
+	t.Setenv("AI_PARSE_RATE_PER_MIN", "0")
+	if _, err := initConfig(); err == nil {
+		t.Error("AI_PARSE_RATE_PER_MIN=0 принят — распознавание перестало бы работать у всех")
+	}
+}

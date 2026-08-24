@@ -4,6 +4,11 @@ options:
   deploymentTarget:
     iOS: "17.0"
   createIntermediateGroups: true
+  # XcodeGen кладёт storeKitConfiguration только в LaunchAction, а UI-тесты
+  # запускают приложение через TestAction — без конфига там нет цен, и экран
+  # оплаты показывает «не удалось загрузить тарифы». Скрипт дописывает ссылку
+  # и идемпотентен, поэтому переживает каждую регенерацию.
+  postGenCommand: python3 scripts/patch-test-storekit.py
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -107,9 +112,9 @@ targets:
         # ровно те же, что в android/app/src/main/res/values-*.
         CFBundleDevelopmentRegion: ru
         CFBundleLocalizations: [ru, en, es, de, fr]
-        CFBundleDisplayName: Splitty
-        CFBundleShortVersionString: "1.6"
-        CFBundleVersion: "17"
+        CFBundleDisplayName: Splitor
+        CFBundleShortVersionString: "1.7"
+        CFBundleVersion: "19"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         # Вход через Google. GIDClientID читается самим SDK, если
@@ -174,6 +179,10 @@ schemes:
         Splitty: all
     run:
       config: Debug
+      # StoreKit-конфиг: покупки работают прямо в симуляторе, без сандбокса и
+      # без живого App Store Connect. Без него экран оплаты показывает «не
+      # удалось загрузить тарифы» — цены брать неоткуда.
+      storeKitConfiguration: Splitty/Splitty.storekit
     test:
       config: Debug
       # Тесты сверяют РУССКИЕ тексты (коды ошибок, конфликт выхода, приглашения),

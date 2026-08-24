@@ -153,7 +153,7 @@ private extension Error {
         switch apiError {
         case .transport:
             return true
-        case .server(let status, _, _):
+        case .server(let status, _, _, _):
             return status >= 500
         case .invalidURL, .decoding:
             return false

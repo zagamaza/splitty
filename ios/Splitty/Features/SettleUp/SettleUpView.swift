@@ -364,7 +364,7 @@ struct SettleUpView: View {
             // формой с уже введённой суммой и устаревшим долгом: понять, что
             // произошло, можно было только закрыв экран (порт Android).
             if let apiError = error as? APIError,
-               case .server(let status, _, _) = apiError, status == 409 {
+               case .server(let status, _, _, _) = apiError, status == 409 {
                 await recoverFromSettledDebt()
                 return
             }

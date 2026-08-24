@@ -41,6 +41,7 @@ type deleteTestSetup struct {
 	debtReminders *fakeChatStates
 	invites       *fakeInviteStore
 	appleTokens   *fakeAppleTokens
+	subs          *fakeSubStore
 	room          *api.Room
 }
 
@@ -117,6 +118,8 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	s.SetPushOutbox(set.pushOutbox)
 	s.SetInvites(set.invites)
 	s.SetDebtReminders(set.debtReminders)
+	set.subs = newFakeSubStore()
+	s.SetSubscriptions(set.subs, nil, nil, nil)
 	return set
 }
 
@@ -610,5 +613,34 @@ func TestDeleteMePurgesRoomInvites(t *testing.T) {
 	}
 	if _, err := set.invites.Find(ctx, foreign, survivorUserID); err != nil {
 		t.Fatalf("чужое приглашение пострадало: %v", err)
+	}
+}
+
+// TestDeleteMePurgesSubscriptions — удаление аккаунта уносит его подписки.
+//
+// Это не только приватность (в документах лежат идентификаторы покупок,
+// привязанные к человеку), но и условие повторной регистрации: оставшаяся
+// запись означала бы, что новый аккаунт упрётся в чек, записанный на прошлый, и
+// купить уже никогда не сможет.
+func TestDeleteMePurgesSubscriptions(t *testing.T) {
+	d := newDeleteSetup(t, Config{})
+	d.subs.byRef[refKey(api.StoreApple, "orig-mine")] = &api.Subscription{
+		UserId: deletedUserID, Store: api.StoreApple, StoreRef: "orig-mine",
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
+	}
+	d.subs.byRef[refKey(api.StoreApple, "orig-other")] = &api.Subscription{
+		UserId: survivorUserID, Store: api.StoreApple, StoreRef: "orig-other",
+		ExpiresAt: time.Now().Add(30 * 24 * time.Hour),
+	}
+
+	if rec := d.deleteMe(t, deletedUserID); rec.Code != http.StatusNoContent {
+		t.Fatalf("DELETE /me: status = %d, body: %s", rec.Code, rec.Body.String())
+	}
+
+	if _, ok := d.subs.byRef[refKey(api.StoreApple, "orig-mine")]; ok {
+		t.Error("подписка удалённого аккаунта осталась — повторная регистрация не сможет купить снова")
+	}
+	if _, ok := d.subs.byRef[refKey(api.StoreApple, "orig-other")]; !ok {
+		t.Error("задета чужая подписка")
 	}
 }

@@ -2,6 +2,7 @@ package com.zagir.splitty.core.network
 
 import androidx.annotation.StringRes
 import com.zagir.splitty.R
+import com.zagir.splitty.core.model.AiQuota
 import com.zagir.splitty.core.ui.UiText
 import java.io.IOException
 import kotlinx.serialization.Serializable
@@ -23,8 +24,30 @@ class ApiException(
     override val message: String,
     /** true — [message] пришёл от сервера, а не собран локально по коду. */
     val fromServer: Boolean = false,
+    /**
+     * Остаток распознаваний из тела ошибки лимита; null у прочих ошибок.
+     * Экрану оплаты нужно показать, что именно закончилось и когда обновится.
+     */
+    val quota: AiQuota? = null,
     cause: Throwable? = null,
 ) : Exception(message, cause) {
+
+    /**
+     * Суточная норма распознаваний исчерпана — показывается экран оплаты.
+     *
+     * Отдельный признак, а не «просто 429»: на минутный троттл человек видит
+     * спокойный тост, а сюда — предложение заплатить. Пока причина была одна,
+     * тыкнувший микрофон дважды подряд получал бы paywall.
+     */
+    val isAiQuotaExceeded: Boolean get() = code == "ai_quota_exceeded"
+
+    /**
+     * Чек оформлен на другой аккаунт Splitor.
+     *
+     * Тупик, из которого человек не выберется сам: деньги списаны, а Plus не
+     * появится, пока он не войдёт в тот аккаунт.
+     */
+    val isReceiptBoundToOtherAccount: Boolean get() = code == "receipt_belongs_to_other_account"
 
     /**
      * Что показать человеку: текст сервера либо ресурс по коду.
@@ -94,6 +117,9 @@ class ApiException(
             // но при пустом теле подставляем текст по коду.
             "unsupported_media" -> R.string.error_unsupported_media
             "rate_limited" -> R.string.error_rate_limited
+            "ai_quota_exceeded" -> R.string.error_ai_quota_exceeded
+            "receipt_belongs_to_other_account" -> R.string.error_receipt_other_account
+            "subscriptions_disabled" -> R.string.error_subscriptions_disabled
             "ai_disabled" -> R.string.error_ai_disabled
             CODE_TRANSPORT -> R.string.error_no_internet
             CODE_DECODING -> R.string.error_decoding
@@ -103,9 +129,17 @@ class ApiException(
     }
 }
 
-/** Тело ошибки бэкенда: {"error": {"code": "...", "message": "..."}}. */
+/**
+ * Тело ошибки бэкенда: {"error": {"code": "...", "message": "..."}}.
+ *
+ * `quota` лежит РЯДОМ с конвертом, а не внутри него: форму `{"error":{...}}`
+ * разбирают все сборки, включая 1.6, и трогать её нельзя.
+ */
 @Serializable
-internal data class ErrorEnvelope(val error: Payload) {
+internal data class ErrorEnvelope(
+    val error: Payload,
+    val quota: AiQuota? = null,
+) {
     @Serializable
     data class Payload(val code: String = "", val message: String = "")
 }
@@ -123,6 +157,7 @@ internal fun parseApiError(status: Int, errorBody: String?, json: Json): ApiExce
         // В логи — либо текст сервера, либо машинный код: человеку показывается uiText().
         message = serverMessage ?: "$code ($status)",
         fromServer = serverMessage != null,
+        quota = envelope?.quota,
     )
 }
 

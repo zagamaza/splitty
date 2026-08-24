@@ -555,7 +555,7 @@ struct GroupSettingsView: View {
 /// удаление расхода открыты любому участнику, поэтому себя (или его) можно
 /// убрать из операции и выйти. Без этого человек упирается в глухое «конфликт».
 func leaveErrorText(_ error: Error, isSelf: Bool = true) -> String {
-    guard let apiError = error as? APIError, case .server(_, let code, _) = apiError else {
+    guard let apiError = error as? APIError, case .server(_, let code, _, _) = apiError else {
         return humanErrorText(error)
     }
     switch code {

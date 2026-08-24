@@ -28,6 +28,17 @@ type errorBody struct {
 	Message string `json:"message"`
 }
 
+// quotaErrorResponse — та же ошибка плюс состояние квоты рядом с конвертом.
+//
+// Поле ДОБАВЛЕНО к существующей форме, а не заменяет её: сборки 1.6 разбирают
+// ровно {"error":{"code","message"}} и лишнее поле просто игнорируют. Стоит
+// вынести код с сообщением наверх — и разбор ошибок сломается у всех, кто ещё
+// не обновился.
+type quotaErrorResponse struct {
+	Error errorBody `json:"error"`
+	Quota quotaDto  `json:"quota"`
+}
+
 type userDto struct {
 	ID          int    `json:"id"`
 	Username    string `json:"username"`
@@ -55,6 +66,11 @@ type meDto struct {
 	// пароля: по нему клиент понимает, что пароль можно задать заново. Профилю
 	// без адреса задавать пароль некуда — завести адрес нечем, почту мы не шлём
 	LoginEmail string `json:"loginEmail,omitempty"`
+	// PurchaseBindingToken — им клиент помечает покупку в магазине
+	// (appAccountToken у Apple, obfuscatedAccountId у Google), чтобы чек
+	// достоверно принадлежал этому аккаунту. Нужен ДО покупки, поэтому едет
+	// вместе с профилем, а не отдельным запросом с экрана оплаты
+	PurchaseBindingToken string `json:"purchaseBindingToken,omitempty"`
 }
 
 type fileDto struct {
@@ -277,13 +293,14 @@ func toUserDtos(users []api.User) []userDto {
 
 func toMeDto(u *api.User) meDto {
 	return meDto{
-		ID:              u.ID,
-		Username:        u.Username,
-		DisplayName:     toUserDto(u).DisplayName,
-		Lang:            api.DefineLang(u),
-		LinkedProviders: linkedProviders(u),
-		NotificationOn:  u.NotificationOn == nil || *u.NotificationOn,
-		LoginEmail:      u.LoginEmail,
+		PurchaseBindingToken: u.PurchaseBindingToken,
+		ID:                   u.ID,
+		Username:             u.Username,
+		DisplayName:          toUserDto(u).DisplayName,
+		Lang:                 api.DefineLang(u),
+		LinkedProviders:      linkedProviders(u),
+		NotificationOn:       u.NotificationOn == nil || *u.NotificationOn,
+		LoginEmail:           u.LoginEmail,
 	}
 }
 

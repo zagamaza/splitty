@@ -195,7 +195,7 @@ struct LoginView: View {
                 .shadow(color: .black.opacity(0.14), radius: 14, y: 7)
                 .accessibilityHidden(true)
 
-            Text("Splitty")
+            Text("Splitor")
                 .scaledFont(size: 40, weight: .bold, relativeTo: .title)
                 .foregroundStyle(Color.accent)
         }
@@ -602,7 +602,7 @@ struct LoginValueProp: Identifiable {
             id: "money",
             icon: "arrow.right",
             title: String(localized: "Деньги передаёте сами"),
-            detail: String(localized: "Splitty только ведёт учёт")
+            detail: String(localized: "Splitor только ведёт учёт")
         ),
     ]
 }

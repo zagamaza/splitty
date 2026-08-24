@@ -112,7 +112,7 @@ extension APIError {
     /// Всё остальное (нет сети, таймаут, 5xx) считается временным: намерение
     /// переживает сбой и исполнится при следующей попытке.
     var isTerminalJoinFailure: Bool {
-        guard case .server(let status, let code, _) = self else { return false }
+        guard case .server(let status, let code, _, _) = self else { return false }
         return status == 404 || status == 403 || code == "not_found" || code == "forbidden"
     }
 }
@@ -126,7 +126,7 @@ extension APIError {
 /// от сервера в этом контексте не объясняет ничего: нужно сказать, что именно
 /// не так со ссылкой и что с этим делать.
 func joinLinkErrorText(_ error: Error) -> String {
-    if let apiError = error as? APIError, case .server(let status, let code, _) = apiError {
+    if let apiError = error as? APIError, case .server(let status, let code, _, _) = apiError {
         if status == 404 || code == "not_found" {
             return String(localized: "Группа не найдена. Возможно, её удалили или ссылка-приглашение устарела")
         }

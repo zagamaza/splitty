@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson"
@@ -82,6 +83,12 @@ type UserRepository interface {
 	// после неё старые JWT не работают, а уведомления не уходят на потерянный
 	// телефон
 	RevokeTokens(ctx context.Context, userId int, at time.Time) error
+	// EnsureBindingToken возвращает purchase_binding_token живого пользователя,
+	// заводя его при первом обращении. Идемпотентен и безопасен к гонке:
+	// параллельные вызовы получают ОДНО значение (токен вшивается в уже
+	// совершённые покупки, второй перетёр бы привязку). Пользователя нет или он
+	// удалён — mongo.ErrNoDocuments
+	EnsureBindingToken(ctx context.Context, userId int) (string, error)
 }
 
 type RoomRepository interface {
@@ -1426,6 +1433,45 @@ func (r MongoUserRepository) SetPasswordHash(ctx context.Context, userId int, ha
 		return mongo.ErrNoDocuments
 	}
 	return nil
+}
+
+// EnsureBindingToken выдаёт токен привязки покупок, заводя его при первом
+// обращении.
+//
+// Запись условная — фильтр требует, чтобы поля ЕЩЁ НЕ БЫЛО. Иначе два
+// параллельных запроса (а их будет два: экран оплаты и восстановление покупок
+// стартуют вместе) записали бы разные значения, и чек, купленный по первому,
+// перестал бы сходиться с аккаунтом. Не совпал фильтр — значит либо токен уже
+// есть, либо пользователя нет; отличаем чтением.
+func (r MongoUserRepository) EnsureBindingToken(ctx context.Context, userId int) (string, error) {
+	token := uuid.NewString()
+	filter := append(
+		bson.D{
+			{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}},
+			{Key: "purchase_binding_token", Value: bson.D{{Key: "$exists", Value: false}}},
+		},
+		notDeleted...,
+	)
+	update := bson.D{{Key: "$set", Value: bson.M{"purchase_binding_token": token}}}
+
+	res, err := r.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return "", err
+	}
+	if res.MatchedCount > 0 {
+		return token, nil
+	}
+
+	user, err := r.findOne(ctx, append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...))
+	if err != nil {
+		return "", err
+	}
+	if user.PurchaseBindingToken == "" {
+		// Пустая строка в документе (а не отсутствие поля) — фильтр $exists её
+		// не поймал бы, и метод зациклился бы на «уже есть, но нечего отдать».
+		return "", mongo.ErrNoDocuments
+	}
+	return user.PurchaseBindingToken, nil
 }
 
 // UpdateAppleProfile дописывает данные из потока Sign in with Apple.

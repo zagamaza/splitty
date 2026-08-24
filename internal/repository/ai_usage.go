@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -43,6 +44,24 @@ func (r *MongoAiUsageRepository) Incr(ctx context.Context, key string, ttl time.
 		Count int64 `bson:"count"`
 	}
 	if err := r.col.FindOneAndUpdate(ctx, bson.M{"_id": key}, update, opts).Decode(&doc); err != nil {
+		return 0, err
+	}
+	return doc.Count, nil
+}
+
+// Get читает счётчик окна, не изменяя его: остаток показывается в интерфейсе и
+// отдаётся в GET /me/ai-quota, и просмотр остатка не должен его расходовать.
+//
+// Отсутствующее окно — это ноль, а не ошибка: до первого распознавания за
+// сутки документа просто нет, и это нормальное состояние, а не сбой.
+func (r *MongoAiUsageRepository) Get(ctx context.Context, key string) (int64, error) {
+	var doc struct {
+		Count int64 `bson:"count"`
+	}
+	if err := r.col.FindOne(ctx, bson.M{"_id": key}).Decode(&doc); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return 0, nil
+		}
 		return 0, err
 	}
 	return doc.Count, nil

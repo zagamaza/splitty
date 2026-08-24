@@ -28,6 +28,8 @@ final class StoreShotsUITests: XCTestCase {
         let firstRoom: String
         let balances: String
         let rooms: [String]
+        /// Расход, разобранный по позициям чека: главный кадр витрины.
+        let receiptExpense: String
         let emailDisclosure = "emailLoginDisclosure"
     }
 
@@ -37,14 +39,16 @@ final class StoreShotsUITests: XCTestCase {
             tabGroups: "Группы", tabFriends: "Друзья", tabAdd: "Добавить расход",
             totals: "Итоги", settle: "Погасить", firstRoom: "Поездка в Стамбул",
             balances: "Балансы",
-            rooms: ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"]
+            rooms: ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"],
+            receiptExpense: "Ужин в Кадыкёе"
         ),
         "en": Labels(
             appleLanguage: "en", locale: "en_US",
             tabGroups: "Groups", tabFriends: "Friends", tabAdd: "Add expense",
             totals: "Totals", settle: "Settle up", firstRoom: "Trip to Lisbon",
             balances: "Balances",
-            rooms: ["Weekend cabin", "Flat share", "Trip to Lisbon"]
+            rooms: ["Weekend cabin", "Flat share", "Trip to Lisbon"],
+            receiptExpense: "Dinner in Alfama"
         ),
     ]
 
@@ -85,6 +89,25 @@ final class StoreShotsUITests: XCTestCase {
         app.staticTexts[labels.firstRoom].tap()
         XCTAssertTrue(app.buttons[labels.totals].waitForExistence(timeout: 15))
         settle(); shoot(app, "group")
+
+        // Главный кадр витрины: расход, РАЗОБРАННЫЙ по позициям чека.
+        // Открывается правкой существующего расхода — так же, как его увидит
+        // человек сразу после распознавания, но без записи голоса в тесте.
+        let receipt = app.staticTexts[labels.receiptExpense].firstMatch
+        if receipt.waitForExistence(timeout: 15) {
+            receipt.tap()
+            settle(1.6)
+            // Прокручиваем к «Позициям чека»: сверху итог и участники, а
+            // витрине нужен сам разбор — ради него кадр и снимается.
+            app.swipeUp()
+            settle(1.2)
+            shoot(app, "receipt")
+            // Возвращаемся в группу: следующие кадры снимаются оттуда.
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            settle(1.2)
+        } else {
+            XCTFail("нет расхода «\(labels.receiptExpense)» — прогнан ли scripts/seed-store-shots.py?")
+        }
 
         // Погашение снимаем ЗДЕСЬ, не откатившись назад: кнопка живёт в шапке
         // группы, и со списка групп её уже не видно.

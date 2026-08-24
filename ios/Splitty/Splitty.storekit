@@ -1,0 +1,76 @@
+{
+  "identifier" : "SPLITOR_PLUS",
+  "nonRenewingSubscriptions" : [ ],
+  "products" : [ ],
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_billingGracePeriodEnabled" : true,
+    "_storeKitErrors" : [ ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21567890",
+      "localizations" : [ ],
+      "name" : "Splitor Plus",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [ ],
+          "codeOffers" : [ ],
+          "displayPrice" : "199",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "21567891",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Распознавание расходов голосом и по фото чека без суточного лимита",
+              "displayName" : "Splitor Plus на месяц",
+              "locale" : "ru"
+            },
+            {
+              "description" : "Voice and receipt recognition with no daily limit",
+              "displayName" : "Splitor Plus monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.zagir.splitty.plus.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Plus Monthly",
+          "subscriptionGroupID" : "21567890",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [ ],
+          "codeOffers" : [ ],
+          "displayPrice" : "1490",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "21567892",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Распознавание расходов голосом и по фото чека без суточного лимита",
+              "displayName" : "Splitor Plus на год",
+              "locale" : "ru"
+            },
+            {
+              "description" : "Voice and receipt recognition with no daily limit",
+              "displayName" : "Splitor Plus yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.zagir.splitty.plus.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Plus Yearly",
+          "subscriptionGroupID" : "21567890",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

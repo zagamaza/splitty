@@ -51,18 +51,25 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Остаток на момент ПОСЛЕ этой попытки. Едет в ответе, чтобы счётчик у
+	// микрофона обновлялся сам: отдельный запрос за остатком был бы лишним
+	// round-trip и гонкой — счётчик меняется ровно здесь.
+	var parseQuota quotaDto
+
 	// rate-limit ДО чтения больших частей и вызова Gemini
 	if s.rateLimiter != nil {
-		ok, reason, err := s.rateLimiter.AllowParse(ctx, userId)
+		tier, quota := s.tierAndQuota(ctx, r, userId)
+		dec, err := s.rateLimiter.AllowParse(ctx, userId, quota)
 		if err != nil {
 			log.Error().Err(err).Msg("rate limit check failed")
 			writeError(w, http.StatusInternalServerError, "internal", "ошибка проверки лимита")
 			return
 		}
-		if !ok {
-			writeError(w, http.StatusTooManyRequests, "rate_limited", reason)
+		if !dec.Allowed {
+			writeQuotaRejection(w, tier, dec)
 			return
 		}
+		parseQuota = toQuotaDto(tier, dec)
 	}
 
 	// общий предел тела (взамен глобального 1 МБ, снятого в middleware для /parse)
@@ -85,9 +92,14 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 		if in.Draft != nil {
 			echo = *in.Draft
 		}
-		writeJSON(w, http.StatusBadGateway, ai.ParseResult{
-			Draft:     echo,
-			Questions: []string{"не удалось распознать, попробуйте ещё раз"},
+		// Квота отдаётся и здесь: попытка уже списана, и человек должен видеть
+		// остаток честно, даже когда распознать не удалось.
+		writeJSON(w, http.StatusBadGateway, parseResponse{
+			ParseResult: ai.ParseResult{
+				Draft:     echo,
+				Questions: []string{"не удалось распознать, попробуйте ещё раз"},
+			},
+			Quota: parseQuota,
 		})
 		return
 	}
@@ -105,7 +117,18 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 		Bool("hasImage", len(in.Image) > 0).
 		Bool("hasText", in.Text != "").
 		Msg("ai parse ok")
-	writeJSON(w, http.StatusOK, res)
+	writeJSON(w, http.StatusOK, parseResponse{ParseResult: res, Quota: parseQuota})
+}
+
+// parseResponse — результат распознавания плюс остаток квоты.
+//
+// Встраивание, а не вложенное поле: ai.ParseResult сериализуется в корень
+// ответа, как и раньше, поэтому сборки 1.6 читают его без изменений и просто
+// игнорируют лишний quota. Класть квоту внутрь самой ai.ParseResult нельзя —
+// это доменная структура парсера, ничего не знающая про тарифы.
+type parseResponse struct {
+	ai.ParseResult
+	Quota quotaDto `json:"quota"`
 }
 
 // parseMultipartInput разбирает multipart-тело в ai.ParseInput с покусочными

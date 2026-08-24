@@ -300,7 +300,7 @@ final class OutboxStore {
                 remove(localId: entry.localId)
                 syncedAny = true
             } catch let error as APIError {
-                if case .server(let status, _, _) = error, isPermanentReject(status) {
+                if case .server(let status, _, _, _) = error, isPermanentReject(status) {
                     // Сервер отверг операцию — правка данных не поможет сама собой:
                     // помечаем failed, пользователь исправит/удалит. Идём к следующей.
                     markFailed(localId: entry.localId, message: error.localizedDescription)

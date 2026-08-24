@@ -21,6 +21,7 @@ import (
 	"github.com/almaznur91/splitty/internal/repository"
 	"github.com/almaznur91/splitty/internal/rest"
 	"github.com/almaznur91/splitty/internal/service"
+	"github.com/almaznur91/splitty/internal/store"
 	"github.com/gookit/i18n"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -372,6 +373,73 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		return nil, nil, nil, errors.Wrap(err, "cannot backfill notifications_seen_at")
 	}
 
+	// Подписки Splitor Plus. Коллекция и резолв тарифа заводятся ВСЕГДА, даже
+	// когда ключи сторов пусты: без них никто не станет платным, но тариф всё
+	// равно надо у кого-то спрашивать — иначе бесплатный лимит негде взять.
+	subscriptionRepo := repository.NewSubscriptionRepository(db)
+	if err := subscriptionRepo.EnsureIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create subscriptions indexes")
+	}
+	entitlements := service.NewEntitlements(subscriptionRepo, service.EntitlementsConfig{
+		FreeQuota:     cfg.AiFreeDailyQuota,
+		PlusQuota:     cfg.AiPlusDailyQuota,
+		LegacyQuota:   cfg.AiLegacyDailyQuota,
+		DeliverySlack: cfg.PlusDeliverySlack,
+		CompUserIds:   intsFromInt64(cfg.PlusCompUserIds),
+		CacheTTL:      cfg.PlusTierCacheTTL,
+	})
+	server.SetEntitlements(entitlements)
+
+	// Проверка чеков. Пустые ключи — покупки выключены: эндпоинты подписки
+	// отдают 503, никто не становится платным, остальное работает как раньше.
+	var appleReceipts, googleReceipts rest.ReceiptVerifier
+	var googleAck rest.PurchaseAcknowledger
+	if a, err := store.NewApple(store.AppleConfig{
+		KeyContent:         []byte(cfg.AppleIapPrivateKey),
+		KeyID:              cfg.AppleIapKeyId,
+		Issuer:             cfg.AppleIapIssuerId,
+		BundleID:           cfg.AppleIapBundleId,
+		AllowedEnvironment: cfg.StoreAllowedEnvironment,
+		ProductIds:         nonEmptyValues(cfg.PlusProductIds),
+	}); err != nil {
+		log.Info().Msg("покупки App Store выключены (APPLE_IAP_* пусты)")
+	} else {
+		appleReceipts = a
+	}
+	if saJson, err := os.ReadFile(cfg.GooglePlaySaJson); err == nil {
+		if g, gErr := store.NewGoogle(ctx, store.GoogleConfig{
+			ServiceAccountJSON: saJson,
+			PackageName:        cfg.GooglePlayPackage,
+			ProductIds:         nonEmptyValues(cfg.PlusProductIds),
+			AllowedEnvironment: cfg.StoreAllowedEnvironment,
+		}); gErr != nil {
+			log.Warn().Err(gErr).Msg("не удалось поднять Play Developer API, покупки Google выключены")
+		} else {
+			googleReceipts, googleAck = g, g
+		}
+	} else {
+		log.Info().Msg("покупки Google Play выключены (GOOGLE_PLAY_SA_JSON недоступен)")
+	}
+	server.SetSubscriptions(subscriptionRepo, appleReceipts, googleReceipts, googleAck)
+
+	// Уведомления магазинов и фоновая доработка. Состояние подписки они берут у
+	// магазина, а не из уведомления, поэтому нужен тот же клиент.
+	var appleStatus service.AppleStatusReader
+	var googleStatus service.GoogleStatusReader
+	if a, ok := appleReceipts.(service.AppleStatusReader); ok {
+		appleStatus = a
+	}
+	if g, ok := googleReceipts.(service.GoogleStatusReader); ok {
+		googleStatus = g
+	}
+	server.SetStoreWebhooks(appleStatus, googleStatus)
+
+	if appleStatus != nil || googleStatus != nil {
+		worker := service.NewSubscriptionWorker(subscriptionRepo, appleStatus, googleStatus, entitlements,
+			service.SubscriptionWorkerConfig{})
+		go worker.Run(ctx)
+	}
+
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
 	if cfg.GeminiApiKey != "" {
 		aiUsageRepo := repository.NewAiUsageRepository(db)
@@ -379,7 +447,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 			log.Warn().Err(err).Msg("cannot create ai_usage TTL index")
 		}
 		parser := ai.NewGemini(cfg.GeminiApiKey, cfg.GeminiModel)
-		limiter := service.NewRateLimiter(aiUsageRepo, cfg.AiParseRatePerMin, cfg.AiParseDailyQuota)
+		limiter := service.NewRateLimiter(aiUsageRepo, cfg.AiParseRatePerMin)
 		server.SetAI(parser, limiter, cfg.AiMaxBodyBytes)
 		log.Info().Msg("AI expense parsing enabled (Gemini)")
 	} else {
@@ -483,6 +551,23 @@ func nonEmptyValues(values []string) []string {
 	for _, v := range values {
 		if trimmed := strings.TrimSpace(v); trimmed != "" {
 			out = append(out, trimmed)
+		}
+	}
+	return out
+}
+
+// intsFromInt64 приводит номера пользователей к int.
+//
+// В конфиге они int64 не от хорошей жизни: caarlos0/env разбирает поле типа int
+// через ParseInt с bitSize 32 независимо от разрядности платформы, и номер из
+// аллокатора (1000000000004) роняет старт. Внутри же номер пользователя —
+// обычный int (api.User.ID). Нули отбрасываются: пустая переменная со сплитом
+// даёт [""], а не пустой срез, и превратилась бы в comp-доступ для id 0.
+func intsFromInt64(values []int64) []int {
+	out := make([]int, 0, len(values))
+	for _, v := range values {
+		if v != 0 {
+			out = append(out, int(v))
 		}
 	}
 	return out

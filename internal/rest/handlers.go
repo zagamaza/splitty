@@ -187,11 +187,27 @@ func (s *Server) inviteURL(roomId string) string {
 
 // handleGetMe GET /api/v1/me
 func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
-	user, hErr := s.currentUser(r.Context())
+	ctx := r.Context()
+	user, hErr := s.currentUser(ctx)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
+
+	// Токен привязки покупок заводится лениво — при первом профиле, где его ещё
+	// нет. Не при регистрации: он нужен только тем, кто дойдёт до оплаты, а
+	// бэкфилл всей коллекции ради поля, которое почти никому не понадобится,
+	// того не стоит. У кого он уже есть, лишних запросов не делается.
+	if user.PurchaseBindingToken == "" {
+		if token, err := s.userRepo.EnsureBindingToken(ctx, user.ID); err != nil {
+			// Не 500: без токена экран оплаты просто не покажет кнопку покупки,
+			// а весь остальной профиль человеку нужен и сейчас.
+			log.Warn().Err(err).Int("userId", user.ID).Msg("cannot ensure purchase binding token")
+		} else {
+			user.PurchaseBindingToken = token
+		}
+	}
+
 	writeJSON(w, http.StatusOK, toMeDto(user))
 }
 

@@ -200,6 +200,10 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 		{name: "push_outbox", repo: s.pushOutbox, ids: []int{u.ID}},
 		{name: "room_invite", repo: s.invites, ids: []int{u.ID}},
 		{name: "debt_reminder", repo: s.debtReminders, ids: []int{u.ID}},
+		// Подписки: идентификаторы покупок, привязанные к человеку. Помимо
+		// приватности это ещё и условие повторной регистрации — иначе новый
+		// аккаунт упрётся в чек, записанный на прошлый, и купить не сможет
+		{name: "subscriptions", repo: s.subscriptions, ids: []int{u.ID}},
 	} {
 		if cleaner.repo == nil {
 			return errors.Errorf("коллекция %s не подключена: PII удалённого пользователя осталась бы в базе", cleaner.name)

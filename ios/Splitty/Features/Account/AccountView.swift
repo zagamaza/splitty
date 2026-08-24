@@ -8,6 +8,8 @@ struct AccountView: View {
     @State private var isRevoking = false
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     @Environment(SessionStore.self) private var session
+    @Environment(SubscriptionStore.self) private var subscriptions
+    @State private var isPaywallPresented = false
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var nameDraft = ""
@@ -54,6 +56,7 @@ struct AccountView: View {
                     if session.profileLoadFailed {
                         profileLoadFailedCard
                     } else {
+                        plusSection
                         settingsSection
                         loginMethodsSection
                     // Адрес сервера — отладочная информация, пользователю в
@@ -214,6 +217,92 @@ struct AccountView: View {
     }
 
     /// Карточка настроек: имя, язык, уведомления — с hairline-разделителями.
+    /// Секция подписки.
+    ///
+    /// Нужна не только человеку: без неё единственный путь к экрану оплаты —
+    /// упереться в суточный лимит, а ревьюеру App Store искать покупку по
+    /// счётчику распознаваний неоткуда. Плюс Apple ждёт, что действующую
+    /// подписку видно и управлять ею можно из приложения.
+    private var plusSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Подписка")
+                .sectionHeaderStyle()
+                .padding(.horizontal, 4)
+            VStack(spacing: 0) {
+                Button {
+                    isPaywallPresented = true
+                } label: {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Splitor Plus")
+                                .scaledFont(size: 16)
+                                .foregroundStyle(Color.ink)
+                            Text(plusStatusText)
+                                .scaledFont(size: 13, relativeTo: .footnote)
+                                .foregroundStyle(Color.inkSecondary)
+                        }
+                        Spacer(minLength: 8)
+                        if subscriptions.isPlus {
+                            Text("Активна")
+                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                                .foregroundStyle(Color.accentText)
+                        }
+                        Image(systemName: "chevron.right")
+                            .scaledFont(size: 13, weight: .semibold)
+                            .foregroundStyle(Color.inkSecondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                // Отменяет подписку магазин, а не приложение: своей кнопки
+                // отмены у нас нет и быть не может.
+                if let manage = subscriptions.subscription?.manageUrl, subscriptions.isPlus {
+                    rowDivider
+                    Link(destination: URL(string: manage) ?? URL(string: "https://apps.apple.com/account/subscriptions")!) {
+                        HStack {
+                            Text("Управлять подпиской")
+                                .scaledFont(size: 16)
+                                .foregroundStyle(Color.accentText)
+                            Spacer()
+                            Image(systemName: "arrow.up.forward")
+                                .scaledFont(size: 13, weight: .semibold)
+                                .foregroundStyle(Color.inkSecondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                    }
+                }
+            }
+            .surfaceCard(padding: 0)
+        }
+        .sheet(isPresented: $isPaywallPresented) {
+            PaywallView(store: subscriptions, quota: subscriptions.quota)
+        }
+        .task {
+            await subscriptions.refreshQuota()
+            await subscriptions.refreshSubscription()
+        }
+    }
+
+    /// Подпись под названием тарифа: у бесплатного — сколько распознаваний в
+    /// день, у платного — до какого числа действует.
+    private var plusStatusText: String {
+        if subscriptions.isPlus {
+            if let until = subscriptions.subscription?.expiresAt {
+                return String(localized: "Активна до \(until.formatted(date: .abbreviated, time: .omitted))")
+            }
+            return String(localized: "Распознавания без суточного лимита")
+        }
+        if let quota = subscriptions.quota, !quota.unlimited {
+            return String(localized: "Бесплатный тариф · \(quota.limit) распознаваний в день")
+        }
+        return String(localized: "Распознавание расходов без суточного лимита")
+    }
+
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Настройки")
@@ -819,7 +908,7 @@ struct AccountView: View {
 /// привяжите другой способ».
 func identityErrorText(_ error: Error) -> String {
     guard let apiError = error as? APIError,
-          case .server(let status, let code, _) = apiError
+          case .server(let status, let code, _, _) = apiError
     else {
         return humanErrorText(error)
     }

@@ -75,3 +75,43 @@ func TestLegalPagesWorkWithoutPublicBaseUrl(t *testing.T) {
 		}
 	}
 }
+
+// Условия подписки — вторая обязательная ссылка с экрана оплаты
+// (Guideline 3.1.2). Ссылка, ведущая в никуда, — типовая причина отказа при
+// первой подписке, поэтому публичность и наполнение проверяются отдельно.
+
+func TestTermsPageIsPublic(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo(newTestRoom()))
+
+	rec := doRequest(t, s, http.MethodGet, "/terms", "", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 без токена — ревьюер магазина открыть её не сможет", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Fatalf("Content-Type = %q", ct)
+	}
+	if rec.Body.Len() == 0 {
+		t.Fatal("пустое тело страницы условий")
+	}
+}
+
+// Пункты, которых Apple ждёт от условий подписки. Без любого из них экран
+// оплаты не проходит ревью.
+func TestTermsPageCoversSubscriptionRequirements(t *testing.T) {
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo(newTestRoom()))
+	body := doRequest(t, s, http.MethodGet, "/terms", "", "").Body.String()
+
+	required := map[string]string{
+		"продлевается автоматически": "не сказано про автопродление",
+		"Как отменить":               "не сказано, как отменить подписку",
+		"Возврат":                    "нет раздела про возвраты",
+		"на месяц или на год":        "не назван срок подписки",
+		"/privacy":                   "нет ссылки на политику конфиденциальности",
+		"руками":                     "не сказано, что расход можно внести без подписки",
+	}
+	for needle, complaint := range required {
+		if !strings.Contains(body, needle) {
+			t.Errorf("%s (нет %q)", complaint, needle)
+		}
+	}
+}

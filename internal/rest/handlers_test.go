@@ -37,10 +37,16 @@ func newTestServerWithLoginCodes(cfg Config, userRepo *fakeUserRepo, roomRepo *f
 	if cfg.JwtSecret == "" {
 		cfg.JwtSecret = "test-secret"
 	}
-	return NewServer(cfg, userRepo, roomRepo, codeRepo,
+	s := NewServer(cfg, userRepo, roomRepo, codeRepo,
 		service.NewRoomService(roomRepo),
 		service.NewOperationService(roomRepo),
 		newFakeUserIDAllocator())
+	// Подписки подключены всегда — как в проде: хранилище заводится независимо
+	// от ключей магазинов. Без него удаление аккаунта справедливо падает
+	// (см. purgeUserData: неподключённая коллекция значит, что данные удалённого
+	// человека остались бы в базе).
+	s.SetSubscriptions(newFakeSubStore(), nil, nil, nil)
+	return s
 }
 
 // newTestRoom комната с участниками 1 и 2 и ЛЕГАСИ-операцией эпохи master-2021

@@ -61,6 +61,13 @@ struct Me: Codable, Identifiable, Hashable {
     /// после отвязки пароля — по нему профиль понимает, что пароль можно
     /// задать заново.
     var loginEmail: String?
+    /// Токен привязки покупок: им помечается покупка в магазине
+    /// (`appAccountToken` у StoreKit), чтобы чек достоверно принадлежал этому
+    /// аккаунту. Нужен ДО покупки, поэтому приезжает вместе с профилем.
+    ///
+    /// Пусто — сервер старый или не отдал токен: покупка тогда уйдёт без
+    /// пометки, и сервер примет её как чек со сборки, которая токена не шлёт.
+    var purchaseBindingToken: String?
 }
 
 // init(from:) в extension, чтобы сохранить memberwise-инициализатор.
@@ -77,6 +84,7 @@ extension Me {
         linkedProviders = try c.decodeIfPresent([String].self, forKey: .linkedProviders) ?? []
         notificationOn = try c.decode(Bool.self, forKey: .notificationOn)
         loginEmail = try c.decodeIfPresent(String.self, forKey: .loginEmail)
+        purchaseBindingToken = try c.decodeIfPresent(String.self, forKey: .purchaseBindingToken)
     }
 }
 
@@ -373,6 +381,11 @@ struct ParseResponse: Codable, Hashable {
     let draft: ParseDraft
     /// Уточняющие вопросы модели («кто платил?»); nil/пусто — вопросов нет.
     let questions: [String]?
+    /// Остаток распознаваний ПОСЛЕ этой попытки.
+    ///
+    /// Опционально: сервер до 1.7 его не отдавал, а офлайн-кеш мог сохранить
+    /// ответ без этого поля — строгий decode уронил бы весь разбор.
+    var quota: AiQuota?
 
     /// Вопросы без опциональности.
     var questionList: [String] { questions ?? [] }
@@ -817,4 +830,43 @@ struct AuthResponse: Codable {
 struct LinkedProvidersResponse: Codable {
     let user: Me
     let warning: String?
+}
+
+// MARK: - Тариф и лимит распознаваний
+
+/// Тариф пользователя. Считает его СЕРВЕР — клиент только показывает.
+enum Tier: String, Codable, Hashable {
+    case free
+    case plus
+}
+
+/// Остаток распознаваний на сегодня.
+///
+/// Приезжает двумя путями: `GET /me/ai-quota` на холодный старт экрана и полем
+/// `quota` в ответе на распознавание. Второе важнее: счётчик меняется ровно в
+/// момент распознавания, и отдельный запрос за остатком был бы и лишним
+/// round-trip, и гонкой.
+struct AiQuota: Codable, Hashable {
+    let tier: Tier
+    let limit: Int
+    let used: Int
+    let remaining: Int
+    let unlimited: Bool
+    let resetsAt: Date
+
+    /// Через сколько обновится лимит. Показываем именно «через N ч», а не
+    /// «в 00:00»: обнуление идёт по UTC, и для человека в другом поясе
+    /// полночь — неправда.
+    var resetsIn: TimeInterval { max(0, resetsAt.timeIntervalSinceNow) }
+}
+
+/// Состояние подписки для экрана управления.
+struct SubscriptionState: Codable, Hashable {
+    let tier: Tier
+    var store: String?
+    var productId: String?
+    var expiresAt: Date?
+    var autoRenew: Bool = false
+    /// Куда вести за отменой: отменяет магазин, а не приложение.
+    var manageUrl: String?
 }

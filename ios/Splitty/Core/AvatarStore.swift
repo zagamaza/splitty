@@ -35,7 +35,7 @@ final class AvatarStore {
             }
         } catch let error as APIError {
             guard started == generation else { return }
-            if case .server(let status, _, _) = error, status == 404 {
+            if case .server(let status, _, _, _) = error, status == 404 {
                 missing.insert(userId)
             }
             // прочие ошибки (сеть) — не кешируем, попробуем ещё раз
@@ -75,7 +75,7 @@ final class AvatarStore {
             guard started == generation else { return }
             // 403/404 — файла нет или он не наш: повторять незачем. Сетевые
             // ошибки не кешируем, попробуем ещё раз.
-            if case .server(let status, _, _) = error, status == 404 || status == 403 {
+            if case .server(let status, _, _, _) = error, status == 404 || status == 403 {
                 missingFiles.insert(fileId)
             }
         } catch {

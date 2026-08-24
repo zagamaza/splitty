@@ -29,16 +29,26 @@ enum AppTheme: String, CaseIterable {
 /// во все view через environment.
 @main
 struct SplittyApp: App {
-    @State private var session = SessionStore()
+    @State private var session: SessionStore
+    /// Тариф и остаток распознаваний. Живёт рядом с сессией: тариф привязан к
+    /// аккаунту, и при смене человека состояние обязано перечитаться.
+    @State private var subscriptions: SubscriptionStore
     @AppStorage(AppTheme.storageKey) private var themeRaw = AppTheme.system.rawValue
     // UIKit-делегат нужен для инициализации push (Firebase + APNs), SwiftUI-
     // жизненный цикл сохраняется.
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
+    init() {
+        let session = SessionStore()
+        _session = State(initialValue: session)
+        _subscriptions = State(initialValue: SubscriptionStore(api: session.api))
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(session)
+                .environment(subscriptions)
                 .tint(.accent)
                 // Все цветовые токены адаптивные (light/dark) — override схемы
                 // на корне переключает их во всей иерархии.
@@ -51,6 +61,7 @@ struct SplittyApp: App {
                     // Бейдж обязан появляться до открытия раздела — иначе
                     // счётчик показывался бы ровно тогда, когда его гасят.
                     await session.refreshUnreadCount()
+                    await subscriptions.bootstrap()
                 }
                 // Логин/логаут → (пере)регистрация FCM-токена. Отвязка при выходе
                 // делается ЯВНО в AccountView до logout (там JWT ещё валиден).

@@ -196,6 +196,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.datastore.preferences)
+    implementation(libs.billing.ktx)
 
     // Вход через Google: системный выбор аккаунта (Credential Manager) +
     // провайдер Play Services под ним + разбор GoogleIdTokenCredential.

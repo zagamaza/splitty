@@ -13,7 +13,7 @@
     <string name="login_prop_once_title">Paga una sola vez</string>
     <string name="login_prop_once_body">Las deudas se compensan: una transferencia en vez de varias</string>
     <string name="login_prop_money_title">El dinero lo enviáis vosotros</string>
-    <string name="login_prop_money_body">Splitty solo lleva la cuenta</string>
+    <string name="login_prop_money_body">Splitor solo lleva la cuenta</string>
     <string name="login_google_button">Entrar con Google</string>
     <string name="google_sign_in_no_activity">No se pudo abrir la ventana de Google. Inténtalo de nuevo</string>
     <string name="login_email_disclosure_prefix">O</string>
@@ -249,7 +249,7 @@
     <string name="group_currency_change_title">¿Cambiar la moneda a %1$s?</string>
     <string name="group_currency_change_confirm">Cambiar a %1$s</string>
     <string name="group_currency_change_message">Los importes no se convierten: solo cambia el símbolo, para todo el grupo</string>
-    <string name="group_invite_message">Únete al grupo «%1$s» en Splitty: %2$s\nCódigo del grupo: %3$s</string>
+    <string name="group_invite_message">Únete al grupo «%1$s» en Splitor: %2$s\nCódigo del grupo: %3$s</string>
 
     <!-- Группы: карточка операции -->
     <string name="op_title_expense">Gasto</string>
@@ -409,10 +409,10 @@
     <string name="rec_review_title">Grabado</string>
     <string name="rec_review_subtitle">Grabación de voz · %1$d s</string>
     <string name="ai_disclosure_title">El reconocimiento ocurre en el servidor</string>
-    <string name="ai_disclosure_message">La grabación de voz y la foto del recibo se envían al servidor de Splitty y a un modelo de terceros que las convierte en un gasto. El gasto se queda en tu grupo.</string>
+    <string name="ai_disclosure_message">La grabación de voz y la foto del recibo se envían al servidor de Splitor y a un modelo de terceros que las convierte en un gasto. El gasto se queda en tu grupo.</string>
     <string name="ai_disclosure_ok">Entendido</string>
-    <string name="rec_review_privacy_voice">La grabación se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento</string>
-    <string name="rec_review_privacy_photo">La foto se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento</string>
+    <string name="rec_review_privacy_voice">La grabación se envía al servidor de Splitor y a un modelo de terceros para el reconocimiento</string>
+    <string name="rec_review_privacy_photo">La foto se envía al servidor de Splitor y a un modelo de terceros para el reconocimiento</string>
     <string name="rec_review_recognize">Reconocer</string>
     <string name="rec_review_add_photo">Añadir foto del recibo</string>
     <string name="rec_review_add_photo_hint">los precios del recibo son más exactos</string>
@@ -456,7 +456,7 @@
     <string name="settleup_submit">Registrar pago</string>
     <string name="settleup_already_settled">Esta deuda ya está saldada</string>
     <string name="settleup_back_to_list">Volver a las deudas</string>
-    <string name="settleup_records_only">Splitty solo lo anota: el dinero se entrega en efectivo o por transferencia</string>
+    <string name="settleup_records_only">Splitor solo lo anota: el dinero se entrega en efectivo o por transferencia</string>
     <string name="settleup_offline_caption">Saldar solo funciona en línea</string>
     <string name="profile_app_version">Versión %1$s (%2$d)</string>
 
@@ -481,7 +481,7 @@
     <string name="error_ai_disabled">El reconocimiento no está disponible ahora mismo</string>
     <string name="error_server_status">Error del servidor (%1$d)</string>
     <string name="error_invalid_url">Dirección del servidor incorrecta</string>
-    <string name="error_identity_taken">Esta cuenta ya está vinculada a otro perfil de Splitty. Entra con ese</string>
+    <string name="error_identity_taken">Esta cuenta ya está vinculada a otro perfil de Splitor. Entra con ese</string>
     <string name="error_identity_already_linked">Ya hay otra cuenta de esta forma de entrar vinculada. Desvincula la actual primero</string>
     <string name="error_last_identity">No puedes desvincular tu única forma de entrar. Vincula otra primero</string>
     <string name="error_provider_rejected">No se pudo confirmar la cuenta. Inténtalo de nuevo</string>
@@ -619,14 +619,14 @@
     <string name="welcome_rcpt_count">2 pos.</string>
     <string name="welcome_rcpt_total">Total</string>
     <string name="welcome_3_title">Quién pagó cuánto</string>
-    <string name="welcome_3_body">Splitty reparte cada gasto entre los participantes. Cena 600 entre tres — 200 cada uno, taxi 300 — 100 cada uno.</string>
+    <string name="welcome_3_body">Splitor reparte cada gasto entre los participantes. Cena 600 entre tres — 200 cada uno, taxi 300 — 100 cada uno.</string>
     <string name="welcome_paid_anya">Anya</string>
     <string name="welcome_paid_borya">Borya</string>
     <string name="welcome_split_three">dividimos entre tres</string>
     <string name="welcome_you_paid_nothing">Tú</string>
     <string name="welcome_your_share">no pagaste nada</string>
     <string name="welcome_4_title">Paga una sola vez</string>
-    <string name="welcome_4_body">Tus 300 ₽ salen en una transferencia y no en dos: Splitty compensa las deudas dentro del grupo.</string>
+    <string name="welcome_4_body">Tus 300 ₽ salen en una transferencia y no en dos: Splitor compensa las deudas dentro del grupo.</string>
     <string name="welcome_you_transfer">Tú transfieres</string>
     <string name="welcome_to_anya">A Anya</string>
     <string name="welcome_to_borya">A Borya</string>
@@ -643,9 +643,34 @@
     <string name="welcome_settled">en paz</string>
     <string name="welcome_note_without">Dos transferencias, dos confirmaciones</string>
     <string name="welcome_note_with">Sus 100 ₽ van a Anya con los tuyos</string>
-    <string name="welcome_without">Sin Splitty</string>
-    <string name="welcome_with">Con Splitty</string>
+    <string name="welcome_without">Sin Splitor</string>
+    <string name="welcome_with">Con Splitor</string>
 
     <string name="invite_friends_hint">Puedes invitar a quien ya compartió un grupo contigo. A alguien nuevo — por enlace o código de invitación.</string>
     <string name="group_alone_hint">Los gastos se reparten entre los participantes — mientras estés solo, no hay nada que repartir.</string>
+    <string name="error_ai_quota_exceeded">Se acabaron los reconocimientos de hoy</string>
+    <string name="error_receipt_other_account">Esta suscripción pertenece a otra cuenta de Splitor</string>
+    <string name="error_subscriptions_disabled">Las compras no están disponibles ahora</string>
+    <string name="plus_title">Splitor Plus</string>
+    <string name="plus_hero_phrase">«Cena 3200, dividida entre cuatro»</string>
+    <string name="plus_hero_expense">Cena</string>
+    <string name="plus_hero_split">A partes iguales entre cuatro</string>
+    <string name="plus_stubs_left">Quedan %1$d de %2$d</string>
+    <string name="plus_stubs_none">Se acabaron los reconocimientos de hoy</string>
+    <string name="plus_mic_remaining">Quedan %1$d reconocimientos</string>
+    <string name="plus_buy">Suscribirse por %1$s</string>
+    <string name="plus_renewal_notice">%1$s por %2$s. Se renueva automáticamente; cancela en Google Play</string>
+    <string name="plus_period_month">mes</string>
+    <string name="plus_period_year">año</string>
+    <string name="plus_add_manually">Añadir gasto manualmente</string>
+    <string name="plus_restore">Restaurar compras</string>
+    <string name="plus_terms">Términos</string>
+    <string name="plus_privacy">Privacidad</string>
+    <string name="plus_products_failed">No se pudieron cargar los planes. Revisa la conexión e inténtalo de nuevo</string>
+    <string name="plus_status_active">Activa hasta el %1$s</string>
+    <string name="plus_status_free">Plan gratuito · %1$d reconocimientos al día</string>
+    <string name="plus_manage">Gestionar suscripción</string>
+    <string name="plus_purchase_pending_server">El pago se realizó, pero aún no pudimos confirmarlo. Revisa la conexión: el acceso aparecerá solo</string>
+    <string name="plus_purchase_failed">No se pudo completar la compra</string>
+    <string name="plus_nothing_to_restore">No hay compras para restaurar</string>
 </resources>

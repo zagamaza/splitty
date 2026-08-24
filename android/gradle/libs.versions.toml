@@ -27,6 +27,9 @@ junit = "4.13.2"
 # устройства, Roborazzi снимает/сверяет PNG. Robolectric 4.13 — под кэш SDK 34.
 robolectric = "4.13"
 roborazzi = "1.44.0"
+# Play Billing 7: покупка подписки Splitor Plus. Подтверждение покупки делает
+# СЕРВЕР после проверки токена — клиент лишь дожидается успеха.
+billing = "7.1.1"
 # Раздача релизных сборок тестерам (Task 14).
 firebaseAppDistribution = "5.1.1"
 firebaseCrashlyticsPlugin = "3.0.6"
@@ -46,6 +49,7 @@ credentials = "1.5.0"
 googleid = "1.1.1"
 
 [libraries]
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }

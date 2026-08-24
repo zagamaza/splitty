@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/caarlos0/env/v6"
@@ -117,8 +118,66 @@ type config struct {
 	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`
 	GeminiModel       string `env:"GEMINI_MODEL" envDefault:"gemini-3.1-flash-lite"`
 	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
-	AiParseDailyQuota int    `env:"AI_PARSE_DAILY_QUOTA" envDefault:"50"`
 	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
+
+	// Суточные лимиты распознавания по тарифам. -1 — безлимит.
+	//
+	// ⚠️ Именно -1, а не 0: с нулём-как-безлимитом любая пустая или битая
+	// переменная тихо раздавала бы безлимит всем, то есть ошибка конфигурации
+	// оплачивалась бы деньгами за Gemini. С -1 неверное значение — это ноль
+	// разрешённых распознаваний, заметная поломка; ноль отвергается на старте
+	// (см. validate).
+	//
+	// AiLegacyDailyQuota — для сборок, не присылающих X-Client-Version. Они
+	// физически не умеют показать экран оплаты, и урезать их до бесплатных пяти
+	// значило бы сломать распознавание всем, кто ещё не обновился, не дав пути
+	// заплатить. Это ramp совместимости, а НЕ граница безопасности: клиент
+	// может заголовок не слать. Опустить до Free после раскатки 1.7.
+	//
+	// AiParseDailyQuota — прежнее имя AiFreeDailyQuota, читается для
+	// совместимости с уже задеплоенным окружением и, если задано, побеждает
+	// дефолт (см. initConfig).
+	AiFreeDailyQuota   int `env:"AI_FREE_DAILY_QUOTA" envDefault:"5"`
+	AiPlusDailyQuota   int `env:"AI_PLUS_DAILY_QUOTA" envDefault:"-1"`
+	AiLegacyDailyQuota int `env:"AI_LEGACY_DAILY_QUOTA" envDefault:"50"`
+	AiParseDailyQuota  int `env:"AI_PARSE_DAILY_QUOTA" envDefault:"0"`
+
+	// Подписка Splitor Plus.
+	//
+	// PlusCompUserIds — тариф без покупки: владелец проекта и демо-аккаунт
+	// ревьюера магазина. Ревьюеру нужен рабочий Plus, а сандбокс-чеки на проде
+	// не принимаются (см. StoreAllowedEnvironment). int64 по той же причине,
+	// что и ReviewUserId, — см. комментарий выше.
+	//
+	// PlusDeliverySlack — запас на задержку ДОСТАВКИ уведомления о продлении,
+	// а НЕ собственный grace-период: продление и billing retry стора уже
+	// отражены в дате окончания, и свои сутки поверх раздавали бы платное
+	// бесплатно.
+	//
+	// StoreAllowedEnvironment — какие чеки принимает этот инстанс. На проде
+	// только Production: sandbox-подписки бесплатны и продлеваются каждые
+	// несколько минут, то есть дали бы вечный Plus даром.
+	//
+	// PlusProductIds — белый список: чек на любой другой продукт (в том числе
+	// чужого приложения того же аккаунта) не должен включать Plus.
+	PlusCompUserIds         []int64       `env:"PLUS_COMP_USER_IDS" envSeparator:":" envDefault:""`
+	PlusDeliverySlack       time.Duration `env:"PLUS_DELIVERY_SLACK" envDefault:"2h"`
+	PlusTierCacheTTL        time.Duration `env:"PLUS_TIER_CACHE_TTL" envDefault:"1m"`
+	StoreAllowedEnvironment string        `env:"STORE_ALLOWED_ENVIRONMENT" envDefault:"Production"`
+	PlusProductIds          []string      `env:"PLUS_PRODUCT_IDS" envSeparator:":" envDefault:"com.zagir.splitty.plus.monthly:com.zagir.splitty.plus.yearly"`
+
+	// Ключи проверки чеков. Пустые — покупки выключены: эндпоинты подписки
+	// отдают 503, все считаются бесплатными. Та же политика, что у Gemini и FCM.
+	//
+	// ⚠️ AppleIapKeyId — ключ In-App Purchase, ОТДЕЛЬНЫЙ от ключа выкладки
+	// сборок и от APPLE_KEY_ID для Sign in with Apple. AppleIapPrivateKey —
+	// содержимое .p8, а не путь.
+	AppleIapIssuerId   string `env:"APPLE_IAP_ISSUER_ID" envDefault:""`
+	AppleIapKeyId      string `env:"APPLE_IAP_KEY_ID" envDefault:""`
+	AppleIapPrivateKey string `env:"APPLE_IAP_PRIVATE_KEY" envDefault:""`
+	AppleIapBundleId   string `env:"APPLE_IAP_BUNDLE_ID" envDefault:"com.zagir.splitty"`
+	GooglePlaySaJson   string `env:"GOOGLE_PLAY_SA_JSON" envDefault:""`
+	GooglePlayPackage  string `env:"GOOGLE_PLAY_PACKAGE" envDefault:"com.zagir.splitty"`
 
 	// FCM push. Путь к service-account JSON Firebase Admin (см. firebase-service-
 	// account.json, в .gitignore). Пусто — пуши выключены (NoopSender), сервер
@@ -150,5 +209,35 @@ func initConfig() (*config, error) {
 		return cfg, err
 	}
 
+	// Прежнее имя переменной побеждает дефолт нового: окружение, задеплоенное до
+	// введения тарифов, продолжает работать со своим значением, а не проваливается
+	// молча на пять распознаваний в сутки.
+	if cfg.AiParseDailyQuota != 0 {
+		cfg.AiFreeDailyQuota = cfg.AiParseDailyQuota
+	}
+
+	if err := cfg.validate(); err != nil {
+		return cfg, err
+	}
+
 	return cfg, nil
+}
+
+// validate отвергает конфигурацию, которая тихо раздала бы платное бесплатно
+// или, наоборот, сломала бы распознавание всем.
+func (c *config) validate() error {
+	quotas := map[string]int{
+		"AI_FREE_DAILY_QUOTA":   c.AiFreeDailyQuota,
+		"AI_PLUS_DAILY_QUOTA":   c.AiPlusDailyQuota,
+		"AI_LEGACY_DAILY_QUOTA": c.AiLegacyDailyQuota,
+	}
+	for name, v := range quotas {
+		if v == 0 || v < -1 {
+			return fmt.Errorf("%s=%d: допустимы только положительное число или -1 (безлимит)", name, v)
+		}
+	}
+	if c.AiParseRatePerMin <= 0 {
+		return fmt.Errorf("AI_PARSE_RATE_PER_MIN=%d: должно быть положительным", c.AiParseRatePerMin)
+	}
+	return nil
 }

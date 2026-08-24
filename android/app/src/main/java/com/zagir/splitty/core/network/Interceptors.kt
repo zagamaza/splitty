@@ -4,6 +4,7 @@ import com.zagir.splitty.core.session.SessionStore
 import javax.inject.Inject
 import javax.inject.Singleton
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import com.zagir.splitty.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.Response
 
@@ -45,6 +46,13 @@ class AuthInterceptor @Inject constructor(
         var request = chain.request()
         val isAuthEndpoint = request.url.encodedPath.contains("/auth/")
         val token = session.currentToken()
+        // Версия сборки: по ней сервер понимает, умеет ли клиент показать
+        // экран оплаты. Сборки без заголовка получают увеличенный переходный
+        // лимит — иначе распознавание сломалось бы у всех, кто не обновился, и
+        // заплатить им было бы негде.
+        request = request.newBuilder()
+            .header("X-Client-Version", BuildConfig.VERSION_NAME)
+            .build()
         if (token != null && !isAuthEndpoint) {
             request = request.newBuilder()
                 .header("Authorization", "Bearer $token")

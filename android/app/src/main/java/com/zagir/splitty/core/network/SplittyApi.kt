@@ -1,6 +1,9 @@
 package com.zagir.splitty.core.network
 
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.model.AiQuota
+import com.zagir.splitty.core.model.GooglePurchaseBody
+import com.zagir.splitty.core.model.SubscriptionState
 import com.zagir.splitty.core.model.AddMemberBody
 import com.zagir.splitty.core.model.AddMemberResponse
 import com.zagir.splitty.core.model.InviteCard
@@ -73,6 +76,30 @@ interface SplittyApi {
      */
     @POST("api/v1/auth/login")
     suspend fun loginWithPassword(@Body body: PasswordLoginBody): AuthResponse
+
+    // --- Тариф и подписка ---
+
+    /**
+     * Остаток распознаваний. Нужен на холодный старт экрана: при самом
+     * распознавании остаток приезжает в ответе, и опрашивать его отдельно
+     * не приходится.
+     */
+    @GET("api/v1/me/ai-quota")
+    suspend fun aiQuota(): AiQuota
+
+    /** Состояние подписки для экрана управления. */
+    @GET("api/v1/me/subscription")
+    suspend fun subscription(): SubscriptionState
+
+    /**
+     * Отдать серверу токен покупки Google.
+     *
+     * Тариф в ответе — единственный, которому можно верить: локальный ответ
+     * биллинга на устройстве подменяется. Сервер же ещё и ПОДТВЕРЖДАЕТ покупку
+     * у Google, без чего платёж откатится через трое суток.
+     */
+    @POST("api/v1/me/subscription/google")
+    suspend fun submitGooglePurchase(@Body body: GooglePurchaseBody): SubscriptionState
 
     // --- Профиль ---
 

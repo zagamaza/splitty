@@ -19,6 +19,16 @@
     ],
     "shots": [
       {
+        "eyebrow": "ЧЕК",
+        "title": "Кто что ел —\nтот за то и платит",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "ГОЛОСОМ",
+        "title": "Скажите вслух —\nрасход запишется",
+        "screen": "add"
+      },
+      {
         "eyebrow": "ГРУППЫ",
         "title": "Все общие траты\nв одном месте",
         "screen": "groups"
@@ -47,11 +57,6 @@
         "eyebrow": "ДРУЗЬЯ",
         "title": "Долги с друзьями\nсводятся сами",
         "screen": "friends"
-      },
-      {
-        "eyebrow": "ГОЛОСОМ",
-        "title": "Скажите вслух —\nрасход запишется",
-        "screen": "add"
       }
     ]
   },
@@ -75,6 +80,16 @@
     ],
     "shots": [
       {
+        "eyebrow": "THE BILL",
+        "title": "Everyone pays for\nwhat they ordered",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "BY VOICE",
+        "title": "Say it out loud —\nthe expense is saved",
+        "screen": "add"
+      },
+      {
         "eyebrow": "GROUPS",
         "title": "Every shared expense\nin one place",
         "screen": "groups"
@@ -91,7 +106,7 @@
       },
       {
         "eyebrow": "BALANCES",
-        "title": "Who owes whom —\nno calculator",
+        "title": "Who owes whom —\nno calculator needed",
         "screen": "balances"
       },
       {
@@ -101,13 +116,8 @@
       },
       {
         "eyebrow": "FRIENDS",
-        "title": "Balances with friends\nadd up by themselves",
+        "title": "Debts with friends\nnet out on their own",
         "screen": "friends"
-      },
-      {
-        "eyebrow": "VOICE",
-        "title": "Say it out loud —\nthe expense writes itself",
-        "screen": "add"
       }
     ]
   }

@@ -10,16 +10,50 @@ enum APIError: LocalizedError {
     /// Сетевая ошибка (нет соединения, таймаут и т.п.).
     case transport(Error)
     /// Ошибка бэкенда: HTTP-статус + code/message из тела ответа.
-    case server(status: Int, code: String, message: String)
+    ///
+    /// `quota` заполняется только на отказах по лимиту распознавания: экрану
+    /// оплаты нужно показать, что именно закончилось и когда обновится.
+    case server(status: Int, code: String, message: String, quota: AiQuota? = nil)
     /// Не удалось разобрать ответ сервера.
     case decoding(Error)
 
     /// true для 401 — сессию нужно сбросить.
     var isUnauthorized: Bool {
-        if case .server(let status, _, _) = self {
+        if case .server(let status, _, _, _) = self {
             return status == 401
         }
         return false
+    }
+
+    /// true — суточная норма распознаваний исчерпана.
+    ///
+    /// Отдельный признак, а не «просто 429»: на минутный троттл показывается
+    /// спокойный тост, а сюда — экран оплаты. Пока причина была одна, человек,
+    /// тыкнувший микрофон дважды подряд, получал бы предложение заплатить.
+    var isAiQuotaExceeded: Bool {
+        if case .server(_, let code, _, _) = self {
+            return code == "ai_quota_exceeded"
+        }
+        return false
+    }
+
+    /// true — чек оформлен на другой аккаунт Splitor.
+    ///
+    /// Тупик, из которого человек не выберется сам: деньги списаны, а Plus не
+    /// появится, пока он не войдёт в тот аккаунт. Молчать про это нельзя.
+    var isReceiptBoundToOtherAccount: Bool {
+        if case .server(_, let code, _, _) = self {
+            return code == "receipt_belongs_to_other_account"
+        }
+        return false
+    }
+
+    /// Остаток распознаваний из тела ошибки лимита; nil у прочих ошибок.
+    var quota: AiQuota? {
+        if case .server(_, _, _, let quota) = self {
+            return quota
+        }
+        return nil
     }
 
     /// true для 403 — сервер осознанно отказал живому аккаунту (например,
@@ -27,7 +61,7 @@ enum APIError: LocalizedError {
     /// сетевых сбоев, здесь точно известно, что на сервере ничего не
     /// изменилось, — см. `SessionStore.deleteAccount`.
     var isForbidden: Bool {
-        if case .server(let status, _, _) = self {
+        if case .server(let status, _, _, _) = self {
             return status == 403
         }
         return false
@@ -40,7 +74,7 @@ enum APIError: LocalizedError {
     /// висит на `authDeleted` ровно ради повтора, а войти заново нельзя,
     /// личности вычищены. См. `SessionStore.deleteAccount`.
     var isPurgeIncomplete: Bool {
-        if case .server(_, let code, _) = self {
+        if case .server(_, let code, _, _) = self {
             return code == "purge_incomplete"
         }
         return false
@@ -71,7 +105,7 @@ enum APIError: LocalizedError {
             return String(localized: "Некорректный адрес сервера")
         case .transport:
             return String(localized: "Нет соединения с сервером")
-        case .server(let status, let code, let message):
+        case .server(let status, let code, let message, _):
             return message.isEmpty ? Self.fallbackMessage(status: status, code: code) : message
         case .decoding:
             return String(localized: "Не удалось обработать ответ сервера")
@@ -104,6 +138,12 @@ enum APIError: LocalizedError {
             return String(localized: "Неподдерживаемый формат файла")
         case "rate_limited":
             return String(localized: "Слишком много запросов. Попробуйте позже")
+        case "ai_quota_exceeded":
+            return String(localized: "Распознавания на сегодня закончились")
+        case "receipt_belongs_to_other_account":
+            return String(localized: "Эта подписка оформлена на другой аккаунт Splitor")
+        case "subscriptions_disabled":
+            return String(localized: "Покупки сейчас недоступны")
         case "ai_disabled":
             return String(localized: "Распознавание сейчас недоступно")
         default:
@@ -228,6 +268,15 @@ protocol OperationAPI {
 /// Клиент REST API Splitty (контракт — docs/API.md).
 /// Все методы бросают `APIError`.
 final class APIClient: OperationAPI {
+    /// Версия приложения в заголовке `X-Client-Version`.
+    ///
+    /// По ней сервер понимает, умеет ли сборка показать экран оплаты. Сборки
+    /// без заголовка (1.6 и раньше) получают увеличенный переходный лимит:
+    /// урезать их до бесплатных пяти значило бы сломать распознавание тем, кто
+    /// ещё не обновился, и не дать им при этом никакого способа заплатить.
+    static let clientVersion: String =
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+
     /// nil — адрес сервера невалиден: каждый запрос бросит `APIError.invalidURL`
     /// (никакой тихой подмены дефолтным адресом).
     private let baseURL: URL?
@@ -414,6 +463,30 @@ final class APIClient: OperationAPI {
                 authorizationCode: code
             )
         )
+    }
+
+    // MARK: Тариф и подписка
+
+    /// GET /api/v1/me/ai-quota — остаток распознаваний.
+    ///
+    /// Нужен на холодный старт экрана: при самом распознавании остаток
+    /// приезжает в ответе, и опрашивать его отдельно не приходится.
+    func aiQuota() async throws -> AiQuota {
+        try await request("GET", "/api/v1/me/ai-quota")
+    }
+
+    /// GET /api/v1/me/subscription — состояние подписки.
+    func subscription() async throws -> SubscriptionState {
+        try await request("GET", "/api/v1/me/subscription")
+    }
+
+    /// POST /api/v1/me/subscription/apple — отдать серверу подписанный чек.
+    ///
+    /// Тариф в ответе — единственный, которому можно верить: локальное
+    /// состояние StoreKit на устройстве подменяется.
+    func submitAppleReceipt(jws: String) async throws -> SubscriptionState {
+        struct Body: Encodable { let jws: String }
+        return try await request("POST", "/api/v1/me/subscription/apple", body: Body(jws: jws))
     }
 
     // MARK: Профиль
@@ -870,6 +943,11 @@ final class APIClient: OperationAPI {
         }
 
         let error: Payload
+        /// Остаток распознаваний рядом с ошибкой лимита.
+        ///
+        /// Опционально и НЕ внутри `error`: конверт `{"error":{code,message}}`
+        /// разбирают все сборки, включая 1.6, и трогать его форму нельзя.
+        let quota: AiQuota?
     }
 
     private func request<T: Decodable>(
@@ -913,6 +991,7 @@ final class APIClient: OperationAPI {
 
         var request = URLRequest(url: url)
         request.httpMethod = method
+        request.setValue(Self.clientVersion, forHTTPHeaderField: "X-Client-Version")
         if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -982,6 +1061,7 @@ final class APIClient: OperationAPI {
 
         var request = URLRequest(url: url)
         request.httpMethod = method
+        request.setValue(Self.clientVersion, forHTTPHeaderField: "X-Client-Version")
         if let token {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
@@ -1013,7 +1093,8 @@ final class APIClient: OperationAPI {
                 throw APIError.server(
                     status: http.statusCode,
                     code: envelope.error.code,
-                    message: envelope.error.message
+                    message: envelope.error.message,
+                    quota: envelope.quota
                 )
             }
             throw APIError.server(status: http.statusCode, code: "", message: "")

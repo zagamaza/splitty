@@ -26,6 +26,11 @@ import com.zagir.splitty.core.model.itemizedUserIds
 import com.zagir.splitty.core.model.personShares
 import com.zagir.splitty.core.model.shareList
 import com.zagir.splitty.core.money.money
+import android.app.Activity
+import com.android.billingclient.api.ProductDetails
+import com.zagir.splitty.billing.PurchaseOutcome
+import com.zagir.splitty.billing.SubscriptionRepository
+import com.zagir.splitty.core.model.AiQuota
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -649,8 +654,65 @@ class AddExpenseViewModel @Inject constructor(
     private val outboxStore: OutboxStore,
     private val outboxSyncer: OutboxSyncer,
     private val savedStateHandle: SavedStateHandle,
+    private val subscriptions: SubscriptionRepository,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
+
+    /**
+     * Суточная норма распознаваний исчерпана — экран показывает paywall.
+     *
+     * Отдельный флаг, а не текст в parseRetryMessage: на минутный троттл
+     * человек видит спокойный тост, а сюда — предложение заплатить. Пока
+     * причина была одна, тыкнувший микрофон дважды подряд получал бы paywall.
+     */
+    private val _isPaywallVisible = MutableStateFlow(false)
+    val isPaywallVisible: StateFlow<Boolean> = _isPaywallVisible.asStateFlow()
+
+    fun showPaywall() { _isPaywallVisible.value = true }
+
+    fun hidePaywall() { _isPaywallVisible.value = false }
+
+    /** Остаток распознаваний и продукты — для paywall и подписи у микрофона. */
+    val plusQuota: StateFlow<AiQuota?> get() = subscriptions.quota
+    val plusProducts: StateFlow<List<ProductDetails>> get() = subscriptions.products
+
+    /**
+     * Остаток для подписи у микрофона; null — показывать её не нужно.
+     *
+     * Порог живёт в репозитории, а не в экране: правило «показывать, только
+     * когда мало» одно на обе платформы, и разъезжаться ему нельзя.
+     */
+    val remainingRecognitions: Int?
+        get() = if (subscriptions.shouldShowRemaining) subscriptions.remaining else null
+
+    /** Покупка подписки с экрана оплаты. */
+    fun purchasePlus(activity: Activity, product: ProductDetails) {
+        viewModelScope.launch {
+            _isPurchasing.value = true
+            try {
+                if (subscriptions.purchase(activity, product) is PurchaseOutcome.Success) {
+                    _isPaywallVisible.value = false
+                }
+            } finally {
+                _isPurchasing.value = false
+            }
+        }
+    }
+
+    /** Восстановление покупок (требование политик обоих магазинов). */
+    fun restorePlus() {
+        viewModelScope.launch {
+            if (subscriptions.restore()) _isPaywallVisible.value = false
+        }
+    }
+
+    private val _isPurchasing = MutableStateFlow(false)
+    val isPurchasing: StateFlow<Boolean> = _isPurchasing.asStateFlow()
+
+    /** Подгружает тарифы при открытии экрана оплаты. */
+    fun loadPlusProducts() {
+        viewModelScope.launch { subscriptions.loadProducts() }
+    }
 
     private val _state = MutableStateFlow<UiState<AddExpenseForm>>(UiState.Loading)
     val state: StateFlow<UiState<AddExpenseForm>> = _state.asStateFlow()
@@ -1160,11 +1222,26 @@ class AddExpenseViewModel @Inject constructor(
                 savedStateHandle.remove<String>(KEY_AUDIO_PATH)
                 savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
                 updateForm { it.applyingParse(response).copy(isParsing = false) }
+                // Остаток приезжает вместе с ответом — счётчик у микрофона
+                // обновляется без единого лишнего запроса.
+                subscriptions.applyQuota(response.quota)
                 persistDraft()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
                 if (generation != parseGeneration) return@launch
+
+                // Суточная норма кончилась: ведём к оплате, а не показываем
+                // ошибку. Черновик и записанное медиа при этом НЕ теряются —
+                // человек возвращается к тому же экрану, докупив или закрыв
+                // paywall.
+                if (e is ApiException && e.isAiQuotaExceeded) {
+                    subscriptions.applyQuota(e.quota)
+                    updateForm { it.copy(isParsing = false) }
+                    _isPaywallVisible.value = true
+                    return@launch
+                }
+
                 updateForm { it.copy(isParsing = false, parseRetryMessage = humanErrorText(e)) }
             }
         }

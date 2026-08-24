@@ -26,6 +26,7 @@ struct AddExpenseView: View {
     private let onDone: (() -> Void)?
 
     @Environment(SessionStore.self) private var session
+    @Environment(SubscriptionStore.self) private var subscriptions
     @Environment(\.dismiss) private var dismiss
     @State private var model = AddExpenseViewModel()
     @State private var isPayerPickerPresented = false
@@ -370,6 +371,17 @@ struct AddExpenseView: View {
                 }
                 .sheet(isPresented: $isPayerPickerPresented) {
                     PayerPickerView(model: model, meId: session.me?.id)
+                }
+                // Экран оплаты: суточная норма распознаваний кончилась.
+                // Черновик и записанный звук при этом остаются на месте —
+                // человек возвращается ровно туда, где был.
+                .sheet(isPresented: Bindable(model).isPaywallPresented) {
+                    PaywallView(store: subscriptions, quota: model.lastQuota ?? subscriptions.quota)
+                }
+                .onChange(of: model.lastQuota) {
+                    // Остаток приехал вместе с ответом на распознавание —
+                    // счётчик обновляется без отдельного запроса.
+                    subscriptions.apply(quota: model.lastQuota)
                 }
                 .sheet(isPresented: $isSplitPickerPresented) {
                     SplitPickerView(model: model, meId: session.me?.id)
@@ -801,11 +813,35 @@ struct AddExpenseView: View {
             .overlay { micTouchSurface }
             .accessibilityLabel("Записать голосом")
             .accessibilityHint("Удерживайте и говорите; свайп вверх — закрепить")
+            micHint
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// Подпись под микрофоном.
+    ///
+    /// Остаток показывается, ТОЛЬКО когда его мало (см. `shouldShowRemaining`).
+    /// Пока распознаваний вдоволь, счётчик молчит: постоянное напоминание о
+    /// лимите превратило бы рабочий экран в витрину подписки.
+    @ViewBuilder
+    private var micHint: some View {
+        if subscriptions.shouldShowRemaining, let remaining = subscriptions.remaining {
+            Button {
+                subscriptions.purchaseError = nil
+                model.isPaywallPresented = true
+            } label: {
+                // Плюрализация обязательна: «Осталось 1 распознаваний» по-русски
+                // неверно, и человек видит это ровно тогда, когда лимит кончается.
+                Text("Осталось \(remaining) распознаваний")
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .footnote)
+                    .foregroundStyle(Color.accentText)
+            }
+            .buttonStyle(.plain)
+        } else {
             Text("Удерживайте, чтобы говорить")
                 .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
                 .foregroundStyle(Color.inkSecondary)
         }
-        .frame(maxWidth: .infinity)
     }
 
     /// Кнопка «фото чека» в нижней панели: снимок уточнит цены/позиции

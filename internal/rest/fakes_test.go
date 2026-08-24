@@ -595,6 +595,20 @@ func (f *fakeUserRepo) RevokeTokens(_ context.Context, userId int, at time.Time)
 	return nil
 }
 
+// EnsureBindingToken повторяет контракт настоящего репозитория: значение
+// стабильно (иначе уже совершённые покупки оторвались бы от аккаунта), а
+// удалённый и несуществующий аккаунт его не получают.
+func (f *fakeUserRepo) EnsureBindingToken(_ context.Context, userId int) (string, error) {
+	u, ok := f.users[userId]
+	if !ok || u.IsDeleted() {
+		return "", mongo.ErrNoDocuments
+	}
+	if u.PurchaseBindingToken == "" {
+		u.PurchaseBindingToken = "binding-" + strconv.Itoa(userId)
+	}
+	return u.PurchaseBindingToken, nil
+}
+
 func (f *fakeUserRepo) RemovePushToken(_ context.Context, userId int, token string) error {
 	u, ok := f.users[userId]
 	if !ok {

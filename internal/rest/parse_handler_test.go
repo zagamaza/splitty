@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,10 +30,32 @@ func (f *fakeParser) Parse(_ context.Context, in ai.ParseInput) (ai.ParseResult,
 }
 
 // unitCounter отдаёт 1 на каждый инкремент — с ratePerMin=0 даёт мгновенный 429.
+// Get возвращает 0: суточное окно пустое, поэтому отказ приходит именно от
+// минутного лимита, а не от исчерпанной квоты.
 type unitCounter struct{}
 
 func (unitCounter) Incr(_ context.Context, _ string, _ time.Duration) (int64, error) {
 	return 1, nil
+}
+
+func (unitCounter) Get(_ context.Context, _ string) (int64, error) { return 0, nil }
+
+// exhaustedCounter имитирует израсходованную суточную норму: окно суток уже
+// заполнено, минутное пустое.
+type exhaustedCounter struct{ quota int64 }
+
+func (c exhaustedCounter) Incr(_ context.Context, key string, _ time.Duration) (int64, error) {
+	if strings.Contains(key, ":day:") {
+		return c.quota + 1, nil
+	}
+	return 1, nil
+}
+
+func (c exhaustedCounter) Get(_ context.Context, key string) (int64, error) {
+	if strings.Contains(key, ":day:") {
+		return c.quota, nil
+	}
+	return 0, nil
 }
 
 // собираем сервер с AI. Лимитер настраиваем на большие значения, чтобы не мешал.
@@ -238,7 +261,7 @@ func TestParse_NoInput400(t *testing.T) {
 func TestParse_RateLimited429(t *testing.T) {
 	room := newTestRoom()
 	fp := &fakeParser{result: okDraft()}
-	limiter := service.NewRateLimiter(unitCounter{}, 0, 100) // ratePerMin=0 → сразу отказ
+	limiter := service.NewRateLimiter(unitCounter{}, 0) // ratePerMin=0 → сразу отказ
 	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), fp, limiter)
 	ct, body := multipartBody(t, map[string]string{"text": "пицца 300"}, nil)
 	rec := doParse(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), ct, body)
@@ -247,5 +270,74 @@ func TestParse_RateLimited429(t *testing.T) {
 	}
 	if fp.called {
 		t.Fatal("parser не должен вызываться при превышении лимита")
+	}
+}
+
+// TestParseDailyQuotaExceededOpensPaywall — исчерпанная суточная норма отдаёт
+// ОТДЕЛЬНЫЙ код, по которому клиент открывает экран оплаты.
+//
+// Пока причина отказа была одна на оба лимита, упёршийся в суточную норму
+// получал то же «слишком часто», что и человек, тыкнувший микрофон дважды
+// подряд, — и заплатить ему никто не предлагал.
+func TestParseDailyQuotaExceededOpensPaywall(t *testing.T) {
+	room := newTestRoom()
+	fp := &fakeParser{result: okDraft()}
+	limiter := service.NewRateLimiter(exhaustedCounter{quota: 5}, 100)
+	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), fp, limiter)
+	s.SetEntitlements(service.NewEntitlements(&stubSubs{}, service.EntitlementsConfig{
+		FreeQuota: 5, PlusQuota: service.UnlimitedQuota, LegacyQuota: 5,
+	}))
+
+	ct, body := multipartBody(t, map[string]string{"text": "пицца 300"}, nil)
+	rec := doParse(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), ct, body)
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", rec.Code)
+	}
+	if fp.called {
+		t.Fatal("parser не должен вызываться при исчерпанной квоте")
+	}
+
+	var env struct {
+		Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("тело не разбирается моделью клиента: %v (%s)", err, rec.Body.String())
+	}
+	if env.Error.Code != errCodeAiQuotaExceeded {
+		t.Errorf("code = %q, want %q — иначе клиент покажет тост вместо paywall", env.Error.Code, errCodeAiQuotaExceeded)
+	}
+	if env.Error.Message == "" {
+		t.Error("пустой message: сборки 1.6 показывают именно его, у них нет строки для нового кода")
+	}
+}
+
+// TestParseMinuteThrottleKeepsOldCode — минутный троттл по-прежнему
+// rate_limited: на него paywall показывать нельзя.
+func TestParseMinuteThrottleKeepsOldCode(t *testing.T) {
+	room := newTestRoom()
+	fp := &fakeParser{result: okDraft()}
+	limiter := service.NewRateLimiter(unitCounter{}, 0)
+	s := newAIServer(t, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room), fp, limiter)
+	s.SetEntitlements(service.NewEntitlements(&stubSubs{}, service.EntitlementsConfig{
+		FreeQuota: 5, PlusQuota: service.UnlimitedQuota, LegacyQuota: 5,
+	}))
+
+	ct, body := multipartBody(t, map[string]string{"text": "пицца 300"}, nil)
+	rec := doParse(t, s, room.ID.Hex(), mustToken(t, s, testUser1.ID), ct, body)
+
+	var env struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
+		t.Fatalf("тело не разбирается: %v", err)
+	}
+	if env.Error.Code != errCodeRateLimited {
+		t.Errorf("code = %q, want %q", env.Error.Code, errCodeRateLimited)
 	}
 }

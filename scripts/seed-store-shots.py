@@ -27,6 +27,46 @@ PASSWORD = os.environ.get("SHOTS_PASSWORD", "20260806")
 
 # Каждому языку — свой протагонист и свои соседи. id соседей постоянные:
 # повторный прогон попадает в тех же людей, а не плодит новых.
+# Расход, РАЗОБРАННЫЙ ПО ПОЗИЦИЯМ. Ради него всё и затевалось: витрине надо
+# показать не «ужин 16 400 ₽», а что распознавание вытащило из чека каждую
+# строку и разложило её по тем, кто это ел. Обычные ops такого не дают —
+# у них только общая сумма и деление поровну.
+#
+# Формат позиции: (название, сумма строки, количество, кто делит).
+# "all" — все участники комнаты.
+ITEMIZED = {
+    "ru": {
+        "room": "Поездка в Стамбул",
+        "description": "Ужин в Кадыкёе",
+        "donor": "me",
+        "items": [
+            ("Дорада на гриле", 3200, 1, ["me", 0]),
+            ("Мидии по-измирски", 1450, 1, [0, 1]),
+            ("Мезе ассорти", 1800, 1, "all"),
+            ("Ракы", 2400, 2, ["me", 1]),
+            ("Чай и лукум", 620, 4, "all"),
+        ],
+        "surcharge": ("Сервисный сбор", 947, 10),
+    },
+    "en": {
+        "room": "Trip to Lisbon",
+        "description": "Dinner in Alfama",
+        "donor": "me",
+        "items": [
+            ("Grilled sea bass", 32, 1, ["me", 0]),
+            ("Clams à Bulhão Pato", 16, 1, [0, 1]),
+            ("Petiscos platter", 20, 1, "all"),
+            ("Vinho verde", 24, 2, ["me", 1]),
+            ("Pastéis de nata", 8, 4, "all"),
+        ],
+        "surcharge": ("Service charge", 10, 10),
+    },
+}
+
+# Валюта комнат по языку витрины. Скриншоты для американского App Store с
+# рублёвыми ценами выглядят так, будто приложение не для этого рынка.
+CURRENCY = {"ru": "RUB", "en": "EUR"}
+
 DATA = {
     "ru": {
         "email": "shots-ru@splitty.test",
@@ -80,14 +120,14 @@ DATA = {
                 "owner": "me",
                 "members": [0, 1, 2],
                 "ops": [
-                    ("Apartment, three nights", 41000, "me", "all"),
-                    ("Dinner at Ramiro", 8400, 0, "all"),
-                    ("Airport taxi", 2600, 1, "all"),
-                    ("Tram 28 day passes", 3200, "me", "all"),
-                    ("Pastéis de Belém", 1150, 2, "all"),
-                    ("Ferry to Cacilhas", 720, 0, "all"),
-                    ("Time Out Market lunch", 5900, "me", "all"),
-                    ("Fado night", 6800, 1, "all"),
+                    ("Apartment, three nights", 410, "me", "all"),
+                    ("Dinner at Ramiro", 84, 0, "all"),
+                    ("Airport taxi", 26, 1, "all"),
+                    ("Tram 28 day passes", 32, "me", "all"),
+                    ("Pastéis de Belém", 12, 2, "all"),
+                    ("Ferry to Cacilhas", 7, 0, "all"),
+                    ("Time Out Market lunch", 59, "me", "all"),
+                    ("Fado night", 68, 1, "all"),
                 ],
             },
             {
@@ -95,10 +135,10 @@ DATA = {
                 "owner": "me",
                 "members": [0],
                 "ops": [
-                    ("August utilities", 9600, "me", "all"),
-                    ("Internet", 1100, 0, "all"),
-                    ("Weekly groceries", 6200, "me", "all"),
-                    ("Cleaning", 4000, 0, "all"),
+                    ("August utilities", 96, "me", "all"),
+                    ("Internet", 29, 0, "all"),
+                    ("Weekly groceries", 62, "me", "all"),
+                    ("Cleaning", 40, 0, "all"),
                 ],
             },
             {
@@ -106,8 +146,8 @@ DATA = {
                 "owner": 2,
                 "members": ["me", 1],
                 "ops": [
-                    ("Firewood and food", 4800, 2, "all"),
-                    ("Gas", 3400, "me", "all"),
+                    ("Firewood and food", 48, 2, "all"),
+                    ("Gas", 34, "me", "all"),
                 ],
             },
         ],
@@ -156,6 +196,58 @@ def account(email, name):
     sys.exit(f"регистрация {email} не удалась: {st} {res}")
 
 
+def seed_itemized(lang, room_name, rid, tokens, ids, everyone, call):
+    """Создаёт расход, разобранный по позициям чека.
+
+    Такой расход выглядит в приложении не строкой с суммой, а чеком: каждая
+    позиция со своей ценой и своим набором едоков. Ради этого кадра витрины он
+    и нужен — обычный расход показать распознавание не может.
+
+    Сумма НЕ задаётся: сервер считает её из позиций сам, и подгонять её руками
+    значило бы однажды разойтись с ним на рубль.
+    """
+    spec = ITEMIZED.get(lang)
+    if not spec or spec["room"] != room_name:
+        return
+
+    def resolve(who):
+        people = everyone if who == "all" else who
+        return [ids[p] for p in people]
+
+    items = []
+    for name, price, qty, who in spec["items"]:
+        items.append({
+            "name": name,
+            "price": price,
+            "qty": qty,
+            "kind": "item",
+            "shares": [{"userId": uid, "weight": 1} for uid in resolve(who)],
+        })
+    if spec.get("surcharge"):
+        name, price, percent = spec["surcharge"]
+        items.append({
+            "name": name,
+            "price": price,
+            "qty": 1,
+            "kind": "surcharge",
+            "split": "proportional",
+            "percent": percent,
+        })
+
+    total = sum(i["price"] for i in items)
+    st, op = call("POST", f"/rooms/{rid}/operations", tokens[spec["donor"]], {
+        "description": spec["description"],
+        "sum": total,
+        "donorId": ids[spec["donor"]],
+        "recipientIds": [ids[p] for p in everyone],
+        "splitType": "equally",
+        "items": items,
+    })
+    if st not in (200, 201):
+        sys.exit(f"расход-чек «{spec['description']}»: {st} {op}")
+    print(f"    чек «{spec['description']}»: позиций {len(items)}, сумма {total}")
+
+
 def seed(lang):
     spec = DATA[lang]
     me_token, me_id, how = account(spec["email"], spec["me"])
@@ -183,6 +275,11 @@ def seed(lang):
             st, res = call("POST", f"/rooms/{rid}/join", tokens[who])
             if st not in (200, 201):
                 sys.exit(f"join в «{room['name']}»: {st} {res}")
+        want = CURRENCY.get(lang)
+        if want:
+            st, res = call("PUT", f"/rooms/{rid}/currency", tokens[room["owner"]], {"currency": want})
+            if st not in (200, 204):
+                sys.exit(f"валюта «{room['name']}» → {want}: {st} {res}")
         everyone = [room["owner"]] + list(room["members"])
         for desc, total, donor, who in room["ops"]:
             recipients = everyone if who == "all" else who
@@ -195,6 +292,7 @@ def seed(lang):
             })
             if st not in (200, 201):
                 sys.exit(f"расход «{desc}»: {st} {op}")
+        seed_itemized(lang, room["name"], rid, tokens, ids, everyone, call)
         print(f"  «{room['name']}» → {rid}, расходов: {len(room['ops'])}")
 
     print(f"[{lang}] вход: {spec['email']} / {PASSWORD}\n")

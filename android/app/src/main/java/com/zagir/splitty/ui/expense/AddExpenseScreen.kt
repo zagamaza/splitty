@@ -32,6 +32,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -118,6 +120,7 @@ import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.components.nudgeHighlight
 import com.zagir.splitty.ui.components.rememberHaptics
+import com.zagir.splitty.ui.paywall.PaywallSheet
 import com.zagir.splitty.ui.theme.Splitty
 
 /**
@@ -156,6 +159,13 @@ fun AddExpenseScreen(
     // Записанное/снятое, но ещё не отправленное: экран разбора (второй источник
     // / распознать / отмена). Состояние живёт во ViewModel (SavedStateHandle) —
     // переживает поворот и смерть процесса вместе с приложенным к форме медиа.
+    // Тариф и остаток: экран оплаты и подпись у микрофона.
+    val isPaywallVisible by viewModel.isPaywallVisible.collectAsStateWithLifecycle()
+    val plusQuota by viewModel.plusQuota.collectAsStateWithLifecycle()
+    val plusProducts by viewModel.plusProducts.collectAsStateWithLifecycle()
+    val remainingRecognitions = viewModel.remainingRecognitions
+    val isPurchasing by viewModel.isPurchasing.collectAsStateWithLifecycle()
+
     val pendingAudioPath by viewModel.pendingAudioPath.collectAsStateWithLifecycle()
     val pendingReceiptPath by viewModel.pendingReceiptPath.collectAsStateWithLifecycle()
 
@@ -359,6 +369,8 @@ fun AddExpenseScreen(
                             onRequestPermission = requestMic,
                             onTalkBackTap = startVoice,
                             onMicFrame = { micFrame = it },
+                            remaining = remainingRecognitions,
+                            onRemainingTap = viewModel::showPaywall,
                         )
                     } else {
                         Row(
@@ -645,6 +657,28 @@ fun AddExpenseScreen(
             },
             title = { Text(stringResource(R.string.common_error_title)) },
             text = { Text(message) },
+        )
+    }
+
+    // Экран оплаты: суточная норма распознаваний кончилась. Черновик и
+    // записанное медиа при этом остаются на месте — человек возвращается ровно
+    // туда, где был.
+    if (isPaywallVisible) {
+        LaunchedEffect(Unit) { viewModel.loadPlusProducts() }
+        PaywallSheet(
+            quota = plusQuota,
+            products = plusProducts,
+            isPurchasing = isPurchasing,
+            isLoadingProducts = plusProducts.isEmpty(),
+            errorMessage = null,
+            onPurchase = viewModel::purchasePlus,
+            onRestore = viewModel::restorePlus,
+            onOpenUrl = { url ->
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                }
+            },
+            onDismiss = viewModel::hidePaywall,
         )
     }
 }
@@ -1950,6 +1984,8 @@ private fun ComposerMicBar(
     onRequestPermission: () -> Unit,
     onTalkBackTap: () -> Unit,
     onMicFrame: (Rect) -> Unit,
+    remaining: Int? = null,
+    onRemainingTap: () -> Unit = {},
 ) {
     val colors = Splitty.colors
     val a11yLabel = stringResource(R.string.expense_record_a11y)
@@ -1992,12 +2028,25 @@ private fun ComposerMicBar(
                 )
             }
         }
-        Text(
-            text = stringResource(R.string.expense_composer_hold),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = colors.inkSecondary,
-        )
+        // Остаток показывается, ТОЛЬКО когда его мало (решает ViewModel).
+        // Пока распознаваний вдоволь, счётчик молчит: постоянное напоминание о
+        // лимите превратило бы рабочий экран в витрину подписки.
+        if (remaining != null) {
+            Text(
+                text = stringResource(R.string.plus_mic_remaining, remaining),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.accentText,
+                modifier = Modifier.clickable(onClick = onRemainingTap),
+            )
+        } else {
+            Text(
+                text = stringResource(R.string.expense_composer_hold),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.inkSecondary,
+            )
+        }
     }
 }
 

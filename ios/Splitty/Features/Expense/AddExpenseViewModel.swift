@@ -94,6 +94,15 @@ final class AddExpenseViewModel {
     /// Ошибка распознавания с возможностью повторить (запись сохранена во вью):
     /// отдельно от `alertMessage`, чтобы алерт мог предложить «Повторить».
     var parseRetryMessage: String?
+    /// Суточная норма распознаваний исчерпана — вью показывает экран оплаты.
+    ///
+    /// Отдельный флаг, а не текст в `parseRetryMessage`: на минутный троттл
+    /// человек видит спокойный тост, а сюда — предложение заплатить. Пока
+    /// причина была одна, тыкнувший микрофон дважды подряд получал бы paywall.
+    var isPaywallPresented = false
+    /// Остаток распознаваний на момент последней попытки: экран оплаты
+    /// показывает, что именно закончилось.
+    var lastQuota: AiQuota?
 
     /// id редактируемой СИНХРОНИЗИРОВАННОЙ операции (nil — создание/локальная).
     private(set) var editOperationId: String?
@@ -539,6 +548,9 @@ final class AddExpenseViewModel {
             )
             // Устаревший ответ (нас обогнал более полный запрос) — выбрасываем.
             guard generation == parseGeneration else { return }
+            // Остаток приезжает вместе с ответом — счётчик у микрофона
+            // обновляется без единого лишнего запроса.
+            lastQuota = response.quota
             apply(parse: response)
             if didRecognize {
                 Haptics.success()
@@ -546,6 +558,16 @@ final class AddExpenseViewModel {
         } catch {
             if error.isTaskCancellation { return }
             guard generation == parseGeneration else { return }
+
+            // Суточная норма кончилась: ведём к оплате, а не показываем ошибку.
+            // Черновик и записанный звук при этом НЕ теряются — человек
+            // возвращается к тому же экрану, докупив или закрыв paywall.
+            if let apiError = error as? APIError, apiError.isAiQuotaExceeded {
+                lastQuota = apiError.quota
+                isPaywallPresented = true
+                return
+            }
+
             // Отдельный канал ошибки парсинга: у вью есть lastAudio, и она
             // предлагает «Повторить» — диктовка НЕ теряется из-за моргнувшей сети.
             parseRetryMessage = humanErrorText(error)
@@ -1067,7 +1089,7 @@ extension APIError {
         switch self {
         case .transport:
             return true
-        case .server(let status, _, _):
+        case .server(let status, _, _, _):
             return status >= 500
         default:
             return false

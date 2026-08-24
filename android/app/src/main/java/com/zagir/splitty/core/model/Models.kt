@@ -93,6 +93,15 @@ data class Me(
      * заново. У профиля без адреса задавать пароль негде: завести адрес нечем.
      */
     val loginEmail: String? = null,
+    /**
+     * Токен привязки покупок: им помечается покупка в Play
+     * (`obfuscatedAccountId`), чтобы чек достоверно принадлежал этому аккаунту.
+     * Нужен ДО покупки, поэтому приезжает вместе с профилем.
+     *
+     * `null` — сервер старый или токена не отдал: покупка уйдёт без пометки, и
+     * сервер примет её как чек со сборки, которая токена не шлёт.
+     */
+    val purchaseBindingToken: String? = null,
 ) {
     /** Привязан ли способ входа к аккаунту. */
     fun isLinked(provider: LoginProvider): Boolean = provider.id in linkedProviders
@@ -402,6 +411,13 @@ data class ParseResponse(
     val draft: ParseDraft,
     /** Уточняющие вопросы модели; null/пусто — вопросов нет. */
     val questions: List<String>? = null,
+    /**
+     * Остаток распознаваний ПОСЛЕ этой попытки.
+     *
+     * Опционально: сервер до 1.7 его не отдавал, а офлайн-кеш мог сохранить
+     * ответ без этого поля — обязательное поле уронило бы весь разбор.
+     */
+    val quota: AiQuota? = null,
 ) {
     /** Вопросы без опциональности. */
     val questionList: List<String> get() = questions ?: emptyList()
@@ -673,4 +689,51 @@ data class Statistics(
 data class AuthResponse(
     val token: String,
     val user: Me,
+)
+
+
+// --- Тариф и лимит распознаваний ---
+
+/** Тариф пользователя. Считает его СЕРВЕР — клиент только показывает. */
+@Serializable
+enum class Tier {
+    @SerialName("free") FREE,
+    @SerialName("plus") PLUS,
+}
+
+/**
+ * Остаток распознаваний на сегодня.
+ *
+ * Приезжает двумя путями: `GET /me/ai-quota` на холодный старт экрана и полем
+ * `quota` в ответе на распознавание. Второе важнее: счётчик меняется ровно в
+ * момент распознавания, и отдельный запрос за остатком был бы и лишним
+ * round-trip, и гонкой.
+ */
+@Serializable
+data class AiQuota(
+    val tier: Tier = Tier.FREE,
+    val limit: Int = 0,
+    val used: Int = 0,
+    val remaining: Int = 0,
+    val unlimited: Boolean = false,
+    val resetsAt: String? = null,
+)
+
+/** Состояние подписки для экрана управления. */
+@Serializable
+data class SubscriptionState(
+    val tier: Tier = Tier.FREE,
+    val store: String? = null,
+    val productId: String? = null,
+    val expiresAt: String? = null,
+    val autoRenew: Boolean = false,
+    /** Куда вести за отменой: отменяет магазин, а не приложение. */
+    val manageUrl: String? = null,
+)
+
+/** Тело запроса подтверждения покупки Google. */
+@Serializable
+data class GooglePurchaseBody(
+    val purchaseToken: String,
+    val productId: String,
 )

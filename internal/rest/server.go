@@ -210,6 +210,19 @@ type Server struct {
 	aiParser    ai.Parser
 	rateLimiter *service.RateLimiter
 	aiMaxBody   int64
+	// entitlements резолвит тариф пользователя И суточный лимит для него —
+	// единственный источник правды по тарифам (см. SetEntitlements)
+	entitlements *service.Entitlements
+	// Подписки: хранилище и проверка чеков магазинов (см. SetSubscriptions).
+	// nil-верификатор — ключи магазина не заданы, эндпоинт отдаёт 503
+	subscriptions  subscriptionStore
+	appleReceipts  ReceiptVerifier
+	googleReceipts ReceiptVerifier
+	googleAck      PurchaseAcknowledger
+	// Перезапрос состояния подписки для уведомлений магазинов
+	// (см. SetStoreWebhooks и правило «не верить payload»)
+	appleStatus  storeStatusReader
+	googleStatus googleStatusReader
 
 	// authThrottle гасит перебор одноразовых кодов входа (см. throttle.go)
 	authThrottle *throttle
@@ -310,6 +323,15 @@ func (s *Server) SetFiles(store fileStore) {
 	s.files = store
 }
 
+// SetEntitlements подключает резолв тарифа — единственный источник правды о
+// том, платный ли человек и какой у него суточный лимит. Отдельный setter, а не
+// параметр NewServer: иначе пришлось бы править каждый вызов конструктора.
+//
+// nil означает «тарифов нет»: лимит безлимитный, то есть сервер ведёт себя как
+// до их введения. Ноль здесь означал бы «ноль распознаваний» и тихо сломал бы
+// фичу там, где её просто не настраивали.
+func (s *Server) SetEntitlements(e *service.Entitlements) { s.entitlements = e }
+
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
 // nil parser оставляет фичу выключенной (503). Отдельный setter, а не параметр
 // NewServer — не ломает существующие вызовы конструктора в тестах.
@@ -364,6 +386,13 @@ func (s *Server) Handler() http.Handler {
 	// страницу читает ревьюер, у которого аккаунта нет
 	mux.HandleFunc("GET /privacy", s.handlePrivacyPolicy)
 	mux.HandleFunc("GET /account-deletion", s.handleAccountDeletion)
+	// /terms — вторая обязательная ссылка с экрана оплаты (Guideline 3.1.2)
+	mux.HandleFunc("GET /terms", s.handleSubscriptionTerms)
+	// Уведомления магазинов о подписках. Без s.auth: их аутентифицирует не наш
+	// JWT, а сам факт, что состояние мы перезапрашиваем у магазина по своему
+	// ключу — содержимому уведомления мы не верим (см. store_webhooks.go)
+	mux.HandleFunc("POST /api/v1/webhooks/apple", s.handleAppleStoreWebhook)
+	mux.HandleFunc("POST /api/v1/webhooks/google", s.handleGoogleStoreWebhook)
 	// Вход через Telegram Login Widget для нативных клиентов: /tg-auth уводит
 	// на oauth.telegram.org с нашим origin, /tg-callback возвращает результат
 	// в приложение через splitty:// (см. tg_callback.go). Оба публичные:
@@ -377,6 +406,10 @@ func (s *Server) Handler() http.Handler {
 	// ПОВТОРИТЬ удаление, иначе запрос, упавший после tombstone, некому довести
 	// до конца — обычный auth отверг бы его 401 (см. handleDeleteMe)
 	mux.Handle("DELETE /api/v1/me", s.authDeleted(s.handleDeleteMe))
+	mux.Handle("GET /api/v1/me/ai-quota", s.auth(s.handleGetAiQuota))
+	mux.Handle("GET /api/v1/me/subscription", s.auth(s.handleGetSubscription))
+	mux.Handle("POST /api/v1/me/subscription/apple", s.auth(s.handlePostAppleSubscription))
+	mux.Handle("POST /api/v1/me/subscription/google", s.auth(s.handlePostGoogleSubscription))
 	mux.Handle("GET /api/v1/me/notifications", s.auth(s.handleGetNotifications))
 	mux.Handle("PATCH /api/v1/me/notifications", s.auth(s.handlePatchNotifications))
 	mux.Handle("POST /api/v1/me/devices", s.auth(s.handleRegisterDevice))
@@ -585,4 +618,16 @@ func writeJSON(w http.ResponseWriter, status int, body interface{}) {
 
 func writeError(w http.ResponseWriter, status int, code string, message string) {
 	writeJSON(w, status, errorResponse{Error: errorBody{Code: code, Message: message}})
+}
+
+// writeErrorWithQuota — ошибка лимита вместе с состоянием квоты.
+//
+// Отдельный writer, а не третье поле в errorResponse: quota имеет смысл ровно
+// на двух кодах отказа, и таскать пустой объект в каждой ошибке сервера
+// (включая 500 и 404) незачем.
+func writeErrorWithQuota(w http.ResponseWriter, status int, code, message string, quota quotaDto) {
+	writeJSON(w, status, quotaErrorResponse{
+		Error: errorBody{Code: code, Message: message},
+		Quota: quota,
+	})
 }
