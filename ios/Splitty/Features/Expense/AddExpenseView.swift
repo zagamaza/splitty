@@ -165,6 +165,23 @@ struct AddExpenseView: View {
             if let toast = model.toastMessage {
                 toastView(toast).zIndex(3)
             }
+            #if DEBUG
+            if let demo = DemoRecording.fromEnvironment {
+                RecordingOverlay(
+                    isActive: true,
+                    transcript: demo.transcript,
+                    isCancelling: false,
+                    isLocked: true,
+                    isPreparing: false,
+                    drag: .zero,
+                    startedAt: demo.startedAt,
+                    level: 0.55,
+                    micFrame: micButtonFrame
+                )
+                .allowsHitTesting(false)
+                .zIndex(4)
+            }
+            #endif
         }
         .animation(.spring(duration: 0.3), value: model.toastMessage)
         .animation(.spring(duration: 0.25), value: isReviewPresented)

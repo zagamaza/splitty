@@ -19,14 +19,14 @@
     ],
     "shots": [
       {
+        "eyebrow": "ГОЛОСОМ",
+        "title": "Скажите вслух —\nрасход готов",
+        "screen": "add"
+      },
+      {
         "eyebrow": "ЧЕК",
         "title": "Кто что ел —\nтот за то и платит",
         "screen": "receipt"
-      },
-      {
-        "eyebrow": "ГОЛОСОМ",
-        "title": "Скажите вслух —\nрасход запишется",
-        "screen": "add"
       },
       {
         "eyebrow": "ГРУППЫ",
@@ -80,14 +80,14 @@
     ],
     "shots": [
       {
+        "eyebrow": "BY VOICE",
+        "title": "Say it out loud —\nthe expense is done",
+        "screen": "add"
+      },
+      {
         "eyebrow": "THE BILL",
         "title": "Everyone pays for\nwhat they ordered",
         "screen": "receipt"
-      },
-      {
-        "eyebrow": "BY VOICE",
-        "title": "Say it out loud —\nthe expense is saved",
-        "screen": "add"
       },
       {
         "eyebrow": "GROUPS",

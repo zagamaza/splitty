@@ -12,8 +12,20 @@ import XCTest
 /// Путь печатается в лог, забрать оттуда проще, чем выковыривать вложения
 /// из result-бандла.
 ///
-///   xcodebuild test -only-testing:SplittyUITests/StoreShotsUITests \
-///     SHOTS_LANG=ru SHOTS_EMAIL=shots-ru@splitty.test
+/// Переменные раннеру передаются ТОЛЬКО с префиксом `TEST_RUNNER_` — он
+/// снимается на входе в процесс. Без префикса `SHOTS_LANG=en` уходит в
+/// настройки сборки, тест его не видит и молча снимает русский набор.
+///
+/// Симулятор перед сменой языка надо стирать: токен входа лежит в keychain,
+/// а он переживает переустановку — иначе английский прогон логинится русским
+/// аккаунтом и снимает пустой список групп.
+///
+///   xcrun simctl shutdown booted && xcrun simctl erase <udid>
+///   xcrun simctl boot <udid>
+///   xcrun simctl status_bar <udid> override --time 9:41 --cellularBars 4 \
+///     --wifiBars 3 --batteryState charging --batteryLevel 100
+///   TEST_RUNNER_SHOTS_LANG=en TEST_RUNNER_SHOTS_EMAIL=shots-en@splitty.test \
+///     xcodebuild test -only-testing:SplittyUITests/StoreShotsUITests …
 final class StoreShotsUITests: XCTestCase {
 
     /// Подписи, по которым тест ищет элементы, — по одному набору на локаль.
@@ -30,6 +42,10 @@ final class StoreShotsUITests: XCTestCase {
         let rooms: [String]
         /// Расход, разобранный по позициям чека: главный кадр витрины.
         let receiptExpense: String
+        /// Красная подсказка композера: если она в кадре — группа не выбрана.
+        let pickRoomWarning: String
+        /// Кнопка ручного ввода — по ней узнаём, что композер реально открылся.
+        let manualEntry: String
         let emailDisclosure = "emailLoginDisclosure"
     }
 
@@ -40,7 +56,9 @@ final class StoreShotsUITests: XCTestCase {
             totals: "Итоги", settle: "Погасить", firstRoom: "Поездка в Стамбул",
             balances: "Балансы",
             rooms: ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"],
-            receiptExpense: "Ужин в Кадыкёе"
+            receiptExpense: "Ужин в Кадыкёе",
+            pickRoomWarning: "Сначала выберите группу",
+            manualEntry: "Ввести вручную"
         ),
         "en": Labels(
             appleLanguage: "en", locale: "en_US",
@@ -48,7 +66,9 @@ final class StoreShotsUITests: XCTestCase {
             totals: "Totals", settle: "Settle up", firstRoom: "Trip to Lisbon",
             balances: "Balances",
             rooms: ["Weekend cabin", "Flat share", "Trip to Lisbon"],
-            receiptExpense: "Dinner in Alfama"
+            receiptExpense: "Dinner in Alfama",
+            pickRoomWarning: "Pick a group first",
+            manualEntry: "Enter manually"
         ),
     ]
 
@@ -134,12 +154,27 @@ final class StoreShotsUITests: XCTestCase {
         app.tabBars.buttons[labels.tabFriends].tap()
         settle(); shoot(app, "friends")
 
+        // Композер надиктовки — главный кадр витрины, и снимать его в покое
+        // бессмысленно: продаёт нас момент, когда сказанное на глазах
+        // становится текстом. Микрофона у симулятора нет, поэтому оверлей
+        // записи поднимает Debug-заготовка (`SPLITTY_DEMO_RECORDING`), а
+        // переменную можно задать только при запуске — отсюда перезапуск.
+        app.terminate()
+        app.launchEnvironment["SPLITTY_DEMO_RECORDING"] = "1"
+        app.launch()
+        relogin(app, email: env["SHOTS_EMAIL"] ?? "shots-ru@splitty.test",
+                password: env["SHOTS_PASSWORD"] ?? "20260806")
+
         tapAddTab(app)
+        XCTAssertTrue(app.buttons[labels.manualEntry].waitForExistence(timeout: 15),
+                      "композер не открылся — в кадр уедет список групп")
         settle(1.5)
         // Без выбранной группы экран показывает красное «Сначала выберите
         // группу» и гасит кнопки — витрине нужен рабочий вид, а не заглушка.
-        pickAnyGroupChip(app)
+        XCTAssertTrue(pickAnyGroupChip(app), "композер не открылся: не видно чипов групп")
         settle(1.2)
+        XCTAssertFalse(app.staticTexts[labels.pickRoomWarning].exists,
+                       "группа не выбралась — в кадр попадёт красное предупреждение")
         shoot(app, "add")
 
         print("СКРИНЫ: \(shotsDir.path), кадров: \(index)")
@@ -148,27 +183,39 @@ final class StoreShotsUITests: XCTestCase {
     /// Выбирает группу в композере расхода. Порядок в [Labels.rooms] — как на
     /// экране: тап по дальнему чипу прокручивает ряд, и левый край режет слово
     /// пополам прямо в кадре витрины.
-    private func pickAnyGroupChip(_ app: XCUIApplication) {
+    @discardableResult
+    private func pickAnyGroupChip(_ app: XCUIApplication) -> Bool {
         for name in labels.rooms {
-            let chip = app.buttons[name].firstMatch
-            if chip.exists, chip.isHittable {
+            let chip = app.scrollViews.buttons[name].firstMatch
+            if chip.waitForExistence(timeout: 5), chip.isHittable {
                 chip.tap()
-                return
+                return true
             }
         }
+        return false
     }
 
-    /// Центральная вкладка «+»: у неё может не быть текстовой подписи, поэтому
-    /// сначала пробуем по имени, а иначе берём среднюю кнопку таб-бара.
+    /// Вход после перезапуска: сессия обычно переживает его, и тогда логиниться
+    /// заново не надо — но полагаться на это нельзя.
+    private func relogin(_ app: XCUIApplication, email: String, password: String) {
+        if app.tabBars.buttons[labels.tabGroups].waitForExistence(timeout: 12) { return }
+        login(app, email: email, password: password)
+        XCTAssertTrue(app.tabBars.buttons[labels.tabGroups].waitForExistence(timeout: 20),
+                      "после перезапуска вход не прошёл")
+    }
+
+    /// Центральная кнопка «+» композера.
+    ///
+    /// В иерархии она НЕ внутри `tabBars`, а обычной кнопкой поверх него —
+    /// поиск по `app.tabBars.buttons` промахивался, откат «средняя кнопка
+    /// таб-бара» жал соседний таб, и витрине уезжал кадр со списком групп под
+    /// заголовком «Скажите вслух». Ищем так же, как PaywallShotUITests.
     private func tapAddTab(_ app: XCUIApplication) {
-        let named = app.tabBars.buttons[labels.tabAdd]
-        if named.exists {
-            named.tap()
-            return
+        let named = app.buttons[labels.tabAdd].firstMatch
+        guard named.waitForExistence(timeout: 10) else {
+            return XCTFail("нет кнопки композера «\(labels.tabAdd)»")
         }
-        let buttons = app.tabBars.buttons
-        guard buttons.count > 0 else { return XCTFail("таб-бар пуст") }
-        buttons.element(boundBy: buttons.count / 2).tap()
+        named.tap()
     }
 
     /// Вход по email: форма живёт в шторке за ссылкой внизу экрана.
