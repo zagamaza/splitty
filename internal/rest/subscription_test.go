@@ -403,3 +403,61 @@ func TestMeExposesPurchaseBindingToken(t *testing.T) {
 	}
 }
 
+
+// TestSandboxReceiptOnlyForListedUsers — чек песочницы принимается лишь от тех,
+// кто перечислен в SetSandboxReceipts.
+//
+// Ревьюер магазина покупает в песочнице, и отказ по окружению показал бы ему
+// сломанную кнопку «Оформить» — отказ по 2.1. Всем подряд песочницу открывать
+// нельзя: такие подписки бесплатны и продлеваются каждые несколько минут.
+func TestSandboxReceiptOnlyForListedUsers(t *testing.T) {
+	sandboxReceipt := goodReceipt()
+	sandboxReceipt.Environment = api.EnvSandbox
+
+	newServer := func(subs *fakeSubStore, allowed []int) *Server {
+		prod := &fakeVerifier{err: store.ErrWrongEnvironment}
+		s := subServer(t, subs, prod, nil)
+		s.SetSandboxReceipts(allowed, &fakeVerifier{receipt: sandboxReceipt}, nil)
+		return s
+	}
+
+	t.Run("в списке — покупка проходит", func(t *testing.T) {
+		subs := newFakeSubStore()
+		s := newServer(subs, []int{testUser1.ID})
+
+		rr := postAppleReceipt(t, s, mustToken(t, s, testUser1.ID), `{"jws":"any"}`)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("статус %d, хотели 200: %s", rr.Code, rr.Body.String())
+		}
+		saved := subs.byRef[refKey(api.StoreApple, sandboxReceipt.StoreRef)]
+		if saved == nil {
+			t.Fatal("подписка не записалась")
+		}
+		if saved.Environment != api.EnvSandbox {
+			t.Errorf("environment = %q, хотели sandbox", saved.Environment)
+		}
+	})
+
+	t.Run("не в списке — отказ", func(t *testing.T) {
+		subs := newFakeSubStore()
+		s := newServer(subs, []int{testUser2.ID})
+
+		rr := postAppleReceipt(t, s, mustToken(t, s, testUser1.ID), `{"jws":"any"}`)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("статус %d, хотели 400", rr.Code)
+		}
+		if len(subs.byRef) != 0 {
+			t.Error("подписка записалась, хотя чек песочницы от постороннего")
+		}
+	})
+
+	t.Run("список пуст — отказ", func(t *testing.T) {
+		subs := newFakeSubStore()
+		s := subServer(t, subs, &fakeVerifier{err: store.ErrWrongEnvironment}, nil)
+
+		rr := postAppleReceipt(t, s, mustToken(t, s, testUser1.ID), `{"jws":"any"}`)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("статус %d, хотели 400", rr.Code)
+		}
+	})
+}

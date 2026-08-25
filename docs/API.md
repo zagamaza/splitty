@@ -105,6 +105,7 @@ REST API поверх существующих сервисов (`internal/servi
 | `PLUS_PRODUCT_IDS` | `…plus.monthly:…plus.yearly` | белый список продуктов. Чек на любой другой (в том числе чужого приложения того же аккаунта разработчика) Plus не включает |
 | `APPLE_IAP_ISSUER_ID` / `APPLE_IAP_KEY_ID` / `APPLE_IAP_PRIVATE_KEY` | `""` | ключ App Store Server API. ⚠️ **Отдельный** и от ключа выкладки сборок, и от `APPLE_KEY_ID` для Sign in with Apple. `APPLE_IAP_PRIVATE_KEY` — содержимое `.p8`, не путь |
 | `APPLE_IAP_BUNDLE_ID` | `com.zagir.splitty` | bundle id, чьи чеки принимаются |
+| `STORE_ALLOWED_ENVIRONMENT` | `Production` | какие чеки принимает инстанс. Пусто — любые (только для локальной разработки). Исключение: людям из `PLUS_COMP_USER_IDS` чеки песочницы принимаются всегда — ревьюер магазина покупает в песочнице, и отказ по окружению показал бы ему сломанную кнопку «Оформить» |
 | `GOOGLE_PLAY_SA_JSON` | `""` | путь к ключу сервисного аккаунта Play Developer API |
 | `GOOGLE_PLAY_PACKAGE` | `com.zagir.splitty` | имя пакета для проверки покупок |
 

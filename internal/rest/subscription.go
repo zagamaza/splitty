@@ -57,6 +57,36 @@ func (s *Server) SetSubscriptions(subs subscriptionStore, apple ReceiptVerifier,
 	s.googleAck = ack
 }
 
+// SetSandboxReceipts разрешает чеки песочницы — но только перечисленным людям.
+//
+// Ревьюер магазина покупает в песочнице: его чек приходит на боевой сервер, и
+// прод, принимающий только Production, отвечает отказом — кнопка «Оформить»
+// показывает ошибку, а это отказ по 2.1 «In-app purchases must be complete and
+// functional». Открыть песочницу всем нельзя: такие подписки бесплатны и
+// продлеваются каждые несколько минут, то есть раздавали бы вечный Plus даром.
+//
+// Список тот же, что у comp-тарифа: владелец проекта и демо-аккаунт ревьюера.
+func (s *Server) SetSandboxReceipts(userIds []int, apple ReceiptVerifier, google ReceiptVerifier) {
+	s.sandboxUsers = make(map[int]struct{}, len(userIds))
+	for _, id := range userIds {
+		s.sandboxUsers[id] = struct{}{}
+	}
+	s.appleSandboxReceipts = apple
+	s.googleSandboxReceipts = google
+}
+
+// sandboxVerifierFor — «песочный» проверяльщик для этого человека, если он есть
+// в списке и магазин настроен. Иначе nil: обычный отказ по окружению.
+func (s *Server) sandboxVerifierFor(storeName string, userId int) ReceiptVerifier {
+	if _, ok := s.sandboxUsers[userId]; !ok {
+		return nil
+	}
+	if storeName == api.StoreApple {
+		return s.appleSandboxReceipts
+	}
+	return s.googleSandboxReceipts
+}
+
 type appleReceiptRequest struct {
 	JWS string `json:"jws"`
 }
@@ -118,6 +148,13 @@ func (s *Server) applyReceipt(w http.ResponseWriter, r *http.Request, storeName 
 	}
 
 	receipt, err := verifier.Verify(ctx, raw)
+	if errors.Is(err, store.ErrWrongEnvironment) {
+		if sandbox := s.sandboxVerifierFor(storeName, userId); sandbox != nil {
+			log.Info().Int("userId", userId).Str("store", storeName).
+				Msg("принимаю чек песочницы: пользователь в списке comp")
+			receipt, err = sandbox.Verify(ctx, raw)
+		}
+	}
 	if err != nil {
 		s.writeReceiptError(w, storeName, err)
 		return

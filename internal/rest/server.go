@@ -219,6 +219,10 @@ type Server struct {
 	appleReceipts  ReceiptVerifier
 	googleReceipts ReceiptVerifier
 	googleAck      PurchaseAcknowledger
+	// Чеки песочницы — только для перечисленных людей (см. SetSandboxReceipts)
+	sandboxUsers          map[int]struct{}
+	appleSandboxReceipts  ReceiptVerifier
+	googleSandboxReceipts ReceiptVerifier
 	// Перезапрос состояния подписки для уведомлений магазинов
 	// (см. SetStoreWebhooks и правило «не верить payload»)
 	appleStatus  storeStatusReader

@@ -380,12 +380,13 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	if err := subscriptionRepo.EnsureIndexes(ctx); err != nil {
 		log.Warn().Err(err).Msg("cannot create subscriptions indexes")
 	}
+	compUserIds := intsFromInt64(cfg.PlusCompUserIds)
 	entitlements := service.NewEntitlements(subscriptionRepo, service.EntitlementsConfig{
 		FreeQuota:     cfg.AiFreeDailyQuota,
 		PlusQuota:     cfg.AiPlusDailyQuota,
 		LegacyQuota:   cfg.AiLegacyDailyQuota,
 		DeliverySlack: cfg.PlusDeliverySlack,
-		CompUserIds:   intsFromInt64(cfg.PlusCompUserIds),
+		CompUserIds:   compUserIds,
 		CacheTTL:      cfg.PlusTierCacheTTL,
 	})
 	server.SetEntitlements(entitlements)
@@ -421,6 +422,32 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		log.Info().Msg("покупки Google Play выключены (GOOGLE_PLAY_SA_JSON недоступен)")
 	}
 	server.SetSubscriptions(subscriptionRepo, appleReceipts, googleReceipts, googleAck)
+
+	// Чеки песочницы — только тем, кто и так получает Plus без покупки:
+	// владельцу проекта и демо-аккаунту ревьюера. Ревьюер покупает в песочнице,
+	// и отказ по окружению показал бы ему сломанную кнопку «Оформить».
+	if len(cfg.PlusCompUserIds) > 0 {
+		var appleSandbox, googleSandbox rest.ReceiptVerifier
+		if a, err := store.NewApple(store.AppleConfig{
+			KeyContent: []byte(cfg.AppleIapPrivateKey),
+			KeyID:      cfg.AppleIapKeyId,
+			Issuer:     cfg.AppleIapIssuerId,
+			BundleID:   cfg.AppleIapBundleId,
+			ProductIds: nonEmptyValues(cfg.PlusProductIds),
+		}); err == nil {
+			appleSandbox = a
+		}
+		if saJson, err := os.ReadFile(cfg.GooglePlaySaJson); err == nil {
+			if g, gErr := store.NewGoogle(ctx, store.GoogleConfig{
+				ServiceAccountJSON: saJson,
+				PackageName:        cfg.GooglePlayPackage,
+				ProductIds:         nonEmptyValues(cfg.PlusProductIds),
+			}); gErr == nil {
+				googleSandbox = g
+			}
+		}
+		server.SetSandboxReceipts(compUserIds, appleSandbox, googleSandbox)
+	}
 
 	// Уведомления магазинов и фоновая доработка. Состояние подписки они берут у
 	// магазина, а не из уведомления, поэтому нужен тот же клиент.
