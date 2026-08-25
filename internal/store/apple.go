@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -54,8 +57,12 @@ func NewApple(cfg AppleConfig) (*Apple, error) {
 	if len(cfg.KeyContent) == 0 || cfg.KeyID == "" || cfg.Issuer == "" {
 		return nil, ErrNotConfigured
 	}
+	key, err := normalizePEM(cfg.KeyContent)
+	if err != nil {
+		return nil, err
+	}
 	base := appstore.StoreConfig{
-		KeyContent: cfg.KeyContent,
+		KeyContent: key,
 		KeyID:      cfg.KeyID,
 		BundleID:   cfg.BundleID,
 		Issuer:     cfg.Issuer,
@@ -68,6 +75,24 @@ func NewApple(cfg AppleConfig) (*Apple, error) {
 		sandbox: appstore.NewStoreClient(&sandboxCfg),
 		cfg:     cfg,
 	}, nil
+}
+
+// normalizePEM приводит ключ к настоящему PEM и сразу проверяет, что он читается.
+//
+// В переменную окружения .p8 кладут одной строкой с экранированными \n
+// (docker-compose, .env, секреты CI) — go-iap такой ключ не декодирует. А без
+// ранней проверки битый ключ не виден до первой покупки: клиент собирается
+// молча и падает уже у человека с деньгами в руке.
+func normalizePEM(raw []byte) ([]byte, error) {
+	normalized := []byte(strings.ReplaceAll(strings.TrimSpace(string(raw)), `\n`, "\n"))
+	block, _ := pem.Decode(normalized)
+	if block == nil {
+		return nil, errors.New("ключ App Store не разобран как PEM (ожидается содержимое .p8)")
+	}
+	if _, err := x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
+		return nil, errors.Wrap(err, "ключ App Store не разобран как PKCS8")
+	}
+	return normalized, nil
 }
 
 // newAppleWithAPI собирает проверяльщик поверх подставного клиента (тесты).

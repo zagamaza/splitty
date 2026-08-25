@@ -1,6 +1,12 @@
 package store
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/pem"
+	"strings"
 	"context"
 	"errors"
 	"net/url"
@@ -265,5 +271,34 @@ func TestAppleStatusPropagatesStoreOutage(t *testing.T) {
 	}
 	if errors.Is(err, ErrReceiptInvalid) {
 		t.Error("сбой магазина принят за недействительный чек")
+	}
+}
+
+// TestApplePrivateKeyFormats — ключ принимается и настоящим PEM, и одной
+// строкой с экранированными \n, а битый отвергается сразу, а не у кассы.
+func TestApplePrivateKeyFormats(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})
+	escaped := strings.ReplaceAll(string(pemBytes), "\n", `\n`)
+
+	cfg := func(content string) AppleConfig {
+		return AppleConfig{KeyContent: []byte(content), KeyID: "K1", Issuer: "I1", BundleID: "com.example"}
+	}
+
+	if _, err := NewApple(cfg(string(pemBytes))); err != nil {
+		t.Errorf("настоящий PEM отвергнут: %v", err)
+	}
+	if _, err := NewApple(cfg(escaped)); err != nil {
+		t.Errorf("ключ с экранированными \\n отвергнут: %v", err)
+	}
+	if _, err := NewApple(cfg("не ключ вовсе")); err == nil {
+		t.Error("битый ключ принят — сбой всплывёт только при покупке")
 	}
 }
