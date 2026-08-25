@@ -447,6 +447,12 @@
             "state": "translated",
             "value": "%1$@ par %2$@. Renouvellement automatique, résiliable dans les réglages Apple ID"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ за %@. Подписка продлевается автоматически, отменить можно в настройках Apple ID"
+          }
         }
       }
     },
@@ -1005,6 +1011,12 @@
             "state": "translated",
             "value": "32,00 €"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 200 ₽"
+          }
         }
       }
     },
@@ -1384,6 +1396,12 @@
             "state": "translated",
             "value": "Splitor Plus"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
         }
       }
     },
@@ -1587,6 +1605,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "« Dîner 32, partagé en quatre »"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«Ужин 3200, делим на четверых»"
           }
         }
       }
@@ -2772,6 +2796,12 @@
             "state": "translated",
             "value": "Restaurer les achats"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Восстановить покупки"
+          }
         }
       }
     },
@@ -3886,6 +3916,12 @@
             "state": "translated",
             "value": "À la voix ou depuis une photo du reçu"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Голосом или фото чека — как удобно"
+          }
         }
       }
     },
@@ -4229,6 +4265,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Groupes, dépenses et dettes restent gratuits"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Группы, расходы и долги остаются бесплатными"
           }
         }
       }
@@ -4608,6 +4650,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajouter une dépense manuellement"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить расход вручную"
           }
         }
       }
@@ -6495,6 +6543,12 @@
             "state": "translated",
             "value": "Confidentialité"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конфиденциальность"
+          }
         }
       }
     },
@@ -6979,6 +7033,12 @@
             "state": "translated",
             "value": "Annuel"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На год"
+          }
         }
       }
     },
@@ -7042,6 +7102,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mensuel"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На месяц"
           }
         }
       }
@@ -7702,6 +7768,12 @@
             "state": "translated",
             "value": "Impossible de charger les offres. Vérifiez la connexion et réessayez"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось загрузить тарифы. Проверьте связь и попробуйте ещё раз"
+          }
         }
       }
     },
@@ -8080,6 +8152,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de finaliser l’achat"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось совершить покупку"
           }
         }
       }
@@ -9160,6 +9238,12 @@
             "state": "translated",
             "value": "Le paiement est passé, mais nous n’avons pas encore pu le confirmer. Vérifiez la connexion : l’accès apparaîtra tout seul"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оплата прошла, но подтвердить её пока не удалось. Проверьте связь — доступ появится сам"
+          }
         }
       }
     },
@@ -9998,6 +10082,12 @@
             "state": "translated",
             "value": "S’abonner"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оформить"
+          }
         }
       }
     },
@@ -10026,6 +10116,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "S’abonner pour %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оформить за %@"
           }
         }
       }
@@ -10581,6 +10677,12 @@
             "state": "translated",
             "value": "Renouvellement automatique. Résiliation dans les réglages Apple ID"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подписка продлевается автоматически. Отменить можно в настройках Apple ID"
+          }
         }
       }
     },
@@ -10995,6 +11097,12 @@
             "state": "translated",
             "value": "Achat"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Покупка"
+          }
         }
       }
     },
@@ -11023,6 +11131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L’achat est en attente d’approbation"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Покупка ждёт подтверждения"
           }
         }
       }
@@ -11053,6 +11167,12 @@
             "state": "translated",
             "value": "Les achats sont indisponibles pour le moment"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Покупки сейчас недоступны"
+          }
         }
       }
     },
@@ -11081,6 +11201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun achat à restaurer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Покупок для восстановления не нашлось"
           }
         }
       }
@@ -11250,6 +11376,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "À parts égales entre quatre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поровну на четверых"
           }
         }
       }
@@ -12365,6 +12497,12 @@
             "state": "translated",
             "value": "Autant de reconnaissances par jour que nécessaire"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознаваний в день — сколько нужно"
+          }
         }
       }
     },
@@ -12393,6 +12531,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous avez utilisé vos analyses du jour"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавания на сегодня закончились"
           }
         }
       }
@@ -13157,6 +13301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une phrase dite devient une dépense partagée en quatre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сказанная фраза превращается в готовый расход, разделённый на четверых"
           }
         }
       }
@@ -15217,6 +15367,12 @@
             "state": "translated",
             "value": "Dîner"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ужин"
+          }
         }
       }
     },
@@ -15350,6 +15506,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conditions"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Условия"
           }
         }
       }
@@ -15659,6 +15821,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cet abonnement appartient à un autre compte Splitor"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта подписка оформлена на другой аккаунт Splitor"
           }
         }
       }
@@ -16426,6 +16594,12 @@
             "state": "translated",
             "value": "an"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "год"
+          }
         }
       }
     },
@@ -16840,6 +17014,12 @@
             "state": "translated",
             "value": "mois"
           }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "месяц"
+          }
         }
       }
     },
@@ -17043,6 +17223,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "8,00 € chacun"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "по 800 ₽"
           }
         }
       }
