@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
-"""Собирает и отправляет заявку на ревью: версия + обе подписки.
+"""Собирает заявку на ревью: версия и подписки.
 
-Подписки — отдельные объекты ревью. Если положить в заявку только версию,
-приложение уедет на проверку с продуктами, которых ревьюер не видит: экран
-оплаты покажет «не удалось загрузить тарифы», и это отказ по 2.1.
+Подписки — отдельные объекты ревью. Заявка с одной версией отправляет
+приложение на проверку с продуктами, которых ревьюер не видит: экран оплаты
+покажет «не удалось загрузить тарифы», и это отказ по 2.1.
+
+⚠️ ПЕРВУЮ подписку приложения публичный API приложить не может. У
+`reviewSubmissionItems` нет связи `subscription` (как и `inAppPurchaseV2`), а
+`/v1/subscriptionSubmissions` на неё отвечает
+FIRST_SUBSCRIPTION_MUST_BE_SUBMITTED_ON_VERSION — даже когда заявка с версией
+уже создана и ещё не отправлена. Галочка «отправить вместе с версией» живёт
+только в веб-консоли. Поэтому скрипт доводит заявку до READY_FOR_REVIEW и
+останавливается: дожать первую отправку надо руками в App Store Connect.
+Со второй и дальше подписки уходят уже отсюда.
 
     python3 ios/asc/submit_for_review.py            # показать, что уйдёт
     python3 ios/asc/submit_for_review.py --submit   # отправить
@@ -59,17 +68,33 @@ def create_submission():
     return r["data"]
 
 
-def add_item(submission_id, rel_type, rel_id, label):
+def add_version(submission_id, version_id, label):
     st, r = asc.req("POST", "/v1/reviewSubmissionItems", {"data": {
         "type": "reviewSubmissionItems",
         "relationships": {
             "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission_id}},
-            rel_type: {"data": {"type": rel_type + "s" if not rel_type.endswith("s") else rel_type, "id": rel_id}},
+            "appStoreVersion": {"data": {"type": "appStoreVersions", "id": version_id}},
         },
     }})
-    ok = st < 300
-    print(f"   {label}: {'добавлено' if ok else 'СБОЙ ' + str(st) + ' ' + json.dumps(r, ensure_ascii=False)[:300]}")
-    return ok
+    if st >= 300:
+        die(f"версия {label} не добавилась: {st} {json.dumps(r, ensure_ascii=False)[:400]}")
+    print(f"   версия {label}: добавлена")
+
+
+def submit_subscription(sub_id, product):
+    """Подписки идут не пунктом заявки, а собственным ресурсом.
+
+    `reviewSubmissionItems` их не принимает: 'subscription' там не связь. Первую
+    подписку приложения Apple требует отправлять ОДНОВРЕМЕННО с версией — то
+    есть уже после того, как заявка с версией создана, но ещё до `submitted`.
+    """
+    st, r = asc.req("POST", "/v1/subscriptionSubmissions", {"data": {
+        "type": "subscriptionSubmissions",
+        "relationships": {"subscription": {"data": {"type": "subscriptions", "id": sub_id}}},
+    }})
+    if st >= 300:
+        die(f"подписка {product} не отправлена: {st} {json.dumps(r, ensure_ascii=False)[:600]}")
+    print(f"   подписка {product}: отправлена")
 
 
 def items(submission_id):
@@ -82,8 +107,12 @@ def main(argv):
 
     version = editable_version()
     va = version["attributes"]
-    build = version["relationships"].get("build", {}).get("data")
-    print(f"версия {va['versionString']} ({va['appStoreState']}), билд {build['id'] if build else 'НЕ ПРИВЯЗАН'}")
+    # Список версий приходит без данных связи — билд спрашиваем отдельно,
+    # иначе «не привязан» показывается на привязанном билде.
+    st, b = asc.req("GET", f"/v1/appStoreVersions/{version['id']}/build")
+    build = b.get("data") if st == 200 else None
+    label = f"{build['attributes']['version']} ({build['id']})" if build else "НЕ ПРИВЯЗАН"
+    print(f"версия {va['versionString']} ({va['appStoreState']}), билд {label}")
     if not build:
         die("к версии не привязан билд — ревью не примут")
 
@@ -105,20 +134,16 @@ def main(argv):
         sub = create_submission()
         print(f"заявка создана: {sub['id']}")
 
-    have = {(i["relationships"].get("appStoreVersion", {}).get("data") or {}).get("id")
-            for i in items(sub["id"])}
-    have |= {(i["relationships"].get("appStoreVersionExperiment", {}).get("data") or {}).get("id")
-             for i in items(sub["id"])}
-    existing_subs = {(i["relationships"].get("appEvent", {}).get("data") or {}).get("id")
-                     for i in items(sub["id"])}
-
     print("состав заявки:")
-    if version["id"] not in have:
-        add_item(sub["id"], "appStoreVersion", version["id"], f"версия {va['versionString']}")
+    if not items(sub["id"]):
+        add_version(sub["id"], version["id"], va["versionString"])
     else:
         print(f"   версия {va['versionString']}: уже в заявке")
-    for sid, product, _ in subs:
-        add_item(sub["id"], "subscription", sid, product)
+    for sid, product, state in subs:
+        if state == "READY_TO_SUBMIT":
+            submit_subscription(sid, product)
+        else:
+            print(f"   подписка {product}: {state}, отправлять не надо")
 
     st, r = asc.req("PATCH", f"/v1/reviewSubmissions/{sub['id']}", {"data": {
         "type": "reviewSubmissions", "id": sub["id"],
