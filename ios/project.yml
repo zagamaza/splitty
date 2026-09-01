@@ -113,8 +113,8 @@ targets:
         CFBundleDevelopmentRegion: ru
         CFBundleLocalizations: [ru, en, es, de, fr]
         CFBundleDisplayName: Splitor
-        CFBundleShortVersionString: "1.7"
-        CFBundleVersion: "20"
+        CFBundleShortVersionString: "1.8"
+        CFBundleVersion: "21"
         # Только стандартный TLS — нестандартное шифрование не используется
         ITSAppUsesNonExemptEncryption: false
         # Вход через Google. GIDClientID читается самим SDK, если

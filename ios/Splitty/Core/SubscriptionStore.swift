@@ -16,7 +16,16 @@ final class SubscriptionStore {
     var purchaseError: String?
 
     let storeKit = StoreKitService()
-    private let api: APIClient
+    /// Клиент берётся у сессии НА КАЖДЫЙ вызов, а не захватывается один раз.
+    ///
+    /// Захваченный клиент держит токен, который был на момент создания стора, —
+    /// а создаётся он при старте приложения, когда токена ещё нет. После входа
+    /// сессия обновляла токен, но этот стор продолжал ходить со старым, ловил
+    /// 401 и через `onUnauthorized` гасил только что созданную сессию: человек
+    /// входил и его тут же возвращало на экран логина. Ревью App Store
+    /// отклонило релиз 1.7 ровно за это (Guideline 2.1.0, «After login we were
+    /// returned to login screen»).
+    private let api: () -> APIClient
 
     var isPlus: Bool { tier == .plus }
 
@@ -35,7 +44,7 @@ final class SubscriptionStore {
         return remaining <= 2
     }
 
-    init(api: APIClient) {
+    init(api: @escaping () -> APIClient) {
         self.api = api
         storeKit.submitToServer = { [weak self] jws in
             await self?.submitAppleReceipt(jws) ?? false
@@ -56,7 +65,7 @@ final class SubscriptionStore {
 
     /// Перечитывает остаток и тариф с сервера.
     func refreshQuota() async {
-        guard let fresh = try? await api.aiQuota() else { return }
+        guard let fresh = try? await api().aiQuota() else { return }
         quota = fresh
         tier = fresh.tier
     }
@@ -72,13 +81,13 @@ final class SubscriptionStore {
     }
 
     func refreshSubscription() async {
-        subscription = try? await api.subscription()
+        subscription = try? await api().subscription()
     }
 
     /// Покупка выбранного продукта.
     func purchase(_ product: Product) async -> PurchaseOutcome {
         purchaseError = nil
-        let bindingToken = try? await api.me().purchaseBindingToken
+        let bindingToken = try? await api().me().purchaseBindingToken
         let outcome = await storeKit.purchase(product, bindingToken: bindingToken)
 
         switch outcome {
@@ -113,7 +122,7 @@ final class SubscriptionStore {
     private func submitAppleReceipt(_ jws: String) async -> Bool {
         guard !jws.isEmpty else { return false }
         do {
-            let state = try await api.submitAppleReceipt(jws: jws)
+            let state = try await api().submitAppleReceipt(jws: jws)
             subscription = state
             tier = state.tier
             await refreshQuota()

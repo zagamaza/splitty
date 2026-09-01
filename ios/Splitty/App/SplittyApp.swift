@@ -41,7 +41,7 @@ struct SplittyApp: App {
     init() {
         let session = SessionStore()
         _session = State(initialValue: session)
-        _subscriptions = State(initialValue: SubscriptionStore(api: session.api))
+        _subscriptions = State(initialValue: SubscriptionStore(api: { session.api }))
     }
 
     var body: some Scene {

@@ -82,8 +82,22 @@ final class SessionStore {
     }
 
     /// JWT-токен, персистится в Keychain.
+    /// Поколение сессии: растёт на каждую смену токена (вход, выход, протухание).
+    ///
+    /// Нужно, чтобы отличить «401 на действующий токен» от «401, догнавший нас
+    /// из прошлой сессии». Сравнивать сами токены ненадёжно: JWT без jti и с
+    /// секундным iat теоретически повторим, а счётчик уникален всегда.
+    ///
+    /// `@ObservationIgnored` обязателен: счётчик растёт в `didSet` токена, а
+    /// запись НАБЛЮДАЕМОГО свойства внутри `didSet` другого наблюдаемого рвёт
+    /// сам `didSet` — сохранение токена в Keychain переставало доезжать, и
+    /// падал `testUnauthorizedWhilePurgePendingKeepsToken`. Экранам этот
+    /// счётчик и не нужен: он служебный, для сверки поколения.
+    @ObservationIgnored private(set) var sessionGeneration = 0
+
     private(set) var token: String? {
         didSet {
+            sessionGeneration &+= 1
             if let token {
                 // Результат записи нельзя ронять: при отказе Keychain
                 // (например errSecInteractionNotAllowed) приложение выглядит
@@ -212,13 +226,19 @@ final class SessionStore {
     /// Всегда актуальный API-клиент (с текущими token/baseURL).
     /// Любой ответ 401 сбрасывает сессию (токен чистится из Keychain).
     var api: APIClient {
+        let generation = sessionGeneration
         let client = APIClient(baseURL: serverURL, token: token, urlSession: urlSession)
         // Протухший токен — НЕ полный logout: очередь неотправленных офлайн-расходов
         // должна пережить переавторизацию, иначе фоновый GET с просроченным JWT
         // молча стирает то, что пользователь ввёл без сети.
         client.onUnauthorized = { [weak self] in
             Task { @MainActor in
-                self?.expireSession()
+                // 401 засчитываем, только если он пришёл на ДЕЙСТВУЮЩУЮ сессию.
+                // Ответ клиента, созданного до входа (или до переавторизации),
+                // относится к прошлому поколению и гасил бы свежую сессию —
+                // человек входил и тут же оказывался на экране логина.
+                guard let self, self.sessionGeneration == generation else { return }
+                self.expireSession()
             }
         }
         return client
@@ -471,10 +491,14 @@ final class SessionStore {
         guard isPurgePending, isAuthenticated, !isPurgeRetryInFlight else { return }
         isPurgeRetryInFlight = true
         defer { isPurgeRetryInFlight = false }
+        let generation = sessionGeneration
         do {
             try await api.deleteAccount()
             logout()
         } catch let error as APIError where error.isUnauthorized {
+            // Только для своей сессии: запоздалый 401 из прошлого поколения
+            // унёс бы вместе с logout ещё и outbox нового аккаунта.
+            guard sessionGeneration == generation else { return }
             logout()
         } catch {
             // Повторим позже — токен и флаг на месте.
@@ -530,6 +554,9 @@ final class SessionStore {
         // запускает refreshMe в `.task`, и пользователь успевает нажать
         // «Привязать» до того, как ответ придёт (см. `identityRevision`).
         let revision = identityRevision
+        // Поколение на момент старта запроса: ответ мог задержаться, а человек
+        // за это время успел перевойти (см. sessionGeneration).
+        let generation = sessionGeneration
         do {
             let result = try await repo.me { [weak self] cached in
                 // Кеш мгновенно, но только если профиля ещё нет в памяти
@@ -552,6 +579,11 @@ final class SessionStore {
             // Именно expireSession, а НЕ logout: refreshMe зовётся на каждом
             // старте и на «Профиле», и полная очистка стирала бы outbox —
             // один протухший токен уносил все неотправленные офлайн-расходы.
+            //
+            // И только для СВОЕЙ сессии: refreshMe зовётся на каждом старте, его
+            // ответ легко переживает вход, и без этой проверки запоздалый 401
+            // гасил бы только что созданную сессию в обход onUnauthorized.
+            guard sessionGeneration == generation else { return }
             expireSession()
         } catch {
             // Сервер недоступен и кеша нет. Раньше экран оставался скелетоном

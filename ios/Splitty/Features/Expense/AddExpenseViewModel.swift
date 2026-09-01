@@ -802,11 +802,24 @@ final class AddExpenseViewModel {
 
         state = .loading
         do {
+            // onCached обязателен, иначе форма ждёт СЕТЬ даже при полном кеше:
+            // DataRepo читает кеш сразу, но без колбэка отдаёт его только после
+            // сетевой ошибки — а офлайн она приходит по таймауту, до минуты.
+            // Экран при этом «открыт», но висит спиннером, и человек видит это
+            // как «добавить расход без сети нельзя». Создание расхода офлайн —
+            // заявленное поведение (см. OfflineEditPolicyTests), и упираться в
+            // ожидание сети ему нечего: всё нужное уже лежит в кеше.
             if let fixedRoomId {
-                let room = try await repo.room(id: fixedRoomId).value
+                let room = try await repo.room(id: fixedRoomId) { [weak self] cached in
+                    self?.applyRoom(id: cached.id, members: cached.members, currency: cached.currency)
+                    self?.state = .loaded
+                }.value
                 applyRoom(id: room.id, members: room.members, currency: room.currency)
             } else {
-                rooms = try await repo.rooms(archived: false).value
+                rooms = try await repo.rooms(archived: false) { [weak self] cached in
+                    self?.rooms = cached
+                    self?.state = .loaded
+                }.value
             }
             state = .loaded
         } catch {
