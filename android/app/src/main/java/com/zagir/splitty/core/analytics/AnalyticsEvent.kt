@@ -36,7 +36,6 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, String> = 
     class SettingsChanged(what: String) : AnalyticsEvent("settings_changed", mapOf("what" to what))
     class AccountLinked(provider: String) : AnalyticsEvent("account_linked", mapOf("provider" to provider))
     class AccountUnlinked(provider: String) : AnalyticsEvent("account_unlinked", mapOf("provider" to provider))
-    data object AccountDeleted : AnalyticsEvent("account_deleted")
     data object Logout : AnalyticsEvent("logout")
     class MemberAdded(via: String) : AnalyticsEvent("member_added", mapOf("via" to via))
     class MemberAddFailed(reason: String) : AnalyticsEvent("member_add_failed", mapOf("reason" to reason))

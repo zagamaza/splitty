@@ -49,7 +49,6 @@ var Events = map[string]Event{
 	"settings_changed": {Params: map[string][]string{"what": {"theme", "language", "name", "avatar", "notifications"}}},
 	"account_linked":   {Params: map[string][]string{"provider": {"google", "apple", "telegram", "password"}}},
 	"account_unlinked": {Params: map[string][]string{"provider": {"google", "apple", "telegram", "password"}}},
-	"account_deleted":  {},
 	"logout":           {},
 
 	// Люди в тусе.

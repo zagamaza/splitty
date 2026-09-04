@@ -32,7 +32,6 @@ enum AnalyticsEvent {
     case settingsChanged(what: String)
     case accountLinked(provider: String)
     case accountUnlinked(provider: String)
-    case accountDeleted
     case logout
     case memberAdded(via: String)
     case memberAddFailed(reason: String)
@@ -74,7 +73,6 @@ enum AnalyticsEvent {
         case .settingsChanged: return "settings_changed"
         case .accountLinked: return "account_linked"
         case .accountUnlinked: return "account_unlinked"
-        case .accountDeleted: return "account_deleted"
         case .logout: return "logout"
         case .memberAdded: return "member_added"
         case .memberAddFailed: return "member_add_failed"
@@ -123,7 +121,7 @@ enum AnalyticsEvent {
         case let .parseStarted(kind): return ["kind": kind]
         case let .parseSucceeded(kind, items): return ["kind": kind, "items": items]
         case let .parseRetried(kind): return ["kind": kind]
-        case .accountDeleted, .logout, .memberRemoved, .roomLeft, .roomArchived,
+        case .logout, .memberRemoved, .roomLeft, .roomArchived,
              .roomUnarchived, .receiptItemEdited, .receiptUnknownResolved:
             return [:]
         }

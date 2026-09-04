@@ -53,7 +53,11 @@ class AuthInterceptor @Inject constructor(
         request = request.newBuilder()
             .header("X-Client-Version", BuildConfig.VERSION_NAME)
             .build()
-        if (token != null && !isAuthEndpoint) {
+        // Готовый заголовок не трогаем: header() ЗАМЕНЯЕТ значение, и
+        // терминальное событие, снявшее токен до чистки сессии, уехало бы под
+        // токеном следующего вошедшего. См. SplittyApi.postEvents.
+        val hasExplicitAuth = request.header("Authorization") != null
+        if (token != null && !isAuthEndpoint && !hasExplicitAuth) {
             request = request.newBuilder()
                 .header("Authorization", "Bearer $token")
                 .build()

@@ -188,14 +188,16 @@ class AppRootViewModel @Inject constructor(
         if (isFinishingPurge) return
         isFinishingPurge = true
         try {
-            analytics.trackTerminal(AnalyticsEvent.AccountDeleted)
+            // Событие об удалении не шлётся: чистка сносит product_events
+            // этого человека целиком. См. docs/analytics-events.md.
             repository.deleteAccount()
             sessionStore.logout()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
-            val api = e as? ApiException
-            analytics.track(AnalyticsEvent.RoomJoinFailed(analyticsJoinReason(api?.code, api?.status)))
+            // Событие здесь не пишется: сорванная чистка — не шаг воронки, а
+            // повтор случится на следующем запуске. Раньше стояло
+            // room_join_failed — чужое событие, засорявшее вход в тусу.
             // Throwable, а не ApiException: любое другое исключение вылетало бы
             // из collect и НАВСЕГДА убивало подписку (тот же фикс, что в
             // joinPending).

@@ -39,6 +39,7 @@ import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -62,8 +63,18 @@ interface SplittyApi {
      * Продуктовые события пачкой (до 50). Имена и значения — контракт
      * docs/analytics-events.md; ответ несёт три числа, а не «ок».
      */
+    /**
+     * `auth` — готовый заголовок вместо того, что подставит перехватчик.
+     * Нужен терминальному событию: оно уходит на выходе из аккаунта, и к
+     * моменту отправки в сессии может лежать уже ЧУЖОЙ токен — сервер берёт
+     * номер человека из токена, так что выход одного записался бы другому.
+     * null — обычный путь, заголовок ставит [AuthInterceptor].
+     */
     @POST("api/v1/events")
-    suspend fun postEvents(@Body body: com.zagir.splitty.core.analytics.EventsBody): com.zagir.splitty.core.analytics.EventsResult
+    suspend fun postEvents(
+        @Body body: com.zagir.splitty.core.analytics.EventsBody,
+        @Header("Authorization") auth: String?,
+    ): com.zagir.splitty.core.analytics.EventsResult
 
     @POST("api/v1/auth/telegram")
     suspend fun loginWithTelegram(@Body body: TelegramLoginBody): AuthResponse

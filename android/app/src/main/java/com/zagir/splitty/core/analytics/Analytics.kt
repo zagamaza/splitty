@@ -93,10 +93,22 @@ class Analytics @Inject constructor(
      */
     fun trackTerminal(event: AnalyticsEvent) {
         if (!ENABLED) return
-        val owner = ownerUserId ?: session.currentUserId() ?: return
+        // Токен и владелец — ОДНИМ снимком состояния. Два независимых чтения
+        // могли бы разъехаться (человек вышел между ними), а заголовок берём
+        // явный: перехватчик подставил бы токен, актуальный на момент
+        // отправки, то есть уже чужой.
+        val snapshot = session.state.value ?: return
+        val token = snapshot.token ?: return
+        val owner = ownerUserId ?: snapshot.me?.id ?: return
         val record = record(event, owner)
         scope.launch {
-            runCatching { api.postEvents(EventsBody(listOf(record))) }
+            try {
+                api.postEvents(EventsBody(listOf(record)), "Bearer " + token)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.d(TAG, "терминальное событие не ушло", e)
+            }
         }
     }
 
@@ -127,7 +139,7 @@ class Analytics @Inject constructor(
             val batch = queue.take(BATCH_SIZE, owner)
             if (batch.isEmpty()) return@withLock
             try {
-                api.postEvents(EventsBody(batch))
+                api.postEvents(EventsBody(batch), null)
                 queue.remove(batch.map { it.id }.toSet())
             } catch (e: CancellationException) {
                 throw e
