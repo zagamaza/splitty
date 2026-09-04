@@ -192,17 +192,14 @@ class AnalyticsTerminalTest {
         val body = SplittyJson.parseToJsonElement(request!!.body.readUtf8()).jsonObject
         val event = body["events"]!!.jsonArray.first().jsonObject
 
-        // Пустые params kotlinx не пишет (значение по умолчанию), поэтому
-        // обязательным считаем всё, кроме них, а лишнего не допускаем вовсе.
-        val allowed = setOf("id", "name", "at", "session", "platform", "appVersion", "locale", "params")
-        val required = allowed - "params"
-        assertTrue(
-            event.keys.containsAll(required),
-            "в теле не хватает полей конверта: " + (required - event.keys),
-        )
-        assertTrue(
-            allowed.containsAll(event.keys),
-            "в теле лишние поля: " + (event.keys - allowed) + " (см. docs/analytics-events.md)",
+        // Точное равенство, а не «лишнего нет»: у EventBody.params нет значения
+        // по умолчанию, поэтому kotlinx пишет его и пустым. Набор тот же, что
+        // проверяет iOS — расхождение здесь означало бы реальный дрейф провода,
+        // а не особенность платформы.
+        assertEquals(
+            setOf("id", "name", "at", "session", "platform", "appVersion", "locale", "params"),
+            event.keys,
+            "состав тела разошёлся с контрактом (docs/analytics-events.md)",
         )
         assertFalse(
             "ownerUserId" in event.keys,
