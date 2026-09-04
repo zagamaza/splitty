@@ -180,6 +180,16 @@ class GroupsListViewModel @Inject constructor(
         mutate(onSuccess) { repository.joinRoom(roomId) }
     }
 
+    /**
+     * Убирает группу в архив (оба списка обновятся по dataVersion).
+     *
+     * Архивация здесь своя, а не через экран настроек группы: попасть в неё
+     * можно было только открыв тусу и пройдя две вкладки вглубь.
+     */
+    fun archive(roomId: String) {
+        mutate(onSuccess = {}) { repository.archiveRoom(roomId) }
+    }
+
     /** Возвращает группу из архива (оба списка обновятся по dataVersion). */
     fun unarchive(roomId: String) {
         mutate(onSuccess = {}) { repository.unarchiveRoom(roomId) }

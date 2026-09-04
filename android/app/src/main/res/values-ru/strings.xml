@@ -216,6 +216,7 @@
     <string name="groups_title">Группы</string>
     <string name="groups_create_group">Создать группу</string>
     <string name="groups_join_by_code">Присоединиться по коду</string>
+    <string name="groups_archive_action">В архив</string>
     <string name="groups_more">Ещё</string>
     <string name="groups_total_balance">Общий баланс</string>
     <string name="groups_all_settled">Все долги погашены</string>
@@ -629,6 +630,8 @@
     <string name="breakdown_allocated">Сумма распределена полностью</string>
     <string name="groups_cached_updated">Данные сохранённые, обновлялись %1$s</string>
     <string name="groups_cached_no_connection">Данные сохранённые: связи с сервером нет</string>
+    <string name="profile_report_problem">Сообщить о проблеме</string>
+    <string name="profile_report_problem_footer">Откроется бот в Telegram. Отправьте ему «/report» и опишите проблему одним сообщением — репорт придёт разработчикам.</string>
     <string name="profile_privacy_policy">Политика конфиденциальности</string>
     <string name="expense_recognized_title_photo">Распознано с чека</string>
     <string name="expense_recognized_hint_photo">Не то? Снимите чек ещё раз или зажмите микрофон внизу</string>

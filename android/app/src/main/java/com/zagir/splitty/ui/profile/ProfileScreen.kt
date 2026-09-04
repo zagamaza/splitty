@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.outlined.PhonelinkErase
@@ -170,6 +171,7 @@ fun ProfileScreen(
             RevokeSessionsSection(onClick = { isRevokeConfirmPresented = true })
             // Единственное место в приложении, где можно прочитать, куда уходят
             // голос и фото чека и что остаётся после удаления аккаунта
+            ReportProblemSection()
             PolicyLinkSection(baseUrl = baseUrl)
             LogoutSection(onClick = { isLogoutConfirmPresented = true })
             // «Удалить аккаунт» — последним пунктом экрана: и Apple Guideline
@@ -1060,6 +1062,61 @@ private fun HairlineDivider() {
             .background(Splitty.colors.hairline),
     )
 }
+
+/**
+ * «Сообщить о проблеме» — открывает бота в Telegram.
+ *
+ * Инструмент уже есть: команда `/report <текст>` кладёт репорт в базу и пишет
+ * разработчикам (`internal/bot/report_screen.go`), но в приложении о ней не
+ * было ни слова. Предзаполнить команду нельзя — Telegram подставляет текст в
+ * пересылку человеку, а не боту, поэтому что писать сказано подписью.
+ */
+@Composable
+private fun ReportProblemSection() {
+    val colors = Splitty.colors
+    val uriHandler = LocalUriHandler.current
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { uriHandler.openUri(REPORT_BOT_URL) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.BugReport,
+                    contentDescription = null,
+                    tint = colors.accentText,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.profile_report_problem),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.accentText,
+                )
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = colors.inkSecondary.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.profile_report_problem_footer),
+            fontSize = 12.sp,
+            color = colors.inkSecondary,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+    }
+}
+
+/** Тот же бот, что и в приглашениях. */
+private const val REPORT_BOT_URL = "https://t.me/split_money_bot"
 
 /** Строка со ссылкой на политику конфиденциальности (открывается в браузере). */
 @Composable

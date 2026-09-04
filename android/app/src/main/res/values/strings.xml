@@ -206,6 +206,7 @@
     <string name="groups_title">Groups</string>
     <string name="groups_create_group">Create group</string>
     <string name="groups_join_by_code">Join with a code</string>
+    <string name="groups_archive_action">Archive</string>
     <string name="groups_more">More</string>
     <string name="groups_total_balance">Total balance</string>
     <string name="groups_all_settled">All settled up</string>
@@ -602,6 +603,8 @@
     <string name="breakdown_allocated">The amount is fully allocated</string>
     <string name="groups_cached_updated">Saved data, updated %1$s</string>
     <string name="groups_cached_no_connection">Saved data: no connection to the server</string>
+    <string name="profile_report_problem">Report a problem</string>
+    <string name="profile_report_problem_footer">Opens the bot in Telegram. Send it “/report” and describe the problem in one message — it goes straight to the developers.</string>
     <string name="profile_privacy_policy">Privacy policy</string>
     <string name="expense_recognized_title_photo">Recognized from the receipt</string>
     <string name="expense_recognized_hint_photo">Not quite right? Take the receipt again or hold the mic below</string>

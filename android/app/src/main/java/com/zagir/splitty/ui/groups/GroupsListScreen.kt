@@ -3,6 +3,7 @@ package com.zagir.splitty.ui.groups
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,6 +184,7 @@ private fun GroupsListContent(
                 isRefreshing = isRefreshing,
                 onRefresh = viewModel::refresh,
                 onOpenRoom = onOpenRoom,
+                onArchive = viewModel::archive,
                 onOpenArchive = onOpenArchive,
                 onCreate = { isCreatePresented = true },
                 onJoin = { isJoinPresented = true },
@@ -225,6 +227,7 @@ private fun RoomsList(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onOpenRoom: (String) -> Unit,
+    onArchive: (String) -> Unit,
     onOpenArchive: () -> Unit,
     onCreate: () -> Unit,
     onJoin: () -> Unit,
@@ -272,6 +275,7 @@ private fun RoomsList(
                         room = room,
                         hasPending = room.id in pendingRoomIds,
                         onClick = { onOpenRoom(room.id) },
+                        onArchive = { onArchive(room.id) },
                     )
                 }
                 item(key = "archive") { ArchiveRow(onOpenArchive) }
@@ -321,14 +325,23 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
 
 /** Карточка группы: аватар-градиент, название, участники, баланс, chevron. */
 @Composable
-private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Unit) {
+private fun GroupCard(
+    room: RoomSummary,
+    hasPending: Boolean,
+    onClick: () -> Unit,
+    onArchive: () -> Unit,
+) {
     val colors = Splitty.colors
+    // Долгое зажатие вместо свайпа: карточки лежат в LazyColumn как обычные
+    // элементы, и свайп пришлось бы городить руками поверх горизонтальных
+    // жестов. Меню — паритет с iOS, где стоит .contextMenu.
+    var isMenuOpen by remember { mutableStateOf(false) }
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
-                .clickable(onClick = onClick)
+                .combinedClickable(onClick = onClick, onLongClick = { isMenuOpen = true })
                 .padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -407,6 +420,17 @@ private fun GroupCard(room: RoomSummary, hasPending: Boolean, onClick: () -> Uni
                 }
             }
             ChevronIcon()
+        }
+        // Меню якорится к карточке: DropdownMenu внутри SurfaceCard всплывает
+        // там, где человек держал палец.
+        DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.groups_archive_action)) },
+                onClick = {
+                    isMenuOpen = false
+                    onArchive()
+                },
+            )
         }
     }
 }

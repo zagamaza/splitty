@@ -161,6 +161,7 @@
     <string name="groups_title">Grupos</string>
     <string name="groups_create_group">Crear grupo</string>
     <string name="groups_join_by_code">Unirse con un código</string>
+    <string name="groups_archive_action">Archivar</string>
     <string name="groups_more">Más</string>
     <string name="groups_total_balance">Saldo total</string>
     <string name="groups_all_settled">Todo saldado</string>
@@ -586,6 +587,8 @@
     <string name="breakdown_allocated">El importe está repartido por completo</string>
     <string name="groups_cached_updated">Datos guardados, actualizados %1$s</string>
     <string name="groups_cached_no_connection">Datos guardados: sin conexión con el servidor</string>
+    <string name="profile_report_problem">Informar de un problema</string>
+    <string name="profile_report_problem_footer">Abre el bot en Telegram. Envíale «/report» y describe el problema en un mensaje: llegará directamente a los desarrolladores.</string>
     <string name="profile_privacy_policy">Política de privacidad</string>
     <string name="expense_recognized_title_photo">Reconocido del recibo</string>
     <string name="expense_recognized_hint_photo">¿No es correcto? Vuelve a fotografiar el recibo o mantén pulsado el micrófono</string>
