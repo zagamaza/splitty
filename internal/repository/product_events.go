@@ -180,3 +180,147 @@ func (r *MongoProductEventsRepository) DeleteByUserId(ctx context.Context, userI
 	_, err := r.col.DeleteMany(ctx, bson.M{"user_id": userId})
 	return err
 }
+
+// aggregateTimeout — потолок ОДНОГО запроса к mongo, а не всего обработчика.
+// Слушатель админского API своего таймаута не имеет, и тяжёлая выборка иначе
+// висела бы без ограничения, деля базу с продуктовыми запросами.
+const aggregateTimeout = 10 * time.Second
+
+// FeedRow — одна строка ленты событий.
+type FeedRow struct {
+	At       time.Time         `json:"at"`
+	UserID   int               `json:"userId"`
+	Name     string            `json:"name"`
+	Platform string            `json:"platform"`
+	Params   map[string]string `json:"params,omitempty"`
+}
+
+// DailyRow — сколько раз событие случилось за день.
+type DailyRow struct {
+	Date  string `json:"date"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+// PlatformRow — события и люди по платформам. Разводить их обязательно:
+// клиенты выкатываются не одновременно, и общее число читалось бы как «все
+// пользователи», хотя половина платформы ещё не умеет слать события.
+type PlatformRow struct {
+	Platform string `json:"platform"`
+	Events   int    `json:"events"`
+	Users    int    `json:"users"`
+}
+
+// Feed отдаёт последние события окна. Единственный блок, который отдаёт записи,
+// а не агрегат, поэтому у него жёсткий потолок строк.
+func (r *MongoProductEventsRepository) Feed(ctx context.Context, days, limit int) ([]FeedRow, error) {
+	since := time.Now().UTC().AddDate(0, 0, -days)
+	opts := options.Find().
+		SetSort(bson.D{{Key: "at", Value: -1}}).
+		SetLimit(int64(limit)).
+		SetMaxTime(aggregateTimeout)
+
+	cur, err := r.col.Find(ctx, bson.M{"at": bson.M{"$gte": since}}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	rows := []FeedRow{}
+	for cur.Next(ctx) {
+		var doc productEventDoc
+		if err := cur.Decode(&doc); err != nil {
+			return nil, err
+		}
+		rows = append(rows, FeedRow{
+			At: doc.At, UserID: doc.UserID, Name: doc.Name,
+			Platform: doc.Platform, Params: doc.Params,
+		})
+	}
+	return rows, cur.Err()
+}
+
+// Daily считает события по дням и именам. name пустой — все события.
+func (r *MongoProductEventsRepository) Daily(ctx context.Context, days int, name string) ([]DailyRow, error) {
+	since := time.Now().UTC().AddDate(0, 0, -days)
+	match := bson.M{"at": bson.M{"$gte": since}}
+	if name != "" {
+		match["name"] = name
+	}
+
+	pipeline := []bson.M{
+		{"$match": match},
+		{"$group": bson.M{
+			"_id": bson.M{
+				"date": bson.M{"$dateToString": bson.M{"format": "%Y-%m-%d", "date": "$at"}},
+				"name": "$name",
+			},
+			"count": bson.M{"$sum": 1},
+		}},
+		{"$sort": bson.M{"_id.date": -1, "count": -1}},
+	}
+
+	cur, err := r.col.Aggregate(ctx, pipeline, options.Aggregate().SetMaxTime(aggregateTimeout))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	rows := []DailyRow{}
+	for cur.Next(ctx) {
+		var doc struct {
+			ID struct {
+				Date string `bson:"date"`
+				Name string `bson:"name"`
+			} `bson:"_id"`
+			Count int `bson:"count"`
+		}
+		if err := cur.Decode(&doc); err != nil {
+			return nil, err
+		}
+		rows = append(rows, DailyRow{Date: doc.ID.Date, Name: doc.ID.Name, Count: doc.Count})
+	}
+	return rows, cur.Err()
+}
+
+// Platforms — сколько событий и людей на каждой платформе за окно.
+func (r *MongoProductEventsRepository) Platforms(ctx context.Context, days int) ([]PlatformRow, error) {
+	since := time.Now().UTC().AddDate(0, 0, -days)
+	pipeline := []bson.M{
+		{"$match": bson.M{"at": bson.M{"$gte": since}}},
+		{"$group": bson.M{
+			"_id":    "$platform",
+			"events": bson.M{"$sum": 1},
+			"users":  bson.M{"$addToSet": "$user_id"},
+		}},
+		{"$project": bson.M{"events": 1, "users": bson.M{"$size": "$users"}}},
+		{"$sort": bson.M{"events": -1}},
+	}
+
+	cur, err := r.col.Aggregate(ctx, pipeline, options.Aggregate().SetMaxTime(aggregateTimeout))
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = cur.Close(ctx) }()
+
+	rows := []PlatformRow{}
+	for cur.Next(ctx) {
+		var doc struct {
+			ID     string `bson:"_id"`
+			Events int    `bson:"events"`
+			Users  int    `bson:"users"`
+		}
+		if err := cur.Decode(&doc); err != nil {
+			return nil, err
+		}
+		rows = append(rows, PlatformRow{Platform: doc.ID, Events: doc.Events, Users: doc.Users})
+	}
+	return rows, cur.Err()
+}
+
+// Count — сколько событий лежит в коллекции. Нужен снимку метрик: весь отказ от
+// свёрток опирается на обещание измерить фактический поток, а мерить его пока
+// нечем.
+func (r *MongoProductEventsRepository) Count(ctx context.Context) (int64, error) {
+	return r.col.CountDocuments(ctx, bson.M{})
+}

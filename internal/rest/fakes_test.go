@@ -462,10 +462,14 @@ func (f *fakeChatStates) DeleteByUserId(_ context.Context, userId int) error {
 // fakeProductEvents — журнал событий без mongo. Пишет то, что дали, и помнит,
 // по каким id его звали для чистки.
 type fakeProductEvents struct {
-	events  []repository.ProductEvent
-	deleted []int
-	insErr  error
-	delErr  error
+	events    []repository.ProductEvent
+	deleted   []int
+	insErr    error
+	delErr    error
+	queryErr  error
+	lastDays  int
+	lastLimit int
+	lastName  string
 }
 
 func (f *fakeProductEvents) Insert(_ context.Context, events []repository.ProductEvent) (repository.InsertResult, error) {
@@ -479,6 +483,21 @@ func (f *fakeProductEvents) Insert(_ context.Context, events []repository.Produc
 func (f *fakeProductEvents) DeleteByUserId(_ context.Context, userId int) error {
 	f.deleted = append(f.deleted, userId)
 	return f.delErr
+}
+
+func (f *fakeProductEvents) Feed(_ context.Context, days, limit int) ([]repository.FeedRow, error) {
+	f.lastDays, f.lastLimit = days, limit
+	return []repository.FeedRow{{Name: "app_open", UserID: 1, Platform: "ios"}}, f.queryErr
+}
+
+func (f *fakeProductEvents) Daily(_ context.Context, days int, name string) ([]repository.DailyRow, error) {
+	f.lastDays, f.lastName = days, name
+	return []repository.DailyRow{{Date: "2026-09-04", Name: "app_open", Count: 3}}, f.queryErr
+}
+
+func (f *fakeProductEvents) Platforms(_ context.Context, days int) ([]repository.PlatformRow, error) {
+	f.lastDays = days
+	return []repository.PlatformRow{{Platform: "ios", Events: 3, Users: 1}}, f.queryErr
 }
 
 func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {

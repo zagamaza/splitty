@@ -144,3 +144,72 @@ func TestProductEventsEnsureIndexesTwice(t *testing.T) {
 		t.Fatalf("повторный вызов: %v", err)
 	}
 }
+
+// Агрегаты считаются на живой базе: пайплайн легко написать так, что он
+// молча вернёт пустоту или чужие строки, и на фейке это не видно.
+func TestProductEventsAggregates(t *testing.T) {
+	repo := NewProductEventsRepository(testDB(t))
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	events := []ProductEvent{
+		{ID: "g-1", UserID: 30, Name: "app_open", At: now, Session: "s", Platform: "ios"},
+		{ID: "g-2", UserID: 30, Name: "app_open", At: now, Session: "s", Platform: "ios"},
+		{ID: "g-3", UserID: 31, Name: "room_created", At: now, Session: "s", Platform: "android"},
+		// За пределами окна: не должно попасть ни в один блок.
+		{ID: "g-4", UserID: 32, Name: "app_open", At: now.AddDate(0, 0, -40), Session: "s", Platform: "ios"},
+	}
+	if _, err := repo.Insert(ctx, events); err != nil {
+		t.Fatal(err)
+	}
+
+	daily, err := repo.Daily(ctx, 7, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := map[string]int{}
+	for _, row := range daily {
+		counts[row.Name] += row.Count
+	}
+	if counts["app_open"] < 2 {
+		t.Errorf("app_open за неделю: %d, ожидал не меньше 2 (%+v)", counts["app_open"], daily)
+	}
+	if counts["app_open"] > 2 {
+		t.Errorf("в окно попало старое событие: app_open = %d", counts["app_open"])
+	}
+
+	byName, err := repo.Daily(ctx, 7, "room_created")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range byName {
+		if row.Name != "room_created" {
+			t.Errorf("фильтр по имени пропустил %q", row.Name)
+		}
+	}
+
+	platforms, err := repo.Platforms(ctx, 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]PlatformRow{}
+	for _, row := range platforms {
+		seen[row.Platform] = row
+	}
+	if seen["ios"].Users != 1 || seen["android"].Users != 1 {
+		t.Errorf("люди по платформам посчитаны неверно: %+v", platforms)
+	}
+
+	feed, err := repo.Feed(ctx, 7, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feed) < 3 {
+		t.Errorf("в ленте %d строк, ожидал не меньше 3", len(feed))
+	}
+	for i := 1; i < len(feed); i++ {
+		if feed[i].At.After(feed[i-1].At) {
+			t.Error("лента не отсортирована от свежих к старым")
+		}
+	}
+}

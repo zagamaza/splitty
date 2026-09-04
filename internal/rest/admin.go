@@ -114,6 +114,10 @@ func (s *Server) AdminHandler() http.Handler {
 	mux.Handle("GET /admin/rooms/{roomId}", s.adminAuth(s.handleAdminRoom))
 	mux.Handle("GET /admin/users", s.adminAuth(s.handleAdminUsers))
 	mux.Handle("GET /admin/users/{userId}", s.adminAuth(s.handleAdminUser))
+	// Продуктовые события: наружу отдаются ИМЕНОВАННЫЕ блоки, а не сырая
+	// выборка. Панель выбирает окно из закрытого списка, но не текст запроса —
+	// иначе админка стала бы открытым прокси к чужой базе.
+	mux.Handle("GET /admin/analytics/{block}", s.adminAuth(s.handleAdminAnalytics))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")

@@ -25,6 +25,7 @@ func (f *fakeCollector) Collect(context.Context, time.Time) (repository.Stats, e
 func TestExposition(t *testing.T) {
 	c := &fakeCollector{stats: repository.Stats{
 		Rooms: 128, RoomsActive7d: 12, Users: 340, PushOutbox: 3, DebtReminders: 7,
+		ProductEvents: 4096,
 	}}
 	s := NewServer(c, time.Minute)
 	s.refreshOnce(context.Background())
@@ -39,6 +40,9 @@ func TestExposition(t *testing.T) {
 		"splitty_users_total 340",
 		"splitty_push_outbox_depth 3",
 		"splitty_debt_reminders_total 7",
+		// Без этого числа отказ от свёрток опирался бы на прикидку по числу
+		// людей, а прикидка — не измерение.
+		"splitty_product_events_total 4096",
 		"# TYPE splitty_rooms_total gauge",
 	} {
 		if !strings.Contains(body, want) {

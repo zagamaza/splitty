@@ -88,6 +88,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	gauge("splitty_users_total", "Всего пользователей", stats.Users)
 	gauge("splitty_push_outbox_depth", "Пушей в очереди доставки", stats.PushOutbox)
 	gauge("splitty_debt_reminders_total", "Людей с историей напоминаний о долге", stats.DebtReminders)
+	gauge("splitty_product_events_total", "Сырых продуктовых событий в окне хранения", stats.ProductEvents)
 	// Возраст снимка виден снаружи: без него нельзя отличить «ничего не
 	// меняется» от «пересчёт умер полчаса назад».
 	gauge("splitty_stats_age_seconds", "Сколько секунд назад пересчитаны числа",

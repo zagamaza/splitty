@@ -17,6 +17,11 @@ type Stats struct {
 	Users         int64
 	PushOutbox    int64
 	DebtReminders int64
+	// ProductEvents — сколько сырых событий лежит сейчас. Отказ от свёрток и
+	// сэмплирования опирался на прикидку по числу людей, а прикидка — не
+	// измерение: без этого числа «вернуться к вопросу, когда поток покажет»
+	// было бы обещанием, которое нечем исполнить.
+	ProductEvents int64
 }
 
 // MongoStatsRepository считает сводные числа по коллекциям.
@@ -50,6 +55,7 @@ func (r *MongoStatsRepository) Collect(ctx context.Context, now time.Time) (Stat
 	count("user", bson.M{}, &stats.Users)
 	count("push_outbox", bson.M{}, &stats.PushOutbox)
 	count("debt_reminder", bson.M{}, &stats.DebtReminders)
+	count("product_events", bson.M{}, &stats.ProductEvents)
 	// «Живая» комната — та, где за неделю что-то происходило. Дата создания для
 	// этого не годится: старая, но живая группа выпала бы из счёта.
 	count("room", bson.M{"operations.create_at": bson.M{"$gte": now.AddDate(0, 0, -7)}}, &stats.RoomsActive7d)

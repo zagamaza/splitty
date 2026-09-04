@@ -1691,6 +1691,14 @@ func (r MongoUserRepository) findOne(ctx context.Context, filter interface{}) (*
 // Google/Apple/Telegram) на нём строит повторный поиск, разрешающий гонку двух
 // первых входов одного человека
 func (r MongoUserRepository) CreateIdentityUser(ctx context.Context, u api.User) error {
+	// Дата создания ставится здесь, а не «там, где выдаётся номер»: аллокатор
+	// NextUserID зовут только google/apple, регистрация по паролю и telegram с
+	// занятым _id, то есть мимо обычной telegram-регистрации, бота и dev-входа.
+	// Это же место накрывает их все.
+	if u.CreatedAt == nil {
+		now := time.Now().UTC()
+		u.CreatedAt = &now
+	}
 	_, err := r.col.InsertOne(ctx, u)
 	return err
 }
@@ -2041,7 +2049,16 @@ func (r MongoUserRepository) UpsertUser(ctx context.Context, u api.User) (*api.U
 		return nil, err
 	}
 	if !updated {
-		if _, err = r.col.InsertOne(ctx, set); err != nil {
+		// Дата создания только на ВСТАВКЕ, и отдельной копией документа.
+		// В $set её класть нельзя: UpsertUser зовётся на каждом сохранении
+		// профиля (см. handlePatchMe), и дата переписывалась бы при каждой
+		// смене имени — то есть «зарегистрировался» означало бы «последний раз
+		// правил профиль».
+		insert := bson.M{"created_at": time.Now().UTC()}
+		for k, v := range set {
+			insert[k] = v
+		}
+		if _, err = r.col.InsertOne(ctx, insert); err != nil {
 			if !IsDuplicateKey(err) {
 				return nil, err
 			}

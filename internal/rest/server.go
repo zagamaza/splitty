@@ -61,6 +61,9 @@ type userDataCleaner interface {
 type productEventStore interface {
 	Insert(ctx context.Context, events []repository.ProductEvent) (repository.InsertResult, error)
 	DeleteByUserId(ctx context.Context, userId int) error
+	Feed(ctx context.Context, days, limit int) ([]repository.FeedRow, error)
+	Daily(ctx context.Context, days int, name string) ([]repository.DailyRow, error)
+	Platforms(ctx context.Context, days int) ([]repository.PlatformRow, error)
 }
 
 // inviteStore хранит отношения «человек × комната»: кто кого позвал и в каком
