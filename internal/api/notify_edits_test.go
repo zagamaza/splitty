@@ -46,3 +46,37 @@ func TestOperationEditsExplicitAndMaster(t *testing.T) {
 		t.Error("мастер-выключатель обязан гасить и явно включённый push правок")
 	}
 }
+
+// Регрессия, найденная на ревью: до появления категории переименования
+// гейтились Operations, поэтому человек с operations.telegram=false их НЕ
+// получал. Если новая категория берёт безусловный дефолт «включено», выкат
+// молча возвращает ему эти уведомления — отказ, сделанный руками, сбрасывается.
+func TestEditsInheritsTelegramOptOutFromOperations(t *testing.T) {
+	off, on := false, true
+
+	u := &User{ID: 1, Notify: &NotifySettings{Operations: ChannelPrefs{Telegram: &off}}}
+	if u.AllowsTelegram(NotifyOperationEdits) {
+		t.Error("отказ от telegram по операциям должен распространяться на правки, пока edits не задана явно")
+	}
+
+	// Явная настройка правок сильнее унаследованной.
+	u = &User{ID: 1, Notify: &NotifySettings{
+		Operations: ChannelPrefs{Telegram: &off},
+		Edits:      ChannelPrefs{Telegram: &on},
+	}}
+	if !u.AllowsTelegram(NotifyOperationEdits) {
+		t.Error("явно включённый telegram у правок должен побеждать унаследованный отказ")
+	}
+
+	// Человек, включивший операции, правки тоже получает.
+	u = &User{ID: 1, Notify: &NotifySettings{Operations: ChannelPrefs{Telegram: &on}}}
+	if !u.AllowsTelegram(NotifyOperationEdits) {
+		t.Error("включённые операции не должны выключать правки")
+	}
+
+	// Наследуется только telegram: push у правок остаётся выключенным.
+	u = &User{ID: 1, Notify: &NotifySettings{Operations: ChannelPrefs{Push: &on}}}
+	if u.WantsPush(NotifyOperationEdits) {
+		t.Error("push у правок наследоваться не должен — он выключен по умолчанию")
+	}
+}

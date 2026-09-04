@@ -247,16 +247,21 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		w.retry(ctx, p)
 		return
 	}
-	// Исход считаем по SuccessCount, а не по «не было транзиентных сбоёв»:
-	// если ВСЕ токены отбракованы навсегда, принято ноль, и писать в след
-	// «sent» значит врать ровно в том случае, ради которого след и заводился.
-	outcome := OutcomeSent
-	if resp.SuccessCount == 0 {
-		outcome = OutcomeRejected
-	}
+	outcome := outcomeFor(resp.SuccessCount)
 	log.Info().Int("user", p.UserID).Int("tokens", len(outcomes)).
 		Int("failed", resp.FailureCount).Str("outcome", outcome).Msg("push: отправлен")
 	w.mark(ctx, p, DeliveryResult{Outcome: outcome, Tokens: outcomes})
+}
+
+// outcomeFor — исход по числу принятых FCM токенов, а не по «не было
+// транзиентных сбоёв»: если ВСЕ токены отбракованы навсегда, принято ноль, и
+// писать в след «sent» значит врать ровно в том случае, ради которого след и
+// заводился.
+func outcomeFor(successCount int) string {
+	if successCount == 0 {
+		return OutcomeRejected
+	}
+	return OutcomeSent
 }
 
 // mark закрывает запись очереди следом доставки. Ошибку только логируем: пуш

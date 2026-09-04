@@ -38,8 +38,8 @@ type pushOutboxDoc struct {
 	SentAt *time.Time `bson:"sent_at,omitempty"`
 	// Outcome/Tokens — что ответил FCM. Ради них всё и затевалось: раньше
 	// успешная отправка и «ушло в никуда» выглядели одинаково — пустой очередью.
-	Outcome string             `bson:"outcome,omitempty"`
-	Tokens  []tokenOutcomeDoc  `bson:"tokens,omitempty"`
+	Outcome string            `bson:"outcome,omitempty"`
+	Tokens  []tokenOutcomeDoc `bson:"tokens,omitempty"`
 }
 
 type tokenOutcomeDoc struct {

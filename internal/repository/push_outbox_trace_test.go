@@ -118,3 +118,37 @@ func TestEnsureIndexesCreatesSentTTL(t *testing.T) {
 	}
 	t.Fatalf("индекса idx_sent_ttl нет: %+v", idx)
 }
+
+// Найдено на ревью: «глубина очереди» в статистике считала push_outbox целиком,
+// а с появлением следа доставки рядом с очередью лежит недельный архив —
+// метрика показывала бы очередь плюс архив и перестала бы что-то значить.
+func TestStatsCountsOnlyPendingPushes(t *testing.T) {
+	db := testDB(t)
+	repo := NewPushOutboxRepository(db)
+	stats := NewStatsRepository(db)
+	ctx := context.Background()
+
+	for i := 0; i < 3; i++ {
+		if err := repo.Enqueue(ctx, i, push.Notification{Title: "Коворк"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	due, err := repo.Due(ctx, time.Now(), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Две доставлены — в очереди должна остаться одна.
+	for _, p := range due[:2] {
+		if err := repo.MarkSent(ctx, p.ID, push.DeliveryResult{Outcome: push.OutcomeSent}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	got, err := stats.Collect(ctx, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.PushOutbox != 1 {
+		t.Fatalf("глубина очереди = %d, ожидалась 1: след доставки попал в метрику", got.PushOutbox)
+	}
+}

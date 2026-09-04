@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -127,5 +128,83 @@ func TestDeletedOperationPushes(t *testing.T) {
 	}
 	if body := pushes.notifs[0].Body; !strings.Contains(body, "убрал") {
 		t.Errorf("неожиданное тело: %q", body)
+	}
+}
+
+// Найдено на ревью: пометка «уже уведомлён» ставилась ДО отправки, поэтому
+// при комбинированной правке денежная ветка, отсечённая настройками, съедала
+// разрешённый пуш про переименование — человек не получал ничего.
+func TestUpdatePushFallsThroughToEditsWhenOperationsPushOff(t *testing.T) {
+	off, on := false, true
+	recipient := pushableUser(3)
+	recipient.Notify = &api.NotifySettings{
+		Operations: api.ChannelPrefs{Push: &off},
+		Edits:      api.ChannelPrefs{Push: &on},
+	}
+	n, pushes := updNotifier(t, recipient)
+
+	// Одной правкой меняем и долю (operations), и название (edits).
+	old := updOp("Чай", 1, 3, 124)
+	upd := old
+	upd.Description = "Чай (красный)"
+	upd.RecipientsWithSum = []api.RecipientWithSum{{User: api.User{ID: 3, DisplayName: "Гость"}, Sum: 83}}
+
+	n.NotifyOperationUpdated(context.Background(), room(), old, upd, api.User{ID: 1, DisplayName: "Автор"})
+
+	if len(pushes.notifs) != 1 {
+		t.Fatalf("ожидался пуш про переименование, отправлено %d", len(pushes.notifs))
+	}
+	if body := pushes.notifs[0].Body; !strings.Contains(body, "переименовал") {
+		t.Errorf("пришёл не тот пуш: %q", body)
+	}
+}
+
+// Обратная сторона: если денежный пуш РАЗРЕШЁН, он и уходит — ровно один,
+// дубля про переименование быть не должно.
+func TestUpdatePushPrefersMoneyOverRename(t *testing.T) {
+	on := true
+	recipient := pushableUser(3)
+	recipient.Notify = &api.NotifySettings{Edits: api.ChannelPrefs{Push: &on}}
+	n, pushes := updNotifier(t, recipient)
+
+	old := updOp("Чай", 1, 3, 124)
+	upd := old
+	upd.Description = "Чай (красный)"
+	upd.RecipientsWithSum = []api.RecipientWithSum{{User: api.User{ID: 3, DisplayName: "Гость"}, Sum: 83}}
+
+	n.NotifyOperationUpdated(context.Background(), room(), old, upd, api.User{ID: 1, DisplayName: "Автор"})
+
+	if len(pushes.notifs) != 1 {
+		t.Fatalf("на одну правку положен один пуш, отправлено %d", len(pushes.notifs))
+	}
+	if body := pushes.notifs[0].Body; !strings.Contains(body, "долю") {
+		t.Errorf("деньги важнее переименования, а пришло: %q", body)
+	}
+}
+
+// failingButtonService — сохранение inline-кнопок телеграма падает.
+type failingButtonService struct{ noopButtonService }
+
+func (failingButtonService) SaveAll(context.Context, ...*api.Button) ([]*api.Button, error) {
+	return nil, errors.New("mongo down")
+}
+
+// Найдено на ревью: ранний return на ошибке SaveAll гасил уведомление целиком.
+// Кнопки нужны только телеграму, а у человека, вошедшего через Google, его нет
+// вовсе — молчать в push из-за соседнего канала бессмысленно.
+func TestUpdatePushSurvivesButtonFailure(t *testing.T) {
+	loadLang(t)
+	pushes := &capturePayload{}
+	finder := stubUserFinder{users: map[int]*api.User{1: tgUser(1, 1001, "Автор"), 3: pushableUser(3)}}
+	n := NewNotifier(&captureSender{}, noopOperationService{}, failingButtonService{}, finder, pushes)
+
+	old := updOp("Чай", 1, 3, 124)
+	upd := old
+	upd.RecipientsWithSum = []api.RecipientWithSum{{User: api.User{ID: 3, DisplayName: "Гость"}, Sum: 83}}
+
+	n.NotifyOperationUpdated(context.Background(), room(), old, upd, api.User{ID: 1, DisplayName: "Автор"})
+
+	if len(pushes.notifs) != 1 {
+		t.Fatalf("push обязан уйти несмотря на сбой кнопок телеграма, отправлено %d", len(pushes.notifs))
 	}
 }

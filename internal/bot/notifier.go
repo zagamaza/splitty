@@ -59,15 +59,19 @@ func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService, uf Us
 // pushToUser шлёт native-пуш пользователю, если он включил push-канал категории.
 // Канонический документ (с PushTokens и Notify) читаем через uf — во встроенных
 // снимках их нет. Best-effort: ошибки/отсутствие токенов молчат.
-func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.NotifyCategory, title, body string, data map[string]string) {
+// Возвращает true, если пуш действительно ушёл в очередь. Вызывающему это
+// нужно, чтобы не считать человека уведомлённым, когда отправку отсекли
+// настройки: см. pushOperationUpdated.
+func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.NotifyCategory, title, body string, data map[string]string) bool {
 	if n.push == nil || n.uf == nil {
-		return
+		return false
 	}
 	canonical, err := n.uf.FindById(ctx, userID)
 	if err != nil || canonical == nil || !canonical.WantsPush(category) || len(canonical.PushTokens) == 0 {
-		return
+		return false
 	}
 	n.push.SendToUser(ctx, *canonical, push.Notification{Title: title, Body: body, Data: data})
+	return true
 }
 
 // opPushData — данные deeplink пуша по операции (комната/операция + канал Android).
@@ -210,26 +214,30 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 		return
 	}
 
+	// Inline-кнопки нужны ТОЛЬКО telegram-сообщениям. Их неудача больше не
+	// отменяет уведомление целиком: у человека, вошедшего через Google или
+	// Apple, телеграма нет вовсе, и молчать в push из-за проблемы соседнего
+	// канала бессмысленно.
 	donOpBut := api.NewButton(donorOperation, &api.CallbackData{RoomId: room.ID.Hex(), OperationId: newOp.ID})
 	viewRoomBut := api.NewButton(viewRoom, &api.CallbackData{RoomId: room.ID.Hex()})
 	if _, err := n.bs.SaveAll(ctx, donOpBut, viewRoomBut); err != nil {
-		log.Error().Err(err).Stack().Msg("notifier: save buttons failed")
-		return
-	}
-	keyboard := [][]tgbotapi.InlineKeyboardButton{
-		{
-			tgbotapi.NewInlineKeyboardButtonData(I18n(newOp.Donor, "btn_view_operation"), donOpBut.ID.Hex()),
-		}, {
-			tgbotapi.NewInlineKeyboardButtonData(I18n(newOp.Donor, "btn_view_room"), viewRoomBut.ID.Hex()),
-		},
-	}
+		log.Error().Err(err).Stack().Msg("notifier: save buttons failed, telegram пропущен")
+	} else {
+		keyboard := [][]tgbotapi.InlineKeyboardButton{
+			{
+				tgbotapi.NewInlineKeyboardButtonData(I18n(newOp.Donor, "btn_view_operation"), donOpBut.ID.Hex()),
+			}, {
+				tgbotapi.NewInlineKeyboardButtonData(I18n(newOp.Donor, "btn_view_room"), viewRoomBut.ID.Hex()),
+			},
+		}
 
-	// Резолвер канонических документов: без него правки/удаления операций уходили
-	// бы даже тем, кто выключил уведомления в приложении (во встроенных снимках
-	// Notify всегда nil), а chat id брать было бы неоткуда. Ср. NotifyOperationCreated.
-	cu := canonical(ctx, n.uf)
-	allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(cu, u, c) }
-	n.send(buildUpdateOperationMessages(cu, &author, &author, diff, oldOp, newOp, &room, keyboard, allows))
+		// Резолвер канонических документов: без него правки/удаления операций уходили
+		// бы даже тем, кто выключил уведомления в приложении (во встроенных снимках
+		// Notify всегда nil), а chat id брать было бы неоткуда. Ср. NotifyOperationCreated.
+		cu := canonical(ctx, n.uf)
+		allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(cu, u, c) }
+		n.send(buildUpdateOperationMessages(cu, &author, &author, diff, oldOp, newOp, &room, keyboard, allows))
+	}
 	n.pushOperationUpdated(ctx, room, oldOp, newOp, author, diff)
 }
 
@@ -244,12 +252,17 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 func (n *Notifier) pushOperationUpdated(ctx context.Context, room api.Room, oldOp api.Operation, newOp api.Operation, author api.User, diff *api.OperationDiff) {
 	data := opPushData(room, newOp)
 	sent := map[int]bool{author.ID: true}
+	// Помечаем ПОСЛЕ отправки, а не до: с operations.push=false и
+	// edits.push=true денежная ветка ничего не отправит, но пометка «уже
+	// уведомлён» съела бы разрешённый пуш про переименование, и человек не
+	// получил бы ничего.
 	send := func(userID int, category api.NotifyCategory, body string) {
 		if sent[userID] {
 			return
 		}
-		sent[userID] = true
-		n.pushToUser(ctx, userID, category, room.Name, body, data)
+		if n.pushToUser(ctx, userID, category, room.Name, body, data) {
+			sent[userID] = true
+		}
 	}
 
 	if oldOp.Donor.ID != newOp.Donor.ID {
