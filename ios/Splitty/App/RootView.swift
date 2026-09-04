@@ -106,6 +106,7 @@ struct RootView: View {
             defer { isJoining = false }
             do {
                 _ = try await session.api.joinRoom(id: roomId)
+                Analytics.shared.track(.roomJoined(via: "link"))
                 // Вступили — намерение исполнено. Чистим до показа комнаты,
                 // иначе следующий триггер (`.task` при возврате на корень)
                 // отправил бы второй такой же запрос.
@@ -129,6 +130,7 @@ struct RootView: View {
                 if (error as? APIError)?.isTerminalJoinFailure == true {
                     PendingJoin.shared.clear()
                 }
+                Analytics.shared.track(.roomJoinFailed(reason: analyticsJoinReason(error)))
                 joinError = joinLinkErrorText(error)
             }
         }

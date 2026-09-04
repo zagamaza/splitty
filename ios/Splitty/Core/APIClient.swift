@@ -965,12 +965,18 @@ final class APIClient: OperationAPI {
     }
 
     /// Выполняет запрос, проверяет статус, возвращает сырое тело ответа.
+    ///
+    /// `notifyUnauthorized: false` нужен ровно одному вызывающему — отправке
+    /// продуктовых событий. Она уходит в фоне и по токену, который мог
+    /// устареть; её 401 не означает, что человек «разлогинен», и гасить из-за
+    /// него живую сессию нельзя.
     @discardableResult
     private func send(
         _ method: String,
         _ path: String,
         query: [URLQueryItem] = [],
-        body: (any Encodable)? = nil
+        body: (any Encodable)? = nil,
+        notifyUnauthorized: Bool = true
     ) async throws -> Data {
         guard let baseURL,
               var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else {
@@ -1000,7 +1006,17 @@ final class APIClient: OperationAPI {
             request.httpBody = try encoder.encode(body)
         }
 
-        return try await perform(request)
+        return try await perform(request, notifyUnauthorized: notifyUnauthorized)
+    }
+
+    /// Отправляет пачку продуктовых событий.
+    ///
+    /// Своим путём, мимо общей обработки 401: пачка уходит в фоне, токен к
+    /// этому моменту мог быть отозван («выйти на всех устройствах»), и
+    /// централизованный выход выкинул бы человека из приложения на ровном
+    /// месте — из-за аналитики, которой он не просил.
+    func postEvents(_ body: any Encodable) async throws {
+        _ = try await send("POST", "/api/v1/events", body: body, notifyUnauthorized: false)
     }
 
     /// Файловая часть multipart-тела.
@@ -1072,7 +1088,7 @@ final class APIClient: OperationAPI {
 
     /// Выполняет готовый запрос (в т.ч. multipart), проверяет статус, возвращает
     /// сырое тело. Общая обработка ответа для JSON-`send` и `parseOperation`.
-    private func perform(_ request: URLRequest) async throws -> Data {
+    private func perform(_ request: URLRequest, notifyUnauthorized: Bool = true) async throws -> Data {
         let data: Data
         let response: URLResponse
         do {
@@ -1085,7 +1101,7 @@ final class APIClient: OperationAPI {
             throw APIError.transport(URLError(.badServerResponse))
         }
         guard (200..<300).contains(http.statusCode) else {
-            if http.statusCode == 401 {
+            if http.statusCode == 401 && notifyUnauthorized {
                 // Мёртвая сессия: централизованный выход из любого запроса.
                 onUnauthorized?()
             }

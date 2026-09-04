@@ -79,6 +79,7 @@ struct SettleUpView: View {
                 }
         }
         .tint(Color.accent)
+        .onAppear { Analytics.shared.track(.settleUpOpened) }
     }
 
     private var alertPresented: Binding<Bool> {
@@ -352,6 +353,7 @@ struct SettleUpView: View {
                 sum: sum,
                 clientOpId: idempotency.key(debtorId: debt.debtor.id, lenderId: debt.lender.id, sum: sum)
             )
+            Analytics.shared.track(.settleUpDone)
             Haptics.success()
             // Единая инвалидация: списки и экран группы перезагрузятся по dataVersion.
             session.noteDataChanged()

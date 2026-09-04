@@ -53,6 +53,12 @@ struct InviteGroupView: View {
                     Label("Поделиться ссылкой", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(.primaryPill)
+                .simultaneousGesture(TapGesture().onEnded {
+                    // Именно «отправил», а не «дошло»: чем кончился системный
+                    // лист, приложению не сообщают, и делать вид, что мы это
+                    // знаем, нельзя.
+                    Analytics.shared.track(.inviteSent(channel: "share"))
+                })
 
                 // Код — вторичный способ: одна строка, тап копирует.
                 Button {
@@ -92,6 +98,7 @@ struct InviteGroupView: View {
     }
 
     private func copy(_ text: String, as item: CopiedItem) {
+        Analytics.shared.track(.inviteSent(channel: "link"))
         UIPasteboard.general.string = text
         Haptics.success()
         withAnimation { copied = item }

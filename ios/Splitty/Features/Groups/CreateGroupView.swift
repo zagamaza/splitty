@@ -77,6 +77,7 @@ struct CreateGroupView: View {
         defer { isSaving = false }
         do {
             let room = try await session.api.createRoom(name: trimmedName)
+            Analytics.shared.track(.roomCreated)
             // Единая инвалидация: список групп перезагрузится по dataVersion.
             session.noteDataChanged()
             Haptics.success()

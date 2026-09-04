@@ -314,6 +314,10 @@ final class SessionStore {
         // session.isAuthenticated)`, так что `RootView` уже не находил ничего.
         PendingJoin.shared.reconcileOwner(userId)
         outbox.keepOwned(by: userId, inheritingOrphans: previous == nil || previous == userId)
+        // События, в отличие от расходов, НЕ наследуются: расход человек ввёл
+        // сам и терять его нельзя, а событие содержимого не несёт — приклеить
+        // его чужому человеку хуже, чем выбросить.
+        Analytics.shared.configure(api: api, userId: userId)
     }
 
     /// Вход через Google: POST /auth/google, сохраняет токен (Keychain)
@@ -325,12 +329,14 @@ final class SessionStore {
     func loginWithTelegram(_ payload: TelegramWebAuth.Payload) async throws {
         let response = try await api.loginWithTelegram(payload)
         adoptSession(response)
+        Analytics.shared.track(.loginCompleted(method: "telegram"))
     }
 
     @MainActor
     func loginWithGoogle(idToken: String) async throws {
         let response = try await api.loginWithGoogle(idToken: idToken)
         adoptSession(response)
+        Analytics.shared.track(.loginCompleted(method: "google"))
     }
 
     /// Вход через Sign in with Apple: POST /auth/apple, сохраняет токен
@@ -352,6 +358,7 @@ final class SessionStore {
             authorizationCode: authorizationCode
         )
         adoptSession(response)
+        Analytics.shared.track(.loginCompleted(method: "apple"))
     }
 
     /// Регистрация по email и паролю: POST /auth/register.
@@ -360,6 +367,7 @@ final class SessionStore {
     func register(email: String, password: String, displayName: String) async throws {
         let response = try await api.register(email: email, password: password, displayName: displayName)
         adoptSession(response)
+        Analytics.shared.track(.loginCompleted(method: "password"))
     }
 
     /// Вход по email и паролю: POST /auth/login.
@@ -368,6 +376,7 @@ final class SessionStore {
     func loginWithPassword(email: String, password: String) async throws {
         let response = try await api.loginWithPassword(email: email, password: password)
         adoptSession(response)
+        Analytics.shared.track(.loginCompleted(method: "password"))
     }
 
     // MARK: - Способы входа
@@ -520,6 +529,9 @@ final class SessionStore {
         // следующий вошедший на устройстве человек молча оказался бы
         // в группе предыдущего.
         PendingJoin.shared.clear()
+        // Очередь событий — тоже чужое: не отправленные события ушедшего
+        // человека не должны уехать под номером следующего.
+        Analytics.shared.configure(api: nil, userId: nil)
         // Кеш — актор: чистим асинхронно, UI разлогина не ждёт диска.
         Task { [cache] in await cache.removeAll() }
         outbox.clear()

@@ -68,6 +68,10 @@ final class AddExpenseViewModel {
     /// Форма заполнена распознаванием (голос/фото), а не вручную. Нужно, чтобы
     /// плоский AI-результат (без позиций) не выглядел как обычный ручной ввод.
     private(set) var didRecognize = false
+    /// Чем расход в итоге набран: руками, голосом или чеком. Запоминается в
+    /// момент распознавания, а на сохранении уже поздно — там видно только
+    /// готовые поля.
+    private var inputMethod = "manual" 
     /// Расход ушёл в очередь, а не на сервер: экран говорит об этом отдельно.
     private(set) var savedOffline = false
     /// Чем распознавали в последний раз. Раньше плашка всегда говорила
@@ -538,6 +542,7 @@ final class AddExpenseViewModel {
         let currentDraft: ParseDraft? = (hasDraftItems || !descriptionText.isEmpty || (sum ?? 0) > 0)
             ? ParseDraft(description: descriptionText, sum: sum ?? 0, donorId: payerId, items: draftItems)
             : nil
+        inputMethod = audio != nil ? "voice" : (image != nil ? "receipt" : inputMethod)
         do {
             let response = try await api.parseOperation(
                 roomId: roomId,
@@ -562,6 +567,7 @@ final class AddExpenseViewModel {
             // Суточная норма кончилась: ведём к оплате, а не показываем ошибку.
             // Черновик и записанный звук при этом НЕ теряются — человек
             // возвращается к тому же экрану, докупив или закрыв paywall.
+            Analytics.shared.track(.expenseParseFailed(reason: analyticsParseReason(error)))
             if let apiError = error as? APIError, apiError.isAiQuotaExceeded {
                 lastQuota = apiError.quota
                 isPaywallPresented = true
@@ -1045,6 +1051,7 @@ final class AddExpenseViewModel {
                 )
             }
             didSave = true
+            Analytics.shared.track(.expenseAdded(method: inputMethod))
             return true
         } catch let error as APIError {
             // Сервер недоступен или ответил 5xx: создание не теряем — кладём в
@@ -1055,6 +1062,9 @@ final class AddExpenseViewModel {
                 outbox.add(roomId: roomId, payload: payload, localId: localId, ownerUserId: meId)
                 didSave = true
                 savedOffline = true
+                // Ушёл в очередь — для человека расход добавлен, и в воронке
+                // это тот же шаг: иначе офлайн выглядел бы обрывом.
+                Analytics.shared.track(.expenseAdded(method: inputMethod))
                 return true
             }
             alertMessage = humanErrorText(error)

@@ -57,7 +57,10 @@ struct SplittyApp: App {
                     // Привязываем сессию к push-менеджеру: если FCM-токен уже
                     // получен и пользователь авторизован — токен уйдёт на бэкенд.
                     PushManager.shared.attach(session: session)
+                    // Холодный старт — новая сессия событий.
+                    Analytics.shared.startSession()
                     await session.refreshMe()
+                    Analytics.shared.track(.appOpen(cold: true))
                     // Бейдж обязан появляться до открытия раздела — иначе
                     // счётчик показывался бы ровно тогда, когда его гасят.
                     await session.refreshUnreadCount()

@@ -281,7 +281,7 @@ struct AccountView: View {
             .surfaceCard(padding: 0)
         }
         .sheet(isPresented: $isPaywallPresented) {
-            PaywallView(store: subscriptions, quota: subscriptions.quota)
+            PaywallView(store: subscriptions, quota: subscriptions.quota, from: "account")
         }
         .task {
             await subscriptions.refreshQuota()

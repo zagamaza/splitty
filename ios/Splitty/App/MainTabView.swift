@@ -133,10 +133,16 @@ struct MainTabView: View {
                 // расходы и погашения: обновляем не только бейдж, но и сами
                 // экраны — иначе человек возвращался к устаревшим суммам
                 session.noteDataChanged()
+                Analytics.shared.track(.appOpen(cold: false))
                 Task {
                     await session.syncOutbox()
                     await session.refreshUnreadCount()
                 }
+            }
+            if phase == .background {
+                // Уход в фон — последний момент, когда можно отправить
+                // накопленное: дальше система приложение усыпит.
+                Analytics.shared.flushInBackground()
             }
         }
         // Тап по push: единственный подписчик, который реально куда-то ведёт.

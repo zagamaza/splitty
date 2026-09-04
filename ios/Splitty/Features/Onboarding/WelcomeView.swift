@@ -28,7 +28,10 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button("Пропустить") { onFinish(false) }
+                Button("Пропустить") {
+                    Analytics.shared.track(.onboardingSkipped)
+                    onFinish(false)
+                }
                     .scaledFont(size: 16, weight: .medium)
                     .foregroundStyle(Color.inkSecondary)
                     .accessibilityIdentifier("welcomeSkip")
@@ -50,6 +53,7 @@ struct WelcomeView: View {
 
             Button(page == Self.pageCount - 1 ? "Создать группу" : "Далее") {
                 if page == Self.pageCount - 1 {
+                    Analytics.shared.track(.onboardingCompleted)
                     onFinish(true)
                 } else {
                     withAnimation(.easeInOut(duration: 0.25)) { page += 1 }
@@ -61,6 +65,11 @@ struct WelcomeView: View {
             .accessibilityIdentifier("welcomePrimary")
         }
         .background(Color.bg)
+        .onAppear { Analytics.shared.track(.onboardingStarted) }
+        .onChange(of: page) { _, current in
+            guard let step = WelcomeStep(rawValue: current) else { return }
+            Analytics.shared.track(.onboardingStep(step: step.analyticsName))
+        }
     }
 }
 
@@ -70,6 +79,18 @@ struct WelcomeView: View {
 /// посмотреть без запуска приложения (`WelcomeRenderTests`).
 enum WelcomeStep: Int, CaseIterable {
     case group, dictate, whoPaid, transfers
+
+    /// Имя шага в контракте событий. Отдельно от `case`: имена там snake_case и
+    /// общие со вторым клиентом, а переименование шага в коде не должно тихо
+    /// разводить один шаг воронки на два.
+    var analyticsName: String {
+        switch self {
+        case .group: return "group"
+        case .dictate: return "dictate"
+        case .whoPaid: return "who_paid"
+        case .transfers: return "transfers"
+        }
+    }
 
     var title: String {
         switch self {

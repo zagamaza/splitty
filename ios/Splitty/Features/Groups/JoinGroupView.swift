@@ -118,12 +118,14 @@ struct JoinGroupView: View {
         defer { isJoining = false }
         do {
             _ = try await session.api.joinRoom(id: roomId)
+            Analytics.shared.track(.roomJoined(via: "code"))
             // Единая инвалидация: список групп перезагрузится по dataVersion.
             session.noteDataChanged()
             Haptics.success()
             onJoined()
             dismiss()
         } catch {
+            Analytics.shared.track(.roomJoinFailed(reason: analyticsJoinReason(error)))
             alertMessage = humanErrorText(error)
         }
     }

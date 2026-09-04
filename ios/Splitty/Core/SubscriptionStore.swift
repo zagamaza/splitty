@@ -88,19 +88,25 @@ final class SubscriptionStore {
     func purchase(_ product: Product) async -> PurchaseOutcome {
         purchaseError = nil
         let bindingToken = try? await api().me().purchaseBindingToken
+        Analytics.shared.track(.purchaseStarted(product: analyticsProduct(product.id)))
         let outcome = await storeKit.purchase(product, bindingToken: bindingToken)
 
         switch outcome {
         case .success:
+            Analytics.shared.track(.purchaseCompleted(product: analyticsProduct(product.id)))
             await refreshQuota()
             await refreshSubscription()
         case .pendingServer:
+            // Деньги списаны, но сервер чек ещё не принял — для воронки это не
+            // покупка и не отказ, а отдельная причина.
+            Analytics.shared.track(.purchaseFailed(reason: "verify"))
             purchaseError = String(localized: "Оплата прошла, но подтвердить её пока не удалось. Проверьте связь — доступ появится сам")
         case .pendingApproval:
             purchaseError = String(localized: "Покупка ждёт подтверждения")
         case .cancelled:
-            break
+            Analytics.shared.track(.purchaseFailed(reason: "cancelled"))
         case .failed(let error):
+            Analytics.shared.track(.purchaseFailed(reason: "store"))
             purchaseError = error?.localizedDescription
                 ?? String(localized: "Не удалось совершить покупку")
         }

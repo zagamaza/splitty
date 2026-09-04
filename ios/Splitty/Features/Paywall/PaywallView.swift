@@ -19,6 +19,9 @@ struct PaywallView: View {
 
     let store: SubscriptionStore
     var quota: AiQuota?
+    /// Откуда открыт: `quota` — упёрся в лимит распознаваний, `account` — зашёл
+    /// сам из профиля. Два разных вопроса к воронке, и складывать их нельзя.
+    var from: String = "quota"
 
     @State private var selectedProductId = StoreKitService.yearlyId
     @State private var isRestoring = false
@@ -63,6 +66,15 @@ struct PaywallView: View {
                 }
             }
             .task { await store.storeKit.loadProducts() }
+            .onAppear { Analytics.shared.track(.paywallShown(from: from)) }
+            .onDisappear {
+                // Закрыли, не купив. Вывести это из «показали, но не начали
+                // покупку» нельзя: «закрыл экран» и «ушёл из приложения» —
+                // разные ответы на вопрос, почему не купили.
+                if !store.isPlus {
+                    Analytics.shared.track(.paywallDismissed(from: from))
+                }
+            }
             .alert(
                 String(localized: "Покупка"),
                 isPresented: Binding(
