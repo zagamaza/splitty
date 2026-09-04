@@ -241,6 +241,8 @@ type NotifySettings struct {
 	Debts ChannelPrefs `json:"debts" bson:"debts,omitempty"`
 	// Invites — приглашения в группы
 	Invites ChannelPrefs `json:"invites" bson:"invites,omitempty"`
+	// Edits — правки операции, не меняющие сумму: переименование, фото
+	Edits ChannelPrefs `json:"edits" bson:"edits,omitempty"`
 }
 
 // NotifyCategory категория уведомления для проверки настроек
@@ -253,7 +255,41 @@ const (
 	// добавляются позже (NotifySettings.Invites); до этого действуют общий
 	// дефолт «включено» и мастер-выключатель NotificationOn
 	NotifyInvites NotifyCategory = "invites"
+	// NotifyOperationEdits — правки, не влияющие на деньги: переименование
+	// операции и добавленное фото. Единственная категория с разными дефолтами
+	// по каналам, см. notifyDefaults
+	NotifyOperationEdits NotifyCategory = "edits"
 )
+
+// notifyDefaults возвращает настройки категории и её дефолты по каналам для
+// случая, когда пользователь ничего не выбирал.
+//
+// У всех категорий дефолт «включено», и только у NotifyOperationEdits push
+// выключен: переименовать операцию можно сколько угодно раз подряд, и в баннер
+// это летит очередью. Telegram у правок остаётся включённым — он слал их с
+// самого начала, и молча отключить это значит поменять поведение живым людям.
+func (u *User) notifyDefaults(category NotifyCategory) (prefs ChannelPrefs, defTelegram, defPush bool) {
+	defTelegram, defPush = true, true
+	if u.Notify != nil {
+		prefs = u.Notify.Operations
+	}
+	switch category {
+	case NotifyDebts:
+		if u.Notify != nil {
+			prefs = u.Notify.Debts
+		}
+	case NotifyInvites:
+		if u.Notify != nil {
+			prefs = u.Notify.Invites
+		}
+	case NotifyOperationEdits:
+		if u.Notify != nil {
+			prefs = u.Notify.Edits
+		}
+		defPush = false
+	}
+	return prefs, defTelegram, defPush
+}
 
 // AllowsTelegram слать ли пользователю telegram-уведомление категории.
 // Приоритет: глобальный выключатель NotificationOn (мастер-тумблер) → явная
@@ -268,21 +304,12 @@ func (u *User) AllowsTelegram(category NotifyCategory) bool {
 	if u.NotificationOn != nil && !*u.NotificationOn {
 		return false
 	}
-	if u.Notify != nil {
-		prefs := u.Notify.Operations
-		switch category {
-		case NotifyDebts:
-			prefs = u.Notify.Debts
-		case NotifyInvites:
-			prefs = u.Notify.Invites
-		}
-		if prefs.Telegram != nil {
-			return *prefs.Telegram
-		}
+	prefs, defTelegram, _ := u.notifyDefaults(category)
+	if prefs.Telegram != nil {
+		return *prefs.Telegram
 	}
-	// Мастер включён (или не задан → включён): по умолчанию telegram-канал
-	// активен для обеих категорий.
-	return true
+	// Мастер включён (или не задан → включён): действует дефолт категории.
+	return defTelegram
 }
 
 // WantsPush хочет ли пользователь push категории. Симметрично AllowsTelegram:
@@ -298,19 +325,11 @@ func (u *User) WantsPush(category NotifyCategory) bool {
 	if u.NotificationOn != nil && !*u.NotificationOn {
 		return false
 	}
-	if u.Notify != nil {
-		prefs := u.Notify.Operations
-		switch category {
-		case NotifyDebts:
-			prefs = u.Notify.Debts
-		case NotifyInvites:
-			prefs = u.Notify.Invites
-		}
-		if prefs.Push != nil {
-			return *prefs.Push
-		}
+	prefs, _, defPush := u.notifyDefaults(category)
+	if prefs.Push != nil {
+		return *prefs.Push
 	}
-	return true
+	return defPush
 }
 
 func DefineLang(u *User) string {

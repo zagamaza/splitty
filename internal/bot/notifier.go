@@ -230,6 +230,65 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 	cu := canonical(ctx, n.uf)
 	allows := func(u *api.User, c api.NotifyCategory) bool { return n.allowsTelegram(cu, u, c) }
 	n.send(buildUpdateOperationMessages(cu, &author, &author, diff, oldOp, newOp, &room, keyboard, allows))
+	n.pushOperationUpdated(ctx, room, oldOp, newOp, author, diff)
+}
+
+// pushOperationUpdated — пуши по тому же diff, что и телеграм-сообщения выше.
+// Отдельным проходом, а не внутри buildUpdateOperationMessages: тот собирает
+// только telegram и общий с ботом, а пуш нужен и тем, у кого телеграма нет
+// вовсе (вход через Google или Apple).
+//
+// Каждый получает не больше одного пуша за правку, поэтому порядок веток —
+// от денежных к косметическим: если человеку и долю поменяли, и операцию
+// заодно переименовали, важнее первое. Автор правки не уведомляется о себе.
+func (n *Notifier) pushOperationUpdated(ctx context.Context, room api.Room, oldOp api.Operation, newOp api.Operation, author api.User, diff *api.OperationDiff) {
+	data := opPushData(room, newOp)
+	sent := map[int]bool{author.ID: true}
+	send := func(userID int, category api.NotifyCategory, body string) {
+		if sent[userID] {
+			return
+		}
+		sent[userID] = true
+		n.pushToUser(ctx, userID, category, room.Name, body, data)
+	}
+
+	if oldOp.Donor.ID != newOp.Donor.ID {
+		send(newOp.Donor.ID, api.NotifyOperations,
+			fmt.Sprintf("%s назначил вас плательщиком «%s»", author.DisplayName, newOp.Description))
+		send(oldOp.Donor.ID, api.NotifyOperations,
+			fmt.Sprintf("%s сменил плательщика «%s» — теперь это %s", author.DisplayName, newOp.Description, newOp.Donor.DisplayName))
+	}
+	for _, added := range diff.RecipientsAdded {
+		send(added.User.ID, api.NotifyOperations,
+			fmt.Sprintf("%s добавил вас в расход «%s» — ваша доля %s",
+				author.DisplayName, newOp.Description, moneySpace(int(added.Sum), room.Currency)))
+	}
+	for _, change := range diff.RecipientsShareChanged {
+		send(change.User.ID, api.NotifyOperations,
+			fmt.Sprintf("%s изменил вашу долю в «%s»: %s → %s", author.DisplayName, newOp.Description,
+				moneySpace(int(change.OldSum), room.Currency), moneySpace(int(change.NewSum), room.Currency)))
+	}
+	for _, removed := range diff.RecipientsRemoved {
+		send(removed.User.ID, api.NotifyOperations,
+			fmt.Sprintf("%s убрал вас из расхода «%s»", author.DisplayName, newOp.Description))
+	}
+
+	if !diff.NameChanged && !diff.PhotoAdded {
+		return
+	}
+	var body string
+	switch {
+	case diff.NameChanged && diff.PhotoAdded:
+		body = fmt.Sprintf("%s переименовал «%s» → «%s» и добавил фото", author.DisplayName, oldOp.Description, newOp.Description)
+	case diff.NameChanged:
+		body = fmt.Sprintf("%s переименовал «%s» → «%s»", author.DisplayName, oldOp.Description, newOp.Description)
+	default:
+		body = fmt.Sprintf("%s добавил фото к расходу «%s»", author.DisplayName, newOp.Description)
+	}
+	send(newOp.Donor.ID, api.NotifyOperationEdits, body)
+	for _, r := range newOp.RecipientsWithSum {
+		send(r.User.ID, api.NotifyOperationEdits, body)
+	}
 }
 
 // NotifyOperationDeleted — паритет с DeleteDonorOperation: бот при удалении

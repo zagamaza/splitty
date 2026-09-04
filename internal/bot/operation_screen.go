@@ -1504,9 +1504,11 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 			changeDetails += "Добавлено фото.\n"
 		}
 
-		// Уведомляем донора, если он существует и у него включены уведомления
+		// Категория здесь NotifyOperationEdits, а не NotifyOperations: сумма не
+		// поменялась, и это единственный блок, который срабатывает на правку
+		// без денежных последствий
 		notifiedUsers := make(map[int]bool)
-		if allows(newOp.Donor, api.NotifyOperations) {
+		if allows(newOp.Donor, api.NotifyOperationEdits) {
 			if chatId, ok := cu.chatID(newOp.Donor); ok {
 				text := I18n(newOp.Donor, "scrn_notification_operation_updated_all", cu.link(newOp.Donor), newDesc, cu.link(editor), changeDetails)
 				msg := NewMessage(chatId, text, keyboard)
@@ -1517,7 +1519,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 
 		// Уведомляем всех получателей
 		for _, r := range newOp.RecipientsWithSum {
-			if allows(&r.User, api.NotifyOperations) && !notifiedUsers[r.User.ID] {
+			if allows(&r.User, api.NotifyOperationEdits) && !notifiedUsers[r.User.ID] {
 				notifiedUsers[r.User.ID] = true
 				chatId, ok := cu.chatID(&r.User)
 				if !ok {

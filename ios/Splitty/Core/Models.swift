@@ -43,6 +43,29 @@ struct NotifySettings: Codable, Hashable {
     var operations: ChannelPrefs
     var debts: ChannelPrefs
     var invites: ChannelPrefs
+    /// Правки операции, не меняющие сумму: переименование и добавленное фото.
+    /// Push здесь по умолчанию выключен — переименовать расход можно сколько
+    /// угодно раз подряд, и в баннер это летит очередью.
+    var edits: ChannelPrefs
+
+    init(operations: ChannelPrefs, debts: ChannelPrefs, invites: ChannelPrefs, edits: ChannelPrefs) {
+        self.operations = operations
+        self.debts = debts
+        self.invites = invites
+        self.edits = edits
+    }
+
+    /// `edits` появилась позже остальных категорий: сервер прошлой версии её не
+    /// пришлёт, и обычный синтезированный декодер уронил бы весь экран
+    /// настроек на отсутствующем ключе.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        operations = try c.decode(ChannelPrefs.self, forKey: .operations)
+        debts = try c.decode(ChannelPrefs.self, forKey: .debts)
+        invites = try c.decode(ChannelPrefs.self, forKey: .invites)
+        edits = try c.decodeIfPresent(ChannelPrefs.self, forKey: .edits)
+            ?? ChannelPrefs(telegram: true, push: false)
+    }
 }
 
 /// Профиль текущего пользователя.

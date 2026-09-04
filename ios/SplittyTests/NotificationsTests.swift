@@ -693,3 +693,54 @@ final class NotifySettingsTests: XCTestCase {
         XCTAssertNotNil(json["invites"], "категория приглашений не уезжает в PATCH — тумблер немой")
     }
 }
+
+// MARK: - Категория «Правки расходов»
+
+/// Категория `edits` появилась позже остальных. Сервер прошлой версии её не
+/// пришлёт, и синтезированный Codable уронил бы весь экран настроек на
+/// отсутствующем ключе — человек увидел бы «Не удалось загрузить» вместо
+/// тумблеров. Дефолт обязан совпадать с серверным: telegram включён, push нет.
+final class NotifyEditsDecodingTests: XCTestCase {
+    func testMissingEditsFallsBackToServerDefaults() throws {
+        let json = """
+        {"operations":{"telegram":true,"push":true},
+         "debts":{"telegram":true,"push":true},
+         "invites":{"telegram":true,"push":true}}
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(NotifySettings.self, from: json)
+
+        XCTAssertTrue(settings.edits.telegram, "telegram у правок исторически включён")
+        XCTAssertFalse(settings.edits.push, "push у правок по умолчанию выключен")
+        XCTAssertTrue(settings.operations.push, "остальные категории не задеты")
+    }
+
+    func testEditsDecodedWhenPresent() throws {
+        let json = """
+        {"operations":{"telegram":true,"push":true},
+         "debts":{"telegram":true,"push":true},
+         "invites":{"telegram":true,"push":true},
+         "edits":{"telegram":false,"push":true}}
+        """.data(using: .utf8)!
+
+        let settings = try JSONDecoder().decode(NotifySettings.self, from: json)
+
+        XCTAssertFalse(settings.edits.telegram)
+        XCTAssertTrue(settings.edits.push)
+    }
+
+    /// PATCH уходит целиком, поэтому edits обязана попасть в тело — иначе
+    /// включённый тумблер не доехал бы до сервера.
+    func testEditsSurvivesRoundTrip() throws {
+        let original = NotifySettings(
+            operations: ChannelPrefs(telegram: true, push: true),
+            debts: ChannelPrefs(telegram: true, push: true),
+            invites: ChannelPrefs(telegram: true, push: true),
+            edits: ChannelPrefs(telegram: true, push: true))
+
+        let data = try JSONEncoder().encode(original)
+        XCTAssertTrue(String(data: data, encoding: .utf8)!.contains("edits"),
+                      "ключ edits обязан быть в теле PATCH")
+        XCTAssertEqual(try JSONDecoder().decode(NotifySettings.self, from: data), original)
+    }
+}

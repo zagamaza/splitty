@@ -1,8 +1,7 @@
 import SwiftUI
 
 /// Настройки уведомлений: категория событий × канал доставки.
-/// Telegram работает сразу (шлёт бот), «Приложение» — задел под пуши
-/// (APNs/FCM), пока выключен и подписан «скоро».
+/// Оба канала рабочие: Telegram шлёт бот, «Приложение» — пуш (APNs/FCM).
 struct NotificationSettingsView: View {
     @Environment(SessionStore.self) private var session
     @State private var settings: NotifySettings?
@@ -121,6 +120,30 @@ struct NotificationSettingsView: View {
                             set: { newValue in
                                 var updated = current
                                 updated.invites.push = newValue
+                                save(updated)
+                            }
+                        )
+                    )
+                    // Отдельная категория, а не часть «Операций»: сумма от
+                    // переименования не меняется, и push здесь по умолчанию
+                    // выключен — иначе правка названия трижды подряд даёт
+                    // очередь баннеров ни о чём.
+                    section(
+                        title: "Правки расходов",
+                        footer: "Расход переименовали или добавили фото — сумма и ваша доля не изменились",
+                        telegram: Binding(
+                            get: { current.edits.telegram },
+                            set: { newValue in
+                                var updated = current
+                                updated.edits.telegram = newValue
+                                save(updated)
+                            }
+                        ),
+                        push: Binding(
+                            get: { current.edits.push },
+                            set: { newValue in
+                                var updated = current
+                                updated.edits.push = newValue
                                 save(updated)
                             }
                         )

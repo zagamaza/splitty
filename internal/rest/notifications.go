@@ -22,6 +22,8 @@ type notifySettingsDto struct {
 	Debts channelPrefsDto `json:"debts"`
 	// Invites — приглашения в группы.
 	Invites channelPrefsDto `json:"invites"`
+	// Edits — правки операции без изменения суммы: переименование, фото.
+	Edits channelPrefsDto `json:"edits"`
 }
 
 // patchNotifyRequest частичное обновление: незаданные поля не меняются.
@@ -40,6 +42,12 @@ type patchNotifyRequest struct {
 		Telegram *bool `json:"telegram"`
 		Push     *bool `json:"push"`
 	} `json:"invites"`
+	// Edits добавлена позже остальных — старый клиент её не пришлёт, см.
+	// стартовые эффективные значения в handlePatchNotifications.
+	Edits *struct {
+		Telegram *bool `json:"telegram"`
+		Push     *bool `json:"push"`
+	} `json:"edits"`
 }
 
 func toNotifyDto(u *api.User) notifySettingsDto {
@@ -55,6 +63,10 @@ func toNotifyDto(u *api.User) notifySettingsDto {
 		Invites: channelPrefsDto{
 			Telegram: u.AllowsTelegram(api.NotifyInvites),
 			Push:     u.WantsPush(api.NotifyInvites),
+		},
+		Edits: channelPrefsDto{
+			Telegram: u.AllowsTelegram(api.NotifyOperationEdits),
+			Push:     u.WantsPush(api.NotifyOperationEdits),
 		},
 	}
 }
@@ -106,6 +118,12 @@ func (s *Server) handlePatchNotifications(w http.ResponseWriter, r *http.Request
 			Telegram: boolPtr(user.AllowsTelegram(api.NotifyInvites)),
 			Push:     boolPtr(user.WantsPush(api.NotifyInvites)),
 		},
+		// Push у правок выключен по умолчанию — эффективное значение это уже
+		// учитывает, так что фиксация матрицы его не включит
+		Edits: api.ChannelPrefs{
+			Telegram: boolPtr(user.AllowsTelegram(api.NotifyOperationEdits)),
+			Push:     boolPtr(user.WantsPush(api.NotifyOperationEdits)),
+		},
 	}
 	if req.Operations != nil {
 		if req.Operations.Telegram != nil {
@@ -129,6 +147,14 @@ func (s *Server) handlePatchNotifications(w http.ResponseWriter, r *http.Request
 		}
 		if req.Invites.Push != nil {
 			settings.Invites.Push = req.Invites.Push
+		}
+	}
+	if req.Edits != nil {
+		if req.Edits.Telegram != nil {
+			settings.Edits.Telegram = req.Edits.Telegram
+		}
+		if req.Edits.Push != nil {
+			settings.Edits.Push = req.Edits.Push
 		}
 	}
 

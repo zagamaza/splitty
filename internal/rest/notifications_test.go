@@ -128,3 +128,62 @@ func TestNotifyInvitesDefaultsOn(t *testing.T) {
 		t.Fatal("мастер-выключатель обязан гасить и приглашения")
 	}
 }
+
+// Категория «правки» приезжает выключенной по push и включённой по telegram.
+// Проверяем через HTTP, а не только на модели: стартовая матрица в
+// handlePatchNotifications фиксирует ЭФФЕКТИВНЫЕ значения, и если бы она брала
+// общий дефолт «включено», первое же сохранение настроек из приложения
+// незаметно включило бы человеку пуши на каждое переименование.
+func TestEditsCategoryDefaults(t *testing.T) {
+	userRepo := newFakeUserRepo(testUser1)
+	s := newTestServer(Config{}, userRepo, newFakeRoomRepo())
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, "GET", "/api/v1/me/notifications", token, "")
+	var dto notifySettingsDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &dto); err != nil {
+		t.Fatal(err)
+	}
+	if dto.Edits.Push {
+		t.Errorf("edits.push должен быть выключен по умолчанию, got %+v", dto.Edits)
+	}
+	if !dto.Edits.Telegram {
+		t.Errorf("edits.telegram должен остаться включённым, got %+v", dto.Edits)
+	}
+
+	// Правка соседней категории не включает пуши правок задним числом.
+	rec = doRequest(t, s, "PATCH", "/api/v1/me/notifications", token, `{"debts":{"push":false}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &dto)
+	if dto.Edits.Push {
+		t.Errorf("сохранение других настроек не должно включать edits.push, got %+v", dto.Edits)
+	}
+}
+
+// Включение пушей правок сохраняется и не задевает соседей.
+func TestPatchEditsPush(t *testing.T) {
+	userRepo := newFakeUserRepo(testUser1)
+	s := newTestServer(Config{}, userRepo, newFakeRoomRepo())
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, "PATCH", "/api/v1/me/notifications", token, `{"edits":{"push":true}}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %s", rec.Code, rec.Body.String())
+	}
+	var dto notifySettingsDto
+	_ = json.Unmarshal(rec.Body.Bytes(), &dto)
+	if !dto.Edits.Push {
+		t.Fatalf("edits.push должен включиться, got %+v", dto)
+	}
+	if !dto.Operations.Push || !dto.Debts.Push {
+		t.Fatalf("соседние категории не трогали, got %+v", dto)
+	}
+
+	rec = doRequest(t, s, "GET", "/api/v1/me/notifications", token, "")
+	_ = json.Unmarshal(rec.Body.Bytes(), &dto)
+	if !dto.Edits.Push {
+		t.Fatalf("GET после PATCH не согласован: %+v", dto)
+	}
+}
