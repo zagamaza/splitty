@@ -50,7 +50,8 @@ type TokenOutcome struct {
 
 // Исходы доставки, попадающие в след записи.
 const (
-	OutcomeSent     = "sent"      // FCM принял (хотя бы часть токенов)
+	OutcomeSent     = "sent"      // FCM принял хотя бы один токен
+	OutcomeRejected = "rejected"  // приняты НОЛЬ токенов: все отбракованы навсегда
 	OutcomeNoTokens = "no_tokens" // слать некуда: у человека не осталось устройств
 	OutcomeGaveUp   = "gave_up"   // исчерпаны попытки на транзиентных сбоях
 )
@@ -246,9 +247,16 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		w.retry(ctx, p)
 		return
 	}
+	// Исход считаем по SuccessCount, а не по «не было транзиентных сбоёв»:
+	// если ВСЕ токены отбракованы навсегда, принято ноль, и писать в след
+	// «sent» значит врать ровно в том случае, ради которого след и заводился.
+	outcome := OutcomeSent
+	if resp.SuccessCount == 0 {
+		outcome = OutcomeRejected
+	}
 	log.Info().Int("user", p.UserID).Int("tokens", len(outcomes)).
-		Int("failed", resp.FailureCount).Msg("push: отправлен")
-	w.mark(ctx, p, DeliveryResult{Outcome: OutcomeSent, Tokens: outcomes})
+		Int("failed", resp.FailureCount).Str("outcome", outcome).Msg("push: отправлен")
+	w.mark(ctx, p, DeliveryResult{Outcome: outcome, Tokens: outcomes})
 }
 
 // mark закрывает запись очереди следом доставки. Ошибку только логируем: пуш

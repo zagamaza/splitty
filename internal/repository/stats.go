@@ -53,7 +53,10 @@ func (r *MongoStatsRepository) Collect(ctx context.Context, now time.Time) (Stat
 
 	count("room", bson.M{}, &stats.Rooms)
 	count("user", bson.M{}, &stats.Users)
-	count("push_outbox", bson.M{}, &stats.PushOutbox)
+	// Только НЕотправленные: с появлением следа доставки (sent_at) в коллекции
+	// рядом с очередью лежит недельный архив, и без фильтра «глубина очереди»
+	// показывала бы очередь плюс архив — метрика перестала бы что-то значить.
+	count("push_outbox", bson.M{"sent_at": bson.M{"$eq": nil}}, &stats.PushOutbox)
 	count("debt_reminder", bson.M{}, &stats.DebtReminders)
 	count("product_events", bson.M{}, &stats.ProductEvents)
 	// «Живая» комната — та, где за неделю что-то происходило. Дата создания для

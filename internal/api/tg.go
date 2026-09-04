@@ -299,6 +299,15 @@ func (u *User) notifyDefaults(category NotifyCategory) (prefs ChannelPrefs, defT
 	case NotifyOperationEdits:
 		if u.Notify != nil {
 			prefs = u.Notify.Edits
+			// Явный отказ от telegram по операциям наследуем: до появления
+			// этой категории переименования гейтились именно Operations, и
+			// человек, выключивший их, переименований НЕ получал. Без
+			// наследования выкат молча вернул бы ему эти уведомления, а первый
+			// же PATCH со старого клиента (тела без edits) зафиксировал бы
+			// edits.telegram=true в базе.
+			if u.Notify.Operations.Telegram != nil {
+				defTelegram = *u.Notify.Operations.Telegram
+			}
 		}
 		defPush = false
 	}

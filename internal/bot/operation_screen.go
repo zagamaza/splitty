@@ -1430,9 +1430,20 @@ func notificationWhenUpdateOperation(cu *canonicalUsers, u *api.Update, oldOp ap
 		},
 	}
 
+	// Категория правок обязана слушаться КАНОНИЧЕСКИХ настроек и на бот-пути:
+	// снимок участника Notify не несёт никогда, и тумблер «Правки расходов» из
+	// приложения иначе не действовал бы на переименование, сделанное из бота, —
+	// тумблер работал бы наполовину. Остальные категории намеренно оставлены на
+	// снимке: их перевод меняет давнее поведение бота и идёт отдельной задачей.
+	allows := func(usr *api.User, c api.NotifyCategory) bool {
+		if c == api.NotifyOperationEdits {
+			return cu.get(usr).AllowsTelegram(c)
+		}
+		return usr.AllowsTelegram(c)
+	}
 	// editor — КАНОНИЧЕСКИЙ пользователь: внутри buildUpdateOperationMessages его
 	// ID сравнивается с ID доноров операции, то есть работает как номер Splitty
-	messages = append(messages, buildUpdateOperationMessages(cu, u.User, u.User, diff, oldOp, newOp, room, keyboard, nil)...)
+	messages = append(messages, buildUpdateOperationMessages(cu, u.User, u.User, diff, oldOp, newOp, room, keyboard, allows)...)
 	return buttons, messages
 }
 
