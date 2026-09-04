@@ -38,14 +38,42 @@ type PendingPush struct {
 	Attempts     int
 }
 
+// TokenOutcome — судьба одного токена в отправке. Token хранит только ХВОСТ
+// токена: полный лежит в документе пользователя, а для сопоставления «какое из
+// устройств не приняло» хватает шести символов, и копия секрета в другой
+// коллекции не заводится.
+type TokenOutcome struct {
+	Token string
+	// Error пусто — доставлено; иначе текст ошибки FCM.
+	Error string
+}
+
+// Исходы доставки, попадающие в след записи.
+const (
+	OutcomeSent     = "sent"      // FCM принял (хотя бы часть токенов)
+	OutcomeNoTokens = "no_tokens" // слать некуда: у человека не осталось устройств
+	OutcomeGaveUp   = "gave_up"   // исчерпаны попытки на транзиентных сбоях
+)
+
+// DeliveryResult — что случилось с пушем. Оседает в очереди рядом с записью.
+type DeliveryResult struct {
+	Outcome string
+	Tokens  []TokenOutcome
+}
+
 // Store — персистентная очередь пушей (реализация — Mongo в repository).
 type Store interface {
 	// Enqueue кладёт пуш в очередь к немедленной доставке.
 	Enqueue(ctx context.Context, userID int, n Notification) error
 	// Due возвращает пачку записей, у которых подошло время доставки.
+	// Обязана отдавать только НЕотправленные — иначе доставленный пуш уходил
+	// бы по кругу.
 	Due(ctx context.Context, now time.Time, limit int) ([]PendingPush, error)
-	// Delete убирает запись (успех либо исчерпаны попытки).
-	Delete(ctx context.Context, id string) error
+	// MarkSent закрывает запись, оставляя след: что ответил FCM по каждому
+	// токену. Запись не удаляется — её уносит TTL. Раньше здесь был Delete, и
+	// успешная отправка была неотличима от «ушло в никуда»: очередь пуста в
+	// обоих случаях, а логов не было вовсе.
+	MarkSent(ctx context.Context, id string, result DeliveryResult) error
 	// Reschedule откладывает повторную попытку (транзиентный сбой + бэк-офф).
 	Reschedule(ctx context.Context, id string, nextAt time.Time, attempts int) error
 }
@@ -161,7 +189,9 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		return
 	}
 	if user == nil || len(user.PushTokens) == 0 {
-		_ = w.store.Delete(ctx, p.ID) // некому слать — не держим запись
+		// Некому слать. След оставляем: пустой список токенов — самый частый
+		// ответ на вопрос «почему не пришло», и раньше он был невидим.
+		w.mark(ctx, p, DeliveryResult{Outcome: OutcomeNoTokens})
 		return
 	}
 
@@ -190,14 +220,21 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 	}
 
 	transient := false
+	outcomes := make([]TokenOutcome, 0, len(resp.Responses))
 	for i, r := range resp.Responses {
+		token := user.PushTokens[i].Token
 		if r.Success {
+			outcomes = append(outcomes, TokenOutcome{Token: tokenTail(token)})
 			continue
 		}
-		token := user.PushTokens[i].Token
+		outcomes = append(outcomes, TokenOutcome{Token: tokenTail(token), Error: r.Error.Error()})
 		switch {
 		case messaging.IsUnregistered(r.Error) || messaging.IsInvalidArgument(r.Error):
 			// Мёртвый/битый токен — чистим, не ретраим (это не сбой доставки).
+			// Логируем: молчаливая чистка делала картину «токены есть, ошибок
+			// нет, пуш не пришёл» необъяснимой.
+			log.Warn().Int("user", p.UserID).Str("token", tokenTail(token)).
+				Err(r.Error).Msg("push: токен отбракован FCM, удаляем")
 			if w.remover != nil {
 				_ = w.remover.RemovePushToken(ctx, p.UserID, token)
 			}
@@ -209,14 +246,34 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		w.retry(ctx, p)
 		return
 	}
-	_ = w.store.Delete(ctx, p.ID)
+	log.Info().Int("user", p.UserID).Int("tokens", len(outcomes)).
+		Int("failed", resp.FailureCount).Msg("push: отправлен")
+	w.mark(ctx, p, DeliveryResult{Outcome: OutcomeSent, Tokens: outcomes})
+}
+
+// mark закрывает запись очереди следом доставки. Ошибку только логируем: пуш
+// уже отправлен, и падать из-за неудачной пометки нечестно — зато потерянный
+// след виден.
+func (w *Worker) mark(ctx context.Context, p PendingPush, result DeliveryResult) {
+	if err := w.store.MarkSent(ctx, p.ID, result); err != nil {
+		log.Error().Err(err).Str("id", p.ID).Msg("push: mark sent failed")
+	}
+}
+
+// tokenTail — последние 6 символов токена: столько нужно, чтобы отличить
+// устройства друг от друга, и мало, чтобы это был секрет.
+func tokenTail(token string) string {
+	if len(token) <= 6 {
+		return token
+	}
+	return token[len(token)-6:]
 }
 
 func (w *Worker) retry(ctx context.Context, p PendingPush) {
 	attempts := p.Attempts + 1
 	if attempts >= maxAttempts {
 		log.Warn().Int("user", p.UserID).Int("attempts", attempts).Msg("push: giving up after max attempts")
-		_ = w.store.Delete(ctx, p.ID)
+		w.mark(ctx, p, DeliveryResult{Outcome: OutcomeGaveUp})
 		return
 	}
 	// Экспоненциальный бэк-офф: 10с, 20с, 40с … кап 10 мин.

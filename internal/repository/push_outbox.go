@@ -32,7 +32,24 @@ type pushOutboxDoc struct {
 	Attempts      int                `bson:"attempts"`
 	NextAttemptAt time.Time          `bson:"next_attempt_at"`
 	CreatedAt     time.Time          `bson:"created_at"`
+	// SentAt заполняется, когда доставка закончилась (успехом или отказом):
+	// запись перестаёт быть очередью и становится следом, который через
+	// retention уносит TTL. Пока поля нет — пуш ждёт отправки.
+	SentAt *time.Time `bson:"sent_at,omitempty"`
+	// Outcome/Tokens — что ответил FCM. Ради них всё и затевалось: раньше
+	// успешная отправка и «ушло в никуда» выглядели одинаково — пустой очередью.
+	Outcome string             `bson:"outcome,omitempty"`
+	Tokens  []tokenOutcomeDoc  `bson:"tokens,omitempty"`
 }
+
+type tokenOutcomeDoc struct {
+	Token string `bson:"token"`
+	Error string `bson:"error,omitempty"`
+}
+
+// sentRetention — сколько держим след доставки. Неделя: этого хватает разобрать
+// жалобу «мне не пришло», и коллекция не растёт.
+const sentRetention = 7 * 24 * time.Hour
 
 // EnsureIndexes создаёт индексы очереди. Идемпотентно; вызывать при старте.
 //   - по next_attempt_at: воркер каждые 5 секунд фильтрует и сортирует по нему.
@@ -48,6 +65,14 @@ func (r *MongoPushOutboxRepository) EnsureIndexes(ctx context.Context) error {
 		{
 			Keys:    bson.D{{Key: "next_attempt_at", Value: ascParameter}},
 			Options: options.Index().SetName("idx_next_attempt"),
+		},
+		{
+			// TTL по sent_at — вместо отдельной джобы чистки: mongod сам
+			// обходит коллекцию раз в минуту. Записи БЕЗ sent_at (то есть
+			// ждущие отправки) TTL не трогает — он удаляет только документы,
+			// где поле есть и это дата.
+			Keys:    bson.D{{Key: "sent_at", Value: ascParameter}},
+			Options: options.Index().SetName("idx_sent_ttl").SetExpireAfterSeconds(int32(sentRetention.Seconds())),
 		},
 	})
 	return err
@@ -68,7 +93,13 @@ func (r *MongoPushOutboxRepository) Enqueue(ctx context.Context, userID int, n p
 
 func (r *MongoPushOutboxRepository) Due(ctx context.Context, now time.Time, limit int) ([]push.PendingPush, error) {
 	opts := options.Find().SetLimit(int64(limit)).SetSort(bson.D{{Key: "next_attempt_at", Value: 1}})
-	cur, err := r.col.Find(ctx, bson.M{"next_attempt_at": bson.M{"$lte": now}}, opts)
+	// sent_at: nil обязателен — иначе воркер брал бы уже доставленные записи
+	// и слал их по кругу, пока их не унесёт TTL. В Mongo $eq: nil совпадает и
+	// с отсутствующим полем, поэтому старые записи очереди тоже подходят.
+	cur, err := r.col.Find(ctx, bson.M{
+		"next_attempt_at": bson.M{"$lte": now},
+		"sent_at":         bson.M{"$eq": nil},
+	}, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +125,22 @@ func (r *MongoPushOutboxRepository) Due(ctx context.Context, now time.Time, limi
 	return out, nil
 }
 
-func (r *MongoPushOutboxRepository) Delete(ctx context.Context, id string) error {
+// MarkSent закрывает запись следом доставки: запись остаётся в коллекции и
+// уходит по TTL (idx_sent_ttl), а не удаляется сразу.
+func (r *MongoPushOutboxRepository) MarkSent(ctx context.Context, id string, result push.DeliveryResult) error {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return err
 	}
-	_, err = r.col.DeleteOne(ctx, bson.M{"_id": oid})
+	tokens := make([]tokenOutcomeDoc, 0, len(result.Tokens))
+	for _, t := range result.Tokens {
+		tokens = append(tokens, tokenOutcomeDoc{Token: t.Token, Error: t.Error})
+	}
+	_, err = r.col.UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$set": bson.M{
+		"sent_at": time.Now(),
+		"outcome": result.Outcome,
+		"tokens":  tokens,
+	}})
 	return err
 }
 
