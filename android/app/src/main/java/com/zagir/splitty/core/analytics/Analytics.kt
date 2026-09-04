@@ -22,7 +22,38 @@ private const val TAG = "Analytics"
 
 /** Тело пачки. Поля совпадают с контрактом, см. docs/analytics-events.md. */
 @kotlinx.serialization.Serializable
-data class EventsBody(val events: List<AnalyticsRecord>)
+data class EventsBody(val events: List<EventBody>)
+
+/**
+ * Одно событие НА ПРОВОДЕ.
+ *
+ * Отдельный тип от [AnalyticsRecord] ради одного поля: у записи очереди есть
+ * ownerUserId — он нужен на диске, чтобы при смене аккаунта разобрать, чьи
+ * события остались. Серверу его слать нечего: человека тот берёт из токена,
+ * поле игнорирует, и в контракте его нет. iOS шлёт ровно этот набор.
+ */
+@kotlinx.serialization.Serializable
+data class EventBody(
+    val id: String,
+    val name: String,
+    val at: String,
+    val session: String,
+    val platform: String,
+    val appVersion: String,
+    val locale: String,
+    val params: Map<String, String>,
+) {
+    constructor(record: AnalyticsRecord) : this(
+        id = record.id,
+        name = record.name,
+        at = record.at,
+        session = record.session,
+        platform = record.platform,
+        appVersion = record.appVersion,
+        locale = record.locale,
+        params = record.params,
+    )
+}
 
 @kotlinx.serialization.Serializable
 data class EventsResult(val accepted: Int = 0, val duplicates: Int = 0, val rejected: Int = 0)
@@ -81,8 +112,10 @@ class Analytics @Inject constructor(
     }
 
     /**
-     * Событие, после которого очередь перестаёт существовать: выход и удаление
-     * аккаунта.
+     * Событие, после которого очереди уже не будет: нажатие «Выйти».
+     *
+     * Удаление аккаунта сюда не относится и относиться не может — см.
+     * docs/analytics-events.md.
      *
      * Отправляется НАПРЯМУЮ, минуя очередь. Сразу после такого события
      * OfflineDataCleaner вычищает очередь как чужую, и положенная в неё запись
@@ -99,11 +132,15 @@ class Analytics @Inject constructor(
         // отправки, то есть уже чужой.
         val snapshot = session.state.value ?: return
         val token = snapshot.token ?: return
-        val owner = ownerUserId ?: snapshot.me?.id ?: return
+        // Владелец — из ТОГО ЖЕ снимка, что и токен. Поле ownerUserId живёт
+        // своей жизнью (его двигает onOwnerChanged) и может отстать, а
+        // разъехавшаяся пара «токен одного, номер другого» — ровно то, от чего
+        // здесь и защищаемся.
+        val owner = snapshot.me?.id ?: return
         val record = record(event, owner)
         scope.launch {
             try {
-                api.postEvents(EventsBody(listOf(record)), "Bearer " + token)
+                api.postEvents(EventsBody(listOf(EventBody(record))), "Bearer " + token)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -139,7 +176,7 @@ class Analytics @Inject constructor(
             val batch = queue.take(BATCH_SIZE, owner)
             if (batch.isEmpty()) return@withLock
             try {
-                api.postEvents(EventsBody(batch), null)
+                api.postEvents(EventsBody(batch.map { EventBody(it) }), null)
                 queue.remove(batch.map { it.id }.toSet())
             } catch (e: CancellationException) {
                 throw e
