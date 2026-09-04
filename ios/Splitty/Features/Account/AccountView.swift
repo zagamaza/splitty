@@ -67,6 +67,7 @@ struct AccountView: View {
                     #endif
                     logoutSection
                     revokeSessionsSection
+                    supportSection
                     legalSection
                     deleteAccountSection
                 }
@@ -669,6 +670,43 @@ struct AccountView: View {
             errorMessage = humanErrorText(error)
         }
     }
+
+    /// Сообщить о проблеме: инструмент уже есть — команда `/report <текст>` в
+    /// боте (`internal/bot/report_screen.go`), она кладёт репорт в базу и
+    /// пишет разработчикам. В приложении о ней не было ни слова, так что
+    /// пользовался ей только тот, кто пришёл из Telegram и наткнулся сам.
+    ///
+    /// Ссылка открывает чат с ботом; предзаполнить команду нельзя — Telegram
+    /// умеет подставлять текст только в пересылку человеку, не боту, поэтому
+    /// что писать, сказано подписью под строкой.
+    private var supportSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Link(destination: Self.reportBotURL) {
+                HStack {
+                    Label("Сообщить о проблеме", systemImage: "ladybug")
+                        .scaledFont(size: 15, weight: .medium)
+                        .foregroundStyle(Color.accentText)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.inkSecondary.opacity(0.6))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .surfaceCard(padding: 0)
+
+            Text("Откроется бот в Telegram. Отправьте ему «/report» и опишите проблему одним сообщением — репорт придёт разработчикам.")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .padding(.horizontal, 4)
+        }
+    }
+
+    /// Тот же бот, что и в приглашениях (`InviteGroupView`).
+    static let reportBotURL = URL(string: "https://t.me/split_money_bot")!
 
     /// Строка со ссылкой на политику: единственное место в приложении, где
     /// человек может прочитать, куда уходят голос и фото чека и что остаётся
