@@ -63,6 +63,16 @@ class ProfileViewModel @Inject constructor(
     fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("account"))
 
     /**
+     * Состояние подписки прочитано хотя бы раз.
+     *
+     * Тариф стартует как FREE, и до первого ответа сервера экран не имеет права
+     * писать «Бесплатный»: у человека с подарком это ложь, а при отказе сети —
+     * ложь навсегда. Пока false, строка говорит «загружаю».
+     */
+    private val _plusLoaded = MutableStateFlow(false)
+    val plusLoaded: StateFlow<Boolean> = _plusLoaded.asStateFlow()
+
+    /**
      * Подтягивает состояние подписки на входе на экран.
      *
      * Своего вызова не было ни одного: refreshSubscription() звался только
@@ -70,7 +80,14 @@ class ProfileViewModel @Inject constructor(
      * без покупок состояние оставалось null навсегда.
      */
     fun refreshSubscription() {
-        viewModelScope.launch { subscriptions.refreshSubscription() }
+        viewModelScope.launch {
+            subscriptions.refreshSubscription()
+            // Флаг поднимается по факту ПОПЫТКИ, а не успеха: иначе при
+            // лежащей сети строка висела бы «загружаю» вечно. Что показать при
+            // неудаче, решает экран — сервер ответил бы free, и разницы для
+            // человека нет.
+            _plusLoaded.value = true
+        }
     }
 
     /** Профиль текущего пользователя (кэш сессии, обновляется после GET/PATCH /me). */

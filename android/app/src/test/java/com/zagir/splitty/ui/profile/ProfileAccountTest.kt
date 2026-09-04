@@ -251,6 +251,27 @@ class ProfileAccountTest {
         assertNull(state?.manageUrl)
     }
 
+    /**
+     * До первого ответа сервера экран не утверждает, что человек бесплатный.
+     *
+     * Тариф стартует как FREE, и без этого флага человек с подарком первым
+     * делом видел бы «Бесплатный», а при лежащей сети — видел бы это всегда.
+     */
+    @Test
+    fun `plus state is not claimed before the first answer`() = runBlocking {
+        val vm = viewModel()
+        assertFalse(vm.plusLoaded.value, "состояние объявлено прочитанным до запроса")
+
+        respond(
+            "GET /api/v1/me/subscription",
+            MockResponse().setBody("""{"tier":"plus","expiresAt":"2027-01-01T00:00:00Z"}"""),
+        )
+        vm.refreshSubscription()
+
+        withTimeout(5_000) { vm.plusLoaded.first { it } }
+        assertEquals(Tier.PLUS, vm.tier.value)
+    }
+
     /** Дата показывается человеческим текстом, а неразобранная — как пришла. */
     @Test
     fun `plus date is rendered readable`() {

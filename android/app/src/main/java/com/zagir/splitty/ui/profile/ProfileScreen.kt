@@ -92,6 +92,7 @@ fun ProfileScreen(
     val me by viewModel.me.collectAsStateWithLifecycle()
     val tier by viewModel.tier.collectAsStateWithLifecycle()
     val subscription by viewModel.subscription.collectAsStateWithLifecycle()
+    val plusLoaded by viewModel.plusLoaded.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -142,7 +143,7 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HeaderSection(me)
-            PlusSection(tier = tier, subscription = subscription)
+            PlusSection(tier = tier, subscription = subscription, loaded = plusLoaded)
             SettingsSection(
                 me = me,
                 lang = langDraft,
@@ -651,7 +652,7 @@ private fun HeaderSection(me: Me?) {
  * (здесь он дублировал строку-ссылку и путал — убран в паритете с iOS).
  */
 @Composable
-private fun PlusSection(tier: Tier, subscription: SubscriptionState?) {
+private fun PlusSection(tier: Tier, subscription: SubscriptionState?, loaded: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(
             text = stringResource(R.string.profile_plus_section),
@@ -672,15 +673,21 @@ private fun PlusSection(tier: Tier, subscription: SubscriptionState?) {
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
+                    // До первого ответа сервера «Бесплатный» писать нельзя: у
+                    // человека с подарком это неправда, и увидит он её первой.
                     text = stringResource(
-                        if (tier == Tier.PLUS) R.string.profile_plus_active else R.string.profile_plus_free
+                        when {
+                            !loaded -> R.string.profile_plus_loading
+                            tier == Tier.PLUS -> R.string.profile_plus_active
+                            else -> R.string.profile_plus_free
+                        }
                     ),
                     fontSize = 16.sp,
                     color = Splitty.colors.inkSecondary,
                 )
             }
             // Дата — только у платного: у бесплатного ей взяться неоткуда.
-            val until = subscription?.expiresAt?.takeIf { tier == Tier.PLUS }
+            val until = subscription?.expiresAt?.takeIf { loaded && tier == Tier.PLUS }
             if (until != null) {
                 HairlineDivider()
                 Row(
