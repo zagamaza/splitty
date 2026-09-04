@@ -1,6 +1,7 @@
 import AVFoundation
 import Foundation
 import Observation
+import OSLog
 import Speech
 
 /// Запись голосового ввода расхода (hold-to-talk) с живой транскрипцией.
@@ -114,6 +115,10 @@ final class AudioRecorder {
         }
     }
 
+    /// Отказ аудиосессии виден только здесь: наружу уходит человеческий текст,
+    /// а домен и код исходной ошибки нужны, чтобы понять причину.
+    private static let audioLog = Logger(subsystem: "com.zagir.splitty", category: "audio")
+
     /// true — старт записи уже идёт (подъём аудиосессии в фоне).
     private var isStarting = false
 
@@ -166,8 +171,25 @@ final class AudioRecorder {
     /// Поднимает аудиосессию и движок с tap'ом (фоновый поток — дорого для main).
     private nonisolated static func makeEngine(feed: SpeechFeed, sink: PCMSink) throws -> EngineBox {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .default)
-        try session.setActive(true)
+        // Ошибки аудиосессии заворачиваем в свою: наружу они уходили сырыми, и
+        // человек видел системное английское «Session activation failed»
+        // вместо подсказки, что делать (humanErrorText для неизвестной ошибки
+        // отдаёт localizedDescription как есть).
+        //
+        // Домен и код исходной NSError логируем: без них причину отказа
+        // (занят другой app, звонок, неотпущенная прошлая сессия) установить
+        // было нечем — в алерт попадал только текст.
+        do {
+            try session.setCategory(.record, mode: .default)
+            try session.setActive(true)
+        } catch {
+            let ns = error as NSError
+            Self.audioLog.error("audio session activate failed: \(ns.domain) code=\(ns.code) \(ns.localizedDescription)")
+            // Сессия могла остаться наполовину поднятой: не отпустив её,
+            // мы заблокировали бы и все следующие попытки записи.
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            throw AudioRecorderError.sessionBusy
+        }
         // Сессия уже активна и заглушила чужую музыку: КАЖДЫЙ выход по ошибке
         // ниже обязан её отпустить, иначе плеер пользователя остаётся немым
         // до перезапуска приложения (стоп-путь такой же).
@@ -471,6 +493,8 @@ enum AudioRecorderError: LocalizedError {
     case failedToStart
     /// Предыдущий старт ещё поднимает движок (двойное нажатие).
     case alreadyStarting
+    /// Аудиосессию не отдали: микрофон занят звонком или другим приложением.
+    case sessionBusy
 
     var errorDescription: String? {
         switch self {
@@ -478,6 +502,8 @@ enum AudioRecorderError: LocalizedError {
             return String(localized: "Не удалось начать запись. Проверьте доступ к микрофону")
         case .alreadyStarting:
             return String(localized: "Запись ещё готовится. Попробуйте ещё раз")
+        case .sessionBusy:
+            return String(localized: "Микрофон занят другим приложением или звонком. Закройте его и попробуйте ещё раз")
         }
     }
 }
