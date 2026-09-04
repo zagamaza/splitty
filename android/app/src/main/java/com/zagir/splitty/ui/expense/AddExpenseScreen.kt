@@ -148,6 +148,7 @@ fun AddExpenseScreen(
     viewModel: AddExpenseViewModel = hiltViewModel(),
     onDone: () -> Unit,
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     LaunchedEffect(roomId, operationId, localId) { viewModel.start(roomId, operationId, localId) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
@@ -230,7 +231,7 @@ fun AddExpenseScreen(
         }
     }
     voice.onShortTap = { viewModel.showToast(context.getString(R.string.rec_short_tap_hint)) }
-    voice.onCancelled = { }
+    voice.onCancelled = { viewModel.trackCaptureCancelled("voice") }
     voice.onError = { message -> viewModel.showToast(message) }
 
     // Разрешение спрашиваем ДО жеста: удержание без него упёрлось бы в отказ
@@ -466,8 +467,15 @@ fun AddExpenseScreen(
                     onBackToVoice = { manualMode = false },
                     onTakePhoto = receiptCapture::captureFromCamera,
                     onPickPhoto = receiptCapture::pickFromGallery,
-                    onEditItem = { index -> itemEditIndex = index },
-                    onResolveUnknown = { index, name -> unknownTarget = UnknownTarget(index, name) },
+                    onEditItem = { index ->
+                        // Правка позиции — это «AI распознал, но не так».
+                        viewModel.trackReceiptItemEdited()
+                        itemEditIndex = index
+                    },
+                    onResolveUnknown = { index, name ->
+                        viewModel.trackReceiptUnknownResolved()
+                        unknownTarget = UnknownTarget(index, name)
+                    },
                     onAddItem = { itemEditIndex = viewModel.addBlankItem() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -517,9 +525,11 @@ fun AddExpenseScreen(
             },
             onCancel = {
                 if (pendingAudio != null) {
+                    viewModel.trackCaptureCancelled("voice")
                     viewModel.discardAudio()
                     recorder.reset()
                 } else {
+                    viewModel.trackCaptureCancelled("camera")
                     viewModel.discardReceipt()
                 }
             },
@@ -722,7 +732,10 @@ private fun ExpenseFormContent(
         form.parseRetryMessage?.let { message ->
             ParseRetryBanner(
                 message = message.resolve(),
-                onRetry = viewModel::retryParse,
+                onRetry = {
+                    viewModel.trackParseRetried()
+                    viewModel.retryParse()
+                },
                 onDismiss = viewModel::dismissParseRetry,
             )
         }

@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import android.content.Context
@@ -42,7 +44,11 @@ class ProfileViewModel @Inject constructor(
     private val pushTokenRegistrar: PushTokenRegistrar,
     private val googleIdTokenProvider: GoogleIdTokenProvider,
     outboxStore: OutboxStore,
+    private val analytics: Analytics,
 ) : ViewModel() {
+
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("account"))
 
     /** Профиль текущего пользователя (кэш сессии, обновляется после GET/PATCH /me). */
     val me: StateFlow<Me?> = sessionStore.state
@@ -61,6 +67,7 @@ class ProfileViewModel @Inject constructor(
             // сделан в LoginViewModel и NotificationSettingsViewModel).
             try {
                 sessionStore.setTheme(theme)
+                analytics.track(AnalyticsEvent.SettingsChanged("theme"))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
@@ -139,6 +146,11 @@ class ProfileViewModel @Inject constructor(
         notificationOn: Boolean? = null,
     ) {
         if (_isSaving.value) return
+        // Что именно правили — из закрытого списка. Один вызов может нести
+        // несколько полей, поэтому событие на каждое непустое.
+        displayName?.let { analytics.track(AnalyticsEvent.SettingsChanged("name")) }
+        lang?.let { analytics.track(AnalyticsEvent.SettingsChanged("language")) }
+        notificationOn?.let { analytics.track(AnalyticsEvent.SettingsChanged("notifications")) }
         viewModelScope.launch {
             _isSaving.value = true
             try {
@@ -179,6 +191,7 @@ class ProfileViewModel @Inject constructor(
             try {
                 val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
                 sessionStore.updateMe(repository.linkGoogle(idToken).user)
+                analytics.track(AnalyticsEvent.AccountLinked("google"))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: GoogleSignInException) {
@@ -234,6 +247,7 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val response = repository.unlinkProvider(provider)
+                analytics.track(AnalyticsEvent.AccountUnlinked(provider.id))
                 sessionStore.updateMe(response.user)
                 response.warning?.takeIf { it.isNotBlank() }?.let { _noticeMessage.value = it }
             } catch (e: CancellationException) {
@@ -329,6 +343,9 @@ class ProfileViewModel @Inject constructor(
 
     /** Выход: чистит токен и профиль — AppRoot сам покажет LoginScreen. */
     fun logout() {
+        // До чистки: после неё владельца очереди уже нет, и записать выход
+        // будет некуда.
+        analytics.track(AnalyticsEvent.Logout)
         viewModelScope.launch {
             // Отвязка push-токена — best-effort и НЕ должна мешать выходу.
             // Раньше её падение (нет сервисов Google, отозван доступ) выбрасывало

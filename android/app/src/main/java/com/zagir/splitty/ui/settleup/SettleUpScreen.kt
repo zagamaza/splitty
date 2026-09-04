@@ -86,6 +86,7 @@ fun SettleUpScreen(
     viewModel: SettleUpViewModel = hiltViewModel(),
     onDone: () -> Unit,
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     LaunchedEffect(roomId) {
         viewModel.start(roomId)
         viewModel.trackOpened()

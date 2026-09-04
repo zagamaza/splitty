@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.analytics.analyticsMemberAddReason
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
@@ -74,6 +75,9 @@ class GroupDetailViewModel @Inject constructor(
     private val analytics: Analytics,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
+
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("group"))
 
     private val roomIdFlow = MutableStateFlow<String?>(null)
 
@@ -210,6 +214,7 @@ class GroupDetailViewModel @Inject constructor(
             _savingCurrency.value = code
             try {
                 repository.setRoomCurrency(id, code)
+                analytics.track(AnalyticsEvent.RoomSettingsChanged("currency"))
                 _selectedCurrencyOverride.value = code
                 // Единая инвалидация: экран и списки перечитают суммы в новой валюте.
                 sessionStore.noteDataChanged()
@@ -254,13 +259,18 @@ class GroupDetailViewModel @Inject constructor(
             var invited = 0
             userIds.forEach { id ->
                 try {
-                    if (repository.addMember(detail.id, id) == InviteStatus.PENDING) {
+                    val status = repository.addMember(detail.id, id)
+                    analytics.track(AnalyticsEvent.MemberAdded("friends"))
+                    if (status == InviteStatus.PENDING) {
                         pending += name(id)
                     } else {
                         added += name(id)
                     }
                     invited++
                 } catch (e: ApiException) {
+                    analytics.track(
+                        AnalyticsEvent.MemberAddFailed(analyticsMemberAddReason(e.code, e.status)),
+                    )
                     failed += name(id)
                 }
             }
@@ -300,6 +310,7 @@ class GroupDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 repository.leaveRoom(detail.id)
+                analytics.track(AnalyticsEvent.RoomLeft)
                 sessionStore.noteDataChanged()
                 sessionStore.confirm(UiText.res(R.string.toast_left_group))
                 onDone()
@@ -321,6 +332,7 @@ class GroupDetailViewModel @Inject constructor(
             try {
                 val removed = detail.members.firstOrNull { it.id == userId }?.displayName
                 repository.removeMember(detail.id, userId)
+                analytics.track(AnalyticsEvent.MemberRemoved)
                 sessionStore.noteDataChanged()
                 if (removed != null) {
                     sessionStore.confirm(UiText.res(R.string.toast_member_removed, removed))
@@ -349,6 +361,7 @@ class GroupDetailViewModel @Inject constructor(
             try {
                 val previous = detail.avatarFileId
                 val fileId = repository.setRoomAvatar(detail.id, image)
+                analytics.track(AnalyticsEvent.RoomSettingsChanged("avatar"))
                 previous?.let { avatarStore.forgetFile(it) }
                 // Новый id ставим сразу, не дожидаясь refresh(): тот при сбое
                 // сети отдаёт КЕШ комнаты, и экран продолжал бы уверять, что
@@ -400,8 +413,10 @@ class GroupDetailViewModel @Inject constructor(
             try {
                 if (detail.isArchived) {
                     repository.unarchiveRoom(detail.id)
+                    analytics.track(AnalyticsEvent.RoomUnarchived)
                 } else {
                     repository.archiveRoom(detail.id)
+                    analytics.track(AnalyticsEvent.RoomArchived)
                 }
                 sessionStore.noteDataChanged()
                 onDone()

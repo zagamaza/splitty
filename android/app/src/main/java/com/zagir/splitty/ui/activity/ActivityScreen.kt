@@ -87,6 +87,7 @@ fun ActivityScreen(
     onOpenRoom: (String) -> Unit,
     viewModel: ActivityViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMore.collectAsStateWithLifecycle()

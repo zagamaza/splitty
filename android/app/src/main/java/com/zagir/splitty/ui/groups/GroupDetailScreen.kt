@@ -138,6 +138,7 @@ fun GroupDetailScreen(
     onEditLocalOperation: (String, String) -> Unit,
     viewModel: GroupDetailViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     LaunchedEffect(roomId) { viewModel.start(roomId) }
 
     val state by viewModel.room.collectAsStateWithLifecycle()

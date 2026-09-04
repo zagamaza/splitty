@@ -102,6 +102,7 @@ fun GroupsListScreen(
     onOpenRoom: (String) -> Unit,
     viewModel: GroupsListViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     var isArchivePresented by rememberSaveable { mutableStateOf(false) }
     if (isArchivePresented) {
         ArchivedGroupsScreen(

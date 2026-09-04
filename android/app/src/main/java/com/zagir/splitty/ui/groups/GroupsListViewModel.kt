@@ -45,6 +45,9 @@ class GroupsListViewModel @Inject constructor(
     private val analytics: Analytics,
 ) : ViewModel() {
 
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("groups"))
+
     private val _rooms = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
 
     /** Активные (неархивные) группы. */
@@ -205,12 +208,16 @@ class GroupsListViewModel @Inject constructor(
      * можно было только открыв тусу и пройдя две вкладки вглубь.
      */
     fun archive(roomId: String) {
-        mutate(onSuccess = {}) { repository.archiveRoom(roomId) }
+        mutate(onSuccess = { analytics.track(AnalyticsEvent.RoomArchived) }) {
+            repository.archiveRoom(roomId)
+        }
     }
 
     /** Возвращает группу из архива (оба списка обновятся по dataVersion). */
     fun unarchive(roomId: String) {
-        mutate(onSuccess = {}) { repository.unarchiveRoom(roomId) }
+        mutate(onSuccess = { analytics.track(AnalyticsEvent.RoomUnarchived) }) {
+            repository.unarchiveRoom(roomId)
+        }
     }
 
     private fun mutate(

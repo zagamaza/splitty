@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
 import android.content.Context
@@ -209,6 +210,7 @@ class ProfileAccountTest {
             pushTokenRegistrar = registrar,
             googleIdTokenProvider = provider,
             outboxStore = OutboxStore(File(cacheDir, "outbox.json"), json),
+            analytics = testAnalytics(cacheDir, json, session, scope),
         )
     }
 

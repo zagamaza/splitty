@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.activity
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
@@ -41,7 +43,11 @@ class ActivityViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val outboxSyncer: OutboxSyncer,
+    private val analytics: Analytics,
 ) : ViewModel() {
+
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("activity"))
 
     companion object {
         private const val PAGE_SIZE = 30

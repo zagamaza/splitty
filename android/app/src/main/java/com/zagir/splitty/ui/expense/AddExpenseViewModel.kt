@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.analytics.analyticsItemsBucket
 import com.zagir.splitty.core.analytics.analyticsParseReason
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
@@ -662,6 +663,9 @@ class AddExpenseViewModel @Inject constructor(
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("add_expense"))
+
     /**
      * Суточная норма распознаваний исчерпана — экран показывает paywall.
      *
@@ -669,6 +673,37 @@ class AddExpenseViewModel @Inject constructor(
      * человек видит спокойный тост, а сюда — предложение заплатить. Пока
      * причина была одна, тыкнувший микрофон дважды подряд получал бы paywall.
      */
+    /** Чем распознавали в текущей попытке — для событий пути распознавания. */
+    private var parseKind = "receipt"
+
+    /**
+     * Правил ли человек то, что распознал AI. Уезжает в `expense_added`
+     * параметром `edited`: без него видно только КАКИМ способом завели расход,
+     * но не сработал ли способ.
+     */
+    private var editedAfterParse = false
+
+    /** Отметить правку распознанного (позиция чека, неизвестное имя). */
+    fun noteEditedAfterParse() { editedAfterParse = true }
+
+    /** Чем распознавали в последний раз — нужно кнопке «Повторить». */
+    fun lastParseKind(): String = parseKind
+
+    fun trackParseRetried() = analytics.track(AnalyticsEvent.ParseRetried(parseKind))
+
+    fun trackReceiptItemEdited() {
+        noteEditedAfterParse()
+        analytics.track(AnalyticsEvent.ReceiptItemEdited)
+    }
+
+    fun trackReceiptUnknownResolved() {
+        noteEditedAfterParse()
+        analytics.track(AnalyticsEvent.ReceiptUnknownResolved)
+    }
+
+    /** Ввод отменён до отправки. */
+    fun trackCaptureCancelled(kind: String) = analytics.track(AnalyticsEvent.CaptureCancelled(kind))
+
     private val _isPaywallVisible = MutableStateFlow(false)
     val isPaywallVisible: StateFlow<Boolean> = _isPaywallVisible.asStateFlow()
 
@@ -1052,6 +1087,7 @@ class AddExpenseViewModel @Inject constructor(
         // Источник запоминаем ДО запроса: плашка и подсказка «не то?» обязаны
         // соответствовать тому, чем человек только что пользовался
         updateForm { it.copy(lastParseSource = ParseSource.PHOTO) }
+        analytics.track(AnalyticsEvent.CaptureStarted("camera"))
         savedStateHandle[KEY_RECEIPT_PATH] = path
         // Экран разбора гасим, ТОЛЬКО если распознавание действительно пошло:
         // иначе (форма ещё грузится или не загрузилась) медиа осталось бы
@@ -1067,6 +1103,7 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun parseVoice(audioPath: String) {
         updateForm { it.copy(lastParseSource = ParseSource.VOICE) }
+        analytics.track(AnalyticsEvent.CaptureStarted("voice"))
         savedStateHandle[KEY_AUDIO_PATH] = audioPath
         // Гасим экран разбора, только если распознавание реально стартовало
         // (см. [parseReceiptImage]).
@@ -1228,8 +1265,16 @@ class AddExpenseViewModel @Inject constructor(
                     }
                     return@launch
                 }
+                parseKind = if (audio != null) "voice" else "receipt"
+                analytics.track(AnalyticsEvent.ParseStarted(parseKind))
                 val response = repository.parseOperation(roomId, audio = audio, image = image, draft = draft)
                 if (generation != parseGeneration) return@launch // обогнан — игнор
+                analytics.track(
+                    AnalyticsEvent.ParseSucceeded(
+                        parseKind,
+                        analyticsItemsBucket(response.draft.items?.size ?: 0),
+                    ),
+                )
                 // Медиа израсходовано — пути гасим. Иначе следующее фото чека
                 // тянуло бы с собой СТАРУЮ надиктовку: сервер применял уже
                 // учтённую правку повторно (дубли позиций, удвоенные цены) и
@@ -1248,7 +1293,7 @@ class AddExpenseViewModel @Inject constructor(
 
                 val api = e as? ApiException
                 analytics.track(
-                    AnalyticsEvent.ExpenseParseFailed(analyticsParseReason(api?.code, api?.status)),
+                    AnalyticsEvent.ExpenseParseFailed(parseKind, analyticsParseReason(api?.code, api?.status)),
                 )
 
                 // Суточная норма кончилась: ведём к оплате, а не показываем
@@ -1384,6 +1429,7 @@ class AddExpenseViewModel @Inject constructor(
                             ParseSource.PHOTO -> "receipt"
                             else -> "manual"
                         },
+                        edited = editedAfterParse,
                     ),
                 )
             } catch (e: CancellationException) {

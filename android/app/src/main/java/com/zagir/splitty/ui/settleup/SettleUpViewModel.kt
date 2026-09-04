@@ -96,6 +96,9 @@ class SettleUpViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
+    /** Экран открыт. Зовётся из composable один раз на вход. */
+    fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("settle_up"))
+
     private val _state = MutableStateFlow<UiState<SettleUpForm>>(UiState.Loading)
     val state: StateFlow<UiState<SettleUpForm>> = _state.asStateFlow()
 

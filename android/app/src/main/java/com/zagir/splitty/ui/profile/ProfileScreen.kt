@@ -81,6 +81,7 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
+    LaunchedEffect(Unit) { viewModel.trackScreen() }
     val me by viewModel.me.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()

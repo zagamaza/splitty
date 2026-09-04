@@ -5,6 +5,7 @@ import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.InviteStatus
 import com.zagir.splitty.core.model.Me
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
@@ -108,7 +109,7 @@ class ActivityViewModelTest {
             MutableStateFlow(true),
             scope,
         )
-        return ActivityViewModel(repository, session, syncer)
+        return ActivityViewModel(repository, session, syncer, testAnalytics(dir, SplittyJson, session, scope))
     }
 
     /** Ждёт запрос с нужным путём, пропуская посторонние (синк outbox и т.п.). */
