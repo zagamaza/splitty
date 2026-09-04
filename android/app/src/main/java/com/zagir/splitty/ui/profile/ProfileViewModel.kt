@@ -345,7 +345,7 @@ class ProfileViewModel @Inject constructor(
     fun logout() {
         // До чистки: после неё владельца очереди уже нет, и записать выход
         // будет некуда.
-        analytics.track(AnalyticsEvent.Logout)
+        analytics.trackTerminal(AnalyticsEvent.Logout)
         viewModelScope.launch {
             // Отвязка push-токена — best-effort и НЕ должна мешать выходу.
             // Раньше её падение (нет сервисов Google, отозван доступ) выбрасывало

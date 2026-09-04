@@ -19,7 +19,14 @@ final class SubscriptionStoreTokenTests: XCTestCase {
         Self.seenTokens = []
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.handler = { request in
+            // Продуктовые события сюда не считаем: отправка терминального
+            // события живёт своей задачей и может долететь из соседнего теста —
+            // стаб-протокол общий на класс. К тому, чем ходит стор подписки,
+            // это отношения не имеет.
             let auth = request.value(forHTTPHeaderField: "Authorization") ?? ""
+            if (request.url?.path ?? "").hasSuffix("/api/v1/events") {
+                return (200, Data(#"{"accepted":0,"duplicates":0,"rejected":0}"#.utf8))
+            }
             Self.seenTokens.append(auth.replacingOccurrences(of: "Bearer ", with: ""))
             let body = #"{"tier":"free","limit":5,"remaining":5,"unlimited":false,"resetsAt":"2026-09-01T00:00:00Z"}"#
             return (200, Data(body.utf8))

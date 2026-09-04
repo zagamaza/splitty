@@ -188,7 +188,7 @@ class AppRootViewModel @Inject constructor(
         if (isFinishingPurge) return
         isFinishingPurge = true
         try {
-            analytics.track(AnalyticsEvent.AccountDeleted)
+            analytics.trackTerminal(AnalyticsEvent.AccountDeleted)
             repository.deleteAccount()
             sessionStore.logout()
         } catch (e: CancellationException) {

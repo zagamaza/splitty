@@ -73,14 +73,41 @@ class Analytics @Inject constructor(
     fun track(event: AnalyticsEvent) {
         if (!ENABLED) return
         val owner = ownerUserId ?: session.currentUserId() ?: return
+        val record = record(event, owner)
+        scope.launch {
+            queue.append(record)
+            if (queue.take(BATCH_SIZE, owner).size >= BATCH_SIZE) flush()
+        }
+    }
 
+    /**
+     * Событие, после которого очередь перестаёт существовать: выход и удаление
+     * аккаунта.
+     *
+     * Отправляется НАПРЯМУЮ, минуя очередь. Сразу после такого события
+     * OfflineDataCleaner вычищает очередь как чужую, и положенная в неё запись
+     * не уехала бы никогда — событие выглядело бы проинструментированным и
+     * молчало.
+     *
+     * Не доехало — значит потеряно: у последнего вздоха ретраить негде.
+     */
+    fun trackTerminal(event: AnalyticsEvent) {
+        if (!ENABLED) return
+        val owner = ownerUserId ?: session.currentUserId() ?: return
+        val record = record(event, owner)
+        scope.launch {
+            runCatching { api.postEvents(EventsBody(listOf(record))) }
+        }
+    }
+
+    private fun record(event: AnalyticsEvent, owner: Long): AnalyticsRecord {
         val now = System.currentTimeMillis()
         if (now - lastActivity > SESSION_IDLE_LIMIT_MS) {
             sessionId = UUID.randomUUID().toString()
         }
         lastActivity = now
 
-        val record = AnalyticsRecord(
+        return AnalyticsRecord(
             id = UUID.randomUUID().toString(),
             name = event.name,
             at = DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(now)),
@@ -90,10 +117,6 @@ class Analytics @Inject constructor(
             params = event.params,
             ownerUserId = owner,
         )
-        scope.launch {
-            queue.append(record)
-            if (queue.take(BATCH_SIZE, owner).size >= BATCH_SIZE) flush()
-        }
     }
 
     /** Отправляет накопленное. Ошибка — не повод чистить очередь. */

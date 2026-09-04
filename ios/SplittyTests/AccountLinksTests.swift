@@ -920,8 +920,13 @@ final class PathRecorder: @unchecked Sendable {
     }
 
     func record(_ request: URLRequest) {
+        let path = request.url?.path ?? ""
+        // Продуктовые события в эти проверки не входят: тесты здесь про
+        // авторизацию и чистку аккаунта, а аналитика уходит фоном и своим
+        // путём. Без фильтра любое новое событие ломало бы чужой тест.
+        guard !path.hasSuffix("/api/v1/events") else { return }
         lock.withLock {
-            storedPaths.append(request.url?.path ?? "")
+            storedPaths.append(path)
             storedAuthorizations.append(request.value(forHTTPHeaderField: "Authorization") ?? "")
         }
     }

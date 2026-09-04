@@ -465,7 +465,7 @@ final class SessionStore {
     @MainActor
     func deleteAccount() async throws {
         // До запроса: успех уносит сессию вместе с владельцем очереди.
-        Analytics.shared.track(.accountDeleted)
+        Analytics.shared.trackTerminal(.accountDeleted)
         do {
             try await api.deleteAccount()
         } catch {
@@ -523,7 +523,7 @@ final class SessionStore {
     func logout() {
         // Событие до чистки: после неё владельца очереди уже нет, и записать
         // выход будет некуда.
-        Analytics.shared.track(.logout)
+        Analytics.shared.trackTerminal(.logout)
         // Снять ДО `expireSession`: пока флаг стоит, тот намеренно бережёт
         // токен, и выход не состоялся бы вовсе. Явный выход (и подтверждённый
         // 204) — единственные места, где чистку больше повторять не нужно.

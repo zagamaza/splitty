@@ -311,14 +311,37 @@ final class Analytics {
 
     func track(_ event: AnalyticsEvent) {
         guard Self.isEnabled, let owner = ownerUserId else { return }
+        queue.append(record(event, owner: owner))
 
+        if queue.take(Self.batchSize, owner: owner).count >= Self.batchSize {
+            scheduleFlush()
+        }
+    }
+
+    /// Событие, после которого очередь перестаёт существовать: выход и удаление
+    /// аккаунта.
+    ///
+    /// Отправляется НАПРЯМУЮ, минуя очередь. Через несколько строк после такого
+    /// события очередь вычищается как чужая (`configure(api: nil, userId: nil)`),
+    /// и положенная в неё запись не успела бы уехать никогда — событие
+    /// выглядело бы проинструментированным и молчало.
+    ///
+    /// Не доехало — значит потеряно: у последнего вздоха ретраить негде, и
+    /// делать вид, что доставка гарантирована, нельзя.
+    func trackTerminal(_ event: AnalyticsEvent) {
+        guard Self.isEnabled, let owner = ownerUserId, let api else { return }
+        let single = EventsBody(events: [EventBody(record(event, owner: owner))])
+        Task { try? await api.postEvents(single) }
+    }
+
+    private func record(_ event: AnalyticsEvent, owner: Int) -> AnalyticsRecord {
         let now = Date()
         if now.timeIntervalSince(lastActivity) > Self.sessionIdleLimit {
             sessionId = UUID().uuidString
         }
         lastActivity = now
 
-        queue.append(AnalyticsRecord(
+        return AnalyticsRecord(
             id: UUID().uuidString,
             name: event.name,
             at: now,
@@ -331,11 +354,7 @@ final class Analytics {
             locale: Locale.current.identifier,
             params: event.params,
             ownerUserId: owner
-        ))
-
-        if queue.take(Self.batchSize, owner: owner).count >= Self.batchSize {
-            scheduleFlush()
-        }
+        )
     }
 
     /// Новая сессия на холодном старте.
