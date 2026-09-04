@@ -259,6 +259,17 @@ struct GroupsListView: View {
                 )
             }
             .buttonStyle(.plain)
+            // Долгое зажатие вместо свайпа: список это ScrollView + LazyVStack
+            // с кастомными карточками, а .swipeActions живёт только внутри List
+            // — переводить экран на List значило бы потерять их вид.
+            .contextMenu {
+                Button("В архив", systemImage: "archivebox") {
+                    Task {
+                        await model.archive(repo: session.repo, roomId: room.id)
+                        session.noteDataChanged()
+                    }
+                }
+            }
         }
     }
 
@@ -452,6 +463,14 @@ private struct ArchivedGroupsView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button("Вернуть из архива", systemImage: "arrow.uturn.backward") {
+                                Task {
+                                    await model.unarchive(repo: session.repo, roomId: room.id)
+                                    session.noteDataChanged()
+                                }
+                            }
+                        }
                         Button("Разархивировать") {
                             Task {
                                 await model.unarchive(repo: session.repo, roomId: room.id)

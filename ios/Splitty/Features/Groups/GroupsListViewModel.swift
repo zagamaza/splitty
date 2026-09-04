@@ -95,6 +95,22 @@ final class GroupsListViewModel {
         }
     }
 
+    /// Убирает группу в архив и обновляет оба списка.
+    ///
+    /// Архивация здесь своя, а не через экран настроек группы: попасть в неё
+    /// можно было только открыв тусу и пройдя две вкладки вглубь.
+    func archive(repo: DataRepo, roomId: String) async {
+        do {
+            try await repo.api.archiveRoom(id: roomId)
+            rooms = try await repo.rooms(archived: false).value
+            archivedRooms = try await repo.rooms(archived: true).value
+            state = .loaded
+        } catch {
+            if error.isTaskCancellation { return }
+            alertMessage = humanErrorText(error)
+        }
+    }
+
     /// Возвращает группу из архива и обновляет оба списка.
     func unarchive(repo: DataRepo, roomId: String) async {
         do {
