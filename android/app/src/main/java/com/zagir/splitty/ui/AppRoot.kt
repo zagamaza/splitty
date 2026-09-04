@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui
 
+import com.zagir.splitty.core.analytics.analyticsJoinReason
 import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.R
@@ -192,6 +193,8 @@ class AppRootViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Throwable) {
+            val api = e as? ApiException
+            analytics.track(AnalyticsEvent.RoomJoinFailed(analyticsJoinReason(api?.code, api?.status)))
             // Throwable, а не ApiException: любое другое исключение вылетало бы
             // из collect и НАВСЕГДА убивало подписку (тот же фикс, что в
             // joinPending).

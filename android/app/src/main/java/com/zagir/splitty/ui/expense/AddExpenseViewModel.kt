@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.analytics.analyticsParseReason
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.R
@@ -1244,6 +1245,11 @@ class AddExpenseViewModel @Inject constructor(
                 throw e
             } catch (e: Throwable) {
                 if (generation != parseGeneration) return@launch
+
+                val api = e as? ApiException
+                analytics.track(
+                    AnalyticsEvent.ExpenseParseFailed(analyticsParseReason(api?.code, api?.status)),
+                )
 
                 // Суточная норма кончилась: ведём к оплате, а не показываем
                 // ошибку. Черновик и записанное медиа при этом НЕ теряются —

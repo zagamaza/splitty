@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.analytics.analyticsJoinReason
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
@@ -177,7 +178,7 @@ class GroupsListViewModel @Inject constructor(
     fun createGroup(name: String, onSuccess: () -> Unit) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        mutate({
+        mutate(onSuccess = {
             analytics.track(AnalyticsEvent.RoomCreated)
             onSuccess()
         }) { repository.createRoom(trimmed) }
@@ -186,10 +187,15 @@ class GroupsListViewModel @Inject constructor(
     /** POST /rooms/{id}/join по коду или ссылке-приглашению. */
     fun joinGroup(codeInput: String, onSuccess: () -> Unit) {
         val roomId = parseRoomCode(codeInput) ?: return
-        mutate({
-            analytics.track(AnalyticsEvent.RoomJoined(via = "code"))
-            onSuccess()
-        }) { repository.joinRoom(roomId) }
+        mutate(
+            onSuccess = {
+                analytics.track(AnalyticsEvent.RoomJoined(via = "code"))
+                onSuccess()
+            },
+            onFailure = { e ->
+                analytics.track(AnalyticsEvent.RoomJoinFailed(analyticsJoinReason(e.code, e.status)))
+            },
+        ) { repository.joinRoom(roomId) }
     }
 
     /**
@@ -207,7 +213,11 @@ class GroupsListViewModel @Inject constructor(
         mutate(onSuccess = {}) { repository.unarchiveRoom(roomId) }
     }
 
-    private fun mutate(onSuccess: () -> Unit, block: suspend () -> Any?) {
+    private fun mutate(
+        onSuccess: () -> Unit,
+        onFailure: (ApiException) -> Unit = {},
+        block: suspend () -> Any?,
+    ) {
         if (_isMutating.value) return
         viewModelScope.launch {
             _isMutating.value = true
@@ -217,6 +227,7 @@ class GroupsListViewModel @Inject constructor(
                 sessionStore.noteDataChanged()
                 onSuccess()
             } catch (e: ApiException) {
+                onFailure(e)
                 _alertMessage.value = humanErrorText(e)
             } finally {
                 _isMutating.value = false

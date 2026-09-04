@@ -1,5 +1,7 @@
 package com.zagir.splitty
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -42,6 +44,9 @@ class MainActivity : ComponentActivity() {
 
     /** Досылка outbox; инжект здесь запускает наблюдение за сетью со старта. */
     @Inject lateinit var outboxSyncer: OutboxSyncer
+
+    /** Продуктовые события: возврат на передний план и отправка накопленного. */
+    @Inject lateinit var analytics: Analytics
 
     /** Eager-создание: чистит офлайн-кеш и outbox при выходе из аккаунта. */
     @Inject lateinit var offlineDataCleaner: OfflineDataCleaner
@@ -120,7 +125,15 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         // Триггер синка «приложение вернулось на передний план».
         outboxSyncer.syncNow()
+        // Холодный старт ловит Application.onCreate, но он бывает один раз за
+        // жизнь процесса: без этого «открыл приложение» считалось бы только у
+        // тех, у кого систему выгрузила память.
+        if (startedOnce) analytics.track(AnalyticsEvent.AppOpen(cold = false))
+        startedOnce = true
     }
+
+    /** Первый onStart идёт сразу за холодным стартом — его уже посчитали. */
+    private var startedOnce = false
 
     /**
      * Разбор ссылки-приглашения (`https://<domain>/join/<roomId>` и

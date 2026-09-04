@@ -86,7 +86,10 @@ fun SettleUpScreen(
     viewModel: SettleUpViewModel = hiltViewModel(),
     onDone: () -> Unit,
 ) {
-    LaunchedEffect(roomId) { viewModel.start(roomId) }
+    LaunchedEffect(roomId) {
+        viewModel.start(roomId)
+        viewModel.trackOpened()
+    }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
     val snapshot = state

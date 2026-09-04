@@ -481,7 +481,4 @@ class GroupDetailViewModel @Inject constructor(
      *  системный лист, приложению не сообщают. */
     fun trackInvite(channel: String) = analytics.track(AnalyticsEvent.InviteSent(channel))
 
-    /** Расчёт долгов открыт. */
-    fun trackSettleUpOpened() = analytics.track(AnalyticsEvent.SettleUpOpened)
-
 }

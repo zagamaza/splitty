@@ -172,6 +172,9 @@ class SettleUpViewModel @Inject constructor(
      */
     private val idempotency = RepayIdempotency()
 
+    /** Экран расчёта открыт. Зовётся из [SettleUpScreen] один раз на вход. */
+    fun trackOpened() = analytics.track(AnalyticsEvent.SettleUpOpened)
+
     fun repay() {
         val roomId = roomId ?: return
         val form = currentForm() ?: return
