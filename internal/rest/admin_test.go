@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http/httptest"
 	"strconv"
 	"strings"
@@ -59,7 +60,18 @@ func adminServer(t *testing.T, room *api.Room) (*Server, *fakeAdminRooms) {
 
 func doAdmin(t *testing.T, s *Server, target, token string) *httptest.ResponseRecorder {
 	t.Helper()
-	req := httptest.NewRequest("GET", target, nil)
+	return doAdminMethod(t, s, "GET", target, token, "")
+}
+
+// doAdminMethod — тот же вызов, но с методом и телом: админский API перестал
+// быть только читающим (см. admin_plus.go).
+func doAdminMethod(t *testing.T, s *Server, method, target, token, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	var reader io.Reader
+	if body != "" {
+		reader = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, target, reader)
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -76,8 +88,17 @@ func TestAdminRoutesAbsentFromPublicHandler(t *testing.T) {
 	room := newTestRoom()
 	s, _ := adminServer(t, room)
 
-	for _, path := range []string{"/admin/rooms", "/admin/rooms/" + room.ID.Hex()} {
+	for _, path := range []string{"/admin/rooms", "/admin/rooms/" + room.ID.Hex(), "/admin/plus"} {
 		rec := doRequest(t, s, "GET", path, testAdminToken, "")
+		assertErrorCode(t, rec, 404, "not_found")
+	}
+	// Пишущие — тем более: на публичном порту выдача Plus не должна
+	// существовать даже под токеном.
+	for _, m := range []struct{ method, path string }{
+		{"POST", "/admin/users/1/plus"},
+		{"DELETE", "/admin/users/1/plus"},
+	} {
+		rec := doRequest(t, s, m.method, m.path, testAdminToken, "")
 		assertErrorCode(t, rec, 404, "not_found")
 	}
 }

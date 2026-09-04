@@ -41,6 +41,7 @@ type deleteTestSetup struct {
 	debtReminders *fakeChatStates
 	invites       *fakeInviteStore
 	events        *fakeProductEvents
+	grants        *fakeGrantStore
 	appleTokens   *fakeAppleTokens
 	subs          *fakeSubStore
 	room          *api.Room
@@ -113,6 +114,7 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 		debtReminders: &fakeChatStates{},
 		invites:       newFakeInviteStore(),
 		events:        &fakeProductEvents{},
+		grants:        newFakeGrantStore(),
 		appleTokens:   apple, room: room,
 	}
 	s.SetChatStates(set.chatStates)
@@ -123,6 +125,9 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	// Подключается безусловно: purgeUserData падает на неподключённом
 	// очистителе, и падает уже после tombstone
 	s.SetProductEvents(set.events)
+	// Тоже безусловно и по той же причине: в строке гранта лежит номер человека
+	// и текст, зачем ему выдали Plus
+	s.SetPlusGrants(set.grants)
 	set.subs = newFakeSubStore()
 	s.SetSubscriptions(set.subs, nil, nil, nil)
 	return set
@@ -678,5 +683,24 @@ func TestDeleteMeFailsLoudlyWhenEventsPurgeFails(t *testing.T) {
 	rr := set.deleteMe(t, deletedUserID)
 	if rr.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500: непрошедшая чистка не должна выглядеть успехом", rr.Code)
+	}
+}
+
+// Удаление аккаунта уносит и гранты: в строке лежит номер человека и свободный
+// текст причины. Тест падает, если очиститель не подключён — purgeUserData
+// считает nil ошибкой, и падает уже ПОСЛЕ tombstone.
+func TestDeleteMePurgesPlusGrants(t *testing.T) {
+	set := newDeleteSetup(t, Config{})
+	set.grants.give(deletedUserID, time.Now().UTC().Add(30*24*time.Hour))
+
+	rec := set.deleteMe(t, deletedUserID)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("код %d, тело %s", rec.Code, rec.Body.String())
+	}
+	if len(set.grants.deleted) != 1 || set.grants.deleted[0] != deletedUserID {
+		t.Fatalf("гранты не вычищены: %v", set.grants.deleted)
+	}
+	if set.grants.byUser[deletedUserID] != nil {
+		t.Fatal("строка гранта пережила удаление аккаунта")
 	}
 }

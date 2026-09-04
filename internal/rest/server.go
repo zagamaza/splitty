@@ -236,6 +236,13 @@ type Server struct {
 	appleReceipts  ReceiptVerifier
 	googleReceipts ReceiptVerifier
 	googleAck      PurchaseAcknowledger
+	// plusGrants — Plus, выданный из панели: третий источник тарифа. Экрану
+	// подписки нужен его срок, удалению аккаунта — чистка (см. SetPlusGrants)
+	plusGrants plusGrantStore
+	// deliverySlack — тот же запас, что у Entitlements. Нужен, чтобы решить,
+	// живая ли покупка: Active(now, 0) спрятал бы ссылку «управлять» у
+	// платящего на два часа окна продления, хотя тариф всё ещё Plus
+	deliverySlack time.Duration
 	// Чеки песочницы — только для перечисленных людей (см. SetSandboxReceipts)
 	sandboxUsers          map[int]struct{}
 	appleSandboxReceipts  ReceiptVerifier
@@ -370,6 +377,12 @@ func (s *Server) SetFiles(store fileStore) {
 // до их введения. Ноль здесь означал бы «ноль распознаваний» и тихо сломал бы
 // фичу там, где её просто не настраивали.
 func (s *Server) SetEntitlements(e *service.Entitlements) { s.entitlements = e }
+
+// SetDeliverySlack проводит в сервер тот же запас на задержку доставки, что
+// получил Entitlements. Без него экран подписки судил бы о «живой покупке»
+// строже, чем резолв тарифа, и у платящего в окне продления пропадала бы ссылка
+// «Управлять подпиской» при живом Plus. Вызывать до Run.
+func (s *Server) SetDeliverySlack(d time.Duration) { s.deliverySlack = d }
 
 // SetAI включает AI-парсинг расхода (эндпоинт /parse). Вызывать до Run.
 // nil parser оставляет фичу выключенной (503). Отдельный setter, а не параметр

@@ -175,6 +175,11 @@ func (s *Server) revokeAppleTokens(ctx context.Context, u *api.User) {
 //     приложение, что делал, где оборвался. Чистится ВСЕГДА, даже когда приём
 //     событий выключен.
 //
+//   - plus_grant — номер человека и свободный текст причины, зачем ему выдали
+//     Plus. После чистки от истории выдачи остаётся только строка лога: отдельной
+//     коллекции аудита нет намеренно, а была бы — её пришлось бы чистить по
+//     этому же правилу.
+//
 // Что НЕ чистится осознанно:
 //   - button — только id комнат и операций, PII там нет;
 //   - ai_usage — счётчики запросов без содержимого.
@@ -220,6 +225,7 @@ func (s *Server) purgeUserData(ctx context.Context, u *api.User) error {
 		// который помечен удалённым, а DELETE /me навсегда отвечает
 		// purge_incomplete
 		{name: "product_events", repo: s.productEvents, ids: []int{u.ID}},
+		{name: "plus_grant", repo: s.plusGrants, ids: []int{u.ID}},
 	} {
 		if cleaner.repo == nil {
 			return errors.Errorf("коллекция %s не подключена: PII удалённого пользователя осталась бы в базе", cleaner.name)

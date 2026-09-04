@@ -405,6 +405,19 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	})
 	server.SetEntitlements(entitlements)
 
+	// Гранты: Plus по решению админа, третий источник тарифа рядом со списком в
+	// окружении и покупкой. Заводится всегда — выдача идёт из панели, ключи
+	// сторов к ней отношения не имеют.
+	plusGrantRepo := repository.NewPlusGrantRepository(db)
+	if err := plusGrantRepo.EnsureIndexes(ctx); err != nil {
+		log.Warn().Err(err).Msg("cannot create plus grants indexes")
+	}
+	entitlements.SetGrants(plusGrantRepo)
+	server.SetPlusGrants(plusGrantRepo)
+	// Тот же запас, что у резолва тарифа: экран подписки не имеет права судить
+	// о «живой покупке» строже, чем Entitlements.
+	server.SetDeliverySlack(cfg.PlusDeliverySlack)
+
 	// Проверка чеков. Пустые ключи — покупки выключены: эндпоинты подписки
 	// отдают 503, никто не становится платным, остальное работает как раньше.
 	var appleReceipts, googleReceipts rest.ReceiptVerifier

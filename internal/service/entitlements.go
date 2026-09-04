@@ -17,6 +17,14 @@ type SubscriptionReader interface {
 	ActiveByUser(ctx context.Context, userId int) ([]api.Subscription, error)
 }
 
+// PlusGrantReader — доступ к грантам: Plus, выданный решением админа.
+//
+// Отдельный узкий интерфейс рядом с SubscriptionReader и по той же причине:
+// сервису нужен один метод, а полный репозиторный распухал бы фейками.
+type PlusGrantReader interface {
+	LiveByUser(ctx context.Context, userId int, now time.Time) (*api.PlusGrant, error)
+}
+
 // EntitlementsConfig — параметры резолва тарифа.
 type EntitlementsConfig struct {
 	// FreeQuota/PlusQuota/LegacyQuota — суточные лимиты распознавания.
@@ -49,9 +57,14 @@ type tierCacheEntry struct {
 // никогда — он присылает лишь чек стора, который проверяется отдельно.
 type Entitlements struct {
 	subs SubscriptionReader
-	cfg  EntitlementsConfig
-	comp map[int]struct{}
-	now  func() time.Time // подменяется в тестах
+	// grants — необязательная зависимость: nil означает поведение до появления
+	// грантов. Сеттером, а не параметром конструктора: NewEntitlements зовут из
+	// шести тестов и main.go, и третий позиционный параметр — семь правок ради
+	// ничего (та же конвенция, что у сеттеров rest.Server).
+	grants PlusGrantReader
+	cfg    EntitlementsConfig
+	comp   map[int]struct{}
+	now    func() time.Time // подменяется в тестах
 
 	mu    sync.RWMutex
 	cache map[int]tierCacheEntry
@@ -69,6 +82,22 @@ func NewEntitlements(subs SubscriptionReader, cfg EntitlementsConfig) *Entitleme
 		now:   time.Now,
 		cache: map[int]tierCacheEntry{},
 	}
+}
+
+// SetGrants подключает гранты. Звать до старта обслуживания: поле читается из
+// обработчиков без блокировки.
+func (e *Entitlements) SetGrants(grants PlusGrantReader) {
+	e.grants = grants
+}
+
+// IsComp — человек из списка в окружении (владелец, демо-аккаунт ревьюера).
+//
+// Нужен админскому API, чтобы отличить «платит» от «подарено» и от comp: карта
+// приватная, а Server.sandboxUsers не замена — он заполняется только при живых
+// ключах стора.
+func (e *Entitlements) IsComp(userId int) bool {
+	_, ok := e.comp[userId]
+	return ok
 }
 
 // Tier возвращает тариф пользователя.
@@ -99,6 +128,23 @@ func (e *Entitlements) Tier(ctx context.Context, userId int) (api.Tier, error) {
 		if subs[i].Active(now, e.cfg.DeliverySlack) {
 			tier = api.TierPlus
 			break
+		}
+	}
+
+	// Гранты — ПОСЛЕДНИМИ и только если Plus ещё не найден. Две причины.
+	// Первая: подписка — частый случай, ранний выход экономит запрос на горячем
+	// пути (тариф считается на каждом распознавании). Вторая, важнее: при
+	// отказе коллекции грантов платящий подписчик не должен разжаловаться до
+	// free — до грантов дело просто не дойдёт.
+	if tier == api.TierFree && e.grants != nil {
+		grant, err := e.grants.LiveByUser(ctx, userId, now)
+		if err != nil {
+			// Тот же fail closed, что у подписок: ошибка возвращается наружу,
+			// TierOrFree разжалует до free.
+			return api.TierFree, err
+		}
+		if grant.Live(now) {
+			tier = api.TierPlus
 		}
 	}
 

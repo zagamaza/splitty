@@ -87,3 +87,42 @@ func (s *Subscription) Active(now time.Time, slack time.Duration) bool {
 	}
 	return now.Before(s.ExpiresAt.Add(slack))
 }
+
+// Источник гранта. Один на сегодня: у панели один пароль и один токен, и поле
+// актора отличалось бы от строки к строке ничем. Появится второй актор —
+// появится и он.
+const GrantSourcePanel = "panel"
+
+// PlusGrant — Plus, выданный решением админа: другу, раннему пользователю,
+// человеку, у которого что-то сломалось.
+//
+// Третий источник тарифа рядом со списком в окружении и покупкой. Всегда со
+// сроком: бессрочный подарок никто никогда не пересматривает.
+//
+// Коллекция append-only. Отзыв ставит RevokedAt, а не удаляет строку: «продлили»
+// и «выдали заново после отзыва» — разные факты, и по удалённой строке их не
+// различить.
+type PlusGrant struct {
+	UserId int    `bson:"user_id"`
+	Source string `bson:"source"`
+	// Reason — зачем выдан, свободным текстом. Видят только админы.
+	Reason string `bson:"reason,omitempty"`
+	// RevokedReason — зачем отозван. Отдельной коллекции аудита нет: строка
+	// гранта сама несёт кто, когда и почему.
+	RevokedReason string     `bson:"revoked_reason,omitempty"`
+	ExpiresAt     time.Time  `bson:"expires_at"`
+	RevokedAt     *time.Time `bson:"revoked_at,omitempty"`
+	CreatedAt     time.Time  `bson:"created_at"`
+	UpdatedAt     time.Time  `bson:"updated_at"`
+}
+
+// Live — даёт ли грант Plus на момент now.
+//
+// Запаса, в отличие от подписки, нет: срок ставит человек в панели, задержке
+// доставки взяться неоткуда.
+func (g *PlusGrant) Live(now time.Time) bool {
+	if g == nil || g.RevokedAt != nil {
+		return false
+	}
+	return now.Before(g.ExpiresAt)
+}

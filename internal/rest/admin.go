@@ -1,6 +1,9 @@
 package rest
 
-// Админский API: чтение чужих комнат для панели администратора.
+// Админский API: чтение чужих комнат для панели администратора и выдача Plus.
+//
+// Читающим он был до появления грантов (admin_plus.go): теперь здесь есть и
+// пишущие маршруты, и они меняют тариф живого человека.
 //
 // Живёт на ОТДЕЛЬНОМ слушателе (AdminHandler), который наружу не публикуется —
 // до него дотягивается только соседний контейнер по сети docker. Это не
@@ -118,6 +121,12 @@ func (s *Server) AdminHandler() http.Handler {
 	// выборка. Панель выбирает окно из закрытого списка, но не текст запроса —
 	// иначе админка стала бы открытым прокси к чужой базе.
 	mux.Handle("GET /admin/analytics/{block}", s.adminAuth(s.handleAdminAnalytics))
+	// Plus по решению админа. ПИШУЩИЕ маршруты — только POST и DELETE, никогда
+	// GET: кука панели с SameSite: Lax не уходит на кросс-сайтовый POST, но
+	// уходит на top-level GET-навигацию (см. admin_plus.go).
+	mux.Handle("GET /admin/plus", s.adminAuth(s.handleAdminPlusList))
+	mux.Handle("POST /admin/users/{userId}/plus", s.adminAuth(s.handleAdminGrantPlus))
+	mux.Handle("DELETE /admin/users/{userId}/plus", s.adminAuth(s.handleAdminRevokePlus))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "not_found", "не найдено")
@@ -261,8 +270,10 @@ type adminUserDto struct {
 	// PushOff — человек выключил уведомления целиком
 	PushOff bool `json:"pushOff,omitempty"`
 	// TokensRevokedAt — когда он в последний раз выходил на всех устройствах
-	TokensRevokedAt *time.Time         `json:"tokensRevokedAt,omitempty"`
-	Rooms           []adminUserRoomDto `json:"rooms"`
+	TokensRevokedAt *time.Time `json:"tokensRevokedAt,omitempty"`
+	// Plus — тариф и его источник: покупка, грант или список в окружении
+	Plus  *adminUserPlusDto  `json:"plus,omitempty"`
+	Rooms []adminUserRoomDto `json:"rooms"`
 }
 
 // handleAdminUsers GET /admin/users?q=&limit= — поиск человека
@@ -327,6 +338,11 @@ func (s *Server) handleAdminUser(w http.ResponseWriter, r *http.Request) {
 		TokensRevokedAt: user.TokensValidFrom,
 		Rooms:           []adminUserRoomDto{},
 	}
+
+	// Plus: тариф и откуда он. Без источника панель не отличит «платит» от
+	// «подарено» — а отзывать можно только подаренное.
+	plus := s.adminPlusState(r, userId)
+	card.Plus = &plus
 
 	// Тусы читаем, только если есть чем: без них карточка всё равно полезна —
 	// «чем входит» и «сколько устройств» отвечают на большую часть вопросов

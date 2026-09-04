@@ -45,6 +45,29 @@ type subscriptionStore interface {
 	DeleteByUserId(ctx context.Context, userId int) error
 }
 
+// plusGrantStore — гранты глазами HTTP-слоя.
+//
+// ОДИН узкий интерфейс на обе нужды, по образцу subscriptionStore: срок для
+// экрана подписки и чистка при удалении аккаунта. Второй сеттер ради
+// DeleteByUserId завёл бы две настройки одной коллекции, которые можно забыть
+// подключить по отдельности.
+type plusGrantStore interface {
+	LiveByUser(ctx context.Context, userId int, now time.Time) (*api.PlusGrant, error)
+	Grant(ctx context.Context, userId int, expiresAt time.Time, reason string, now time.Time) error
+	Revoke(ctx context.Context, userId int, reason string, at time.Time) error
+	ListLive(ctx context.Context, now time.Time) ([]api.PlusGrant, error)
+	// DeleteByUserId — чистка при удалении аккаунта: строка гранта несёт номер
+	// человека и причину, то есть данные о нём
+	DeleteByUserId(ctx context.Context, userId int) error
+}
+
+// SetPlusGrants подключает гранты. Вызывать до Run: поле читается из
+// обработчиков без блокировки. Nil-безопасно — без него экран подписки ведёт
+// себя ровно как раньше.
+func (s *Server) SetPlusGrants(g plusGrantStore) {
+	s.plusGrants = g
+}
+
 // SetSubscriptions подключает проверку чеков и хранилище подписок.
 //
 // nil-верификаторы означают, что ключи магазина не заданы: эндпоинты отдают 503,
@@ -307,9 +330,20 @@ func (s *Server) writeSubscriptionState(w http.ResponseWriter, r *http.Request, 
 	}
 	dto := subscriptionDto{Tier: tier}
 
+	// Реквизиты покупки заполняются ТОЛЬКО от живой. ActiveByUser намеренно
+	// возвращает и истёкшие (решение «активна ли» принимает вызывающий), и
+	// раньше это было безвредно: у просрочившего tier == free, и экран уходил в
+	// бесплатную ветку. С грантом tier == plus — и человек с прошлогодней
+	// отменённой подпиской увидел бы «Активна до» с датой из прошлого и живую
+	// ссылку в стор, где ничего нет. Это ровно та аудитория, которой гранты и
+	// раздают.
+	now := time.Now()
 	if s.subscriptions != nil {
 		if subs, err := s.subscriptions.ActiveByUser(ctx, userId); err == nil {
 			for i := range subs {
+				if !subs[i].Active(now, s.deliverySlack) {
+					continue
+				}
 				if dto.ExpiresAt == nil || subs[i].ExpiresAt.After(*dto.ExpiresAt) {
 					expires := subs[i].ExpiresAt
 					dto.ExpiresAt = &expires
@@ -325,6 +359,27 @@ func (s *Server) writeSubscriptionState(w http.ResponseWriter, r *http.Request, 
 		dto.ManageUrl = appleManageUrl
 	case api.StoreGoogle:
 		dto.ManageUrl = googleManageUrl
+	}
+
+	// Грант побеждает по дате, но реквизитов не приносит: у него нет ни стора,
+	// ни продукта, ни страницы управления. Победил — значит все поля покупки
+	// снимаются, иначе экран показал бы дату гранта со ссылкой от чужой,
+	// давно истёкшей покупки.
+	//
+	// tier выше взят из кеша, а срок — свежим запросом: пара не атомарна. В
+	// одном процессе окна нет (выдача и отзыв зовут Invalidate), но при
+	// репликах оно появится.
+	if s.plusGrants != nil {
+		if g, err := s.plusGrants.LiveByUser(ctx, userId, now); err == nil && g.Live(now) {
+			if dto.ExpiresAt == nil || g.ExpiresAt.After(*dto.ExpiresAt) {
+				expires := g.ExpiresAt
+				dto.ExpiresAt = &expires
+				dto.Store = ""
+				dto.ProductId = ""
+				dto.AutoRenew = false
+				dto.ManageUrl = ""
+			}
+		}
 	}
 
 	writeJSON(w, http.StatusOK, dto)
