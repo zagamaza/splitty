@@ -260,6 +260,20 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	server.SetBugReports(repository.NewBugReportRepository(db))
 	server.SetPushOutbox(pushOutbox)
 
+	// Продуктовые события. Подключается БЕЗУСЛОВНО, даже если приём выключен:
+	// purgeUserData падает на неподключённом очистителе, и падает уже после
+	// tombstone — пропущенная строка означала бы аккаунт, помеченный удалённым,
+	// у которого DELETE /me навсегда отвечает purge_incomplete.
+	productEvents := repository.NewProductEventsRepository(db)
+	if err := productEvents.EnsureIndexes(ctx); err != nil {
+		log.Error().Err(err).Msg("cannot ensure product_events indexes")
+	}
+	server.SetProductEvents(productEvents)
+	server.SetAnalyticsEnabled(cfg.AnalyticsEnabled)
+	if !cfg.AnalyticsEnabled {
+		log.Info().Msg("приём продуктовых событий выключен (ANALYTICS_ENABLED=false)")
+	}
+
 	// Приглашения в комнаты: кто кого позвал и в каком состоянии отношение.
 	// Нужны и REST-эндпоинтам, и удалению аккаунта (там своя PII).
 	inviteRepository := repository.NewInviteRepository(db)

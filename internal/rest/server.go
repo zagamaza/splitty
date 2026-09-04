@@ -56,6 +56,13 @@ type userDataCleaner interface {
 	DeleteByUserId(ctx context.Context, userId int) error
 }
 
+// productEventStore — журнал продуктовых событий. Интерфейс узкий, как и
+// соседние: тестам нужен фейк, а не живой mongo.
+type productEventStore interface {
+	Insert(ctx context.Context, events []repository.ProductEvent) (repository.InsertResult, error)
+	DeleteByUserId(ctx context.Context, userId int) error
+}
+
 // inviteStore хранит отношения «человек × комната»: кто кого позвал и в каком
 // состоянии отношение сейчас. Интерфейс объявлен здесь узким — как
 // userIDAllocator и Notifier: тестам нужен фейк, а не живой mongo.
@@ -189,6 +196,13 @@ type Server struct {
 	adminRooms adminRoomStore
 	// adminUsers опционален (см. SetAdminUsers): поиск людей для админской панели
 	adminUsers adminUserStore
+	// productEvents — журнал продуктовых событий. Опционален для ПРИЁМА
+	// (nil — маршрут отвечает 503), но НЕ для удаления аккаунта: там он
+	// подключается безусловно, см. purgeUserData
+	productEvents productEventStore
+	// analyticsEnabled — принимать ли события. Управляет записью, а не
+	// чисткой: события удалённого аккаунта вычищаются всегда
+	analyticsEnabled bool
 	// files опционален (см. SetFiles): хранилище картинок в mongo. nil —
 	// загрузка авы отвечает 503, а отдача файлов работает по-старому, через
 	// телеграм
@@ -308,6 +322,24 @@ func (s *Server) SetPushOutbox(c userDataCleaner) {
 	s.pushOutbox = c
 }
 
+// SetProductEvents подключает журнал продуктовых событий.
+//
+// ⚠️ Вызывать БЕЗУСЛОВНО, даже когда приём событий выключен. purgeUserData
+// возвращает ошибку на неподключённом очистителе, и делает это уже ПОСЛЕ
+// tombstone: пропущенный вызов означал бы аккаунт, который помечен удалённым, а
+// DELETE /me навсегда отвечает purge_incomplete. Выключатель приёма
+// (SetAnalyticsEnabled) управляет записью, а не чисткой.
+func (s *Server) SetProductEvents(store productEventStore) {
+	s.productEvents = store
+}
+
+// SetAnalyticsEnabled включает приём событий. Выключено — маршрут отвечает
+// «принято» и ничего не пишет: отказ заставил бы клиента копить очередь и
+// ретраить её вечно.
+func (s *Server) SetAnalyticsEnabled(enabled bool) {
+	s.analyticsEnabled = enabled
+}
+
 // SetInvites подключает хранилище приглашений. Вызывать до Run, nil-безопасно:
 // без него эндпоинты приглашений отвечают 503, остальной сервер работает.
 func (s *Server) SetInvites(store inviteStore) {
@@ -403,6 +435,11 @@ func (s *Server) Handler() http.Handler {
 	// человек здесь ещё не авторизован — он только пытается войти
 	mux.HandleFunc("GET /tg-auth", s.handleTelegramAuthStart)
 	mux.HandleFunc("GET /tg-callback", s.handleTelegramCallback)
+
+	// Продуктовые события. Под обычной авторизацией: анонимного маршрута
+	// записи наружу не появляется — это был бы самый дешёвый способ насыпать
+	// нам в базу. Верх воронки закрывают числа App Store, а не этот поток.
+	mux.Handle("POST /api/v1/events", s.auth(s.handlePostEvents))
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))

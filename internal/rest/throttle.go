@@ -65,6 +65,19 @@ func newThrottle() *throttle {
 
 // allow инкрементирует счётчик key и сообщает, уложились ли в limit за минуту
 func (t *throttle) allow(key string, limit int) bool {
+	return t.allowCost(key, limit, 1)
+}
+
+// allowCost — то же, но списывает не одну попытку, а cost.
+//
+// Нужен пачечным маршрутам. Приём событий принимает до 50 штук за запрос, и
+// лимит «столько-то ЗАПРОСОВ в минуту» обошёлся бы ровно в пятьдесят раз: один
+// клиент с полными пачками льёт полсотни событий там, где счётчик видит одно.
+func (t *throttle) allowCost(key string, limit, cost int) bool {
+	if cost < 1 {
+		cost = 1
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -75,7 +88,7 @@ func (t *throttle) allow(key string, limit int) bool {
 		w = &throttleWindow{resetAt: now.Add(time.Minute)}
 		t.windows[key] = w
 	}
-	w.count++
+	w.count += cost
 	return w.count <= limit
 }
 

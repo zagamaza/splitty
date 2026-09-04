@@ -270,3 +270,29 @@ func TestRatePerMinMustBePositive(t *testing.T) {
 		t.Error("AI_PARSE_RATE_PER_MIN=0 принят — распознавание перестало бы работать у всех")
 	}
 }
+
+// Приём событий по умолчанию ВКЛЮЧЁН, и это проверяется отдельно.
+//
+// При дефолте «выключено» забытая строка в compose даёт ровно ту картинку,
+// которую пустая база рисует законно — «данных пока нет», — и отличить одно от
+// другого нечем: ни ошибки, ни записи в логе. Такой отказ живёт месяцами.
+func TestAnalyticsEnabledByDefault(t *testing.T) {
+	t.Setenv("API_JWT_SECRET", "секрет-для-теста")
+
+	cfg, err := initConfig()
+	if err != nil {
+		t.Fatalf("конфиг не собрался: %v", err)
+	}
+	if !cfg.AnalyticsEnabled {
+		t.Error("незаданный ANALYTICS_ENABLED выключил приём событий — молчаливая потеря данных")
+	}
+
+	t.Setenv("ANALYTICS_ENABLED", "false")
+	cfg, err = initConfig()
+	if err != nil {
+		t.Fatalf("конфиг не собрался: %v", err)
+	}
+	if cfg.AnalyticsEnabled {
+		t.Error("ANALYTICS_ENABLED=false не выключил приём")
+	}
+}

@@ -198,6 +198,15 @@ type config struct {
 	AdminApiToken   string        `env:"ADMIN_API_TOKEN" envDefault:""`
 	MetricsInterval time.Duration `env:"METRICS_INTERVAL" envDefault:"5m"`
 
+	// AnalyticsEnabled — принимать ли продуктовые события от клиентов.
+	//
+	// По умолчанию ВКЛЮЧЕНО, и это решение, а не удобство: при дефолте
+	// «выключено» забытая строка в compose даёт ровно ту картинку, которую
+	// пустая база и так рисует законно — «данных пока нет», — и отличить одно
+	// от другого нечем. Выключатель управляет ЗАПИСЬЮ, а не чисткой: события
+	// удалённого аккаунта вычищаются всегда (см. purgeUserData).
+	AnalyticsEnabled bool `env:"ANALYTICS_ENABLED" envDefault:"true"`
+
 	DebtReminders     string `env:"DEBT_REMINDERS" envDefault:"off"`
 	DebtRemindersHour int    `env:"DEBT_REMINDERS_HOUR" envDefault:"15"` // 18:00 МСК
 }

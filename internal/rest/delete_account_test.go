@@ -40,6 +40,7 @@ type deleteTestSetup struct {
 	pushOutbox    *fakeChatStates
 	debtReminders *fakeChatStates
 	invites       *fakeInviteStore
+	events        *fakeProductEvents
 	appleTokens   *fakeAppleTokens
 	subs          *fakeSubStore
 	room          *api.Room
@@ -111,6 +112,7 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 		chatStates: &fakeChatStates{}, bugReports: &fakeChatStates{}, pushOutbox: &fakeChatStates{},
 		debtReminders: &fakeChatStates{},
 		invites:       newFakeInviteStore(),
+		events:        &fakeProductEvents{},
 		appleTokens:   apple, room: room,
 	}
 	s.SetChatStates(set.chatStates)
@@ -118,6 +120,9 @@ func newDeleteSetup(t *testing.T, cfg Config) *deleteTestSetup {
 	s.SetPushOutbox(set.pushOutbox)
 	s.SetInvites(set.invites)
 	s.SetDebtReminders(set.debtReminders)
+	// Подключается безусловно: purgeUserData падает на неподключённом
+	// очистителе, и падает уже после tombstone
+	s.SetProductEvents(set.events)
 	set.subs = newFakeSubStore()
 	s.SetSubscriptions(set.subs, nil, nil, nil)
 	return set
@@ -642,5 +647,36 @@ func TestDeleteMePurgesSubscriptions(t *testing.T) {
 	}
 	if _, ok := d.subs.byRef[refKey(api.StoreApple, "orig-other")]; !ok {
 		t.Error("задета чужая подписка")
+	}
+}
+
+// Удаление аккаунта проходит и при ВЫКЛЮЧЕННОМ приёме событий.
+//
+// Соблазн подключать журнал условно был прямой: приём выключен — зачем он. Но
+// purgeUserData возвращает ошибку на неподключённом очистителе, и делает это
+// уже ПОСЛЕ SoftDeleteUser. Условная проводка означала бы аккаунт, помеченный
+// удалённым, у которого DELETE /me навсегда отвечает purge_incomplete, а
+// человек честно ретраит. Выключатель управляет записью, а не чисткой.
+func TestDeleteMeWorksWithAnalyticsDisabled(t *testing.T) {
+	set := newDeleteSetup(t, Config{})
+	set.s.SetAnalyticsEnabled(false)
+
+	rr := set.deleteMe(t, deletedUserID)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("DELETE /me: status = %d, want 204, body: %s", rr.Code, rr.Body.String())
+	}
+	if len(set.events.deleted) != 1 || set.events.deleted[0] != deletedUserID {
+		t.Errorf("события не вычищены: %v", set.events.deleted)
+	}
+}
+
+// Отказ журнала на чистке — это 500, а не молчаливое «удалили».
+func TestDeleteMeFailsLoudlyWhenEventsPurgeFails(t *testing.T) {
+	set := newDeleteSetup(t, Config{})
+	set.events.delErr = errors.New("mongo прилегла")
+
+	rr := set.deleteMe(t, deletedUserID)
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("status = %d, want 500: непрошедшая чистка не должна выглядеть успехом", rr.Code)
 	}
 }

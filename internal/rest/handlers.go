@@ -707,12 +707,22 @@ func validateClientOpId(id string) *httpError {
 	if id == "" {
 		return nil
 	}
+	return validateClientId("clientOpId", id)
+}
+
+// validateClientId — формат клиентского идентификатора с ИМЕНЕМ ПОЛЯ.
+//
+// Имя параметром, а не в тексте: тот же формат нужен идентификатору события и
+// сессии, и жалоба «clientOpId может содержать…» отправляла бы чинить не туда.
+// Пустоту здесь не разрешаем — решает вызывающий: у clientOpId пусто означает
+// «идемпотентность выключена», у события без id молча ломается дедуп.
+func validateClientId(field, id string) *httpError {
 	if len(id) > maxClientOpIdLen {
-		return &httpError{http.StatusBadRequest, "validation", "clientOpId не должен превышать 64 символа"}
+		return &httpError{http.StatusBadRequest, "validation", field + " не должен превышать 64 символа"}
 	}
 	for _, c := range id {
 		if (c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && c != '-' {
-			return &httpError{http.StatusBadRequest, "validation", "clientOpId может содержать только латинские буквы, цифры и дефис"}
+			return &httpError{http.StatusBadRequest, "validation", field + " может содержать только латинские буквы, цифры и дефис"}
 		}
 	}
 	return nil

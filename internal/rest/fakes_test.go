@@ -459,6 +459,28 @@ func (f *fakeChatStates) DeleteByUserId(_ context.Context, userId int) error {
 	return f.err
 }
 
+// fakeProductEvents — журнал событий без mongo. Пишет то, что дали, и помнит,
+// по каким id его звали для чистки.
+type fakeProductEvents struct {
+	events  []repository.ProductEvent
+	deleted []int
+	insErr  error
+	delErr  error
+}
+
+func (f *fakeProductEvents) Insert(_ context.Context, events []repository.ProductEvent) (repository.InsertResult, error) {
+	if f.insErr != nil {
+		return repository.InsertResult{}, f.insErr
+	}
+	f.events = append(f.events, events...)
+	return repository.InsertResult{Accepted: len(events)}, nil
+}
+
+func (f *fakeProductEvents) DeleteByUserId(_ context.Context, userId int) error {
+	f.deleted = append(f.deleted, userId)
+	return f.delErr
+}
+
 func (f *fakeUserRepo) FindByUsername(_ context.Context, username string) (*api.User, error) {
 	for _, u := range f.users {
 		if u.Username == username {

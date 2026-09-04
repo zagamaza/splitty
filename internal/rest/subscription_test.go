@@ -403,7 +403,6 @@ func TestMeExposesPurchaseBindingToken(t *testing.T) {
 	}
 }
 
-
 // TestSandboxReceiptOnlyForListedUsers — чек песочницы принимается лишь от тех,
 // кто перечислен в SetSandboxReceipts.
 //
