@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -166,6 +168,46 @@ class AnalyticsTerminalTest {
 
         val request = withTimeout(5_000) { server.takeRequest(5, TimeUnit.SECONDS) }
         assertEquals("Bearer token-A", request?.getHeader("Authorization"))
+    }
+
+/**
+     * В теле уезжают ТОЛЬКО поля конверта из контракта.
+     *
+     * Конверт не сверяет ни один контракт-тест: они проверяют имена событий и
+     * параметры, а состав тела — нет. Именно так `AnalyticsRecord`, уходивший
+     * на провод целиком, какое-то время слал серверу внутренний `ownerUserId`:
+     * сервер его игнорирует, в контракте его нет, и не заметил никто.
+     */
+    @Test
+    fun wireBodyCarriesOnlyContractFields() = runBlocking {
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        awaitToken("token-A")
+        val analytics = analytics()
+        analytics.onOwnerChanged(1)
+
+        analytics.trackTerminal(AnalyticsEvent.Logout)
+        gate.countDown()
+
+        val request = withTimeout(5_000) { server.takeRequest(5, TimeUnit.SECONDS) }
+        val body = SplittyJson.parseToJsonElement(request!!.body.readUtf8()).jsonObject
+        val event = body["events"]!!.jsonArray.first().jsonObject
+
+        // Пустые params kotlinx не пишет (значение по умолчанию), поэтому
+        // обязательным считаем всё, кроме них, а лишнего не допускаем вовсе.
+        val allowed = setOf("id", "name", "at", "session", "platform", "appVersion", "locale", "params")
+        val required = allowed - "params"
+        assertTrue(
+            event.keys.containsAll(required),
+            "в теле не хватает полей конверта: " + (required - event.keys),
+        )
+        assertTrue(
+            allowed.containsAll(event.keys),
+            "в теле лишние поля: " + (event.keys - allowed) + " (см. docs/analytics-events.md)",
+        )
+        assertFalse(
+            "ownerUserId" in event.keys,
+            "владелец записи — внутреннее поле очереди, серверу его слать нечего",
+        )
     }
 
     /**
