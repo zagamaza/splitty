@@ -106,6 +106,8 @@
     <string name="profile_plus_active">Plus</string>
     <string name="profile_plus_free">Kostenlos</string>
     <string name="profile_plus_loading">Wird geladen…</string>
+    <string name="profile_plus_unknown">Nicht abrufbar</string>
+    <string name="profile_plus_retry">Wiederholen</string>
     <string name="profile_plus_until">Aktiv bis</string>
     <string name="profile_settings_section">Einstellungen</string>
     <string name="profile_name">Name</string>

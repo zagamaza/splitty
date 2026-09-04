@@ -78,12 +78,19 @@ class SubscriptionRepository @Inject constructor(
         }
     }
 
-    suspend fun refreshSubscription() {
+    /**
+     * Перечитывает состояние подписки. Возвращает, УДАЛОСЬ ли.
+     *
+     * Раньше метод возвращал Unit, и вызывающий не мог отличить «сервер сказал
+     * free» от «сервер не ответил». Для экрана это разные вещи: первое — факт,
+     * второе — незнание, и выдавать второе за первое значит врать человеку с
+     * подаренным Plus ровно тогда, когда у него лежит сеть.
+     */
+    suspend fun refreshSubscription(): Boolean =
         runCatching { api.get().subscription() }.onSuccess {
             _subscription.value = it
             _tier.value = it.tier
-        }
-    }
+        }.isSuccess
 
     /**
      * Применяет квоту, приехавшую в ответе на распознавание.

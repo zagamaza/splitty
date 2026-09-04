@@ -63,14 +63,17 @@ class ProfileViewModel @Inject constructor(
     fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("account"))
 
     /**
-     * Состояние подписки прочитано хотя бы раз.
+     * Что мы знаем о тарифе: ещё спрашиваем, узнали или не смогли узнать.
      *
-     * Тариф стартует как FREE, и до первого ответа сервера экран не имеет права
-     * писать «Бесплатный»: у человека с подарком это ложь, а при отказе сети —
-     * ложь навсегда. Пока false, строка говорит «загружаю».
+     * Три состояния, а не флаг: тариф стартует как FREE, и «сервер не ответил»
+     * нельзя показывать как «бесплатный» — у человека с подаренным Plus это
+     * ложь ровно тогда, когда у него лежит сеть. Успевший приехать ответ
+     * прошлого запроса остаётся показанным: устаревшая правда лучше выдуманной.
      */
-    private val _plusLoaded = MutableStateFlow(false)
-    val plusLoaded: StateFlow<Boolean> = _plusLoaded.asStateFlow()
+    enum class PlusLoad { LOADING, LOADED, FAILED }
+
+    private val _plusLoad = MutableStateFlow(PlusLoad.LOADING)
+    val plusLoad: StateFlow<PlusLoad> = _plusLoad.asStateFlow()
 
     /**
      * Подтягивает состояние подписки на входе на экран.
@@ -81,12 +84,14 @@ class ProfileViewModel @Inject constructor(
      */
     fun refreshSubscription() {
         viewModelScope.launch {
-            subscriptions.refreshSubscription()
-            // Флаг поднимается по факту ПОПЫТКИ, а не успеха: иначе при
-            // лежащей сети строка висела бы «загружаю» вечно. Что показать при
-            // неудаче, решает экран — сервер ответил бы free, и разницы для
-            // человека нет.
-            _plusLoaded.value = true
+            val ok = subscriptions.refreshSubscription()
+            _plusLoad.value = when {
+                ok -> PlusLoad.LOADED
+                // Уже показанный ответ прошлого запроса не стираем: он был
+                // правдой. Пустое незнание — другое дело, о нём и говорим.
+                subscriptions.subscription.value != null -> PlusLoad.LOADED
+                else -> PlusLoad.FAILED
+            }
         }
     }
 

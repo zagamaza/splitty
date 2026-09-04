@@ -260,7 +260,7 @@ class ProfileAccountTest {
     @Test
     fun `plus state is not claimed before the first answer`() = runBlocking {
         val vm = viewModel()
-        assertFalse(vm.plusLoaded.value, "состояние объявлено прочитанным до запроса")
+        assertEquals(ProfileViewModel.PlusLoad.LOADING, vm.plusLoad.value, "состояние объявлено до запроса")
 
         respond(
             "GET /api/v1/me/subscription",
@@ -268,7 +268,46 @@ class ProfileAccountTest {
         )
         vm.refreshSubscription()
 
-        withTimeout(5_000) { vm.plusLoaded.first { it } }
+        withTimeout(5_000) { vm.plusLoad.first { it == ProfileViewModel.PlusLoad.LOADED } }
+        assertEquals(Tier.PLUS, vm.tier.value)
+    }
+
+    /**
+     * Сервер не ответил — экран НЕ выдаёт это за «бесплатный».
+     *
+     * Это и была половина невыполненной работы: флаг поднимался по факту
+     * попытки, и после неудачного запроса человек с подаренным Plus снова читал
+     * «Бесплатный» — теперь уже навсегда.
+     */
+    @Test
+    fun `failed subscription fetch does not claim free`() = runBlocking {
+        respond("GET /api/v1/me/subscription", MockResponse().setResponseCode(503))
+        val vm = viewModel()
+
+        vm.refreshSubscription()
+
+        withTimeout(5_000) { vm.plusLoad.first { it == ProfileViewModel.PlusLoad.FAILED } }
+        assertEquals(Tier.FREE, vm.tier.value, "тариф остался дефолтным — это не ответ сервера")
+        assertNull(vm.subscription.value)
+    }
+
+    /** Неудача ПОСЛЕ удачного ответа не стирает уже известное: устаревшая
+     *  правда лучше выдуманной. */
+    @Test
+    fun `failure after success keeps the known answer`() = runBlocking {
+        respond(
+            "GET /api/v1/me/subscription",
+            MockResponse().setBody("""{"tier":"plus","expiresAt":"2027-01-01T00:00:00Z"}"""),
+        )
+        val vm = viewModel()
+        vm.refreshSubscription()
+        withTimeout(5_000) { vm.plusLoad.first { it == ProfileViewModel.PlusLoad.LOADED } }
+
+        respond("GET /api/v1/me/subscription", MockResponse().setResponseCode(503))
+        vm.refreshSubscription()
+
+        withTimeout(5_000) { vm.subscription.first { it != null } }
+        assertEquals(ProfileViewModel.PlusLoad.LOADED, vm.plusLoad.value)
         assertEquals(Tier.PLUS, vm.tier.value)
     }
 

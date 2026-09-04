@@ -152,6 +152,8 @@
     <string name="profile_plus_active">Plus</string>
     <string name="profile_plus_free">Бесплатный</string>
     <string name="profile_plus_loading">Загружаю…</string>
+    <string name="profile_plus_unknown">Не удалось узнать</string>
+    <string name="profile_plus_retry">Повторить</string>
     <string name="profile_plus_until">Активен до</string>
     <string name="profile_settings_section">Настройки</string>
     <string name="profile_name">Имя</string>

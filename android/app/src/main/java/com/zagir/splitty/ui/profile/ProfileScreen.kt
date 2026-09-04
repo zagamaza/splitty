@@ -92,7 +92,7 @@ fun ProfileScreen(
     val me by viewModel.me.collectAsStateWithLifecycle()
     val tier by viewModel.tier.collectAsStateWithLifecycle()
     val subscription by viewModel.subscription.collectAsStateWithLifecycle()
-    val plusLoaded by viewModel.plusLoaded.collectAsStateWithLifecycle()
+    val plusLoad by viewModel.plusLoad.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -143,7 +143,12 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HeaderSection(me)
-            PlusSection(tier = tier, subscription = subscription, loaded = plusLoaded)
+            PlusSection(
+                tier = tier,
+                subscription = subscription,
+                load = plusLoad,
+                onRetry = viewModel::refreshSubscription,
+            )
             SettingsSection(
                 me = me,
                 lang = langDraft,
@@ -652,7 +657,12 @@ private fun HeaderSection(me: Me?) {
  * (здесь он дублировал строку-ссылку и путал — убран в паритете с iOS).
  */
 @Composable
-private fun PlusSection(tier: Tier, subscription: SubscriptionState?, loaded: Boolean) {
+private fun PlusSection(
+    tier: Tier,
+    subscription: SubscriptionState?,
+    load: ProfileViewModel.PlusLoad,
+    onRetry: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(
             text = stringResource(R.string.profile_plus_section),
@@ -673,11 +683,14 @@ private fun PlusSection(tier: Tier, subscription: SubscriptionState?, loaded: Bo
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    // До первого ответа сервера «Бесплатный» писать нельзя: у
-                    // человека с подарком это неправда, и увидит он её первой.
+                    // «Бесплатный» — это ФАКТ от сервера. Пока ответа нет или
+                    // он не пришёл вовсе, пишем то, что есть на самом деле:
+                    // спрашиваем или не смогли спросить. Иначе человек с
+                    // подарком читает неправду ровно тогда, когда лежит сеть.
                     text = stringResource(
                         when {
-                            !loaded -> R.string.profile_plus_loading
+                            load == ProfileViewModel.PlusLoad.LOADING -> R.string.profile_plus_loading
+                            load == ProfileViewModel.PlusLoad.FAILED -> R.string.profile_plus_unknown
                             tier == Tier.PLUS -> R.string.profile_plus_active
                             else -> R.string.profile_plus_free
                         }
@@ -687,7 +700,8 @@ private fun PlusSection(tier: Tier, subscription: SubscriptionState?, loaded: Bo
                 )
             }
             // Дата — только у платного: у бесплатного ей взяться неоткуда.
-            val until = subscription?.expiresAt?.takeIf { loaded && tier == Tier.PLUS }
+            val until = subscription?.expiresAt
+                ?.takeIf { load == ProfileViewModel.PlusLoad.LOADED && tier == Tier.PLUS }
             if (until != null) {
                 HairlineDivider()
                 Row(
@@ -709,6 +723,13 @@ private fun PlusSection(tier: Tier, subscription: SubscriptionState?, loaded: Bo
                         color = Splitty.colors.inkSecondary,
                     )
                 }
+            }
+        }
+        // Не узнали — предлагаем спросить ещё раз, а не оставляем человека
+        // с непонятной строкой.
+        if (load == ProfileViewModel.PlusLoad.FAILED) {
+            TextButton(onClick = onRetry, modifier = Modifier.padding(start = 4.dp)) {
+                Text(stringResource(R.string.profile_plus_retry))
             }
         }
         // Ссылки «управлять» намеренно нет, когда её нет у сервера: у
