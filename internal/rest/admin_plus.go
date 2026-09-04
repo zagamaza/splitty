@@ -9,6 +9,8 @@ package rest
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/rs/zerolog/log"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -58,10 +61,24 @@ const (
 
 // adminUserPlusDto — блок Plus в карточке человека.
 type adminUserPlusDto struct {
-	Tier      api.Tier   `json:"tier"`
+	Tier api.Tier `json:"tier"`
+	// Source — откуда Plus ПО МНЕНИЮ РЕЗОЛВА, в его же порядке: список в
+	// окружении, живая покупка, подарок. Не «у кого дата дальше»: панель обязана
+	// говорить то же, что сервер, иначе она объявит подарком человека, которому
+	// Plus на самом деле даёт покупка.
 	Source    string     `json:"source,omitempty"`
 	ExpiresAt *time.Time `json:"expiresAt,omitempty"`
 	Reason    string     `json:"reason,omitempty"`
+	// Grant — живой подарок САМ ПО СЕБЕ, независимо от того, победил ли он в
+	// резолве. Без него подарок, перекрытый покупкой или списком в окружении,
+	// исчезал бы из карточки — и отозвать его было бы нечем.
+	Grant *adminGrantDto `json:"grant,omitempty"`
+}
+
+// adminGrantDto — живой подарок человека.
+type adminGrantDto struct {
+	ExpiresAt time.Time `json:"expiresAt"`
+	Reason    string    `json:"reason,omitempty"`
 }
 
 // handleAdminGrantPlus POST /admin/users/{userId}/plus — выдать или продлить.
@@ -131,10 +148,14 @@ func (s *Server) handleAdminRevokePlus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Тело необязательное: отзыв без объяснения — рабочий случай.
+	// Пустое тело — рабочий случай: отзыв без объяснения. А вот битое тело
+	// разбирать молча нельзя: это первое РАЗРУШАЮЩЕЕ действие, и ошибка клиента
+	// не должна всё равно приводить к отзыву — только io.EOF означает «нечего
+	// разбирать».
 	var req revokeRequest
-	if r.Body != nil {
-		_ = json.NewDecoder(r.Body).Decode(&req)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "validation", "тело запроса не разобрано")
+		return
 	}
 	if utf8.RuneCountInString(req.Reason) > maxGrantReasonRunes {
 		writeError(w, http.StatusBadRequest, "validation", "причина длиннее двухсот символов")
@@ -223,6 +244,14 @@ func (s *Server) adminLivingUser(w http.ResponseWriter, r *http.Request) *api.Us
 		return nil
 	}
 	user, err := s.userRepo.FindById(r.Context(), userId)
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		// Отказ базы — не «нет такого человека»: под 404 он выглядел бы как
+		// опечатка в номере, и человек в панели искал бы несуществующую ошибку.
+		// «Не нашли» приезжает отдельным ErrNoDocuments и падает в 404 ниже.
+		log.Error().Err(err).Int("userId", userId).Msg("админский api: чтение человека")
+		writeError(w, http.StatusInternalServerError, errCodeInternal, "не удалось прочитать человека")
+		return nil
+	}
 	if err != nil || user == nil || user.DeletedAt != nil {
 		writeError(w, http.StatusNotFound, "not_found", "нет такого человека")
 		return nil
@@ -245,12 +274,26 @@ func (s *Server) adminPlusState(r *http.Request, userId int) adminUserPlusDto {
 	if s.entitlements != nil {
 		state.Tier = s.entitlements.TierOrFree(ctx, userId)
 	}
+
+	// Живой подарок читается ВСЕГДА, даже у бесплатного и у платящего: он
+	// показывается и отзывается сам по себе, независимо от того, кто победил в
+	// резолве. Иначе подарок, перекрытый покупкой, из карточки исчезал бы.
+	var grant *api.PlusGrant
+	if s.plusGrants != nil {
+		if g, err := s.plusGrants.LiveByUser(ctx, userId, now); err == nil && g.Live(now) {
+			grant = g
+			state.Grant = &adminGrantDto{ExpiresAt: g.ExpiresAt, Reason: g.Reason}
+		}
+	}
+
 	if state.Tier != api.TierPlus {
 		return state
 	}
 
-	// Порядок тот же, что у резолва тарифа: список в окружении, покупка, грант.
-	// Разойдись он — панель показала бы источник, которого резолв не выбирал.
+	// Источник — в порядке резолва (см. service.Entitlements.Tier): список в
+	// окружении, живая покупка, подарок. Ранний выход, а не «у кого дата
+	// дальше»: резолв при живой покупке до подарков не доходит вовсе, и панель
+	// не имеет права называть подарком то, что Plus даёт покупкой.
 	if s.entitlements != nil && s.entitlements.IsComp(userId) {
 		state.Source = plusSourceComp
 		return state
@@ -270,16 +313,15 @@ func (s *Server) adminPlusState(r *http.Request, userId int) adminUserPlusDto {
 			}
 		}
 	}
+	if state.Source == plusSourcePurchase {
+		return state
+	}
 
-	if s.plusGrants != nil {
-		if g, err := s.plusGrants.LiveByUser(ctx, userId, now); err == nil && g.Live(now) {
-			if state.ExpiresAt == nil || g.ExpiresAt.After(*state.ExpiresAt) {
-				expires := g.ExpiresAt
-				state.ExpiresAt = &expires
-				state.Source = plusSourceGrant
-				state.Reason = g.Reason
-			}
-		}
+	if grant != nil {
+		expires := grant.ExpiresAt
+		state.ExpiresAt = &expires
+		state.Source = plusSourceGrant
+		state.Reason = grant.Reason
 	}
 
 	return state

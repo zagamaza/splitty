@@ -72,10 +72,7 @@ func (r *MongoPlusGrantRepository) LiveByUser(ctx context.Context, userId int, n
 // человека вставят две строки. Цена этого не в дубле, а в отзыве, поэтому
 // Revoke ходит по ВСЕМ живым строкам, а LiveByUser берёт максимум.
 func (r *MongoPlusGrantRepository) Grant(ctx context.Context, userId int, expiresAt time.Time, reason string, now time.Time) error {
-	set := bson.M{
-		"expires_at": expiresAt.UTC(),
-		"updated_at": now.UTC(),
-	}
+	set := bson.M{"updated_at": now.UTC()}
 	// Причина затирается только новой непустой: продление без причины не должно
 	// стирать ту, ради которой грант и выдали.
 	if reason != "" {
@@ -85,6 +82,15 @@ func (r *MongoPlusGrantRepository) Grant(ctx context.Context, userId int, expire
 	_, err := r.col.UpdateOne(ctx,
 		liveFilter(userId, now),
 		bson.M{
+			// $max, а не $set: выдача НИКОГДА не сокращает уже выданный срок.
+			// Кнопка в панели называется «продлить», и запрос с датой раньше
+			// текущей приходит от устаревшего или параллельного клиента —
+			// исполнить его буквально значило бы отнять доступ по нажатию на
+			// «продлить». На вставке $max ведёт себя как $set: поля ещё нет.
+			//
+			// Сам «плюс месяц» считает вызывающий — он видит текущий срок.
+			// Здесь только инвариант «меньше не станет».
+			"$max": bson.M{"expires_at": expiresAt.UTC()},
 			"$set": set,
 			"$setOnInsert": bson.M{
 				"user_id":    userId,
@@ -107,8 +113,12 @@ func (r *MongoPlusGrantRepository) Revoke(ctx context.Context, userId int, reaso
 	if reason != "" {
 		set["revoked_reason"] = reason
 	}
+	// Фильтр ЖИВЫХ, а не просто «не отозванных»: истёкшая строка отзыву не
+	// подлежит — она уже ничего не даёт, а проставленные ей задним числом
+	// revoked_at и причина превратили бы «истёк в мае» в «отозван в сентябре».
+	// Журнал append-only, и врать о прошлом он не должен.
 	_, err := r.col.UpdateMany(ctx,
-		bson.M{"user_id": userId, "revoked_at": bson.M{"$exists": false}},
+		liveFilter(userId, at),
 		bson.M{"$set": set},
 	)
 	return err
@@ -128,9 +138,24 @@ func (r *MongoPlusGrantRepository) ListLive(ctx context.Context, now time.Time) 
 	}
 	defer func() { _ = cur.Close(ctx) }()
 
-	grants := make([]api.PlusGrant, 0)
-	if err := cur.All(ctx, &grants); err != nil {
+	rows := make([]api.PlusGrant, 0)
+	if err := cur.All(ctx, &rows); err != nil {
 		return nil, err
+	}
+
+	// По одной строке на человека. Живых строк у одного человека может
+	// оказаться две — уникальность не гарантируется сознательно (см. Grant), —
+	// и тогда список показал бы его дважды. Выборка отсортирована по сроку
+	// убыванием, поэтому первая встреченная строка и есть самая поздняя: та же
+	// «одна строка», которую отдаёт LiveByUser.
+	seen := make(map[int]struct{}, len(rows))
+	grants := make([]api.PlusGrant, 0, len(rows))
+	for i := range rows {
+		if _, ok := seen[rows[i].UserId]; ok {
+			continue
+		}
+		seen[rows[i].UserId] = struct{}{}
+		grants = append(grants, rows[i])
 	}
 	return grants, nil
 }

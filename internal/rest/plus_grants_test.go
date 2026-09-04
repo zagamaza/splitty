@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"sort"
 	"strconv"
@@ -541,4 +542,91 @@ func TestAdminPlusGrantNotReachableByGet(t *testing.T) {
 	s, _, _ := adminGrantServer(t, false)
 	rec := doAdmin(t, s, "/admin/users/"+strconv.Itoa(testUser1.ID)+"/plus", testAdminToken)
 	assertErrorCode(t, rec, http.StatusNotFound, "not_found")
+}
+
+// Источник совпадает с порядком РЕЗОЛВА, а не с «у кого дата дальше».
+//
+// У человека и живая покупка, и подарок подлиннее. Резолв при живой покупке до
+// подарков не доходит вовсе, поэтому панель обязана сказать «платит» — иначе
+// она объявит подарком того, кому Plus на самом деле даёт покупка.
+func TestAdminPlusSourceFollowsResolverNotLongestDate(t *testing.T) {
+	s, grants, subs := adminGrantServer(t, false)
+	subs.byRef[refKey(api.StoreApple, "live")] = &api.Subscription{
+		UserId: testUser1.ID, Store: api.StoreApple, StoreRef: "live",
+		ExpiresAt: time.Now().UTC().Add(30 * 24 * time.Hour),
+	}
+	grants.give(testUser1.ID, time.Now().UTC().Add(365*24*time.Hour))
+
+	card := adminCard(t, s)
+	if card.Plus == nil || card.Plus.Source != plusSourcePurchase {
+		t.Fatalf("источник %q, ожидал покупку: %+v", card.Plus.Source, card.Plus)
+	}
+	// Но сам подарок из карточки не исчезает — иначе его нечем было бы отозвать.
+	if card.Plus.Grant == nil {
+		t.Fatal("подарок, перекрытый покупкой, пропал из карточки")
+	}
+}
+
+// Подарок виден и у человека из списка в окружении — там он тоже перекрыт.
+func TestAdminPlusGrantVisibleUnderComp(t *testing.T) {
+	s, grants, subs := adminGrantServer(t, false)
+	ent := service.NewEntitlements(subs, service.EntitlementsConfig{
+		FreeQuota: 5, PlusQuota: service.UnlimitedQuota, LegacyQuota: 50,
+		CompUserIds: []int{testUser1.ID},
+	})
+	ent.SetGrants(grants)
+	s.SetEntitlements(ent)
+	grants.give(testUser1.ID, time.Now().UTC().Add(30*24*time.Hour))
+
+	card := adminCard(t, s)
+	if card.Plus == nil || card.Plus.Source != plusSourceComp {
+		t.Fatalf("источник %q, ожидал список в окружении", card.Plus.Source)
+	}
+	if card.Plus.Grant == nil {
+		t.Fatal("подарок под comp-аккаунтом пропал из карточки")
+	}
+}
+
+// Подарок виден и у бесплатного, у которого он ещё не начал действовать в
+// резолве по любой причине: блок grant не зависит от тарифа.
+func TestAdminPlusGrantShownForFreeUserToo(t *testing.T) {
+	s, grants, _ := adminGrantServer(t, false)
+	grants.give(testUser1.ID, time.Now().UTC().Add(30*24*time.Hour))
+
+	card := adminCard(t, s)
+	if card.Plus == nil || card.Plus.Grant == nil {
+		t.Fatalf("подарок не показан: %+v", card.Plus)
+	}
+}
+
+// Битое тело DELETE не приводит к отзыву.
+//
+// Первое разрушающее действие: ошибка клиента не должна всё равно снимать Plus.
+func TestAdminRevokePlusRejectsMalformedBody(t *testing.T) {
+	s, grants, _ := adminGrantServer(t, false)
+	grants.give(testUser1.ID, time.Now().UTC().Add(30*24*time.Hour))
+
+	rec := doAdminMethod(t, s, http.MethodDelete,
+		"/admin/users/"+strconv.Itoa(testUser1.ID)+"/plus", testAdminToken, `{"reason":`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	if g := grants.byUser[testUser1.ID]; g == nil || g.RevokedAt != nil {
+		t.Fatalf("битое тело всё равно отозвало Plus: %+v", g)
+	}
+}
+
+// Отказ базы — 500, а не 404: иначе недоступность mongo выглядит как опечатка
+// в номере человека, и в панели ищут несуществующую ошибку.
+func TestAdminGrantPlusDatabaseFailureIsNotNotFound(t *testing.T) {
+	users := newFakeUserRepo(testUser1, testUser2)
+	users.findErr = errors.New("mongo недоступна")
+	s := newTestServer(Config{AdminToken: testAdminToken}, users, newFakeRoomRepo(newTestRoom()))
+	s.SetPlusGrants(newFakeGrantStore())
+
+	rec := doAdminMethod(t, s, http.MethodPost,
+		"/admin/users/"+strconv.Itoa(testUser1.ID)+"/plus", testAdminToken,
+		grantBody(time.Now().UTC().Add(24*time.Hour), ""))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("код %d, ожидал 500: %s", rec.Code, rec.Body.String())
+	}
 }
