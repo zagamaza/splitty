@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.core.app.ApplicationProvider
+import com.zagir.splitty.billing.BillingService
+import com.zagir.splitty.billing.SubscriptionRepository
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.NetworkMonitor
@@ -17,6 +19,7 @@ import com.zagir.splitty.data.OutboxSyncer
 import com.zagir.splitty.data.SplittyRepository
 import java.io.File
 import java.nio.file.Files
+import javax.inject.Provider
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -104,8 +107,18 @@ class AddExpenseCaptureRoutingTest {
         val session = SessionStore(dataStore, FakeTokenCipher(), scope)
         val outbox = OutboxStore(File(dir, "outbox.json"), json)
         val syncer = OutboxSyncer(outbox, repository, session, MutableStateFlow(true), scope)
+        // SubscriptionRepository появился в конструкторе вместе с платным тарифом
+        // (коммит «Splitor Plus»), а этот тест не обновили — весь юнит-сорссет
+        // перестал компилироваться. Настоящий репозиторий здесь безвреден:
+        // BillingClient только собирается, соединение с Play открывает
+        // startConnection, которого мы не зовём, а api берётся лениво.
+        val subscriptions = SubscriptionRepository(
+            Provider { retrofit.create(SplittyApi::class.java) },
+            BillingService(context),
+        )
         return AddExpenseViewModel(
-            repository, session, outbox, syncer, SavedStateHandle(), NetworkMonitor(context),
+            repository, session, outbox, syncer, SavedStateHandle(), subscriptions,
+            NetworkMonitor(context),
         )
     }
 
