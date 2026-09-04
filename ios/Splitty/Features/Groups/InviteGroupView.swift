@@ -87,6 +87,7 @@ struct InviteGroupView: View {
             .padding(20)
             .background(Color.bg)
             .navigationTitle("Пригласить в группу")
+            .trackScreen("invite")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

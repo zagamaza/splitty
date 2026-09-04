@@ -60,8 +60,8 @@
 | `room_created` | туса создана | — |
 | `room_joined` | вход в тусу удался | `via`: `link` / `code` / `invite` |
 | `room_join_failed` | войти в тусу не удалось | `reason`: `not_found` / `deleted` / `forbidden` / `network` |
-| `expense_added` | расход добавлен | `method`: `manual` / `voice` / `receipt` |
-| `expense_parse_failed` | распознавание не удалось | `reason`: `quota` / `rate_limited` / `unsupported_media` / `too_large` / `validation` / `network` / `internal` |
+| `expense_added` | расход добавлен | `method`: `manual` / `voice` / `receipt`; `edited`: `true` / `false` |
+| `expense_parse_failed` | распознавание не удалось | `kind`: `voice` / `receipt`; `reason`: `quota` / `rate_limited` / `unsupported_media` / `too_large` / `validation` / `network` / `internal` |
 | `settle_up_opened` | открыт расчёт долгов | — |
 | `settle_up_done` | долг отмечен погашенным | — |
 | `paywall_shown` | показан экран оплаты | `from`: `quota` / `account` |
@@ -70,11 +70,39 @@
 | `purchase_completed` | покупка прошла | `product`: `monthly` / `yearly` |
 | `purchase_failed` | покупка не прошла | `reason`: `cancelled` / `store` / `verify` / `network` |
 | `invite_sent` | приглашение отправлено | `channel`: `link` / `share` |
+| `screen_view` | открыт экран | `screen`: `groups` / `group` / `group_settings` / `balances` / `add_expense` / `operation` / `settle_up` / `account` / `paywall` / `invite` / `archive` / `activity` / `friends` / `welcome` |
+| `settings_changed` | что-то изменено в настройках | `what`: `theme` / `language` / `name` / `avatar` / `notifications` |
+| `account_linked` | привязан способ входа | `provider`: `google` / `apple` / `telegram` / `password` |
+| `account_unlinked` | отвязан способ входа | `provider`: `google` / `apple` / `telegram` / `password` |
+| `account_deleted` | аккаунт удалён | — |
+| `logout` | выход из аккаунта | — |
+| `member_added` | человек добавлен в тусу | `via`: `friends` |
+| `member_add_failed` | добавить не удалось | `reason`: `not_found` / `already_member` / `forbidden` / `network` |
+| `member_removed` | человек убран из тусы | — |
+| `room_left` | вышел из тусы сам | — |
+| `room_archived` | туса убрана в архив | — |
+| `room_unarchived` | туса возвращена из архива | — |
+| `room_settings_changed` | правки тусы | `what`: `name` / `avatar` / `currency` |
+| `capture_started` | начат ввод для распознавания | `kind`: `voice` / `camera` / `gallery` |
+| `capture_cancelled` | ввод отменён до отправки | `kind`: `voice` / `camera` / `gallery` |
+| `parse_started` | материал ушёл на распознавание | `kind`: `voice` / `receipt` |
+| `parse_succeeded` | распознавание вернулось | `kind`: `voice` / `receipt`; `items`: `none` / `few` / `many` / `lots` |
+| `parse_retried` | нажато «Повторить» | `kind`: `voice` / `receipt` |
+| `receipt_item_edited` | правил позицию чека | — |
+| `receipt_unknown_resolved` | сопоставил незнакомое имя с человеком | — |
 
-`screen_view` **зарезервирован и вводится в V2** — вместе с закрытым списком
-имён экранов и своим контракт-тестом. Это самая большая клиентская поверхность
-набора (каждый экран на двух платформах), а ни один блок первой версии без него
-не ломается. Причина отложить — трудозатраты, не объём данных.
+### Числа в параметрах — бакетами
+
+`items` у `parse_succeeded` — это не «сколько именно позиций», а `none` / `few`
+(1-3) / `many` (4-10) / `lots` (10+). Параметр обязан оставаться закрытым
+множеством: точное число не группируется в агрегате, а читать «в чеке было 12»
+всё равно некому. То же правило для любого будущего счётчика.
+
+### Что даёт `edited` у `expense_added`
+
+Правил ли человек то, что распознал AI. Это единственный честный ответ на вопрос
+«распознавание работает или люди за ним переделывают»: `expense_added` без него
+говорит только, каким способом расход завели, но не сработал ли способ.
 
 ## Почему набор именно такой
 

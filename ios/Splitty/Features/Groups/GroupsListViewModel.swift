@@ -102,6 +102,7 @@ final class GroupsListViewModel {
     func archive(repo: DataRepo, roomId: String) async {
         do {
             try await repo.api.archiveRoom(id: roomId)
+            Analytics.shared.track(.roomArchived)
             rooms = try await repo.rooms(archived: false).value
             archivedRooms = try await repo.rooms(archived: true).value
             state = .loaded
@@ -115,6 +116,7 @@ final class GroupsListViewModel {
     func unarchive(repo: DataRepo, roomId: String) async {
         do {
             try await repo.api.unarchiveRoom(id: roomId)
+            Analytics.shared.track(.roomUnarchived)
             archivedRooms = try await repo.rooms(archived: true).value
             rooms = try await repo.rooms(archived: false).value
             state = .loaded

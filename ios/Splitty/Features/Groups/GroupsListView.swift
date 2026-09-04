@@ -73,6 +73,7 @@ struct GroupsListView: View {
                     }
                 }
                 .navigationTitle("Группы")
+                .trackScreen("groups")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         // Меню, а не кнопка: вход по коду был доступен ТОЛЬКО из

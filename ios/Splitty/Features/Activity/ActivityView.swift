@@ -45,6 +45,7 @@ struct ActivityView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
                 .navigationTitle("Уведомления")
+                .trackScreen("activity")
                 // .task на контенте (не на NavigationStack): срабатывает и при
                 // возврате (pop) с экрана группы — лента обновляется.
                 .task {

@@ -151,6 +151,7 @@ struct AddExpenseView: View {
                 },
                 onCancel: {
                     isRecordingLocked = false
+                    Analytics.shared.track(.captureCancelled(kind: "voice"))
                     cancelRecording()
                 }
             )
@@ -364,6 +365,7 @@ struct AddExpenseView: View {
                 .navigationTitle(
                     editOperation == nil && editEntry == nil ? "Добавить расход" : "Изменить расход"
                 )
+                .trackScreen("add_expense")
                 .navigationBarTitleDisplayMode(.inline)
                 .background(Color.bg)
                 .toolbar {
@@ -437,9 +439,15 @@ struct AddExpenseView: View {
                     titleVisibility: .visible
                 ) {
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                        Button("Камера") { isCameraPresented = true }
+                        Button("Камера") {
+                            Analytics.shared.track(.captureStarted(kind: "camera"))
+                            isCameraPresented = true
+                        }
                     }
-                    Button("Галерея") { isPhotoPickerPresented = true }
+                    Button("Галерея") {
+                        Analytics.shared.track(.captureStarted(kind: "gallery"))
+                        isPhotoPickerPresented = true
+                    }
                     Button("Отмена", role: .cancel) {}
                 }
                 .confirmationDialog(
@@ -467,7 +475,10 @@ struct AddExpenseView: View {
                         pendingParseImage = nil
                         performParse(image: image)
                     }
-                    Button("Отмена", role: .cancel) { pendingParseImage = nil }
+                    Button("Отмена", role: .cancel) {
+                        Analytics.shared.track(.captureCancelled(kind: "camera"))
+                        pendingParseImage = nil
+                    }
                 } message: {
                     Text("Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.")
                 }
@@ -533,6 +544,7 @@ struct AddExpenseView: View {
                 Text(message)
             } actions: {
                 Button("Повторить") {
+                    Analytics.shared.track(.parseRetried(kind: model.lastParseKind))
                     Task {
                         await model.retry(
                             repo: session.repo,
@@ -1175,6 +1187,7 @@ struct AddExpenseView: View {
     /// иначе запись стартует после «отпустили» и остаётся включённой навсегда.
     private func startRecordingIfNeeded() {
         guard !recorder.isRecording, !model.isParsing else { return }
+        Analytics.shared.track(.captureStarted(kind: "voice"))
         Task {
             if !micGranted {
                 micGranted = await recorder.ensurePermission()
@@ -1319,8 +1332,16 @@ struct AddExpenseView: View {
                 items: model.draftItemList,
                 members: model.members,
                 currency: model.currency,
-                onEditItem: { index in itemEditTarget = ItemEditTarget(index: index) },
+                onEditItem: { index in
+                    // Правка позиции — это «AI распознал, но не так». Считаем
+                    // здесь, а не на сохранении: там уже не видно, что правили.
+                    Analytics.shared.track(.receiptItemEdited)
+                    model.noteEditedAfterParse()
+                    itemEditTarget = ItemEditTarget(index: index)
+                },
                 onResolveUnknown: { index, name in
+                    Analytics.shared.track(.receiptUnknownResolved)
+                    model.noteEditedAfterParse()
                     unknownTarget = UnknownTarget(itemIndex: index, name: name)
                 },
                 onToggleSurchargeRule: { index in

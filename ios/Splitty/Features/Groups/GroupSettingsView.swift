@@ -63,6 +63,7 @@ struct GroupSettingsView: View {
             NavigationStack {
                 content
                     .navigationTitle("Настройки группы")
+                    .trackScreen("group_settings")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
@@ -196,6 +197,7 @@ struct GroupSettingsView: View {
         do {
             let previous = avatarFileId
             let fileId = try await session.api.setRoomAvatar(roomId: room.id, image: data)
+            Analytics.shared.track(.roomSettingsChanged(what: "avatar"))
             avatarFileId = fileId
             if let previous { session.avatars.forgetFile(previous) }
             session.noteDataChanged()
@@ -341,6 +343,7 @@ struct GroupSettingsView: View {
         defer { isMutating = false }
         do {
             try await session.api.leaveRoom(roomId: room.id)
+            Analytics.shared.track(.roomLeft)
             session.noteDataChanged()
             session.confirm(String(localized: "Вы вышли из группы"))
             onChange()
@@ -355,6 +358,7 @@ struct GroupSettingsView: View {
         defer { isMutating = false }
         do {
             try await session.api.removeMember(roomId: room.id, userId: member.id)
+            Analytics.shared.track(.memberRemoved)
             session.noteDataChanged()
             session.confirm(String(localized: "\(member.displayName) убран(а) из группы"))
             onChange()
@@ -515,6 +519,7 @@ struct GroupSettingsView: View {
         defer { savingCurrency = nil }
         do {
             try await session.api.setRoomCurrency(roomId: room.id, currency: code)
+            Analytics.shared.track(.roomSettingsChanged(what: "currency"))
             selectedCurrency = code
             Haptics.tap()
             // Единая инвалидация: экран группы и списки перечитают суммы

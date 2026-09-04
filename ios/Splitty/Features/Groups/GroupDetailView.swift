@@ -46,6 +46,7 @@ struct GroupDetailView: View {
         content
             .background(Color.bg.ignoresSafeArea())
             .navigationTitle(model.room?.name ?? String(localized: "Группа"))
+            .trackScreen("group")
             .navigationBarTitleDisplayMode(.large)
             // Туса — «центр мира»: глобальный таб-бар скрыт, вместо него —
             // системный таб-бар вложенного TabView (нативный вид и анимации).

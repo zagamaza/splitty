@@ -31,6 +31,7 @@ struct GroupBalancesView: View {
             NavigationStack {
                 content
                     .navigationTitle("Балансы")
+                    .trackScreen("balances")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {

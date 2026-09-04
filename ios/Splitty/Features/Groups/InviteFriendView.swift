@@ -206,6 +206,7 @@ struct InviteFriendView: View {
             let name = friends.first { $0.user.id == userId }?.user.displayName ?? String(localized: "Участник")
             do {
                 let status = try await session.api.addMember(roomId: roomId, userId: userId)
+                Analytics.shared.track(.memberAdded(via: "friends"))
                 if status == .pending {
                     pending.append(name)
                 } else {
@@ -215,6 +216,7 @@ struct InviteFriendView: View {
                 // должен звать по второму разу уже позванных.
                 selected.remove(userId)
             } catch {
+                Analytics.shared.track(.memberAddFailed(reason: analyticsMemberAddReason(error)))
                 failed.append(name)
                 reason = humanErrorText(error)
             }

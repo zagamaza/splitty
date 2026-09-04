@@ -71,7 +71,20 @@ final class AddExpenseViewModel {
     /// Чем расход в итоге набран: руками, голосом или чеком. Запоминается в
     /// момент распознавания, а на сохранении уже поздно — там видно только
     /// готовые поля.
-    private var inputMethod = "manual" 
+    private var inputMethod = "manual"
+    /// Правил ли человек то, что распознал AI. Единственный честный ответ на
+    /// вопрос «распознавание работает или за ним переделывают».
+    private var editedAfterParse = false
+    /// Чем распознавали в текущей попытке — для событий пути распознавания.
+    private var parseKind = "receipt"
+
+    /// Чем распознавали в последний раз — нужно кнопке «Повторить».
+    var lastParseKind: String { parseKind }
+
+    /// Отметить, что человек правил распознанное. Уезжает в `expense_added`
+    /// параметром `edited`: без него видно только КАКИМ способом завели расход,
+    /// но не сработал ли способ.
+    func noteEditedAfterParse() { editedAfterParse = true }
     /// Расход ушёл в очередь, а не на сервер: экран говорит об этом отдельно.
     private(set) var savedOffline = false
     /// Чем распознавали в последний раз. Раньше плашка всегда говорила
@@ -543,6 +556,8 @@ final class AddExpenseViewModel {
             ? ParseDraft(description: descriptionText, sum: sum ?? 0, donorId: payerId, items: draftItems)
             : nil
         inputMethod = audio != nil ? "voice" : (image != nil ? "receipt" : inputMethod)
+        parseKind = audio != nil ? "voice" : "receipt"
+        Analytics.shared.track(.parseStarted(kind: parseKind))
         do {
             let response = try await api.parseOperation(
                 roomId: roomId,
@@ -556,6 +571,10 @@ final class AddExpenseViewModel {
             // Остаток приезжает вместе с ответом — счётчик у микрофона
             // обновляется без единого лишнего запроса.
             lastQuota = response.quota
+            Analytics.shared.track(.parseSucceeded(
+                kind: parseKind,
+                items: analyticsItemsBucket(response.draft.items?.count ?? 0)
+            ))
             apply(parse: response)
             if didRecognize {
                 Haptics.success()
@@ -567,7 +586,7 @@ final class AddExpenseViewModel {
             // Суточная норма кончилась: ведём к оплате, а не показываем ошибку.
             // Черновик и записанный звук при этом НЕ теряются — человек
             // возвращается к тому же экрану, докупив или закрыв paywall.
-            Analytics.shared.track(.expenseParseFailed(reason: analyticsParseReason(error)))
+            Analytics.shared.track(.expenseParseFailed(kind: parseKind, reason: analyticsParseReason(error)))
             if let apiError = error as? APIError, apiError.isAiQuotaExceeded {
                 lastQuota = apiError.quota
                 isPaywallPresented = true
@@ -1051,7 +1070,7 @@ final class AddExpenseViewModel {
                 )
             }
             didSave = true
-            Analytics.shared.track(.expenseAdded(method: inputMethod))
+            Analytics.shared.track(.expenseAdded(method: inputMethod, edited: editedAfterParse))
             return true
         } catch let error as APIError {
             // Сервер недоступен или ответил 5xx: создание не теряем — кладём в
@@ -1064,7 +1083,7 @@ final class AddExpenseViewModel {
                 savedOffline = true
                 // Ушёл в очередь — для человека расход добавлен, и в воронке
                 // это тот же шаг: иначе офлайн выглядел бы обрывом.
-                Analytics.shared.track(.expenseAdded(method: inputMethod))
+                Analytics.shared.track(.expenseAdded(method: inputMethod, edited: editedAfterParse))
                 return true
             }
             alertMessage = humanErrorText(error)

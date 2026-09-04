@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import UIKit
 
 /// Продуктовое событие. Перечисление, а не строки на месте вызова: имя события —
@@ -17,8 +18,8 @@ enum AnalyticsEvent {
     case roomCreated
     case roomJoined(via: String)
     case roomJoinFailed(reason: String)
-    case expenseAdded(method: String)
-    case expenseParseFailed(reason: String)
+    case expenseAdded(method: String, edited: Bool)
+    case expenseParseFailed(kind: String, reason: String)
     case settleUpOpened
     case settleUpDone
     case paywallShown(from: String)
@@ -27,6 +28,26 @@ enum AnalyticsEvent {
     case purchaseCompleted(product: String)
     case purchaseFailed(reason: String)
     case inviteSent(channel: String)
+    case screenView(screen: String)
+    case settingsChanged(what: String)
+    case accountLinked(provider: String)
+    case accountUnlinked(provider: String)
+    case accountDeleted
+    case logout
+    case memberAdded(via: String)
+    case memberAddFailed(reason: String)
+    case memberRemoved
+    case roomLeft
+    case roomArchived
+    case roomUnarchived
+    case roomSettingsChanged(what: String)
+    case captureStarted(kind: String)
+    case captureCancelled(kind: String)
+    case parseStarted(kind: String)
+    case parseSucceeded(kind: String, items: String)
+    case parseRetried(kind: String)
+    case receiptItemEdited
+    case receiptUnknownResolved
 
     var name: String {
         switch self {
@@ -49,6 +70,26 @@ enum AnalyticsEvent {
         case .purchaseCompleted: return "purchase_completed"
         case .purchaseFailed: return "purchase_failed"
         case .inviteSent: return "invite_sent"
+        case .screenView: return "screen_view"
+        case .settingsChanged: return "settings_changed"
+        case .accountLinked: return "account_linked"
+        case .accountUnlinked: return "account_unlinked"
+        case .accountDeleted: return "account_deleted"
+        case .logout: return "logout"
+        case .memberAdded: return "member_added"
+        case .memberAddFailed: return "member_add_failed"
+        case .memberRemoved: return "member_removed"
+        case .roomLeft: return "room_left"
+        case .roomArchived: return "room_archived"
+        case .roomUnarchived: return "room_unarchived"
+        case .roomSettingsChanged: return "room_settings_changed"
+        case .captureStarted: return "capture_started"
+        case .captureCancelled: return "capture_cancelled"
+        case .parseStarted: return "parse_started"
+        case .parseSucceeded: return "parse_succeeded"
+        case .parseRetried: return "parse_retried"
+        case .receiptItemEdited: return "receipt_item_edited"
+        case .receiptUnknownResolved: return "receipt_unknown_resolved"
         }
     }
 
@@ -59,8 +100,8 @@ enum AnalyticsEvent {
         case let .onboardingStep(step): return ["step": step]
         case let .roomJoined(via): return ["via": via]
         case let .roomJoinFailed(reason): return ["reason": reason]
-        case let .expenseAdded(method): return ["method": method]
-        case let .expenseParseFailed(reason): return ["reason": reason]
+        case let .expenseAdded(method, edited): return ["method": method, "edited": edited ? "true" : "false"]
+        case let .expenseParseFailed(kind, reason): return ["kind": kind, "reason": reason]
         case let .paywallShown(from): return ["from": from]
         case let .paywallDismissed(from): return ["from": from]
         case let .purchaseStarted(product): return ["product": product]
@@ -70,6 +111,21 @@ enum AnalyticsEvent {
              .roomCreated, .settleUpOpened, .settleUpDone:
             return [:]
         case let .inviteSent(channel): return ["channel": channel]
+        case let .screenView(screen): return ["screen": screen]
+        case let .settingsChanged(what): return ["what": what]
+        case let .accountLinked(provider): return ["provider": provider]
+        case let .accountUnlinked(provider): return ["provider": provider]
+        case let .memberAdded(via): return ["via": via]
+        case let .memberAddFailed(reason): return ["reason": reason]
+        case let .roomSettingsChanged(what): return ["what": what]
+        case let .captureStarted(kind): return ["kind": kind]
+        case let .captureCancelled(kind): return ["kind": kind]
+        case let .parseStarted(kind): return ["kind": kind]
+        case let .parseSucceeded(kind, items): return ["kind": kind, "items": items]
+        case let .parseRetried(kind): return ["kind": kind]
+        case .accountDeleted, .logout, .memberRemoved, .roomLeft, .roomArchived,
+             .roomUnarchived, .receiptItemEdited, .receiptUnknownResolved:
+            return [:]
         }
     }
 }
@@ -390,6 +446,18 @@ func analyticsJoinReason(_ error: Error) -> String {
     }
 }
 
+/// Причина, по которой не удалось добавить человека в тусу.
+func analyticsMemberAddReason(_ error: Error) -> String {
+    guard case let APIError.server(status, code, _, _) = error else { return "network" }
+    switch code {
+    case "not_found": return "not_found"
+    case "already_member": return "already_member"
+    case "forbidden": return "forbidden"
+    default:
+        return status == 404 ? "not_found" : (status == 403 ? "forbidden" : "network")
+    }
+}
+
 /// Причина неудачного распознавания — тоже из закрытого множества.
 func analyticsParseReason(_ error: Error) -> String {
     guard case let APIError.server(status, code, _, _) = error else { return "network" }
@@ -406,4 +474,29 @@ func analyticsParseReason(_ error: Error) -> String {
 /// платформенные и разъедутся между App Store и Google Play.
 func analyticsProduct(_ productId: String) -> String {
     productId.contains("year") ? "yearly" : "monthly"
+}
+
+/// Сколько позиций распозналось — бакетом, как на сервере.
+///
+/// Диапазоны обязаны совпадать с `analytics.ItemsBucket` в Go и с Android:
+/// поделив их по-своему, один и тот же чек попал бы в разные корзины, и
+/// сравнивать платформы стало бы нельзя.
+func analyticsItemsBucket(_ count: Int) -> String {
+    switch count {
+    case ..<1: return "none"
+    case ..<4: return "few"
+    case ..<11: return "many"
+    default: return "lots"
+    }
+}
+
+extension View {
+    /// Отметить открытие экрана.
+    ///
+    /// Отдельным модификатором, а не `.onAppear` на месте: `onAppear` легко
+    /// повесить не на тот уровень, и тогда событие полетит на каждый рендер
+    /// строки списка. Здесь один вызов и одно место, где это можно проверить.
+    func trackScreen(_ screen: String) -> some View {
+        onAppear { Analytics.shared.track(.screenView(screen: screen)) }
+    }
 }

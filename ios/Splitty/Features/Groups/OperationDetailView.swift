@@ -64,6 +64,7 @@ struct OperationDetailView: View {
         }
         .background(Color.bg)
         .navigationTitle(operation.isDebtRepayment ? "Погашение" : "Расход")
+        .trackScreen("operation")
         .navigationBarTitleDisplayMode(.inline)
         // Полноэкранно, а не sheet: форму со введёнными данными нельзя
         // случайно смахнуть — выход только «Отмена»/«Сохранить».

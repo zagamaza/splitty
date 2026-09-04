@@ -287,6 +287,7 @@ struct AccountView: View {
             await subscriptions.refreshQuota()
             await subscriptions.refreshSubscription()
         }
+        .trackScreen("account")
     }
 
     /// Подпись под названием тарифа: у бесплатного — сколько распознаваний в
@@ -366,6 +367,7 @@ struct AccountView: View {
                 .tint(Color.inkSecondary)
                 .onChange(of: lang) { _, newValue in
                     guard newValue != session.me?.lang else { return }
+                    Analytics.shared.track(.settingsChanged(what: "language"))
                     Task { await save(lang: newValue) }
                 }
             }
@@ -393,6 +395,9 @@ struct AccountView: View {
             .pickerStyle(.menu)
             .labelsHidden()
             .tint(Color.inkSecondary)
+            .onChange(of: themeRaw) { _, _ in
+                Analytics.shared.track(.settingsChanged(what: "theme"))
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 7)
@@ -791,6 +796,7 @@ struct AccountView: View {
             return
         }
         guard trimmed != session.me?.displayName else { return }
+        Analytics.shared.track(.settingsChanged(what: "name"))
         Task { await save(displayName: trimmed) }
     }
 
@@ -822,6 +828,7 @@ struct AccountView: View {
             do {
                 let idToken = try await GoogleSignInService.signIn()
                 try await session.linkGoogle(idToken: idToken)
+                Analytics.shared.track(.accountLinked(provider: "google"))
                 Haptics.success()
             } catch GoogleSignInError.cancelled {
                 return
@@ -882,6 +889,7 @@ struct AccountView: View {
             defer { isIdentityBusy = false }
             do {
                 let warning = try await session.unlink(provider)
+                Analytics.shared.track(.accountUnlinked(provider: provider.rawValue))
                 if let warning, !warning.isEmpty {
                     noticeMessage = warning
                 } else {
