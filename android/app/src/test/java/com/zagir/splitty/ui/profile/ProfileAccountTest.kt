@@ -47,6 +47,10 @@ import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
+import androidx.test.core.app.ApplicationProvider
+import com.zagir.splitty.billing.BillingService
+import com.zagir.splitty.billing.SubscriptionRepository
+import com.zagir.splitty.core.model.Tier
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -204,14 +208,55 @@ class ProfileAccountTest {
             ApiCache(cacheDir, json),
         )
         registrar = SpyRegistrar(repository, session, scope)
+        val analytics = testAnalytics(cacheDir, json, session, scope)
+        val api = retrofit.create(SplittyApi::class.java)
         ProfileViewModel(
             repository = repository,
             sessionStore = session,
             pushTokenRegistrar = registrar,
             googleIdTokenProvider = provider,
             outboxStore = OutboxStore(File(cacheDir, "outbox.json"), json),
-            analytics = testAnalytics(cacheDir, json, session, scope),
+            analytics = analytics,
+            // Настоящий репозиторий поверх того же MockWebServer: строка Plus
+            // читает ровно то, что ответит сервер.
+            subscriptions = SubscriptionRepository(
+                { api },
+                BillingService(ApplicationProvider.getApplicationContext()),
+                analytics,
+            ),
         )
+    }
+
+    /**
+     * Подаренный Plus виден в профиле: тариф и дата приезжают с сервера.
+     *
+     * До этого экрана подписки на Android не существовало вовсе, а
+     * refreshSubscription() не звал никто снаружи репозитория — у человека без
+     * покупок состояние оставалось пустым навсегда, и подарка он не видел.
+     */
+    @Test
+    fun `granted plus reaches the profile screen`() = runBlocking {
+        respond(
+            "GET /api/v1/me/subscription",
+            MockResponse().setBody("""{"tier":"plus","expiresAt":"2027-01-01T00:00:00Z"}"""),
+        )
+        val vm = viewModel()
+
+        vm.refreshSubscription()
+
+        val state = withTimeout(5_000) { vm.subscription.first { it != null } }
+        assertEquals(Tier.PLUS, vm.tier.value)
+        assertEquals("2027-01-01T00:00:00Z", state?.expiresAt)
+        // Ссылки «управлять» у подарка нет — вести в магазин некуда.
+        assertNull(state?.manageUrl)
+    }
+
+    /** Дата показывается человеческим текстом, а неразобранная — как пришла. */
+    @Test
+    fun `plus date is rendered readable`() {
+        val ru = java.util.Locale.forLanguageTag("ru")
+        assertEquals("1 января 2027", plusUntilText("2027-01-01T00:00:00Z", ru))
+        assertEquals("что-то не то", plusUntilText("что-то не то", ru))
     }
 
     /** Профиль в сессии после обновления способов входа. */

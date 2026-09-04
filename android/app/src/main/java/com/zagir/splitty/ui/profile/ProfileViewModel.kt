@@ -27,6 +27,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import com.zagir.splitty.billing.SubscriptionRepository
+import com.zagir.splitty.core.model.SubscriptionState
+import com.zagir.splitty.core.model.Tier
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -45,10 +48,30 @@ class ProfileViewModel @Inject constructor(
     private val googleIdTokenProvider: GoogleIdTokenProvider,
     outboxStore: OutboxStore,
     private val analytics: Analytics,
+    private val subscriptions: SubscriptionRepository,
 ) : ViewModel() {
+
+    /** Тариф и подписка — для строки Plus в профиле.
+     *
+     * Экран подписки на Android до этого не существовал вовсе: Plus всплывал
+     * только пейволом при исчерпании квоты. Человеку с ПОДАРЕННЫМ Plus это
+     * значило бы, что подарка он не видит — просто пейвол перестал вылезать. */
+    val tier: StateFlow<Tier> = subscriptions.tier
+    val subscription: StateFlow<SubscriptionState?> = subscriptions.subscription
 
     /** Экран открыт. Зовётся из composable один раз на вход. */
     fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("account"))
+
+    /**
+     * Подтягивает состояние подписки на входе на экран.
+     *
+     * Своего вызова не было ни одного: refreshSubscription() звался только
+     * изнутри самого репозитория (после покупки и восстановления), и у человека
+     * без покупок состояние оставалось null навсегда.
+     */
+    fun refreshSubscription() {
+        viewModelScope.launch { subscriptions.refreshSubscription() }
+    }
 
     /** Профиль текущего пользователя (кэш сессии, обновляется после GET/PATCH /me). */
     val me: StateFlow<Me?> = sessionStore.state

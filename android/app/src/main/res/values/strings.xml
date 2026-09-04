@@ -143,6 +143,11 @@
 
     <!-- Профиль -->
     <string name="profile_id">ID: %1$d</string>
+    <string name="profile_plus_section">Splitor Plus</string>
+    <string name="profile_plus_tier">Plan</string>
+    <string name="profile_plus_active">Plus</string>
+    <string name="profile_plus_free">Free</string>
+    <string name="profile_plus_until">Active until</string>
     <string name="profile_settings_section">Settings</string>
     <string name="profile_name">Name</string>
     <string name="notifications_title">Notifications</string>

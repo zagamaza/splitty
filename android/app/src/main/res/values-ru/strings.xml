@@ -147,6 +147,11 @@
 
     <!-- Профиль -->
     <string name="profile_id">ID: %1$d</string>
+    <string name="profile_plus_section">Splitor Plus</string>
+    <string name="profile_plus_tier">Тариф</string>
+    <string name="profile_plus_active">Plus</string>
+    <string name="profile_plus_free">Бесплатный</string>
+    <string name="profile_plus_until">Активен до</string>
     <string name="profile_settings_section">Настройки</string>
     <string name="profile_name">Имя</string>
     <string name="notifications_title">Уведомления</string>

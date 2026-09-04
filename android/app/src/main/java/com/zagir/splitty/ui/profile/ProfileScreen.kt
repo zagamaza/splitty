@@ -61,6 +61,8 @@ import com.zagir.splitty.R
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.model.LoginProvider
+import com.zagir.splitty.core.model.SubscriptionState
+import com.zagir.splitty.core.model.Tier
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.ui.auth.EmailLoginForm
@@ -81,8 +83,15 @@ fun ProfileScreen(
     onOpenNotifications: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
-    LaunchedEffect(Unit) { viewModel.trackScreen() }
+    LaunchedEffect(Unit) {
+        viewModel.trackScreen()
+        // Состояние подписки запрашивается здесь: у человека без покупок его
+        // не запрашивал никто, и оно оставалось пустым навсегда.
+        viewModel.refreshSubscription()
+    }
     val me by viewModel.me.collectAsStateWithLifecycle()
+    val tier by viewModel.tier.collectAsStateWithLifecycle()
+    val subscription by viewModel.subscription.collectAsStateWithLifecycle()
     val baseUrl by viewModel.baseUrl.collectAsStateWithLifecycle()
     val theme by viewModel.theme.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -133,6 +142,7 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HeaderSection(me)
+            PlusSection(tier = tier, subscription = subscription)
             SettingsSection(
                 me = me,
                 lang = langDraft,
@@ -640,6 +650,78 @@ private fun HeaderSection(me: Me?) {
  * разделителями. Мастер-тумблер уведомлений живёт на самом экране уведомлений
  * (здесь он дублировал строку-ссылку и путал — убран в паритете с iOS).
  */
+@Composable
+private fun PlusSection(tier: Tier, subscription: SubscriptionState?) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            text = stringResource(R.string.profile_plus_section),
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.profile_plus_tier),
+                    fontSize = 16.sp,
+                    color = Splitty.colors.ink,
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = stringResource(
+                        if (tier == Tier.PLUS) R.string.profile_plus_active else R.string.profile_plus_free
+                    ),
+                    fontSize = 16.sp,
+                    color = Splitty.colors.inkSecondary,
+                )
+            }
+            // Дата — только у платного: у бесплатного ей взяться неоткуда.
+            val until = subscription?.expiresAt?.takeIf { tier == Tier.PLUS }
+            if (until != null) {
+                HairlineDivider()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.profile_plus_until),
+                        fontSize = 16.sp,
+                        color = Splitty.colors.ink,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        text = plusUntilText(until),
+                        fontSize = 16.sp,
+                        color = Splitty.colors.inkSecondary,
+                    )
+                }
+            }
+        }
+        // Ссылки «управлять» намеренно нет, когда её нет у сервера: у
+        // подаренного Plus магазина не существует, и вести туда некуда.
+    }
+}
+
+/**
+ * Дата окончания человеческим текстом; неразобранная — как пришла.
+ *
+ * Язык — параметром, а не из умолчания JVM: месяц пишется словом, и без явной
+ * локали дата на экране зависела бы от настроек машины, а тест — от того, где
+ * его запустили.
+ */
+internal fun plusUntilText(raw: String, locale: java.util.Locale = java.util.Locale.getDefault()): String =
+    runCatching {
+        val date = java.time.OffsetDateTime.parse(raw).toLocalDate()
+        date.format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", locale))
+    }.getOrDefault(raw)
+
 @Composable
 private fun SettingsSection(
     me: Me?,
