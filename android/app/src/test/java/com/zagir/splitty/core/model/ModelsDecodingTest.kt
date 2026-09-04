@@ -361,6 +361,43 @@ class ModelsDecodingTest {
         assertTrue("operations" in body)
         assertTrue("debts" in body)
         assertTrue("invites" in body)
+        assertTrue("edits" in body)
+    }
+
+    /**
+     * Категория `edits` (правки без изменения суммы) добавлена позже остальных.
+     * Ответ сервера прошлой версии её не несёт, и разобраться он обязан в те же
+     * значения, что вернул бы новый: telegram включён, push выключен.
+     */
+    @Test
+    fun `NotifySettings without edits falls back to server defaults`() {
+        val settings = SplittyJson.decodeFromString<NotifySettings>(
+            """
+            {
+              "operations": {"telegram": true, "push": true},
+              "debts": {"telegram": true, "push": true},
+              "invites": {"telegram": true, "push": true}
+            }
+            """.trimIndent()
+        )
+        assertTrue(settings.edits.telegram)
+        assertFalse(settings.edits.push)
+    }
+
+    @Test
+    fun `decodes edits category when server sends it`() {
+        val settings = SplittyJson.decodeFromString<NotifySettings>(
+            """
+            {
+              "operations": {"telegram": true, "push": true},
+              "debts": {"telegram": true, "push": true},
+              "invites": {"telegram": true, "push": true},
+              "edits": {"telegram": false, "push": true}
+            }
+            """.trimIndent()
+        )
+        assertFalse(settings.edits.telegram)
+        assertTrue(settings.edits.push)
     }
 
     @Test

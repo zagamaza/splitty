@@ -110,6 +110,8 @@
     <string name="notifications_debts_footer">Jemand hat dir Geld zurückgezahlt, und Erinnerungen an deine Schulden</string>
     <string name="notifications_invites">Einladungen</string>
     <string name="notifications_invites_footer">Jemand hat dich zu einer Gruppe eingeladen oder hinzugefügt</string>
+    <string name="notifications_edits">Änderungen an Ausgaben</string>
+    <string name="notifications_edits_footer">Eine Ausgabe wurde umbenannt oder ein Foto hinzugefügt — Betrag und dein Anteil bleiben gleich</string>
     <string name="notifications_channel_push">App</string>
     <string name="profile_theme">Design</string>
     <string name="profile_theme_system">Systemeinstellung</string>

@@ -152,6 +152,8 @@
     <string name="notifications_debts_footer">Someone paid you back, and reminders about debts you owe</string>
     <string name="notifications_invites">Invites</string>
     <string name="notifications_invites_footer">Someone invited or added you to a group</string>
+    <string name="notifications_edits">Expense edits</string>
+    <string name="notifications_edits_footer">An expense was renamed or a photo was added — the amount and your share did not change</string>
     <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">App</string>
     <string name="profile_theme">Theme</string>

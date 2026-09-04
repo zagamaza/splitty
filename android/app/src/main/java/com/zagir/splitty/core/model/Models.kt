@@ -179,6 +179,15 @@ data class NotifySettings(
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val invites: ChannelPrefs = ChannelPrefs(),
+    /**
+     * Правки операции, не меняющие сумму: переименование и добавленное фото.
+     * Дефолт [ChannelPrefs] (telegram включён, push выключен) совпадает с
+     * серверным, поэтому ответ старого сервера без ключа `edits` разбирается
+     * в те же значения, что вернул бы новый.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.ALWAYS)
+    val edits: ChannelPrefs = ChannelPrefs(),
 )
 
 /** Долг: [debtor] должен [lender]'у [sum]. */

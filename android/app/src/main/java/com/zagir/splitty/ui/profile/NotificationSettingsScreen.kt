@@ -195,6 +195,22 @@ private fun SettingsContent(
                     onChange(settings.copy(invites = settings.invites.copy(push = on)))
                 },
             )
+            // Отдельная категория, а не часть «Операций»: сумма от
+            // переименования не меняется, и push здесь по умолчанию выключен —
+            // иначе правка названия трижды подряд даёт очередь баннеров ни о чём.
+            NotifySection(
+                title = stringResource(R.string.notifications_edits),
+                footer = stringResource(R.string.notifications_edits_footer),
+                telegramOn = settings.edits.telegram,
+                pushOn = settings.edits.push,
+                enabled = state.categoriesEnabled,
+                onTelegramChange = { on ->
+                    onChange(settings.copy(edits = settings.edits.copy(telegram = on)))
+                },
+                onPushChange = { on ->
+                    onChange(settings.copy(edits = settings.edits.copy(push = on)))
+                },
+            )
         }
     }
 }

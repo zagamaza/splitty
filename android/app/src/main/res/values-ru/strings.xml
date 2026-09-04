@@ -156,6 +156,8 @@
     <string name="notifications_debts_footer">Вам вернули долг, и напоминания о ваших долгах</string>
     <string name="notifications_invites">Приглашения</string>
     <string name="notifications_invites_footer">Вас пригласили или добавили в группу</string>
+    <string name="notifications_edits">Правки расходов</string>
+    <string name="notifications_edits_footer">Расход переименовали или добавили фото — сумма и ваша доля не изменились</string>
     <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">Приложение</string>
     <string name="profile_theme">Тема</string>

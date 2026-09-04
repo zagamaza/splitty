@@ -80,6 +80,15 @@ class NotifyScreenStateTest {
     }
 
     @Test
+    fun `edits toggle changes only its own category`() {
+        val changed = loaded.settings!!.copy(edits = ChannelPrefs(telegram = false, push = true))
+        val next = loaded.applyCategories(changed).categoriesSaved(changed)
+        assertEquals(ChannelPrefs(telegram = false, push = true), next.settings!!.edits)
+        assertEquals(loaded.settings!!.operations, next.settings!!.operations)
+        assertEquals(loaded.settings!!.invites, next.settings!!.invites)
+    }
+
+    @Test
     fun `categories saved leaves saving with server value`() {
         val changed = loaded.settings!!.copy(debts = ChannelPrefs(telegram = false))
         val next = loaded.applyCategories(changed).categoriesSaved(changed)

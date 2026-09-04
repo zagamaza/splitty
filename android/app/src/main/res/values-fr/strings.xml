@@ -110,6 +110,8 @@
     <string name="notifications_debts_footer">Quelqu\'un vous a remboursé, et rappels de vos dettes</string>
     <string name="notifications_invites">Invitations</string>
     <string name="notifications_invites_footer">Quelqu\'un vous a invité ou ajouté à un groupe</string>
+    <string name="notifications_edits">Modifications de dépenses</string>
+    <string name="notifications_edits_footer">Une dépense a été renommée ou une photo ajoutée — le montant et votre part n\'ont pas changé</string>
     <string name="notifications_channel_push">Application</string>
     <string name="profile_theme">Thème</string>
     <string name="profile_theme_system">Système</string>
