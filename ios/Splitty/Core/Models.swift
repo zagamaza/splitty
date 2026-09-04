@@ -681,6 +681,10 @@ extension RoomDetail {
         // лежащих в офлайн-кеше с прошлой версии приложения.
         inviteUrl = try c.decodeIfPresent(String.self, forKey: .inviteUrl)
         seenThrough = try c.decodeIfPresent(Date.self, forKey: .seenThrough)
+        // Забытая здесь строка стоила фото группы на экране настроек: поле
+        // объявлено с дефолтом nil, поэтому компилятор о пропуске молчал, а
+        // в списке тус фото было — там RoomSummary со своим декодером.
+        avatarFileId = try c.decodeIfPresent(String.self, forKey: .avatarFileId)
     }
 }
 

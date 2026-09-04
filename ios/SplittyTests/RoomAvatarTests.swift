@@ -54,6 +54,33 @@ final class RoomAvatarTests: XCTestCase {
         XCTAssertEqual(room.avatarFileId, "65a0000000000000000000ff")
     }
 
+    /// RoomDetail разбирается РУЧНЫМ init(from:), где поля перечислены по
+    /// одному. Строку про avatarFileId там забыли, и фото группы не
+    /// показывалось на экране настроек — при том что в списке тус оно было
+    /// (там RoomSummary со своим декодером), а сервер поле исправно отдавал.
+    /// Компилятор промолчал: у поля есть дефолт nil.
+    func testRoomDetailDecodesAvatar() throws {
+        let room = try Self.decodeDetail(avatar: "\"avatarFileId\":\"65a0000000000000000000ff\",")
+        XCTAssertEqual(room.avatarFileId, "65a0000000000000000000ff")
+    }
+
+    /// Ключа может не быть (omitempty) — разбор обязан это пережить.
+    func testRoomDetailDecodesWithoutAvatar() throws {
+        let room = try Self.decodeDetail(avatar: "")
+        XCTAssertNil(room.avatarFileId)
+    }
+
+    private static func decodeDetail(avatar: String) throws -> RoomDetail {
+        let json = """
+        {"id":"1","name":"Стамбул","createdAt":"2026-08-17T10:00:00Z","isArchived":false,
+         "members":[],"currency":"RUB",\(avatar)"totalSpent":0,"mySpent":0,"myBalance":0,
+         "debts":[],"operations":[]}
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return try decoder.decode(RoomDetail.self, from: Data(json.utf8))
+    }
+
     /// Загрузка идёт PUT-ом на адрес комнаты, тело — multipart с полем `image`.
     /// Сервер отличает поле по имени, поэтому имя проверяем явно.
     func testSetRoomAvatarSendsMultipartPut() async throws {
