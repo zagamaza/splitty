@@ -15,6 +15,28 @@
 
     <key>NSPrivacyCollectedDataTypes</key>
     <array>
+        <!--
+            Обезличенные события: что в приложении происходит и где люди
+            спотыкаются. Имя события, время и пометки из заранее заданного
+            набора — ни сумм, ни названий групп, ни описаний расходов.
+
+            Linked = true честно: событие пишется под номером аккаунта, иначе
+            воронку не построить. Tracking = false: сторонних SDK и рекламных
+            идентификаторов нет, за пределы нашего сервера ничего не уходит,
+            поэтому и ATT-запрос не нужен.
+        -->
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeProductInteraction</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <true/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+            </array>
+        </dict>
         <!-- Имя и способ входа: нужны, чтобы человека было видно в группе. -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>

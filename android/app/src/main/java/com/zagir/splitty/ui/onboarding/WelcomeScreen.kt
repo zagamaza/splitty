@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.onboarding
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -84,11 +85,31 @@ import kotlinx.coroutines.launch
  * активной, и повторяется. Статичная картинка читается как заглушка.
  */
 @Composable
-fun WelcomeScreen(onFinish: (createGroup: Boolean) -> Unit) {
+fun WelcomeScreen(
+    onFinish: (createGroup: Boolean) -> Unit,
+    /**
+     * Куда сообщать о шагах. Колбэком, а не через Hilt: экран рендерится в
+     * снимках Roborazzi, и зависимость от графа заставила бы их переснимать.
+     */
+    onEvent: (AnalyticsEvent) -> Unit = {},
+) {
     val colors = Splitty.colors
     val pages = 4
     val pagerState = rememberPagerState(pageCount = { pages })
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) { onEvent(AnalyticsEvent.OnboardingStarted) }
+    LaunchedEffect(pagerState.currentPage) {
+        // Имена шагов общие со вторым клиентом: переименование страницы в коде
+        // не должно тихо развести один шаг воронки на два.
+        val step = when (pagerState.currentPage) {
+            0 -> "group"
+            1 -> "dictate"
+            2 -> "who_paid"
+            else -> "transfers"
+        }
+        onEvent(AnalyticsEvent.OnboardingStep(step))
+    }
 
     Column(
         modifier = Modifier
@@ -97,7 +118,13 @@ fun WelcomeScreen(onFinish: (createGroup: Boolean) -> Unit) {
             .padding(bottom = 20.dp),
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(onClick = { onFinish(false) }, modifier = Modifier.testTag("welcome_skip")) {
+            TextButton(
+                onClick = {
+                    onEvent(AnalyticsEvent.OnboardingSkipped)
+                    onFinish(false)
+                },
+                modifier = Modifier.testTag("welcome_skip"),
+            ) {
                 Text(stringResource(R.string.welcome_skip), fontSize = 16.sp, color = colors.inkSecondary)
             }
         }
@@ -120,8 +147,12 @@ fun WelcomeScreen(onFinish: (createGroup: Boolean) -> Unit) {
         PrimaryPillButton(
             text = stringResource(if (isLast) R.string.welcome_create else R.string.welcome_next),
             onClick = {
-                if (isLast) onFinish(true)
-                else scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                if (isLast) {
+                    onEvent(AnalyticsEvent.OnboardingCompleted)
+                    onFinish(true)
+                } else {
+                    scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
+                }
             },
             modifier = Modifier.padding(horizontal = 20.dp).testTag("welcome_primary"),
         )

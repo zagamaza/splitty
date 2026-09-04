@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
@@ -655,6 +657,7 @@ class AddExpenseViewModel @Inject constructor(
     private val outboxSyncer: OutboxSyncer,
     private val savedStateHandle: SavedStateHandle,
     private val subscriptions: SubscriptionRepository,
+    private val analytics: Analytics,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
@@ -668,9 +671,20 @@ class AddExpenseViewModel @Inject constructor(
     private val _isPaywallVisible = MutableStateFlow(false)
     val isPaywallVisible: StateFlow<Boolean> = _isPaywallVisible.asStateFlow()
 
-    fun showPaywall() { _isPaywallVisible.value = true }
+    fun showPaywall() {
+        _isPaywallVisible.value = true
+        analytics.track(AnalyticsEvent.PaywallShown(from = "quota"))
+    }
 
-    fun hidePaywall() { _isPaywallVisible.value = false }
+    fun hidePaywall() {
+        // Закрыли, не купив. Вывести это из «показали, но не начали покупку»
+        // нельзя: «закрыл экран» и «ушёл из приложения» — разные ответы на
+        // вопрос, почему не купили.
+        if (_isPaywallVisible.value) {
+            analytics.track(AnalyticsEvent.PaywallDismissed(from = "quota"))
+        }
+        _isPaywallVisible.value = false
+    }
 
     /** Остаток распознаваний и продукты — для paywall и подписи у микрофона. */
     val plusQuota: StateFlow<AiQuota?> get() = subscriptions.quota
@@ -1357,6 +1371,15 @@ class AddExpenseViewModel @Inject constructor(
                     else -> createOperation(roomId, description, sum, payerId, split, itemsToSend)
                 }
                 updateForm { it.copy(isSaving = false, isSaved = true) }
+                analytics.track(
+                    AnalyticsEvent.ExpenseAdded(
+                        method = when (form.lastParseSource) {
+                            ParseSource.VOICE -> "voice"
+                            ParseSource.PHOTO -> "receipt"
+                            else -> "manual"
+                        },
+                    ),
+                )
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
             } catch (e: ApiException) {

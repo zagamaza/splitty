@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
@@ -39,6 +41,7 @@ class GroupsListViewModel @Inject constructor(
     private val sessionStore: SessionStore,
     private val outboxSyncer: OutboxSyncer,
     outboxStore: OutboxStore,
+    private val analytics: Analytics,
 ) : ViewModel() {
 
     private val _rooms = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
@@ -167,17 +170,26 @@ class GroupsListViewModel @Inject constructor(
         _alertMessage.value = null
     }
 
+    /** Шаги онбординга: экран отдаёт их колбэком, чтобы не тянуть Hilt в снимки. */
+    fun trackOnboarding(event: AnalyticsEvent) = analytics.track(event)
+
     /** POST /rooms; успех — dataVersion bump (список обновится сам) и [onSuccess]. */
     fun createGroup(name: String, onSuccess: () -> Unit) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
-        mutate(onSuccess) { repository.createRoom(trimmed) }
+        mutate({
+            analytics.track(AnalyticsEvent.RoomCreated)
+            onSuccess()
+        }) { repository.createRoom(trimmed) }
     }
 
     /** POST /rooms/{id}/join по коду или ссылке-приглашению. */
     fun joinGroup(codeInput: String, onSuccess: () -> Unit) {
         val roomId = parseRoomCode(codeInput) ?: return
-        mutate(onSuccess) { repository.joinRoom(roomId) }
+        mutate({
+            analytics.track(AnalyticsEvent.RoomJoined(via = "code"))
+            onSuccess()
+        }) { repository.joinRoom(roomId) }
     }
 
     /**

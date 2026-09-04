@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.settleup
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
@@ -90,6 +92,7 @@ class SettleUpViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     private val networkMonitor: NetworkMonitor,
+    private val analytics: Analytics,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -192,6 +195,7 @@ class SettleUpViewModel @Inject constructor(
                 )
                 sessionStore.noteDataChanged()
                 sessionStore.confirm(UiText.res(R.string.toast_repayment_saved))
+                analytics.track(AnalyticsEvent.SettleUpDone)
                 updateForm { it.copy(isSaving = false, isSaved = true) }
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка

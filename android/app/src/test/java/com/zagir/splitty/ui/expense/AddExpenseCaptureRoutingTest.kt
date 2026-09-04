@@ -7,6 +7,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.zagir.splitty.billing.BillingService
 import com.zagir.splitty.billing.SubscriptionRepository
 import com.zagir.splitty.core.UiState
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.network.ParseApi
@@ -115,9 +116,11 @@ class AddExpenseCaptureRoutingTest {
         val subscriptions = SubscriptionRepository(
             Provider { retrofit.create(SplittyApi::class.java) },
             BillingService(context),
+            testAnalytics(dir, SplittyJson, session, scope),
         )
         return AddExpenseViewModel(
             repository, session, outbox, syncer, SavedStateHandle(), subscriptions,
+            testAnalytics(dir, SplittyJson, session, scope),
             NetworkMonitor(context),
         )
     }

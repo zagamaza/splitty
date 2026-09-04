@@ -4,6 +4,7 @@ import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
@@ -139,7 +140,13 @@ class EmailPasswordLoginTest {
             File(sessionDir, "session.preferences_pb")
         }
         session = SessionStore(dataStore, FakeTokenCipher(), scope)
-        return LoginViewModel(repository, session, UnusedProvider, TelegramAuthBus())
+        return LoginViewModel(
+            repository,
+            session,
+            UnusedProvider,
+            TelegramAuthBus(),
+            testAnalytics(sessionDir, SplittyJson, session, scope),
+        )
     }
 
     private suspend fun LoginViewModel.awaitIdle(): LoginUiState =

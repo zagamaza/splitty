@@ -311,7 +311,11 @@ fun GroupDetailScreen(
         )
     }
     if (isInvitePresented && detail != null) {
-        InviteBottomSheet(room = detail, onDismiss = { isInvitePresented = false })
+        InviteBottomSheet(
+            room = detail,
+            onDismiss = { isInvitePresented = false },
+            onInviteSent = viewModel::trackInvite,
+        )
     }
 
     GroupsAlertDialog(alertMessage, viewModel::dismissAlert)
@@ -324,7 +328,11 @@ fun GroupDetailScreen(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InviteBottomSheet(room: RoomDetail, onDismiss: () -> Unit) {
+private fun InviteBottomSheet(
+    room: RoomDetail,
+    onDismiss: () -> Unit,
+    onInviteSent: (String) -> Unit = {},
+) {
     val colors = Splitty.colors
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -366,6 +374,7 @@ private fun InviteBottomSheet(room: RoomDetail, onDismiss: () -> Unit) {
                         type = "text/plain"
                         putExtra(Intent.EXTRA_TEXT, inviteMessage)
                     }
+                    onInviteSent("share")
                     context.startActivity(Intent.createChooser(send, null))
                 },
             )

@@ -63,7 +63,12 @@ class AuthInterceptor @Inject constructor(
         // «был ли заголовок» ловила и запрос, улетевший до перелогина: его
         // запоздалый 401 сносил уже новую сессию — вместе с ключом Keystore
         // и неотправленной офлайн-очередью (её logout чистит безвозвратно).
-        if (response.code == 401 && token != null && session.currentToken() == token) {
+        // Маршрут событий из разлогина исключён: пачка уходит в фоне и по
+        // токену, который мог быть отозван («выйти на всех устройствах»), и
+        // общий выход выкинул бы человека из приложения из-за аналитики,
+        // которой он не просил.
+        val isAnalytics = request.url.encodedPath.endsWith("/api/v1/events")
+        if (response.code == 401 && token != null && !isAnalytics && session.currentToken() == token) {
             session.notifyUnauthorized()
         }
         return response

@@ -58,6 +58,13 @@ interface SplittyApi {
     // --- Auth (без Bearer-заголовка) ---
 
     /** Вход через Telegram Login Widget (веб-поток, без ухода в Telegram). */
+    /**
+     * Продуктовые события пачкой (до 50). Имена и значения — контракт
+     * docs/analytics-events.md; ответ несёт три числа, а не «ок».
+     */
+    @POST("api/v1/events")
+    suspend fun postEvents(@Body body: com.zagir.splitty.core.analytics.EventsBody): com.zagir.splitty.core.analytics.EventsResult
+
     @POST("api/v1/auth/telegram")
     suspend fun loginWithTelegram(@Body body: TelegramLoginBody): AuthResponse
 

@@ -1,5 +1,8 @@
 package com.zagir.splitty.billing
 
+import com.zagir.splitty.core.analytics.analyticsProduct
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
 import com.zagir.splitty.core.model.AiQuota
@@ -26,6 +29,7 @@ import javax.inject.Singleton
 class SubscriptionRepository @Inject constructor(
     private val api: Provider<SplittyApi>,
     private val billing: BillingService,
+    private val analytics: Analytics,
 ) {
     private val _tier = MutableStateFlow(Tier.FREE)
     val tier: StateFlow<Tier> = _tier.asStateFlow()
@@ -102,10 +106,19 @@ class SubscriptionRepository @Inject constructor(
     /** Покупка выбранного продукта. */
     suspend fun purchase(activity: Activity, product: ProductDetails): PurchaseOutcome {
         val bindingToken = runCatching { api.get().me().purchaseBindingToken }.getOrNull()
+        analytics.track(AnalyticsEvent.PurchaseStarted(analyticsProduct(product.productId)))
         val outcome = billing.purchase(activity, product, bindingToken)
-        if (outcome is PurchaseOutcome.Success) {
-            refreshQuota()
-            refreshSubscription()
+        when (outcome) {
+            is PurchaseOutcome.Success -> {
+                analytics.track(AnalyticsEvent.PurchaseCompleted(analyticsProduct(product.productId)))
+                refreshQuota()
+                refreshSubscription()
+            }
+            // Деньги списаны, но сервер чек ещё не принял — для воронки это не
+            // покупка и не отказ, а отдельная причина.
+            is PurchaseOutcome.PendingServer -> analytics.track(AnalyticsEvent.PurchaseFailed("verify"))
+            is PurchaseOutcome.Cancelled -> analytics.track(AnalyticsEvent.PurchaseFailed("cancelled"))
+            else -> analytics.track(AnalyticsEvent.PurchaseFailed("store"))
         }
         return outcome
     }

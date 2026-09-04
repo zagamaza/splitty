@@ -198,7 +198,10 @@ private fun GroupsListContent(
     val openCreateGroup by viewModel.openCreateGroup.collectAsStateWithLifecycle()
     if (showWelcome) {
         Box(Modifier.fillMaxSize().background(Splitty.colors.bg)) {
-            WelcomeScreen(onFinish = { createGroup -> viewModel.dismissWelcome(createGroup) })
+            WelcomeScreen(
+                onFinish = { createGroup -> viewModel.dismissWelcome(createGroup) },
+                onEvent = viewModel::trackOnboarding,
+            )
         }
     }
     LaunchedEffect(openCreateGroup) {

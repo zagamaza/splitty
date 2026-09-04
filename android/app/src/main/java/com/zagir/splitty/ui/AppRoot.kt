@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui
 
+import com.zagir.splitty.core.analytics.Analytics
+import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import androidx.compose.foundation.background
@@ -53,6 +55,7 @@ class AppRootViewModel @Inject constructor(
     private val pendingJoinStore: PendingJoinStore,
     private val repository: SplittyRepository,
     private val pushEventBus: PushEventBus,
+    private val analytics: Analytics,
 ) : ViewModel() {
     val session: StateFlow<Session?> = sessionStore.state
 
@@ -224,6 +227,7 @@ class AppRootViewModel @Inject constructor(
         isJoining = true
         try {
             repository.joinRoom(roomId)
+            analytics.track(AnalyticsEvent.RoomJoined(via = "link"))
             joinedRoomId = roomId
             // Намерение исполнено — стираем. Ошибку записи глотаем: повторное
             // вступление сервер обработает идемпотентно (участник уже в группе),

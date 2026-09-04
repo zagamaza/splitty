@@ -6,6 +6,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.network.ParseApi
@@ -172,6 +173,7 @@ class GroupSeenMarkTest {
             syncer,
             AvatarStore(repository, scope),
             outbox,
+            testAnalytics(dir, SplittyJson, session, scope),
             NetworkMonitor(ApplicationProvider.getApplicationContext()),
         )
     }

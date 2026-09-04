@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
@@ -69,6 +71,7 @@ class GroupDetailViewModel @Inject constructor(
     private val outboxSyncer: OutboxSyncer,
     private val avatarStore: AvatarStore,
     outboxStore: OutboxStore,
+    private val analytics: Analytics,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
@@ -474,4 +477,11 @@ class GroupDetailViewModel @Inject constructor(
             }
         }
     }
+    /** Приглашение отправлено. Именно «отправил», а не «дошло»: чем кончился
+     *  системный лист, приложению не сообщают. */
+    fun trackInvite(channel: String) = analytics.track(AnalyticsEvent.InviteSent(channel))
+
+    /** Расчёт долгов открыт. */
+    fun trackSettleUpOpened() = analytics.track(AnalyticsEvent.SettleUpOpened)
+
 }

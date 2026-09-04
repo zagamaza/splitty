@@ -13,6 +13,7 @@ import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.session.KeystoreTokenCipher
 import com.zagir.splitty.core.session.TokenCipher
 import com.zagir.splitty.data.ApiCache
+import com.zagir.splitty.core.analytics.AnalyticsQueue
 import com.zagir.splitty.data.OutboxStore
 import dagger.Module
 import dagger.Provides
@@ -91,4 +92,10 @@ object AppModule {
     @Singleton
     fun provideOutboxStore(@ApplicationContext context: Context, json: Json): OutboxStore =
         OutboxStore(File(context.filesDir, "outbox.json"), json)
+
+    /** Очередь продуктовых событий: filesDir/analytics.json. */
+    @Provides
+    @Singleton
+    fun provideAnalyticsQueue(@ApplicationContext context: Context, json: Json): AnalyticsQueue =
+        AnalyticsQueue(File(context.filesDir, "analytics.json"), json)
 }

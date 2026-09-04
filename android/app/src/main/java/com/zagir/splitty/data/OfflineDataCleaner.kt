@@ -1,6 +1,8 @@
 package com.zagir.splitty.data
 
 import android.util.Log
+import com.zagir.splitty.core.analytics.Analytics
+import com.zagir.splitty.core.analytics.AnalyticsQueue
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionEndReason
 import com.zagir.splitty.core.session.SessionStore
@@ -44,6 +46,8 @@ class OfflineDataCleaner @Inject constructor(
     private val sessionStore: SessionStore,
     private val cache: ApiCache,
     private val outbox: OutboxStore,
+    private val analyticsQueue: AnalyticsQueue,
+    private val analytics: Analytics,
     private val avatars: AvatarStore,
     private val pendingJoin: PendingJoinStore,
     @ApplicationScope scope: CoroutineScope,
@@ -79,6 +83,9 @@ class OfflineDataCleaner @Inject constructor(
                 // ключах и стирал бы всю очередь неотправленных расходов.
                 val hasToken = session.hasStoredToken
                 val userId = session.me?.id
+                // Владелец очереди событий меняется здесь же: этот цикл —
+                // единственное место, где смена аккаунта видна целиком.
+                analytics.onOwnerChanged(if (hasToken) userId else null)
                 // Сменился владелец учётных данных — данные прошлого стираем даже
                 // без промежуточного «токена нет». null (профиль не прочитался)
                 // сменой НЕ считается: это тот же transient-сбой, а не другой вход.
@@ -175,6 +182,10 @@ class OfflineDataCleaner @Inject constructor(
         // человеку, который сейчас перелогинится (iOS делает так же).
         if (clearOutbox) {
             step("outbox") { outbox.clear() }
+            // Очередь событий уходит вместе с очередью расходов: она
+            // принадлежит тому же уходящему человеку. Без этого события
+            // прошлого владельца остались бы на диске навсегда.
+            step("analytics") { analyticsQueue.keepOwned(null) }
         }
         step("avatars") { avatars.clear() }
         // Отложенное вступление по ссылке-приглашению: без чистки следующий

@@ -6,6 +6,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.zagir.splitty.core.model.Me
+import com.zagir.splitty.core.analytics.AnalyticsQueue
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.ParseApi
@@ -130,7 +132,7 @@ class AppRootJoinTest {
         sessionDir.deleteRecursively()
     }
 
-    private fun viewModel() = AppRootViewModel(session, pendingJoin, repository, PushEventBus())
+    private fun viewModel() = AppRootViewModel(session, pendingJoin, repository, PushEventBus(), analytics())
 
     /** Вход: без токена вступление не начинается вовсе. */
     private suspend fun signIn(token: String = "jwt-token", me: Me = ME) {
@@ -139,10 +141,14 @@ class AppRootJoinTest {
     }
 
     /** Чистильщик офлайн-данных поверх тех же хранилищ, что и у VM. */
+    private fun analytics() = testAnalytics(cacheDir, SplittyJson, session, scope)
+
     private fun cleaner() = OfflineDataCleaner(
         session,
         ApiCache(cacheDir, SplittyJson),
         OutboxStore(File(cacheDir, "outbox.json"), SplittyJson),
+        AnalyticsQueue(File(cacheDir, "analytics.json"), SplittyJson),
+        analytics(),
         AvatarStore(repository, scope),
         pendingJoin,
         scope,

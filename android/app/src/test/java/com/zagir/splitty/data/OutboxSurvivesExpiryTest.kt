@@ -2,6 +2,8 @@ package com.zagir.splitty.data
 
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.model.Me
+import com.zagir.splitty.core.analytics.AnalyticsQueue
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionStore
@@ -76,6 +78,8 @@ class OutboxSurvivesExpiryTest {
                 ),
                 scope,
             ),
+            analyticsQueue = AnalyticsQueue(File(dir, "analytics.json"), SplittyJson),
+            analytics = testAnalytics(dir, SplittyJson, session, scope),
             pendingJoin = PendingJoinStore(dataStore),
             scope = scope,
         )

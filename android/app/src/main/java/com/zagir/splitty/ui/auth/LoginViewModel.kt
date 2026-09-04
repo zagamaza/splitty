@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.core.analytics.AnalyticsEvent
+import com.zagir.splitty.core.analytics.Analytics
 import com.zagir.splitty.ui.components.humanErrorText
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
@@ -86,6 +88,7 @@ class LoginViewModel @Inject constructor(
     private val sessionStore: SessionStore,
     private val googleIdTokenProvider: GoogleIdTokenProvider,
     private val telegramAuthBus: TelegramAuthBus,
+    private val analytics: Analytics,
 ) : ViewModel() {
 
     /** Результаты входа через Telegram — их приносит MainActivity по deep link. */
@@ -133,6 +136,7 @@ class LoginViewModel @Inject constructor(
                 val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
                 val response = repository.loginWithGoogle(idToken)
                 sessionStore.signIn(response.token, response.user)
+                analytics.track(AnalyticsEvent.LoginCompleted(method = "google"))
             } catch (e: CancellationException) {
                 // Обязательно ДО общего catch (e: Exception): CancellationException
                 // наследует IllegalStateException и попадала в него, превращая
@@ -228,6 +232,7 @@ class LoginViewModel @Inject constructor(
                     repository.loginWithPassword(email, password)
                 }
                 sessionStore.signIn(response.token, response.user)
+                analytics.track(AnalyticsEvent.LoginCompleted(method = "password"))
                 _state.update { it.copy(password = "") }
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle

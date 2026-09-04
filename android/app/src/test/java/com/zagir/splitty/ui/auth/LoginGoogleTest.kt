@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.auth.GoogleIdTokenProvider
 import com.zagir.splitty.core.auth.GoogleSignInException
+import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
@@ -126,7 +127,7 @@ class LoginGoogleTest {
             File(sessionDir, "session.preferences_pb")
         }
         session = SessionStore(dataStore, FakeTokenCipher(), scope)
-        return LoginViewModel(repository, session, provider, TelegramAuthBus())
+        return LoginViewModel(repository, session, provider, TelegramAuthBus(), testAnalytics(sessionDir, SplittyJson, session, scope))
     }
 
     /** Ждём завершения входа: флаг ставится синхронно, снимается в finally. */

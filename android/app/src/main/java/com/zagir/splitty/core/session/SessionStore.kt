@@ -297,6 +297,9 @@ class SessionStore @Inject constructor(
     /** Текущий токен — для OkHttp-интерцептора (синхронно). */
     fun currentToken(): String? = state.value?.token
 
+    /** Номер текущего человека — аналитике, чтобы не писать событие ничьим. */
+    fun currentUserId(): Long? = state.value?.me?.id
+
     /**
      * Чистка после tombstone не доведена до конца — см. [Session.purgePending].
      * Синхронно: читается из [endSession], который зовёт [notifyUnauthorized]
