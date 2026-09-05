@@ -442,12 +442,12 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 
 ### Task 15: Verify acceptance criteria
 
-- [ ] `cd ios && xcodegen generate && xcodebuild test -project Splitty.xcodeproj -scheme Splitty -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:SplittyTests`
-- [ ] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:lintVitalRelease`
-- [ ] `GOTOOLCHAIN=go1.22.12 go build ./... && GOTOOLCHAIN=go1.22.12 go vet ./... && GOTOOLCHAIN=go1.24.6 go test ./internal/...`
-- [ ] `python3 scripts/check-store-limits.py` — зелёный на всех десяти локалях
-- [ ] пуш на разных локалях подтверждён юнит-тестом из Задачи 8 (живой пуш — ручная проверка, см. Post-Completion)
-- [ ] скриншоты из Задачи 11 лежат в `docs/i18n-review/screens/`
+- [ ] `cd ios && xcodegen generate && xcodebuild test -project Splitty.xcodeproj -scheme Splitty -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' -only-testing:SplittyTests`
+- [x] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:lintVitalRelease`
+- [x] `GOTOOLCHAIN=go1.22.12 go build ./... && GOTOOLCHAIN=go1.22.12 go vet ./... && GOTOOLCHAIN=go1.24.6 go test ./internal/...`
+- [x] `python3 scripts/check-store-limits.py` — зелёный на всех десяти локалях
+- [x] пуш на разных локалях подтверждён юнит-тестом из Задачи 8 (живой пуш — ручная проверка, см. Post-Completion)
+- [x] скриншоты из Задачи 11 лежат в `docs/i18n-review/screens/`
 
 ### Task 17: ➕ Скриншоты магазина на новых языках
 
@@ -475,8 +475,8 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 
 ### Task 16: [Final] Обновить документацию
 
-- [ ] дописать в `CLAUDE.md` таблицу кодов локалей по трём системам
-- [ ] зафиксировать правило: новый язык добавляется в каталожные тесты ПЕРВЫМ действием, вместе с таблицей форм CLDR
+- [x] дописать в `CLAUDE.md` таблицу кодов локалей по трём системам
+- [x] зафиксировать правило: новый язык добавляется в каталожные тесты ПЕРВЫМ действием, вместе с таблицей форм CLDR
 - [ ] перенести план в `docs/plans/completed/`
 
 ## Post-Completion
