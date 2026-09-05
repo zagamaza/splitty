@@ -65,6 +65,10 @@ def main(locales):
         for loc in locales:
             cfg = LOCALES[loc]
             body = json.loads((ROOT / "metadata" / "play" / f"{loc}.json").read_text())
+            # whatsNew из файла НЕ отправляется намеренно: у Play заметки о
+            # релизе живут в выкладке сборки (release notes трека), а не в
+            # витрине. Текст лежит в файле заготовкой для консоли — см.
+            # metadata/README.md.
             r = requests.put(
                 f"{BASE}/edits/{edit}/listings/{loc}", headers=head, timeout=60,
                 json={"language": loc, "title": body["title"],

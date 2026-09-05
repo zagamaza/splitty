@@ -11,6 +11,7 @@ app-info/<loc>.json        имя, подзаголовок, ссылка на �
 version/<ver>/<loc>.json   описание, ключевые слова, промо-текст, «что нового»
 version/next/<loc>.json    то же, но номер версии ещё не назначен
 play/<loc>.json            заголовок, короткое и полное описание (Google Play)
+                           + whatsNew — ЗАГОТОВКА, скриптом не заливается
 screenshots/<lang>/        СЫРЫЕ кадры iOS, 1320×2868
 screenshots-android/<lang>/ СЫРЫЕ кадры Android, 1280×2856
 screenshots-framed/<lang>/ оформленные кадры App Store, 1320×2868
@@ -27,6 +28,18 @@ feature-graphic/<loc>.png  обязательная графика Google Play, 
 App Store — `ru`, `en-US`, `es-ES`, `de-DE`, `fr-FR`, `ja`, `zh-Hans`, `ko`,
 `pt-BR`, `it`; Google Play — `ru-RU` вместо `ru`, `zh-CN` вместо `zh-Hans`.
 Каталоги кадров идут по языку приложения: `ru`, `en`.
+
+## «Что нового» в Google Play заливается руками
+
+`marketing/push-play-listing.py` отправляет только `title`,
+`shortDescription` и `fullDescription`. Поле `whatsNew` в `play/<loc>.json`
+лежит рядом как заготовка: у Play заметки о релизе живут не в витрине, а в
+самой выкладке сборки (release notes трека), и задаются при публикации APK —
+через консоль или отдельный вызов `androidpublisher`. Текст на всех языках
+готов, его нужно скопировать при выкладке.
+
+У App Store иначе: там «Что нового» — поле версии, и `ios/asc/push_metadata.py`
+заливает его вместе с описанием.
 
 ## Как пересобрать
 
