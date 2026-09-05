@@ -124,7 +124,9 @@
 - Modify: `internal/rest/handlers.go` (справочник в ответе)
 - Modify: `ios/Splitty/Core/Models.swift`, `android/…/core/model/Models.kt`
 
-- [ ] добавить `Exponent` в `CurrencyInfo` и отдавать его в `GET /currencies`
+- [ ] добавить `displayExponent` в `CurrencyInfo` и отдавать его в
+      `GET /currencies` (имя именно такое — см. Решение 1: `Exponent` или
+      `minorUnit` обещали бы соответствие ISO, которого у нас нет)
 - [ ] ⚠️ **решить один раз: ISO или практика.** По ISO 4217 у рупии, сума и
       тенге экспонента 2, но минорной единицы в обороте нет — и на живых данных
       суммы в IDR доходят до 100 000 000, то есть в минорных станут 10
