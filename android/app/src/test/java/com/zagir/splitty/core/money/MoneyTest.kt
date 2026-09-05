@@ -55,12 +55,30 @@ class MoneyTest {
         assertEquals("1 000–1 001 $", moneyRange(1_000, 1_001, "USD"))
     }
 
+    /**
+     * Валюты рынков, на языки которых переведено приложение. До них комната в
+     * Токио считалась в долларах, а «410 000 JPY» на витрине выглядело браком:
+     * незнакомый код показывается как есть.
+     */
+    @Test
+    fun `money renders currencies of localized markets`() {
+        assertEquals("410 000 ¥", money(410_000, "JPY"))
+        assertEquals("1 200 ¥", money(1_200, "CNY"))
+        assertEquals("58 000 ₩", money(58_000, "KRW"))
+        assertEquals("180 R$", money(180, "BRL"))
+    }
+
     @Test
     fun `currencySymbol maps contract codes`() {
         assertEquals("₽", currencySymbol("RUB"))
         assertEquals("$", currencySymbol("USD"))
         assertEquals("€", currencySymbol("EUR"))
         assertEquals("Rp", currencySymbol("IDR"))
+        // Иена и юань делят знак намеренно: в комнате валюта всегда одна.
+        assertEquals("¥", currencySymbol("JPY"))
+        assertEquals("¥", currencySymbol("CNY"))
+        assertEquals("₩", currencySymbol("KRW"))
+        assertEquals("R$", currencySymbol("BRL"))
         assertEquals("XYZ", currencySymbol("XYZ"))
     }
 

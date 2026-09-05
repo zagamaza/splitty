@@ -17,11 +17,18 @@ var Currencies = map[string]CurrencyInfo{
 	"IDR": {Code: "IDR", Symbol: "Rp", Flag: "🇮🇩"},
 	"KZT": {Code: "KZT", Symbol: "₸", Flag: "🇰🇿"},
 	"UZS": {Code: "UZS", Symbol: "сум", Flag: "🇺🇿"},
+	// Валюты рынков, на языки которых приложение переведено. Без них комната
+	// в Токио считалась в долларах, а «410 JPY» на витрине выглядело браком:
+	// незнакомый код показывается как есть.
+	"JPY": {Code: "JPY", Symbol: "¥", Flag: "🇯🇵"},
+	"CNY": {Code: "CNY", Symbol: "¥", Flag: "🇨🇳"},
+	"KRW": {Code: "KRW", Symbol: "₩", Flag: "🇰🇷"},
+	"BRL": {Code: "BRL", Symbol: "R$", Flag: "🇧🇷"},
 }
 
 // CurrencyCodes стабильный порядок выдачи справочника валют
 // (map не гарантирует порядок итерации)
-var CurrencyCodes = []string{"RUB", "USD", "EUR", "IDR", "KZT", "UZS"}
+var CurrencyCodes = []string{"RUB", "USD", "EUR", "JPY", "CNY", "KRW", "BRL", "IDR", "KZT", "UZS"}
 
 // IsSupportedCurrency проверяет, что код валюты есть в справочнике
 func IsSupportedCurrency(code string) bool {

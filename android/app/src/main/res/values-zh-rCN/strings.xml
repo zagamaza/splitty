@@ -122,14 +122,14 @@
     <string name="profile_settings_section">设置</string>
     <string name="profile_name">名称</string>
     <string name="notifications_title">通知</string>
-    <string name="notifications_operations">笔</string>
+    <string name="notifications_operations">支出</string>
     <string name="notifications_operations_footer">有人在你的群组中添加或修改了支出</string>
     <string name="notifications_debts">欠款</string>
     <string name="notifications_debts_footer">有人还款给你，以及关于你欠款的提醒</string>
     <string name="notifications_invites">邀请</string>
     <string name="notifications_invites_footer">有人邀请你或把你加入群组</string>
     <string name="notifications_edits">支出编辑</string>
-    <string name="notifications_edits_footer">支出被改名或添加了照片 — 金额和你的分摊没有变化</string>
+    <string name="notifications_edits_footer">支出被改名或添加了照片 — 金额和你的份额没有变化</string>
     <string name="notifications_channel_push">应用</string>
     <string name="profile_theme">主题</string>
     <string name="profile_theme_system">跟随系统</string>
@@ -267,8 +267,8 @@
     <string name="op_you">你</string>
     <string name="op_paid_you">支付</string>
     <string name="op_paid">支付</string>
-    <string name="op_share_yours">你的分摊</string>
-    <string name="op_share">分摊</string>
+    <string name="op_share_yours">你的份额</string>
+    <string name="op_share">份额</string>
     <string name="op_you_owe">你欠</string>
     <string name="op_owes">欠</string>
     <string name="op_received_you">已收到</string>
@@ -292,7 +292,7 @@
     <string name="attach_other">附件</string>
     <string name="attach_open_share">打开／分享</string>
     <string name="common_done">完成</string>
-    <string name="group_tab_operations">笔</string>
+    <string name="group_tab_operations">支出</string>
     <string name="group_settings_short">设置</string>
     <string name="group_filter_all">全部</string>
     <string name="group_chip_settle_short">结算</string>

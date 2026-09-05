@@ -80,6 +80,16 @@ final class MoneyTests: XCTestCase {
         XCTAssertEqual(moneyRange(333, 334, currency: "USD"), "333–334 $")
     }
 
+    /// Валюты рынков, на языки которых переведено приложение. До них комната
+    /// в Токио считалась в долларах, а «410 000 JPY» на витрине выглядело
+    /// браком: незнакомый код показывается как есть.
+    func testMoneyLocalizedMarkets() {
+        XCTAssertEqual(money(410_000, currency: "JPY"), "410 000 ¥")
+        XCTAssertEqual(money(1200, currency: "CNY"), "1 200 ¥")
+        XCTAssertEqual(money(58_000, currency: "KRW"), "58 000 ₩")
+        XCTAssertEqual(money(180, currency: "BRL"), "180 R$")
+    }
+
     func testCurrencySymbol() {
         XCTAssertEqual(currencySymbol("RUB"), "₽")
         XCTAssertEqual(currencySymbol("USD"), "$")
@@ -87,6 +97,11 @@ final class MoneyTests: XCTestCase {
         XCTAssertEqual(currencySymbol("IDR"), "Rp")
         XCTAssertEqual(currencySymbol("KZT"), "₸")
         XCTAssertEqual(currencySymbol("UZS"), "сум")
+        // Иена и юань делят знак намеренно: в комнате валюта всегда одна.
+        XCTAssertEqual(currencySymbol("JPY"), "¥")
+        XCTAssertEqual(currencySymbol("CNY"), "¥")
+        XCTAssertEqual(currencySymbol("KRW"), "₩")
+        XCTAssertEqual(currencySymbol("BRL"), "R$")
         XCTAssertEqual(currencySymbol("GBP"), "GBP")
     }
 

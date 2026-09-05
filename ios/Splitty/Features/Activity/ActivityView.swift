@@ -80,7 +80,9 @@ struct ActivityView: View {
                     ),
                     titleVisibility: .visible
                 ) {
-                    Button("Выйти", role: .destructive) {
+                    // «Выйти из группы», а не «Выйти»: второй ключ означает
+                    // выход из АККАУНТА и переведён как «Log out», «ログアウト».
+                    Button("Выйти из группы", role: .destructive) {
                         guard let card = leaveConfirmCard else { return }
                         leaveConfirmCard = nil
                         Task { await model.leaveFromCard(card, session: session) }
@@ -384,7 +386,7 @@ private struct InviteCardView: View {
                 // Отступ отделяет необратимое действие от обычного: рядом
                 // стоящие кнопки ловили промах, и человек выходил из группы
                 Spacer(minLength: 24)
-                Button("Выйти") { onAction(.leave) }
+                Button("Выйти из группы") { onAction(.leave) }
                     .buttonStyle(.softChip)
             }
         }

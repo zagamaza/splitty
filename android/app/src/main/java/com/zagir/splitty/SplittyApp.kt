@@ -3,6 +3,7 @@ package com.zagir.splitty
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
 import android.app.Application
+import android.content.res.Configuration
 import com.zagir.splitty.push.PushTokenRegistrar
 import com.zagir.splitty.push.SplittyMessagingService
 import dagger.hilt.android.HiltAndroidApp
@@ -26,5 +27,16 @@ class SplittyApp : Application() {
         // Холодный старт — новая сессия событий.
         analytics.startSession()
         analytics.track(AnalyticsEvent.AppOpen(cold = true))
+    }
+
+    /**
+     * Смена языка системы. Процесс при ней не умирает — активити пересоздаются,
+     * а Application живёт дальше, — поэтому без этого места токен оставался
+     * зарегистрированным со старым языком и пуши продолжали приходить на нём до
+     * следующего убийства процесса.
+     */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        pushTokenRegistrar.onLocaleMaybeChanged()
     }
 }

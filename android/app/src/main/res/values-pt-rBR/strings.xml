@@ -182,7 +182,7 @@
     <string name="groups_row_owed">devem a você</string>
     <string name="groups_row_owes">você deve</string>
     <string name="groups_row_settled">quites</string>
-    <string name="groups_archive">Arquivar</string>
+    <string name="groups_archive">Arquivo</string>
     <string name="groups_archive_empty_title">O arquivo está vazio</string>
     <string name="groups_archive_empty_subtitle">Os grupos arquivados aparecerão aqui</string>
     <string name="groups_unarchive">Desarquivar</string>
@@ -272,7 +272,7 @@
     <string name="op_you_owe">você deve</string>
     <string name="op_owes">deve</string>
     <string name="op_received_you">receberam</string>
-    <string name="op_received">receberam</string>
+    <string name="op_received">recebeu</string>
     <string name="op_edit">Editar</string>
     <string name="op_delete">Excluir</string>
     <string name="op_deleting">Excluindo…</string>

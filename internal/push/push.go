@@ -192,6 +192,26 @@ func (w *Worker) drain(ctx context.Context) {
 // deliver шлёт один пуш на все токены пользователя. Успех/фатальный результат
 // (нет токенов, исчерпаны попытки) — удаляем из очереди; транзиентный сбой —
 // откладываем с экспоненциальным бэк-оффом.
+// tokensFor — токены ровно этой локали; пустая локаль тоже локаль.
+//
+// Раньше запись без языка уходила на ВСЕ токены, и человек со старым телефоном
+// (токен без языка) и обновлённым планшетом получал на планшет два пуша: один
+// от записи «без языка», второй от записи «en». Ровно то, что происходит на
+// выкате, пока одно устройство обновилось, а другое нет.
+//
+// Записи, легшие в очередь до появления поля, тоже приходят сюда с пустым
+// языком — и попадают на все токены такого пользователя, потому что до
+// перерегистрации у его устройств языка нет.
+func tokensFor(tokens []api.PushToken, locale string) []api.PushToken {
+	out := make([]api.PushToken, 0, len(tokens))
+	for _, t := range tokens {
+		if t.Locale == locale {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 	user, err := w.users.FindById(ctx, p.UserID)
 	if err != nil {
@@ -205,22 +225,11 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		return
 	}
 
-	// Токены этой локали. Запись без локали адресована ВСЕМ токенам: так
-	// обслуживаются и записи, лежавшие в очереди до появления поля, и
-	// устройства старых клиентов.
-	tokens := user.PushTokens
-	if p.Locale != "" {
-		tokens = tokens[:0:0]
-		for _, t := range user.PushTokens {
-			if t.Locale == p.Locale {
-				tokens = append(tokens, t)
-			}
-		}
-		if len(tokens) == 0 {
-			// Устройство успело сменить язык или отвалиться, пока пуш ждал.
-			w.mark(ctx, p, DeliveryResult{Outcome: OutcomeNoTokens})
-			return
-		}
+	tokens := tokensFor(user.PushTokens, p.Locale)
+	if len(tokens) == 0 {
+		// Устройство успело сменить язык или отвалиться, пока пуш ждал.
+		w.mark(ctx, p, DeliveryResult{Outcome: OutcomeNoTokens})
+		return
 	}
 
 	messages := make([]*messaging.Message, 0, len(tokens))

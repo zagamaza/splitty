@@ -46,23 +46,23 @@ struct DemoRecording {
     """
 
     private static let ja = """
-    先斗町の夕食。焼き魚の定食、三十二ドル、わたしとユウタ。\
-    だし巻き卵、十六ドル、ユウタとミオ
+    先斗町の夕食。焼き魚の定食、五千円、わたしとユウタ。\
+    だし巻き卵、二千五百円、ユウタとミオ
     """
 
     private static let zh = """
-    宽窄巷子晚餐。烤鱼三十二美元，我和子墨。\
-    口水鸡十六美元，子墨和佳宁
+    宽窄巷子晚餐。烤鱼两百二十元，我和子墨。\
+    口水鸡一百一十元，子墨和佳宁
     """
 
     private static let ko = """
-    흑돼지 저녁. 흑돼지 구이 삼십이 달러, 나랑 서연. \
-    전복 뚝배기 십육 달러, 서연이랑 민준
+    흑돼지 저녁. 흑돼지 구이 사만 오천 원, 나랑 서연. \
+    전복 뚝배기 이만 이천 원, 서연이랑 민준
     """
 
     private static let pt = """
-    Jantar no Pelourinho. Moqueca de peixe trinta e dois dólares — eu e a Camila. \
-    Bobó de camarão dezesseis, isso é da Camila com o Rafa
+    Jantar no Pelourinho. Moqueca de peixe cento e sessenta reais — eu e a Camila. \
+    Bobó de camarão oitenta, isso é da Camila com o Rafa
     """
 
     private static let it = """

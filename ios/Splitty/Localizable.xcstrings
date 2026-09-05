@@ -634,7 +634,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "月 %@"
+            "value": "月額 %@"
           }
         },
         "ko": {
@@ -1065,7 +1065,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ t'a remboursé"
+            "value": "%@ vous a remboursé"
           }
         },
         "es": {
@@ -6820,7 +6820,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你今晚的分摊"
+            "value": "你今晚的份额"
           }
         },
         "ko": {
@@ -9207,7 +9207,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tu as remboursé — %@"
+            "value": "Vous avez remboursé — %@"
           }
         },
         "es": {
@@ -11506,7 +11506,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存済みのデータ・更新 %@"
+            "value": "保存済みのデータ・%@に更新"
           }
         },
         "ko": {
@@ -11518,7 +11518,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已保存的数据 · 更新于 %@"
+            "value": "已保存的数据 · %@更新"
           }
         }
       }
@@ -12292,7 +12292,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 님을 그룹에 추가할까요?"
+            "value": "%@ 님을 그룹에 추가하시겠습니까?"
           }
         },
         "zh-Hans": {
@@ -12682,7 +12682,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "참여자 %lld명을 추가할까요?"
+            "value": "참여자 %lld명을 추가하시겠습니까?"
           }
         },
         "zh-Hans": {
@@ -18096,7 +18096,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tu figures dans %lld dépenses. Retire-toi de ces dépenses, et si c'est toi qui as payé, change le payeur ou supprime la dépense. N'importe quel membre peut modifier les dépenses"
+            "value": "Vous figurez dans %lld dépenses. Retirez-vous de ces dépenses, et si c'est vous qui avez payé, changez le payeur ou supprimez la dépense. N'importe quel membre peut modifier les dépenses"
           }
         },
         "es": {
@@ -18120,13 +18120,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "あなたは %lld 件の支出に入っています。そこから自分を外してください。支払ったのがあなたなら、支払者を変えるか支出を削除します。支出は誰でも編集できます"
+            "value": "あなたは %lld 件の支出に入っています。そこから自分を外してください。支払ったのがあなたなら、支払者を変えるか支出を削除してください。支出は誰でも編集できます"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "회원님이 포함된 지출이 %lld건 있습니다. 거기에서 자신을 빼세요. 결제한 사람이 회원님이라면 결제자를 바꾸거나 지출을 삭제하세요. 지출은 참여자 누구나 수정할 수 있습니다"
+            "value": "회원님이 포함된 지출이 %lld건 있습니다. 거기에서 자신을 제외해 주십시오. 결제한 사람이 회원님이라면 결제자를 바꾸거나 지출을 삭제해 주십시오. 지출은 참여자 누구나 수정할 수 있습니다"
           }
         },
         "zh-Hans": {
@@ -29350,71 +29350,6 @@
         }
       }
     },
-    "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Join the “%@” group on Splitty: %@\nGroup code: %@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Komm in die Gruppe „%@“ bei Splitty: %@\nGruppencode: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rejoins le groupe « %@ » sur Splitty : %@\nCode du groupe : %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Únete al grupo «%@» en Splitty: %@\nCódigo del grupo: %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unisciti al gruppo «%@» su Splitty: %@\nCodice del gruppo: %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entre no grupo “%@” no Splitty: %@\nCódigo do grupo: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitty のグループ「%@」に参加してね: %@\nグループコード: %@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Splitty에서 「%@」 그룹에 참여해 주세요: %@\n그룹 코드: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "来加入 Splitty 的「%@」群组：%@\n群组代码：%@"
-          }
-        }
-      }
-    },
     "Проверьте позиции чека — доли не сходятся": {
       "extractionState": "manual",
       "localizations": {
@@ -31472,7 +31407,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "支出被改名或添加了照片 — 金额和你的分摊没有变化"
+            "value": "支出被改名或添加了照片 — 金额和你的份额没有变化"
           }
         },
         "ko": {
@@ -39191,7 +39126,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的分摊"
+            "value": "你的份额"
           }
         },
         "ko": {
@@ -39256,7 +39191,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的分摊：¥20.00 + ¥10.00"
+            "value": "你的份额：¥20.00 + ¥10.00"
           }
         },
         "ko": {
@@ -40296,7 +40231,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分摊"
+            "value": "份额"
           }
         },
         "ko": {

@@ -62,6 +62,15 @@ open class PushTokenRegistrar @Inject constructor(
         }
     }
 
+    /**
+     * Язык интерфейса мог смениться (SplittyApp.onConfigurationChanged).
+     * Дедуп держит пару «токен + язык», поэтому достаточно позвать регистрацию:
+     * при том же языке она сама ничего не отправит.
+     */
+    fun onLocaleMaybeChanged() {
+        if (sessionStore.currentToken() != null) registerCurrentToken()
+    }
+
     /** Ротация FCM-токена (SplittyMessagingService.onNewToken). */
     fun onTokenRefreshed(token: String) {
         lastRegistered = null

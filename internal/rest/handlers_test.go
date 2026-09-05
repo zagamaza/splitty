@@ -1139,6 +1139,12 @@ func TestCurrenciesDictionary(t *testing.T) {
 		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺"},
 		{Code: "USD", Symbol: "$", Flag: "🇺🇸"},
 		{Code: "EUR", Symbol: "€", Flag: "🇪🇺"},
+		// Валюты рынков, на языки которых переведено приложение: японец видел
+		// свою комнату в долларах, потому что иены в справочнике не было.
+		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵"},
+		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳"},
+		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷"},
+		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷"},
 		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩"},
 		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿"},
 		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿"},

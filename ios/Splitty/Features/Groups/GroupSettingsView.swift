@@ -116,7 +116,9 @@ struct GroupSettingsView: View {
             isPresented: $isLeaveConfirmPresented,
             titleVisibility: .visible
         ) {
-            Button("Выйти", role: .destructive) {
+            // «Выйти из группы», а не «Выйти»: второй ключ означает выход из
+            // АККАУНТА и переведён как «Log out», «ログアウト».
+            Button("Выйти из группы", role: .destructive) {
                 Task { await leaveRoom() }
             }
             Button("Отмена", role: .cancel) {}

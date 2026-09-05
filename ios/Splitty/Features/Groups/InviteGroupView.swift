@@ -42,7 +42,7 @@ struct InviteGroupView: View {
     /// Текст для системного share — ссылка плюс код на случай, если ссылку
     /// не открыть (совпадает с прежним сообщением из настроек группы).
     private var inviteMessage: String {
-        String(localized: "Присоединяйся к группе «\(room.name)» в Splitty: \(inviteLink)\nКод группы: \(room.id)")
+        String(localized: "Присоединяйся к группе «\(room.name)» в Splitor: \(inviteLink)\nКод группы: \(room.id)")
     }
 
     var body: some View {

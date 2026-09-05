@@ -122,7 +122,7 @@
     <string name="profile_settings_section">設定</string>
     <string name="profile_name">名称</string>
     <string name="notifications_title">通知</string>
-    <string name="notifications_operations">件</string>
+    <string name="notifications_operations">支出</string>
     <string name="notifications_operations_footer">グループで誰かが支出を追加または変更したとき</string>
     <string name="notifications_debts">貸し借り</string>
     <string name="notifications_debts_footer">返済を受けたとき、およびあなたの借りについてのお知らせ</string>
@@ -182,7 +182,7 @@
     <string name="groups_row_owed">受け取る</string>
     <string name="groups_row_owes">あなたの借り</string>
     <string name="groups_row_settled">精算済み</string>
-    <string name="groups_archive">アーカイブへ</string>
+    <string name="groups_archive">アーカイブ</string>
     <string name="groups_archive_empty_title">アーカイブは空です</string>
     <string name="groups_archive_empty_subtitle">アーカイブしたグループがここに表示されます</string>
     <string name="groups_unarchive">アーカイブから戻す</string>
@@ -292,7 +292,7 @@
     <string name="attach_other">添付ファイル</string>
     <string name="attach_open_share">開く／共有</string>
     <string name="common_done">完了</string>
-    <string name="group_tab_operations">件</string>
+    <string name="group_tab_operations">支出</string>
     <string name="group_settings_short">設定</string>
     <string name="group_filter_all">すべて</string>
     <string name="group_chip_settle_short">精算する</string>

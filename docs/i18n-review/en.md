@@ -53,12 +53,12 @@
 | Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут. | You’ll have to sign in again — here too. The old devices will stop receiving notifications. |
 | Добавьте первый расход — здесь появится статистика группы | Add your first expense — the group's stats will appear here |
 | Google не подтвердил вход. Попробуйте ещё раз | Google didn’t confirm the sign-in. Please try again |
-| Сказанная фраза превращается в готовый расход, разделённый на четверых | A spoken phrase turns into a finished expense split four ways |
+| Слишком много запросов. Попробуйте позже | Too many requests. Please try again later |
 | %@ добавил вас в группу «%@» | %1$@ added you to “%2$@” |
 | Диктуйте расход или снимайте чек столько раз, сколько нужно | Dictate an expense or snap a receipt as many times as you need |
-| Профиль удаляется безвозвратно, расходы и долги в группах остаются. | Your profile is deleted for good; expenses and debts stay in your groups. |
-| Слишком много запросов. Попробуйте позже | Too many requests. Please try again later |
-| Проверьте позиции чека — итог не считается | Check the receipt items — the total doesn’t add up |
+| Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.  Расходы и долги в группах останутся: участники увидят «Удалённый пользователь» вместо вашего имени, а суммы и расчёты не изменятся. | Your profile, name and sign-in methods will be deleted for good — the account can't be restored.  Expenses and debts stay in your groups: members will see “Deleted user” instead of your name, and all amounts stay the same. |
+| Сначала выберите, кто есть кто в позициях | First choose who is who in the items |
+| Проверьте связь и попробуйте ещё раз. Способы входа и настройки покажем, когда профиль загрузится. | Check your connection and try again. We’ll show sign-in methods and settings once the profile loads. |
 | График «%@» — суммы по участникам | Chart “%@” — amounts by member |
-| Этот аккаунт уже связан с другим профилем Splitty. Войдите через него | This account is already linked to another Splitty profile. Sign in with that one |
+| Язык сообщений бота в Telegram | Language of the Telegram bot's messages |
 | Диаграмма долей участников в оплатах | Chart of each member's share of the payments |

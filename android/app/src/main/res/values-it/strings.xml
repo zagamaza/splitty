@@ -182,7 +182,7 @@
     <string name="groups_row_owed">ti devono</string>
     <string name="groups_row_owes">devi</string>
     <string name="groups_row_settled">in pari</string>
-    <string name="groups_archive">Archivia</string>
+    <string name="groups_archive">Archivio</string>
     <string name="groups_archive_empty_title">L’archivio è vuoto</string>
     <string name="groups_archive_empty_subtitle">I gruppi archiviati compariranno qui</string>
     <string name="groups_unarchive">Ripristina dall’archivio</string>
@@ -272,7 +272,7 @@
     <string name="op_you_owe">devi</string>
     <string name="op_owes">deve</string>
     <string name="op_received_you">hanno ricevuto</string>
-    <string name="op_received">hanno ricevuto</string>
+    <string name="op_received">ha ricevuto</string>
     <string name="op_edit">Modifica</string>
     <string name="op_delete">Elimina</string>
     <string name="op_deleting">Eliminazione…</string>

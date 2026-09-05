@@ -57,12 +57,12 @@
 | Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут. | Você vai precisar entrar de novo — aqui também. Os aparelhos antigos param de receber notificações. |
 | Добавьте первый расход — здесь появится статистика группы | Adicione a primeira despesa — as estatísticas do grupo aparecerão aqui |
 | Google не подтвердил вход. Попробуйте ещё раз | O Google não confirmou o login. Tente novamente |
-| Сказанная фраза превращается в готовый расход, разделённый на четверых | Uma frase dita vira uma despesa pronta, dividida por quatro |
+| Слишком много запросов. Попробуйте позже | Requisições demais. Tente mais tarde |
 | %@ добавил вас в группу «%@» | %1$@ adicionou você a “%2$@” |
 | Диктуйте расход или снимайте чек столько раз, сколько нужно | Dite a despesa ou fotografe o recibo quantas vezes precisar |
-| Профиль удаляется безвозвратно, расходы и долги в группах остаются. | O perfil é excluído para sempre; as despesas e as dívidas continuam nos grupos. |
-| Слишком много запросов. Попробуйте позже | Requisições demais. Tente mais tarde |
-| Проверьте позиции чека — итог не считается | Confira os itens do recibo — o total não fecha |
+| Профиль, имя и способы входа будут удалены безвозвратно — восстановить аккаунт нельзя.  Расходы и долги в группах останутся: участники увидят «Удалённый пользователь» вместо вашего имени, а суммы и расчёты не изменятся. | O perfil, o nome e os métodos de login serão excluídos para sempre — a conta não pode ser recuperada.  As despesas e as dívidas continuam nos grupos: os participantes verão “Usuário excluído” no lugar do seu nome, e os valores não mudam. |
+| Сначала выберите, кто есть кто в позициях | Primeiro escolha quem é quem nos itens |
+| Проверьте связь и попробуйте ещё раз. Способы входа и настройки покажем, когда профиль загрузится. | Verifique a conexão e tente de novo. Vamos mostrar os métodos de login e os ajustes assim que o perfil carregar. |
 | График «%@» — суммы по участникам | Gráfico “%@” — valores por participante |
-| Этот аккаунт уже связан с другим профилем Splitty. Войдите через него | Esta conta já está vinculada a outro perfil do Splitty. Entre por ele |
+| Язык сообщений бота в Telegram | Idioma das mensagens do bot no Telegram |
 | Диаграмма долей участников в оплатах | Gráfico da participação de cada um nos pagamentos |

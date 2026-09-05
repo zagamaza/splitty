@@ -59,13 +59,20 @@ enum MoneyLocale {
     }
 }
 
-/// Символ валюты по коду: RUB → «₽», USD → «$», EUR → «€», IDR → «Rp»,
-/// KZT → «₸», UZS → «сум»; незнакомый код показывается как есть («GBP»).
+/// Символ валюты по коду: RUB → «₽», USD → «$», EUR → «€», JPY/CNY → «¥»,
+/// KRW → «₩», BRL → «R$», IDR → «Rp», KZT → «₸», UZS → «сум»; незнакомый код
+/// показывается как есть («GBP»).
+///
+/// Иена и юань делят «¥» намеренно: так их пишут дома, а в одной комнате
+/// валюта всегда одна — спутать не с чем.
 func currencySymbol(_ currency: String) -> String {
     switch currency {
     case "RUB": return "₽"
     case "USD": return "$"
     case "EUR": return "€"
+    case "JPY", "CNY": return "¥"
+    case "KRW": return "₩"
+    case "BRL": return "R$"
     case "IDR": return "Rp"
     case "KZT": return "₸"
     case "UZS": return String(localized: "сум")

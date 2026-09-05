@@ -58,13 +58,19 @@ object MoneyLocale {
 }
 
 /**
- * Символ валюты по коду контракта: RUB -> ₽, USD -> $, EUR -> €, IDR -> Rp;
- * незнакомый код показывается как есть ("GBP").
+ * Символ валюты по коду контракта: RUB -> ₽, USD -> $, EUR -> €, JPY/CNY -> ¥,
+ * KRW -> ₩, BRL -> R$, IDR -> Rp; незнакомый код показывается как есть ("GBP").
+ *
+ * Иена и юань делят «¥» намеренно: так их пишут дома, а в одной комнате валюта
+ * всегда одна — спутать не с чем.
  */
 fun currencySymbol(currency: String): String = when (currency) {
     "RUB" -> "₽"
     "USD" -> "$"
     "EUR" -> "€"
+    "JPY", "CNY" -> "¥"
+    "KRW" -> "₩"
+    "BRL" -> "R$"
     "IDR" -> "Rp"
     "KZT" -> "₸"
     "UZS" -> uzbekSum(MoneyFormat.locale)
