@@ -24,17 +24,18 @@ func NewPushOutboxRepository(db *mongo.Database) *MongoPushOutboxRepository {
 // pushOutboxDoc — запись очереди. next_attempt_at гейтит доставку (сразу = now),
 // attempts растёт при транзиентных сбоях (бэк-офф в push.Worker).
 type pushOutboxDoc struct {
-	ID            primitive.ObjectID `bson:"_id,omitempty"`
-	UserID        int                `bson:"user_id"`
-	Title         string             `bson:"title"`
-	Body          string             `bson:"body"`
-	Data          map[string]string  `bson:"data,omitempty"`
-	// Locale — язык устройств-адресатов. Пусто у записей, легших в очередь до
-	// появления поля: они доставляются на все токены, как раньше.
-	Locale        string             `bson:"locale,omitempty"`
-	Attempts      int                `bson:"attempts"`
-	NextAttemptAt time.Time          `bson:"next_attempt_at"`
-	CreatedAt     time.Time          `bson:"created_at"`
+	ID     primitive.ObjectID `bson:"_id,omitempty"`
+	UserID int                `bson:"user_id"`
+	Title  string             `bson:"title"`
+	Body   string             `bson:"body"`
+	Data   map[string]string  `bson:"data,omitempty"`
+	// Locale — язык устройств-адресатов. Пусто и у записей, легших в очередь
+	// до появления поля, и у устройств старых клиентов: и те и другие уходят
+	// на токены без языка.
+	Locale        string    `bson:"locale,omitempty"`
+	Attempts      int       `bson:"attempts"`
+	NextAttemptAt time.Time `bson:"next_attempt_at"`
+	CreatedAt     time.Time `bson:"created_at"`
 	// SentAt заполняется, когда доставка закончилась (успехом или отказом):
 	// запись перестаёт быть очередью и становится следом, который через
 	// retention уносит TTL. Пока поля нет — пуш ждёт отправки.

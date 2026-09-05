@@ -51,6 +51,11 @@ final class PushManager: NSObject, PushTokenBinding {
     /// токену регистрация не повторилась бы — пуши так и шли бы на старом языке.
     private var lastRegisteredLocale: String?
 
+    /// Запрос уже в полёте. Дедуп по паре срабатывает только ПОСЛЕ ответа, а
+    /// триггеров два и приходят они разом (вход и колбэк FCM) — без этого флага
+    /// оба проходили проверку и уходили двумя одновременными POST.
+    private var isRegistering = false
+
     /// Язык интерфейса на этом устройстве в том виде, в каком его понимает
     /// бэкенд: `ru`, `en`, `zh-Hans`, `pt-BR`. Берём фактическую локализацию
     /// приложения, а не язык системы — на неподдержанном языке человек видит
@@ -105,11 +110,13 @@ final class PushManager: NSObject, PushTokenBinding {
     /// следующем логине/старте/refresh токена).
     private func registerIfPossible() {
         let locale = currentLocale
-        guard let session, session.isAuthenticated, let token = fcmToken,
+        guard let session, session.isAuthenticated, let token = fcmToken, !isRegistering,
               token != lastRegisteredToken || locale != lastRegisteredLocale else {
             return
         }
+        isRegistering = true
         Task {
+            defer { isRegistering = false }
             do {
                 try await session.api.registerDevice(token: token, locale: locale)
                 lastRegisteredToken = token

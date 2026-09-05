@@ -80,12 +80,15 @@ type fakeQueue struct {
 	mu   sync.Mutex
 	sent []push.Notification
 	fail bool
+	// failLocale — падать только на этом языке. Нужен для частичного успеха:
+	// у человека два языка устройств, один лёг, второй нет.
+	failLocale string
 }
 
-func (f *fakeQueue) Enqueue(_ context.Context, _ int, _ string, n push.Notification) error {
+func (f *fakeQueue) Enqueue(_ context.Context, _ int, locale string, n push.Notification) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if f.fail {
+	if f.fail || (f.failLocale != "" && locale == f.failLocale) {
 		return errors.New("очередь недоступна")
 	}
 	f.sent = append(f.sent, n)
@@ -202,6 +205,39 @@ func TestJobReleasesClaimWhenQueueFails(t *testing.T) {
 	}
 	if state.released[almaz.ID] != 1 {
 		t.Error("право не возвращено — серия из четырёх выгорела бы вхолостую")
+	}
+}
+
+// Частичный успех: у человека два языка устройств, запись на один язык легла,
+// на второй нет. Право НЕ возвращается — иначе следующий прогон прислал бы
+// второе такое же напоминание на устройство, которое своё уже получило.
+func TestJobKeepsClaimWhenOnlyOneLocaleFails(t *testing.T) {
+	now := time.Now().UTC()
+	rooms := []api.Room{room("Стамбул", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)}
+
+	bilingual := pushable(almaz)
+	bilingual.PushTokens = []api.PushToken{
+		{Token: "phone", Locale: "ru"},
+		{Token: "tablet", Locale: "en"},
+	}
+	job, state, queue := jobFor(t, onConfig(), rooms, map[int]api.User{
+		zagir.ID: pushable(zagir),
+		almaz.ID: bilingual,
+	})
+	queue.failLocale = "en"
+
+	stats, err := job.Run(context.Background(), now)
+	if err != nil {
+		t.Fatalf("прогон не должен падать: %v", err)
+	}
+	if len(queue.sent) != 1 {
+		t.Fatalf("в очередь легло %d записей, ожидалась одна (ru)", len(queue.sent))
+	}
+	if stats.Sent != 1 {
+		t.Errorf("Sent = %d, ожидалась 1: человек напоминание получил", stats.Sent)
+	}
+	if state.released[almaz.ID] != 0 {
+		t.Error("право вернули после частичного успеха — на следующем прогоне будет дубль")
 	}
 }
 

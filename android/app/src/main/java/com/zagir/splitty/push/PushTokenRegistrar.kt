@@ -12,6 +12,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,6 +43,13 @@ open class PushTokenRegistrar @Inject constructor(
     /** Пара «токен + язык»: сменив язык, человек оставляет тот же FCM-токен. */
     @Volatile
     private var lastRegistered: String? = null
+
+    /**
+     * Регистрации выстраиваются в очередь. Дедуп срабатывает только ПОСЛЕ
+     * ответа сервера, а триггеров несколько (вход, старт, смена языка, ротация
+     * токена) — без замка два из них уходили двумя одновременными запросами.
+     */
+    private val sending = Mutex()
 
     /**
      * Язык интерфейса на этом устройстве в том виде, в каком его понимает
@@ -97,10 +106,10 @@ open class PushTokenRegistrar @Inject constructor(
         }
     }
 
-    private suspend fun send(token: String) {
+    private suspend fun send(token: String) = sending.withLock {
         val locale = locale()
         val key = "$token|$locale"
-        if (key == lastRegistered) return
+        if (key == lastRegistered) return@withLock
         runCatching { repository.registerDevice(token, locale) }
             .onSuccess { lastRegistered = key }
             .onFailure { Log.w(TAG, "register device failed — retry on next login/start", it) }

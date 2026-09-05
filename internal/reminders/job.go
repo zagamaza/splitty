@@ -1,8 +1,8 @@
 package reminders
 
 import (
-	"sort"
 	"context"
+	"sort"
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -258,6 +258,13 @@ func (j *Job) remind(ctx context.Context, target Target, now time.Time) (channel
 		// По записи на каждый язык устройств: у человека может быть русский
 		// телефон и английский планшет. Язык БОТА (DefineLang) здесь не
 		// годится — он знает только ru/en и относится к телеграму.
+		//
+		// Право возвращается, только если не ушло НИЧЕГО. Записи легли по
+		// одной на язык, откатить уже вставленную нельзя, и возврат права
+		// после частичного успеха давал бы человеку второе такое же
+		// напоминание на следующем прогоне. Пропущенный язык — потеря одного
+		// устройства, дубль — потеря доверия.
+		enqueued := 0
 		for _, locale := range devicePushLocales(user.PushTokens) {
 			if e := j.queue.Enqueue(ctx, target.UserId, locale, push.Notification{
 				Title: PushTitle(locale),
@@ -265,7 +272,14 @@ func (j *Job) remind(ctx context.Context, target Target, now time.Time) (channel
 				Data:  PushData(target),
 			}); e != nil {
 				err = e
+				continue
 			}
+			enqueued++
+		}
+		if err != nil && enqueued > 0 {
+			log.Error().Err(err).Int("user", target.UserId).Int("enqueued", enqueued).
+				Msg("часть языков напоминания не легла в очередь; право не возвращаем — иначе дубль")
+			err = nil
 		}
 	} else {
 		err = j.telegram.SendDebtReminder(ctx, user, Body(target, lang), target.RoomId)

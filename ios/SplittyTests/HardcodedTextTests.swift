@@ -214,6 +214,39 @@ final class HardcodedTextTests: XCTestCase {
         )
     }
 
+    /// Разбор — не лексер Swift, и молчать об этом нельзя.
+    ///
+    /// Многострочный литерал (`"""`) и raw string (`#"…"#`) он не понимает:
+    /// первый обрывается на переводе строки, второй считает кавычки не там.
+    /// Пока таких литералов в исходниках нет, проверки выше честны; появится
+    /// первый — тест обязан упасть ЗДЕСЬ, а не молча пропустить русский текст
+    /// внутри него. Исключение одно: заготовка витринного кадра, она под
+    /// `#if DEBUG` и в релизной сборке её нет.
+    func testParserMeetsNoConstructsItCannotRead() throws {
+        let allowedMultiline = ["DemoRecording.swift"]
+        var found: [String] = []
+
+        for file in try swiftFiles() {
+            let text = withoutComments(try String(contentsOf: file, encoding: .utf8))
+            let name = file.lastPathComponent
+            if text.contains("\"\"\""), !allowedMultiline.contains(name) {
+                found.append("\(name): многострочный литерал — разбор его не видит")
+            }
+            if text.contains("#\"") {
+                found.append("\(name): raw string — разбор его не видит")
+            }
+            if text.contains("\\u{") {
+                found.append("\(name): escape \\u{…} — ключ каталога с ним не сойдётся")
+            }
+        }
+        XCTAssertTrue(
+            found.isEmpty,
+            "разбор литералов такого не умеет, и проверки выше стали бы ложно зелёными. "
+                + "Либо перепиши строку обычным литералом, либо научи literals(in:):\n"
+                + found.sorted().joined(separator: "\n")
+        )
+    }
+
     /// Список исключений не пухнет молча: устаревшая запись обязана бросаться в глаза.
     func testAllowListHasNoStaleEntries() throws {
         var seen = Set<String>()

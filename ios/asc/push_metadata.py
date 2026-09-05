@@ -139,4 +139,7 @@ def main(locales):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:] or ["en-US", "ru", "es-ES", "de-DE", "fr-FR"])
+    main(sys.argv[1:] or [
+        "en-US", "ru", "es-ES", "de-DE", "fr-FR",
+        "ja", "zh-Hans", "ko", "pt-BR", "it",
+    ])

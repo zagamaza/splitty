@@ -1953,22 +1953,58 @@ func (r MongoUserRepository) AddAlias(ctx context.Context, userId int, alias str
 	return nil
 }
 
-// AddPushToken регистрирует FCM-токен устройства (идемпотентно): сначала убираем
-// прежнюю запись с тем же token (мог сменить платформу/пользователя), затем
-// добавляем. Дубли токенов недопустимы — один токен = одно устройство.
+// AddPushToken регистрирует FCM-токен устройства. Идемпотентно и устойчиво к
+// гонке: один токен = одно устройство = одна запись.
+//
+// Было «$pull, потом $push». Два одновременных запроса с одним токеном (а они
+// бывают: вход и колбэк FCM дёргают регистрацию разом, и клиентский дедуп
+// пропускает оба, пока ни один не ответил) успевали сделать pull-pull-push-push
+// и оставляли токен ДВАЖДЫ. С языками это стало заметно: один телефон получал
+// два пуша, и на разных языках.
+//
+// Теперь запись, которая уже есть, правится на месте, а вставка идёт под
+// фильтром «такого токена нет» — второй запрос просто не совпадёт.
 //
 // Обе записи — по живому документу: push_tokens входит в snapshotPIIFields, и
 // токен, дописанный на tombstone, вернул бы удалённому аккаунту адрес доставки
 // пушей
 func (r MongoUserRepository) AddPushToken(ctx context.Context, userId int, token api.PushToken) error {
-	if _, err := r.updateLiveUser(ctx, userId, bson.M{"$pull": bson.M{"push_tokens": bson.M{"token": token.Token}}}); err != nil {
-		return err
-	}
-	updated, err := r.updateLiveUser(ctx, userId, bson.M{"$push": bson.M{"push_tokens": token}})
+	live := append(bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: userId}}}}, notDeleted...)
+
+	updated, err := r.col.UpdateOne(ctx,
+		append(live, bson.E{Key: "push_tokens.token", Value: token.Token}),
+		bson.M{"$set": bson.M{
+			"push_tokens.$[t].platform": token.Platform,
+			"push_tokens.$[t].locale":   token.Locale,
+		}},
+		options.Update().SetArrayFilters(options.ArrayFilters{
+			Filters: []interface{}{bson.M{"t.token": token.Token}},
+		}),
+	)
 	if err != nil {
 		return err
 	}
-	if !updated {
+	if updated.MatchedCount > 0 {
+		return nil
+	}
+
+	inserted, err := r.col.UpdateOne(ctx,
+		append(live, bson.E{Key: "push_tokens.token", Value: bson.M{"$ne": token.Token}}),
+		bson.M{"$push": bson.M{"push_tokens": token}},
+	)
+	if err != nil {
+		return err
+	}
+	if inserted.MatchedCount > 0 {
+		return nil
+	}
+	// Не совпало ничего: либо аккаунт удалён, либо токен успел добавить
+	// параллельный запрос между нашими двумя операциями. Второе не ошибка.
+	exists, err := r.col.CountDocuments(ctx, live, options.Count().SetLimit(1))
+	if err != nil {
+		return err
+	}
+	if exists == 0 {
 		return mongo.ErrNoDocuments
 	}
 	return nil

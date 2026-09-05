@@ -28,6 +28,14 @@ ASC_VERSION = {"description": 4000, "keywords": 100, "promotionalText": 170, "wh
 ASC_APP_INFO = {"name": 30, "subtitle": 30}
 PLAY = {"title": 30, "shortDescription": 80, "fullDescription": 4000}
 
+# Поля, без которых витрина неполна. Раньше проверялись «если есть» — и файл
+# без description проходил молча, хотя это ровно та локаль, которую забыли.
+REQUIRED = {
+    "asc_version": ("description", "keywords", "promotionalText"),
+    "asc_app_info": ("name", "subtitle"),
+    "play": ("title", "shortDescription", "fullDescription"),
+}
+
 TERMS_URL = "https://splitor.zagirnur.dev/terms"
 PRIVACY_URL = "https://splitor.zagirnur.dev/privacy"
 
@@ -35,14 +43,35 @@ PRIVACY_URL = "https://splitor.zagirnur.dev/privacy"
 # («2,99 $», «299 ₽») — в наших переводах как раз второй вариант.
 PRICE = re.compile(r"[\$€₽¥]\s?\d|\d[\d\s.,]*\s?[\$€₽¥]|\d[\d.,]*\s?(?:USD|EUR|RUB|JPY|KRW|CNY|BRL)")
 
+# Длительность и автопродление — на всех десяти языках, поэтому ищем слова, а
+# не фразы: «1 месяц», «1か月», «1 mês», «자동 갱신», «自動更新».
+DURATION = re.compile(
+    r"месяц|год|month|year|Monat|Jahr|mois|an\b|mes\b|año|mese|anno|mês|ano|か月|年|개월|년|个月|年",
+    re.IGNORECASE,
+)
+AUTORENEW = re.compile(
+    r"продлевается|renew|verlängert|renouvel|renueva|rinnov|renova|自動更新|自动续期|자동.{0,3}갱신",
+    re.IGNORECASE,
+)
+
 
 def check(text: str, field: str, limit: int, where: str, problems: list[str]) -> None:
     if len(text) > limit:
         problems.append(f"{where}: {field} — {len(text)} символов, предел {limit}")
 
 
+def check_required(data: dict, kind: str, where: str, problems: list[str]) -> None:
+    for field in REQUIRED[kind]:
+        if not data.get(field, "").strip():
+            problems.append(f"{where}: нет обязательного поля {field}")
+
+
 def check_subscription_block(description: str, where: str, problems: list[str]) -> None:
-    """Требования 3.1.2(c) к описанию платного приложения."""
+    """Требования 3.1.2(c) к описанию платного приложения.
+
+    Apple ждёт четыре вещи: название подписки, её длительность, цену и то, что
+    она продлевается сама. Плюс рабочие ссылки на условия и политику.
+    """
     if "Plus" not in description and "PLUS" not in description:
         problems.append(f"{where}: нет блока про подписку Splitor Plus")
         return
@@ -52,6 +81,10 @@ def check_subscription_block(description: str, where: str, problems: list[str]) 
         problems.append(f"{where}: нет ссылки на политику ({PRIVACY_URL})")
     if not PRICE.search(description):
         problems.append(f"{where}: в блоке про подписку нет цены")
+    if not DURATION.search(description):
+        problems.append(f"{where}: не указана длительность подписки (месяц/год)")
+    if not AUTORENEW.search(description):
+        problems.append(f"{where}: не сказано, что подписка продлевается автоматически")
 
 
 def check_asc(version: str, problems: list[str]) -> int:
@@ -59,6 +92,7 @@ def check_asc(version: str, problems: list[str]) -> int:
     for path in sorted((META / "version" / version).glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         where = f"asc/{version}/{path.stem}"
+        check_required(data, "asc_version", where, problems)
         for field, limit in ASC_VERSION.items():
             if field in data:
                 check(data[field], field, limit, where, problems)
@@ -68,6 +102,7 @@ def check_asc(version: str, problems: list[str]) -> int:
     for path in sorted((META / "app-info").glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         where = f"asc/app-info/{path.stem}"
+        check_required(data, "asc_app_info", where, problems)
         for field, limit in ASC_APP_INFO.items():
             if field in data:
                 check(data[field], field, limit, where, problems)
@@ -83,6 +118,7 @@ def check_play(problems: list[str]) -> int:
     for path in sorted((META / "play").glob("*.json")):
         data = json.loads(path.read_text(encoding="utf-8"))
         where = f"play/{path.stem}"
+        check_required(data, "play", where, problems)
         for field, limit in PLAY.items():
             if field in data:
                 check(data[field], field, limit, where, problems)
