@@ -195,12 +195,18 @@ class LoginViewModel @Inject constructor(
      * (см. core/auth/TelegramWebAuth) обменивается на сессию — POST /auth/telegram.
      * 401 — подпись не сошлась: чинить это человеку нечем, кроме «попробуйте ещё раз».
      */
+    /** Нажата кнопка Telegram: браузер открывает экран, ответ придёт шиной. */
+    fun onTelegramStarted() {
+        analytics.trackAnonymous(AnalyticsEvent.LoginStarted(method = "telegram"))
+    }
+
     /** Результат из шины: успех — меняем на сессию, провал разбора — говорим вслух. */
     fun onTelegramResult(result: Result<TelegramLoginBody>) {
         telegramAuthBus.consume()
         result.fold(
             onSuccess = ::loginWithTelegram,
             onFailure = {
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("telegram", "provider"))
                 _state.update { it.copy(errorMessage = UiText.res(R.string.error_telegram_rejected)) }
             },
         )
@@ -213,6 +219,9 @@ class LoginViewModel @Inject constructor(
             try {
                 val response = repository.loginWithTelegram(payload)
                 sessionStore.signIn(response.token, response.user)
+                // Раньше этого события тут не было вовсе: последняя ступень
+                // воронки теряла всех, кто вошёл через Telegram.
+                analytics.track(AnalyticsEvent.LoginCompleted(method = "telegram"))
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
@@ -221,12 +230,14 @@ class LoginViewModel @Inject constructor(
                 } else {
                     humanErrorText(e)
                 }
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("telegram", failureReason(e)))
                 _state.update { it.copy(errorMessage = message) }
             } catch (e: Exception) {
                 // signIn пишет в DataStore/Keystore мимо SplittyRepository.call —
                 // IOException не оборачивается в ApiException и раньше улетал из
                 // viewModelScope (обработчик стоит только на @ApplicationScope),
                 // роняя процесс прямо на экране входа.
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("telegram", "server"))
                 Log.e(TAG, "telegram login failed", e)
                 _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {

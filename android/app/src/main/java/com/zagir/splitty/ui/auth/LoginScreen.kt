@@ -141,6 +141,9 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
                 baseUrl = state.baseUrl,
                 enabled = !state.isLoggingIn,
                 onError = viewModel::showError,
+                // Здесь, а не во ViewModel: браузер открывается прямо отсюда,
+                // а loginWithTelegram зовётся уже с ответом из него.
+                onOpen = viewModel::onTelegramStarted,
             )
             Spacer(Modifier.height(14.dp))
             EmailDisclosure(
@@ -459,7 +462,12 @@ private fun EmailLoginForm(
  * (Custom Tabs делят cookie с Chrome, аналог iOS ASWebAuthenticationSession).
  */
 @Composable
-private fun TelegramLoginButton(baseUrl: String, enabled: Boolean, onError: (UiText) -> Unit) {
+private fun TelegramLoginButton(
+    baseUrl: String,
+    enabled: Boolean,
+    onError: (UiText) -> Unit,
+    onOpen: () -> Unit,
+) {
     val context = LocalContext.current
     Box(
         modifier = Modifier
@@ -467,7 +475,10 @@ private fun TelegramLoginButton(baseUrl: String, enabled: Boolean, onError: (UiT
             .height(52.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(TelegramBlue)
-            .clickable(enabled = enabled) { openTelegramWidget(context, baseUrl, onError) },
+            .clickable(enabled = enabled) {
+                onOpen()
+                openTelegramWidget(context, baseUrl, onError)
+            },
         contentAlignment = Alignment.Center,
     ) {
         Row(

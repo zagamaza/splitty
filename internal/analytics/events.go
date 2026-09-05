@@ -21,10 +21,10 @@ var Events = map[string]Event{
 	"app_open":    {Params: map[string][]string{"cold": {"true", "false"}}},
 	"login_shown": {},
 	"login_started": {Params: map[string][]string{
-		"method": {"google", "apple", "password", "code"},
+		"method": {"google", "apple", "telegram", "password", "code"},
 	}},
 	"login_failed": {Params: map[string][]string{
-		"method": {"google", "apple", "password", "code"},
+		"method": {"google", "apple", "telegram", "password", "code"},
 		"reason": {"cancelled", "network", "provider", "invalid", "server"},
 	}},
 	"login_completed":      {Params: map[string][]string{"method": {"telegram", "google", "apple", "password", "code", "dev"}}},

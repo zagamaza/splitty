@@ -464,6 +464,7 @@ struct LoginView: View {
     /// Отмену глотаем молча, как у Apple и Google.
     private func loginWithTelegramWidget() {
         isLoggingIn = true
+        Analytics.shared.trackAnonymous(.loginStarted(method: "telegram"), api: session.api)
         Task {
             defer { isLoggingIn = false }
             do {
@@ -474,9 +475,12 @@ struct LoginView: View {
                 try await session.loginWithTelegram(payload)
             } catch TelegramWebAuth.Failure.cancelled {
                 // человек закрыл окно — это не ошибка
+                loginFailed(method: "telegram", reason: "cancelled")
             } catch TelegramWebAuth.Failure.badResponse {
+                loginFailed(method: "telegram", reason: "provider")
                 errorMessage = String(localized: "Telegram не подтвердил вход. Попробуйте ещё раз")
             } catch {
+                loginFailed(method: "telegram", reason: failureReason(error))
                 errorMessage = humanErrorText(error)
             }
         }
@@ -572,8 +576,10 @@ struct LoginView: View {
                     authorizationCode: authorizationCode
                 )
             } catch let error as APIError where error.isUnauthorized {
+                loginFailed(method: "apple", reason: "invalid")
                 errorMessage = String(localized: "Apple не подтвердил вход. Попробуйте ещё раз")
             } catch {
+                loginFailed(method: "apple", reason: failureReason(error))
                 errorMessage = humanErrorText(error)
             }
         }

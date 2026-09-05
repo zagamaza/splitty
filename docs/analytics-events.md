@@ -53,8 +53,8 @@
 |---|---|---|
 | `app_open` | запуск и возврат из фона | `cold`: `true` / `false` |
 | `login_shown` | показан экран входа | — |
-| `login_started` | нажат способ входа | `method`: `google` / `apple` / `password` / `code` |
-| `login_failed` | вход не состоялся | `method`: `google` / `apple` / `password` / `code`; `reason`: `cancelled` / `network` / `provider` / `invalid` / `server` |
+| `login_started` | нажат способ входа | `method`: `google` / `apple` / `telegram` / `password` / `code` |
+| `login_failed` | вход не состоялся | `method`: `google` / `apple` / `telegram` / `password` / `code`; `reason`: `cancelled` / `network` / `provider` / `invalid` / `server` |
 | `login_completed` | успешный вход | `method`: `telegram` / `google` / `apple` / `password` / `code` / `dev` |
 | `onboarding_started` | показан первый экран приветствия | — |
 | `onboarding_step` | пролистан экран приветствия | `step`: `group` / `dictate` / `who_paid` / `transfers` |
