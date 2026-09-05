@@ -29,6 +29,9 @@ type pushOutboxDoc struct {
 	Title         string             `bson:"title"`
 	Body          string             `bson:"body"`
 	Data          map[string]string  `bson:"data,omitempty"`
+	// Locale — язык устройств-адресатов. Пусто у записей, легших в очередь до
+	// появления поля: они доставляются на все токены, как раньше.
+	Locale        string             `bson:"locale,omitempty"`
 	Attempts      int                `bson:"attempts"`
 	NextAttemptAt time.Time          `bson:"next_attempt_at"`
 	CreatedAt     time.Time          `bson:"created_at"`
@@ -78,10 +81,11 @@ func (r *MongoPushOutboxRepository) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
-func (r *MongoPushOutboxRepository) Enqueue(ctx context.Context, userID int, n push.Notification) error {
+func (r *MongoPushOutboxRepository) Enqueue(ctx context.Context, userID int, locale string, n push.Notification) error {
 	now := time.Now()
 	_, err := r.col.InsertOne(ctx, pushOutboxDoc{
 		UserID:        userID,
+		Locale:        locale,
 		Title:         n.Title,
 		Body:          n.Body,
 		Data:          n.Data,
@@ -120,6 +124,7 @@ func (r *MongoPushOutboxRepository) Due(ctx context.Context, now time.Time, limi
 				Data:  d.Data,
 			},
 			Attempts: d.Attempts,
+			Locale:   d.Locale,
 		})
 	}
 	return out, nil

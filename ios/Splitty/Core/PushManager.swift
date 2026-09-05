@@ -46,6 +46,19 @@ final class PushManager: NSObject, PushTokenBinding {
     /// один и тот же POST повторно на каждом логине/refresh.
     private var lastRegisteredToken: String?
 
+    /// Язык, с которым токен зарегистрирован. Дедуп смотрит на пару: сменив
+    /// язык приложения, человек оставляет тот же FCM-токен, и по одному только
+    /// токену регистрация не повторилась бы — пуши так и шли бы на старом языке.
+    private var lastRegisteredLocale: String?
+
+    /// Язык интерфейса на этом устройстве в том виде, в каком его понимает
+    /// бэкенд: `ru`, `en`, `zh-Hans`, `pt-BR`. Берём фактическую локализацию
+    /// приложения, а не язык системы — на неподдержанном языке человек видит
+    /// английский, и пуши должны совпадать с тем, что у него на экране.
+    private var currentLocale: String {
+        Bundle.main.preferredLocalizations.first ?? "en"
+    }
+
     private override init() {}
 
     // MARK: Конфигурация (из AppDelegate.didFinishLaunching)
@@ -91,14 +104,16 @@ final class PushManager: NSObject, PushTokenBinding {
     /// и он отличается от уже отправленного. Ошибки best-effort (ретрай — при
     /// следующем логине/старте/refresh токена).
     private func registerIfPossible() {
-        guard let session, session.isAuthenticated,
-              let token = fcmToken, token != lastRegisteredToken else {
+        let locale = currentLocale
+        guard let session, session.isAuthenticated, let token = fcmToken,
+              token != lastRegisteredToken || locale != lastRegisteredLocale else {
             return
         }
         Task {
             do {
-                try await session.api.registerDevice(token: token)
+                try await session.api.registerDevice(token: token, locale: locale)
                 lastRegisteredToken = token
+                lastRegisteredLocale = locale
             } catch {
                 // Молча: токен зарегистрируется при следующем триггере
                 // (повторный логин, ротация токена, перезапуск приложения).
@@ -110,7 +125,10 @@ final class PushManager: NSObject, PushTokenBinding {
     /// токен ещё валиден. Ждём результат (best-effort), чтобы запрос ушёл до
     /// сброса JWT. Сбрасывает дедуп, чтобы следующий вход зарегистрировал заново.
     func unregisterCurrentToken() async {
-        defer { lastRegisteredToken = nil }
+        defer {
+            lastRegisteredToken = nil
+            lastRegisteredLocale = nil
+        }
         guard let session, session.isAuthenticated, let token = fcmToken else {
             return
         }
@@ -147,6 +165,7 @@ extension PushManager: MessagingDelegate {
         // Токен сменился — прошлая регистрация невалидна, дедуп сбрасываем.
         if lastRegisteredToken != fcmToken {
             lastRegisteredToken = nil
+            lastRegisteredLocale = nil
         }
         registerIfPossible()
     }

@@ -692,4 +692,5 @@
     <plurals name="profile_logout_outbox_confirm">
         <item quantity="other">전송되지 않은 작업이 %d건 있습니다. 로그아웃하고 삭제하시겠습니까?</item>
     </plurals>
+    <string name="push_locale">ko</string>
 </resources>

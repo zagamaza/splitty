@@ -20,7 +20,7 @@ func TestDueSkipsSentPushes(t *testing.T) {
 	repo := NewPushOutboxRepository(db)
 	ctx := context.Background()
 
-	if err := repo.Enqueue(ctx, 1, push.Notification{Title: "Коворк", Body: "пицца"}); err != nil {
+	if err := repo.Enqueue(ctx, 1, "", push.Notification{Title: "Коворк", Body: "пицца"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,7 +55,7 @@ func TestMarkSentKeepsTrace(t *testing.T) {
 	repo := NewPushOutboxRepository(db)
 	ctx := context.Background()
 
-	if err := repo.Enqueue(ctx, 42, push.Notification{Title: "Коворк", Body: "чай"}); err != nil {
+	if err := repo.Enqueue(ctx, 42, "", push.Notification{Title: "Коворк", Body: "чай"}); err != nil {
 		t.Fatal(err)
 	}
 	due, _ := repo.Due(ctx, time.Now(), 10)
@@ -129,7 +129,7 @@ func TestStatsCountsOnlyPendingPushes(t *testing.T) {
 	ctx := context.Background()
 
 	for i := 0; i < 3; i++ {
-		if err := repo.Enqueue(ctx, i, push.Notification{Title: "Коворк"}); err != nil {
+		if err := repo.Enqueue(ctx, i, "", push.Notification{Title: "Коворк"}); err != nil {
 			t.Fatal(err)
 		}
 	}

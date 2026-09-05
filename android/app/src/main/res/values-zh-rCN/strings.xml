@@ -692,4 +692,5 @@
     <plurals name="profile_logout_outbox_confirm">
         <item quantity="other">有 %d 项未发送的操作 — 退出并删除吗？</item>
     </plurals>
+    <string name="push_locale">zh-Hans</string>
 </resources>

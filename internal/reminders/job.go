@@ -1,6 +1,7 @@
 package reminders
 
 import (
+	"sort"
 	"context"
 	"time"
 
@@ -90,7 +91,7 @@ type Telegram interface {
 // ошибку постановки, а джобу она нужна — иначе он спишет попытку человеку,
 // которому ничего не ушло.
 type Queue interface {
-	Enqueue(ctx context.Context, userID int, n push.Notification) error
+	Enqueue(ctx context.Context, userID int, locale string, n push.Notification) error
 }
 
 // Job — рассылка напоминаний о невозвращённом долге.
@@ -254,11 +255,18 @@ func (j *Job) remind(ctx context.Context, target Target, now time.Time) (channel
 
 	lang := api.DefineLang(user)
 	if via == channelPush {
-		err = j.queue.Enqueue(ctx, target.UserId, push.Notification{
-			Title: Title(lang),
-			Body:  Body(target, lang),
-			Data:  PushData(target),
-		})
+		// По записи на каждый язык устройств: у человека может быть русский
+		// телефон и английский планшет. Язык БОТА (DefineLang) здесь не
+		// годится — он знает только ru/en и относится к телеграму.
+		for _, locale := range devicePushLocales(user.PushTokens) {
+			if e := j.queue.Enqueue(ctx, target.UserId, locale, push.Notification{
+				Title: PushTitle(locale),
+				Body:  PushBody(target, locale),
+				Data:  PushData(target),
+			}); e != nil {
+				err = e
+			}
+		}
 	} else {
 		err = j.telegram.SendDebtReminder(ctx, user, Body(target, lang), target.RoomId)
 	}
@@ -301,4 +309,20 @@ func untilNextRun(now time.Time, hour int) time.Duration {
 		next = next.AddDate(0, 0, 1)
 	}
 	return next.Sub(now)
+}
+
+// devicePushLocales — языки устройств пользователя, по одному разу. Пустая
+// локаль (старый клиент) остаётся в списке: такая запись уходит на все токены.
+func devicePushLocales(tokens []api.PushToken) []string {
+	seen := make(map[string]struct{}, len(tokens))
+	out := make([]string, 0, len(tokens))
+	for _, t := range tokens {
+		if _, ok := seen[t.Locale]; ok {
+			continue
+		}
+		seen[t.Locale] = struct{}{}
+		out = append(out, t.Locale)
+	}
+	sort.Strings(out)
+	return out
 }

@@ -650,13 +650,18 @@ final class APIClient: OperationAPI {
 
     /// POST /api/v1/me/devices — привязать FCM-токен этого устройства к аккаунту
     /// (нужно для native-пушей). Идемпотентно: повтор с тем же токеном обновляет
-    /// платформу, дублей не плодит. Ответ 204 без тела.
-    func registerDevice(token: String, platform: String = "ios") async throws {
+    /// платформу и язык, дублей не плодит. Ответ 204 без тела.
+    ///
+    /// `locale` — язык, на котором приложение показано на ЭТОМ устройстве
+    /// (`preferredLocalizations`, а не язык системы: если системный язык мы не
+    /// переводили, человек видит английский и пуши должен получать такие же).
+    func registerDevice(token: String, platform: String = "ios", locale: String) async throws {
         struct Body: Encodable {
             let token: String
             let platform: String
+            let locale: String
         }
-        try await send("POST", "/api/v1/me/devices", body: Body(token: token, platform: platform))
+        try await send("POST", "/api/v1/me/devices", body: Body(token: token, platform: platform, locale: locale))
     }
 
     /// DELETE /api/v1/me/devices (тело `{"token": …}`) — отвязать токен при выходе.

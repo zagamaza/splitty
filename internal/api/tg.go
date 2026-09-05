@@ -238,6 +238,13 @@ func (u User) Snapshot() User {
 type PushToken struct {
 	Token    string `json:"token" bson:"token"`
 	Platform string `json:"platform" bson:"platform,omitempty"` // "android" | "ios"
+	// Locale — язык интерфейса ЭТОГО устройства (ja, zh-Hans, ko, pt-BR, it,
+	// ru, en, de, fr, es). Язык принадлежит устройству, а не аккаунту: у
+	// человека может быть русский телефон и английский планшет.
+	//
+	// Пусто — старый клиент: такому устройству пуш уходит на языке по
+	// умолчанию, как и раньше.
+	Locale string `json:"locale,omitempty" bson:"locale,omitempty"`
 }
 
 // ChannelPrefs каналы доставки уведомлений одной категории;

@@ -54,7 +54,15 @@ data class TelegramLoginBody(
 
 /** POST/DELETE /me/devices — FCM-токен устройства для native-пушей. */
 @Serializable
-data class DeviceBody(val token: String, val platform: String = "android")
+data class DeviceBody(
+    val token: String,
+    val platform: String = "android",
+    /**
+     * Язык интерфейса ЭТОГО устройства — на нём приходят пуши. Пустая строка
+     * означает «не знаем»; бэкенд отвечает на неё прежним поведением.
+     */
+    val locale: String = "",
+)
 
 /** PATCH /me — только изменяемые поля. */
 @Serializable

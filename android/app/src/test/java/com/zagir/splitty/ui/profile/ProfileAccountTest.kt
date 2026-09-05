@@ -105,7 +105,8 @@ class ProfileAccountTest {
         repository: SplittyRepository,
         session: SessionStore,
         scope: CoroutineScope,
-    ) : PushTokenRegistrar(repository, session, scope) {
+        context: Context,
+    ) : PushTokenRegistrar(repository, session, scope, context) {
         @Volatile
         var unregisterCalls = 0
 
@@ -208,7 +209,7 @@ class ProfileAccountTest {
             json,
             ApiCache(cacheDir, json),
         )
-        registrar = SpyRegistrar(repository, session, scope)
+        registrar = SpyRegistrar(repository, session, scope, RuntimeEnvironment.getApplication())
         val analytics = testAnalytics(cacheDir, json, session, scope)
         val api = retrofit.create(SplittyApi::class.java)
         ProfileViewModel(

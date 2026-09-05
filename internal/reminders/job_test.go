@@ -82,7 +82,7 @@ type fakeQueue struct {
 	fail bool
 }
 
-func (f *fakeQueue) Enqueue(_ context.Context, _ int, n push.Notification) error {
+func (f *fakeQueue) Enqueue(_ context.Context, _ int, _ string, n push.Notification) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.fail {

@@ -54,6 +54,39 @@ class LocalizationCatalogTest {
             .map { it.groupValues[1] }
             .toSet()
 
+    /**
+     * `push_locale` — метка языка, которая уходит на бэкенд вместе с
+     * push-токеном. Забытая в новой локали, она молча падает на базовое `en`,
+     * и человек с корейским экраном получает английские пуши: на устройстве
+     * это видно только по самому пушу, а не по интерфейсу.
+     */
+    @Test
+    fun `push locale tag matches every resource folder`() {
+        val expected = mapOf(
+            "values" to "en",
+            "values-ru" to "ru",
+            "values-de" to "de",
+            "values-es" to "es",
+            "values-fr" to "fr",
+            "values-it" to "it",
+            "values-ja" to "ja",
+            "values-ko" to "ko",
+            "values-pt-rBR" to "pt-BR",
+            "values-zh-rCN" to "zh-Hans",
+        )
+        val folders = (locales + "values").toSet()
+        assertTrue(
+            expected.keys == folders,
+            "список локалей разошёлся с ожидаемыми метками: ${folders - expected.keys} / ${expected.keys - folders}",
+        )
+        for ((folder, tag) in expected) {
+            assertTrue(
+                values(folder)["push_locale"] == tag,
+                "$folder: push_locale = ${values(folder)["push_locale"]}, ожидался $tag",
+            )
+        }
+    }
+
     /** Ключи, помеченные в базовом файле как непереводимые. */
     private fun sharedKeys(): Set<String> =
         Regex("""name="([^"]+)"\s+translatable="false"""").findAll(text("values"))

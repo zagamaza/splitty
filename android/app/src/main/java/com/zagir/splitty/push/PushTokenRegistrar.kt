@@ -1,10 +1,13 @@
 package com.zagir.splitty.push
 
+import android.content.Context
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessaging
+import com.zagir.splitty.R
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.SplittyRepository
 import com.zagir.splitty.di.ApplicationScope
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -33,9 +36,19 @@ open class PushTokenRegistrar @Inject constructor(
     private val repository: SplittyRepository,
     private val sessionStore: SessionStore,
     @ApplicationScope private val scope: CoroutineScope,
+    @ApplicationContext private val context: Context,
 ) {
+    /** Пара «токен + язык»: сменив язык, человек оставляет тот же FCM-токен. */
     @Volatile
     private var lastRegistered: String? = null
+
+    /**
+     * Язык интерфейса на этом устройстве в том виде, в каком его понимает
+     * бэкенд (`ru`, `en`, `zh-Hans`, `pt-BR`). Берётся из ресурсов, поэтому
+     * это РЕАЛЬНО показанный язык: на неподдержанном системном языке человек
+     * видит английский, и пуши должны совпадать с тем, что у него на экране.
+     */
+    private fun locale(): String = context.getString(R.string.push_locale)
 
     /** Наблюдение за сессией на всё время жизни приложения. */
     fun start() {
@@ -76,9 +89,11 @@ open class PushTokenRegistrar @Inject constructor(
     }
 
     private suspend fun send(token: String) {
-        if (token == lastRegistered) return
-        runCatching { repository.registerDevice(token) }
-            .onSuccess { lastRegistered = token }
+        val locale = locale()
+        val key = "$token|$locale"
+        if (key == lastRegistered) return
+        runCatching { repository.registerDevice(token, locale) }
+            .onSuccess { lastRegistered = key }
             .onFailure { Log.w(TAG, "register device failed — retry on next login/start", it) }
     }
 

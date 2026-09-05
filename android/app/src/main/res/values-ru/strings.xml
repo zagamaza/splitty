@@ -792,4 +792,5 @@
     <string name="demo_sum_1000">1000 ₽</string>
     <string name="demo_sum_1350">1350 ₽</string>
     <string name="demo_sum_1500">1500 ₽</string>
+    <string name="push_locale">ru</string>
 </resources>

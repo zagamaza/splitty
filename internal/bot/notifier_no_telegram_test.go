@@ -17,7 +17,7 @@ import (
 // независимо от telegram, у google/apple-пользователя telegram нет вовсе.
 type capturePush struct{ users []int }
 
-func (c *capturePush) SendToUser(_ context.Context, user api.User, _ push.Notification) {
+func (c *capturePush) SendToUser(_ context.Context, user api.User, _ string, _ push.Notification) {
 	c.users = append(c.users, user.ID)
 }
 

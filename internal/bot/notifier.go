@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"html"
 	"slices"
+	"sort"
 
 	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/push"
+	"github.com/almaznur91/splitty/internal/pushtext"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -62,7 +64,7 @@ func NewNotifier(tg TelegramSender, os OperationService, bs ButtonService, uf Us
 // Возвращает true, если пуш действительно ушёл в очередь. Вызывающему это
 // нужно, чтобы не считать человека уведомлённым, когда отправку отсекли
 // настройки: см. pushOperationUpdated.
-func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.NotifyCategory, title, body string, data map[string]string) bool {
+func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.NotifyCategory, title, key string, data map[string]string, args ...any) bool {
 	if n.push == nil || n.uf == nil {
 		return false
 	}
@@ -70,8 +72,34 @@ func (n *Notifier) pushToUser(ctx context.Context, userID int, category api.Noti
 	if err != nil || canonical == nil || !canonical.WantsPush(category) || len(canonical.PushTokens) == 0 {
 		return false
 	}
-	n.push.SendToUser(ctx, *canonical, push.Notification{Title: title, Body: body, Data: data})
+	// По записи на каждый РАЗЛИЧНЫЙ язык среди устройств: у человека может быть
+	// русский телефон и английский планшет, и один общий текст был бы неверен
+	// для одного из них. Устройства без локали (старый клиент) собираются в
+	// запись с пустым языком — она уходит на все токены, как раньше.
+	for _, locale := range distinctLocales(canonical.PushTokens) {
+		n.push.SendToUser(ctx, *canonical, locale, push.Notification{
+			Title: title,
+			Body:  pushtext.Tr(locale, key, args...),
+			Data:  data,
+		})
+	}
 	return true
+}
+
+// distinctLocales — языки устройств пользователя, по одному разу, в
+// устойчивом порядке (иначе тесты ловили бы случайный порядок map).
+func distinctLocales(tokens []api.PushToken) []string {
+	seen := make(map[string]struct{}, len(tokens))
+	out := make([]string, 0, len(tokens))
+	for _, t := range tokens {
+		if _, ok := seen[t.Locale]; ok {
+			continue
+		}
+		seen[t.Locale] = struct{}{}
+		out = append(out, t.Locale)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // opPushData — данные deeplink пуша по операции (комната/операция + канал Android).
@@ -156,8 +184,8 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		op.NotificationSent = append(op.NotificationSent, op.Donor.ID)
 		// push независим от telegram-канала: у google-пользователя telegram нет вовсе
 		n.pushToUser(ctx, op.Donor.ID, api.NotifyOperations, room.Name,
-			fmt.Sprintf("%s назначил вас плательщиком «%s»", author.DisplayName, op.Description),
-			opPushData(room, op))
+			pushtext.PayerAssigned, opPushData(room, op),
+			author.DisplayName, op.Description)
 		if chatId, ok := cu.chatID(op.Donor); ok {
 			messages = append(messages, NewMessage(chatId,
 				I18n(op.Donor, "scrn_notification_payer_changed",
@@ -174,9 +202,8 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		}
 		op.NotificationSent = append(op.NotificationSent, recipient.ID)
 		n.pushToUser(ctx, recipient.ID, api.NotifyOperations, room.Name,
-			fmt.Sprintf("%s добавил расход «%s» — ваша доля %s",
-				author.DisplayName, op.Description, moneySpace(int(r.Sum), room.Currency)),
-			opPushData(room, op))
+			pushtext.ExpenseAdded, opPushData(room, op),
+			author.DisplayName, op.Description, moneySpace(int(r.Sum), room.Currency))
 		if !n.allowsTelegram(cu, &recipient, api.NotifyOperations) {
 			continue
 		}
@@ -256,51 +283,51 @@ func (n *Notifier) pushOperationUpdated(ctx context.Context, room api.Room, oldO
 	// edits.push=true денежная ветка ничего не отправит, но пометка «уже
 	// уведомлён» съела бы разрешённый пуш про переименование, и человек не
 	// получил бы ничего.
-	send := func(userID int, category api.NotifyCategory, body string) {
+	send := func(userID int, category api.NotifyCategory, key string, args ...any) {
 		if sent[userID] {
 			return
 		}
-		if n.pushToUser(ctx, userID, category, room.Name, body, data) {
+		if n.pushToUser(ctx, userID, category, room.Name, key, data, args...) {
 			sent[userID] = true
 		}
 	}
 
 	if oldOp.Donor.ID != newOp.Donor.ID {
-		send(newOp.Donor.ID, api.NotifyOperations,
-			fmt.Sprintf("%s назначил вас плательщиком «%s»", author.DisplayName, newOp.Description))
-		send(oldOp.Donor.ID, api.NotifyOperations,
-			fmt.Sprintf("%s сменил плательщика «%s» — теперь это %s", author.DisplayName, newOp.Description, newOp.Donor.DisplayName))
+		send(newOp.Donor.ID, api.NotifyOperations, pushtext.PayerAssigned,
+			author.DisplayName, newOp.Description)
+		send(oldOp.Donor.ID, api.NotifyOperations, pushtext.PayerChanged,
+			author.DisplayName, newOp.Description, newOp.Donor.DisplayName)
 	}
 	for _, added := range diff.RecipientsAdded {
-		send(added.User.ID, api.NotifyOperations,
-			fmt.Sprintf("%s добавил вас в расход «%s» — ваша доля %s",
-				author.DisplayName, newOp.Description, moneySpace(int(added.Sum), room.Currency)))
+		send(added.User.ID, api.NotifyOperations, pushtext.RecipientAdded,
+			author.DisplayName, newOp.Description, moneySpace(int(added.Sum), room.Currency))
 	}
 	for _, change := range diff.RecipientsShareChanged {
-		send(change.User.ID, api.NotifyOperations,
-			fmt.Sprintf("%s изменил вашу долю в «%s»: %s → %s", author.DisplayName, newOp.Description,
-				moneySpace(int(change.OldSum), room.Currency), moneySpace(int(change.NewSum), room.Currency)))
+		send(change.User.ID, api.NotifyOperations, pushtext.ShareChanged,
+			author.DisplayName, newOp.Description,
+			moneySpace(int(change.OldSum), room.Currency), moneySpace(int(change.NewSum), room.Currency))
 	}
 	for _, removed := range diff.RecipientsRemoved {
-		send(removed.User.ID, api.NotifyOperations,
-			fmt.Sprintf("%s убрал вас из расхода «%s»", author.DisplayName, newOp.Description))
+		send(removed.User.ID, api.NotifyOperations, pushtext.RecipientRemoved,
+			author.DisplayName, newOp.Description)
 	}
 
 	if !diff.NameChanged && !diff.PhotoAdded {
 		return
 	}
-	var body string
+	var key string
+	var args []any
 	switch {
 	case diff.NameChanged && diff.PhotoAdded:
-		body = fmt.Sprintf("%s переименовал «%s» → «%s» и добавил фото", author.DisplayName, oldOp.Description, newOp.Description)
+		key, args = pushtext.RenamedWithPhoto, []any{author.DisplayName, oldOp.Description, newOp.Description}
 	case diff.NameChanged:
-		body = fmt.Sprintf("%s переименовал «%s» → «%s»", author.DisplayName, oldOp.Description, newOp.Description)
+		key, args = pushtext.Renamed, []any{author.DisplayName, oldOp.Description, newOp.Description}
 	default:
-		body = fmt.Sprintf("%s добавил фото к расходу «%s»", author.DisplayName, newOp.Description)
+		key, args = pushtext.PhotoAdded, []any{author.DisplayName, newOp.Description}
 	}
-	send(newOp.Donor.ID, api.NotifyOperationEdits, body)
+	send(newOp.Donor.ID, api.NotifyOperationEdits, key, args...)
 	for _, r := range newOp.RecipientsWithSum {
-		send(r.User.ID, api.NotifyOperationEdits, body)
+		send(r.User.ID, api.NotifyOperationEdits, key, args...)
 	}
 }
 
@@ -330,8 +357,9 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 
 	// Push независим от telegram-канала: у кредитора tg может быть выключен, а push включён.
 	n.pushToUser(ctx, lender.ID, api.NotifyDebts, room.Name,
-		fmt.Sprintf("%s вернул вам долг %s", op.Donor.DisplayName, moneySpace(op.Sum, room.Currency)),
-		map[string]string{"channel": "debts", "roomId": room.ID.Hex(), "type": "debt"})
+		pushtext.DebtRepaid,
+		map[string]string{"channel": "debts", "roomId": room.ID.Hex(), "type": "debt"},
+		op.Donor.DisplayName, moneySpace(op.Sum, room.Currency))
 
 	cu := canonical(ctx, n.uf)
 	if !n.allowsTelegram(cu, &lender, api.NotifyDebts) {
@@ -368,12 +396,13 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 // иначе фоновый пуш на Android 8+ молча не покажется.
 func (n *Notifier) NotifyInvited(ctx context.Context, room api.Room, invitee api.User, inviter api.User, isReturn bool) {
 	title := room.Name
-	body := fmt.Sprintf("%s добавил вас в группу", inviter.DisplayName)
+	key := pushtext.Invited
 	if isReturn {
-		body = fmt.Sprintf("%s приглашает вас вернуться в группу", inviter.DisplayName)
+		key = pushtext.InviteReturn
 	}
-	n.pushToUser(ctx, invitee.ID, api.NotifyInvites, title, body,
-		map[string]string{"channel": "invites", "roomId": room.ID.Hex(), "type": "invite"})
+	n.pushToUser(ctx, invitee.ID, api.NotifyInvites, title, key,
+		map[string]string{"channel": "invites", "roomId": room.ID.Hex(), "type": "invite"},
+		inviter.DisplayName)
 
 	cu := canonical(ctx, n.uf)
 	if !n.allowsTelegram(cu, &invitee, api.NotifyInvites) {
@@ -398,16 +427,15 @@ func (n *Notifier) NotifyInvited(ctx context.Context, room api.Room, invitee api
 		}
 	}
 
-	// Текст telegram — через I18n, как все остальные сообщения бота: тело push
-	// собирается по-русски (так же, как у операций и долгов, — там текст
-	// адресату не локализуется вовсе), но в telegram у человека выбран язык, и
-	// подставлять туда русскую строку нельзя.
-	key := "scrn_notification_invited"
+	// Текст telegram — через I18n, как все остальные сообщения бота: у него
+	// свои ключи и свои два языка. Push берёт текст из pushtext по языку
+	// УСТРОЙСТВА — это разные механизмы намеренно, см. пакет pushtext.
+	tgKey := "scrn_notification_invited"
 	if isReturn {
-		key = "scrn_notification_invited_return"
+		tgKey = "scrn_notification_invited_return"
 	}
 	n.send([]tgbotapi.Chattable{NewMessage(chatId,
-		I18n(&invitee, key, html.EscapeString(inviter.DisplayName), html.EscapeString(room.Name)),
+		I18n(&invitee, tgKey, html.EscapeString(inviter.DisplayName), html.EscapeString(room.Name)),
 		keyboard)})
 }
 

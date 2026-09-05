@@ -696,4 +696,5 @@
         <item quantity="one">Há %d operação não enviada — sair e excluí-la?</item>
         <item quantity="other">Há %d operações não enviadas — sair e excluí-las?</item>
     </plurals>
+    <string name="push_locale">pt-BR</string>
 </resources>

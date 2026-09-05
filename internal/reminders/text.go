@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/pushtext"
 	"github.com/gookit/i18n"
 )
 
@@ -28,6 +29,21 @@ func Body(t Target, lang string) string {
 // Title — заголовок пуша.
 func Title(lang string) string {
 	return i18n.Tr(lang, "push_debt_reminder_title")
+}
+
+// PushBody и PushTitle — тексты PUSH на языке УСТРОЙСТВА. Отдельно от Body и
+// Title: те идут через i18n вместе с текстами бота и знают только ru/en, а у
+// пуша языков десять — см. пакет pushtext.
+func PushBody(t Target, locale string) string {
+	amount := amountText(t.Totals)
+	if t.Groups == 1 {
+		return pushtext.Tr(locale, pushtext.DebtReminderOne, amount, t.RoomName)
+	}
+	return pushtext.Tr(locale, pushtext.DebtReminderMany, amount, t.Groups)
+}
+
+func PushTitle(locale string) string {
+	return pushtext.Tr(locale, pushtext.DebtReminderTitle)
 }
 
 // amountText — суммы по валютам: «1 200 ₽» либо «1 200 ₽ и 30 €».

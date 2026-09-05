@@ -367,8 +367,9 @@ class SplittyRepository @Inject constructor(
 
     // --- Файлы ---
 
-    /** Привязать FCM-токен устройства (native-пуши). */
-    suspend fun registerDevice(token: String) = call { api.registerDevice(DeviceBody(token)) }
+    /** Привязать FCM-токен устройства (native-пуши) вместе с языком интерфейса. */
+    suspend fun registerDevice(token: String, locale: String) =
+        call { api.registerDevice(DeviceBody(token, locale = locale)) }
 
     /** Отвязать FCM-токен (logout). */
     suspend fun unregisterDevice(token: String) = call { api.unregisterDevice(DeviceBody(token)) }

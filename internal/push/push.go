@@ -36,6 +36,9 @@ type PendingPush struct {
 	UserID       int
 	Notification Notification
 	Attempts     int
+	// Locale — язык устройств-адресатов. Пусто: запись старой очереди или
+	// устройства без локали — доставляем на все токены, как раньше.
+	Locale string
 }
 
 // TokenOutcome — судьба одного токена в отправке. Token хранит только ХВОСТ
@@ -64,8 +67,9 @@ type DeliveryResult struct {
 
 // Store — персистентная очередь пушей (реализация — Mongo в repository).
 type Store interface {
-	// Enqueue кладёт пуш в очередь к немедленной доставке.
-	Enqueue(ctx context.Context, userID int, n Notification) error
+	// Enqueue кладёт пуш в очередь к немедленной доставке. locale — язык
+	// устройств-адресатов; пусто = устройства без локали.
+	Enqueue(ctx context.Context, userID int, locale string, n Notification) error
 	// Due возвращает пачку записей, у которых подошло время доставки.
 	// Обязана отдавать только НЕотправленные — иначе доставленный пуш уходил
 	// бы по кругу.
@@ -90,15 +94,20 @@ type UserFinder interface {
 }
 
 // Sender — то, что зовёт Notifier: кладёт пуш в очередь (не шлёт синхронно).
+//
+// locale — язык УСТРОЙСТВ, которым адресована эта запись. Пусто означает
+// устройства без локали (старый клиент). Notifier ставит по одной записи на
+// каждый различный язык среди токенов пользователя, поэтому русский телефон и
+// английский планшет получают разный текст.
 type Sender interface {
-	SendToUser(ctx context.Context, user api.User, n Notification)
+	SendToUser(ctx context.Context, user api.User, locale string, n Notification)
 }
 
 // NoopSender — заглушка, когда FCM/очередь не сконфигурированы: молча ничего не
 // делает, остальной сервер работает как раньше.
 type NoopSender struct{}
 
-func (NoopSender) SendToUser(context.Context, api.User, Notification) {}
+func (NoopSender) SendToUser(context.Context, api.User, string, Notification) {}
 
 // queueSender кладёт пуш в Store (outbox). Доставку делает Worker.
 type queueSender struct {
@@ -113,8 +122,8 @@ func NewSender(store Store) Sender {
 	return &queueSender{store: store}
 }
 
-func (s *queueSender) SendToUser(ctx context.Context, user api.User, n Notification) {
-	if err := s.store.Enqueue(ctx, user.ID, n); err != nil {
+func (s *queueSender) SendToUser(ctx context.Context, user api.User, locale string, n Notification) {
+	if err := s.store.Enqueue(ctx, user.ID, locale, n); err != nil {
 		log.Error().Err(err).Int("user", user.ID).Msg("push: enqueue failed")
 	}
 }
@@ -196,8 +205,26 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 		return
 	}
 
-	messages := make([]*messaging.Message, 0, len(user.PushTokens))
-	for _, t := range user.PushTokens {
+	// Токены этой локали. Запись без локали адресована ВСЕМ токенам: так
+	// обслуживаются и записи, лежавшие в очереди до появления поля, и
+	// устройства старых клиентов.
+	tokens := user.PushTokens
+	if p.Locale != "" {
+		tokens = tokens[:0:0]
+		for _, t := range user.PushTokens {
+			if t.Locale == p.Locale {
+				tokens = append(tokens, t)
+			}
+		}
+		if len(tokens) == 0 {
+			// Устройство успело сменить язык или отвалиться, пока пуш ждал.
+			w.mark(ctx, p, DeliveryResult{Outcome: OutcomeNoTokens})
+			return
+		}
+	}
+
+	messages := make([]*messaging.Message, 0, len(tokens))
+	for _, t := range tokens {
 		messages = append(messages, &messaging.Message{
 			Token:        t.Token,
 			Notification: &messaging.Notification{Title: p.Notification.Title, Body: p.Notification.Body},
@@ -223,7 +250,7 @@ func (w *Worker) deliver(ctx context.Context, p PendingPush) {
 	transient := false
 	outcomes := make([]TokenOutcome, 0, len(resp.Responses))
 	for i, r := range resp.Responses {
-		token := user.PushTokens[i].Token
+		token := tokens[i].Token
 		if r.Success {
 			outcomes = append(outcomes, TokenOutcome{Token: tokenTail(token)})
 			continue

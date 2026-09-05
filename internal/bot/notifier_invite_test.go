@@ -23,7 +23,7 @@ type capturePayload struct {
 	notifs []push.Notification
 }
 
-func (c *capturePayload) SendToUser(_ context.Context, user api.User, n push.Notification) {
+func (c *capturePayload) SendToUser(_ context.Context, user api.User, _ string, n push.Notification) {
 	c.users = append(c.users, user.ID)
 	c.notifs = append(c.notifs, n)
 }

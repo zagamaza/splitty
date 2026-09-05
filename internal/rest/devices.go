@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/pushtext"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -14,6 +15,9 @@ import (
 type deviceRequest struct {
 	Token    string `json:"token"`
 	Platform string `json:"platform"` // "android" | "ios"
+	// Locale — язык интерфейса устройства; на нём ему уйдут пуши. Пустое
+	// значение = старый клиент; незнакомый язык сводится к английскому.
+	Locale string `json:"locale"`
 }
 
 // handleRegisterDevice POST /api/v1/me/devices — привязать FCM-токен текущего
@@ -39,7 +43,8 @@ func (s *Server) handleRegisterDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.userRepo.AddPushToken(ctx, user.ID, api.PushToken{Token: req.Token, Platform: req.Platform}); err != nil {
+	token := api.PushToken{Token: req.Token, Platform: req.Platform, Locale: pushtext.Canonical(req.Locale)}
+	if err := s.userRepo.AddPushToken(ctx, user.ID, token); err != nil {
 		// репозиторий пишет только в живой документ: аккаунт удалили, пока
 		// запрос шёл, — токен на tombstone не сядет, отвечаем как middleware
 		if errors.Is(err, mongo.ErrNoDocuments) {

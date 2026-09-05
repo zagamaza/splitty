@@ -696,4 +696,5 @@
         <item quantity="one">C’è %d operazione non inviata: vuoi uscire ed eliminarla?</item>
         <item quantity="other">Ci sono %d operazioni non inviate: vuoi uscire ed eliminarle?</item>
     </plurals>
+    <string name="push_locale">it</string>
 </resources>
