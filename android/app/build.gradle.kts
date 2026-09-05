@@ -131,6 +131,11 @@ android {
         unitTests {
             // Roborazzi/Robolectric рендерят Compose с реальными ресурсами темы.
             isIncludeAndroidResources = true
+            // android.util.Log в чистом JVM-тесте не «ничего не делает», а
+            // БРОСАЕТ. Строка логирования внутри catch-блока роняла корутину,
+            // а вместе с ней и весь CoroutineScope теста — падал не тот тест,
+            // который логировал, а тот, чья сессия жила в том же scope.
+            isReturnDefaultValues = true
         }
     }
 }

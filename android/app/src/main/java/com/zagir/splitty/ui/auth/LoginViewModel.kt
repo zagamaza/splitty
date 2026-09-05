@@ -120,6 +120,23 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    init {
+        // Знаменатель воронки: сколько человек вообще дошли до экрана входа.
+        // Здесь, а не в composable: экран пересобирается при повороте и смене
+        // темы, и событие считалось бы по числу перерисовок.
+        analytics.trackAnonymous(AnalyticsEvent.LoginShown)
+    }
+
+    /**
+     * Причина неудачи из закрытого множества контракта. Сеть и сервер
+     * разделены намеренно: первое чинится у человека, второе у нас.
+     */
+    private fun failureReason(e: ApiException): String = when {
+        e.code == ApiException.CODE_TRANSPORT -> "network"
+        e.isUnauthorized -> "invalid"
+        else -> "server"
+    }
+
     /**
      * Вход через Google: системный лист выбора аккаунта (Credential Manager) →
      * id-токен → POST /auth/google.
@@ -131,9 +148,14 @@ class LoginViewModel @Inject constructor(
     fun loginWithGoogle(activityContext: Context) {
         if (_state.value.isLoggingIn) return
         _state.update { it.copy(isLoggingIn = true) }
+        analytics.trackAnonymous(AnalyticsEvent.LoginStarted(method = "google"))
         viewModelScope.launch {
             try {
-                val idToken = googleIdTokenProvider.idToken(activityContext) ?: return@launch
+                val idToken = googleIdTokenProvider.idToken(activityContext) ?: run {
+                    // null — человек закрыл лист выбора аккаунта.
+                    analytics.trackAnonymous(AnalyticsEvent.LoginFailed("google", "cancelled"))
+                    return@launch
+                }
                 val response = repository.loginWithGoogle(idToken)
                 sessionStore.signIn(response.token, response.user)
                 analytics.track(AnalyticsEvent.LoginCompleted(method = "google"))
@@ -144,6 +166,7 @@ class LoginViewModel @Inject constructor(
                 // в алерт «Не удалось сохранить сессию» — а сессия сохранена.
                 throw e
             } catch (e: GoogleSignInException) {
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("google", "provider"))
                 _state.update { it.copy(errorMessage = humanErrorText(e)) }
             } catch (e: ApiException) {
                 // 401 здесь — «сервер отверг id-токен» (протухший/чужой aud),
@@ -153,10 +176,12 @@ class LoginViewModel @Inject constructor(
                 } else {
                     humanErrorText(e)
                 }
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("google", failureReason(e)))
                 _state.update { it.copy(errorMessage = message) }
             } catch (e: Exception) {
                 // См. комментарий в loginWithTelegram: signIn пишет в
                 // DataStore/Keystore мимо ApiException-обёртки.
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("google", "server"))
                 Log.e(TAG, "google login failed", e)
                 _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {
@@ -224,6 +249,8 @@ class LoginViewModel @Inject constructor(
         val registering = current.isRegistering
 
         _state.update { it.copy(isLoggingIn = true) }
+        // Здесь, а не на экране: форму отправляют и кнопкой, и клавишей ввода.
+        analytics.trackAnonymous(AnalyticsEvent.LoginStarted(method = "password"))
         viewModelScope.launch {
             try {
                 val response = if (registering) {
@@ -237,8 +264,10 @@ class LoginViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("password", failureReason(e)))
                 _state.update { it.copy(errorMessage = humanErrorText(e)) }
             } catch (e: Exception) {
+                analytics.trackAnonymous(AnalyticsEvent.LoginFailed("password", "server"))
                 Log.e(TAG, "password login failed", e)
                 _state.update { it.copy(errorMessage = UiText.res(R.string.error_session_save)) }
             } finally {

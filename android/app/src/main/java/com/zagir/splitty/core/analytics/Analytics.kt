@@ -55,6 +55,10 @@ data class EventBody(
     )
 }
 
+/** Пачка событий ДО входа: вместо человека — установка приложения. */
+@kotlinx.serialization.Serializable
+data class AnonymousEventsBody(val device: String, val events: List<EventBody>)
+
 @kotlinx.serialization.Serializable
 data class EventsResult(val accepted: Int = 0, val duplicates: Int = 0, val rejected: Int = 0)
 
@@ -72,6 +76,7 @@ class Analytics @Inject constructor(
     private val api: SplittyApi,
     private val session: SessionStore,
     @ApplicationScope private val scope: CoroutineScope,
+    private val deviceId: DeviceIdSource,
 ) {
     private val flushMutex = Mutex()
 
@@ -99,6 +104,29 @@ class Analytics @Inject constructor(
     fun startSession() {
         sessionId = UUID.randomUUID().toString()
         lastActivity = System.currentTimeMillis()
+    }
+
+    /**
+     * Событие, случившееся ДО входа.
+     *
+     * Уходит сразу и мимо очереди: очередь именная (записи лежат с номером
+     * владельца и чистятся при смене аккаунта), и класть туда безымянные
+     * значило бы решать, кому они достанутся после входа. Событий здесь
+     * единицы за запуск, и потеря одного без сети — честная цена за то, что
+     * этот поток ни с кем не связывается.
+     */
+    fun trackAnonymous(event: AnalyticsEvent) {
+        if (!ENABLED) return
+        val record = record(event, owner = 0L)
+        scope.launch {
+            try {
+                api.postAnonymousEvents(AnonymousEventsBody(deviceId.get(), listOf(EventBody(record))))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "anonymous event lost", e)
+            }
+        }
     }
 
     fun track(event: AnalyticsEvent) {

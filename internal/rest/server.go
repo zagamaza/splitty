@@ -456,6 +456,9 @@ func (s *Server) Handler() http.Handler {
 	// записи наружу не появляется — это был бы самый дешёвый способ насыпать
 	// нам в базу. Верх воронки закрывают числа App Store, а не этот поток.
 	mux.Handle("POST /api/v1/events", s.auth(s.handlePostEvents))
+	// Без авторизации намеренно: всё, что происходит до входа, иначе не
+	// измерить. Набор имён там закрыт четырьмя (analytics.Anonymous).
+	mux.HandleFunc("POST /api/v1/events/anonymous", s.handlePostAnonymousEvents)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))
 	mux.Handle("PATCH /api/v1/me", s.auth(s.handlePatchMe))

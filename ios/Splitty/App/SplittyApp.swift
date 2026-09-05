@@ -60,7 +60,14 @@ struct SplittyApp: App {
                     // Холодный старт — новая сессия событий.
                     Analytics.shared.startSession()
                     await session.refreshMe()
-                    Analytics.shared.track(.appOpen(cold: true))
+                    // До входа событие уходит анонимным маршрутом: иначе запуск
+                    // человека, который до аккаунта так и не дошёл, не считался
+                    // бы вовсе — а это и есть знаменатель воронки.
+                    if session.isAuthenticated {
+                        Analytics.shared.track(.appOpen(cold: true))
+                    } else {
+                        Analytics.shared.trackAnonymous(.appOpen(cold: true), api: session.api)
+                    }
                     // Бейдж обязан появляться до открытия раздела — иначе
                     // счётчик показывался бы ровно тогда, когда его гасят.
                     await session.refreshUnreadCount()

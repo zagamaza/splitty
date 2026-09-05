@@ -187,3 +187,132 @@ func TestEventsRequireAuth(t *testing.T) {
 		t.Errorf("status %d, ожидал 401", rr.Code)
 	}
 }
+
+// --- Анонимный маршрут: всё, что до входа ---
+
+func postAnonymous(t *testing.T, s *Server, body string) (int, eventsResponse) {
+	t.Helper()
+	rr := doRequest(t, s, http.MethodPost, "/api/v1/events/anonymous", "", body)
+	var out eventsResponse
+	if rr.Code == http.StatusOK {
+		if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
+			t.Fatalf("не разобрал ответ: %v (%s)", err, rr.Body.String())
+		}
+	}
+	return rr.Code, out
+}
+
+func anonEvent(name, id string, params string) string {
+	at := time.Now().UTC().Format(time.RFC3339)
+	p := ""
+	if params != "" {
+		p = `,"params":` + params
+	}
+	return `{"id":"` + id + `","name":"` + name + `","session":"s-1","platform":"ios","at":"` + at + `"` + p + `}`
+}
+
+// Событие до входа пишется БЕЗ токена и без номера человека: экран входа
+// человека ещё не знает, и знаменателя у login_completed иначе не существует.
+func TestAnonymousEventsStoredWithoutToken(t *testing.T) {
+	s, store := newEventsServer(t)
+
+	code, got := postAnonymous(t, s, `{"device":"dev-1","events":[
+		`+anonEvent("app_open", "a-1", `{"cold":"true"}`)+`,
+		`+anonEvent("login_shown", "a-2", "")+`,
+		`+anonEvent("login_started", "a-3", `{"method":"google"}`)+`
+	]}`)
+	if code != http.StatusOK {
+		t.Fatalf("status %d", code)
+	}
+	if got.Accepted != 3 {
+		t.Fatalf("принято %d, ожидал 3 (%+v)", got.Accepted, got)
+	}
+	for _, e := range store.events {
+		if e.UserID != 0 {
+			t.Errorf("анонимное событие записано на человека %d", e.UserID)
+		}
+		if e.DeviceID != "dev-1" {
+			t.Errorf("устройство %q, ожидалось dev-1", e.DeviceID)
+		}
+	}
+}
+
+// Именные события через анонимный маршрут не проходят. Маршрут открыт всему
+// интернету: пусти сюда room_created — и коллекцию засорят бесплатно, а в
+// агрегате появятся тусы, которых никто не создавал.
+func TestAnonymousEventsAcceptOnlyPreLoginNames(t *testing.T) {
+	s, store := newEventsServer(t)
+
+	code, got := postAnonymous(t, s, `{"device":"dev-1","events":[
+		`+anonEvent("login_shown", "a-1", "")+`,
+		`+anonEvent("room_created", "a-2", "")+`,
+		`+anonEvent("purchase_completed", "a-3", `{"product":"yearly"}`)+`
+	]}`)
+	if code != http.StatusOK {
+		t.Fatalf("status %d", code)
+	}
+	if got.Accepted != 1 || got.Rejected != 2 {
+		t.Fatalf("принято %d, отвергнуто %d — ожидал 1 и 2", got.Accepted, got.Rejected)
+	}
+	if len(store.events) != 1 || store.events[0].Name != "login_shown" {
+		t.Errorf("в журнал уехало не то: %+v", store.events)
+	}
+}
+
+// Причина неудачи входа — из закрытого множества, как и везде.
+func TestAnonymousEventsValidateLoginFailure(t *testing.T) {
+	s, _ := newEventsServer(t)
+
+	code, got := postAnonymous(t, s, `{"device":"dev-1","events":[
+		`+anonEvent("login_failed", "a-1", `{"method":"google","reason":"cancelled"}`)+`,
+		`+anonEvent("login_failed", "a-2", `{"method":"google","reason":"человек передумал"}`)+`
+	]}`)
+	if code != http.StatusOK {
+		t.Fatalf("status %d", code)
+	}
+	if got.Accepted != 1 || got.Rejected != 1 {
+		t.Errorf("принято %d, отвергнуто %d — ожидал 1 и 1", got.Accepted, got.Rejected)
+	}
+}
+
+// Без устройства считать нечего: пустая строка проходит проверку формата, и
+// без отдельной проверки такие события легли бы в одну безымянную кучу.
+func TestAnonymousEventsRequireDevice(t *testing.T) {
+	s, _ := newEventsServer(t)
+
+	for _, body := range []string{
+		`{"events":[` + anonEvent("login_shown", "a-1", "") + `]}`,
+		`{"device":"","events":[` + anonEvent("login_shown", "a-1", "") + `]}`,
+		`{"device":"плохое устройство","events":[` + anonEvent("login_shown", "a-1", "") + `]}`,
+	} {
+		if code, _ := postAnonymous(t, s, body); code != http.StatusBadRequest {
+			t.Errorf("status %d на теле %s, ожидал 400", code, body)
+		}
+	}
+}
+
+// Поток открыт наружу, поэтому лимит на устройство ниже, чем на человека.
+func TestAnonymousEventsRateLimited(t *testing.T) {
+	s, _ := newEventsServer(t)
+
+	sent := 0
+	for i := 0; i < 40; i++ {
+		body := `{"device":"dev-1","events":[`
+		for j := 0; j < 10; j++ {
+			if j > 0 {
+				body += ","
+			}
+			body += anonEvent("login_shown", fmt.Sprintf("a-%d-%d", i, j), "")
+		}
+		body += `]}`
+		code, _ := postAnonymous(t, s, body)
+		if code == http.StatusTooManyRequests {
+			return
+		}
+		if code != http.StatusOK {
+			t.Fatalf("status %d", code)
+		}
+		sent += 10
+	}
+	t.Errorf("лимит не сработал: приняли %d событий с одного устройства", sent)
+}

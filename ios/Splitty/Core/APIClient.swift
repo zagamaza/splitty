@@ -1075,6 +1075,13 @@ final class APIClient: OperationAPI {
         _ = try await send("POST", "/api/v1/events", body: body, notifyUnauthorized: false)
     }
 
+    /// Отправляет события, случившиеся ДО входа: человека ещё нет, есть
+    /// установка приложения. Свой маршрут на сервере, где открыты только
+    /// четыре имени — см. `docs/analytics-events.md`.
+    func postAnonymousEvents(_ body: any Encodable) async throws {
+        _ = try await send("POST", "/api/v1/events/anonymous", body: body, notifyUnauthorized: false)
+    }
+
     /// Файловая часть multipart-тела.
     struct MultipartFile {
         let name: String

@@ -128,6 +128,9 @@ struct LoginView: View {
         .sheet(isPresented: $isEmailSheetPresented) {
             emailSheet
         }
+        // Знаменатель воронки: сколько человек вообще дошли до экрана входа.
+        // Событие анонимное — человека здесь ещё нет.
+        .task { Analytics.shared.trackAnonymous(.loginShown, api: session.api) }
         .tint(Color.accent)
         .alert(
             "Ошибка",
@@ -223,6 +226,7 @@ struct LoginView: View {
             // Скоупы и ХЕШ nonce проставляет общий сервис: протокол Apple
             // обязан совпадать со стороной привязки (AccountView).
             appleRawNonce = AppleSignInService.prepare(request)
+            Analytics.shared.trackAnonymous(.loginStarted(method: "apple"), api: session.api)
         } onCompletion: { result in
             handleAppleCompletion(result)
         }
@@ -406,6 +410,7 @@ struct LoginView: View {
 
         isLoggingIn = true
         emailErrorMessage = nil
+        Analytics.shared.trackAnonymous(.loginStarted(method: "password"), api: session.api)
         Task {
             defer { isLoggingIn = false }
             do {
@@ -417,6 +422,7 @@ struct LoginView: View {
                 password = ""
                 isEmailSheetPresented = false
             } catch {
+                loginFailed(method: "password", reason: failureReason(error))
                 emailErrorMessage = humanErrorText(error)
             }
         }
@@ -484,19 +490,38 @@ struct LoginView: View {
     /// `GoogleSignInError.cancelled` он превращается только внутри сервиса.
     private func loginWithGoogle() {
         isLoggingIn = true
+        Analytics.shared.trackAnonymous(.loginStarted(method: "google"), api: session.api)
         Task {
             defer { isLoggingIn = false }
             do {
                 let idToken = try await GoogleSignInService.signIn()
                 try await session.loginWithGoogle(idToken: idToken)
             } catch GoogleSignInError.cancelled {
+                loginFailed(method: "google", reason: "cancelled")
                 return
             } catch let error as APIError where error.isUnauthorized {
+                loginFailed(method: "google", reason: "provider")
                 errorMessage = String(localized: "Google не подтвердил вход. Попробуйте ещё раз")
             } catch {
+                loginFailed(method: "google", reason: failureReason(error))
                 errorMessage = humanErrorText(error)
             }
         }
+    }
+
+    /// Неудачная попытка входа. Событие анонимное по определению: человек не
+    /// вошёл, и приписывать его аккаунту нечему.
+    private func loginFailed(method: String, reason: String) {
+        Analytics.shared.trackAnonymous(.loginFailed(method: method, reason: reason), api: session.api)
+    }
+
+    /// Причина из закрытого множества контракта. Разделять сеть и сервер важно:
+    /// первое чинится у человека, второе у нас.
+    private func failureReason(_ error: Error) -> String {
+        guard let api = error as? APIError else { return "server" }
+        if case .transport = api { return "network" }
+        if api.isUnauthorized { return "invalid" }
+        return "server"
     }
 
     /// Разбор ответа системного листа Apple.
@@ -516,12 +541,16 @@ struct LoginView: View {
                 authorizationCode: credential.authorizationCode
             )
         } catch AppleSignInError.cancelled {
+            loginFailed(method: "apple", reason: "cancelled")
             return
         } catch AppleSignInError.nonceUnavailable {
+            loginFailed(method: "apple", reason: "provider")
             errorMessage = String(localized: "Не удалось начать вход через Apple. Попробуйте ещё раз")
         } catch AppleSignInError.missingCredential {
+            loginFailed(method: "apple", reason: "provider")
             errorMessage = String(localized: "Apple не вернул данные для входа. Попробуйте ещё раз")
         } catch {
+            loginFailed(method: "apple", reason: failureReason(error))
             errorMessage = humanErrorText(error)
         }
     }

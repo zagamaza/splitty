@@ -76,6 +76,16 @@ interface SplittyApi {
         @Header("Authorization") auth: String?,
     ): com.zagir.splitty.core.analytics.EventsResult
 
+    /**
+     * События, случившиеся ДО входа. Человека тут нет — есть установка
+     * приложения, и сервер открывает по этому маршруту всего четыре имени
+     * (docs/analytics-events.md).
+     */
+    @POST("api/v1/events/anonymous")
+    suspend fun postAnonymousEvents(
+        @Body body: com.zagir.splitty.core.analytics.AnonymousEventsBody,
+    ): com.zagir.splitty.core.analytics.EventsResult
+
     @POST("api/v1/auth/telegram")
     suspend fun loginWithTelegram(@Body body: TelegramLoginBody): AuthResponse
 

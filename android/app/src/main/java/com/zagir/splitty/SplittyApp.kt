@@ -4,6 +4,7 @@ import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
 import android.app.Application
 import android.content.res.Configuration
+import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.push.PushTokenRegistrar
 import com.zagir.splitty.push.SplittyMessagingService
 import dagger.hilt.android.HiltAndroidApp
@@ -18,6 +19,9 @@ class SplittyApp : Application() {
     @Inject
     lateinit var analytics: Analytics
 
+    @Inject
+    lateinit var sessionStore: SessionStore
+
     override fun onCreate() {
         super.onCreate()
         // Каналы уведомлений — заранее (нужны и для фоновых системных пушей).
@@ -26,7 +30,14 @@ class SplittyApp : Application() {
         pushTokenRegistrar.start()
         // Холодный старт — новая сессия событий.
         analytics.startSession()
-        analytics.track(AnalyticsEvent.AppOpen(cold = true))
+        // До входа событие уходит анонимным маршрутом: иначе запуск человека,
+        // который до аккаунта так и не дошёл, не считался бы вовсе — а это и
+        // есть знаменатель воронки.
+        if (sessionStore.currentToken() != null) {
+            analytics.track(AnalyticsEvent.AppOpen(cold = true))
+        } else {
+            analytics.trackAnonymous(AnalyticsEvent.AppOpen(cold = true))
+        }
     }
 
     /**

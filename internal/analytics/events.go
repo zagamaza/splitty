@@ -18,7 +18,15 @@ type Event struct {
 
 // Events — белый список. Меняется ТОЛЬКО вместе с docs/analytics-events.md.
 var Events = map[string]Event{
-	"app_open":             {Params: map[string][]string{"cold": {"true", "false"}}},
+	"app_open":    {Params: map[string][]string{"cold": {"true", "false"}}},
+	"login_shown": {},
+	"login_started": {Params: map[string][]string{
+		"method": {"google", "apple", "password", "code"},
+	}},
+	"login_failed": {Params: map[string][]string{
+		"method": {"google", "apple", "password", "code"},
+		"reason": {"cancelled", "network", "provider", "invalid", "server"},
+	}},
 	"login_completed":      {Params: map[string][]string{"method": {"telegram", "google", "apple", "password", "code", "dev"}}},
 	"onboarding_started":   {},
 	"onboarding_step":      {Params: map[string][]string{"step": {"group", "dictate", "who_paid", "transfers"}}},
@@ -123,3 +131,21 @@ func contains(values []string, value string) bool {
 	}
 	return false
 }
+
+// Anonymous — события, которые принимаются БЕЗ токена.
+//
+// Всё, что до входа: человек ставит приложение, видит экран входа и уходит.
+// Знаменателя у login_completed иначе не существует, и непонятно, теряем мы
+// людей на экране входа или они не доходят до него вовсе.
+//
+// Набор закрытый и маленький намеренно: маршрут открыт всему интернету, и
+// каждое лишнее имя в нём — это то, чем можно засорить коллекцию бесплатно.
+var Anonymous = map[string]bool{
+	"app_open":      true,
+	"login_shown":   true,
+	"login_started": true,
+	"login_failed":  true,
+}
+
+// IsAnonymous — можно ли прислать событие с этим именем без токена.
+func IsAnonymous(name string) bool { return Anonymous[name] }

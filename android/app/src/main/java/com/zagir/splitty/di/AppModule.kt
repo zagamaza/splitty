@@ -18,6 +18,8 @@ import com.zagir.splitty.data.OutboxStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import com.zagir.splitty.core.analytics.DeviceIdSource
+import com.zagir.splitty.core.analytics.InstallDeviceId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import java.io.File
@@ -92,6 +94,12 @@ object AppModule {
     @Singleton
     fun provideOutboxStore(@ApplicationContext context: Context, json: Json): OutboxStore =
         OutboxStore(File(context.filesDir, "outbox.json"), json)
+
+    /** Идентификатор установки для событий до входа. */
+    @Provides
+    @Singleton
+    fun provideDeviceIdSource(@ApplicationContext context: Context): DeviceIdSource =
+        InstallDeviceId(context)
 
     /** Очередь продуктовых событий: filesDir/analytics.json. */
     @Provides

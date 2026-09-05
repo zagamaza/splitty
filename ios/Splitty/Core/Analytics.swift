@@ -10,6 +10,9 @@ import UIKit
 /// новое значение сначала попадает туда, потом сюда.
 enum AnalyticsEvent {
     case appOpen(cold: Bool)
+    case loginShown
+    case loginStarted(method: String)
+    case loginFailed(method: String, reason: String)
     case loginCompleted(method: String)
     case onboardingStarted
     case onboardingStep(step: String)
@@ -51,6 +54,9 @@ enum AnalyticsEvent {
     var name: String {
         switch self {
         case .appOpen: return "app_open"
+        case .loginShown: return "login_shown"
+        case .loginStarted: return "login_started"
+        case .loginFailed: return "login_failed"
         case .loginCompleted: return "login_completed"
         case .onboardingStarted: return "onboarding_started"
         case .onboardingStep: return "onboarding_step"
@@ -94,6 +100,8 @@ enum AnalyticsEvent {
     var params: [String: String] {
         switch self {
         case let .appOpen(cold): return ["cold": cold ? "true" : "false"]
+        case let .loginStarted(method): return ["method": method]
+        case let .loginFailed(method, reason): return ["method": method, "reason": reason]
         case let .loginCompleted(method): return ["method": method]
         case let .onboardingStep(step): return ["step": step]
         case let .roomJoined(via): return ["via": via]
@@ -105,7 +113,8 @@ enum AnalyticsEvent {
         case let .purchaseStarted(product): return ["product": product]
         case let .purchaseCompleted(product): return ["product": product]
         case let .purchaseFailed(reason): return ["reason": reason]
-        case .onboardingStarted, .onboardingCompleted, .onboardingSkipped,
+        case .loginShown,
+             .onboardingStarted, .onboardingCompleted, .onboardingSkipped,
              .roomCreated, .settleUpOpened, .settleUpDone:
             return [:]
         case let .inviteSent(channel): return ["channel": channel]
@@ -307,6 +316,40 @@ final class Analytics {
         }
     }
 
+    /// Идентификатор УСТАНОВКИ для событий до входа.
+    ///
+    /// Живёт в UserDefaults и переживает выход из аккаунта: он про приложение
+    /// на телефоне, а не про человека. Переустановка даёт новый — так и надо,
+    /// это ровно та единица, которую считает воронка «поставил → вошёл».
+    private var deviceId: String {
+        let key = "splitty.analytics.device"
+        if let saved = UserDefaults.standard.string(forKey: key) {
+            return saved
+        }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: key)
+        return fresh
+    }
+
+    /// Событие, случившееся ДО входа.
+    ///
+    /// Уходит сразу и мимо очереди: очередь у нас именная (записи хранятся с
+    /// номером владельца и чистятся при смене аккаунта), а класть туда
+    /// безымянные значило бы решать, кому они достанутся после входа. Событий
+    /// здесь единицы за запуск, и потеря одного при отсутствии сети — честная
+    /// цена за то, что этот поток вообще ни с кем не связывается.
+    /// Клиент передаётся снаружи намеренно. Свой `api` Analytics держит только
+    /// пока есть сессия — на выходе он обнуляется вместе с очередью, а экран
+    /// входа это ровно состояние «сессии нет».
+    func trackAnonymous(_ event: AnalyticsEvent, api: APIClient) {
+        guard Self.isEnabled else { return }
+        let body = AnonymousEventsBody(
+            device: deviceId,
+            events: [EventBody(record(event, owner: 0))]
+        )
+        Task { try? await api.postAnonymousEvents(body) }
+    }
+
     func track(_ event: AnalyticsEvent) {
         guard Self.isEnabled, let owner = ownerUserId else { return }
         queue.append(record(event, owner: owner))
@@ -424,6 +467,12 @@ final class Analytics {
     }
 
     private struct EventsBody: Encodable {
+        let events: [EventBody]
+    }
+
+    /// Пачка событий ДО входа: вместо человека — установка приложения.
+    private struct AnonymousEventsBody: Encodable {
+        let device: String
         let events: [EventBody]
     }
 

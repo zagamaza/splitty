@@ -12,6 +12,11 @@ package com.zagir.splitty.core.analytics
  */
 sealed class AnalyticsEvent(val name: String, val params: Map<String, String> = emptyMap()) {
     class AppOpen(cold: Boolean) : AnalyticsEvent("app_open", mapOf("cold" to cold.toString()))
+    /** Показан экран входа. Знаменатель воронки: до аккаунта дошли столько-то. */
+    object LoginShown : AnalyticsEvent("login_shown", emptyMap())
+    class LoginStarted(method: String) : AnalyticsEvent("login_started", mapOf("method" to method))
+    class LoginFailed(method: String, reason: String) :
+        AnalyticsEvent("login_failed", mapOf("method" to method, "reason" to reason))
     class LoginCompleted(method: String) : AnalyticsEvent("login_completed", mapOf("method" to method))
     data object OnboardingStarted : AnalyticsEvent("onboarding_started")
     class OnboardingStep(step: String) : AnalyticsEvent("onboarding_step", mapOf("step" to step))

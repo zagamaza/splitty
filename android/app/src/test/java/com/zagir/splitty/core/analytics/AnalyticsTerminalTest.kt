@@ -126,7 +126,13 @@ class AnalyticsTerminalTest {
     }
 
     private fun analytics(withApi: SplittyApi = api, into: CoroutineScope = scope) =
-        Analytics(AnalyticsQueue(File(dir, "analytics.json"), SplittyJson), withApi, session, into)
+        Analytics(
+            AnalyticsQueue(File(dir, "analytics.json"), SplittyJson),
+            withApi,
+            session,
+            into,
+            DeviceIdSource { "test-device" },
+        )
 
     /**
      * Выход A, вошедший до отправки B — событие всё равно уходит под токеном A.

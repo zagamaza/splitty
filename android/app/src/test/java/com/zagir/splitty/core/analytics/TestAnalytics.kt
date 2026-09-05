@@ -31,5 +31,8 @@ fun testAnalytics(
         retrofit.create(SplittyApi::class.java),
         session,
         scope,
+        // Постоянная строка: в тесте важно, что идентификатор установки есть и
+        // не меняется между вызовами, а не какой он.
+        DeviceIdSource { "test-device" },
     )
 }

@@ -22,8 +22,13 @@ const productEventsTTL = 90 * 24 * time.Hour
 // Содержимого здесь нет и не будет: ни сумм, ни названий тус, ни текста
 // расхода. Только имя события и параметры из закрытых множеств.
 type ProductEvent struct {
-	ID         string
-	UserID     int
+	ID string
+	// UserID — 0 у события, присланного до входа. Тогда заполнен DeviceID.
+	UserID int
+	// DeviceID — установка приложения, а не человек. Живёт только у анонимных
+	// событий и с аккаунтом НЕ связывается: склейка превратила бы обезличенный
+	// поток в профиль.
+	DeviceID   string
 	Name       string
 	At         time.Time
 	Session    string
@@ -42,6 +47,7 @@ type ProductEvent struct {
 type productEventDoc struct {
 	ID         string            `bson:"_id"`
 	UserID     int               `bson:"user_id"`
+	DeviceID   string            `bson:"device_id,omitempty"`
 	Name       string            `bson:"name"`
 	At         time.Time         `bson:"at"`
 	Session    string            `bson:"session"`
@@ -59,6 +65,16 @@ type MongoProductEventsRepository struct {
 
 func NewProductEventsRepository(db *mongo.Database) *MongoProductEventsRepository {
 	return &MongoProductEventsRepository{col: db.Collection("product_events")}
+}
+
+// eventDocID — составной _id. У анонимного события номера человека нет, и
+// префикс "d:" держит его в своём пространстве: иначе событие устройства с
+// UserID 0 столкнулось бы с чужим по одному только клиентскому id.
+func eventDocID(e ProductEvent) string {
+	if e.UserID == 0 && e.DeviceID != "" {
+		return "d:" + e.DeviceID + ":" + e.ID
+	}
+	return fmt.Sprintf("%d:%s", e.UserID, e.ID)
 }
 
 // EnsureIndexes создаёт TTL и индексы выборок. Идемпотентно; вызывать при старте.
@@ -104,8 +120,9 @@ func (r *MongoProductEventsRepository) Insert(ctx context.Context, events []Prod
 	docs := make([]interface{}, 0, len(events))
 	for _, e := range events {
 		docs = append(docs, productEventDoc{
-			ID:         fmt.Sprintf("%d:%s", e.UserID, e.ID),
+			ID:         eventDocID(e),
 			UserID:     e.UserID,
+			DeviceID:   e.DeviceID,
 			Name:       e.Name,
 			At:         e.At,
 			Session:    e.Session,
