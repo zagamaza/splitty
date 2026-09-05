@@ -43,6 +43,21 @@ jobs:
       - name: Roborazzi
         run: ./gradlew :app:verifyRoborazziDebug
 
+      # Без картинок расхождения «снимок не совпал» — это тупик: в логе только
+      # AssertionError, а чем именно отличается — не видно. Выкладываем их,
+      # чтобы падение можно было разобрать, а не гадать.
+      - name: Отчёты о расхождениях
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-и-отчёты-тестов
+          if-no-files-found: ignore
+          retention-days: 7
+          path: |
+            android/app/build/outputs/roborazzi/**
+            android/app/build/reports/tests/**
+            android/app/build/test-results/**
+
       # Страховка от случайной перезаписи эталонов: если шаг выше их изменил,
       # значит сверка шла не с тем, что лежит в репозитории.
       - name: Snapshots unchanged
