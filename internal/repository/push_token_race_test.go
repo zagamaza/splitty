@@ -181,3 +181,39 @@ func TestDedupePushTokensCollapsesExistingDuplicates(t *testing.T) {
 		t.Errorf("повтор без маркера тронул чистого: %+v, было %+v", after, before711)
 	}
 }
+
+// Телефон сменил владельца: Маша вышла, но запрос на отвязку не дошёл, и её
+// запись осталась. Регистрация Пети обязана забрать токен себе — иначе Маша
+// продолжит слать названия своих групп на чужой экран, и само это не пройдёт:
+// телефон живой, доставка успешна, отбраковки не будет.
+func TestAddPushTokenTakesDeviceFromPreviousOwner(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	repo := NewUserRepository(db)
+	seedUsers(t, db,
+		api.User{ID: 720, Username: "masha", DisplayName: "Маша", PushTokens: []api.PushToken{
+			{Token: "shared-phone", Platform: "ios", Locale: "ru"},
+			{Token: "her-tablet", Platform: "ios", Locale: "ru"},
+		}},
+		api.User{ID: 721, Username: "petya", DisplayName: "Петя"},
+	)
+
+	if err := repo.AddPushToken(ctx, 721, api.PushToken{Token: "shared-phone", Platform: "ios", Locale: "en"}); err != nil {
+		t.Fatalf("регистрация нового владельца: %v", err)
+	}
+
+	previous := pushTokens(t, db, 720)
+	for _, tok := range previous {
+		if tok.Token == "shared-phone" {
+			t.Error("токен остался у прежнего аккаунта — его пуши уйдут чужому человеку")
+		}
+	}
+	if len(previous) != 1 || previous[0].Token != "her-tablet" {
+		t.Errorf("у прежнего владельца пострадали другие устройства: %+v", previous)
+	}
+
+	current := pushTokens(t, db, 721)
+	if len(current) != 1 || current[0].Token != "shared-phone" || current[0].Locale != "en" {
+		t.Errorf("новый владелец не получил устройство: %+v", current)
+	}
+}
