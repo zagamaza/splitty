@@ -33,6 +33,36 @@
             "state": "translated",
             "value": "Камера нужна, чтобы сфотографировать чек"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レシートを撮影するためにカメラを使用します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要使用相机拍摄小票"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증을 촬영하기 위해 카메라가 필요합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A câmera serve para fotografar o recibo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fotocamera serve per fotografare lo scontrino"
+          }
         }
       }
     },
@@ -67,6 +97,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Микрофон нужен, чтобы надиктовать расход голосом"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出を音声で入力するためにマイクを使用します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要使用麦克风通过语音记录支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출을 음성으로 입력하기 위해 마이크가 필요합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O microfone serve para ditar a despesa por voz"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il microfono serve per dettare la spesa a voce"
           }
         }
       }
@@ -103,6 +163,36 @@
             "state": "translated",
             "value": "Доступ к фото нужен, чтобы выбрать фото чека"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レシートの写真を選ぶために写真へのアクセスが必要です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要访问照片以选择小票照片"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 사진을 선택하기 위해 사진 접근 권한이 필요합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O acesso às fotos serve para escolher a foto do recibo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accesso alle foto serve per scegliere la foto dello scontrino"
+          }
         }
       }
     },
@@ -137,6 +227,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Распознавание речи показывает текст надиктовки прямо во время записи"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声認識により、録音中に話した内容がその場で文字で表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音识别会在录音过程中实时显示口述的文字"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 인식은 녹음하는 동안 말씀하신 내용을 바로 문자로 보여 줍니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento de fala mostra o texto do que você dita enquanto grava"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il riconoscimento vocale mostra il testo di ciò che detti mentre registri"
           }
         }
       }

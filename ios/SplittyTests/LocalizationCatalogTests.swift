@@ -88,8 +88,15 @@ final class LocalizationCatalogTests: XCTestCase {
 
     // MARK: Исходный каталог
 
-    private func catalog() throws -> [String: [String: Any]] {
-        let data = try Data(contentsOf: Self.catalogURL)
+    /// Второй каталог — тексты системных разрешений. Тест его не читал вовсе,
+    /// поэтому пропущенный перевод «зачем приложению микрофон» не ловился
+    /// ничем: диалог просто выходил по-русски на любом языке.
+    private static let infoPlistCatalogURL = catalogURL
+        .deletingLastPathComponent()
+        .appendingPathComponent("InfoPlist.xcstrings")
+
+    private func catalog(_ url: URL? = nil) throws -> [String: [String: Any]] {
+        let data = try Data(contentsOf: url ?? Self.catalogURL)
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(json["sourceLanguage"] as? String, "ru")
         return try XCTUnwrap(json["strings"] as? [String: [String: Any]])
@@ -99,8 +106,18 @@ final class LocalizationCatalogTests: XCTestCase {
     /// а у строк с числом заданы все формы: русскому нужны one/few/many, иначе
     /// «2 участник» и «5 участника» вернутся с первым же двузначным счётчиком.
     func testCatalogIsFullyTranslated() throws {
+        try assertFullyTranslated(try catalog(), label: "catalog")
+    }
+
+    /// Тексты разрешений живут в отдельном каталоге и проверяются теми же
+    /// правилами: пустой перевод здесь — это системный диалог на чужом языке.
+    func testInfoPlistCatalogIsFullyTranslated() throws {
+        try assertFullyTranslated(try catalog(Self.infoPlistCatalogURL), label: "infoplist")
+    }
+
+    private func assertFullyTranslated(_ strings: [String: [String: Any]], label: String) throws {
         var problems: [String] = []
-        for (key, entry) in try catalog() {
+        for (key, entry) in strings {
             guard let localizations = entry["localizations"] as? [String: [String: Any]] else {
                 problems.append("\(key): нет localizations")
                 continue
@@ -138,7 +155,7 @@ final class LocalizationCatalogTests: XCTestCase {
                 }
             }
         }
-        XCTAssertTrue(problems.isEmpty, report(problems, "catalog"))
+        XCTAssertTrue(problems.isEmpty, report(problems, label))
     }
 
     /// Каталог и собранный бандл описывают один и тот же набор ключей: лишняя
