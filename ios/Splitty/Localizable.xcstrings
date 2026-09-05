@@ -51,6 +51,12 @@
             "state": "translated",
             "value": "「%@」에서"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " em “%@”"
+          }
         }
       }
     },
@@ -103,6 +109,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%2$@」에 「%1$@」을(를) 추가했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " adicionou “%1$@” em “%2$@”"
           }
         }
       }
@@ -157,6 +169,12 @@
             "state": "translated",
             "value": "님이 결제했습니다 "
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " pagou "
+          }
         }
       }
     },
@@ -209,6 +227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "님이 회원님께 지급했습니다 "
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " pagou a você "
           }
         }
       }
@@ -263,6 +287,12 @@
             "state": "translated",
             "value": "전원이 균등하게"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " entre todos"
+          }
         }
       }
     },
@@ -315,6 +345,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "각자 먹은 만큼"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " pelo que cada um consumiu"
           }
         }
       }
@@ -369,6 +405,12 @@
             "state": "translated",
             "value": "%@(회원님)"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (você)"
+          }
         }
       }
     },
@@ -421,6 +463,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ ÷ %2$lld = 1인당 %3$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ ÷ %2$lld = %3$@ por pessoa"
           }
         }
       }
@@ -475,6 +523,12 @@
             "state": "translated",
             "value": "%@ · 비밀번호 미설정"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · sem senha definida"
+          }
         }
       }
     },
@@ -527,6 +581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 님이 회원님을 「%2$@」에 추가했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ adicionou você a “%2$@”"
           }
         }
       }
@@ -581,6 +641,12 @@
             "state": "translated",
             "value": "%@ 님이 회원님께 빚졌습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ deve a você"
+          }
         }
       }
     },
@@ -633,6 +699,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 님의 빚 — %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ deve — %2$@"
           }
         }
       }
@@ -687,6 +759,12 @@
             "state": "translated",
             "value": "%2$@당 %1$@입니다. 자동으로 갱신되며 Apple ID 설정에서 언제든지 해지할 수 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ por %2$@. Renova automaticamente; cancele quando quiser nos ajustes do Apple ID"
+          }
         }
       }
     },
@@ -739,6 +817,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 님이 %2$@을(를) 결제했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ pagou %2$@"
           }
         }
       }
@@ -793,6 +877,12 @@
             "state": "translated",
             "value": "%@ 님이 회원님께 지급했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pagou a você"
+          }
         }
       }
     },
@@ -845,6 +935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 님이 회원님께 지급합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ paga a você"
           }
         }
       }
@@ -899,6 +995,12 @@
             "state": "translated",
             "value": "%1$@ 님이 결제 — %2$@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ paga — %2$@"
+          }
         }
       }
     },
@@ -952,6 +1054,12 @@
             "state": "translated",
             "value": "%1$@ 님이 「%2$@」에 다시 초대했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ convida você a voltar para “%2$@”"
+          }
         }
       }
     },
@@ -1004,6 +1112,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@은(는) 고정 금액 · 나머지는 균등"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ fixo · o resto igualmente"
           }
         }
       }
@@ -1272,6 +1386,12 @@
             "state": "translated",
             "value": "%1$lld개 · 개당 %2$@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld un · %2$@ cada"
+          }
         }
       }
     },
@@ -1325,6 +1445,12 @@
             "state": "translated",
             "value": "+%@ 수수료"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@ de taxa"
+          }
         }
       }
     },
@@ -1374,6 +1500,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "0"
@@ -1431,6 +1563,12 @@
             "state": "translated",
             "value": "₩0"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 0,00"
+          }
         }
       }
     },
@@ -1483,6 +1621,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "송금 1건"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 transferência"
           }
         }
       }
@@ -1537,6 +1681,12 @@
             "state": "translated",
             "value": "₩1,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 10,00"
+          }
         }
       }
     },
@@ -1589,6 +1739,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩10,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 100,00"
           }
         }
       }
@@ -1643,6 +1799,12 @@
             "state": "translated",
             "value": "₩13,500"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 135,00"
+          }
         }
       }
     },
@@ -1695,6 +1857,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩1,500"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 15,00"
           }
         }
       }
@@ -1749,6 +1917,12 @@
             "state": "translated",
             "value": "₩15,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 150,00"
+          }
         }
       }
     },
@@ -1801,6 +1975,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "송금 2건"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 transferências"
           }
         }
       }
@@ -1855,6 +2035,12 @@
             "state": "translated",
             "value": "2개 항목"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 itens"
+          }
         }
       }
     },
@@ -1907,6 +2093,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩2,000 + 보리스 님의 ₩1,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 20,00 + R$ 10,00 do Boris"
           }
         }
       }
@@ -1961,6 +2153,12 @@
             "state": "translated",
             "value": "₩2,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 20,00"
+          }
         }
       }
     },
@@ -2013,6 +2211,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩32,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 320,00"
           }
         }
       }
@@ -2067,6 +2271,12 @@
             "state": "translated",
             "value": "₩3,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 30,00"
+          }
         }
       }
     },
@@ -2119,6 +2329,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩4,500"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 45,00"
           }
         }
       }
@@ -2173,6 +2389,12 @@
             "state": "translated",
             "value": "₩6,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 60,00"
+          }
         }
       }
     },
@@ -2225,6 +2447,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "₩8,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 80,00"
           }
         }
       }
@@ -2279,6 +2507,12 @@
             "state": "translated",
             "value": "₩9,000"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 90,00"
+          }
         }
       }
     },
@@ -2331,6 +2565,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple에서 로그인 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple não retornou os dados de login. Tente novamente"
           }
         }
       }
@@ -2385,6 +2625,12 @@
             "state": "translated",
             "value": "Apple에서 연결에 필요한 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple não retornou os dados necessários para vincular. Tente novamente"
+          }
         }
       }
     },
@@ -2437,6 +2683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple não confirmou o login. Tente novamente"
           }
         }
       }
@@ -2491,6 +2743,12 @@
             "state": "translated",
             "value": "이메일"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail"
+          }
         }
       }
     },
@@ -2544,6 +2802,12 @@
             "state": "translated",
             "value": "이메일과 비밀번호"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail e senha"
+          }
         }
       }
     },
@@ -2593,6 +2857,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "English"
@@ -2650,6 +2920,12 @@
             "state": "translated",
             "value": "Google에서 로그인 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Google não retornou os dados de login. Tente novamente"
+          }
         }
       }
     },
@@ -2703,6 +2979,12 @@
             "state": "translated",
             "value": "Google이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Google não confirmou o login. Tente novamente"
+          }
         }
       }
     },
@@ -2752,6 +3034,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID: %@"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "ID: %@"
@@ -2809,6 +3097,12 @@
             "state": "translated",
             "value": "Splitor"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
         }
       }
     },
@@ -2858,6 +3152,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Splitor Plus"
@@ -2915,6 +3215,12 @@
             "state": "translated",
             "value": "Splitor는 기록만 합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Splitor só faz as contas"
+          }
         }
       }
     },
@@ -2967,6 +3273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty는 모든 지출을 참여자에게 나눕니다. 3인 ₩6,000 저녁은 1인 ₩2,000, ₩3,000 택시는 1인 ₩1,000입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Splitty divide cada despesa entre os participantes. Um jantar de R$ 60,00 para três fica R$ 20,00 por pessoa; um táxi de R$ 30,00, R$ 10,00 cada."
           }
         }
       }
@@ -3021,6 +3333,12 @@
             "state": "translated",
             "value": "Splitty는 기록만 합니다. 금액은 현금이나 송금으로 직접 전달해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Splitty apenas registra: entregue o dinheiro em espécie ou por transferência"
+          }
         }
       }
     },
@@ -3070,6 +3388,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Telegram"
@@ -3127,6 +3451,12 @@
             "state": "translated",
             "value": "Telegram이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Telegram não confirmou o login. Tente novamente"
+          }
         }
       }
     },
@@ -3176,6 +3506,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "http://127.0.0.1:7171"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "http://127.0.0.1:7171"
@@ -3233,6 +3569,12 @@
             "state": "translated",
             "value": "「%1$@」은(는) %2$@ 님이군요. 기억했으니 다시 여쭙지 않겠습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@” é %2$@. Anotado, não pergunto de novo"
+          }
         }
       }
     },
@@ -3285,6 +3627,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「균등」을 선택하면 영수증 항목이 삭제되고 총액이 모든 참여자에게 균등하게 분배됩니다. 「실행 취소」로 되돌릴 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Igualmente” descarta os itens do recibo e divide o valor por igual entre todos. Você pode voltar atrás em “Desfazer”"
           }
         }
       }
@@ -3339,6 +3687,12 @@
             "state": "translated",
             "value": "「저녁 ₩32,000, 네 명이서 나누기」"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Jantar de R$ 320,00, dividido por quatro”"
+          }
         }
       }
     },
@@ -3391,6 +3745,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "· %lld초 남음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· faltam %lld s"
           }
         }
       }
@@ -3445,6 +3805,12 @@
             "state": "translated",
             "value": "· 금액별"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· por valores"
+          }
         }
       }
     },
@@ -3498,6 +3864,12 @@
             "state": "translated",
             "value": "· 균등"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· igualmente"
+          }
         }
       }
     },
@@ -3547,6 +3919,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "A"
@@ -3604,6 +3982,12 @@
             "state": "translated",
             "value": "계정은 삭제되었지만 데이터 정리가 완료되지 않았습니다. 「계정 삭제」를 다시 눌러 완료해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A conta foi excluída, mas a limpeza dos dados não terminou. Toque em “Excluir conta” novamente para concluir"
+          }
         }
       }
     },
@@ -3656,6 +4040,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "사용 중"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativa"
           }
         }
       }
@@ -3710,6 +4100,12 @@
             "state": "translated",
             "value": "안나"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
         }
       }
     },
@@ -3762,6 +4158,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "안나"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
           }
         }
       }
@@ -3816,6 +4218,12 @@
             "state": "translated",
             "value": "보관함"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivo"
+          }
         }
       }
     },
@@ -3868,6 +4276,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보관함이 비어 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo está vazio"
           }
         }
       }
@@ -3922,6 +4336,12 @@
             "state": "translated",
             "value": "보관하면 해당 그룹은 회원님의 목록에서만 숨겨집니다. 지출과 빚은 그대로 유지됩니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivar esconde o grupo apenas da sua lista. As despesas e as dívidas continuam guardadas."
+          }
         }
       }
     },
@@ -3974,6 +4394,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보관"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivar"
           }
         }
       }
@@ -4028,6 +4454,12 @@
             "state": "translated",
             "value": "보관한 그룹이 여기에 표시됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os grupos arquivados aparecerão aqui"
+          }
         }
       }
     },
@@ -4077,6 +4509,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "B"
@@ -4134,6 +4572,12 @@
             "state": "translated",
             "value": "잔액"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldos"
+          }
         }
       }
     },
@@ -4186,6 +4630,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty가 없다면"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem o Splitty"
           }
         }
       }
@@ -4240,6 +4690,12 @@
             "state": "translated",
             "value": "무료 횟수는 곧 회복됩니다. Plus를 이용하시면 일일 제한이 사라집니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As gratuitas voltam em breve. O Plus tira o limite diário de vez"
+          }
         }
       }
     },
@@ -4292,6 +4748,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보리스"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
           }
         }
       }
@@ -4346,6 +4808,12 @@
             "state": "translated",
             "value": "보리스"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
         }
       }
     },
@@ -4398,6 +4866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보관함으로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivar"
           }
         }
       }
@@ -4452,6 +4926,12 @@
             "state": "translated",
             "value": "그룹의 모든 금액은 해당 통화로 표시됩니다. 지출, 빚, 합계 모두 해당됩니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os valores do grupo aparecem na moeda dele: despesas, dívidas e totais."
+          }
         }
       }
     },
@@ -4504,6 +4984,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에 회원님만 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só você está no grupo"
           }
         }
       }
@@ -4558,6 +5044,12 @@
             "state": "translated",
             "value": "어느 그룹에서 정산하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em qual grupo você quer acertar?"
+          }
         }
       }
     },
@@ -4610,6 +5102,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 그룹에 지출이 너무 많이 쌓였습니다. 새 그룹을 만들어 주십시오. 기존 그룹은 계속 열람할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este grupo acumulou despesas demais. Crie um novo — o antigo continua disponível para leitura"
           }
         }
       }
@@ -4664,6 +5162,12 @@
             "state": "translated",
             "value": "회원님이 송금"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VOCÊ TRANSFERE"
+          }
         }
       }
     },
@@ -4716,6 +5220,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "통화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moeda"
           }
         }
       }
@@ -4770,6 +5280,12 @@
             "state": "translated",
             "value": "빚을 돌려받았습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagaram sua dívida"
+          }
         }
       }
     },
@@ -4822,6 +5338,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚을 돌려받았을 때와 회원님의 빚에 대한 알림"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alguém pagou o que devia a você, e lembretes das suas dívidas"
           }
         }
       }
@@ -4876,6 +5398,12 @@
             "state": "translated",
             "value": "받을 금액"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devem a você"
+          }
         }
       }
     },
@@ -4928,6 +5456,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에 초대되거나 추가되었을 때"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convidaram ou adicionaram você a um grupo"
           }
         }
       }
@@ -4982,6 +5516,12 @@
             "state": "translated",
             "value": "회원님의 몫 ₩3,000은 두 번이 아니라 한 번의 송금으로 나갑니다. Splitty가 그룹 내 빚을 상계합니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua parte de R$ 30,00 sai em uma transferência, não em duas: o Splitty compensa as dívidas dentro do grupo."
+          }
         }
       }
     },
@@ -5034,6 +5574,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘 저녁 회원님의 몫"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua parte da noite"
           }
         }
       }
@@ -5088,6 +5634,12 @@
             "state": "translated",
             "value": "회원님의 빚"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suas dívidas"
+          }
         }
       }
     },
@@ -5140,6 +5692,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출 설명을 입력해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite a descrição da despesa"
           }
         }
       }
@@ -5194,6 +5752,12 @@
             "state": "translated",
             "value": "금액을 입력해 주십시오(1 이상의 정수)"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite um valor (número inteiro, no mínimo 1)"
+          }
         }
       }
     },
@@ -5246,6 +5810,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "직접 입력"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digitar manualmente"
           }
         }
       }
@@ -5300,6 +5870,12 @@
             "state": "translated",
             "value": "계속하시려면 손가락을 다시 올려 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coloque o dedo de volta para continuar"
+          }
         }
       }
     },
@@ -5352,6 +5928,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "보관함에서 복원"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tirar do arquivo"
           }
         }
       }
@@ -5406,6 +5988,12 @@
             "state": "translated",
             "value": "버전 %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versão %@"
+          }
         }
       }
     },
@@ -5458,6 +6046,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "동영상"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo"
           }
         }
       }
@@ -5512,6 +6106,12 @@
             "state": "translated",
             "value": "첨부 파일"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anexo"
+          }
         }
       }
     },
@@ -5564,6 +6164,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "첨부 파일"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anexos"
           }
         }
       }
@@ -5618,6 +6224,12 @@
             "state": "translated",
             "value": "주의"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atenção"
+          }
         }
       }
     },
@@ -5670,6 +6282,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "로그인"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar"
           }
         }
       }
@@ -5724,6 +6342,12 @@
             "state": "translated",
             "value": "비밀번호로는 더 이상 로그인할 수 없습니다. 이메일 주소는 계정에 남습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não será mais possível entrar com senha. O endereço continua vinculado à conta."
+          }
         }
       }
     },
@@ -5776,6 +6400,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@(으)로는 더 이상 로그인할 수 없습니다. 다른 로그인 방법은 계속 사용할 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não será mais possível entrar com %@. Os outros métodos continuam funcionando."
           }
         }
       }
@@ -5830,6 +6460,12 @@
             "state": "translated",
             "value": "Google로 로그인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar com o Google"
+          }
         }
       }
     },
@@ -5882,6 +6518,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Telegram으로 로그인"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar com o Telegram"
           }
         }
       }
@@ -5936,6 +6578,12 @@
             "state": "translated",
             "value": "Telegram으로는 더 이상 로그인할 수 없으며, 다음에 봇에 메시지를 보내면 그룹이 없는 별도 프로필이 생성됩니다. 이 Telegram은 다시 연결할 수 없습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não será mais possível entrar com o Telegram, e na próxima mensagem ao bot ele criará um perfil separado, sem os seus grupos. Este Telegram não pode ser vinculado de volta."
+          }
         }
       }
     },
@@ -5988,6 +6636,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구입 복원"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar compras"
           }
         }
       }
@@ -6042,6 +6696,12 @@
             "state": "translated",
             "value": "1인당 정확한 금액을 입력해 주십시오. 비워 두면 「자동」으로 나머지가 균등하게 분배됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite o valor exato por pessoa. Campo vazio significa “automático”: o resto é dividido igualmente"
+          }
         }
       }
     },
@@ -6094,6 +6754,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "전체"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos"
           }
         }
       }
@@ -6148,6 +6814,12 @@
             "state": "translated",
             "value": "모두 정산되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Está tudo acertado"
+          }
         }
       }
     },
@@ -6200,6 +6872,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "모두 정산 완료"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo quitado"
           }
         }
       }
@@ -6254,6 +6932,12 @@
             "state": "translated",
             "value": "모든 참여자가 정산했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os participantes estão quites"
+          }
         }
       }
     },
@@ -6306,6 +6990,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "총 지출"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total gasto"
           }
         }
       }
@@ -6360,6 +7050,12 @@
             "state": "translated",
             "value": "붙여넣기"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colar"
+          }
         }
       }
     },
@@ -6412,6 +7108,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "초대 코드나 링크 전체를 붙여넣어 주십시오. …/join/…과 t.me/split_money_bot?start=room… 모두 사용할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cole o código do convite ou o link inteiro — vale tanto …/join/… quanto t.me/split_money_bot?start=room…"
           }
         }
       }
@@ -6466,6 +7168,12 @@
             "state": "translated",
             "value": "이메일로 로그인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar com e-mail"
+          }
         }
       }
     },
@@ -6518,6 +7226,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google 로그인이 취소되었습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login com o Google cancelado"
           }
         }
       }
@@ -6572,6 +7286,12 @@
             "state": "translated",
             "value": "회원님"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você"
+          }
         }
       }
     },
@@ -6624,6 +7344,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에서 나갔습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você saiu do grupo"
           }
         }
       }
@@ -6678,6 +7404,12 @@
             "state": "translated",
             "value": "회원님의 빚"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você deve"
+          }
         }
       }
     },
@@ -6730,6 +7462,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@을(를) 빚졌습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você deve %@"
           }
         }
       }
@@ -6784,6 +7522,12 @@
             "state": "translated",
             "value": "회원님이 결제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você pagou"
+          }
         }
       }
     },
@@ -6836,6 +7580,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@을(를) 결제했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você pagou %@"
           }
         }
       }
@@ -6890,6 +7640,12 @@
             "state": "translated",
             "value": "참여하지 않았습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você não participa"
+          }
         }
       }
     },
@@ -6942,6 +7698,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원님이 대신 냈습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você emprestou"
           }
         }
       }
@@ -6996,6 +7758,12 @@
             "state": "translated",
             "value": "회원님이 결제 — %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você paga — %@"
+          }
         }
       }
     },
@@ -7048,6 +7816,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "받았습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você recebeu"
           }
         }
       }
@@ -7102,6 +7876,12 @@
             "state": "translated",
             "value": "회원님이 마지막 참여자입니다. 더 이상 필요하지 않다면 그룹을 보관해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você é o último participante. Arquive o grupo se não precisar mais dele"
+          }
         }
       }
     },
@@ -7154,6 +7934,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹 선택"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um grupo"
           }
         }
       }
@@ -7208,6 +7994,12 @@
             "state": "translated",
             "value": "참여자를 한 명 이상 선택해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha pelo menos um participante"
+          }
         }
       }
     },
@@ -7260,6 +8052,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제한 사람 선택"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha quem pagou"
           }
         }
       }
@@ -7314,6 +8112,12 @@
             "state": "translated",
             "value": "「%@」이(가) 누구인지 선택해 주십시오. 영수증의 빨간 표시를 누르십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha quem é “%@”: toque na marca vermelha do recibo"
+          }
         }
       }
     },
@@ -7366,6 +8170,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "로그아웃"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair"
           }
         }
       }
@@ -7420,6 +8230,12 @@
             "state": "translated",
             "value": "모든 기기에서 로그아웃"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair em todos os dispositivos"
+          }
         }
       }
     },
@@ -7472,6 +8288,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」에서 나가시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair de “%@”?"
           }
         }
       }
@@ -7526,6 +8348,12 @@
             "state": "translated",
             "value": "계정에서 로그아웃하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair da sua conta?"
+          }
         }
       }
     },
@@ -7578,6 +8406,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹 나가기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair do grupo"
           }
         }
       }
@@ -7632,6 +8466,12 @@
             "state": "translated",
             "value": "모든 기기에서 로그아웃"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair em todos os dispositivos"
+          }
         }
       }
     },
@@ -7684,6 +8524,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "모든 기기에서 로그아웃하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair em todos os dispositivos?"
           }
         }
       }
@@ -7738,6 +8584,12 @@
             "state": "translated",
             "value": "갤러리"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Galeria"
+          }
         }
       }
     },
@@ -7790,6 +8642,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "손을 떼셔도 됩니다. 편하게 말씀해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pode soltar — fale à vontade"
           }
         }
       }
@@ -7844,6 +8702,12 @@
             "state": "translated",
             "value": "말씀해 주십시오…"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fale…"
+          }
         }
       }
     },
@@ -7896,6 +8760,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "음성 녹음 · %lld초"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravação de voz · %lld s"
           }
         }
       }
@@ -7950,6 +8820,12 @@
             "state": "translated",
             "value": "음성 녹음과 영수증 사진은 Splitty 서버와 이를 지출로 변환하는 외부 모델로 전송됩니다. 생성된 지출은 그룹 안에 남습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A gravação e a foto do recibo vão para o servidor do Splitty e para um modelo de terceiros que os transforma em despesa. A despesa em si fica no seu grupo."
+          }
         }
       }
     },
@@ -8002,6 +8878,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "음성으로도, 영수증 사진으로도 편하신 방법으로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por voz ou pela foto do recibo, como preferir"
           }
         }
       }
@@ -8056,6 +8938,12 @@
             "state": "translated",
             "value": "완료"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto"
+          }
         }
       }
     },
@@ -8108,6 +8996,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "완료 — 지출이 그룹에 추가되었습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronto — a despesa está no grupo"
           }
         }
       }
@@ -8162,6 +9056,12 @@
             "state": "translated",
             "value": "차트 「%@」 — 참여자별 금액"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gráfico “%@” — valores por participante"
+          }
         }
       }
     },
@@ -8214,6 +9114,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "최근 한 달간 일별 지출 차트"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gráfico de gastos por dia no último mês"
           }
         }
       }
@@ -8268,6 +9174,12 @@
             "state": "translated",
             "value": "요일별 지출 차트"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gráfico de gastos por dia da semana"
+          }
         }
       }
     },
@@ -8320,6 +9232,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupo"
           }
         }
       }
@@ -8374,6 +9292,12 @@
             "state": "translated",
             "value": "보관된 그룹"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupo arquivado"
+          }
         }
       }
     },
@@ -8426,6 +9350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹이 목록에서 사라집니다. 참여자의 초대를 받아야만 다시 들어올 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O grupo some da sua lista. Só dá para voltar se um participante convidar você"
           }
         }
       }
@@ -8480,6 +9410,12 @@
             "state": "translated",
             "value": "그룹을 찾을 수 없습니다. 삭제되었거나 초대 링크가 만료되었을 수 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupo não encontrado. Pode ter sido excluído, ou o link do convite expirou"
+          }
         }
       }
     },
@@ -8532,6 +9468,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹은 공동 계산서입니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um grupo é uma conta compartilhada"
           }
         }
       }
@@ -8586,6 +9528,12 @@
             "state": "translated",
             "value": "그룹"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos"
+          }
         }
       }
     },
@@ -8638,6 +9586,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹, 지출, 빚은 계속 무료입니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos, despesas e dívidas continuam gratuitos"
           }
         }
       }
@@ -8692,6 +9646,12 @@
             "state": "translated",
             "value": "다음"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avançar"
+          }
         }
       }
     },
@@ -8744,6 +9704,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 그룹의 데이터는 이전 버전의 것이라 잔액이 맞지 않습니다. 지출과 합계는 이용할 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dados deste grupo vêm de uma versão antiga, por isso os saldos não fecham. As despesas e os totais funcionam."
           }
         }
       }
@@ -8798,6 +9764,12 @@
             "state": "translated",
             "value": "저장된 데이터: 서버에 연결할 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dados salvos: sem conexão com o servidor"
+          }
         }
       }
     },
@@ -8850,6 +9822,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "날짜"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
           }
         }
       }
@@ -8904,6 +9882,12 @@
             "state": "translated",
             "value": "송금 두 번, 확인 두 번"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duas transferências, duas confirmações"
+          }
         }
       }
     },
@@ -8956,6 +9940,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지금은 이 작업을 할 수 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta ação não é possível agora"
           }
         }
       }
@@ -9010,6 +10000,12 @@
             "state": "translated",
             "value": "친구들과 지출을 나누세요"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Divida despesas com os amigos"
+          }
         }
       }
     },
@@ -9062,6 +10058,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "일"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dia"
           }
         }
       }
@@ -9116,6 +10118,12 @@
             "state": "translated",
             "value": "금액은 직접 주고받으십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O dinheiro vocês passam entre si"
+          }
         }
       }
     },
@@ -9168,6 +10176,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "계속 누르고 계십시오. 마이크를 준비하고 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure — o microfone está ligando"
           }
         }
       }
@@ -9222,6 +10236,12 @@
             "state": "translated",
             "value": "참여자별 결제 비율 차트"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gráfico da participação de cada um nos pagamentos"
+          }
         }
       }
     },
@@ -9274,6 +10294,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "필요한 만큼 몇 번이든 지출을 말하거나 영수증을 찍으십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dite a despesa ou fotografe o recibo quantas vezes precisar"
           }
         }
       }
@@ -9328,6 +10354,12 @@
             "state": "translated",
             "value": "추가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar"
+          }
         }
       }
     },
@@ -9380,6 +10412,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar ao grupo"
           }
         }
       }
@@ -9434,6 +10472,12 @@
             "state": "translated",
             "value": "음성으로 추가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar por voz"
+          }
         }
       }
     },
@@ -9486,6 +10530,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "항목 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar item"
           }
         }
       }
@@ -9540,6 +10590,12 @@
             "state": "translated",
             "value": "지출 추가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar despesa"
+          }
         }
       }
     },
@@ -9592,6 +10648,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출 직접 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar despesa manualmente"
           }
         }
       }
@@ -9646,6 +10708,12 @@
             "state": "translated",
             "value": "사진 추가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar foto"
+          }
         }
       }
     },
@@ -9698,6 +10766,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증 사진 추가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar foto do recibo"
           }
         }
       }
@@ -9752,6 +10826,12 @@
             "state": "translated",
             "value": "그룹에 추가됨: %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionado ao grupo: %@"
+          }
         }
       }
     },
@@ -9804,6 +10884,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 추가됨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ adicionado"
           }
         }
       }
@@ -9858,6 +10944,12 @@
             "state": "translated",
             "value": "첫 지출을 추가해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione a primeira despesa"
+          }
         }
       }
     },
@@ -9910,6 +11002,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "첫 지출을 추가하시면 그룹 통계가 여기에 표시됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione a primeira despesa — as estatísticas do grupo aparecerão aqui"
           }
         }
       }
@@ -9964,6 +11062,12 @@
             "state": "translated",
             "value": "첫 지출을 추가하시면 이 목록에 표시됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicione a primeira despesa — ela vai aparecer nesta lista"
+          }
         }
       }
     },
@@ -10016,6 +11120,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "문서"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documento"
           }
         }
       }
@@ -10070,6 +11180,12 @@
             "state": "translated",
             "value": "이 빚은 이미 정산되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta dívida já foi quitada"
+          }
         }
       }
     },
@@ -10122,6 +11238,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dívida: %@"
           }
         }
       }
@@ -10176,6 +11298,12 @@
             "state": "translated",
             "value": "빚"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dívidas"
+          }
         }
       }
     },
@@ -10228,6 +11356,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚이 계산되지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dívidas não calculadas"
           }
         }
       }
@@ -10282,6 +11416,12 @@
             "state": "translated",
             "value": "빚을 상계합니다. 여러 번이 아니라 한 번의 송금으로 끝납니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As dívidas se compensam: uma transferência em vez de várias"
+          }
         }
       }
     },
@@ -10334,6 +11474,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "어느 그룹에도 빚이 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma dívida em nenhum grupo"
           }
         }
       }
@@ -10388,6 +11534,12 @@
             "state": "translated",
             "value": "회원님께 빚짐"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deve a você"
+          }
         }
       }
     },
@@ -10440,6 +11592,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "비율로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por cotas"
           }
         }
       }
@@ -10494,6 +11652,12 @@
             "state": "translated",
             "value": "친구"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amigos"
+          }
         }
       }
     },
@@ -10546,6 +11710,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출이 있는 그룹을 함께 쓰면 친구가 표시됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os amigos aparecem quando vocês tiverem um grupo com despesas"
           }
         }
       }
@@ -10600,6 +11770,12 @@
             "state": "translated",
             "value": "친구는 이미 함께 계산서를 나눈 사람들입니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amigos são as pessoas com quem você já dividiu uma conta"
+          }
         }
       }
     },
@@ -10652,6 +11828,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그의 ₩1,000은 회원님의 몫과 함께 안나 님께 전달됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os R$ 10,00 dele vão para a Anna junto com os seus"
           }
         }
       }
@@ -10813,6 +11995,12 @@
             "state": "translated",
             "value": "전송되지 않은 작업이 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Há operações não enviadas"
+          }
         }
       }
     },
@@ -10865,6 +12053,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "알림이 대기하는 동안 삭제되었을 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pode ter sido excluída enquanto a notificação esperava"
           }
         }
       }
@@ -10919,6 +12113,12 @@
             "state": "translated",
             "value": "%@ 분"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por %@"
+          }
         }
       }
     },
@@ -10971,6 +12171,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음을 종료하고 인식"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parar a gravação e reconhecer"
           }
         }
       }
@@ -11025,6 +12231,12 @@
             "state": "translated",
             "value": "업로드가 중단되었습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O envio foi interrompido. Tente novamente"
+          }
         }
       }
     },
@@ -11077,6 +12289,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "설정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir"
           }
         }
       }
@@ -11131,6 +12349,12 @@
             "state": "translated",
             "value": "아래 마이크를 누른 채\n누가 무엇을 얼마에 먹었는지 말씀해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure o microfone abaixo e diga\nquem pediu o quê e quanto custou"
+          }
         }
       }
     },
@@ -11183,6 +12407,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "닫기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fechar"
           }
         }
       }
@@ -11237,6 +12467,12 @@
             "state": "translated",
             "value": "사진 교체"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trocar foto"
+          }
         }
       }
     },
@@ -11289,6 +12525,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음됨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravado"
           }
         }
       }
@@ -11343,6 +12585,12 @@
             "state": "translated",
             "value": "음성으로 기록"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravar por voz"
+          }
         }
       }
     },
@@ -11395,6 +12643,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제 기록"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrar um pagamento"
           }
         }
       }
@@ -11449,6 +12703,12 @@
             "state": "translated",
             "value": "녹음을 준비하고 있습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A gravação ainda está iniciando. Tente novamente"
+          }
         }
       }
     },
@@ -11501,6 +12761,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음 중"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gravando"
           }
         }
       }
@@ -11555,6 +12821,12 @@
             "state": "translated",
             "value": "시스템이 녹음을 중단했습니다. 다시 말씀해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O sistema interrompeu a gravação. Dite novamente"
+          }
         }
       }
     },
@@ -11607,6 +12879,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A gravação vai para o servidor do Splitty e para um modelo de terceiros para reconhecimento"
           }
         }
       }
@@ -11661,6 +12939,12 @@
             "state": "translated",
             "value": "이 기록은 이 기기에만 저장되어 있으며 아직 서버로 전송되지 않았습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este registro está salvo só neste dispositivo e ainda não foi enviado ao servidor."
+          }
         }
       }
     },
@@ -11713,6 +12997,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제자"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pago por"
           }
         }
       }
@@ -11767,6 +13057,12 @@
             "state": "translated",
             "value": "결제됨"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pago"
+          }
         }
       }
     },
@@ -11819,6 +13115,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "내가 결제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pago por mim"
           }
         }
       }
@@ -11873,6 +13175,12 @@
             "state": "translated",
             "value": "음성으로 입력"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preencher por voz"
+          }
         }
       }
     },
@@ -11925,6 +13233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원가입"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar conta"
           }
         }
       }
@@ -11979,6 +13293,12 @@
             "state": "translated",
             "value": "그룹의 지출과 결제가 여기에 표시됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As despesas e os pagamentos dos seus grupos aparecerão aqui"
+          }
         }
       }
     },
@@ -12031,6 +13351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹의 활동이 여기에 표시됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A atividade dos seus grupos aparecerá aqui"
           }
         }
       }
@@ -12085,6 +13411,12 @@
             "state": "translated",
             "value": "회원님의 그룹에서"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos seus grupos"
+          }
         }
       }
     },
@@ -12137,6 +13469,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "변경 사항이 영수증에 강조 표시됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As mudanças estão destacadas no recibo"
           }
         }
       }
@@ -12191,6 +13529,12 @@
             "state": "translated",
             "value": "변경"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar"
+          }
         }
       }
     },
@@ -12243,6 +13587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름 변경"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar nome"
           }
         }
       }
@@ -12297,6 +13647,12 @@
             "state": "translated",
             "value": "지출 편집"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar despesa"
+          }
         }
       }
     },
@@ -12349,6 +13705,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "또는"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ou"
           }
         }
       }
@@ -12403,6 +13765,12 @@
             "state": "translated",
             "value": "이름"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
+          }
         }
       }
     },
@@ -12455,6 +13823,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름 성"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome Sobrenome"
           }
         }
       }
@@ -12509,6 +13883,12 @@
             "state": "translated",
             "value": "이름을 비워 둘 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O nome não pode ficar vazio"
+          }
         }
       }
     },
@@ -12561,6 +13941,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "합계"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totais"
           }
         }
       }
@@ -12615,6 +14001,12 @@
             "state": "translated",
             "value": "첫 지출을 추가하시면 합계가 표시됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os totais aparecem com a primeira despesa"
+          }
         }
       }
     },
@@ -12667,6 +14059,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "합계"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total"
           }
         }
       }
@@ -12721,6 +14119,12 @@
             "state": "translated",
             "value": "합계 ≥"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total ≥"
+          }
         }
       }
     },
@@ -12773,6 +14177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "코드 없이 한 번의 탭으로 새 그룹에 초대할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dá para convidá-los a novos grupos com um toque, sem código"
           }
         }
       }
@@ -12827,6 +14237,12 @@
             "state": "translated",
             "value": "이 로그인 방법의 다른 계정이 이미 연결되어 있습니다. 먼저 현재 연결을 해제해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outra conta deste método de login já está vinculada. Desvincule a atual primeiro"
+          }
         }
       }
     },
@@ -12879,6 +14295,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누가 무엇을 결제했는가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QUEM PAGOU O QUÊ"
           }
         }
       }
@@ -12933,6 +14355,12 @@
             "state": "translated",
             "value": "카메라"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Câmera"
+          }
         }
       }
     },
@@ -12985,6 +14413,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아래 + 버튼: 말하거나, 영수증을 찍거나, 직접 입력하십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O botão + abaixo: dite, fotografe o recibo ou digite"
           }
         }
       }
@@ -13039,6 +14473,12 @@
             "state": "translated",
             "value": "코드가 올바르지 않거나 만료되었거나 이미 사용되었습니다. 새 코드를 요청해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O código está errado, expirado ou já foi usado. Peça um novo"
+          }
         }
       }
     },
@@ -13091,6 +14531,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "콜라"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refrigerante"
           }
         }
       }
@@ -13145,6 +14591,12 @@
             "state": "translated",
             "value": "개인정보"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidade"
+          }
         }
       }
     },
@@ -13197,6 +14649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "커피"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Café"
           }
         }
       }
@@ -13251,6 +14709,12 @@
             "state": "translated",
             "value": "누가 더 냈고 누가 덜 냈는가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem está no positivo e quem está no negativo"
+          }
         }
       }
     },
@@ -13303,6 +14767,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누가 결제했습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem pagou?"
           }
         }
       }
@@ -13357,6 +14827,12 @@
             "state": "translated",
             "value": "보낸 사람"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem enviou"
+          }
         }
       }
     },
@@ -13409,6 +14885,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제자"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem pagou"
           }
         }
       }
@@ -13463,6 +14945,12 @@
             "state": "translated",
             "value": "받은 사람"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem recebeu"
+          }
         }
       }
     },
@@ -13515,6 +15003,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누가 얼마를 결제했는가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem pagou quanto"
           }
         }
       }
@@ -13569,6 +15063,12 @@
             "state": "translated",
             "value": "참여자"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem participa"
+          }
         }
       }
     },
@@ -13621,6 +15121,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 님은 누구입니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem é %@?"
           }
         }
       }
@@ -13675,6 +15181,12 @@
             "state": "translated",
             "value": "「%@」은(는) 누구입니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem é “%@”?"
+          }
         }
       }
     },
@@ -13727,6 +15239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누군가"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alguém"
           }
         }
       }
@@ -13781,6 +15299,12 @@
             "state": "translated",
             "value": "그룹에서 누군가 지출을 추가하거나 변경했을 때"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alguém adicionou ou alterou uma despesa no seu grupo"
+          }
         }
       }
     },
@@ -13833,6 +15357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결된 어떤 방법으로도 같은 계정에 로그인할 수 있습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualquer método vinculado entra nesta mesma conta."
           }
         }
       }
@@ -13887,6 +15417,12 @@
             "state": "translated",
             "value": "마이크를 다른 앱이나 통화가 사용 중입니다. 종료 후 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O microfone está ocupado por outro app ou uma chamada. Feche-o e tente de novo"
+          }
         }
       }
     },
@@ -13939,6 +15475,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음은 1분까지입니다. 지금까지 말씀하신 내용을 인식합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um minuto é o limite da gravação. Vou reconhecer o que deu tempo de falar"
           }
         }
       }
@@ -13993,6 +15535,12 @@
             "state": "translated",
             "value": "회원님 앞으로 기록된 지출이 남아 있습니다. 해당 지출에서 자신을 빼 주십시오. 회원님이 결제하셨다면 결제자를 변경하거나 지출을 삭제해 주십시오. 지출은 모든 참여자가 편집할 수 있습니다. 그 후에 나갈 수 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda há despesas registradas em seu nome. Tire-se delas — e, se foi você quem pagou, troque o pagador ou exclua a despesa. Qualquer participante pode editar despesas. Depois disso a saída funciona"
+          }
         }
       }
     },
@@ -14045,6 +15593,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연간"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anual"
           }
         }
       }
@@ -14099,6 +15653,12 @@
             "state": "translated",
             "value": "누구를 위해 쓴 것인가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em quem foi gasto"
+          }
         }
       }
     },
@@ -14151,6 +15711,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "월간"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mensal"
           }
         }
       }
@@ -14205,6 +15771,12 @@
             "state": "translated",
             "value": "이 참여자 앞으로 기록된 지출이 남아 있습니다. 해당 지출에서 빼 주십시오. 그가 결제했다면 결제자를 변경하거나 지출을 삭제해 주십시오. 그 후에 삭제할 수 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda há despesas registradas neste participante. Tire-o delas — e, se foi ele quem pagou, troque o pagador ou exclua a despesa. Depois disso dá para removê-lo"
+          }
         }
       }
     },
@@ -14257,6 +15829,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출을 말씀해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dite a despesa em voz alta"
           }
         }
       }
@@ -14311,6 +15889,12 @@
             "state": "translated",
             "value": "끝나시면 눌러 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toque quando terminar"
+          }
         }
       }
     },
@@ -14363,6 +15947,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "뒤로"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar"
           }
         }
       }
@@ -14417,6 +16007,12 @@
             "state": "translated",
             "value": "빚 목록으로 돌아가기"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voltar à lista de dívidas"
+          }
         }
       }
     },
@@ -14469,6 +16065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
           }
         }
       }
@@ -14523,6 +16125,12 @@
             "state": "translated",
             "value": "예: 「이스탄불 여행」 또는 「셰어하우스」."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por exemplo: “Viagem a Istambul” ou “Apartamento”."
+          }
         }
       }
     },
@@ -14575,6 +16183,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "설정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes"
           }
         }
       }
@@ -14629,6 +16243,12 @@
             "state": "translated",
             "value": "그룹 설정"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes do grupo"
+          }
         }
       }
     },
@@ -14681,6 +16301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음을 시작합니다…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Começando a gravar…"
           }
         }
       }
@@ -14735,6 +16361,12 @@
             "state": "translated",
             "value": "그룹부터 시작하십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comece por um grupo"
+          }
         }
       }
     },
@@ -14787,6 +16419,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚을 넘지 않게: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No máximo o valor da dívida: %@"
           }
         }
       }
@@ -14841,6 +16479,12 @@
             "state": "translated",
             "value": "찾을 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não encontrado"
+          }
         }
       }
     },
@@ -14893,6 +16537,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서버에 연결하지 못했습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível falar com o servidor. Tente novamente"
           }
         }
       }
@@ -14947,6 +16597,12 @@
             "state": "translated",
             "value": "현재 비밀번호가 기억나지 않습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não lembro a atual"
+          }
         }
       }
     },
@@ -14999,6 +16655,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹 코드나 링크가 아닌 것 같습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso não parece um código nem um link de grupo"
           }
         }
       }
@@ -15053,6 +16715,12 @@
             "state": "translated",
             "value": "연결되지 않음"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não vinculado"
+          }
         }
       }
     },
@@ -15105,6 +16773,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아닌가요? 아래 마이크를 누르고 계시거나 영수증 사진을 추가해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não ficou certo? Segure o microfone abaixo ou adicione uma foto do recibo"
           }
         }
       }
@@ -15159,6 +16833,12 @@
             "state": "translated",
             "value": "아닌가요? 영수증을 다시 찍거나 아래 마이크를 누르고 계십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não ficou certo? Fotografe o recibo de novo ou segure o microfone abaixo"
+          }
         }
       }
     },
@@ -15211,6 +16891,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "불러오지 못했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível carregar"
           }
         }
       }
@@ -15265,6 +16951,12 @@
             "state": "translated",
             "value": "프로필을 불러오지 못했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível carregar o perfil"
+          }
         }
       }
     },
@@ -15317,6 +17009,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "요금제를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível carregar os planos. Verifique a conexão e tente de novo"
           }
         }
       }
@@ -15371,6 +17069,12 @@
             "state": "translated",
             "value": "Apple 로그인을 시작하지 못했습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível iniciar o login com a Apple. Tente novamente"
+          }
         }
       }
     },
@@ -15423,6 +17127,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음을 시작하지 못했습니다. 마이크 권한을 확인해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível iniciar a gravação. Verifique o acesso ao microfone"
           }
         }
       }
@@ -15477,6 +17187,12 @@
             "state": "translated",
             "value": "Apple 연결을 시작하지 못했습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível iniciar a vinculação com a Apple. Tente novamente"
+          }
         }
       }
     },
@@ -15529,6 +17245,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서버 응답을 처리하지 못했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível processar a resposta do servidor"
           }
         }
       }
@@ -15583,6 +17305,12 @@
             "state": "translated",
             "value": "Google 로그인 창을 열지 못했습니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível abrir a janela de login do Google. Tente novamente"
+          }
         }
       }
     },
@@ -15635,6 +17363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "계정을 확인하지 못했습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível confirmar a conta. Tente novamente"
           }
         }
       }
@@ -15689,6 +17423,12 @@
             "state": "translated",
             "value": "프로필 정보를 가져오지 못했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível obter os dados do seu perfil"
+          }
         }
       }
     },
@@ -15741,6 +17481,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "초대하지 못했습니다: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível convidar: %@"
           }
         }
       }
@@ -15795,6 +17541,12 @@
             "state": "translated",
             "value": "사진을 읽지 못했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler a foto"
+          }
         }
       }
     },
@@ -15847,6 +17599,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "인식하지 못했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não deu para entender"
           }
         }
       }
@@ -15901,6 +17659,12 @@
             "state": "translated",
             "value": "인식하지 못했습니다. 메뉴와 가격을 함께 다시 말씀해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não deu para entender. Fale de novo — com os pratos e os preços"
+          }
         }
       }
     },
@@ -15953,6 +17717,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구입을 완료하지 못했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível concluir a compra"
           }
         }
       }
@@ -16007,6 +17777,12 @@
             "state": "translated",
             "value": "계정을 삭제하지 못했습니다. 계정과 데이터는 그대로입니다. 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível excluir a conta. A conta e os dados estão intactos — tente novamente"
+          }
         }
       }
     },
@@ -16059,6 +17835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이메일 또는 비밀번호가 올바르지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail ou senha incorretos"
           }
         }
       }
@@ -16113,6 +17895,12 @@
             "state": "translated",
             "value": "현재 비밀번호가 올바르지 않습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha atual incorreta"
+          }
         }
       }
     },
@@ -16165,6 +17953,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "로컬 기록이 올바르지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro local inválido"
           }
         }
       }
@@ -16219,6 +18013,12 @@
             "state": "translated",
             "value": "데이터가 올바르지 않습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dados inválidos"
+          }
         }
       }
     },
@@ -16271,6 +18071,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서버 주소가 올바르지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endereço do servidor inválido"
           }
         }
       }
@@ -16325,6 +18131,12 @@
             "state": "translated",
             "value": "유일한 로그인 방법은 해제할 수 없습니다. 먼저 다른 방법을 연결해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não dá para desvincular o único método de login. Vincule outro primeiro"
+          }
         }
       }
     },
@@ -16377,6 +18189,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지원하지 않는 파일 형식입니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formato de arquivo não suportado"
           }
         }
       }
@@ -16431,6 +18249,12 @@
             "state": "translated",
             "value": "계정이 없으신가요? 회원가입"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não tem conta? Criar conta"
+          }
         }
       }
     },
@@ -16483,6 +18307,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚이 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem dívidas"
           }
         }
       }
@@ -16537,6 +18367,12 @@
             "state": "translated",
             "value": "권한이 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem acesso"
+          }
         }
       }
     },
@@ -16589,6 +18425,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "마이크 권한이 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem acesso ao microfone"
           }
         }
       }
@@ -16643,6 +18485,12 @@
             "state": "translated",
             "value": "이 그룹에 접근할 권한이 없습니다. 참여자에게 새 초대를 요청해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem acesso a este grupo. Peça a um participante um convite novo"
+          }
         }
       }
     },
@@ -16695,6 +18543,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "인터넷에 연결되어 있지 않습니다. 네트워크를 확인하고 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão com a internet. Verifique a rede e tente de novo"
           }
         }
       }
@@ -16749,6 +18603,12 @@
             "state": "translated",
             "value": "서버에 연결할 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão com o servidor"
+          }
         }
       }
     },
@@ -16801,6 +18661,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결이 없습니다. 전송되지 않은 작업만 편집할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão. Só dá para editar operações ainda não enviadas"
           }
         }
       }
@@ -16855,6 +18721,12 @@
             "state": "translated",
             "value": "연결이 없습니다. 정산은 온라인에서만 가능합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão. O acerto de contas só funciona online"
+          }
         }
       }
     },
@@ -16907,6 +18779,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 그룹"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novo grupo"
           }
         }
       }
@@ -16961,6 +18839,12 @@
             "state": "translated",
             "value": "새로운 지출, 정산, 초대 등 참여자들의 모든 활동"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novas despesas, acertos e convites — tudo o que os participantes fazem"
+          }
         }
       }
     },
@@ -17013,6 +18897,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 비밀번호"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova senha"
           }
         }
       }
@@ -17067,6 +18957,12 @@
             "state": "translated",
             "value": "새 비밀번호 확인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repita a nova senha"
+          }
         }
       }
     },
@@ -17119,6 +19015,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 소식: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Novidades: %@"
           }
         }
       }
@@ -17173,6 +19075,12 @@
             "state": "translated",
             "value": "확인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
         }
       }
     },
@@ -17225,6 +19133,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "총 잔액"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saldo total"
           }
         }
       }
@@ -17279,6 +19193,12 @@
             "state": "translated",
             "value": "그룹 합계"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total do grupo"
+          }
         }
       }
     },
@@ -17331,6 +19251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "모두를 위한 하나의 계산서"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma conta para todos"
           }
         }
       }
@@ -17385,6 +19311,12 @@
             "state": "translated",
             "value": "확인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
         }
       }
     },
@@ -17437,6 +19369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "해당 사용자는 즉시 그룹에 참여하며 과거를 포함한 모든 지출을 볼 수 있습니다. 앱이 따로 확인하지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elas entram no grupo na hora e verão todas as despesas, inclusive as antigas. O app não vai perguntar antes."
           }
         }
       }
@@ -17491,6 +19429,12 @@
             "state": "translated",
             "value": "지출"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operações"
+          }
         }
       }
     },
@@ -17543,6 +19487,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "건"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operações"
           }
         }
       }
@@ -17597,6 +19547,12 @@
             "state": "translated",
             "value": "회원님과 관련된 내용이 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada que envolva você"
+          }
         }
       }
     },
@@ -17649,6 +19605,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 작업은 그룹에서 삭제되고 잔액이 다시 계산됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A operação vai sumir do grupo e os saldos serão recalculados."
           }
         }
       }
@@ -17703,6 +19665,12 @@
             "state": "translated",
             "value": "이 작업은 그룹에서 삭제되고 잔액이 다시 계산됩니다. 정산은 편집할 수 없으니 잘못된 경우 삭제 후 다시 기록해 주십시오."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A operação vai sumir do grupo e os saldos serão recalculados. Pagamentos não podem ser editados — se houver erro, exclua e registre de novo."
+          }
         }
       }
     },
@@ -17755,6 +19723,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "작업을 찾을 수 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operação não encontrada"
           }
         }
       }
@@ -17809,6 +19783,12 @@
             "state": "translated",
             "value": "설명"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descrição"
+          }
         }
       }
     },
@@ -17861,6 +19841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제는 완료되었으나 아직 확인하지 못했습니다. 연결을 확인해 주십시오. 이용 권한은 자동으로 활성화됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O pagamento foi feito, mas ainda não deu para confirmar. Verifique a conexão — o acesso aparece sozinho"
           }
         }
       }
@@ -18129,6 +20115,12 @@
             "state": "translated",
             "value": "남은 배분: %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falta distribuir: %@"
+          }
         }
       }
     },
@@ -18181,6 +20173,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "확인이 필요합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda a esclarecer"
           }
         }
       }
@@ -18235,6 +20233,12 @@
             "state": "translated",
             "value": "연결 해제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desvincular"
+          }
         }
       }
     },
@@ -18287,6 +20291,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 연결 해제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desvincular %@"
           }
         }
       }
@@ -18341,6 +20351,12 @@
             "state": "translated",
             "value": "이 로그인 방법의 연결을 해제하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desvincular este método de login?"
+          }
         }
       }
     },
@@ -18393,6 +20409,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "거절"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recusar"
           }
         }
       }
@@ -18447,6 +20469,12 @@
             "state": "translated",
             "value": "Telegram에서 봇이 열립니다. 「/report」를 보내고 문제를 한 통의 메시지로 설명해 주십시오. 개발자에게 전달됩니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um bot do Telegram vai abrir. Envie “/report” e descreva o problema em uma mensagem — o relato chega aos desenvolvedores."
+          }
         }
       }
     },
@@ -18499,6 +20527,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "열기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir"
           }
         }
       }
@@ -18553,6 +20587,12 @@
             "state": "translated",
             "value": "열기 / 공유"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir / compartilhar"
+          }
         }
       }
     },
@@ -18605,6 +20645,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "설정 열기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir Ajustes"
           }
         }
       }
@@ -18659,6 +20705,12 @@
             "state": "translated",
             "value": "취소"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar"
+          }
         }
       }
     },
@@ -18711,6 +20763,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "실행 취소"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desfazer"
           }
         }
       }
@@ -18765,6 +20823,12 @@
             "state": "translated",
             "value": "녹음 취소"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar gravação"
+          }
         }
       }
     },
@@ -18817,6 +20881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "링크 보내기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar link"
           }
         }
       }
@@ -18871,6 +20941,12 @@
             "state": "translated",
             "value": "전송 중…"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviando…"
+          }
         }
       }
     },
@@ -18923,6 +20999,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "손을 떼면 취소"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solte para cancelar"
           }
         }
       }
@@ -18977,6 +21059,12 @@
             "state": "translated",
             "value": "손을 떼면 인식 · 위로 밀면 고정"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solte para reconhecer · deslize para cima para travar"
+          }
         }
       }
     },
@@ -19029,6 +21117,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "손을 떼면 인식 · 위로 고정 · 왼쪽으로 취소"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solte para reconhecer · cima para travar · esquerda para cancelar"
           }
         }
       }
@@ -19083,6 +21177,12 @@
             "state": "translated",
             "value": "오프라인 — 변경 사항은 이 기기에 저장됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline — as mudanças são salvas neste dispositivo"
+          }
         }
       }
     },
@@ -19135,6 +21235,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구독하기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assinar"
           }
         }
       }
@@ -19189,6 +21295,12 @@
             "state": "translated",
             "value": "%@에 구독"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assinar por %@"
+          }
         }
       }
     },
@@ -19241,6 +21353,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "오류"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erro"
           }
         }
       }
@@ -19295,6 +21413,12 @@
             "state": "translated",
             "value": "서버 오류(%lld)"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erro do servidor (%lld)"
+          }
         }
       }
     },
@@ -19347,6 +21471,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호가 일치하지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As senhas não coincidem"
           }
         }
       }
@@ -19401,6 +21531,12 @@
             "state": "translated",
             "value": "비밀번호"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha"
+          }
         }
       }
     },
@@ -19453,6 +21589,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호 설정됨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha definida"
           }
         }
       }
@@ -19507,6 +21649,12 @@
             "state": "translated",
             "value": "비밀번호가 변경되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha alterada"
+          }
         }
       }
     },
@@ -19559,6 +21707,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호는 %lld자 이상이어야 합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A senha precisa ter pelo menos %lld caracteres"
           }
         }
       }
@@ -19613,6 +21767,12 @@
             "state": "translated",
             "value": "초과: %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excedeu em: %@"
+          }
         }
       }
     },
@@ -19665,6 +21825,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "피자"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza"
           }
         }
       }
@@ -19719,6 +21885,12 @@
             "state": "translated",
             "value": "한 번만 결제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pague uma vez"
+          }
         }
       }
     },
@@ -19771,6 +21943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹별"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por grupo"
           }
         }
       }
@@ -19825,6 +22003,12 @@
             "state": "translated",
             "value": "금액별"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por valores"
+          }
         }
       }
     },
@@ -19877,6 +22061,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "다시 시도"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tentar de novo"
           }
         }
       }
@@ -19931,6 +22121,12 @@
             "state": "translated",
             "value": "정산하기"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acertar"
+          }
         }
       }
     },
@@ -19983,6 +22179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagamento"
           }
         }
       }
@@ -20037,6 +22239,12 @@
             "state": "translated",
             "value": "빚 상환"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagamento de dívida"
+          }
         }
       }
     },
@@ -20089,6 +22297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "정산은 온라인에서만 가능합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O acerto de contas só funciona online"
           }
         }
       }
@@ -20143,6 +22357,12 @@
             "state": "translated",
             "value": "정산이 기록되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acerto registrado"
+          }
         }
       }
     },
@@ -20195,6 +22415,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "링크나 코드를 공유해 주십시오. 친구는 「참여하기」로 들어옵니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhe o link ou o código — seu amigo entra por “Entrar no grupo”."
           }
         }
       }
@@ -20249,6 +22475,12 @@
             "state": "translated",
             "value": "링크 공유"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhar link"
+          }
         }
       }
     },
@@ -20301,6 +22533,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구독"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assinatura"
           }
         }
       }
@@ -20355,6 +22593,12 @@
             "state": "translated",
             "value": "자동으로 갱신됩니다. Apple ID 설정에서 언제든지 해지할 수 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renova automaticamente. Cancele quando quiser nos ajustes do Apple ID"
+          }
         }
       }
     },
@@ -20407,6 +22651,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "소계"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtotal"
           }
         }
       }
@@ -20461,6 +22711,12 @@
             "state": "translated",
             "value": "여행, 셰어하우스, 저녁 — 누가 무엇을 결제했는가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viagem, apartamento, jantar — quem pagou o quê"
+          }
         }
       }
     },
@@ -20513,6 +22769,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "여행, 셰어하우스, 한 번의 저녁 — 누군가와 나누는 모든 것"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma viagem, um apartamento compartilhado ou um único jantar — tudo o que você divide com alguém"
           }
         }
       }
@@ -20567,6 +22829,12 @@
             "state": "translated",
             "value": "여행, 임대한 집, 한 번의 저녁. 한 사람이 결제하고 모두가 나눕니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma viagem, um apartamento alugado ou um jantar. Uma pessoa paga e todos dividem a despesa."
+          }
         }
       }
     },
@@ -20619,6 +22887,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이미 같은 그룹에 있던 분을 초대할 수 있습니다. 새로운 분은 링크나 초대 코드로 초대하십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dá para convidar quem já esteve em um grupo com você. Alguém novo — por link ou código de convite"
           }
         }
       }
@@ -20673,6 +22947,12 @@
             "state": "translated",
             "value": "항목"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Itens"
+          }
         }
       }
     },
@@ -20725,6 +23005,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증 항목"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Itens do recibo"
           }
         }
       }
@@ -20779,6 +23065,12 @@
             "state": "translated",
             "value": "항목"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Item"
+          }
         }
       }
     },
@@ -20831,6 +23123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "친구를 초대해 지출을 나누세요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convide amigos para dividir as despesas"
           }
         }
       }
@@ -20885,6 +23183,12 @@
             "state": "translated",
             "value": "회원님 앞으로 지출이 기록되어 있는 동안에는 나갈 수 없습니다. 먼저 해당 지출에서 자신을 빼 주십시오."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enquanto houver despesas registradas em seu nome, você não pode sair — tire-se delas primeiro."
+          }
         }
       }
     },
@@ -20937,6 +23241,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아직 초대할 사람이 없습니다. 함께 그룹을 쓴 분들이 여기에 표시됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há quem convidar: as pessoas com quem você dividiu grupos aparecerão aqui."
           }
         }
       }
@@ -20991,6 +23301,12 @@
             "state": "translated",
             "value": "아직 활동이 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda sem atividade"
+          }
         }
       }
     },
@@ -21043,6 +23359,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아직 그룹이 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda sem grupos"
           }
         }
       }
@@ -21097,6 +23419,12 @@
             "state": "translated",
             "value": "아직 친구가 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda sem amigos"
+          }
         }
       }
     },
@@ -21149,6 +23477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아직 지출이 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda sem despesas"
           }
         }
       }
@@ -21203,6 +23537,12 @@
             "state": "translated",
             "value": "그룹에 남아 있게 하는 지출만 표시하고 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrando apenas as despesas que prendem você ao grupo"
+          }
         }
       }
     },
@@ -21255,6 +23595,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "전체 보기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todas"
           }
         }
       }
@@ -21309,6 +23655,12 @@
             "state": "translated",
             "value": "이 지출 보기"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar essas despesas"
+          }
         }
       }
     },
@@ -21361,6 +23713,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구입"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compra"
           }
         }
       }
@@ -21415,6 +23773,12 @@
             "state": "translated",
             "value": "구입 승인 대기 중"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A compra aguarda aprovação"
+          }
         }
       }
     },
@@ -21467,6 +23831,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재 구입할 수 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As compras estão indisponíveis agora"
           }
         }
       }
@@ -21521,6 +23891,12 @@
             "state": "translated",
             "value": "복원할 구입 내역이 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma compra para restaurar"
+          }
         }
       }
     },
@@ -21573,6 +23949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "개인정보 처리방침"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de Privacidade"
           }
         }
       }
@@ -21627,6 +24009,12 @@
             "state": "translated",
             "value": "알겠습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entendi"
+          }
         }
       }
     },
@@ -21679,6 +24067,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "음성으로 수정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrigir por voz"
           }
         }
       }
@@ -21733,6 +24127,12 @@
             "state": "translated",
             "value": "균등"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igualmente"
+          }
         }
       }
     },
@@ -21785,6 +24185,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "균등하게 나누기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividir igualmente"
           }
         }
       }
@@ -21839,6 +24245,12 @@
             "state": "translated",
             "value": "네 명이서 균등하게"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividir igualmente por quatro"
+          }
         }
       }
     },
@@ -21891,6 +24303,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "균등 — 모두 한 몫씩. 더 드셨다면 몫을 늘려 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Igualmente — cada um com uma cota. Comeu mais? Acrescente cotas"
           }
         }
       }
@@ -21945,6 +24363,12 @@
             "state": "translated",
             "value": "마지막 로그인 방법은 해제할 수 없습니다. 해제하면 계정에 들어올 방법이 없어집니다. 먼저 다른 방법을 연결해 주십시오."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não dá para desvincular o último método de login — sem ele não haveria como entrar. Vincule outro primeiro."
+          }
         }
       }
     },
@@ -21997,6 +24421,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "나에게 쓴 금액"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gasto comigo"
           }
         }
       }
@@ -22051,6 +24481,12 @@
             "state": "translated",
             "value": "수정이 적용되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correção aplicada"
+          }
         }
       }
     },
@@ -22103,6 +24539,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출 편집"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edições de despesas"
           }
         }
       }
@@ -22157,6 +24599,12 @@
             "state": "translated",
             "value": "연결됨"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vinculado"
+          }
         }
       }
     },
@@ -22209,6 +24657,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vincular"
           }
         }
       }
@@ -22263,6 +24717,12 @@
             "state": "translated",
             "value": "초대"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convidar"
+          }
         }
       }
     },
@@ -22315,6 +24775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에 초대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convidar para o grupo"
           }
         }
       }
@@ -22369,6 +24835,12 @@
             "state": "translated",
             "value": "이미 같은 그룹에 있던 분을 초대할 수 있습니다. 다른 분께는 링크를 보내 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dá para convidar quem já esteve em um grupo com você. Aos demais, mande um link"
+          }
         }
       }
     },
@@ -22421,6 +24893,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "초대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convite"
           }
         }
       }
@@ -22475,6 +24953,12 @@
             "state": "translated",
             "value": "초대를 보냈습니다. 수락을 기다리는 중: %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convite enviado — aguardando aceite: %@"
+          }
         }
       }
     },
@@ -22527,6 +25011,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "초대"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convites"
           }
         }
       }
@@ -22581,6 +25071,12 @@
             "state": "translated",
             "value": "휴대폰을 분실했을 때 유용합니다. 이 기기를 포함한 모든 기기의 접근 권한이 해제됩니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Útil se o telefone for perdido: o acesso é revogado em todo lugar, inclusive neste aparelho."
+          }
         }
       }
     },
@@ -22633,6 +25129,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "다시 로그인하셔야 합니다. 이 기기도 마찬가지입니다. 이전 기기에는 알림이 오지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você vai precisar entrar de novo — aqui também. Os aparelhos antigos param de receber notificações."
           }
         }
       }
@@ -22687,6 +25189,12 @@
             "state": "translated",
             "value": "앱"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App"
+          }
         }
       }
     },
@@ -22739,6 +25247,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "수락"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceitar"
           }
         }
       }
@@ -22793,6 +25307,12 @@
             "state": "translated",
             "value": "참여하는 중…"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrando…"
+          }
         }
       }
     },
@@ -22845,6 +25365,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "참여하기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar no grupo"
           }
         }
       }
@@ -22899,6 +25425,12 @@
             "state": "translated",
             "value": "코드로 참여"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrar com um código"
+          }
         }
       }
     },
@@ -22951,6 +25483,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹에 참여하는 중…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrando no grupo…"
           }
         }
       }
@@ -23005,6 +25543,12 @@
             "state": "translated",
             "value": "Splitor의 그룹 「%1$@」에 참여하세요: %2$@\n그룹 코드: %3$@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entre no grupo “%1$@” no Splitor: %2$@\nCódigo do grupo: %3$@"
+          }
         }
       }
     },
@@ -23057,6 +25601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증 항목을 확인해 주십시오. 몫이 맞지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confira os itens do recibo — as cotas não fecham"
           }
         }
       }
@@ -23111,6 +25661,12 @@
             "state": "translated",
             "value": "영수증 항목을 확인해 주십시오. 합계가 계산되지 않습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confira os itens do recibo — o total não fecha"
+          }
         }
       }
     },
@@ -23163,6 +25719,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결을 확인하고 다시 시도해 주십시오. 프로필이 로드되면 로그인 방법과 설정을 표시합니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifique a conexão e tente de novo. Vamos mostrar os métodos de login e os ajustes assim que o perfil carregar."
           }
         }
       }
@@ -23217,6 +25779,12 @@
             "state": "translated",
             "value": "지출을 소리 내어 말씀하시면 그룹에 나타납니다. 영수증을 찍거나 직접 입력하셔도 됩니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dite a despesa em voz alta e ela aparece no grupo. Você também pode fotografar o recibo ou digitar."
+          }
         }
       }
     },
@@ -23269,6 +25837,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "식료품"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mercado"
           }
         }
       }
@@ -23323,6 +25897,12 @@
             "state": "translated",
             "value": "비례해서"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proporcionalmente"
+          }
         }
       }
     },
@@ -23375,6 +25955,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "건너뛰기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pular"
           }
         }
       }
@@ -23429,6 +26015,12 @@
             "state": "translated",
             "value": "프로필"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfil"
+          }
         }
       }
     },
@@ -23481,6 +26073,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "프로필이 로드되지 않았습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfil não carregado"
           }
         }
       }
@@ -23535,6 +26133,12 @@
             "state": "translated",
             "value": "프로필은 영구히 삭제되지만, 그룹의 지출과 빚은 그대로 남습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O perfil é excluído para sempre; as despesas e as dívidas continuam nos grupos."
+          }
         }
       }
     },
@@ -23587,6 +26191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "프로필, 이름, 로그인 방법이 영구히 삭제되며 계정은 복구할 수 없습니다.\n\n그룹의 지출과 빚은 남습니다. 참여자에게는 회원님의 이름 대신 「삭제된 사용자」가 표시되며 금액과 계산은 그대로입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O perfil, o nome e os métodos de login serão excluídos para sempre — a conta não pode ser recuperada.\n\nAs despesas e as dívidas continuam nos grupos: os participantes verão “Usuário excluído” no lugar do seu nome, e os valores não mudam."
           }
         }
       }
@@ -23641,6 +26251,12 @@
             "state": "translated",
             "value": "기타"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outros"
+          }
         }
       }
     },
@@ -23693,6 +26309,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹 지출"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DESPESAS DO GRUPO"
           }
         }
       }
@@ -23747,6 +26369,12 @@
             "state": "translated",
             "value": "보관 해제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desarquivar"
+          }
         }
       }
     },
@@ -23799,6 +26427,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "나눌 대상"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividir entre"
           }
         }
       }
@@ -23853,6 +26487,12 @@
             "state": "translated",
             "value": "음성으로 지출을 기록하시려면 설정에서 권한을 허용해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permita o acesso nos Ajustes para ditar despesas por voz"
+          }
         }
       }
     },
@@ -23905,6 +26545,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "일일 제한 없이 인식"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconheça sem limite diário"
           }
         }
       }
@@ -23959,6 +26605,12 @@
             "state": "translated",
             "value": "인식은 온라인에서만 가능합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento só funciona online"
+          }
         }
       }
     },
@@ -24011,6 +26663,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "인식은 서버에서 이루어집니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento acontece no servidor"
           }
         }
       }
@@ -24065,6 +26723,12 @@
             "state": "translated",
             "value": "일일 제한 없는 지출 인식"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecimento de despesas sem limite diário"
+          }
         }
       }
     },
@@ -24117,6 +26781,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재 인식을 이용할 수 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O reconhecimento está indisponível agora"
           }
         }
       }
@@ -24171,6 +26841,12 @@
             "state": "translated",
             "value": "하루에 필요한 만큼 인식"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quantos reconhecimentos por dia você precisar"
+          }
         }
       }
     },
@@ -24223,6 +26899,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "일일 제한 없는 인식"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecimentos sem limite diário"
           }
         }
       }
@@ -24277,6 +26959,12 @@
             "state": "translated",
             "value": "오늘의 인식 횟수를 모두 사용했습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você já usou os reconhecimentos de hoje"
+          }
         }
       }
     },
@@ -24329,6 +27017,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘의 인식 횟수가 남아 있지 않습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seus reconhecimentos de hoje acabaram"
           }
         }
       }
@@ -24383,6 +27077,12 @@
             "state": "translated",
             "value": "음성으로 인식됨"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecido pela sua voz"
+          }
         }
       }
     },
@@ -24435,6 +27135,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증으로 인식됨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecido pelo recibo"
           }
         }
       }
@@ -24489,6 +27195,12 @@
             "state": "translated",
             "value": "인식"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconhecer"
+          }
         }
       }
     },
@@ -24541,6 +27253,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "인식하는 중…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo…"
           }
         }
       }
@@ -24595,6 +27313,12 @@
             "state": "translated",
             "value": "지출"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Despesa"
+          }
         }
       }
     },
@@ -24647,6 +27371,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "다른 사람이 이 지출을 변경했습니다. 다시 열어 편집해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outra pessoa alterou esta despesa. Abra de novo e refaça a sua edição"
           }
         }
       }
@@ -24701,6 +27431,12 @@
             "state": "translated",
             "value": "지출 이름이 바뀌었거나 사진이 추가되었습니다. 금액과 회원님의 몫은 변하지 않았습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma despesa foi renomeada ou ganhou uma foto — o valor e a sua parte não mudaram"
+          }
         }
       }
     },
@@ -24753,6 +27489,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출이 저장되었습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Despesa salva"
           }
         }
       }
@@ -24807,6 +27549,12 @@
             "state": "translated",
             "value": "지출이 저장되었습니다. 연결이 복구되면 전송합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Despesa salva — enviamos assim que você voltar a ficar online"
+          }
         }
       }
     },
@@ -24859,6 +27607,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "지출은 참여자끼리 나눕니다. 지금은 회원님뿐이라 나눌 상대가 없습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As despesas são divididas entre os participantes — enquanto só você estiver aqui, não há com quem dividir"
           }
         }
       }
@@ -24913,6 +27667,12 @@
             "state": "translated",
             "value": "이미 기록된 지출은 그룹에 남습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As despesas já registradas continuam no grupo"
+          }
         }
       }
     },
@@ -24966,6 +27726,12 @@
             "state": "translated",
             "value": "회원가입"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar conta"
+          }
         }
       }
     },
@@ -25015,6 +27781,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Русский"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Русский"
@@ -25072,6 +27844,12 @@
             "state": "translated",
             "value": "S"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
         }
       }
     },
@@ -25124,6 +27902,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누구와 나누십니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Com quem você divide?"
           }
         }
       }
@@ -25178,6 +27962,12 @@
             "state": "translated",
             "value": "누가 얼마를 내야 하는가"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quem deve o quê"
+          }
         }
       }
     },
@@ -25230,6 +28020,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "가장 큰 지출"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maiores despesas"
           }
         }
       }
@@ -25284,6 +28080,12 @@
             "state": "translated",
             "value": "수수료"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxa"
+          }
         }
       }
     },
@@ -25336,6 +28138,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "수수료는 균등하게 나뉩니다. 변경"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A taxa é dividida igualmente. Alterar"
           }
         }
       }
@@ -25390,6 +28198,12 @@
             "state": "translated",
             "value": "수수료는 비례해서 나뉩니다. 변경"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A taxa é dividida proporcionalmente. Alterar"
+          }
         }
       }
     },
@@ -25442,6 +28256,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "초기화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redefinir"
           }
         }
       }
@@ -25496,6 +28316,12 @@
             "state": "translated",
             "value": "비밀번호를 재설정하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redefinir a senha?"
+          }
         }
       }
     },
@@ -25548,6 +28374,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "라이트"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claro"
           }
         }
       }
@@ -25602,6 +28434,12 @@
             "state": "translated",
             "value": "현재 항목별로 나누고 있습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agora está dividido por itens"
+          }
         }
       }
     },
@@ -25654,6 +28492,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재는 이용할 수 없습니다. 나중에 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso não está disponível agora. Tente mais tarde"
           }
         }
       }
@@ -25708,6 +28552,12 @@
             "state": "translated",
             "value": "서버"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Servidor"
+          }
         }
       }
     },
@@ -25760,6 +28610,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "서버 응답이 지연되고 있습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O servidor está demorando. Tente novamente"
           }
         }
       }
@@ -25814,6 +28670,12 @@
             "state": "translated",
             "value": "세션이 만료되었습니다. 다시 로그인해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua sessão expirou. Entre de novo"
+          }
         }
       }
     },
@@ -25866,6 +28728,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "시스템"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sistema"
           }
         }
       }
@@ -25920,6 +28788,12 @@
             "state": "translated",
             "value": "말씀만 하십시오. 저희가 기록합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É só falar — a gente anota"
+          }
         }
       }
     },
@@ -25972,6 +28846,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "한마디면 네 명이 나누는 지출이 완성됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma frase dita vira uma despesa pronta, dividida por quatro"
           }
         }
       }
@@ -26026,6 +28906,12 @@
             "state": "translated",
             "value": "「%@」은(는) 얼마입니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto custa “%@”?"
+          }
         }
       }
     },
@@ -26078,6 +28964,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "요청이 너무 큽니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requisição grande demais"
           }
         }
       }
@@ -26132,6 +29024,12 @@
             "state": "translated",
             "value": "요청이 너무 많습니다. 나중에 다시 시도해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requisições demais. Tente mais tarde"
+          }
         }
       }
     },
@@ -26184,6 +29082,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "듣고 있습니다…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvindo…"
           }
         }
       }
@@ -26238,6 +29142,12 @@
             "state": "translated",
             "value": "비밀번호 변경"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar senha"
+          }
         }
       }
     },
@@ -26290,6 +29200,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "통화를 %@(으)로 변경하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mudar a moeda para %@?"
           }
         }
       }
@@ -26344,6 +29260,12 @@
             "state": "translated",
             "value": "%@(으)로 변경"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mudar para %@"
+          }
         }
       }
     },
@@ -26396,6 +29318,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "먼저 그룹을 선택해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um grupo primeiro"
           }
         }
       }
@@ -26450,6 +29378,12 @@
             "state": "translated",
             "value": "먼저 항목별 담당자를 선택해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro escolha quem é quem nos itens"
+          }
         }
       }
     },
@@ -26502,6 +29436,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "먼저 %@ 님이 누구인지 선택해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro escolha quem é %@"
           }
         }
       }
@@ -26556,6 +29496,12 @@
             "state": "translated",
             "value": "사진은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A foto vai para o servidor do Splitty e para um modelo de terceiros para reconhecimento"
+          }
         }
       }
     },
@@ -26608,6 +29554,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty가 있다면"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Com o Splitty"
           }
         }
       }
@@ -26662,6 +29614,12 @@
             "state": "translated",
             "value": "나 포함"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comigo"
+          }
         }
       }
     },
@@ -26714,6 +29672,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹을 만들거나 초대 코드로 참여해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crie um grupo ou entre com um código de convite"
           }
         }
       }
@@ -26768,6 +29732,12 @@
             "state": "translated",
             "value": "만드는 중…"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criando…"
+          }
         }
       }
     },
@@ -26820,6 +29790,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "만들기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar"
           }
         }
       }
@@ -26874,6 +29850,12 @@
             "state": "translated",
             "value": "그룹 만들기"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar grupo"
+          }
         }
       }
     },
@@ -26926,6 +29908,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "그룹을 만들거나 코드로 참여"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Criar um grupo ou entrar com um código"
           }
         }
       }
@@ -26980,6 +29968,12 @@
             "state": "translated",
             "value": "문제 신고"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatar um problema"
+          }
         }
       }
     },
@@ -27032,6 +30026,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "저장"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvar"
           }
         }
       }
@@ -27086,6 +30086,12 @@
             "state": "translated",
             "value": "로그인 방법"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Métodos de login"
+          }
         }
       }
     },
@@ -27138,6 +30144,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "평균 지출"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Despesa média"
           }
         }
       }
@@ -27192,6 +30204,12 @@
             "state": "translated",
             "value": "링크 또는 코드"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link ou código"
+          }
         }
       }
     },
@@ -27244,6 +30262,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "링크는 아직 지출을 나눈 적이 없는 분들을 위한 것입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O link é para quem ainda não dividiu despesas com você."
           }
         }
       }
@@ -27298,6 +30322,12 @@
             "state": "translated",
             "value": "기존 비밀번호는 사용할 수 없게 됩니다. 새 비밀번호를 설정하시면 %@ 로그인은 계속 이용할 수 있습니다."
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A senha antiga deixa de funcionar; entrar com %@ continua disponível depois que você definir uma nova."
+          }
         }
       }
     },
@@ -27350,6 +30380,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 줄은 영수증에서 삭제되고 합계가 다시 계산됩니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A linha some do recibo e o total é recalculado"
           }
         }
       }
@@ -27404,6 +30440,12 @@
             "state": "translated",
             "value": "금액"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valor"
+          }
         }
       }
     },
@@ -27456,6 +30498,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "금액이 모두 배분되었습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O valor está todo distribuído"
           }
         }
       }
@@ -27510,6 +30558,12 @@
             "state": "translated",
             "value": "금액별"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por valores"
+          }
         }
       }
     },
@@ -27562,6 +30616,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "금액은 환산되지 않습니다. 표기만 그룹 전원에게 바뀝니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os valores não são convertidos — muda só o símbolo, para todo o grupo"
           }
         }
       }
@@ -27616,6 +30676,12 @@
             "state": "translated",
             "value": "참여자 금액의 합은 지출 총액과 일치해야 합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A soma dos valores dos participantes precisa bater com o total da despesa"
+          }
         }
       }
     },
@@ -27668,6 +30734,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증 촬영"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotografar o recibo"
           }
         }
       }
@@ -27722,6 +30794,12 @@
             "state": "translated",
             "value": "지출을 읽고 항목별로 나누는 중"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo a despesa e separando em itens"
+          }
         }
       }
     },
@@ -27774,6 +30852,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "택시"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Táxi"
           }
         }
       }
@@ -27828,6 +30912,12 @@
             "state": "translated",
             "value": "현재 비밀번호"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senha atual"
+          }
         }
       }
     },
@@ -27880,6 +30970,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "테마"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tema"
           }
         }
       }
@@ -27934,6 +31030,12 @@
             "state": "translated",
             "value": "일별 지출"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gastos por dia"
+          }
         }
       }
     },
@@ -27986,6 +31088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "요일별 지출"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gastos por dia da semana"
           }
         }
       }
@@ -28040,6 +31148,12 @@
             "state": "translated",
             "value": "로그인이 필요합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login necessário"
+          }
         }
       }
     },
@@ -28092,6 +31206,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "다크"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escuro"
           }
         }
       }
@@ -28146,6 +31266,12 @@
             "state": "translated",
             "value": "이 그룹에서 회원님의 빚은 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você não tem dívidas neste grupo"
+          }
         }
       }
     },
@@ -28198,6 +31324,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "아직 그룹이 없습니다. 「그룹」 탭에서 만들어 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você ainda não tem grupos — crie um na aba “Grupos”"
           }
         }
       }
@@ -28252,6 +31384,12 @@
             "state": "translated",
             "value": "삭제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover"
+          }
         }
       }
     },
@@ -28304,6 +31442,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 님을 그룹에서 삭제하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover %@ do grupo?"
           }
         }
       }
@@ -28358,6 +31502,12 @@
             "state": "translated",
             "value": "그룹에서 삭제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover do grupo"
+          }
         }
       }
     },
@@ -28410,6 +31560,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "사진 삭제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descartar foto"
           }
         }
       }
@@ -28464,6 +31620,12 @@
             "state": "translated",
             "value": "알림"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificações"
+          }
         }
       }
     },
@@ -28516,6 +31678,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "삭제하는 중…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluindo…"
           }
         }
       }
@@ -28570,6 +31738,12 @@
             "state": "translated",
             "value": "삭제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir"
+          }
         }
       }
     },
@@ -28622,6 +31796,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "계정 삭제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir conta"
           }
         }
       }
@@ -28676,6 +31856,12 @@
             "state": "translated",
             "value": "계정을 삭제하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir a conta?"
+          }
         }
       }
     },
@@ -28728,6 +31914,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "전송되지 않은 지출을 삭제하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir a despesa não enviada?"
           }
         }
       }
@@ -28782,6 +31974,12 @@
             "state": "translated",
             "value": "결제를 삭제하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir o pagamento?"
+          }
         }
       }
     },
@@ -28834,6 +32032,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "항목 삭제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir item"
           }
         }
       }
@@ -28888,6 +32092,12 @@
             "state": "translated",
             "value": "이 항목을 삭제하시겠습니까?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir o item?"
+          }
         }
       }
     },
@@ -28940,6 +32150,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 지출을 삭제하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir a despesa?"
           }
         }
       }
@@ -28994,6 +32210,12 @@
             "state": "translated",
             "value": "수수료 삭제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir taxa"
+          }
         }
       }
     },
@@ -29046,6 +32268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 수수료를 삭제하시겠습니까?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir a taxa?"
           }
         }
       }
@@ -29100,6 +32328,12 @@
             "state": "translated",
             "value": "누른 채 말씀하십시오. 위로 밀면 고정됩니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure e fale; deslize para cima para travar"
+          }
         }
       }
     },
@@ -29152,6 +32386,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누른 채 변경할 내용을 말씀해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure e diga o que mudar"
           }
         }
       }
@@ -29206,6 +32446,12 @@
             "state": "translated",
             "value": "말씀하시는 동안 마이크를 누르고 계시다가 끝나면 손을 떼십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure o microfone enquanto fala e solte quando terminar"
+          }
         }
       }
     },
@@ -29258,6 +32504,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누르고 계시면 말할 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segure para falar"
           }
         }
       }
@@ -29312,6 +32564,12 @@
             "state": "translated",
             "value": "이미 계정이 있으신가요? 로그인"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Já tem conta? Entrar"
+          }
         }
       }
     },
@@ -29364,6 +32622,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "저녁"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jantar"
           }
         }
       }
@@ -29418,6 +32682,12 @@
             "state": "translated",
             "value": "항목의 가격을 입력해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe o preço do item"
+          }
         }
       }
     },
@@ -29470,6 +32740,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "가격을 입력해 주십시오. 「가격?」이라고 표시된 항목을 누르십시오. 또는 「피자는 6,000원」처럼 말씀해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe o preço — toque no item marcado com “preço?”. Ou diga: “a pizza custou 60”"
           }
         }
       }
@@ -29524,6 +32800,12 @@
             "state": "translated",
             "value": "항목의 가격을 입력해 주십시오. 가격이 없으면 몫을 계산할 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe os preços dos itens — sem eles não dá para calcular as cotas"
+          }
         }
       }
     },
@@ -29576,6 +32858,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "구독 관리"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerenciar assinatura"
           }
         }
       }
@@ -29630,6 +32918,12 @@
             "state": "translated",
             "value": "이용약관"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termos"
+          }
         }
       }
     },
@@ -29682,6 +32976,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "참여자"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participante"
           }
         }
       }
@@ -29736,6 +33036,12 @@
             "state": "translated",
             "value": "참여자"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participantes"
+          }
         }
       }
     },
@@ -29788,6 +33094,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "참여자: %lld명"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Participantes: %lld"
           }
         }
       }
@@ -29842,6 +33154,12 @@
             "state": "translated",
             "value": "사진"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto"
+          }
         }
       }
     },
@@ -29894,6 +33212,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증 사진"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto do recibo"
           }
         }
       }
@@ -29948,6 +33272,12 @@
             "state": "translated",
             "value": "가격"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preço"
+          }
         }
       }
     },
@@ -30000,6 +33330,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "영수증을 촬영했습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recibo fotografado"
           }
         }
       }
@@ -30054,6 +33390,12 @@
             "state": "translated",
             "value": "초안이 업데이트되었습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rascunho atualizado"
+          }
         }
       }
     },
@@ -30106,6 +33448,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "저희 쪽에서 문제가 발생했습니다. 다시 시도해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo deu errado do nosso lado. Tente novamente"
           }
         }
       }
@@ -30160,6 +33508,12 @@
             "state": "translated",
             "value": "이 구독은 다른 Splitor 계정의 것입니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta assinatura pertence a outra conta do Splitor"
+          }
         }
       }
     },
@@ -30212,6 +33566,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이미 가입된 이메일입니다. 회원가입 대신 로그인해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este e-mail já está cadastrado. Entre em vez de criar conta"
           }
         }
       }
@@ -30266,6 +33626,12 @@
             "state": "translated",
             "value": "이 계정은 삭제할 수 없습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta conta não pode ser excluída"
+          }
         }
       }
     },
@@ -30318,6 +33684,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 계정은 이미 다른 Splitor 프로필에 연결되어 있습니다. 해당 계정으로 로그인해 주십시오"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta conta já está vinculada a outro perfil do Splitor. Entre por ele"
           }
         }
       }
@@ -30372,6 +33744,12 @@
             "state": "translated",
             "value": "이 계정은 이미 다른 Splitty 프로필에 연결되어 있습니다. 해당 계정으로 로그인해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta conta já está vinculada a outro perfil do Splitty. Entre por ele"
+          }
         }
       }
     },
@@ -30421,6 +33799,12 @@
           }
         },
         "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        },
+        "pt-BR": {
           "stringUnit": {
             "state": "translated",
             "value": "Y"
@@ -30478,6 +33862,12 @@
             "state": "translated",
             "value": "언어"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma"
+          }
         }
       }
     },
@@ -30530,6 +33920,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Telegram 봇 메시지의 언어"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idioma das mensagens do bot no Telegram"
           }
         }
       }
@@ -30584,6 +33980,12 @@
             "state": "translated",
             "value": "자동"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auto"
+          }
         }
       }
     },
@@ -30637,6 +34039,12 @@
             "state": "translated",
             "value": "자동 · %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "auto · %@"
+          }
         }
       }
     },
@@ -30689,6 +34097,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원님 제외"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sem você"
           }
         }
       }
@@ -30850,6 +34264,12 @@
             "state": "translated",
             "value": "정산 완료"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quites"
+          }
         }
       }
     },
@@ -30902,6 +34322,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "받을 금액"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "devem a você"
           }
         }
       }
@@ -30956,6 +34382,12 @@
             "state": "translated",
             "value": "회원님의 몫"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sua parte"
+          }
         }
       }
     },
@@ -31008,6 +34440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원님의 몫: ₩2,000 + ₩1,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sua parte: R$ 20,00 + R$ 10,00"
           }
         }
       }
@@ -31062,6 +34500,12 @@
             "state": "translated",
             "value": "상호 빚"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dívidas mútuas"
+          }
         }
       }
     },
@@ -31114,6 +34558,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "이메일로 로그인"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "entre com e-mail"
           }
         }
       }
@@ -31168,6 +34618,12 @@
             "state": "translated",
             "value": "일"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dom"
+          }
         }
       }
     },
@@ -31220,6 +34676,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "합계"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "total"
           }
         }
       }
@@ -31274,6 +34736,12 @@
             "state": "translated",
             "value": "화"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ter"
+          }
         }
       }
     },
@@ -31326,6 +34794,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원님"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "você"
           }
         }
       }
@@ -31380,6 +34854,12 @@
             "state": "translated",
             "value": "회원님의 빚"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "você deve"
+          }
         }
       }
     },
@@ -31432,6 +34912,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원님이 대신 냈습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "você emprestou"
           }
         }
       }
@@ -31486,6 +34972,12 @@
             "state": "translated",
             "value": "년"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ano"
+          }
         }
       }
     },
@@ -31538,6 +35030,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "세 명이서 나누기"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dividido por três"
           }
         }
       }
@@ -31592,6 +35090,12 @@
             "state": "translated",
             "value": "균등하게 나눔"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dividido igualmente"
+          }
         }
       }
     },
@@ -31644,6 +35148,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "각자 먹은 만큼 비례해서 나눔"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dividido conforme o que cada um consumiu"
           }
         }
       }
@@ -31698,6 +35208,12 @@
             "state": "translated",
             "value": "빚이 계산되지 않습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dívidas não calculadas"
+          }
         }
       }
     },
@@ -31750,6 +35266,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "빚짐"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "deve"
           }
         }
       }
@@ -31804,6 +35326,12 @@
             "state": "translated",
             "value": "회원님께 빚짐"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "deve a você"
+          }
         }
       }
     },
@@ -31856,6 +35384,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "몫"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cota"
           }
         }
       }
@@ -31910,6 +35444,12 @@
             "state": "translated",
             "value": "택시비"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pelo táxi"
+          }
         }
       }
     },
@@ -31962,6 +35502,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "저녁 식사비"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pelo jantar"
           }
         }
       }
@@ -32016,6 +35562,12 @@
             "state": "translated",
             "value": "모두의 몫을 결제"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pagou por todos"
+          }
         }
       }
     },
@@ -32068,6 +35620,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "모두의 몫을 결제"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pagaram por todos"
           }
         }
       }
@@ -32122,6 +35680,12 @@
             "state": "translated",
             "value": "그리고 나눔"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e dividido"
+          }
         }
       }
     },
@@ -32174,6 +35738,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "또는"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ou"
           }
         }
       }
@@ -32228,6 +35798,12 @@
             "state": "translated",
             "value": "누구인지 선택해 주십시오"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "quem é — escolha"
+          }
         }
       }
     },
@@ -32280,6 +35856,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "월"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mês"
           }
         }
       }
@@ -32334,6 +35916,12 @@
             "state": "translated",
             "value": "일부 가격이 입력되지 않았습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "faltam alguns preços"
+          }
         }
       }
     },
@@ -32386,6 +35974,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "전송되지 않음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "não enviado"
           }
         }
       }
@@ -32440,6 +36034,12 @@
             "state": "translated",
             "value": "전송되지 않음 · %@"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "não enviado · %@"
+          }
         }
       }
     },
@@ -32492,6 +36092,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "결제하지 않음"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "não pagaram"
           }
         }
       }
@@ -32546,6 +36152,12 @@
             "state": "translated",
             "value": "피자 8,000원, 콜라 2,000원을 사냐 님과 반씩"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pizza de oitenta e refrigerante de vinte, meio a meio com o Sanya"
+          }
         }
       }
     },
@@ -32598,6 +36210,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "월"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "seg"
           }
         }
       }
@@ -32652,6 +36270,12 @@
             "state": "translated",
             "value": "각 %1$@ × %2$lld"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ cada × %2$lld"
+          }
         }
       }
     },
@@ -32704,6 +36328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "각 ₩1,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 10,00 cada"
           }
         }
       }
@@ -32758,6 +36388,12 @@
             "state": "translated",
             "value": "각 ₩1,000 × 2"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 10,00 cada × 2"
+          }
         }
       }
     },
@@ -32810,6 +36446,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "각 ₩2,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 20,00 cada"
           }
         }
       }
@@ -32864,6 +36506,12 @@
             "state": "translated",
             "value": "각 ₩4,000 × 2"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 40,00 cada × 2"
+          }
         }
       }
     },
@@ -32916,6 +36564,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "각 ₩8,000"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "R$ 80,00 cada"
           }
         }
       }
@@ -32970,6 +36624,12 @@
             "state": "translated",
             "value": "영수증 항목별"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pelos itens do recibo"
+          }
         }
       }
     },
@@ -33022,6 +36682,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "금액별"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "por valores"
           }
         }
       }
@@ -33076,6 +36742,12 @@
             "state": "translated",
             "value": "항목"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "itens"
+          }
         }
       }
     },
@@ -33128,6 +36800,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "항목"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "item"
           }
         }
       }
@@ -33182,6 +36860,12 @@
             "state": "translated",
             "value": "받았습니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recebeu"
+          }
         }
       }
     },
@@ -33234,6 +36918,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "받았습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "receberam"
           }
         }
       }
@@ -33288,6 +36978,12 @@
             "state": "translated",
             "value": "균등"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "igualmente"
+          }
         }
       }
     },
@@ -33340,6 +37036,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "금"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sex"
           }
         }
       }
@@ -33394,6 +37096,12 @@
             "state": "translated",
             "value": "토"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sáb"
+          }
         }
       }
     },
@@ -33446,6 +37154,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "누가 무엇을 먹었는지 말씀하시면 더 정확합니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "diga quem pediu o quê — fica mais preciso"
           }
         }
       }
@@ -33500,6 +37214,12 @@
             "state": "translated",
             "value": "수"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qua"
+          }
         }
       }
     },
@@ -33552,6 +37272,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "숨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "som"
           }
         }
       }
@@ -33606,6 +37332,12 @@
             "state": "translated",
             "value": "정확한 금액"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valores exatos"
+          }
         }
       }
     },
@@ -33658,6 +37390,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "가격 입력"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "informe o preço"
           }
         }
       }
@@ -33712,6 +37450,12 @@
             "state": "translated",
             "value": "참여자"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "a um participante"
+          }
         }
       }
     },
@@ -33764,6 +37508,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "전액"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "por inteiro"
           }
         }
       }
@@ -33818,6 +37568,12 @@
             "state": "translated",
             "value": "가격?"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "preço?"
+          }
         }
       }
     },
@@ -33871,6 +37627,12 @@
             "state": "translated",
             "value": "영수증의 가격이 더 정확합니다"
           }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "os preços do recibo são mais precisos"
+          }
         }
       }
     },
@@ -33923,6 +37685,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "목"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "qui"
           }
         }
       }
