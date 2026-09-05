@@ -442,12 +442,20 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 
 ### Task 15: Verify acceptance criteria
 
-- [ ] `cd ios && xcodegen generate && xcodebuild test -project Splitty.xcodeproj -scheme Splitty -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' -only-testing:SplittyTests`
+- [x] `cd ios && xcodegen generate && xcodebuild test -project Splitty.xcodeproj -scheme Splitty -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2' -only-testing:SplittyTests`
 - [x] `cd android && ./gradlew :app:testDebugUnitTest && ./gradlew :app:lintVitalRelease`
 - [x] `GOTOOLCHAIN=go1.22.12 go build ./... && GOTOOLCHAIN=go1.22.12 go vet ./... && GOTOOLCHAIN=go1.24.6 go test ./internal/...`
 - [x] `python3 scripts/check-store-limits.py` — зелёный на всех десяти локалях
 - [x] пуш на разных локалях подтверждён юнит-тестом из Задачи 8 (живой пуш — ручная проверка, см. Post-Completion)
 - [x] скриншоты из Задачи 11 лежат в `docs/i18n-review/screens/`
+- ➕ ревью: Fable двумя проходами (код и содержание переводов). Найденное
+  поправлено отдельным коммитом. Главное — задвоение пушей у человека со
+  старым телефоном и обновлённым планшетом: запись очереди без языка уходила
+  на ВСЕ токены, включая те, что уже получили свою
+- ➕ по просьбе человека добавлены валюты рынков (JPY, CNY, KRW, BRL): без них
+  комната в Токио считалась в долларах, а незнакомый код показывался как есть.
+  Кадры витрины пересняты на родных валютах
+
 
 ### Task 17: ➕ Скриншоты магазина на новых языках
 
@@ -477,7 +485,7 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 
 - [x] дописать в `CLAUDE.md` таблицу кодов локалей по трём системам
 - [x] зафиксировать правило: новый язык добавляется в каталожные тесты ПЕРВЫМ действием, вместе с таблицей форм CLDR
-- [ ] перенести план в `docs/plans/completed/`
+- [x] перенести план в `docs/plans/completed/`
 
 ## Post-Completion
 
