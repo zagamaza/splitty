@@ -115,6 +115,63 @@ final class LocalizationCatalogTests: XCTestCase {
         XCTAssertEqual(bundle.subtracting(catalogKeys).sorted(), [], "в каталоге нет ключей бандла")
     }
 
+    // MARK: Исходники
+
+    /// Корень исходников приложения — рядом с каталогом.
+    private static let sourcesURL = catalogURL
+        .deletingLastPathComponent()   // Splitty
+
+    /// Литералы, которые обязаны быть в каталоге: у `String(localized:)` это
+    /// весь смысл вызова, у SwiftUI-инициализаторов голый литерал — тоже ключ.
+    private static let localizedCall = try! NSRegularExpression(
+        pattern: #"String\(\s*localized:\s*"([^"\\\n]*)"\s*\)"#
+    )
+    private static let swiftUILiteral = try! NSRegularExpression(
+        pattern: #"\b(?:Text|Label|Button|Toggle|TextField|SecureField|Section|Picker|Link|NavigationLink|Stepper|Menu)\(\s*"([^"\\\n]*[А-Яа-яЁё₽][^"\\\n]*)""#
+    )
+
+    private func swiftSources() throws -> [(path: String, text: String)] {
+        let manager = FileManager.default
+        let enumerator = try XCTUnwrap(manager.enumerator(atPath: Self.sourcesURL.path))
+        var files: [(String, String)] = []
+        for case let name as String in enumerator where name.hasSuffix(".swift") {
+            let url = Self.sourcesURL.appendingPathComponent(name)
+            files.append((name, try String(contentsOf: url, encoding: .utf8)))
+        }
+        XCTAssertGreaterThan(files.count, 30, "исходники не найдены — проверь путь")
+        return files
+    }
+
+    /// Забытая строка не ломает ничего видимого: ключ отсутствует во ВСЕХ
+    /// языках сразу, включая русский, и `String(localized:)` отдаёт сам ключ —
+    /// то есть русский текст. Под русским интерфейсом это неотличимо от
+    /// нормы, а немец с французом читают русский. Остальные проверки набора
+    /// сверяют каталог с бандлом и потому такую строку не видят: её нет ни там,
+    /// ни там. Поймать её можно только со стороны исходников.
+    func testEveryLocalizedLiteralIsInCatalog() throws {
+        let known = Set(try catalog().keys)
+        var problems: [String] = []
+        for (name, text) in try swiftSources() {
+            for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+                let trimmed = line.trimmingCharacters(in: .whitespaces)
+                guard !trimmed.hasPrefix("//") else { continue }
+                let string = String(line)
+                let range = NSRange(string.startIndex..., in: string)
+                for regex in [Self.localizedCall, Self.swiftUILiteral] {
+                    for match in regex.matches(in: string, range: range) {
+                        guard let keyRange = Range(match.range(at: 1), in: string) else { continue }
+                        let key = String(string[keyRange])
+                        guard !key.isEmpty, !known.contains(key) else { continue }
+                        problems.append("\(name): «\(key)»")
+                    }
+                }
+            }
+        }
+        XCTAssertTrue(problems.isEmpty,
+                      "нет в Localizable.xcstrings — под любым языком покажется русский:\n"
+                      + problems.sorted().prefix(15).joined(separator: "\n"))
+    }
+
     // MARK: Тексты
 
     /// Русская ветка не поменялась: ключ и его русское значение совпадают.

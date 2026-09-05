@@ -106,24 +106,70 @@ enum APIError: LocalizedError {
         case .transport:
             return String(localized: "Нет соединения с сервером")
         case .server(let status, let code, let message, _):
-            return message.isEmpty ? Self.fallbackMessage(status: status, code: code) : message
+            // Текст сервера конкретнее нашего: под общим кодом `forbidden` он
+            // объясняет «демонстрационный аккаунт удалить нельзя», а наш
+            // ресурс скажет только «Нет доступа». Но бэкенд отвечает ТОЛЬКО
+            // по-русски — Accept-Language он не смотрит, — поэтому присланное
+            // годится, пока интерфейс русский. На другом языке берём свой
+            // перевод по коду: конкретность не стоит показанной кириллицы.
+            if !message.isEmpty, ServerTextLocale.isRussian {
+                return message
+            }
+            if let known = Self.knownMessage(code: code) {
+                return known
+            }
+            return String(localized: "Ошибка сервера (\(status))")
         case .decoding:
             return String(localized: "Не удалось обработать ответ сервера")
         }
     }
 
-    private static func fallbackMessage(status: Int, code: String) -> String {
+    /// Текст по коду ошибки — основной путь показа, а не запасной. Список
+    /// обязан покрывать ВСЕ коды бэкенда: код, которого здесь нет, уводит
+    /// человека на русский текст сервера. nil — код клиенту незнаком.
+    private static func knownMessage(code: String) -> String? {
         switch code {
         case "validation":
             return String(localized: "Некорректные данные")
+        case "internal":
+            return String(localized: "Что-то пошло не так на нашей стороне. Попробуйте ещё раз")
+        case "unavailable":
+            return String(localized: "Сейчас это недоступно. Попробуйте позже")
         case "unauthorized":
             return String(localized: "Требуется вход")
+        case "invalid_code":
+            return String(localized: "Код неверный, просрочен или уже использован. Запросите новый")
         case "forbidden":
             return String(localized: "Нет доступа")
         case "not_found":
             return String(localized: "Не найдено")
         case "conflict":
             return String(localized: "Действие сейчас невозможно")
+        // Вход и профиль: у каждого отказа свой следующий шаг, и «Ошибка
+        // сервера (409)» на месте «этот email уже зарегистрирован» отправляет
+        // человека регистрироваться заново по кругу.
+        case "email_taken":
+            return String(localized: "Этот email уже зарегистрирован. Войдите вместо регистрации")
+        case "invalid_credentials":
+            return String(localized: "Неверный email или пароль")
+        case "invalid_password":
+            return String(localized: "Неверный текущий пароль")
+        case "identity_taken":
+            return String(localized: "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него")
+        case "identity_already_linked":
+            return String(localized: "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий")
+        case "last_identity":
+            return String(localized: "Нельзя отвязать единственный способ входа. Сначала привяжите другой")
+        case "provider_rejected":
+            return String(localized: "Не удалось подтвердить аккаунт. Попробуйте ещё раз")
+        case "not_a_friend":
+            return String(localized: "Пригласить можно того, с кем у вас уже была общая группа. Остальным отправьте ссылку")
+        // has_operations различает «себя» и «соседа», last_member — нет; оба
+        // разбираются выше, в leaveErrorText, здесь — общий случай.
+        case "has_operations":
+            return String(localized: "На вас записаны расходы. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник. После этого выход сработает")
+        case "last_member":
+            return String(localized: "Вы последний участник. Заархивируйте группу, если она больше не нужна")
         case "room_too_large":
             return String(localized: "В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения")
         case "stale_operation":
@@ -147,7 +193,7 @@ enum APIError: LocalizedError {
         case "ai_disabled":
             return String(localized: "Распознавание сейчас недоступно")
         default:
-            return String(localized: "Ошибка сервера (\(status))")
+            return nil
         }
     }
 }

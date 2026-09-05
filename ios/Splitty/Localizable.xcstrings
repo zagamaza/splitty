@@ -985,6 +985,391 @@
         }
       }
     },
+    "0 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$0.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0 ₽"
+          }
+        }
+      }
+    },
+    "1 перевод": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Überweisung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 transfer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 transferencia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 virement"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 перевод"
+          }
+        }
+      }
+    },
+    "100 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$1.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100 ₽"
+          }
+        }
+      }
+    },
+    "1000 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$10.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "10,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1000 ₽"
+          }
+        }
+      }
+    },
+    "1350 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "13,50 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$13.50"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "13,50 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "13,50 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1350 ₽"
+          }
+        }
+      }
+    },
+    "150 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,50 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$1.50"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,50 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,50 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "150 ₽"
+          }
+        }
+      }
+    },
+    "1500 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$15.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1500 ₽"
+          }
+        }
+      }
+    },
+    "2 перевода": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 Überweisungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 transfers"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 transferencias"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 virements"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 перевода"
+          }
+        }
+      }
+    },
+    "2 поз.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 Pos."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 items"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 art."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 art."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 поз."
+          }
+        }
+      }
+    },
+    "200 + 100 Бори": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 € + 1,00 € von Boris"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$2.00 + Boris’s $1.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 € + 1,00 € de Boris"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 € + 1,00 € de Boris"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "200 + 100 Бори"
+          }
+        }
+      }
+    },
+    "200 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$2.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "200 ₽"
+          }
+        }
+      }
+    },
     "3 200 ₽": {
       "extractionState": "manual",
       "localizations": {
@@ -1016,6 +1401,181 @@
           "stringUnit": {
             "state": "translated",
             "value": "3 200 ₽"
+          }
+        }
+      }
+    },
+    "300 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$3.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "300 ₽"
+          }
+        }
+      }
+    },
+    "450 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4,50 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$4.50"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4,50 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4,50 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "450 ₽"
+          }
+        }
+      }
+    },
+    "600 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$6.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "600 ₽"
+          }
+        }
+      }
+    },
+    "800 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$8.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "8,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "800 ₽"
+          }
+        }
+      }
+    },
+    "900 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "9,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$9.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "9,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "9,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "900 ₽"
           }
         }
       }
@@ -1405,6 +1965,111 @@
         }
       }
     },
+    "Splitor только ведёт учёт": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor führt nur die Abrechnung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor only keeps the books"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor solo lleva las cuentas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor ne fait que tenir les comptes"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor только ведёт учёт"
+          }
+        }
+      }
+    },
+    "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty teilt jede Ausgabe unter den Teilnehmern auf. Abendessen für 6,00 € durch drei sind je 2,00 €, Taxi für 3,00 € je 1,00 €."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty divides every expense among the members. A $6.00 dinner for three is $2.00 each, a $3.00 taxi is $1.00 each."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty divide cada gasto entre los participantes. Una cena de 6,00 € entre tres son 2,00 € cada uno; un taxi de 3,00 €, 1,00 € cada uno."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty répartit chaque dépense entre les participants. Un dîner à 6,00 € pour trois, c’est 2,00 € chacun ; un taxi à 3,00 €, 1,00 € chacun."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100."
+          }
+        }
+      }
+    },
+    "Splitty только записывает: деньги передайте наличными или переводом": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty hält es nur fest: Das Geld übergibst du bar oder per Überweisung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty only records it: hand over the money in cash or by transfer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty solo lo anota: el dinero lo entregas en efectivo o por transferencia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty ne fait que l’enregistrer : l’argent se remet en espèces ou par virement"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty только записывает: деньги передайте наличными или переводом"
+          }
+        }
+      }
+    },
     "Telegram": {
       "extractionState": "manual",
       "localizations": {
@@ -1586,25 +2251,25 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Dinner 32, split four ways”"
+            "value": "“Dinner $32.00, split four ways”"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "«Cena 32, dividida entre cuatro»"
+            "value": "«Cena 32,00 €, dividida entre cuatro»"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "„Abendessen 32, durch vier geteilt“"
+            "value": "„Abendessen 32,00 €, durch vier geteilt“"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "« Dîner 32, partagé en quatre »"
+            "value": "« Dîner 32,00 €, partagé en quatre »"
           }
         },
         "ru": {
@@ -1720,6 +2385,41 @@
         }
       }
     },
+    "А": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "А"
+          }
+        }
+      }
+    },
     "Аккаунт удалён, но очистка данных не завершена. Нажмите «Удалить аккаунт» ещё раз, чтобы её доделать": {
       "extractionState": "manual",
       "localizations": {
@@ -1751,6 +2451,111 @@
           "stringUnit": {
             "state": "translated",
             "value": "Аккаунт удалён, но очистка данных не завершена. Нажмите «Удалить аккаунт» ещё раз, чтобы её доделать"
+          }
+        }
+      }
+    },
+    "Активна": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активна"
+          }
+        }
+      }
+    },
+    "Ане": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ana"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ане"
+          }
+        }
+      }
+    },
+    "Аня": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ana"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anna"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Аня"
           }
         }
       }
@@ -1930,6 +2735,41 @@
         }
       }
     },
+    "Б": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Б"
+          }
+        }
+      }
+    },
     "Балансы": {
       "extractionState": "manual",
       "localizations": {
@@ -1961,6 +2801,181 @@
           "stringUnit": {
             "state": "translated",
             "value": "Балансы"
+          }
+        }
+      }
+    },
+    "Без Splitty": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Splitty"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Without Splitty"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin Splitty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans Splitty"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без Splitty"
+          }
+        }
+      }
+    },
+    "Бесплатные скоро вернутся. Plus снимает суточный лимит совсем": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die kostenlosen kommen bald zurück. Plus hebt das Tageslimit ganz auf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The free ones are back soon. Plus removes the daily limit entirely"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los gratuitos vuelven pronto. Plus elimina el límite diario por completo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les gratuites reviennent bientôt. Plus supprime complètement la limite quotidienne"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бесплатные скоро вернутся. Plus снимает суточный лимит совсем"
+          }
+        }
+      }
+    },
+    "Боре": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Боре"
+          }
+        }
+      }
+    },
+    "Боря": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boris"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Боря"
+          }
+        }
+      }
+    },
+    "В архив": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiver"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В архив"
           }
         }
       }
@@ -2070,6 +3085,76 @@
         }
       }
     },
+    "В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In dieser Gruppe haben sich zu viele Ausgaben angesammelt. Lege eine neue an — die alte bleibt lesbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This group has piled up too many expenses. Start a new one — the old one stays readable"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este grupo acumula demasiados gastos. Crea uno nuevo: el antiguo seguirá disponible para leer"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce groupe a accumulé trop de dépenses. Créez-en un nouveau — l’ancien restera consultable"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения"
+          }
+        }
+      }
+    },
+    "ВАМ ПЕРЕВОДИТЬ": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DU ÜBERWEIST"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YOU TRANSFER"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TÚ TRANSFIERES"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VOUS VIREZ"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ВАМ ПЕРЕВОДИТЬ"
+          }
+        }
+      }
+    },
     "Валюта": {
       "extractionState": "manual",
       "localizations": {
@@ -2140,6 +3225,41 @@
         }
       }
     },
+    "Вам вернули долг, и напоминания о ваших долгах": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Schuld wurde dir zurückgezahlt, dazu Erinnerungen an deine eigenen Schulden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A debt was repaid to you, plus reminders about your own debts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te han devuelto una deuda, y recordatorios de las tuyas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une dette vous a été remboursée, et rappels de vos propres dettes"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вам вернули долг, и напоминания о ваших долгах"
+          }
+        }
+      }
+    },
     "Вам должны": {
       "extractionState": "manual",
       "localizations": {
@@ -2206,6 +3326,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вас пригласили или добавили в группу"
+          }
+        }
+      }
+    },
+    "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Anteil von 3,00 € geht als eine Überweisung statt zweier: Splitty verrechnet die Schulden innerhalb der Gruppe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your $3.00 share goes out as one transfer instead of two: Splitty nets the debts inside the group."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu parte de 3,00 € sale en una sola transferencia en vez de dos: Splitty compensa las deudas dentro del grupo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre part de 3,00 € part en un seul virement au lieu de deux : Splitty compense les dettes au sein du groupe."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы."
+          }
+        }
+      }
+    },
+    "Ваша доля за вечер": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Anteil für den Abend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your share for the evening"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu parte de la noche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre part de la soirée"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ваша доля за вечер"
           }
         }
       }
@@ -2381,6 +3571,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Верните палец, чтобы продолжить"
+          }
+        }
+      }
+    },
+    "Вернуть из архива": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus dem Archiv holen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore from archive"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sacar del archivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortir de l’archive"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вернуть из архива"
           }
         }
       }
@@ -2875,6 +4100,41 @@
         }
       }
     },
+    "Все в расчёте": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle sind quitt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everyone’s settled up"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos en paz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout le monde est quitte"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все в расчёте"
+          }
+        }
+      }
+    },
     "Все долги погашены": {
       "extractionState": "manual",
       "localizations": {
@@ -3151,6 +4411,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вы"
+          }
+        }
+      }
+    },
+    "Вы вышли из группы": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast die Gruppe verlassen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’ve left the group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has salido del grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez quitté le groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вы вышли из группы"
           }
         }
       }
@@ -3645,6 +4940,41 @@
         }
       }
     },
+    "Выйти везде": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überall abmelden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out everywhere"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar en todos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout déconnecter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выйти везде"
+          }
+        }
+      }
+    },
     "Выйти из «%@»?": {
       "extractionState": "manual",
       "localizations": {
@@ -3746,6 +5076,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выйти из группы"
+          }
+        }
+      }
+    },
+    "Выйти на всех устройствах": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf allen Geräten abmelden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out on all devices"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar sesión en todos los dispositivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se déconnecter sur tous les appareils"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выйти на всех устройствах"
+          }
+        }
+      }
+    },
+    "Выйти на всех устройствах?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf allen Geräten abmelden?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out on all devices?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Cerrar sesión en todos los dispositivos?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se déconnecter sur tous les appareils ?"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выйти на всех устройствах?"
           }
         }
       }
@@ -3890,6 +5290,41 @@
         }
       }
     },
+    "Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Sprachaufnahme und das Belegfoto gehen an den Splitty-Server und an ein Drittanbieter-Modell, das daraus eine Ausgabe macht. Die Ausgabe selbst bleibt in deiner Gruppe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The voice recording and the receipt photo go to the Splitty server and to a third-party model that turns them into an expense. The expense itself stays in your group."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La grabación de voz y la foto del recibo se envían al servidor de Splitty y a un modelo de terceros que los convierte en un gasto. El gasto en sí permanece en tu grupo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’enregistrement vocal et la photo du ticket partent vers le serveur Splitty et vers un modèle tiers qui les transforme en dépense. La dépense elle-même reste dans votre groupe."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе."
+          }
+        }
+      }
+    },
     "Голосом или фото чека — как удобно": {
       "extractionState": "manual",
       "localizations": {
@@ -3956,6 +5391,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Готово"
+          }
+        }
+      }
+    },
+    "Готово — расход в группе": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig — die Ausgabe ist in der Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done — the expense is in the group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listo: el gasto está en el grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminé — la dépense est dans le groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готово — расход в группе"
           }
         }
       }
@@ -4205,6 +5675,41 @@
         }
       }
     },
+    "Группа — это общий счёт": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Gruppe ist eine gemeinsame Rechnung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A group is a shared bill"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un grupo es una cuenta común"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un groupe, c’est une note commune"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Группа — это общий счёт"
+          }
+        }
+      }
+    },
     "Группы": {
       "extractionState": "manual",
       "localizations": {
@@ -4275,6 +5780,41 @@
         }
       }
     },
+    "Далее": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siguiente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivant"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Далее"
+          }
+        }
+      }
+    },
     "Данные группы из старой версии — балансы не сходятся. Операции и итоги доступны.": {
       "extractionState": "manual",
       "localizations": {
@@ -4310,6 +5850,41 @@
         }
       }
     },
+    "Данные сохранённые: связи с сервером нет": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherte Daten: keine Verbindung zum Server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved data: no connection to the server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos guardados: sin conexión con el servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données enregistrées : pas de connexion au serveur"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Данные сохранённые: связи с сервером нет"
+          }
+        }
+      }
+    },
     "Дата": {
       "extractionState": "manual",
       "localizations": {
@@ -4341,6 +5916,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Дата"
+          }
+        }
+      }
+    },
+    "Два перевода, два подтверждения": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei Überweisungen, zwei Bestätigungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two transfers, two confirmations"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos transferencias, dos confirmaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux virements, deux confirmations"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Два перевода, два подтверждения"
           }
         }
       }
@@ -4450,6 +6060,41 @@
         }
       }
     },
+    "Деньги передаёте сами": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Geld überweist du selbst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You move the money yourself"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El dinero lo mueves tú"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’argent, vous le transférez vous-même"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Деньги передаёте сами"
+          }
+        }
+      }
+    },
     "Держите палец — микрофон включается": {
       "extractionState": "manual",
       "localizations": {
@@ -4516,6 +6161,111 @@
           "stringUnit": {
             "state": "translated",
             "value": "Диаграмма долей участников в оплатах"
+          }
+        }
+      }
+    },
+    "Диктуйте расход или снимайте чек столько раз, сколько нужно": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktiere Ausgaben oder fotografiere Belege so oft du willst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictate an expense or snap a receipt as many times as you need"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dicta un gasto o fotografía un recibo tantas veces como necesites"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictez une dépense ou photographiez un ticket autant de fois que nécessaire"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Диктуйте расход или снимайте чек столько раз, сколько нужно"
+          }
+        }
+      }
+    },
+    "Добавить": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить"
+          }
+        }
+      }
+    },
+    "Добавить в группу": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zur Gruppe hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir al grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter au groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить в группу"
           }
         }
       }
@@ -4660,6 +6410,41 @@
         }
       }
     },
+    "Добавить фото": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto hinzufügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add photo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une photo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить фото"
+          }
+        }
+      }
+    },
     "Добавить фото чека": {
       "extractionState": "manual",
       "localizations": {
@@ -4761,6 +6546,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Добавлено %@"
+          }
+        }
+      }
+    },
+    "Добавьте первый расход": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge die erste Ausgabe hinzu"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add your first expense"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade el primer gasto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez la première dépense"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте первый расход"
           }
         }
       }
@@ -5010,6 +6830,41 @@
         }
       }
     },
+    "Долги сводятся: один перевод вместо нескольких": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schulden werden verrechnet: eine Überweisung statt mehrerer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debts are netted: one transfer instead of several"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las deudas se compensan: una transferencia en vez de varias"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les dettes sont compensées : un virement au lieu de plusieurs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Долги сводятся: один перевод вместо нескольких"
+          }
+        }
+      }
+    },
     "Долгов по группам нет": {
       "extractionState": "manual",
       "localizations": {
@@ -5181,6 +7036,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Друзья появятся, когда у вас будут общие группы с расходами"
+          }
+        }
+      }
+    },
+    "Друзья — те, с кем уже был общий счёт": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freunde sind die, mit denen du schon eine gemeinsame Rechnung hattest"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Friends are the people you’ve already shared a bill with"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los amigos son quienes ya han compartido una cuenta contigo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les amis sont ceux avec qui vous avez déjà partagé une note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Друзья — те, с кем уже был общий счёт"
+          }
+        }
+      }
+    },
+    "Его 100 ₽ уходят Ане вместе с вашими": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seine 1,00 € gehen zusammen mit deinen an Anna"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "His $1.00 goes to Anna together with yours"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su 1,00 € va a Ana junto con el tuyo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Son 1,00 € part chez Anna avec le vôtre"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Его 100 ₽ уходят Ане вместе с вашими"
           }
         }
       }
@@ -5572,6 +7497,41 @@
         }
       }
     },
+    "Заменить фото": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto ersetzen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace photo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacer la photo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заменить фото"
+          }
+        }
+      }
+    },
     "Записано": {
       "extractionState": "manual",
       "localizations": {
@@ -5778,6 +7738,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Запись прервана системой. Продиктуйте ещё раз"
+          }
+        }
+      }
+    },
+    "Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Aufnahme geht an den Splitty-Server und an ein Drittanbieter-Modell zur Erkennung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The recording goes to the Splitty server and to a third-party model for recognition"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La grabación se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’enregistrement part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания"
           }
         }
       }
@@ -6023,6 +8018,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Здесь появятся расходы и платежи ваших групп"
+          }
+        }
+      }
+    },
+    "Здесь появятся события ваших групп": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier erscheinen die Ereignisse deiner Gruppen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your groups’ activity will show up here"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aquí aparecerá la actividad de tus grupos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’activité de vos groupes apparaîtra ici"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Здесь появятся события ваших групп"
           }
         }
       }
@@ -6377,6 +8407,41 @@
         }
       }
     },
+    "Итоги появятся с первым расходом": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Auswertung erscheint mit der ersten Ausgabe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totals appear with the first expense"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los totales aparecerán con el primer gasto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les totaux apparaîtront avec la première dépense"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Итоги появятся с первым расходом"
+          }
+        }
+      }
+    },
     "Итого": {
       "extractionState": "manual",
       "localizations": {
@@ -6447,6 +8512,41 @@
         }
       }
     },
+    "Их можно звать в новые группы одним тапом, без кода": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du kannst sie mit einem Tipp in neue Gruppen holen, ganz ohne Code"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can invite them to new groups in one tap, without a code"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes invitarlos a nuevos grupos con un toque, sin código"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez les inviter dans de nouveaux groupes en un geste, sans code"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Их можно звать в новые группы одним тапом, без кода"
+          }
+        }
+      }
+    },
     "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий": {
       "extractionState": "manual",
       "localizations": {
@@ -6478,6 +8578,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий"
+          }
+        }
+      }
+    },
+    "КТО ЗА ЧТО ЗАПЛАТИЛ": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WER WAS BEZAHLT HAT"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WHO PAID FOR WHAT"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QUIÉN PAGÓ QUÉ"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "QUI A PAYÉ QUOI"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "КТО ЗА ЧТО ЗАПЛАТИЛ"
           }
         }
       }
@@ -6517,6 +8652,111 @@
         }
       }
     },
+    "Кнопка + внизу: продиктуйте, снимите чек или впишите руками": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Taste + unten: diktieren, den Beleg fotografieren oder eintippen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The + button below: dictate it, snap the receipt or type it in"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El botón + de abajo: dicta, fotografía el recibo o escríbelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le bouton + en bas : dictez, photographiez le ticket ou saisissez-la"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кнопка + внизу: продиктуйте, снимите чек или впишите руками"
+          }
+        }
+      }
+    },
+    "Код неверный, просрочен или уже использован. Запросите новый": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Code ist falsch, abgelaufen oder schon benutzt. Fordere einen neuen an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The code is wrong, expired or already used. Request a new one"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El código es incorrecto, caducó o ya se usó. Pide uno nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le code est incorrect, expiré ou déjà utilisé. Demandez-en un nouveau"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Код неверный, просрочен или уже использован. Запросите новый"
+          }
+        }
+      }
+    },
+    "Кола": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cola"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cola"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cola"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cola"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кола"
+          }
+        }
+      }
+    },
     "Конфиденциальность": {
       "extractionState": "manual",
       "localizations": {
@@ -6548,6 +8788,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Конфиденциальность"
+          }
+        }
+      }
+    },
+    "Кофе": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kaffee"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coffee"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Café"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Café"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кофе"
           }
         }
       }
@@ -6723,6 +8998,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Кто получил"
+          }
+        }
+      }
+    },
+    "Кто сколько заплатил": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer wie viel bezahlt hat"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Who paid how much"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quién pagó cuánto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qui a payé combien"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Кто сколько заплатил"
           }
         }
       }
@@ -6933,6 +9243,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Любым из привязанных способов можно войти в этот же аккаунт."
+          }
+        }
+      }
+    },
+    "Микрофон занят другим приложением или звонком. Закройте его и попробуйте ещё раз": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Mikrofon wird von einer anderen App oder einem Anruf belegt. Schließe sie und versuche es erneut"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The microphone is busy with another app or a call. Close it and try again"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El micrófono está ocupado por otra app o una llamada. Ciérrala e inténtalo de nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le micro est utilisé par une autre app ou un appel. Fermez-la et réessayez"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Микрофон занят другим приложением или звонком. Закройте его и попробуйте ещё раз"
           }
         }
       }
@@ -7462,6 +9807,41 @@
         }
       }
     },
+    "Начните с группы": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beginne mit einer Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start with a group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empieza por un grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commencez par un groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начните с группы"
+          }
+        }
+      }
+    },
     "Не больше долга: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -7707,6 +10087,41 @@
         }
       }
     },
+    "Не то? Снимите чек ещё раз или зажмите микрофон внизу": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht richtig? Fotografiere den Beleg erneut oder halte unten das Mikrofon gedrückt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not right? Photograph the receipt again or hold the microphone below"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿No es eso? Vuelve a fotografiar el recibo o mantén pulsado el micrófono de abajo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas ça ? Reprenez le ticket en photo ou maintenez le micro en bas"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не то? Снимите чек ещё раз или зажмите микрофон внизу"
+          }
+        }
+      }
+    },
     "Не удалось загрузить": {
       "extractionState": "manual",
       "localizations": {
@@ -7738,6 +10153,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось загрузить"
+          }
+        }
+      }
+    },
+    "Не удалось загрузить профиль": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil konnte nicht geladen werden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t load the profile"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo cargar el perfil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de charger le profil"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось загрузить профиль"
           }
         }
       }
@@ -8057,6 +10507,41 @@
         }
       }
     },
+    "Не удалось прочитать фото": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto konnte nicht gelesen werden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t read the photo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer la foto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de lire la photo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось прочитать фото"
+          }
+        }
+      }
+    },
     "Не удалось распознать": {
       "extractionState": "manual",
       "localizations": {
@@ -8193,6 +10678,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не удалось удалить аккаунт. Аккаунт и данные на месте — попробуйте ещё раз"
+          }
+        }
+      }
+    },
+    "Неверный email или пароль": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-Mail oder Passwort ist falsch"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wrong email or password"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correo o contraseña incorrectos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "E-mail ou mot de passe incorrect"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неверный email или пароль"
           }
         }
       }
@@ -8757,6 +11277,41 @@
         }
       }
     },
+    "Новые расходы, погашения и приглашения — всё, что делают участники": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Ausgaben, Rückzahlungen und Einladungen — alles, was die Teilnehmer tun"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New expenses, settlements and invites — everything the members do"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevos gastos, pagos e invitaciones: todo lo que hacen los participantes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelles dépenses, remboursements et invitations — tout ce que font les participants"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новые расходы, погашения и приглашения — всё, что делают участники"
+          }
+        }
+      }
+    },
     "Новый пароль": {
       "extractionState": "manual",
       "localizations": {
@@ -8932,6 +11487,76 @@
         }
       }
     },
+    "Общий счёт группы": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamtrechnung der Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group total"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta común del grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note commune du groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Общий счёт группы"
+          }
+        }
+      }
+    },
+    "Общий счёт на всех": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Rechnung für alle"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One bill for everyone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuenta para todos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une note pour tous"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Общий счёт на всех"
+          }
+        }
+      }
+    },
     "Ок": {
       "extractionState": "manual",
       "localizations": {
@@ -8963,6 +11588,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ок"
+          }
+        }
+      }
+    },
+    "Они окажутся в группе сразу и увидят все расходы, включая прошлые. Спрашивать их приложение не будет.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie sind sofort in der Gruppe und sehen alle Ausgaben, auch die früheren. Die App fragt sie nicht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They join the group right away and will see every expense, including past ones. The app won’t ask them first."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entrarán en el grupo de inmediato y verán todos los gastos, incluidos los anteriores. La app no les preguntará."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ils rejoignent le groupe immédiatement et verront toutes les dépenses, y compris les anciennes. L’app ne leur demandera rien."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они окажутся в группе сразу и увидят все расходы, включая прошлые. Спрашивать их приложение не будет."
           }
         }
       }
@@ -9671,6 +12331,41 @@
         }
       }
     },
+    "Откроется бот в Telegram. Отправьте ему «/report» и опишите проблему одним сообщением — репорт придёт разработчикам.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Telegram-Bot öffnet sich. Sende ihm „/report“ und beschreibe das Problem in einer Nachricht — der Bericht geht an die Entwickler."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Telegram bot will open. Send it “/report” and describe the problem in one message — the report goes to the developers."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se abrirá un bot de Telegram. Envíale «/report» y describe el problema en un solo mensaje: el informe llegará a los desarrolladores."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un bot Telegram s’ouvrira. Envoyez-lui « /report » et décrivez le problème en un message — le rapport ira aux développeurs."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Откроется бот в Telegram. Отправьте ему «/report» и опишите проблему одним сообщением — репорт придёт разработчикам."
+          }
+        }
+      }
+    },
     "Открыть": {
       "extractionState": "manual",
       "localizations": {
@@ -9986,6 +12681,41 @@
         }
       }
     },
+    "Отпустите — распознать · вверх — закрепить": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loslassen zum Erkennen · nach oben zum Fixieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release to recognize · swipe up to lock"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suelta para reconocer · desliza arriba para fijar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relâchez pour reconnaître · glissez vers le haut pour fixer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отпустите — распознать · вверх — закрепить"
+          }
+        }
+      }
+    },
     "Отпустите — распознать · вверх — закрепить · влево — отмена": {
       "extractionState": "manual",
       "localizations": {
@@ -10266,6 +12996,76 @@
         }
       }
     },
+    "Пароль задан": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort festgelegt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password set"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contraseña establecida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe défini"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль задан"
+          }
+        }
+      }
+    },
+    "Пароль изменён": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort geändert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password changed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contraseña cambiada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe modifié"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пароль изменён"
+          }
+        }
+      }
+    },
     "Пароль — не короче %lld символов": {
       "extractionState": "manual",
       "localizations": {
@@ -10332,6 +13132,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перерасход: %@"
+          }
+        }
+      }
+    },
+    "Пицца": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пицца"
+          }
+        }
+      }
+    },
+    "Платите один раз": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal zahlen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay once"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paga una sola vez"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payez une seule fois"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Платите один раз"
           }
         }
       }
@@ -10581,6 +13451,41 @@
         }
       }
     },
+    "Погашение записано": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rückzahlung erfasst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settlement recorded"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pago registrado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remboursement enregistré"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Погашение записано"
+          }
+        }
+      }
+    },
     "Поделитесь ссылкой или кодом — по нему друг вступит через «Присоединиться».": {
       "extractionState": "manual",
       "localizations": {
@@ -10651,6 +13556,41 @@
         }
       }
     },
+    "Подписка": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subscription"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suscripción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abonnement"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подписка"
+          }
+        }
+      }
+    },
     "Подписка продлевается автоматически. Отменить можно в настройках Apple ID": {
       "extractionState": "manual",
       "localizations": {
@@ -10717,6 +13657,146 @@
           "stringUnit": {
             "state": "translated",
             "value": "Подытог"
+          }
+        }
+      }
+    },
+    "Поездка, квартира, ужин — кто за что заплатил": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reise, Wohnung, Abendessen — wer hat was bezahlt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A trip, a flat, a dinner — who paid for what"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un viaje, un piso, una cena: quién pagó qué"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un voyage, un appartement, un dîner — qui a payé quoi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поездка, квартира, ужин — кто за что заплатил"
+          }
+        }
+      }
+    },
+    "Поездка, общая квартира или один ужин — всё, что вы с кем-то делите": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Reise, eine WG oder ein Abendessen — alles, was du mit jemandem teilst"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A trip, a shared flat or a single dinner — anything you split with someone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un viaje, un piso compartido o una cena: cualquier cosa que compartas con alguien"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un voyage, une colocation ou un dîner — tout ce que vous partagez avec quelqu’un"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поездка, общая квартира или один ужин — всё, что вы с кем-то делите"
+          }
+        }
+      }
+    },
+    "Поездка, съёмная квартира или один ужин. Платит кто-то один, а расход делят все.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Reise, eine Mietwohnung oder ein Abendessen. Einer zahlt, alle teilen sich die Ausgabe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A trip, a rented flat or a single dinner. One person pays, everyone shares the expense."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un viaje, un piso alquilado o una cena. Paga uno y el gasto se reparte entre todos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un voyage, un appartement loué ou un dîner. Une personne paie, tout le monde partage la dépense."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поездка, съёмная квартира или один ужин. Платит кто-то один, а расход делят все."
+          }
+        }
+      }
+    },
+    "Позвать можно того, с кем уже была общая группа. Нового человека — по ссылке или коду приглашения": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladen kannst du, mit wem du schon eine Gruppe geteilt hast. Eine neue Person — per Link oder Einladungscode"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can invite someone you’ve already shared a group with. A new person — by link or invite code"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes invitar a alguien con quien ya compartiste grupo. A una persona nueva, por enlace o código de invitación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez inviter quelqu’un avec qui vous avez déjà partagé un groupe. Une nouvelle personne — par lien ou code d’invitation"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Позвать можно того, с кем уже была общая группа. Нового человека — по ссылке или коду приглашения"
           }
         }
       }
@@ -11071,6 +14151,111 @@
         }
       }
     },
+    "Показаны только расходы, которые держат вас в группе": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es werden nur die Ausgaben gezeigt, die dich in der Gruppe halten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Showing only the expenses that keep you in the group"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se muestran los gastos que te mantienen en el grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les dépenses qui vous retiennent dans le groupe sont affichées"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показаны только расходы, которые держат вас в группе"
+          }
+        }
+      }
+    },
+    "Показать все": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout afficher"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать все"
+          }
+        }
+      }
+    },
+    "Показать эти расходы": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Ausgaben anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show these expenses"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar estos gastos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher ces dépenses"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать эти расходы"
+          }
+        }
+      }
+    },
     "Покупка": {
       "extractionState": "manual",
       "localizations": {
@@ -11207,6 +14392,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Покупок для восстановления не нашлось"
+          }
+        }
+      }
+    },
+    "Политика конфиденциальности": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datenschutzerklärung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy Policy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Política de privacidad"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Politique de confidentialité"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Политика конфиденциальности"
           }
         }
       }
@@ -11526,6 +14746,41 @@
         }
       }
     },
+    "Правки расходов": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen an Ausgaben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense edits"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ediciones de gastos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifications de dépenses"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правки расходов"
+          }
+        }
+      }
+    },
     "Привязан": {
       "extractionState": "manual",
       "localizations": {
@@ -11666,6 +14921,41 @@
         }
       }
     },
+    "Пригласить можно того, с кем у вас уже была общая группа. Остальным отправьте ссылку": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladen kannst du, mit wem du schon eine Gruppe geteilt hast. Allen anderen schick einen Link"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can invite someone you’ve already shared a group with. Send everyone else a link"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes invitar a alguien con quien ya compartiste grupo. A los demás envíales un enlace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez inviter quelqu’un avec qui vous avez déjà partagé un groupe. Envoyez un lien aux autres"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пригласить можно того, с кем у вас уже была общая группа. Остальным отправьте ссылку"
+          }
+        }
+      }
+    },
     "Приглашение": {
       "extractionState": "manual",
       "localizations": {
@@ -11767,6 +15057,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Приглашения"
+          }
+        }
+      }
+    },
+    "Пригодится, если телефон потерян: доступ закроется везде, включая это устройство.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nützlich bei einem verlorenen Telefon: Der Zugriff wird überall gesperrt, auch auf diesem Gerät."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Useful if your phone is lost: access is revoked everywhere, including this device."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Útil si pierdes el teléfono: el acceso se cierra en todas partes, incluido este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utile si votre téléphone est perdu : l’accès est révoqué partout, y compris sur cet appareil."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пригодится, если телефон потерян: доступ закроется везде, включая это устройство."
+          }
+        }
+      }
+    },
+    "Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du musst dich neu anmelden — auch hier. Die alten Geräte erhalten keine Benachrichtigungen mehr."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’ll have to sign in again — here too. The old devices will stop receiving notifications."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tendrás que volver a iniciar sesión, aquí también. Los dispositivos antiguos dejarán de recibir notificaciones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous devrez vous reconnecter — ici aussi. Les anciens appareils ne recevront plus de notifications."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Придётся войти заново — и здесь тоже. Уведомления на прежние устройства приходить перестанут."
           }
         }
       }
@@ -12086,6 +15446,111 @@
         }
       }
     },
+    "Проверьте связь и попробуйте ещё раз. Способы входа и настройки покажем, когда профиль загрузится.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfe die Verbindung und versuche es erneut. Anmeldemethoden und Einstellungen zeigen wir, sobald das Profil geladen ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again. We’ll show sign-in methods and settings once the profile loads."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprueba la conexión e inténtalo de nuevo. Mostraremos los métodos de acceso y los ajustes cuando cargue el perfil."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifiez la connexion et réessayez. Nous afficherons les méthodes de connexion et les réglages une fois le profil chargé."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверьте связь и попробуйте ещё раз. Способы входа и настройки покажем, когда профиль загрузится."
+          }
+        }
+      }
+    },
+    "Продиктуйте расход вслух, и он появится в группе. Можно снять чек или вписать руками.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diktiere die Ausgabe laut, und sie erscheint in der Gruppe. Du kannst auch den Beleg abfotografieren oder alles eintippen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictate the expense out loud and it appears in the group. You can also snap the receipt or type it in."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dicta el gasto en voz alta y aparecerá en el grupo. También puedes fotografiar el recibo o escribirlo a mano."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictez la dépense à voix haute et elle apparaît dans le groupe. Vous pouvez aussi photographier le ticket ou la saisir à la main."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продиктуйте расход вслух, и он появится в группе. Можно снять чек или вписать руками."
+          }
+        }
+      }
+    },
+    "Продукты": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lebensmittel"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groceries"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compra"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Courses"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продукты"
+          }
+        }
+      }
+    },
     "Пропорционально": {
       "extractionState": "manual",
       "localizations": {
@@ -12117,6 +15582,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Пропорционально"
+          }
+        }
+      }
+    },
+    "Пропустить": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Omitir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пропустить"
           }
         }
       }
@@ -12296,6 +15796,41 @@
         }
       }
     },
+    "РАСХОДЫ ГРУППЫ": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AUSGABEN DER GRUPPE"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GROUP EXPENSES"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GASTOS DEL GRUPO"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DÉPENSES DU GROUPE"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "РАСХОДЫ ГРУППЫ"
+          }
+        }
+      }
+    },
     "Разархивировать": {
       "extractionState": "manual",
       "localizations": {
@@ -12401,6 +15936,41 @@
         }
       }
     },
+    "Распознавайте без суточного лимита": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkennen ohne Tageslimit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognize without a daily limit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconoce sin límite diario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnaissez sans limite quotidienne"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавайте без суточного лимита"
+          }
+        }
+      }
+    },
     "Распознавание доступно только онлайн": {
       "extractionState": "manual",
       "localizations": {
@@ -12432,6 +16002,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Распознавание доступно только онлайн"
+          }
+        }
+      }
+    },
+    "Распознавание идёт на сервере": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Erkennung läuft auf dem Server"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognition happens on the server"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El reconocimiento ocurre en el servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La reconnaissance se fait sur le serveur"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавание идёт на сервере"
+          }
+        }
+      }
+    },
+    "Распознавание расходов без суточного лимита": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgabenerkennung ohne Tageslimit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense recognition with no daily limit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconocimiento de gastos sin límite diario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnaissance des dépenses sans limite quotidienne"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавание расходов без суточного лимита"
           }
         }
       }
@@ -12506,6 +16146,41 @@
         }
       }
     },
+    "Распознавания без суточного лимита": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erkennungen ohne Tageslimit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognitions with no daily limit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconocimientos sin límite diario"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnaissances sans limite quotidienne"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавания без суточного лимита"
+          }
+        }
+      }
+    },
     "Распознавания на сегодня закончились": {
       "extractionState": "manual",
       "localizations": {
@@ -12541,6 +16216,41 @@
         }
       }
     },
+    "Распознавания на сегодня кончились": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für heute sind die Erkennungen aufgebraucht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’re out of recognitions for today"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se acabaron los reconocimientos de hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus de reconnaissances pour aujourd’hui"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознавания на сегодня кончились"
+          }
+        }
+      }
+    },
     "Распознано голосом": {
       "extractionState": "manual",
       "localizations": {
@@ -12572,6 +16282,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Распознано голосом"
+          }
+        }
+      }
+    },
+    "Распознано с чека": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vom Beleg erkannt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognized from the receipt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconocido del recibo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnu depuis le ticket"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознано с чека"
           }
         }
       }
@@ -12681,6 +16426,181 @@
         }
       }
     },
+    "Расход изменил кто-то другой. Откройте его заново и повторите правку": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jemand anderes hat diese Ausgabe geändert. Öffne sie erneut und wiederhole deine Änderung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Someone else changed this expense. Open it again and redo your edit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otra persona cambió este gasto. Ábrelo de nuevo y repite tu edición"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelqu’un d’autre a modifié cette dépense. Rouvrez-la et refaites votre modification"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расход изменил кто-то другой. Откройте его заново и повторите правку"
+          }
+        }
+      }
+    },
+    "Расход переименовали или добавили фото — сумма и ваша доля не изменились": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Ausgabe wurde umbenannt oder ein Foto hinzugefügt — Betrag und dein Anteil bleiben gleich"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An expense was renamed or a photo was added — the amount and your share didn’t change"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se renombró un gasto o se añadió una foto: el importe y tu parte no cambian"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une dépense a été renommée ou une photo ajoutée — le montant et votre part n’ont pas changé"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расход переименовали или добавили фото — сумма и ваша доля не изменились"
+          }
+        }
+      }
+    },
+    "Расход сохранён": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgabe gespeichert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense saved"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gasto guardado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dépense enregistrée"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расход сохранён"
+          }
+        }
+      }
+    },
+    "Расход сохранён — отправим, когда появится связь": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgabe gespeichert — wir senden sie, sobald wieder Verbindung besteht"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expense saved — we’ll send it once you’re back online"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gasto guardado: lo enviaremos cuando haya conexión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dépense enregistrée — nous l’enverrons dès que la connexion reviendra"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расход сохранён — отправим, когда появится связь"
+          }
+        }
+      }
+    },
+    "Расходы делятся между участниками — пока в группе только вы, делить не с кем": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgaben werden unter den Teilnehmern geteilt — solange du allein in der Gruppe bist, gibt es niemanden zum Teilen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expenses are split between members — while you’re the only one here, there’s no one to split with"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los gastos se reparten entre los participantes: mientras estés solo en el grupo, no hay con quién repartir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les dépenses se partagent entre participants — tant que vous êtes seul dans le groupe, il n’y a personne avec qui partager"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Расходы делятся между участниками — пока в группе только вы, делить не с кем"
+          }
+        }
+      }
+    },
     "Расходы, которые уже записаны, останутся в группе": {
       "extractionState": "manual",
       "localizations": {
@@ -12782,6 +16702,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Русский"
+          }
+        }
+      }
+    },
+    "С": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "С"
           }
         }
       }
@@ -13136,6 +17091,41 @@
         }
       }
     },
+    "Сейчас это недоступно. Попробуйте позже": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ist gerade nicht verfügbar. Versuche es später"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This isn’t available right now. Please try again later"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto no está disponible ahora. Inténtalo más tarde"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n’est pas disponible pour le moment. Réessayez plus tard"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас это недоступно. Попробуйте позже"
+          }
+        }
+      }
+    },
     "Сервер": {
       "extractionState": "manual",
       "localizations": {
@@ -13272,6 +17262,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Системная"
+          }
+        }
+      }
+    },
+    "Скажите — запишем": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag es einfach — wir tragen es ein"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Just say it — we’ll note it"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dilo y lo anotamos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dites-le, on le note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скажите — запишем"
           }
         }
       }
@@ -13661,6 +17686,76 @@
         }
       }
     },
+    "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Foto geht an den Splitty-Server und an ein Drittanbieter-Modell zur Erkennung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The photo goes to the Splitty server and to a third-party model for recognition"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La foto se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La photo part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания"
+          }
+        }
+      }
+    },
+    "Со Splitty": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Splitty"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With Splitty"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con Splitty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avec Splitty"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Со Splitty"
+          }
+        }
+      }
+    },
     "Со мной": {
       "extractionState": "manual",
       "localizations": {
@@ -13832,6 +17927,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Создать группу"
+          }
+        }
+      }
+    },
+    "Создать группу или присоединиться по коду": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppe erstellen oder per Code beitreten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a group or join with a code"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear un grupo o unirse con un código"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créer un groupe ou rejoindre avec un code"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Создать группу или присоединиться по коду"
+          }
+        }
+      }
+    },
+    "Сообщить о проблеме": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Problem melden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Report a problem"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informar de un problema"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signaler un problème"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сообщить о проблеме"
           }
         }
       }
@@ -14322,6 +18487,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Считываю расход и раскладываю по позициям"
+          }
+        }
+      }
+    },
+    "Такси": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Такси"
           }
         }
       }
@@ -15481,6 +19681,41 @@
         }
       }
     },
+    "Управлять подпиской": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abo verwalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage subscription"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestionar suscripción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gérer l’abonnement"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Управлять подпиской"
+          }
+        }
+      }
+    },
     "Условия": {
       "extractionState": "manual",
       "localizations": {
@@ -15796,6 +20031,41 @@
         }
       }
     },
+    "Что-то пошло не так на нашей стороне. Попробуйте ещё раз": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf unserer Seite ist etwas schiefgelaufen. Versuche es erneut"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong on our side. Please try again"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo salió mal por nuestra parte. Inténtalo de nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelque chose a mal tourné de notre côté. Réessayez"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что-то пошло не так на нашей стороне. Попробуйте ещё раз"
+          }
+        }
+      }
+    },
     "Эта подписка оформлена на другой аккаунт Splitor": {
       "extractionState": "manual",
       "localizations": {
@@ -15827,6 +20097,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "Эта подписка оформлена на другой аккаунт Splitor"
+          }
+        }
+      }
+    },
+    "Этот email уже зарегистрирован. Войдите вместо регистрации": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese E-Mail ist bereits registriert. Melde dich stattdessen an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This email is already registered. Sign in instead"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este correo ya está registrado. Inicia sesión en su lugar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet e-mail est déjà enregistré. Connectez-vous plutôt"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот email уже зарегистрирован. Войдите вместо регистрации"
           }
         }
       }
@@ -15897,6 +20202,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него"
+          }
+        }
+      }
+    },
+    "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Konto ist bereits mit einem anderen Splitty-Profil verknüpft. Melde dich damit an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account is already linked to another Splitty profile. Sign in with that one"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta cuenta ya está vinculada a otro perfil de Splitty. Inicia sesión con ese"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce compte est déjà lié à un autre profil Splitty. Connectez-vous avec celui-ci"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+          }
+        }
+      }
+    },
+    "Я": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "T"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "V"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Я"
           }
         }
       }
@@ -16288,6 +20663,41 @@
         }
       }
     },
+    "ваша доля: 200 + 100": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dein Anteil: 2,00 € + 1,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "your share: $2.00 + $1.00"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tu parte: 2,00 € + 1,00 €"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "votre part : 2,00 € + 1,00 €"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ваша доля: 200 + 100"
+          }
+        }
+      }
+    },
     "взаимные долги": {
       "extractionState": "manual",
       "localizations": {
@@ -16603,6 +21013,41 @@
         }
       }
     },
+    "делим на троих": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "durch drei geteilt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "split three ways"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "dividido entre tres"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "partagé en trois"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "делим на троих"
+          }
+        }
+      }
+    },
     "делится поровну": {
       "extractionState": "manual",
       "localizations": {
@@ -16809,6 +21254,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "доля"
+          }
+        }
+      }
+    },
+    "за такси": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fürs Taxi"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "for the taxi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "por el taxi"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pour le taxi"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "за такси"
+          }
+        }
+      }
+    },
+    "за ужин": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fürs Abendessen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "for dinner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "por la cena"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pour le dîner"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "за ужин"
           }
         }
       }
@@ -17128,6 +21643,76 @@
         }
       }
     },
+    "не платили": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nichts bezahlt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "didn’t pay"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no pagaste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "n’a rien payé"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не платили"
+          }
+        }
+      }
+    },
+    "пицца за восемьсот и кола за двести пополам с Саней": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pizza acht Euro und Cola zwei Euro halbe halbe mit Sam"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pizza eight dollars and cola two dollars split with Sam"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pizza ocho euros y cola dos euros a medias con Sam"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pizza huit euros et cola deux euros moitié moitié avec Sam"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "пицца за восемьсот и кола за двести пополам с Саней"
+          }
+        }
+      }
+    },
     "пн": {
       "extractionState": "manual",
       "localizations": {
@@ -17194,6 +21779,146 @@
           "stringUnit": {
             "state": "translated",
             "value": "по %@ × %lld"
+          }
+        }
+      }
+    },
+    "по 100 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "je 1,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$1.00 each"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 € c/u"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 € chacun"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "по 100 ₽"
+          }
+        }
+      }
+    },
+    "по 100 ₽ × 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "je 1,00 € × 2"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$1.00 each × 2"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 € c/u × 2"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1,00 € chacun × 2"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "по 100 ₽ × 2"
+          }
+        }
+      }
+    },
+    "по 200 ₽": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "je 2,00 €"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$2.00 each"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 € c/u"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2,00 € chacun"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "по 200 ₽"
+          }
+        }
+      }
+    },
+    "по 400 ₽ × 2": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "je 4,00 € × 2"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "$4.00 each × 2"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4,00 € c/u × 2"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4,00 € chacun × 2"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "по 400 ₽ × 2"
           }
         }
       }
@@ -17299,6 +22024,41 @@
           "stringUnit": {
             "state": "translated",
             "value": "по суммам"
+          }
+        }
+      }
+    },
+    "позиции": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Positionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "items"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "artículos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "articles"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "позиции"
           }
         }
       }

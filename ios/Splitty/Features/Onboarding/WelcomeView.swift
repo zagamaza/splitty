@@ -191,17 +191,29 @@ private struct SharedBillArt: View {
     @State private var shown = 3
     @State private var loop: Task<Void, Never>?
 
-    private let slips = [("Ужин", 600), ("Такси", 300), ("Продукты", 450), ("Кофе", 150)]
+    // Суммы витрины — строки каталога, а не числа: в локали они не рубли,
+    // и «₽» здесь дописать неоткуда. Итоги посчитаны заранее по той же причине.
+    private let slips = [
+        (String(localized: "Ужин"), String(localized: "600 ₽")),
+        (String(localized: "Такси"), String(localized: "300 ₽")),
+        (String(localized: "Продукты"), String(localized: "450 ₽")),
+        (String(localized: "Кофе"), String(localized: "150 ₽")),
+    ]
+
+    private let runningTotals = [
+        String(localized: "600 ₽"), String(localized: "900 ₽"),
+        String(localized: "1350 ₽"), String(localized: "1500 ₽"),
+    ]
 
     private var total: String {
-        "\(slips.prefix(shown).reduce(0) { $0 + $1.1 }) ₽"
+        runningTotals[min(max(shown, 1), runningTotals.count) - 1]
     }
 
     var body: some View {
         // Композиция собрана компактно и стоит по центру: тянуть строки
         // распорками по всей карточке — значит порвать список на куски.
         VStack(spacing: 0) {
-            welcomeEyebrow("РАСХОДЫ ГРУППЫ")
+            welcomeEyebrow(String(localized: "РАСХОДЫ ГРУППЫ"))
                 .padding(.bottom, 14)
 
             VStack(spacing: 10) {
@@ -211,7 +223,7 @@ private struct SharedBillArt: View {
                             .scaledFont(size: 16, weight: .semibold)
                             .foregroundStyle(Color.ink)
                         Spacer(minLength: 8)
-                        Text("\(slip.1) ₽")
+                        Text(slip.1)
                             .font(.system(size: 17, weight: .semibold, design: .monospaced))
                             .foregroundStyle(Color.ink)
                     }
@@ -228,7 +240,7 @@ private struct SharedBillArt: View {
                 .padding(.vertical, 14)
 
             VStack(spacing: 2) {
-                Text("Общий счёт группы")
+                Text(String(localized: "Общий счёт группы"))
                     .scaledFont(size: 14, weight: .medium)
                     .foregroundStyle(Color.accentText.opacity(0.8))
                 Text(total)
@@ -292,7 +304,12 @@ private struct DictationArt: View {
     @State private var arc: CGFloat = 0
     @State private var loop: Task<Void, Never>?
 
-    private let phrase = ["пицца", "за", "восемьсот", "и", "кола", "за", "двести", "пополам", "с", "Саней"]
+    // Фраза локализуется целиком и режется на слова здесь: по отдельности
+    // «за» и «с» перевести нельзя — в другом языке их может не быть вовсе.
+    private var phrase: [String] {
+        String(localized: "пицца за восемьсот и кола за двести пополам с Саней")
+            .split(separator: " ").map(String.init)
+    }
 
     var body: some View {
         // Фон один на все стадии: распознавание и чек проявляются поверх той же
@@ -360,7 +377,7 @@ private struct DictationArt: View {
                 Text("Говорите…")
                     .scaledFont(size: 20, weight: .bold)
                     .foregroundStyle(.white)
-                Text("Отпустите — распознать · вверх — закрепить")
+                Text(String(localized: "Отпустите — распознать · вверх — закрепить"))
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(.white.opacity(0.75))
                     .multilineTextAlignment(.center)
@@ -419,7 +436,7 @@ private struct DictationArt: View {
 
     private var receipt: some View {
         VStack(spacing: 16) {
-            Label("Готово — расход в группе", systemImage: "checkmark.circle.fill")
+            Label(String(localized: "Готово — расход в группе"), systemImage: "checkmark.circle.fill")
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.white.opacity(0.85))
             MiniReceipt()
@@ -493,23 +510,25 @@ private struct MiniReceipt: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("позиции").font(.system(size: 12, design: .monospaced))
+                Text(String(localized: "позиции")).font(.system(size: 12, design: .monospaced))
                 Spacer()
-                Text("2 поз.").font(.system(size: 12, design: .monospaced))
+                Text(String(localized: "2 поз.")).font(.system(size: 12, design: .monospaced))
             }
             .foregroundStyle(Color.inkSecondary)
 
             dashed
-            item(name: "Пицца", sum: "800 ₽", each: "по 400 ₽ × 2")
+            item(name: String(localized: "Пицца"), sum: String(localized: "800 ₽"),
+                 each: String(localized: "по 400 ₽ × 2"))
             dashed
-            item(name: "Кола", sum: "200 ₽", each: "по 100 ₽ × 2")
+            item(name: String(localized: "Кола"), sum: String(localized: "200 ₽"),
+                 each: String(localized: "по 100 ₽ × 2"))
 
             Rectangle().fill(Color.ink).frame(height: 1.5).padding(.vertical, 10)
 
             HStack {
                 Text("Итого").scaledFont(size: 16, weight: .bold)
                 Spacer()
-                Text("1000 ₽").font(.system(size: 17, weight: .bold, design: .monospaced))
+                Text(String(localized: "1000 ₽")).font(.system(size: 17, weight: .bold, design: .monospaced))
             }
         }
         .padding(16)
@@ -531,8 +550,8 @@ private struct MiniReceipt: View {
             }
             HStack {
                 HStack(spacing: -6) {
-                    receiptAvatar("Я", color: .accent)
-                    receiptAvatar("С", color: Color(red: 0.55, green: 0.36, blue: 0.96))
+                    receiptAvatar(String(localized: "Я"), color: .accent)
+                    receiptAvatar(String(localized: "С"), color: Color(red: 0.55, green: 0.36, blue: 0.96))
                 }
                 Spacer()
                 Text(each).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.inkSecondary)
@@ -559,18 +578,22 @@ private struct WhoPaidArt: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            welcomeEyebrow("КТО ЗА ЧТО ЗАПЛАТИЛ")
+            welcomeEyebrow(String(localized: "КТО ЗА ЧТО ЗАПЛАТИЛ"))
                 .padding(.bottom, 2)
 
             paidCard(
-                initial: "А", name: "Аня", what: "за ужин", sum: "600 ₽", share: "по 200 ₽",
+                initial: String(localized: "А"), name: String(localized: "Аня"),
+                what: String(localized: "за ужин"), sum: String(localized: "600 ₽"),
+                share: String(localized: "по 200 ₽"),
                 color: .accent
             )
             .opacity(shown > 0 ? 1 : 0)
             .offset(y: shown > 0 ? 0 : -16)
 
             paidCard(
-                initial: "Б", name: "Боря", what: "за такси", sum: "300 ₽", share: "по 100 ₽",
+                initial: String(localized: "Б"), name: String(localized: "Боря"),
+                what: String(localized: "за такси"), sum: String(localized: "300 ₽"),
+                share: String(localized: "по 100 ₽"),
                 color: Color(red: 0.18, green: 0.43, blue: 0.89)
             )
             .opacity(shown > 1 ? 1 : 0)
@@ -584,22 +607,22 @@ private struct WhoPaidArt: View {
 
             VStack(spacing: 12) {
                 HStack(spacing: 14) {
-                    welcomeAvatar("Я", color: Color.inkSecondary, size: 46)
+                    welcomeAvatar(String(localized: "Я"), color: Color.inkSecondary, size: 46)
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Вы").scaledFont(size: 16, weight: .semibold)
-                        Text("не платили")
+                        Text(String(localized: "не платили"))
                             .font(.system(size: 13))
                             .foregroundStyle(Color.inkSecondary)
                     }
                     Spacer(minLength: 8)
-                    Text("300 ₽")
+                    Text(String(localized: "300 ₽"))
                         .font(.system(size: 17, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.accentText)
                 }
 
                 // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
                 HStack {
-                    Text("ваша доля: 200 + 100")
+                    Text(String(localized: "ваша доля: 200 + 100"))
                         .font(.system(size: 13, design: .monospaced))
                         .foregroundStyle(Color.accentText.opacity(0.75))
                     Spacer(minLength: 0)
@@ -658,7 +681,7 @@ private struct WhoPaidArt: View {
             }
 
             HStack(spacing: 8) {
-                Text("делим на троих").font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
+                Text(String(localized: "делим на троих")).font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
                 Text(share)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.accentText)
@@ -687,19 +710,19 @@ private struct TransfersArt: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Ваша доля за вечер").scaledFont(size: 16, weight: .semibold)
+                Text(String(localized: "Ваша доля за вечер")).scaledFont(size: 16, weight: .semibold)
                 Spacer(minLength: 8)
-                Text("300 ₽").font(.system(size: 17, weight: .semibold, design: .monospaced))
+                Text(String(localized: "300 ₽")).font(.system(size: 17, weight: .semibold, design: .monospaced))
             }
             .surfaceCard()
             .padding(.bottom, 6)
 
-            welcomeEyebrow("ВАМ ПЕРЕВОДИТЬ")
+            welcomeEyebrow(String(localized: "ВАМ ПЕРЕВОДИТЬ"))
 
             payRow(
-                initial: "А", name: "Ане",
-                note: withSplitty ? "200 + 100 Бори" : "за ужин",
-                sum: withSplitty ? "300 ₽" : "200 ₽", color: .accent
+                initial: String(localized: "А"), name: String(localized: "Ане"),
+                note: withSplitty ? String(localized: "200 + 100 Бори") : String(localized: "за ужин"),
+                sum: withSplitty ? String(localized: "300 ₽") : String(localized: "200 ₽"), color: .accent
             )
 
             // Место под вторую строку занято в обоих состояниях: слева перевод,
@@ -708,15 +731,16 @@ private struct TransfersArt: View {
             ZStack(alignment: .top) {
                 if !withSplitty {
                     VStack(alignment: .leading, spacing: 8) {
-                        payRow(initial: "Б", name: "Боре", note: "за такси", sum: "100 ₽",
+                        payRow(initial: String(localized: "Б"), name: String(localized: "Боре"),
+                               note: String(localized: "за такси"), sum: String(localized: "100 ₽"),
                                color: Color(red: 0.18, green: 0.43, blue: 0.89))
-                        sideNote("Два перевода, два подтверждения", color: .negative)
+                        sideNote(String(localized: "Два перевода, два подтверждения"), color: .negative)
                     }
                     .transition(.opacity)
                 } else {
                     VStack(alignment: .leading, spacing: 8) {
                         settledRow
-                        sideNote("Его 100 ₽ уходят Ане вместе с вашими", color: .accentText)
+                        sideNote(String(localized: "Его 100 ₽ уходят Ане вместе с вашими"), color: .accentText)
                     }
                     .transition(.opacity)
                 }
@@ -731,7 +755,7 @@ private struct TransfersArt: View {
                         .fill(mark(at: index))
                         .frame(width: 11, height: 15)
                 }
-                Text(withSplitty ? "1 перевод" : "2 перевода")
+                Text(withSplitty ? String(localized: "1 перевод") : String(localized: "2 перевода"))
                     .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(withSplitty ? Color.accentText : Color.negative)
                 Spacer(minLength: 0)
@@ -746,8 +770,8 @@ private struct TransfersArt: View {
             // типографику и серую заливку — рядом с карточками приложения он
             // выглядит вставленным из другой программы.
             HStack(spacing: 4) {
-                segmentHalf("Без Splitty", isOn: !withSplitty) { set(false) }
-                segmentHalf("Со Splitty", isOn: withSplitty) { set(true) }
+                segmentHalf(String(localized: "Без Splitty"), isOn: !withSplitty) { set(false) }
+                segmentHalf(String(localized: "Со Splitty"), isOn: withSplitty) { set(true) }
             }
             .padding(4)
             .background(Color.ink.opacity(0.06), in: Capsule())
@@ -795,13 +819,13 @@ private struct TransfersArt: View {
     /// переводить» для него исчезает — это и есть сведение долгов.
     private var settledRow: some View {
         HStack(spacing: 14) {
-            welcomeAvatar("Б", color: Color(red: 0.18, green: 0.43, blue: 0.89).opacity(0.35), size: 46)
+            welcomeAvatar(String(localized: "Б"), color: Color(red: 0.18, green: 0.43, blue: 0.89).opacity(0.35), size: 46)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Боре").scaledFont(size: 16, weight: .semibold).foregroundStyle(Color.inkSecondary)
+                Text(String(localized: "Боре")).scaledFont(size: 16, weight: .semibold).foregroundStyle(Color.inkSecondary)
                 Text("в расчёте").font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 8)
-            Text("0 ₽")
+            Text(String(localized: "0 ₽"))
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
                 .foregroundStyle(Color.accentText)
         }

@@ -35,6 +35,22 @@ private enum MoneyFormat {
     }
 }
 
+/// Язык интерфейса — им решается, годится ли текст ошибки от сервера.
+///
+/// Бэкенд отвечает только по-русски и `Accept-Language` не смотрит, поэтому
+/// его `message` можно показывать, лишь пока интерфейс русский. Отдельный шов,
+/// а не чтение `Bundle` по месту: набор тестов идёт под `ru`, и нерусскую
+/// ветку иначе нечем было бы проверить.
+enum ServerTextLocale {
+    /// Подменённый язык (тесты). nil — язык, на котором собран интерфейс.
+    static var override: String?
+
+    static var isRussian: Bool {
+        let language = override ?? Bundle.main.preferredLocalizations.first ?? "en"
+        return language.hasPrefix("ru")
+    }
+}
+
 /// Локаль форматирования сумм (шов для тестов).
 enum MoneyLocale {
     static var override: Locale? {

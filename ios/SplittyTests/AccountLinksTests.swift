@@ -14,6 +14,8 @@ final class AccountLinksTests: XCTestCase {
         // Флаг незавершённой чистки персистентный (UserDefaults): без сброса он
         // протекал бы из теста в тест, и «токен сохранился» проходило бы даром.
         UserDefaults.standard.removeObject(forKey: "splitty.purgePending")
+        // Keychain — тоже общий на весь прогон, и тоже переживает тест.
+        KeychainStore.delete(key: "splitty.apiToken")
         StubURLProtocol.handler = nil
         StubURLProtocol.lastRequest = nil
         StubURLProtocol.lastBody = nil
@@ -30,8 +32,16 @@ final class AccountLinksTests: XCTestCase {
         )
     }
 
-    override func tearDown() {
+    // async, чтобы дождаться отложенной работы: `onUnauthorized` обрабатывает
+    // 401 через Task на MainActor, и тест, не дождавшийся его, отдавал задачу
+    // СЛЕДУЮЩЕМУ. Та добегала уже там и стирала токен из общего на весь прогон
+    // Keychain: `testUnauthorizedWhilePurgePendingKeepsToken` падал на «nil
+    // вместо jwt-777», сам ничего не удаляя, — и только в полном наборе,
+    // никогда в одиночном прогоне класса.
+    override func tearDown() async throws {
+        await settleMainActor()
         UserDefaults.standard.removeObject(forKey: "splitty.purgePending")
+        KeychainStore.delete(key: "splitty.apiToken")
         client = nil
         stubSession = nil
         StubURLProtocol.handler = nil
@@ -39,7 +49,7 @@ final class AccountLinksTests: XCTestCase {
         StubURLProtocol.lastBody = nil
         StubURLProtocol.responseDelay = nil
         StubURLProtocol.failure = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Модель Me
