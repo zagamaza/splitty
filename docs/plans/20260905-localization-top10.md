@@ -246,11 +246,11 @@
 - Create: `android/app/src/main/res/values-pt-rBR/strings.xml`
 - Create: `android/app/src/main/res/values-it/strings.xml`
 
-- [ ] переводить с английской базы `values/strings.xml`, но терминами из iOS-каталога (см. «Правила для исполнителя»)
-- [ ] перенести **677** переводимых строк; девять с `translatable="false"` НЕ копировать. `provider_apple`, `provider_google`, `provider_telegram` лежат в старых локалях по недосмотру — не повторять
-- [ ] перевести 4 `plurals`: `ja`/`zh-rCN`/`ko` — только `quantity="other"`
-- [ ] идти секциями по комментариям-разделам базового файла, после каждой сверять счётчик недостающих ключей
-- [ ] `cd android && ./gradlew :app:testDebugUnitTest` — **Android-тест обязан позеленеть**; затем `./gradlew :app:lintVitalRelease` (он ловит `ExtraTranslation`)
+- [x] переводить с английской базы `values/strings.xml`, но терминами из iOS-каталога (см. «Правила для исполнителя»)
+- [x] перенести **677** переводимых строк; девять с `translatable="false"` НЕ копировать. `provider_apple`, `provider_google`, `provider_telegram` лежат в старых локалях по недосмотру — не повторять
+- [x] перевести 4 `plurals`: `ja`/`zh-rCN`/`ko` — только `quantity="other"`
+- [x] идти секциями по комментариям-разделам базового файла, после каждой сверять счётчик недостающих ключей
+- [x] `cd android && ./gradlew :app:testDebugUnitTest` — **Android-тест обязан позеленеть**; затем `./gradlew :app:lintVitalRelease` (он ловит `ExtraTranslation`)
 
 ### Task 6: Порядок дат в Android
 

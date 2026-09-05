@@ -1,0 +1,24 @@
+{
+ "time_years_ago": {
+   "ja": {"other": "%1$d 年前"}, "zh-Hans": {"other": "%1$d 年前"}, "ko": {"other": "%1$d년 전"},
+   "pt-BR": {"one": "há %1$d ano", "other": "há %1$d anos"},
+   "it": {"one": "%1$d anno fa", "other": "%1$d anni fa"}},
+ "groups_member_count": {
+   "ja": {"other": "%d 人"}, "zh-Hans": {"other": "%d 人"}, "ko": {"other": "%d명"},
+   "pt-BR": {"one": "%d participante", "other": "%d participantes"},
+   "it": {"one": "%d partecipante", "other": "%d partecipanti"}},
+ "group_hero_pending_ops": {
+   "ja": {"other": "未送信の操作 %d 件を除く"},
+   "zh-Hans": {"other": "不含 %d 项未发送的操作"},
+   "ko": {"other": "전송되지 않은 작업 %d건 제외"},
+   "pt-BR": {"one": "sem contar %d operação não enviada", "other": "sem contar %d operações não enviadas"},
+   "it": {"one": "senza contare %d operazione non inviata", "other": "senza contare %d operazioni non inviate"}},
+ "profile_logout_outbox_confirm": {
+   "ja": {"other": "未送信の操作が %d 件あります。ログアウトして削除しますか？"},
+   "zh-Hans": {"other": "有 %d 项未发送的操作 — 退出并删除吗？"},
+   "ko": {"other": "전송되지 않은 작업이 %d건 있습니다. 로그아웃하고 삭제하시겠습니까?"},
+   "pt-BR": {"one": "Há %d operação não enviada — sair e excluí-la?",
+             "other": "Há %d operações não enviadas — sair e excluí-las?"},
+   "it": {"one": "C’è %d operazione non inviata: vuoi uscire ed eliminarla?",
+          "other": "Ci sono %d operazioni non inviate: vuoi uscire ed eliminarle?"}}
+}
