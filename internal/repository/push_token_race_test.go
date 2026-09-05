@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"reflect"
 	"sync"
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -142,9 +144,15 @@ func TestDedupePushTokensCollapsesExistingDuplicates(t *testing.T) {
 		t.Error("второе устройство потеряно")
 	}
 
-	// Документ без дублей миграция не трогает.
-	if clean := pushTokens(t, db, 711); len(clean) != 2 {
-		t.Errorf("у чистого пользователя стало %d токенов: %+v", len(clean), clean)
+	// Документ без дублей миграция не трогает. Сверяем массив целиком, а не
+	// длину: фильтр берёт ЛЮБОГО пользователя с двумя токенами, и порядок с
+	// содержимым обязаны остаться прежними.
+	wantClean := []api.PushToken{
+		{Token: "one", Platform: "android", Locale: "de"},
+		{Token: "two", Platform: "android", Locale: "de"},
+	}
+	if clean := pushTokens(t, db, 711); !reflect.DeepEqual(clean, wantClean) {
+		t.Errorf("чистый пользователь изменился: %+v, было %+v", clean, wantClean)
 	}
 
 	// Маркер записан: второй запуск к коллекции user не идёт.
@@ -154,5 +162,22 @@ func TestDedupePushTokensCollapsesExistingDuplicates(t *testing.T) {
 	}
 	if modified != 0 {
 		t.Errorf("повторный запуск тронул %d документов — маркер не сработал", modified)
+	}
+
+	// А теперь без маркера: восстановление базы из старого дампа сносит
+	// коллекцию migration, и pipeline проходит по уже вычищенным документам.
+	// Он обязан быть идемпотентным сам по себе, а не только под маркером.
+	before710, before711 := pushTokens(t, db, 710), pushTokens(t, db, 711)
+	if _, err := db.Collection(migrationCollection).DeleteOne(ctx, bson.M{"_id": dedupePushTokensMarker}); err != nil {
+		t.Fatalf("не удалить маркер: %v", err)
+	}
+	if _, err := DedupePushTokens(ctx, db); err != nil {
+		t.Fatalf("прогон без маркера: %v", err)
+	}
+	if after := pushTokens(t, db, 710); !reflect.DeepEqual(after, before710) {
+		t.Errorf("повтор без маркера изменил массив: %+v, было %+v", after, before710)
+	}
+	if after := pushTokens(t, db, 711); !reflect.DeepEqual(after, before711) {
+		t.Errorf("повтор без маркера тронул чистого: %+v, было %+v", after, before711)
 	}
 }
