@@ -54,13 +54,31 @@ def dump(catalog: dict, path: pathlib.Path) -> None:
     path.write_text(text + "\n", encoding="utf-8")
 
 
+def plain_keys(catalog: dict) -> list[str]:
+    """Ключи БЕЗ множественных форм, в порядке файла — тот же, что у выгрузки."""
+    return [k for k, e in catalog["strings"].items()
+            if not any("variations" in u for u in e.get("localizations", {}).values())]
+
+
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
+    if len(argv) < 2:
         print(__doc__)
         return 2
     language, source = argv[0], pathlib.Path(argv[1])
     catalog = json.loads(CATALOG.read_text(encoding="utf-8"))
-    translations = json.loads(source.read_text(encoding="utf-8"))
+    payload = json.loads(source.read_text(encoding="utf-8"))
+
+    if isinstance(payload, list):
+        # Порядковая форма: список переводов для среза plain_keys, начиная со
+        # start. Русские ключи в файл не повторяются — на объёме в тысячи строк
+        # это ровно половина лишнего текста.
+        start = int(argv[2]) if len(argv) > 2 else 0
+        keys = plain_keys(catalog)[start:start + len(payload)]
+        if len(keys) != len(payload):
+            raise SystemExit(f"переводов {len(payload)}, а ключей в срезе {len(keys)}")
+        translations = dict(zip(keys, payload))
+    else:
+        translations = payload
 
     added, existed = merge(catalog, language, translations)
     dump(catalog, CATALOG)
