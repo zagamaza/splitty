@@ -312,11 +312,20 @@ class ProfileAccountTest {
         assertEquals(Tier.PLUS, vm.tier.value)
     }
 
-    /** Дата показывается человеческим текстом, а неразобранная — как пришла. */
+    /**
+     * Дата показывается человеческим текстом, а неразобранная — как пришла.
+     *
+     * Точную строку не сверяем: порядок и оформление берутся у ICU (по-русски
+     * это «1 января 2027 г.», по-японски «2027年1月1日»), и жёсткое равенство
+     * ломалось бы на каждом обновлении данных локалей. Проверяем то, ради чего
+     * строка существует: день, месяц словом и год на месте и в порядке локали.
+     */
     @Test
     fun `plus date is rendered readable`() {
         val ru = java.util.Locale.forLanguageTag("ru")
-        assertEquals("1 января 2027", plusUntilText("2027-01-01T00:00:00Z", ru))
+        val text = plusUntilText("2027-01-01T00:00:00Z", ru)
+        assertTrue("января" in text, "месяц словом: $text")
+        assertTrue(text.indexOf("1") < text.indexOf("2027"), "день раньше года: $text")
         assertEquals("что-то не то", plusUntilText("что-то не то", ru))
     }
 

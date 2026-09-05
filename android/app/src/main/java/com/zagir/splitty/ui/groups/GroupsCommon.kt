@@ -126,12 +126,35 @@ internal object GroupsDateFmt {
         return cache.getOrPut(pattern to locale) { DateTimeFormatter.ofPattern(pattern, locale) }
     }
 
+    /**
+     * Шаблон по СКЕЛЕТУ: порядок компонентов у каждого языка свой.
+     *
+     * Жёсткое «d MMMM yyyy» по-японски давало «5 9月 2026» вместо «2026年9月5日»,
+     * а по-корейски «5 9월 2026» вместо «2026년 9월 5일»: у восточноазиатских
+     * языков год идёт первым, и никакой перевод названий месяцев этого не
+     * чинит. getBestDateTimePattern отдаёт порядок, принятый в локали, из тех
+     * же данных ICU, что использует система.
+     *
+     * Скелет — это НАБОР полей, а не готовый шаблон: «dMMMMy» значит «день,
+     * месяц словом, год», а как их расставить и чем разделить, решает локаль.
+     */
+    private fun bySkeleton(skeleton: String): DateTimeFormatter {
+        val locale = Locale.getDefault()
+        return cache.getOrPut(skeleton to locale) {
+            DateTimeFormatter.ofPattern(
+                android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+        }
+    }
+
+    // Одиночные поля порядка не имеют — им скелет не нужен.
     private val dayFormatter get() = fmt("d")
     private val monthShortFormatter get() = fmt("MMM")
-    private val dayMonthFormatter get() = fmt("d MMM")
-    private val monthYearFormatter get() = fmt("LLLL yyyy")
-    private val fullDateFormatter get() = fmt("d MMMM yyyy")
     private val monthNameFormatter get() = fmt("LLLL")
+
+    // Составные — только по скелету.
+    private val dayMonthFormatter get() = bySkeleton("dMMM")
+    private val monthYearFormatter get() = bySkeleton("LLLLy")
+    private val fullDateFormatter get() = bySkeleton("dMMMMy")
 
     private fun zoned(instant: Instant) = instant.atZone(ZoneId.systemDefault())
 

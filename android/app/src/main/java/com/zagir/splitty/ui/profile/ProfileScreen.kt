@@ -747,7 +747,11 @@ private fun PlusSection(
 internal fun plusUntilText(raw: String, locale: java.util.Locale = java.util.Locale.getDefault()): String =
     runCatching {
         val date = java.time.OffsetDateTime.parse(raw).toLocalDate()
-        date.format(java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", locale))
+        // Порядок компонентов берём у локали, а не задаём шаблоном: «d MMMM
+        // yyyy» по-японски давало «5 9月 2026» вместо «2026年9月5日». Ср.
+        // GroupsDateFmt.bySkeleton.
+        val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMMy")
+        date.format(java.time.format.DateTimeFormatter.ofPattern(pattern, locale))
     }.getOrDefault(raw)
 
 @Composable

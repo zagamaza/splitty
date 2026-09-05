@@ -267,11 +267,11 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/profile/ProfileScreen.kt`
 - Create: `android/app/src/test/java/com/zagir/splitty/ui/groups/GroupsDateFmtTest.kt`
 
-- [ ] сначала зафиксировать тестом нынешние значения для `ru` и `en` — это защита от порчи при рефакторинге
-- [ ] перевести шесть скелетов на `getBestDateTimePattern`, тест — под Robolectric
-- [ ] добавить проверку порядка компонентов для `ja` (год первым) и `pt-BR`
-- [ ] `uzbekSum` (`core/money/Money.kt:81-85`) знает `ru` и `de`; **решено оставить латинское «sum» для пяти новых языков** — сум пишут латиницей в большинстве языков, отдельная работа тут не нужна
-- [ ] прогнать тесты Android
+- [x] сначала зафиксировать тестом нынешние значения для `ru` и `en` — это защита от порчи при рефакторинге
+- [x] перевести шесть скелетов на `getBestDateTimePattern`, тест — под Robolectric
+- [x] добавить проверку порядка компонентов для `ja` (год первым) и `pt-BR`
+- [x] `uzbekSum` (`core/money/Money.kt:81-85`) знает `ru` и `de`; **решено оставить латинское «sum» для пяти новых языков** — сум пишут латиницей в большинстве языков, отдельная работа тут не нужна
+- [x] прогнать тесты Android
 
 ### Task 7: Передать язык клиента на сервер и локализовать вопросы AI
 
