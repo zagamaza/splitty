@@ -33,13 +33,18 @@ App Store — `ru`, `en-US`, `es-ES`, `de-DE`, `fr-FR`, `ja`, `zh-Hans`, `ko`,
 Нужен локальный бэкенд с демо-данными и поднятые симулятор/эмулятор.
 
 ```bash
-# 1. Бэкенд на всех интерфейсах: эмулятор Android ходит на 10.0.2.2
-LISTEN=0.0.0.0:7171 API_JWT_SECRET=<любой> API_DEV_AUTH=true ./bin/splitty
+# 1. Бэкенд на всех интерфейсах: эмулятор Android ходит на 10.0.2.2.
+# Отдельная база: демо-данные витрины не должны мешаться с рабочими.
+# Собирать go1.24.6 — сборка go1.22.12 (она для CI) не стартует на macOS,
+# dyld ругается на missing LC_UUID.
+GOTOOLCHAIN=go1.24.6 go build -o bin/splitty ./cmd/splitty
+LISTEN=0.0.0.0:7171 DB_NAME=splitty_shots API_JWT_SECRET=<любой> \
+  API_DEV_AUTH=true ./bin/splitty
 
-# 2. Демо-данные: две витринные учётки, свои группы и расходы на язык
+# 2. Демо-данные: своя витринная учётка, группы и расходы на каждый язык
 python3 scripts/seed-store-shots.py
-docker cp scripts/backdate-shots.js splitty-app-mongo-1:/tmp/backdate.js
-docker exec splitty-app-mongo-1 mongosh splitty --quiet --file /tmp/backdate.js
+docker cp scripts/backdate-shots.js splitty-test-mongo:/tmp/backdate.js
+docker exec splitty-test-mongo mongosh splitty_shots --quiet --file /tmp/backdate.js
 
 # 3. Сырые кадры
 cd ios && TEST_RUNNER_SHOTS_LANG=ru TEST_RUNNER_SHOTS_EMAIL=shots-ru@splitty.test \
