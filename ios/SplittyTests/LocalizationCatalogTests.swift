@@ -7,7 +7,35 @@ import XCTest
 /// перевод внешне неотличим от нормальной работы, и поймать его может только
 /// такая проверка.
 final class LocalizationCatalogTests: XCTestCase {
-    private static let languages = ["ru", "en", "es", "de", "fr"]
+    private static let languages = ["ru", "en", "es", "de", "fr", "ja", "zh-Hans", "ko", "pt-BR", "it"]
+
+    /// Обязательные формы множественного числа по языку (CLDR). У японского,
+    /// китайского и корейского форма ОДНА: требовать у них `one` — значит
+    /// требовать несуществующую грамматику, а разрешать лишние формы значит
+    /// пропускать мусор, который переводчик скопировал из соседнего языка.
+    private static func pluralForms(_ language: String) -> Set<String> {
+        switch language {
+        case "ru": return ["one", "few", "many", "other"]
+        case "ja", "zh-Hans", "ko": return ["other"]
+        default: return ["one", "other"]
+        }
+    }
+
+    /// Полный список проблем уходит в файл: обрезание до десяти строк делало
+    /// тест бесполезным ровно тогда, когда работы много.
+    private func report(_ problems: [String], _ label: String) -> String {
+        let byLanguage = Dictionary(grouping: problems) { problem -> String in
+            // Язык стоит либо в конце строки, либо перед пояснением/формой.
+            Self.languages.first {
+                problem.hasSuffix(" \($0)") || problem.contains(" \($0) ") || problem.contains(" \($0)/")
+            } ?? "?"
+        }
+        let counts = byLanguage.map { "\($0.key): \($0.value.count)" }.sorted().joined(separator: ", ")
+        let path = NSTemporaryDirectory() + "splitty-i18n-\(label).txt"
+        try? problems.sorted().joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+        return "проблем \(problems.count) [\(counts)]\nполный список: \(path)\n"
+            + problems.sorted().prefix(40).joined(separator: "\n")
+    }
 
     /// Каталог в исходниках — читается по пути этого файла (тесты идут на
     /// симуляторе, файловая система общая с машиной сборки).
@@ -34,7 +62,7 @@ final class LocalizationCatalogTests: XCTestCase {
         return keys
     }
 
-    func testAppBundleCarriesAllFiveLocalizations() throws {
+    func testAppBundleCarriesEveryLocalization() throws {
         XCTAssertEqual(Bundle.main.bundleIdentifier, "com.zagir.splitty",
                        "тесты обязаны идти с приложением-хостом, иначе локализация не проверяется")
         for language in Self.languages {
@@ -53,7 +81,8 @@ final class LocalizationCatalogTests: XCTestCase {
             let keys = try bundleKeys(language)
             let missing = reference.subtracting(keys).sorted()
             XCTAssertTrue(missing.isEmpty,
-                          "нет перевода на \(language): \(missing.prefix(10).joined(separator: " | "))")
+                          "нет перевода на \(language) (\(missing.count) ключей): "
+                            + report(missing.map { "\($0): \(language) отсутствует" }, "bundle-\(language)"))
         }
     }
 
@@ -82,14 +111,20 @@ final class LocalizationCatalogTests: XCTestCase {
                     continue
                 }
                 if let plural = (unit["variations"] as? [String: Any])?["plural"] as? [String: Any] {
-                    let required = language == "ru" ? ["one", "few", "many", "other"] : ["one", "other"]
-                    for form in required where plural[form] == nil {
+                    let required = Self.pluralForms(language)
+                    for form in required.sorted() where plural[form] == nil {
                         problems.append("\(key): \(language) без формы \(form)")
                     }
                     for (form, value) in plural {
+                        if !required.contains(form) {
+                            problems.append("\(key): \(language)/\(form) — лишняя форма, в этом языке её нет")
+                        }
                         let string = (value as? [String: Any])?["stringUnit"] as? [String: Any]
                         if (string?["value"] as? String)?.isEmpty != false {
                             problems.append("\(key): \(language)/\(form) пустой")
+                        }
+                        if string?["state"] as? String != "translated" {
+                            problems.append("\(key): \(language)/\(form) не переведён")
                         }
                     }
                 } else {
@@ -103,7 +138,7 @@ final class LocalizationCatalogTests: XCTestCase {
                 }
             }
         }
-        XCTAssertTrue(problems.isEmpty, problems.sorted().prefix(15).joined(separator: "\n"))
+        XCTAssertTrue(problems.isEmpty, report(problems, "catalog"))
     }
 
     /// Каталог и собранный бандл описывают один и тот же набор ключей: лишняя

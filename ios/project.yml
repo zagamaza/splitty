@@ -111,7 +111,7 @@ targets:
         # Русский — язык исходников и запасной вариант; остальные четыре
         # ровно те же, что в android/app/src/main/res/values-*.
         CFBundleDevelopmentRegion: ru
-        CFBundleLocalizations: [ru, en, es, de, fr]
+        CFBundleLocalizations: [ru, en, es, de, fr, ja, zh-Hans, ko, pt-BR, it]
         CFBundleDisplayName: Splitor
         CFBundleShortVersionString: "1.9"
         CFBundleVersion: "22"

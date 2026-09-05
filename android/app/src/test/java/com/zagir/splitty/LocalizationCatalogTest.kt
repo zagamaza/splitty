@@ -19,7 +19,29 @@ import kotlin.test.assertTrue
  */
 class LocalizationCatalogTest {
 
-    private val locales = listOf("values-ru", "values-de", "values-es", "values-fr")
+    private val locales = listOf(
+        "values-ru", "values-de", "values-es", "values-fr",
+        "values-ja", "values-zh-rCN", "values-ko", "values-pt-rBR", "values-it",
+    )
+
+    /** Полный список уходит в файл: обрезание до десяти строк делало вывод
+     *  бесполезным ровно тогда, когда работы много. */
+    private fun report(items: Collection<String>, label: String): String {
+        val path = File(System.getProperty("java.io.tmpdir"), "splitty-i18n-$label.txt")
+        path.writeText(items.sorted().joinToString("\n"))
+        return "всего ${items.size}, полный список: $path\n" +
+            items.sorted().take(40).joinToString("\n")
+    }
+
+    /** Подстановки в переводе: набор обязан совпадать с базой, иначе строка
+     *  упадёт в runtime или потеряет число. Сравниваем МУЛЬТИМНОЖЕСТВО. */
+    private fun placeholders(value: String): List<String> =
+        Regex("""%(\d+\$)?[sdf]""").findAll(value).map { it.value }.sorted().toList()
+
+    private fun values(folder: String): Map<String, String> =
+        Regex("""<string name="([^"]+)"[^>]*>(.*?)</string>""", RegexOption.DOT_MATCHES_ALL)
+            .findAll(text(folder))
+            .associate { it.groupValues[1] to it.groupValues[2] }
 
     private fun text(folder: String): String {
         val file = File("src/main/res/$folder/strings.xml")
@@ -45,10 +67,37 @@ class LocalizationCatalogTest {
             val missing = base - keys(locale)
             assertTrue(
                 missing.isEmpty(),
-                "в $locale не хватает ${missing.size} строк — экран будет наполовину на английском: " +
-                    missing.sorted().take(10),
+                "в $locale не хватает строк — экран будет наполовину на английском: " +
+                    report(missing, "missing-$locale"),
             )
         }
+    }
+
+    /**
+     * Подстановки перевода совпадают с базой.
+     *
+     * Совпадения имён ключей мало: файл, где 677 строк скопированы с
+     * английского и потеряли `%1$s`, проходил как валидный, а в runtime строка
+     * теряет число или падает. Пустые значения ловим здесь же — их набор имён
+     * тоже не отличает.
+     */
+    @Test
+    fun `translations keep base placeholders`() {
+        val base = values("values")
+        val problems = mutableListOf<String>()
+        for (locale in locales) {
+            for ((key, value) in values(locale)) {
+                val reference = base[key] ?: continue
+                if (value.isBlank()) {
+                    problems += "$locale/$key: пустое значение"
+                    continue
+                }
+                if (placeholders(value) != placeholders(reference)) {
+                    problems += "$locale/$key: подстановки ${placeholders(value)} вместо ${placeholders(reference)}"
+                }
+            }
+        }
+        assertTrue(problems.isEmpty(), report(problems, "placeholders"))
     }
 
     @Test
@@ -58,7 +107,8 @@ class LocalizationCatalogTest {
             val extra = keys(locale) - base
             assertTrue(
                 extra.isEmpty(),
-                "в $locale есть лишние ключи (переименовали и забыли убрать): ${extra.sorted().take(10)}",
+                "в $locale есть лишние ключи (переименовали и забыли убрать): " +
+                    report(extra, "extra-$locale"),
             )
         }
     }
