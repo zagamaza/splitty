@@ -32,6 +32,13 @@ LOCALES = {
     "es-ES": {"graphic": "es-ES", "shots": None},
     "de-DE": {"graphic": "de-DE", "shots": None},
     "fr-FR": {"graphic": "fr-FR", "shots": None},
+    # Пять новых локалей переиспользуют английскую графику: своих картинок для
+    # них нет, а пустой feature graphic Play не принимает вовсе.
+    "ja-JP": {"graphic": "en-US", "shots": None},
+    "zh-CN": {"graphic": "en-US", "shots": None},
+    "ko-KR": {"graphic": "en-US", "shots": None},
+    "pt-BR": {"graphic": "en-US", "shots": None},
+    "it-IT": {"graphic": "en-US", "shots": None},
 }
 
 

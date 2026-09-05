@@ -423,11 +423,15 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 - Create: `metadata/play/{ja-JP,zh-CN,ko-KR,pt-BR,it-IT}.json`
 - Modify: `marketing/push-play-listing.py`
 
-- [ ] создать пять JSON по образцу `metadata/play/en-US.json`
-- [ ] дописать локали в `LOCALES` (`push-play-listing.py:29-35`) со значениями `{"graphic": "en-US", "shots": None}` — **решено переиспользовать английскую графику**, своих картинок для новых локалей нет
-- [ ] помнить, что скрипт льёт только `title`, `shortDescription`, `fullDescription`; `whatsNew` через него не уходит
-- [ ] прогнать проверку лимитов
-- [ ] ⚠️ **скрипт НЕ запускать**: он делает `edits:commit` (`push-play-listing.py:101`) — витрина обновляется мгновенно и без ревью, а без аргументов ещё и перезаливает скриншоты `en-US`/`ru-RU`
+- [x] создать пять JSON по образцу `metadata/play/en-US.json`
+- [x] дописать локали в `LOCALES` (`push-play-listing.py:29-35`) со значениями `{"graphic": "en-US", "shots": None}` — **решено переиспользовать английскую графику**, своих картинок для новых локалей нет
+- [x] помнить, что скрипт льёт только `title`, `shortDescription`, `fullDescription`; `whatsNew` через него не уходит
+- [x] прогнать проверку лимитов
+- [x] ⚠️ **скрипт НЕ запускать**: он делает `edits:commit` (`push-play-listing.py:101`) — витрина обновляется мгновенно и без ревью, а без аргументов ещё и перезаливает скриншоты `en-US`/`ru-RU`
+- ➕ полное описание для Play собрано из текста App Store с ОТРЕЗАННЫМ блоком
+  про подписку: условия подписки у Play живут в консоли, а ссылка на Apple ID
+  в витрине Google смотрелась бы ошибкой. Ссылка на политику приклеена
+  обратно — её Play требует
 
 ### Task 15: Verify acceptance criteria
 
