@@ -586,6 +586,71 @@
         }
       }
     },
+    "%@ в месяц": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ в месяц"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ per month"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pro Monat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ par mois"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ al mes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ al mese"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ por mês"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월 %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每月 %@"
+          }
+        }
+      }
+    },
     "%@ добавил вас в группу «%@»": {
       "extractionState": "manual",
       "localizations": {
@@ -976,6 +1041,136 @@
         }
       }
     },
+    "%@ отдал(а) вам": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ отдал(а) вам"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ paid you"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat dir bezahlt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ t'a remboursé"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ te ha pagado"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ti ha pagato"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pagou você"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんがあなたに返しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님이 회원님에게 갚았습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已还款给你"
+          }
+        }
+      }
+    },
+    "%@ отдал(а) — %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ отдал(а) — %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ paid — %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ hat bezahlt — %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a remboursé — %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha pagado — %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ha pagato — %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ pagou — %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんが返しました — %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님이 갚았습니다 — %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已还款 — %@"
+          }
+        }
+      }
+    },
     "%@ платит вам": {
       "extractionState": "manual",
       "localizations": {
@@ -1167,6 +1362,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ ti invita a tornare in “%2$@”"
+          }
+        }
+      }
+    },
+    "%@ убран(а) из группы": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ убран(а) из группы"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ removed from the group"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ wurde aus der Gruppe entfernt"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a été retiré du groupe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ya no está en el grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ è stato rimosso dal gruppo"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ foi removido do grupo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんをグループから外しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님을 그룹에서 내보냈습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已把 %@ 移出群组"
           }
         }
       }
@@ -4584,6 +4844,71 @@
         }
       }
     },
+    "Активна до %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Активна до %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active until %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktiv bis %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active jusqu'au %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa hasta el %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva fino al %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ativa até %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ まで有効"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@까지 유효"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效期至 %@"
+          }
+        }
+      }
+    },
     "Ане": {
       "extractionState": "manual",
       "localizations": {
@@ -5234,6 +5559,71 @@
         }
       }
     },
+    "Бесплатные вернутся через %lld ч. Plus снимает суточный лимит совсем": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Бесплатные вернутся через %lld ч. Plus снимает суточный лимит совсем"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The free ones are back in %lld h. Plus removes the daily limit entirely"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die kostenlosen kommen in %lld Std. zurück. Plus hebt das Tageslimit ganz auf"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les gratuites reviennent dans %lld h. Plus supprime complètement la limite quotidienne"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los gratuitos vuelven en %lld h. Plus elimina el límite diario por completo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelli gratuiti tornano tra %lld h. Plus toglie del tutto il limite giornaliero"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As gratuitas voltam em %lld h. O Plus tira o limite diário de vez"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料分は %lld 時間後に回復します。Plus なら1日の上限がなくなります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료 횟수는 %lld시간 뒤에 회복됩니다. Plus를 이용하시면 일일 제한이 사라집니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费次数将在 %lld 小时后恢复。Plus 可完全取消每日上限"
+          }
+        }
+      }
+    },
     "Бесплатные скоро вернутся. Plus снимает суточный лимит совсем": {
       "extractionState": "manual",
       "localizations": {
@@ -5295,6 +5685,185 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quelli gratuiti tornano presto. Plus toglie del tutto il limite giornaliero"
+          }
+        }
+      }
+    },
+    "Бесплатный тариф · %lld распознаваний в день": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Бесплатный тариф · %lld распознавание в день"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Бесплатный тариф · %lld распознавания в день"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Бесплатный тариф · %lld распознаваний в день"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Бесплатный тариф · %lld распознаваний в день"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Free plan · %lld recognition per day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Free plan · %lld recognitions per day"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Gratis-Tarif · %lld Erkennung pro Tag"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Gratis-Tarif · %lld Erkennungen pro Tag"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Forfait gratuit · %lld reconnaissance par jour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Forfait gratuit · %lld reconnaissances par jour"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Plan gratis · %lld reconocimiento al día"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Plan gratis · %lld reconocimientos al día"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Piano gratuito · %lld riconoscimento al giorno"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Piano gratuito · %lld riconoscimenti al giorno"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Plano gratuito · %lld reconhecimento por dia"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Plano gratuito · %lld reconhecimentos por dia"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "無料プラン・1日 %lld 回の認識"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "무료 요금제 · 하루 %lld회 인식"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "免费版 · 每天 %lld 次识别"
+                }
+              }
+            }
           }
         }
       }
@@ -8614,6 +9183,71 @@
         }
       }
     },
+    "Вы отдали — %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вы отдали — %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You paid — %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast bezahlt — %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu as remboursé — %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has pagado — %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai pagato — %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você pagou — %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたが返しました — %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 갚았습니다 — %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你已还款 — %@"
+          }
+        }
+      }
+    },
     "Вы платите — %@": {
       "extractionState": "manual",
       "localizations": {
@@ -10824,6 +11458,71 @@
         }
       }
     },
+    "Данные сохранённые, обновлялись %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Данные сохранённые, обновлялись %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved data, updated %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespeicherte Daten, aktualisiert %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données enregistrées, mises à jour %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos guardados, actualizados %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati salvati, aggiornati %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dados salvos, atualizados %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存済みのデータ・更新 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장된 데이터 · %@ 업데이트"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存的数据 · 更新于 %@"
+          }
+        }
+      }
+    },
     "Данные сохранённые: связи с сервером нет": {
       "extractionState": "manual",
       "localizations": {
@@ -11539,6 +12238,71 @@
         }
       }
     },
+    "Добавить %@ в группу?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить %@ в группу?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %@ to the group?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ zur Gruppe hinzufügen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter %@ au groupe ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Añadir a %@ al grupo?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungere %@ al gruppo?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar %@ ao grupo?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんをグループに追加しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님을 그룹에 추가할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把 %@ 加入群组？"
+          }
+        }
+      }
+    },
     "Добавить в группу": {
       "extractionState": "manual",
       "localizations": {
@@ -11860,6 +12624,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aggiungi spesa a mano"
+          }
+        }
+      }
+    },
+    "Добавить участников: %lld?": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить участников: %lld?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %lld members?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mitglieder hinzufügen?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter %lld membres ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Añadir %lld miembros?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungere %lld partecipanti?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar %lld participantes?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 人のメンバーを追加しますか？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자 %lld명을 추가할까요?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加 %lld 位成员？"
           }
         }
       }
@@ -17239,6 +18068,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Il limite è un minuto. Riconosco quello che sei riuscito a dire"
+          }
+        }
+      }
+    },
+    "На вас записано расходов: %lld. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На вас записано расходов: %lld. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You're listed in %lld expenses. Remove yourself from them, and if you paid, change the payer or delete the expense. Any member can edit expenses"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist in %lld Ausgaben eingetragen. Nimm dich dort heraus, und wenn du bezahlt hast, ändere den Zahler oder lösche die Ausgabe. Ausgaben kann jedes Mitglied bearbeiten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu figures dans %lld dépenses. Retire-toi de ces dépenses, et si c'est toi qui as payé, change le payeur ou supprime la dépense. N'importe quel membre peut modifier les dépenses"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apareces en %lld gastos. Quítate de ellos y, si pagaste tú, cambia el pagador o elimina el gasto. Cualquier miembro puede editar los gastos"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compari in %lld spese. Rimuoviti da quelle spese e, se hai pagato tu, cambia il pagante o elimina la spesa. Qualsiasi partecipante può modificare le spese"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você aparece em %lld despesas. Tire você mesmo delas e, se foi você quem pagou, troque o pagador ou exclua a despesa. Qualquer participante pode editar as despesas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたは %lld 件の支出に入っています。そこから自分を外してください。支払ったのがあなたなら、支払者を変えるか支出を削除します。支出は誰でも編集できます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 포함된 지출이 %lld건 있습니다. 거기에서 자신을 빼세요. 결제한 사람이 회원님이라면 결제자를 바꾸거나 지출을 삭제하세요. 지출은 참여자 누구나 수정할 수 있습니다"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %lld 笔支出记在你名下。请把自己从这些支出中移除；如果是你付的钱，就换个付款人或删除该支出。任何成员都可以修改支出"
           }
         }
       }
@@ -28452,6 +29346,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unisciti al gruppo “%1$@” su Splitor: %2$@\nCodice del gruppo: %3$@"
+          }
+        }
+      }
+    },
+    "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Join the “%@” group on Splitty: %@\nGroup code: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komm in die Gruppe „%@“ bei Splitty: %@\nGruppencode: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rejoins le groupe « %@ » sur Splitty : %@\nCode du groupe : %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Únete al grupo «%@» en Splitty: %@\nCódigo del grupo: %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unisciti al gruppo «%@» su Splitty: %@\nCodice del gruppo: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entre no grupo “%@” no Splitty: %@\nCódigo do grupo: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty のグループ「%@」に参加してね: %@\nグループコード: %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty에서 「%@」 그룹에 참여해 주세요: %@\n그룹 코드: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来加入 Splitty 的「%@」群组：%@\n群组代码：%@"
           }
         }
       }

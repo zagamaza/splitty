@@ -1,0 +1,187 @@
+{
+  "Активна до %@": {
+    "ru": "Активна до %@",
+    "en": "Active until %@",
+    "de": "Aktiv bis %@",
+    "fr": "Active jusqu'au %@",
+    "es": "Activa hasta el %@",
+    "it": "Attiva fino al %@",
+    "pt-BR": "Ativa até %@",
+    "ja": "%@ まで有効",
+    "ko": "%@까지 유효",
+    "zh-Hans": "有效期至 %@"
+  },
+  "Бесплатный тариф · %lld распознаваний в день": {
+    "ru": {
+      "one": "Бесплатный тариф · %lld распознавание в день",
+      "few": "Бесплатный тариф · %lld распознавания в день",
+      "many": "Бесплатный тариф · %lld распознаваний в день",
+      "other": "Бесплатный тариф · %lld распознаваний в день"
+    },
+    "en": {
+      "one": "Free plan · %lld recognition per day",
+      "other": "Free plan · %lld recognitions per day"
+    },
+    "de": {
+      "one": "Gratis-Tarif · %lld Erkennung pro Tag",
+      "other": "Gratis-Tarif · %lld Erkennungen pro Tag"
+    },
+    "fr": {
+      "one": "Forfait gratuit · %lld reconnaissance par jour",
+      "other": "Forfait gratuit · %lld reconnaissances par jour"
+    },
+    "es": {
+      "one": "Plan gratis · %lld reconocimiento al día",
+      "other": "Plan gratis · %lld reconocimientos al día"
+    },
+    "it": {
+      "one": "Piano gratuito · %lld riconoscimento al giorno",
+      "other": "Piano gratuito · %lld riconoscimenti al giorno"
+    },
+    "pt-BR": {
+      "one": "Plano gratuito · %lld reconhecimento por dia",
+      "other": "Plano gratuito · %lld reconhecimentos por dia"
+    },
+    "ja": {
+      "other": "無料プラン・1日 %lld 回の認識"
+    },
+    "ko": {
+      "other": "무료 요금제 · 하루 %lld회 인식"
+    },
+    "zh-Hans": {
+      "other": "免费版 · 每天 %lld 次识别"
+    }
+  },
+  "Данные сохранённые, обновлялись %@": {
+    "ru": "Данные сохранённые, обновлялись %@",
+    "en": "Saved data, updated %@",
+    "de": "Gespeicherte Daten, aktualisiert %@",
+    "fr": "Données enregistrées, mises à jour %@",
+    "es": "Datos guardados, actualizados %@",
+    "it": "Dati salvati, aggiornati %@",
+    "pt-BR": "Dados salvos, atualizados %@",
+    "ja": "保存済みのデータ・更新 %@",
+    "ko": "저장된 데이터 · %@ 업데이트",
+    "zh-Hans": "已保存的数据 · 更新于 %@"
+  },
+  "На вас записано расходов: %lld. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник": {
+    "ru": "На вас записано расходов: %lld. Уберите себя из них, а если платили вы — смените плательщика или удалите расход. Править расходы может любой участник",
+    "en": "You're listed in %lld expenses. Remove yourself from them, and if you paid, change the payer or delete the expense. Any member can edit expenses",
+    "de": "Du bist in %lld Ausgaben eingetragen. Nimm dich dort heraus, und wenn du bezahlt hast, ändere den Zahler oder lösche die Ausgabe. Ausgaben kann jedes Mitglied bearbeiten",
+    "fr": "Tu figures dans %lld dépenses. Retire-toi de ces dépenses, et si c'est toi qui as payé, change le payeur ou supprime la dépense. N'importe quel membre peut modifier les dépenses",
+    "es": "Apareces en %lld gastos. Quítate de ellos y, si pagaste tú, cambia el pagador o elimina el gasto. Cualquier miembro puede editar los gastos",
+    "it": "Compari in %lld spese. Rimuoviti da quelle spese e, se hai pagato tu, cambia il pagante o elimina la spesa. Qualsiasi partecipante può modificare le spese",
+    "pt-BR": "Você aparece em %lld despesas. Tire você mesmo delas e, se foi você quem pagou, troque o pagador ou exclua a despesa. Qualquer participante pode editar as despesas",
+    "ja": "あなたは %lld 件の支出に入っています。そこから自分を外してください。支払ったのがあなたなら、支払者を変えるか支出を削除します。支出は誰でも編集できます",
+    "ko": "회원님이 포함된 지출이 %lld건 있습니다. 거기에서 자신을 빼세요. 결제한 사람이 회원님이라면 결제자를 바꾸거나 지출을 삭제하세요. 지출은 참여자 누구나 수정할 수 있습니다",
+    "zh-Hans": "有 %lld 笔支出记在你名下。请把自己从这些支出中移除；如果是你付的钱，就换个付款人或删除该支出。任何成员都可以修改支出"
+  },
+  "%@ убран(а) из группы": {
+    "ru": "%@ убран(а) из группы",
+    "en": "%@ removed from the group",
+    "de": "%@ wurde aus der Gruppe entfernt",
+    "fr": "%@ a été retiré du groupe",
+    "es": "%@ ya no está en el grupo",
+    "it": "%@ è stato rimosso dal gruppo",
+    "pt-BR": "%@ foi removido do grupo",
+    "ja": "%@ さんをグループから外しました",
+    "ko": "%@ 님을 그룹에서 내보냈습니다",
+    "zh-Hans": "已把 %@ 移出群组"
+  },
+  "Добавить %@ в группу?": {
+    "ru": "Добавить %@ в группу?",
+    "en": "Add %@ to the group?",
+    "de": "%@ zur Gruppe hinzufügen?",
+    "fr": "Ajouter %@ au groupe ?",
+    "es": "¿Añadir a %@ al grupo?",
+    "it": "Aggiungere %@ al gruppo?",
+    "pt-BR": "Adicionar %@ ao grupo?",
+    "ja": "%@ さんをグループに追加しますか？",
+    "ko": "%@ 님을 그룹에 추가할까요?",
+    "zh-Hans": "把 %@ 加入群组？"
+  },
+  "Добавить участников: %lld?": {
+    "ru": "Добавить участников: %lld?",
+    "en": "Add %lld members?",
+    "de": "%lld Mitglieder hinzufügen?",
+    "fr": "Ajouter %lld membres ?",
+    "es": "¿Añadir %lld miembros?",
+    "it": "Aggiungere %lld partecipanti?",
+    "pt-BR": "Adicionar %lld participantes?",
+    "ja": "%lld 人のメンバーを追加しますか？",
+    "ko": "참여자 %lld명을 추가할까요?",
+    "zh-Hans": "添加 %lld 位成员？"
+  },
+  "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@": {
+    "ru": "Присоединяйся к группе «%@» в Splitty: %@\nКод группы: %@",
+    "en": "Join the “%@” group on Splitty: %@\nGroup code: %@",
+    "de": "Komm in die Gruppe „%@“ bei Splitty: %@\nGruppencode: %@",
+    "fr": "Rejoins le groupe « %@ » sur Splitty : %@\nCode du groupe : %@",
+    "es": "Únete al grupo «%@» en Splitty: %@\nCódigo del grupo: %@",
+    "it": "Unisciti al gruppo «%@» su Splitty: %@\nCodice del gruppo: %@",
+    "pt-BR": "Entre no grupo “%@” no Splitty: %@\nCódigo do grupo: %@",
+    "ja": "Splitty のグループ「%@」に参加してね: %@\nグループコード: %@",
+    "ko": "Splitty에서 「%@」 그룹에 참여해 주세요: %@\n그룹 코드: %@",
+    "zh-Hans": "来加入 Splitty 的「%@」群组：%@\n群组代码：%@"
+  },
+  "Бесплатные вернутся через %lld ч. Plus снимает суточный лимит совсем": {
+    "ru": "Бесплатные вернутся через %lld ч. Plus снимает суточный лимит совсем",
+    "en": "The free ones are back in %lld h. Plus removes the daily limit entirely",
+    "de": "Die kostenlosen kommen in %lld Std. zurück. Plus hebt das Tageslimit ganz auf",
+    "fr": "Les gratuites reviennent dans %lld h. Plus supprime complètement la limite quotidienne",
+    "es": "Los gratuitos vuelven en %lld h. Plus elimina el límite diario por completo",
+    "it": "Quelli gratuiti tornano tra %lld h. Plus toglie del tutto il limite giornaliero",
+    "pt-BR": "As gratuitas voltam em %lld h. O Plus tira o limite diário de vez",
+    "ja": "無料分は %lld 時間後に回復します。Plus なら1日の上限がなくなります",
+    "ko": "무료 횟수는 %lld시간 뒤에 회복됩니다. Plus를 이용하시면 일일 제한이 사라집니다",
+    "zh-Hans": "免费次数将在 %lld 小时后恢复。Plus 可完全取消每日上限"
+  },
+  "%@ в месяц": {
+    "ru": "%@ в месяц",
+    "en": "%@ per month",
+    "de": "%@ pro Monat",
+    "fr": "%@ par mois",
+    "es": "%@ al mes",
+    "it": "%@ al mese",
+    "pt-BR": "%@ por mês",
+    "ja": "月 %@",
+    "ko": "월 %@",
+    "zh-Hans": "每月 %@"
+  },
+  "Вы отдали — %@": {
+    "ru": "Вы отдали — %@",
+    "en": "You paid — %@",
+    "de": "Du hast bezahlt — %@",
+    "fr": "Tu as remboursé — %@",
+    "es": "Has pagado — %@",
+    "it": "Hai pagato — %@",
+    "pt-BR": "Você pagou — %@",
+    "ja": "あなたが返しました — %@",
+    "ko": "회원님이 갚았습니다 — %@",
+    "zh-Hans": "你已还款 — %@"
+  },
+  "%@ отдал(а) вам": {
+    "ru": "%@ отдал(а) вам",
+    "en": "%@ paid you",
+    "de": "%@ hat dir bezahlt",
+    "fr": "%@ t'a remboursé",
+    "es": "%@ te ha pagado",
+    "it": "%@ ti ha pagato",
+    "pt-BR": "%@ pagou você",
+    "ja": "%@ さんがあなたに返しました",
+    "ko": "%@ 님이 회원님에게 갚았습니다",
+    "zh-Hans": "%@ 已还款给你"
+  },
+  "%@ отдал(а) — %@": {
+    "ru": "%@ отдал(а) — %@",
+    "en": "%@ paid — %@",
+    "de": "%@ hat bezahlt — %@",
+    "fr": "%@ a remboursé — %@",
+    "es": "%@ ha pagado — %@",
+    "it": "%@ ha pagato — %@",
+    "pt-BR": "%@ pagou — %@",
+    "ja": "%@ さんが返しました — %@",
+    "ko": "%@ 님이 갚았습니다 — %@",
+    "zh-Hans": "%@ 已还款 — %@"
+  }
+}

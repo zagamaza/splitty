@@ -336,11 +336,20 @@ iOS собирает формат через `setLocalizedDateFormatFromTemplate
 - Modify: `ios/SplittyTests/LocalizationCatalogTests.swift`
 - Modify: `android/app/src/test/java/com/zagir/splitty/HardcodedTextTest.kt`
 
-- [ ] перенести на iOS правило андроидного теста: любой кириллический литерал в исходниках обязан быть ключом каталога либо в явном allow-list — это проверяемо, в отличие от «найти все места»
-- [ ] починить найденное, начиная с `GroupsAddAction.title` и `leaveConfirmTitle` (`ActivityView.swift:95-99`)
-- [ ] новые ключи перевести на все 10 языков тем же скриптом слияния
-- [ ] расширить сканеры: `.navigationTitle`, `.alert`, `.accessibilityLabel`, `.accessibilityHint`
-- [ ] прогнать оба клиента — зелёные
+- [x] перенести на iOS правило андроидного теста: любой кириллический литерал в исходниках обязан быть ключом каталога либо в явном allow-list — это проверяемо, в отличие от «найти все места»
+- [x] починить найденное, начиная с `GroupsAddAction.title` и `leaveConfirmTitle` (`ActivityView.swift:95-99`)
+- [x] новые ключи перевести на все 10 языков тем же скриптом слияния
+- [x] расширить сканеры: `.navigationTitle`, `.alert`, `.accessibilityLabel`, `.accessibilityHint`
+- [x] прогнать оба клиента — зелёные
+- ➕ ключи, которые код просит, а каталог не видел, сняты сборкой:
+  `xcodebuild ... SWIFT_EMIT_LOC_STRINGS=YES`, ключи в
+  `Objects-normal/<arch>/*.stringsdata`. Нашлось 13 штук — весь Splitor Plus,
+  SettleUp и приглашения. `String(localized:)` без записи в каталоге молча
+  отдаёт сам ключ, то есть русский текст на любом языке, и ни один тест этого
+  не видел
+- ➕ `merge-xcstrings.py` умеет лить только в существующую запись, поэтому
+  заведён `scripts/add-xcstrings-keys.py`: создаёт записи (в т. ч. с формами
+  множественного числа) и падает на ключ, который уже есть
 
 ### Task 10: Проверить переводы счётными критериями
 

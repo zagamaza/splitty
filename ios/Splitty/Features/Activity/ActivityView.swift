@@ -93,9 +93,12 @@ struct ActivityView: View {
     }
 
     /// Заголовок подтверждения выхода с карточки.
+    ///
+    /// `String(localized:)`, а не голая интерполяция: `.alert(строка, …)` берёт
+    /// обычную строку как есть, и заголовок оставался русским на любом языке.
     private var leaveConfirmTitle: String {
         guard let card = leaveConfirmCard else { return "" }
-        return "Выйти из «\(card.roomName)»?"
+        return String(localized: "Выйти из «\(card.roomName)»?")
     }
 
     @ViewBuilder

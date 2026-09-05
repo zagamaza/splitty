@@ -16,7 +16,10 @@ enum GroupsRoute: Hashable {
 enum GroupsAddAction: CaseIterable {
     case create, joinByCode
 
-    var title: String {
+    /// `LocalizedStringKey`, а не `String`: `Label(строка, systemImage:)` берёт
+    /// обычную строку как есть и не ходит в каталог — пункт меню оставался
+    /// русским на любом языке.
+    var title: LocalizedStringKey {
         switch self {
         case .create: return "Создать группу"
         case .joinByCode: return "Присоединиться по коду"
