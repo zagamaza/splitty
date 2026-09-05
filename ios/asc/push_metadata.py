@@ -12,6 +12,12 @@
   metadata/app-info/<loc>.json    — name, subtitle, privacyPolicyUrl
   metadata/version/<ver>/<loc>.json — description, keywords, promotionalText,
                                       whatsNew, supportUrl
+
+Каталог версии выбирается по номеру редактируемой версии в ASC, а не зашит:
+с зашитой «1.4» скрипт залил бы в новую версию тексты позапрошлой, и заметить
+это можно было бы только по «Что нового» на витрине. Если каталога с таким
+номером нет, берётся `metadata/version/next` — черновик текстов, которым номер
+ещё не назначен.
 """
 import json
 import pathlib
@@ -21,7 +27,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import asc  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-VERSION_DIR = ROOT / "metadata" / "version" / "1.4"
+VERSIONS = ROOT / "metadata" / "version"
 INFO_DIR = ROOT / "metadata" / "app-info"
 
 
@@ -73,10 +79,22 @@ def upsert(kind, parent_rel, parent_id, have, locale, attrs):
 PARENT_TYPE = {"appInfo": "appInfos", "appStoreVersion": "appStoreVersions"}
 
 
+def version_dir(version_string):
+    exact = VERSIONS / str(version_string)
+    if exact.is_dir():
+        return exact
+    draft = VERSIONS / "next"
+    if draft.is_dir():
+        print(f"каталога metadata/version/{version_string} нет — беру {draft.name}")
+        return draft
+    die(f"нет ни metadata/version/{version_string}, ни metadata/version/next")
+
+
 def main(locales):
     version_id, version_string = editable_version()
     info_id = app_info_id()
-    print(f"версия {version_string} ({version_id}), appInfo {info_id}\n")
+    versions_dir = version_dir(version_string)
+    print(f"версия {version_string} ({version_id}), appInfo {info_id}, тексты из {versions_dir.name}\n")
 
     have_info = existing(f"/v1/appInfos/{info_id}/appInfoLocalizations")
     st, builds = asc.req("GET", f"/v1/apps/{asc.APP_ID}/appStoreVersions?limit=200")
@@ -86,7 +104,7 @@ def main(locales):
 
     for loc in locales:
         info_file = INFO_DIR / f"{loc}.json"
-        ver_file = VERSION_DIR / f"{loc}.json"
+        ver_file = versions_dir / f"{loc}.json"
         if not info_file.exists() or not ver_file.exists():
             print(f"{loc}: нет файлов метаданных — пропускаю")
             continue

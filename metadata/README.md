@@ -8,7 +8,8 @@
 
 ```
 app-info/<loc>.json        имя, подзаголовок, ссылка на политику (App Store)
-version/1.4/<loc>.json     описание, ключевые слова, промо-текст, «что нового»
+version/<ver>/<loc>.json   описание, ключевые слова, промо-текст, «что нового»
+version/next/<loc>.json    то же, но номер версии ещё не назначен
 play/<loc>.json            заголовок, короткое и полное описание (Google Play)
 screenshots/<lang>/        СЫРЫЕ кадры iOS, 1320×2868
 screenshots-android/<lang>/ СЫРЫЕ кадры Android, 1280×2856
@@ -17,9 +18,15 @@ screenshots-framed-android/<lang>/ оформленные кадры Google Play
 feature-graphic/<loc>.png  обязательная графика Google Play, 1024×500
 ```
 
+Каталог версии выбирает `ios/asc/push_metadata.py` по номеру редактируемой
+версии в ASC. Пока такой версии нет, тексты лежат в `version/next`: заводить
+версию в App Store Connect — ручной шаг, и придумывать номер за человека
+скрипт не должен.
+
 Локали именуются по-разному, потому что так их называют сами магазины:
-App Store — `ru`, `en-US`, `es-ES`, `de-DE`, `fr-FR`; Google Play — `ru-RU`
-вместо `ru`. Каталоги кадров идут по языку приложения: `ru`, `en`.
+App Store — `ru`, `en-US`, `es-ES`, `de-DE`, `fr-FR`, `ja`, `zh-Hans`, `ko`,
+`pt-BR`, `it`; Google Play — `ru-RU` вместо `ru`, `zh-CN` вместо `zh-Hans`.
+Каталоги кадров идут по языку приложения: `ru`, `en`.
 
 ## Как пересобрать
 

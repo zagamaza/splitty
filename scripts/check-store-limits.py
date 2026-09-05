@@ -91,12 +91,17 @@ def check_play(problems: list[str]) -> int:
 
 
 def versions() -> list[str]:
-    """Свежая версия каталога. Прошлые не проверяем: 1.4 вышла до подписки, и
-    требовать от неё блок 3.1.2(c) значит держать красным то, что уже продано.
+    """Свежая версия каталога плюс черновик `next`, если он есть.
+
+    Прошлые версии не проверяем: 1.4 вышла до подписки, и требовать от неё
+    блок 3.1.2(c) значит держать красным то, что уже продано. `next` — тексты,
+    которым номер ещё не назначен: версию в App Store Connect заводит человек,
+    и до этого каталог лежит под именем, которое ни на что не претендует.
     """
-    names = sorted((p.name for p in (META / "version").iterdir() if p.is_dir()),
-                   key=lambda n: [int(x) for x in n.split(".")])
-    return names[-1:]
+    dirs = [p.name for p in (META / "version").iterdir() if p.is_dir()]
+    numbered = sorted((n for n in dirs if n.replace(".", "").isdigit()),
+                      key=lambda n: [int(x) for x in n.split(".")])
+    return numbered[-1:] + [n for n in dirs if n == "next"]
 
 
 def main(argv: list[str]) -> int:
