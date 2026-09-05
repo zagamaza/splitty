@@ -39,6 +39,12 @@
             "state": "translated",
             "value": "「%@」で"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「%@」中"
+          }
         }
       }
     },
@@ -79,6 +85,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "さんが「%2$@」に「%1$@」を追加しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「%2$@」中添加了「%1$@」"
           }
         }
       }
@@ -121,6 +133,12 @@
             "state": "translated",
             "value": "さんが支払いました "
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支付了 "
+          }
         }
       }
     },
@@ -161,6 +179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "さんがあなたに支払いました "
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "向你支付了 "
           }
         }
       }
@@ -203,6 +227,12 @@
             "state": "translated",
             "value": "全員で"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由所有人平摊"
+          }
         }
       }
     },
@@ -243,6 +273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "食べた分に応じて"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按各自消费"
           }
         }
       }
@@ -285,6 +321,12 @@
             "state": "translated",
             "value": "%@（あなた）"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（你）"
+          }
         }
       }
     },
@@ -325,6 +367,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ ÷ %2$lld = 1人あたり %3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ ÷ %2$lld = 每人 %3$@"
           }
         }
       }
@@ -367,6 +415,12 @@
             "state": "translated",
             "value": "%@・パスワード未設定"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 未设置密码"
+          }
         }
       }
     },
@@ -407,6 +461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ さんがあなたを「%2$@」に追加しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 把你加入了「%2$@」"
           }
         }
       }
@@ -449,6 +509,12 @@
             "state": "translated",
             "value": "%@ さんがあなたに借りています"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 欠你"
+          }
         }
       }
     },
@@ -489,6 +555,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ さんの借り — %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 欠 — %2$@"
           }
         }
       }
@@ -531,6 +603,12 @@
             "state": "translated",
             "value": "%2$@ あたり %1$@。自動更新されます。解約は Apple ID の設定からいつでも可能です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每%2$@ %1$@。自动续订，可随时在 Apple ID 设置中取消"
+          }
         }
       }
     },
@@ -571,6 +649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ さんが %2$@ を支払いました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 支付了 %2$@"
           }
         }
       }
@@ -613,6 +697,12 @@
             "state": "translated",
             "value": "%@ さんがあなたに支払いました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 向你支付了"
+          }
         }
       }
     },
@@ -653,6 +743,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ さんがあなたに支払います"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 付给你"
           }
         }
       }
@@ -695,6 +791,12 @@
             "state": "translated",
             "value": "%1$@ さんが支払い — %2$@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 支付 — %2$@"
+          }
         }
       }
     },
@@ -736,6 +838,12 @@
             "state": "translated",
             "value": "%1$@ さんが「%2$@」への復帰に招待しています"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 邀请你回到「%2$@」"
+          }
         }
       }
     },
@@ -776,6 +884,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ は固定・残りは均等"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 固定金额 · 其余平摊"
           }
         }
       }
@@ -1032,6 +1146,12 @@
             "state": "translated",
             "value": "%1$lld 個・1個あたり %2$@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 件 · 每件 %2$@"
+          }
         }
       }
     },
@@ -1073,6 +1193,12 @@
             "state": "translated",
             "value": "+%@ の手数料"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@ 服务费"
+          }
         }
       }
     },
@@ -1110,6 +1236,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "0"
@@ -1155,6 +1287,12 @@
             "state": "translated",
             "value": "¥0"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥0.00"
+          }
         }
       }
     },
@@ -1195,6 +1333,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "送金 1 件"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 笔转账"
           }
         }
       }
@@ -1237,6 +1381,12 @@
             "state": "translated",
             "value": "¥100"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥10.00"
+          }
         }
       }
     },
@@ -1277,6 +1427,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥1,000"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥100.00"
           }
         }
       }
@@ -1319,6 +1475,12 @@
             "state": "translated",
             "value": "¥1,350"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥135.00"
+          }
         }
       }
     },
@@ -1359,6 +1521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥150"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥15.00"
           }
         }
       }
@@ -1401,6 +1569,12 @@
             "state": "translated",
             "value": "¥1,500"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥150.00"
+          }
         }
       }
     },
@@ -1441,6 +1615,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "送金 2 件"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 笔转账"
           }
         }
       }
@@ -1483,6 +1663,12 @@
             "state": "translated",
             "value": "2 品"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 项"
+          }
         }
       }
     },
@@ -1523,6 +1709,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥200 + ボリスの ¥100"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥20.00 + 鲍里斯的 ¥10.00"
           }
         }
       }
@@ -1565,6 +1757,12 @@
             "state": "translated",
             "value": "¥200"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥20.00"
+          }
         }
       }
     },
@@ -1605,6 +1803,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥3,200"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥320.00"
           }
         }
       }
@@ -1647,6 +1851,12 @@
             "state": "translated",
             "value": "¥300"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥30.00"
+          }
         }
       }
     },
@@ -1687,6 +1897,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥450"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥45.00"
           }
         }
       }
@@ -1729,6 +1945,12 @@
             "state": "translated",
             "value": "¥600"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥60.00"
+          }
         }
       }
     },
@@ -1769,6 +1991,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥800"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥80.00"
           }
         }
       }
@@ -1811,6 +2039,12 @@
             "state": "translated",
             "value": "¥900"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥90.00"
+          }
         }
       }
     },
@@ -1851,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple からサインイン情報が返されませんでした。もう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 未返回登录信息，请重试"
           }
         }
       }
@@ -1893,6 +2133,12 @@
             "state": "translated",
             "value": "Apple から連携に必要な情報が返されませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 未返回绑定所需的信息，请重试"
+          }
         }
       }
     },
@@ -1933,6 +2179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple がサインインを確認できませんでした。もう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 未确认登录，请重试"
           }
         }
       }
@@ -1975,6 +2227,12 @@
             "state": "translated",
             "value": "メール"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮箱"
+          }
         }
       }
     },
@@ -2016,6 +2274,12 @@
             "state": "translated",
             "value": "メールとパスワード"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮箱和密码"
+          }
         }
       }
     },
@@ -2053,6 +2317,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "English"
@@ -2098,6 +2368,12 @@
             "state": "translated",
             "value": "Google からサインイン情報が返されませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 未返回登录信息，请重试"
+          }
         }
       }
     },
@@ -2139,6 +2415,12 @@
             "state": "translated",
             "value": "Google がサインインを確認できませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 未确认登录，请重试"
+          }
         }
       }
     },
@@ -2176,6 +2458,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID: %@"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "ID: %@"
@@ -2221,6 +2509,12 @@
             "state": "translated",
             "value": "Splitor"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
         }
       }
     },
@@ -2258,6 +2552,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "Splitor Plus"
@@ -2303,6 +2603,12 @@
             "state": "translated",
             "value": "Splitor は記録するだけです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor 只负责记账"
+          }
         }
       }
     },
@@ -2343,6 +2649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty はすべての支出を参加者で分割します。夕食 600円 を3人なら1人 200円、タクシー 300円 なら1人 100円です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty 会把每笔支出分摊给成员。三人 ¥60.00 的晚餐每人 ¥20.00，¥30.00 的打车每人 ¥10.00。"
           }
         }
       }
@@ -2385,6 +2697,12 @@
             "state": "translated",
             "value": "Splitty は記録するだけです。お金は現金または送金でお渡しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty 只做记录：请用现金或转账把钱交给对方"
+          }
         }
       }
     },
@@ -2422,6 +2740,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "Telegram"
@@ -2467,6 +2791,12 @@
             "state": "translated",
             "value": "Telegram がサインインを確認できませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram 未确认登录，请重试"
+          }
         }
       }
     },
@@ -2504,6 +2834,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "http://127.0.0.1:7171"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "http://127.0.0.1:7171"
@@ -2549,6 +2885,12 @@
             "state": "translated",
             "value": "「%1$@」は %2$@ さんですね。覚えましたので、次からは伺いません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」是 %2$@。已记住，不再询问"
+          }
         }
       }
     },
@@ -2589,6 +2931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「均等」を選ぶとレシートの品目は破棄され、合計が全員で均等に分割されます。「取り消す」で元に戻せます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择「平摊」会舍弃小票上的项目，把总额在所有成员之间平均分配。可用「撤销」恢复"
           }
         }
       }
@@ -2631,6 +2979,12 @@
             "state": "translated",
             "value": "「夕食 3,200円、4人で割って」"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「晚餐 ¥320，四个人分」"
+          }
         }
       }
     },
@@ -2671,6 +3025,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "・残り %lld 秒"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 剩余 %lld 秒"
           }
         }
       }
@@ -2713,6 +3073,12 @@
             "state": "translated",
             "value": "・金額で指定"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 按金额"
+          }
         }
       }
     },
@@ -2754,6 +3120,12 @@
             "state": "translated",
             "value": "・均等"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 平摊"
+          }
         }
       }
     },
@@ -2791,6 +3163,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "A"
@@ -2836,6 +3214,12 @@
             "state": "translated",
             "value": "アカウントは削除されましたが、データの消去が完了していません。「アカウントを削除」をもう一度タップして完了してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号已删除，但数据清理尚未完成。请再次点按「删除账号」以完成"
+          }
         }
       }
     },
@@ -2876,6 +3260,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "有効"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有效"
           }
         }
       }
@@ -2918,6 +3308,12 @@
             "state": "translated",
             "value": "アンナ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安娜"
+          }
         }
       }
     },
@@ -2958,6 +3354,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アンナ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安娜"
           }
         }
       }
@@ -3000,6 +3402,12 @@
             "state": "translated",
             "value": "アーカイブ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档"
+          }
         }
       }
     },
@@ -3040,6 +3448,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アーカイブは空です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档为空"
           }
         }
       }
@@ -3082,6 +3496,12 @@
             "state": "translated",
             "value": "アーカイブすると、そのグループはあなたの一覧からのみ非表示になります。支出と貸し借りはそのまま残ります。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档只会把该群组从你的列表中隐藏，支出和欠款都会保留。"
+          }
         }
       }
     },
@@ -3122,6 +3542,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アーカイブする"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档"
           }
         }
       }
@@ -3164,6 +3590,12 @@
             "state": "translated",
             "value": "アーカイブしたグループがここに表示されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档的群组会显示在这里"
+          }
         }
       }
     },
@@ -3201,6 +3633,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "B"
@@ -3246,6 +3684,12 @@
             "state": "translated",
             "value": "残高"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "余额"
+          }
         }
       }
     },
@@ -3286,6 +3730,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty なしの場合"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不用 Splitty"
           }
         }
       }
@@ -3328,6 +3778,12 @@
             "state": "translated",
             "value": "無料分はまもなく回復します。Plus なら1日の上限がなくなります"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "免费次数很快恢复。Plus 可完全取消每日上限"
+          }
         }
       }
     },
@@ -3368,6 +3824,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ボリス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鲍里斯"
           }
         }
       }
@@ -3410,6 +3872,12 @@
             "state": "translated",
             "value": "ボリス"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鲍里斯"
+          }
         }
       }
     },
@@ -3450,6 +3918,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アーカイブへ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档"
           }
         }
       }
@@ -3492,6 +3966,12 @@
             "state": "translated",
             "value": "グループの通貨で、支出・貸し借り・合計のすべての金額が表示されます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组的所有金额都以其货币显示：支出、欠款和合计。"
+          }
         }
       }
     },
@@ -3532,6 +4012,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このグループにはあなただけです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组里只有你"
           }
         }
       }
@@ -3574,6 +4060,12 @@
             "state": "translated",
             "value": "どのグループで精算しますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要在哪个群组结算？"
+          }
         }
       }
     },
@@ -3614,6 +4106,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このグループには支出が溜まりすぎました。新しいグループを作成してください。古いグループは閲覧のみ可能です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个群组的支出太多了。请新建一个，旧群组仍可查看"
           }
         }
       }
@@ -3656,6 +4154,12 @@
             "state": "translated",
             "value": "あなたが送金する"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你需转账"
+          }
         }
       }
     },
@@ -3696,6 +4200,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "通貨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "货币"
           }
         }
       }
@@ -3738,6 +4248,12 @@
             "state": "translated",
             "value": "返済を受けました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有人还了你钱"
+          }
         }
       }
     },
@@ -3778,6 +4294,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "返済を受けたとき、およびあなたの借りについてのお知らせ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有人还款给你，以及关于你欠款的提醒"
           }
         }
       }
@@ -3820,6 +4342,12 @@
             "state": "translated",
             "value": "受け取る"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "别人欠你"
+          }
         }
       }
     },
@@ -3860,6 +4388,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループに招待または追加されたとき"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有人邀请你或把你加入群组"
           }
         }
       }
@@ -3902,6 +4436,12 @@
             "state": "translated",
             "value": "あなたの負担分 300円 は2回ではなく1回の送金で済みます。Splitty がグループ内の貸し借りを相殺します。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 ¥30.00 只需一次转账，而不是两次：Splitty 会在群组内抵销欠款。"
+          }
         }
       }
     },
@@ -3942,6 +4482,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "今夜のあなたの負担分"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你今晚的分摊"
           }
         }
       }
@@ -3984,6 +4530,12 @@
             "state": "translated",
             "value": "あなたの借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的欠款"
+          }
         }
       }
     },
@@ -4024,6 +4576,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出の説明を入力してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入支出说明"
           }
         }
       }
@@ -4066,6 +4624,12 @@
             "state": "translated",
             "value": "金額を入力してください（1以上の整数）"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入金额（不小于 1 的整数）"
+          }
         }
       }
     },
@@ -4106,6 +4670,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "手入力する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手动输入"
           }
         }
       }
@@ -4148,6 +4718,12 @@
             "state": "translated",
             "value": "続けるには指を戻してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请把手指放回以继续"
+          }
         }
       }
     },
@@ -4188,6 +4764,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アーカイブから戻す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从归档恢复"
           }
         }
       }
@@ -4230,6 +4812,12 @@
             "state": "translated",
             "value": "バージョン %@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本 %@"
+          }
         }
       }
     },
@@ -4270,6 +4858,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "動画"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频"
           }
         }
       }
@@ -4312,6 +4906,12 @@
             "state": "translated",
             "value": "添付ファイル"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件"
+          }
         }
       }
     },
@@ -4352,6 +4952,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "添付ファイル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件"
           }
         }
       }
@@ -4394,6 +5000,12 @@
             "state": "translated",
             "value": "ご注意"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请注意"
+          }
         }
       }
     },
@@ -4434,6 +5046,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サインイン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录"
           }
         }
       }
@@ -4476,6 +5094,12 @@
             "state": "translated",
             "value": "パスワードでのサインインはできなくなります。メールアドレスはアカウントに残ります。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将无法再使用密码登录。邮箱地址仍会保留在账号中。"
+          }
         }
       }
     },
@@ -4516,6 +5140,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ でのサインインはできなくなります。他のサインイン方法は引き続き使えます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将无法再使用 %@ 登录。其他登录方式仍可使用。"
           }
         }
       }
@@ -4558,6 +5188,12 @@
             "state": "translated",
             "value": "Google でサインイン"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Google 登录"
+          }
         }
       }
     },
@@ -4598,6 +5234,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Telegram でサインイン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Telegram 登录"
           }
         }
       }
@@ -4640,6 +5282,12 @@
             "state": "translated",
             "value": "Telegram でのサインインはできなくなり、次にボットへメッセージを送ると、グループのない別のプロフィールが作成されます。この Telegram を再連携することはできません。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将无法再使用 Telegram 登录，下次给机器人发消息时会创建一个不含你群组的独立账号。此 Telegram 无法重新绑定。"
+          }
         }
       }
     },
@@ -4680,6 +5328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "購入を復元"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复购买"
           }
         }
       }
@@ -4722,6 +5376,12 @@
             "state": "translated",
             "value": "1人あたりの金額を入力してください。空欄は「自動」で、残りが均等に分割されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入每人的准确金额。留空表示「自动」：剩余金额平摊"
+          }
         }
       }
     },
@@ -4762,6 +5422,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべて"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部"
           }
         }
       }
@@ -4804,6 +5470,12 @@
             "state": "translated",
             "value": "全員精算済みです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大家都已结清"
+          }
         }
       }
     },
@@ -4844,6 +5516,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "精算が完了しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已全部结清"
           }
         }
       }
@@ -4886,6 +5564,12 @@
             "state": "translated",
             "value": "全員が精算済みです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有成员都已结清"
+          }
         }
       }
     },
@@ -4926,6 +5610,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出の合計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总支出"
           }
         }
       }
@@ -4968,6 +5658,12 @@
             "state": "translated",
             "value": "貼り付け"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴"
+          }
         }
       }
     },
@@ -5008,6 +5704,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "招待コードまたはリンク全体を貼り付けてください。…/join/… も t.me/split_money_bot?start=room… も使えます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粘贴邀请码或整条链接 — …/join/… 和 t.me/split_money_bot?start=room… 都可以"
           }
         }
       }
@@ -5050,6 +5752,12 @@
             "state": "translated",
             "value": "メールでサインイン"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用邮箱登录"
+          }
         }
       }
     },
@@ -5090,6 +5798,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google でのサインインをキャンセルしました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已取消 Google 登录"
           }
         }
       }
@@ -5132,6 +5846,12 @@
             "state": "translated",
             "value": "あなた"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你"
+          }
         }
       }
     },
@@ -5172,6 +5892,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループから退出しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你已退出群组"
           }
         }
       }
@@ -5214,6 +5940,12 @@
             "state": "translated",
             "value": "あなたの借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你欠"
+          }
         }
       }
     },
@@ -5254,6 +5986,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ を借りています"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你欠 %@"
           }
         }
       }
@@ -5296,6 +6034,12 @@
             "state": "translated",
             "value": "あなたが支払いました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你支付了"
+          }
         }
       }
     },
@@ -5336,6 +6080,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ を支払いました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你支付了 %@"
           }
         }
       }
@@ -5378,6 +6128,12 @@
             "state": "translated",
             "value": "あなたは参加していません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与你无关"
+          }
         }
       }
     },
@@ -5418,6 +6174,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなたが立て替えました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你垫付了"
           }
         }
       }
@@ -5460,6 +6222,12 @@
             "state": "translated",
             "value": "あなたが支払う — %@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你支付 — %@"
+          }
         }
       }
     },
@@ -5500,6 +6268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "受け取りました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你收到了"
           }
         }
       }
@@ -5542,6 +6316,12 @@
             "state": "translated",
             "value": "あなたが最後のメンバーです。不要であればグループをアーカイブしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你是最后一名成员。若不再需要，可将群组归档"
+          }
         }
       }
     },
@@ -5582,6 +6362,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループを選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择群组"
           }
         }
       }
@@ -5624,6 +6410,12 @@
             "state": "translated",
             "value": "メンバーを1人以上選択してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请至少选择一名成员"
+          }
         }
       }
     },
@@ -5664,6 +6456,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払った人を選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择付款人"
           }
         }
       }
@@ -5706,6 +6504,12 @@
             "state": "translated",
             "value": "「%@」が誰かを選んでください。レシートの赤い印をタップします"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择「%@」是谁：点按小票上的红色标记"
+          }
         }
       }
     },
@@ -5746,6 +6550,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ログアウト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出登录"
           }
         }
       }
@@ -5788,6 +6598,12 @@
             "state": "translated",
             "value": "すべてのデバイスからサインアウト"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在所有设备退出"
+          }
         }
       }
     },
@@ -5828,6 +6644,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」から退出しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要退出「%@」吗？"
           }
         }
       }
@@ -5870,6 +6692,12 @@
             "state": "translated",
             "value": "アカウントからログアウトしますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要退出账号吗？"
+          }
         }
       }
     },
@@ -5910,6 +6738,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループから退出"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出群组"
           }
         }
       }
@@ -5952,6 +6786,12 @@
             "state": "translated",
             "value": "すべてのデバイスからサインアウト"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在所有设备退出登录"
+          }
         }
       }
     },
@@ -5992,6 +6832,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべてのデバイスからサインアウトしますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要在所有设备退出登录吗？"
           }
         }
       }
@@ -6034,6 +6880,12 @@
             "state": "translated",
             "value": "ギャラリー"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相册"
+          }
         }
       }
     },
@@ -6074,6 +6926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "指を離しても大丈夫です。そのままお話しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以松手，请继续说"
           }
         }
       }
@@ -6116,6 +6974,12 @@
             "state": "translated",
             "value": "お話しください…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请讲…"
+          }
         }
       }
     },
@@ -6156,6 +7020,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "音声録音・%lld 秒"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音录制 · %lld 秒"
           }
         }
       }
@@ -6198,6 +7068,12 @@
             "state": "translated",
             "value": "音声とレシートの写真は Splitty のサーバーと、それを支出に変換する外部モデルに送信されます。作成された支出はグループ内に留まります。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音和小票照片会发送到 Splitty 服务器以及负责识别的第三方模型。生成的支出仍保留在你的群组中。"
+          }
         }
       }
     },
@@ -6238,6 +7114,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "音声でもレシートの写真でも、お好きな方法で"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音或小票照片，任你选择"
           }
         }
       }
@@ -6280,6 +7162,12 @@
             "state": "translated",
             "value": "完了"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
         }
       }
     },
@@ -6320,6 +7208,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "完了しました — 支出をグループに追加しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成 — 支出已加入群组"
           }
         }
       }
@@ -6362,6 +7256,12 @@
             "state": "translated",
             "value": "グラフ「%@」— メンバー別の金額"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图表「%@」— 各成员金额"
+          }
         }
       }
     },
@@ -6402,6 +7302,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "直近1か月の日別支出のグラフ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近一个月每日支出图表"
           }
         }
       }
@@ -6444,6 +7350,12 @@
             "state": "translated",
             "value": "曜日別の支出のグラフ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按星期统计的支出图表"
+          }
         }
       }
     },
@@ -6484,6 +7396,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组"
           }
         }
       }
@@ -6526,6 +7444,12 @@
             "state": "translated",
             "value": "アーカイブ済みのグループ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组已归档"
+          }
         }
       }
     },
@@ -6566,6 +7490,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループは一覧から消えます。戻るにはメンバーからの招待が必要です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该群组会从你的列表中消失。只有成员再次邀请你才能回来"
           }
         }
       }
@@ -6608,6 +7538,12 @@
             "state": "translated",
             "value": "グループが見つかりません。削除されたか、招待リンクの有効期限が切れた可能性があります"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到群组。它可能已被删除，或邀请链接已过期"
+          }
         }
       }
     },
@@ -6648,6 +7584,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループは共同の会計です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组就是一份共同账单"
           }
         }
       }
@@ -6690,6 +7632,12 @@
             "state": "translated",
             "value": "グループ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组"
+          }
         }
       }
     },
@@ -6730,6 +7678,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループ・支出・貸し借りは引き続き無料です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组、支出和欠款始终免费"
           }
         }
       }
@@ -6772,6 +7726,12 @@
             "state": "translated",
             "value": "次へ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一步"
+          }
         }
       }
     },
@@ -6812,6 +7772,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このグループのデータは旧バージョンのもので、残高が一致しません。支出と合計はご利用いただけます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该群组的数据来自旧版本，余额无法对齐。支出和合计仍可使用。"
           }
         }
       }
@@ -6854,6 +7820,12 @@
             "state": "translated",
             "value": "保存済みのデータ：サーバーに接続できません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存的数据：无法连接服务器"
+          }
         }
       }
     },
@@ -6894,6 +7866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "日付"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期"
           }
         }
       }
@@ -6936,6 +7914,12 @@
             "state": "translated",
             "value": "送金2回、確認2回"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两次转账，两次确认"
+          }
         }
       }
     },
@@ -6976,6 +7960,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この操作は現在できません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前无法执行此操作"
           }
         }
       }
@@ -7018,6 +8008,12 @@
             "state": "translated",
             "value": "友だちと支出を分け合う"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和朋友分摊支出"
+          }
         }
       }
     },
@@ -7055,6 +8051,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "日"
@@ -7100,6 +8102,12 @@
             "state": "translated",
             "value": "お金のやり取りはご自身で"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "钱由你们自己转"
+          }
         }
       }
     },
@@ -7140,6 +8148,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "指を押したままにしてください — マイクを準備しています"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请按住 — 麦克风正在准备"
           }
         }
       }
@@ -7182,6 +8196,12 @@
             "state": "translated",
             "value": "メンバー別の支払い割合のグラフ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各成员付款占比图表"
+          }
         }
       }
     },
@@ -7222,6 +8242,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "必要なだけ何度でも、支出を話すかレシートを撮影してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "想说几次就说几次，也可以随时拍小票"
           }
         }
       }
@@ -7264,6 +8290,12 @@
             "state": "translated",
             "value": "追加"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
         }
       }
     },
@@ -7304,6 +8336,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループに追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入群组"
           }
         }
       }
@@ -7346,6 +8384,12 @@
             "state": "translated",
             "value": "音声で追加"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音添加"
+          }
         }
       }
     },
@@ -7386,6 +8430,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "品目を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加项目"
           }
         }
       }
@@ -7428,6 +8478,12 @@
             "state": "translated",
             "value": "支出を追加"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加支出"
+          }
         }
       }
     },
@@ -7468,6 +8524,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出を手入力で追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手动添加支出"
           }
         }
       }
@@ -7510,6 +8572,12 @@
             "state": "translated",
             "value": "写真を追加"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加照片"
+          }
         }
       }
     },
@@ -7550,6 +8618,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "レシートの写真を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加小票照片"
           }
         }
       }
@@ -7592,6 +8666,12 @@
             "state": "translated",
             "value": "グループに追加されました：%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入群组：%@"
+          }
         }
       }
     },
@@ -7632,6 +8712,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ を追加しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加 %@"
           }
         }
       }
@@ -7674,6 +8760,12 @@
             "state": "translated",
             "value": "最初の支出を追加してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加第一笔支出"
+          }
         }
       }
     },
@@ -7714,6 +8806,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最初の支出を追加すると、グループの統計がここに表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加第一笔支出 — 群组统计会显示在这里"
           }
         }
       }
@@ -7756,6 +8854,12 @@
             "state": "translated",
             "value": "最初の支出を追加すると、この一覧に表示されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加第一笔支出 — 它会出现在这个列表中"
+          }
         }
       }
     },
@@ -7796,6 +8900,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "書類"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档"
           }
         }
       }
@@ -7838,6 +8948,12 @@
             "state": "translated",
             "value": "この貸し借りは精算済みです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这笔欠款已结清"
+          }
         }
       }
     },
@@ -7878,6 +8994,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "借り：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠款：%@"
           }
         }
       }
@@ -7920,6 +9042,12 @@
             "state": "translated",
             "value": "貸し借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠款"
+          }
         }
       }
     },
@@ -7960,6 +9088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "貸し借りは計算されません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不计算欠款"
           }
         }
       }
@@ -8002,6 +9136,12 @@
             "state": "translated",
             "value": "貸し借りを相殺：複数回ではなく1回の送金で済みます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠款已抵销：一次转账即可，无需多次"
+          }
         }
       }
     },
@@ -8042,6 +9182,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "どのグループにも貸し借りはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有群组都没有欠款"
           }
         }
       }
@@ -8084,6 +9230,12 @@
             "state": "translated",
             "value": "あなたへの借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠你"
+          }
         }
       }
     },
@@ -8124,6 +9276,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "割合で"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按份额"
           }
         }
       }
@@ -8166,6 +9324,12 @@
             "state": "translated",
             "value": "友だち"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友"
+          }
         }
       }
     },
@@ -8206,6 +9370,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出のあるグループを共有すると、友だちが表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当你们共享含支出的群组后，好友就会出现"
           }
         }
       }
@@ -8248,6 +9418,12 @@
             "state": "translated",
             "value": "友だちとは、すでに一緒に会計を分けた人たちです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好友是你已经一起分摊过账单的人"
+          }
         }
       }
     },
@@ -8288,6 +9464,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "彼の 100円 はあなたの分と一緒にアンナさんへ送られます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他的 ¥10.00 和你的一起转给安娜"
           }
         }
       }
@@ -8437,6 +9619,12 @@
             "state": "translated",
             "value": "未送信の操作があります"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有未发送的操作"
+          }
         }
       }
     },
@@ -8477,6 +9665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "通知が届くまでの間に削除された可能性があります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可能在通知等待期间被删除了"
           }
         }
       }
@@ -8519,6 +9713,12 @@
             "state": "translated",
             "value": "%@ の分"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的"
+          }
         }
       }
     },
@@ -8559,6 +9759,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音を終了して認識する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止录音并识别"
           }
         }
       }
@@ -8601,6 +9807,12 @@
             "state": "translated",
             "value": "アップロードが中断されました。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上传被中断，请重试"
+          }
         }
       }
     },
@@ -8641,6 +9853,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
           }
         }
       }
@@ -8683,6 +9901,12 @@
             "state": "translated",
             "value": "下のマイクを押したまま、\n誰が何を頼んでいくらだったかをお話しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住下方麦克风，说出\n谁点了什么、花了多少"
+          }
         }
       }
     },
@@ -8723,6 +9947,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "閉じる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
           }
         }
       }
@@ -8765,6 +9995,12 @@
             "state": "translated",
             "value": "写真を変更"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更换照片"
+          }
         }
       }
     },
@@ -8805,6 +10041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已录制"
           }
         }
       }
@@ -8847,6 +10089,12 @@
             "state": "translated",
             "value": "音声で記録"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音记录"
+          }
         }
       }
     },
@@ -8887,6 +10135,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払いを記録"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录一笔付款"
           }
         }
       }
@@ -8929,6 +10183,12 @@
             "state": "translated",
             "value": "録音を準備しています。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音仍在准备中，请重试"
+          }
         }
       }
     },
@@ -8969,6 +10229,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音中"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在录音"
           }
         }
       }
@@ -9011,6 +10277,12 @@
             "state": "translated",
             "value": "システムによって録音が中断されました。もう一度お話しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统中断了录音，请重新口述"
+          }
         }
       }
     },
@@ -9051,6 +10323,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音は Splitty のサーバーと、認識のための外部モデルに送信されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音会发送到 Splitty 服务器以及负责识别的第三方模型"
           }
         }
       }
@@ -9093,6 +10371,12 @@
             "state": "translated",
             "value": "この記録はこの端末にのみ保存されており、まだサーバーに送信されていません。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此记录仅保存在本设备上，尚未发送到服务器。"
+          }
         }
       }
     },
@@ -9133,6 +10417,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払った人"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "付款人"
           }
         }
       }
@@ -9175,6 +10465,12 @@
             "state": "translated",
             "value": "支払い済み"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已支付"
+          }
         }
       }
     },
@@ -9215,6 +10511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分が支払い"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我支付"
           }
         }
       }
@@ -9257,6 +10559,12 @@
             "state": "translated",
             "value": "音声で入力"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音填写"
+          }
         }
       }
     },
@@ -9297,6 +10605,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規登録"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注册"
           }
         }
       }
@@ -9339,6 +10653,12 @@
             "state": "translated",
             "value": "グループの支出と支払いがここに表示されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组的支出和付款会显示在这里"
+          }
         }
       }
     },
@@ -9379,6 +10699,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループの動きがここに表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组的动态会显示在这里"
           }
         }
       }
@@ -9421,6 +10747,12 @@
             "state": "translated",
             "value": "あなたのグループから"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自你的群组"
+          }
         }
       }
     },
@@ -9461,6 +10793,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "変更点はレシート上で強調表示されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改动已在小票上高亮显示"
           }
         }
       }
@@ -9503,6 +10841,12 @@
             "state": "translated",
             "value": "変更"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改"
+          }
         }
       }
     },
@@ -9543,6 +10887,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前を変更"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改名字"
           }
         }
       }
@@ -9585,6 +10935,12 @@
             "state": "translated",
             "value": "支出を編集"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑支出"
+          }
         }
       }
     },
@@ -9625,6 +10981,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "または"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "或"
           }
         }
       }
@@ -9667,6 +11029,12 @@
             "state": "translated",
             "value": "名前"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名字"
+          }
         }
       }
     },
@@ -9704,6 +11072,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "姓名"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "姓名"
@@ -9749,6 +11123,12 @@
             "state": "translated",
             "value": "名前を空にはできません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名字不能为空"
+          }
         }
       }
     },
@@ -9789,6 +11169,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "集計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合计"
           }
         }
       }
@@ -9831,6 +11217,12 @@
             "state": "translated",
             "value": "最初の支出を追加すると集計が表示されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加第一笔支出后会显示合计"
+          }
         }
       }
     },
@@ -9871,6 +11263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合计"
           }
         }
       }
@@ -9913,6 +11311,12 @@
             "state": "translated",
             "value": "合計 ≥"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合计 ≥"
+          }
         }
       }
     },
@@ -9953,6 +11357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "コードなしで、ワンタップで新しいグループに招待できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需邀请码，一键就能把他们拉进新群组"
           }
         }
       }
@@ -9995,6 +11405,12 @@
             "state": "translated",
             "value": "このサインイン方法の別のアカウントがすでに連携されています。先に現在の連携を解除してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该登录方式的另一个账号已绑定。请先解绑当前账号"
+          }
         }
       }
     },
@@ -10035,6 +11451,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "誰が何を支払ったか"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁为什么付了钱"
           }
         }
       }
@@ -10077,6 +11499,12 @@
             "state": "translated",
             "value": "カメラ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相机"
+          }
         }
       }
     },
@@ -10117,6 +11545,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下の + ボタン：話す、レシートを撮る、手で入力する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下方的 + 按钮：口述、拍小票或手动输入"
           }
         }
       }
@@ -10159,6 +11593,12 @@
             "state": "translated",
             "value": "コードが正しくないか、期限切れか、使用済みです。新しいコードをリクエストしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请码有误、已过期或已被使用。请重新获取"
+          }
         }
       }
     },
@@ -10199,6 +11639,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "コーラ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可乐"
           }
         }
       }
@@ -10241,6 +11687,12 @@
             "state": "translated",
             "value": "プライバシー"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私"
+          }
         }
       }
     },
@@ -10281,6 +11733,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "コーヒー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "咖啡"
           }
         }
       }
@@ -10323,6 +11781,12 @@
             "state": "translated",
             "value": "誰がプラスで、誰がマイナスか"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁多付了，谁少付了"
+          }
         }
       }
     },
@@ -10363,6 +11827,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払ったのは誰ですか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁付的款？"
           }
         }
       }
@@ -10405,6 +11875,12 @@
             "state": "translated",
             "value": "送信者"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送人"
+          }
         }
       }
     },
@@ -10445,6 +11921,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払った人"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "付款人"
           }
         }
       }
@@ -10487,6 +11969,12 @@
             "state": "translated",
             "value": "受取人"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接收人"
+          }
         }
       }
     },
@@ -10527,6 +12015,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "誰がいくら支払ったか"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁付了多少"
           }
         }
       }
@@ -10569,6 +12063,12 @@
             "state": "translated",
             "value": "参加者"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参与者"
+          }
         }
       }
     },
@@ -10609,6 +12109,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ さんは誰ですか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 是谁？"
           }
         }
       }
@@ -10651,6 +12157,12 @@
             "state": "translated",
             "value": "「%@」は誰ですか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」是谁？"
+          }
         }
       }
     },
@@ -10691,6 +12203,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "誰か"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "某人"
           }
         }
       }
@@ -10733,6 +12251,12 @@
             "state": "translated",
             "value": "グループで誰かが支出を追加または変更したとき"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有人在你的群组中添加或修改了支出"
+          }
         }
       }
     },
@@ -10773,6 +12297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連携したどの方法でも、この同じアカウントにサインインできます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意一种已绑定的方式都可登录同一个账号。"
           }
         }
       }
@@ -10815,6 +12345,12 @@
             "state": "translated",
             "value": "マイクが他のアプリまたは通話で使用中です。終了してからもう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "麦克风正被其他应用或通话占用。请关闭后重试"
+          }
         }
       }
     },
@@ -10855,6 +12391,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音は1分までです。ここまでの内容を認識します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "录音上限为一分钟。将识别你已说出的内容"
           }
         }
       }
@@ -10897,6 +12439,12 @@
             "state": "translated",
             "value": "あなたに紐づく支出が残っています。その支出から自分を外してください。あなたが支払った場合は、支払者を変更するか支出を削除してください。支出はどのメンバーでも編集できます。その後で退出できます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有支出记在你名下。请先把自己从这些支出中移除；如果是你付的款，请更换付款人或删除该支出。任何成员都可以编辑支出。之后即可退出"
+          }
         }
       }
     },
@@ -10937,6 +12485,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "年額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按年"
           }
         }
       }
@@ -10979,6 +12533,12 @@
             "state": "translated",
             "value": "誰のための支出か"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为谁花的"
+          }
         }
       }
     },
@@ -11019,6 +12579,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "月額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按月"
           }
         }
       }
@@ -11061,6 +12627,12 @@
             "state": "translated",
             "value": "このメンバーに紐づく支出が残っています。その支出から外してください。その人が支払った場合は、支払者を変更するか支出を削除してください。その後で削除できます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有支出记在该成员名下。请先把他从这些支出中移除；如果是他付的款，请更换付款人或删除该支出。之后即可移除该成员"
+          }
         }
       }
     },
@@ -11101,6 +12673,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出を声で伝える"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说出这笔支出"
           }
         }
       }
@@ -11143,6 +12721,12 @@
             "state": "translated",
             "value": "終わったらタップしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说完后点按"
+          }
         }
       }
     },
@@ -11183,6 +12767,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "戻る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
           }
         }
       }
@@ -11225,6 +12815,12 @@
             "state": "translated",
             "value": "貸し借りの一覧に戻る"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回欠款列表"
+          }
         }
       }
     },
@@ -11262,6 +12858,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "名称"
@@ -11307,6 +12909,12 @@
             "state": "translated",
             "value": "例：「イスタンブール旅行」「シェアハウス」。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例如：「伊斯坦布尔旅行」或「合租房」。"
+          }
         }
       }
     },
@@ -11347,6 +12955,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
           }
         }
       }
@@ -11389,6 +13003,12 @@
             "state": "translated",
             "value": "グループの設定"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组设置"
+          }
         }
       }
     },
@@ -11429,6 +13049,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音を開始します…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始录音…"
           }
         }
       }
@@ -11471,6 +13097,12 @@
             "state": "translated",
             "value": "まずグループを作りましょう"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先从群组开始"
+          }
         }
       }
     },
@@ -11511,6 +13143,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "借りの額を超えないでください：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不超过欠款：%@"
           }
         }
       }
@@ -11553,6 +13191,12 @@
             "state": "translated",
             "value": "見つかりません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到"
+          }
         }
       }
     },
@@ -11593,6 +13237,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーに接続できませんでした。もう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接服务器，请重试"
           }
         }
       }
@@ -11635,6 +13285,12 @@
             "state": "translated",
             "value": "現在のパスワードを忘れました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我不记得当前密码"
+          }
         }
       }
     },
@@ -11675,6 +13331,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループのコードやリンクではないようです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这看起来不像群组邀请码或链接"
           }
         }
       }
@@ -11717,6 +13379,12 @@
             "state": "translated",
             "value": "未連携"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未绑定"
+          }
         }
       }
     },
@@ -11757,6 +13425,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "違いましたか？下のマイクを押したままにするか、レシートの写真を追加してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不太对？按住下方麦克风，或添加小票照片"
           }
         }
       }
@@ -11799,6 +13473,12 @@
             "state": "translated",
             "value": "違いましたか？レシートを撮り直すか、下のマイクを押したままにしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不对？请重新拍摄小票，或按住下方麦克风"
+          }
         }
       }
     },
@@ -11839,6 +13519,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "読み込めませんでした"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加载失败"
           }
         }
       }
@@ -11881,6 +13567,12 @@
             "state": "translated",
             "value": "プロフィールを読み込めませんでした"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载个人资料"
+          }
         }
       }
     },
@@ -11921,6 +13613,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プランを読み込めませんでした。接続を確認してもう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法加载套餐。请检查网络后重试"
           }
         }
       }
@@ -11963,6 +13661,12 @@
             "state": "translated",
             "value": "Apple でのサインインを開始できませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法开始使用 Apple 登录，请重试"
+          }
         }
       }
     },
@@ -12003,6 +13707,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "録音を開始できませんでした。マイクへのアクセスを確認してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法开始录音。请检查麦克风权限"
           }
         }
       }
@@ -12045,6 +13755,12 @@
             "state": "translated",
             "value": "Apple の連携を開始できませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法开始绑定 Apple，请重试"
+          }
         }
       }
     },
@@ -12085,6 +13801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーの応答を処理できませんでした"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法处理服务器响应"
           }
         }
       }
@@ -12127,6 +13849,12 @@
             "state": "translated",
             "value": "Google のサインイン画面を開けませんでした。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法打开 Google 登录窗口，请重试"
+          }
         }
       }
     },
@@ -12167,6 +13895,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントを確認できませんでした。もう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法确认账号，请重试"
           }
         }
       }
@@ -12209,6 +13943,12 @@
             "state": "translated",
             "value": "プロフィールを取得できませんでした"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法获取你的个人资料"
+          }
         }
       }
     },
@@ -12249,6 +13989,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "招待できませんでした：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请失败：%@"
           }
         }
       }
@@ -12291,6 +14037,12 @@
             "state": "translated",
             "value": "写真を読み込めませんでした"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取照片"
+          }
         }
       }
     },
@@ -12331,6 +14083,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "認識できませんでした"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法识别"
           }
         }
       }
@@ -12373,6 +14131,12 @@
             "state": "translated",
             "value": "認識できませんでした。品名と金額を添えて、もう一度お話しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法识别。请重新说一遍 — 带上菜品和价格"
+          }
         }
       }
     },
@@ -12413,6 +14177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "購入を完了できませんでした"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法完成购买"
           }
         }
       }
@@ -12455,6 +14225,12 @@
             "state": "translated",
             "value": "アカウントを削除できませんでした。アカウントとデータはそのままです。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法删除账号。账号和数据均完好 — 请重试"
+          }
         }
       }
     },
@@ -12495,6 +14271,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "メールアドレスまたはパスワードが違います"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邮箱或密码有误"
           }
         }
       }
@@ -12537,6 +14319,12 @@
             "state": "translated",
             "value": "現在のパスワードが違います"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前密码有误"
+          }
         }
       }
     },
@@ -12577,6 +14365,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ローカルの記録が不正です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地记录无效"
           }
         }
       }
@@ -12619,6 +14413,12 @@
             "state": "translated",
             "value": "データが不正です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据无效"
+          }
         }
       }
     },
@@ -12659,6 +14459,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーのアドレスが不正です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器地址无效"
           }
         }
       }
@@ -12701,6 +14507,12 @@
             "state": "translated",
             "value": "唯一のサインイン方法は解除できません。先に別の方法を連携してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不能解绑唯一的登录方式。请先绑定另一种"
+          }
         }
       }
     },
@@ -12741,6 +14553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "対応していないファイル形式です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不支持的文件格式"
           }
         }
       }
@@ -12783,6 +14601,12 @@
             "state": "translated",
             "value": "アカウントをお持ちでない方はこちら"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有账号？注册"
+          }
         }
       }
     },
@@ -12823,6 +14647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "貸し借りはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有欠款"
           }
         }
       }
@@ -12865,6 +14695,12 @@
             "state": "translated",
             "value": "アクセス権がありません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无访问权限"
+          }
         }
       }
     },
@@ -12905,6 +14741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "マイクへのアクセスがありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无麦克风权限"
           }
         }
       }
@@ -12947,6 +14789,12 @@
             "state": "translated",
             "value": "このグループへのアクセス権がありません。メンバーに新しい招待を送ってもらってください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无权访问该群组。请让成员再发一次邀请"
+          }
         }
       }
     },
@@ -12987,6 +14835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "インターネットに接続できません。ネットワークを確認してもう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无网络连接。请检查网络后重试"
           }
         }
       }
@@ -13029,6 +14883,12 @@
             "state": "translated",
             "value": "サーバーに接続できません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接服务器"
+          }
         }
       }
     },
@@ -13069,6 +14929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続がありません。未送信の操作のみ編集できます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无网络连接。只能编辑尚未发送的操作"
           }
         }
       }
@@ -13111,6 +14977,12 @@
             "state": "translated",
             "value": "接続がありません。精算はオンラインでのみ可能です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无网络连接。结算仅支持在线进行"
+          }
         }
       }
     },
@@ -13151,6 +15023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新しいグループ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建群组"
           }
         }
       }
@@ -13193,6 +15071,12 @@
             "state": "translated",
             "value": "新しい支出・精算・招待など、メンバーの操作のすべて"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的支出、结算和邀请 — 成员的所有动作"
+          }
         }
       }
     },
@@ -13233,6 +15117,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新しいパスワード"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新密码"
           }
         }
       }
@@ -13275,6 +15165,12 @@
             "state": "translated",
             "value": "新しいパスワード（確認）"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次输入新密码"
+          }
         }
       }
     },
@@ -13315,6 +15211,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新着：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新消息：%@"
           }
         }
       }
@@ -13357,6 +15259,12 @@
             "state": "translated",
             "value": "OK"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
         }
       }
     },
@@ -13397,6 +15305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合計残高"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总余额"
           }
         }
       }
@@ -13439,6 +15353,12 @@
             "state": "translated",
             "value": "グループの合計"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组合计"
+          }
         }
       }
     },
@@ -13479,6 +15399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全員分の共同会計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一份账单，所有人分"
           }
         }
       }
@@ -13521,6 +15447,12 @@
             "state": "translated",
             "value": "OK"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "好"
+          }
         }
       }
     },
@@ -13562,6 +15494,12 @@
             "state": "translated",
             "value": "そのメンバーはすぐにグループに参加し、過去のものを含むすべての支出を見ることができます。確認は求められません。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他们会立即加入群组，并看到包括以往在内的所有支出。应用不会再询问他们。"
+          }
         }
       }
     },
@@ -13599,6 +15537,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "支出"
@@ -13644,6 +15588,12 @@
             "state": "translated",
             "value": "件"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔"
+          }
         }
       }
     },
@@ -13684,6 +15634,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなたに関わるものはありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有与你相关的内容"
           }
         }
       }
@@ -13726,6 +15682,12 @@
             "state": "translated",
             "value": "この操作はグループから削除され、残高が再計算されます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该操作将从群组中删除，余额会重新计算。"
+          }
         }
       }
     },
@@ -13766,6 +15728,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この操作はグループから削除され、残高が再計算されます。精算は編集できません。間違えた場合は削除して記録し直してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该操作将从群组中删除，余额会重新计算。付款记录无法编辑 — 如有错误，请删除后重新添加。"
           }
         }
       }
@@ -13808,6 +15776,12 @@
             "state": "translated",
             "value": "操作が見つかりません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到该操作"
+          }
         }
       }
     },
@@ -13849,6 +15823,12 @@
             "state": "translated",
             "value": "説明"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说明"
+          }
         }
       }
     },
@@ -13889,6 +15869,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払いは完了しましたが、まだ確認できていません。接続を確認してください。アクセスは自動的に有効になります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "付款已完成，但暂时无法确认。请检查网络 — 权限会自动开通"
           }
         }
       }
@@ -14145,6 +16131,12 @@
             "state": "translated",
             "value": "残りの割り当て：%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待分配：%@"
+          }
         }
       }
     },
@@ -14185,6 +16177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "確認が必要です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍需确认"
           }
         }
       }
@@ -14227,6 +16225,12 @@
             "state": "translated",
             "value": "連携を解除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解绑"
+          }
         }
       }
     },
@@ -14267,6 +16271,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ の連携を解除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解绑 %@"
           }
         }
       }
@@ -14309,6 +16319,12 @@
             "state": "translated",
             "value": "このサインイン方法の連携を解除しますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要解绑这种登录方式吗？"
+          }
         }
       }
     },
@@ -14349,6 +16365,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "辞退する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拒绝"
           }
         }
       }
@@ -14391,6 +16413,12 @@
             "state": "translated",
             "value": "Telegram でボットが開きます。「/report」を送り、問題を1通のメッセージで説明してください。開発者に届きます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将打开 Telegram 机器人。请发送「/report」并用一条消息描述问题 — 报告会发给开发者。"
+          }
         }
       }
     },
@@ -14431,6 +16459,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开"
           }
         }
       }
@@ -14473,6 +16507,12 @@
             "state": "translated",
             "value": "開く／共有"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开／分享"
+          }
         }
       }
     },
@@ -14513,6 +16553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定を開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开设置"
           }
         }
       }
@@ -14555,6 +16601,12 @@
             "state": "translated",
             "value": "キャンセル"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
         }
       }
     },
@@ -14595,6 +16647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "取り消す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销"
           }
         }
       }
@@ -14637,6 +16695,12 @@
             "state": "translated",
             "value": "録音をキャンセル"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消录音"
+          }
         }
       }
     },
@@ -14677,6 +16741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "リンクを送る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送链接"
           }
         }
       }
@@ -14719,6 +16789,12 @@
             "state": "translated",
             "value": "送信中…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送中…"
+          }
         }
       }
     },
@@ -14759,6 +16835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "指を離すとキャンセル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松手即取消"
           }
         }
       }
@@ -14801,6 +16883,12 @@
             "state": "translated",
             "value": "指を離すと認識・上へスワイプで固定"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松手识别 · 上滑锁定"
+          }
         }
       }
     },
@@ -14841,6 +16929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "指を離すと認識・上で固定・左でキャンセル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松手识别 · 上滑锁定 · 左滑取消"
           }
         }
       }
@@ -14883,6 +16977,12 @@
             "state": "translated",
             "value": "オフライン — 変更はこの端末に保存されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "离线 — 改动保存在本设备"
+          }
         }
       }
     },
@@ -14923,6 +17023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "登録する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅"
           }
         }
       }
@@ -14965,6 +17071,12 @@
             "state": "translated",
             "value": "%@ で登録する"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以 %@ 订阅"
+          }
         }
       }
     },
@@ -15005,6 +17117,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "エラー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "错误"
           }
         }
       }
@@ -15047,6 +17165,12 @@
             "state": "translated",
             "value": "サーバーエラー（%lld）"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器错误（%lld）"
+          }
         }
       }
     },
@@ -15087,6 +17211,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "パスワードが一致しません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两次密码不一致"
           }
         }
       }
@@ -15129,6 +17259,12 @@
             "state": "translated",
             "value": "パスワード"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码"
+          }
         }
       }
     },
@@ -15169,6 +17305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "パスワード設定済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已设置密码"
           }
         }
       }
@@ -15211,6 +17353,12 @@
             "state": "translated",
             "value": "パスワードを変更しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码已修改"
+          }
         }
       }
     },
@@ -15251,6 +17399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "パスワードは %lld 文字以上にしてください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "密码至少需要 %lld 个字符"
           }
         }
       }
@@ -15293,6 +17447,12 @@
             "state": "translated",
             "value": "超過：%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超出：%@"
+          }
         }
       }
     },
@@ -15333,6 +17493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ピザ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "披萨"
           }
         }
       }
@@ -15375,6 +17541,12 @@
             "state": "translated",
             "value": "支払いは1回だけ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只需支付一次"
+          }
         }
       }
     },
@@ -15415,6 +17587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループ別"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按群组"
           }
         }
       }
@@ -15457,6 +17635,12 @@
             "state": "translated",
             "value": "金額で"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按金额"
+          }
         }
       }
     },
@@ -15497,6 +17681,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "再試行"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
           }
         }
       }
@@ -15539,6 +17729,12 @@
             "state": "translated",
             "value": "精算する"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结算"
+          }
         }
       }
     },
@@ -15579,6 +17775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払い"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "付款"
           }
         }
       }
@@ -15621,6 +17823,12 @@
             "state": "translated",
             "value": "借りの返済"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还款"
+          }
         }
       }
     },
@@ -15661,6 +17869,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "精算はオンラインでのみ可能です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结算仅支持在线进行"
           }
         }
       }
@@ -15703,6 +17917,12 @@
             "state": "translated",
             "value": "精算を記録しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已记录结算"
+          }
         }
       }
     },
@@ -15743,6 +17963,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "リンクまたはコードを共有してください。友だちは「参加する」から参加できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享链接或邀请码 — 好友可通过「加入」进群。"
           }
         }
       }
@@ -15785,6 +18011,12 @@
             "state": "translated",
             "value": "リンクを共有"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享链接"
+          }
         }
       }
     },
@@ -15825,6 +18057,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サブスクリプション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅"
           }
         }
       }
@@ -15867,6 +18105,12 @@
             "state": "translated",
             "value": "自動更新されます。解約は Apple ID の設定からいつでも可能です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动续订。可随时在 Apple ID 设置中取消"
+          }
         }
       }
     },
@@ -15907,6 +18151,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "小計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小计"
           }
         }
       }
@@ -15949,6 +18199,12 @@
             "state": "translated",
             "value": "旅行・シェアハウス・食事 — 誰が何を支払ったか"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行、合租、晚餐 — 谁为什么付了钱"
+          }
         }
       }
     },
@@ -15989,6 +18245,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "旅行、シェアハウス、1回の食事 — 誰かと分け合うものすべて"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行、合租房或一顿晚餐 — 任何你和别人分摊的开销"
           }
         }
       }
@@ -16031,6 +18293,12 @@
             "state": "translated",
             "value": "旅行、賃貸の部屋、1回の食事。誰か1人が支払い、支出は全員で分けます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行、租房或一顿晚餐。一个人付款，所有人分摊。"
+          }
         }
       }
     },
@@ -16071,6 +18339,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すでに同じグループにいた人を招待できます。新しい人はリンクまたは招待コードで"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以邀请已经同群的人。新朋友请用链接或邀请码"
           }
         }
       }
@@ -16113,6 +18387,12 @@
             "state": "translated",
             "value": "品目"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目"
+          }
         }
       }
     },
@@ -16153,6 +18433,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "レシートの品目"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小票项目"
           }
         }
       }
@@ -16195,6 +18481,12 @@
             "state": "translated",
             "value": "品目"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目"
+          }
         }
       }
     },
@@ -16235,6 +18527,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "友だちを招待して支出を分け合いましょう"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请好友一起分摊支出"
           }
         }
       }
@@ -16277,6 +18575,12 @@
             "state": "translated",
             "value": "あなたに紐づく支出が残っている間は退出できません。先にその支出から自分を外してください。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只要还有支出记在你名下，就无法退出 — 请先把自己从中移除。"
+          }
         }
       }
     },
@@ -16317,6 +18621,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "招待できる人がまだいません。同じグループにいた人がここに表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时没有可邀请的人：与你同过群的人会显示在这里。"
           }
         }
       }
@@ -16359,6 +18669,12 @@
             "state": "translated",
             "value": "まだ動きはありません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无动态"
+          }
         }
       }
     },
@@ -16399,6 +18715,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだグループがありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无群组"
           }
         }
       }
@@ -16441,6 +18763,12 @@
             "state": "translated",
             "value": "まだ友だちがいません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无好友"
+          }
         }
       }
     },
@@ -16481,6 +18809,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだ支出がありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无支出"
           }
         }
       }
@@ -16523,6 +18857,12 @@
             "state": "translated",
             "value": "グループに留める原因になっている支出のみ表示しています"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅显示让你无法退出群组的支出"
+          }
         }
       }
     },
@@ -16563,6 +18903,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべて表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示全部"
           }
         }
       }
@@ -16605,6 +18951,12 @@
             "state": "translated",
             "value": "これらの支出を表示"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示这些支出"
+          }
         }
       }
     },
@@ -16645,6 +18997,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "購入"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买"
           }
         }
       }
@@ -16687,6 +19045,12 @@
             "state": "translated",
             "value": "購入の承認待ちです"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买等待批准"
+          }
         }
       }
     },
@@ -16727,6 +19091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "現在購入できません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前无法购买"
           }
         }
       }
@@ -16769,6 +19139,12 @@
             "state": "translated",
             "value": "復元できる購入はありませんでした"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可恢复的购买"
+          }
         }
       }
     },
@@ -16809,6 +19185,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プライバシーポリシー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
           }
         }
       }
@@ -16851,6 +19233,12 @@
             "state": "translated",
             "value": "わかりました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "知道了"
+          }
         }
       }
     },
@@ -16891,6 +19279,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "音声で修正"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语音修正"
           }
         }
       }
@@ -16933,6 +19327,12 @@
             "state": "translated",
             "value": "均等"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平摊"
+          }
         }
       }
     },
@@ -16973,6 +19373,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "均等に分ける"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均分摊"
           }
         }
       }
@@ -17015,6 +19421,12 @@
             "state": "translated",
             "value": "4人で均等に分ける"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "四人平摊"
+          }
         }
       }
     },
@@ -17055,6 +19467,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "均等 — 全員が1人分。多く食べた場合は取り分を増やしてください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平摊 — 每人一份。吃得多？可增加份数"
           }
         }
       }
@@ -17097,6 +19515,12 @@
             "state": "translated",
             "value": "最後のサインイン方法は解除できません。解除するとアカウントに入る手段がなくなります。先に別の方法を連携してください。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不能解绑最后一种登录方式 — 否则将无法进入账号。请先绑定另一种。"
+          }
         }
       }
     },
@@ -17137,6 +19561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分に使われた金額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "花在我身上"
           }
         }
       }
@@ -17179,6 +19609,12 @@
             "state": "translated",
             "value": "修正を適用しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已应用修改"
+          }
         }
       }
     },
@@ -17219,6 +19655,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出の編集"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出编辑"
           }
         }
       }
@@ -17261,6 +19703,12 @@
             "state": "translated",
             "value": "連携済み"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已绑定"
+          }
         }
       }
     },
@@ -17301,6 +19749,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連携する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绑定"
           }
         }
       }
@@ -17343,6 +19797,12 @@
             "state": "translated",
             "value": "招待する"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
+          }
         }
       }
     },
@@ -17383,6 +19843,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループに招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请加入群组"
           }
         }
       }
@@ -17425,6 +19891,12 @@
             "state": "translated",
             "value": "すでに同じグループにいた人を招待できます。ほかの人にはリンクを送ってください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以邀请已经同群的人。其他人请发送链接"
+          }
         }
       }
     },
@@ -17465,6 +19937,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
           }
         }
       }
@@ -17507,6 +19985,12 @@
             "state": "translated",
             "value": "招待を送りました。承諾をお待ちください：%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请已发送 — 等待对方接受：%@"
+          }
         }
       }
     },
@@ -17547,6 +20031,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "招待"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "邀请"
           }
         }
       }
@@ -17589,6 +20079,12 @@
             "state": "translated",
             "value": "携帯をなくしたときに便利です。この端末を含め、すべてのアクセスが無効になります。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手机丢失时很有用：所有设备的访问权限都会被撤销，包括本机。"
+          }
         }
       }
     },
@@ -17629,6 +20125,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サインインし直す必要があります。この端末も同様です。以前の端末には通知が届かなくなります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你需要重新登录 — 本机也是。原有设备将不再收到通知。"
           }
         }
       }
@@ -17671,6 +20173,12 @@
             "state": "translated",
             "value": "アプリ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用"
+          }
         }
       }
     },
@@ -17711,6 +20219,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "承諾する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接受"
           }
         }
       }
@@ -17753,6 +20267,12 @@
             "state": "translated",
             "value": "参加しています…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加入…"
+          }
         }
       }
     },
@@ -17793,6 +20313,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "参加する"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入"
           }
         }
       }
@@ -17835,6 +20361,12 @@
             "state": "translated",
             "value": "コードで参加"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用邀请码加入"
+          }
         }
       }
     },
@@ -17875,6 +20407,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループに参加しています…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加入群组…"
           }
         }
       }
@@ -17917,6 +20455,12 @@
             "state": "translated",
             "value": "Splitor のグループ「%1$@」に参加しませんか：%2$@\nグループコード：%3$@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入 Splitor 上的群组「%1$@」：%2$@\n群组邀请码：%3$@"
+          }
         }
       }
     },
@@ -17957,6 +20501,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "レシートの品目を確認してください — 取り分が合いません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查小票项目 — 份额对不上"
           }
         }
       }
@@ -17999,6 +20549,12 @@
             "state": "translated",
             "value": "レシートの品目を確認してください — 合計が合いません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查小票项目 — 合计算不出来"
+          }
         }
       }
     },
@@ -18039,6 +20595,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続を確認してもう一度お試しください。プロフィールが読み込まれ次第、サインイン方法と設定を表示します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请检查网络后重试。个人资料加载完成后会显示登录方式和设置。"
           }
         }
       }
@@ -18081,6 +20643,12 @@
             "state": "translated",
             "value": "支出を声に出して伝えると、グループに追加されます。レシートを撮る、手で入力することもできます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把支出说出来，它就会出现在群组里。也可以拍小票或手动输入。"
+          }
         }
       }
     },
@@ -18121,6 +20689,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "食料品"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "食品"
           }
         }
       }
@@ -18163,6 +20737,12 @@
             "state": "translated",
             "value": "比例して"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按比例"
+          }
         }
       }
     },
@@ -18203,6 +20783,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "スキップ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳过"
           }
         }
       }
@@ -18245,6 +20831,12 @@
             "state": "translated",
             "value": "プロフィール"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料"
+          }
         }
       }
     },
@@ -18285,6 +20877,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロフィールを読み込めていません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料未加载"
           }
         }
       }
@@ -18327,6 +20925,12 @@
             "state": "translated",
             "value": "プロフィールは完全に削除されますが、グループの支出と貸し借りは残ります。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料将被永久删除；群组中的支出和欠款仍会保留。"
+          }
         }
       }
     },
@@ -18367,6 +20971,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロフィール・名前・サインイン方法は完全に削除され、アカウントは復元できません。\n\nグループの支出と貸し借りは残ります。メンバーにはあなたの名前の代わりに「削除されたユーザー」と表示され、金額や計算は変わりません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料、名字和登录方式将被永久删除 — 账号无法恢复。\n\n群组中的支出和欠款仍会保留：成员看到的将是「已删除用户」而不是你的名字，金额和计算均不变。"
           }
         }
       }
@@ -18409,6 +21019,12 @@
             "state": "translated",
             "value": "その他"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
+          }
         }
       }
     },
@@ -18449,6 +21065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループの支出"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组支出"
           }
         }
       }
@@ -18491,6 +21113,12 @@
             "state": "translated",
             "value": "アーカイブから戻す"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消归档"
+          }
         }
       }
     },
@@ -18531,6 +21159,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分ける相手"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分摊给"
           }
         }
       }
@@ -18573,6 +21207,12 @@
             "state": "translated",
             "value": "音声で支出を伝えるには、設定でアクセスを許可してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在设置中允许权限，以便用语音记录支出"
+          }
         }
       }
     },
@@ -18613,6 +21253,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1日の上限なしで認識"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别不受每日次数限制"
           }
         }
       }
@@ -18655,6 +21301,12 @@
             "state": "translated",
             "value": "認識はオンラインでのみ可能です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别仅支持在线进行"
+          }
         }
       }
     },
@@ -18695,6 +21347,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "認識はサーバー上で行われます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别在服务器上完成"
           }
         }
       }
@@ -18737,6 +21395,12 @@
             "state": "translated",
             "value": "1日の上限なしで支出を認識"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出识别，不受每日次数限制"
+          }
         }
       }
     },
@@ -18777,6 +21441,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "現在、認識をご利用いただけません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前无法使用识别功能"
           }
         }
       }
@@ -18819,6 +21489,12 @@
             "state": "translated",
             "value": "1日の認識回数は必要なだけ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每天想识别多少次都可以"
+          }
         }
       }
     },
@@ -18859,6 +21535,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1日の上限なしの認識"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别不限每日次数"
           }
         }
       }
@@ -18901,6 +21583,12 @@
             "state": "translated",
             "value": "本日の認識回数を使い切りました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天的识别次数已用完"
+          }
         }
       }
     },
@@ -18941,6 +21629,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本日の認識回数がなくなりました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天的识别次数已用完"
           }
         }
       }
@@ -18983,6 +21677,12 @@
             "state": "translated",
             "value": "音声から認識しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由语音识别"
+          }
         }
       }
     },
@@ -19023,6 +21723,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "レシートから認識しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由小票识别"
           }
         }
       }
@@ -19065,6 +21771,12 @@
             "state": "translated",
             "value": "認識する"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "识别"
+          }
         }
       }
     },
@@ -19106,6 +21818,12 @@
             "state": "translated",
             "value": "認識しています…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在识别…"
+          }
         }
       }
     },
@@ -19143,6 +21861,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "支出"
@@ -19188,6 +21912,12 @@
             "state": "translated",
             "value": "この支出は他の人が変更しました。開き直してから編集をやり直してください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这笔支出已被其他人修改。请重新打开后再编辑"
+          }
         }
       }
     },
@@ -19228,6 +21958,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出の名称が変更されたか、写真が追加されました。金額とあなたの負担分は変わっていません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出被改名或添加了照片 — 金额和你的分摊没有变化"
           }
         }
       }
@@ -19270,6 +22006,12 @@
             "state": "translated",
             "value": "支出を保存しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出已保存"
+          }
         }
       }
     },
@@ -19310,6 +22052,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出を保存しました。接続が回復したら送信します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出已保存 — 恢复联网后会自动发送"
           }
         }
       }
@@ -19352,6 +22100,12 @@
             "state": "translated",
             "value": "支出はメンバーで分割されます。今はあなただけなので、分ける相手がいません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支出会在成员之间分摊 — 目前群组里只有你，无人可分"
+          }
         }
       }
     },
@@ -19392,6 +22146,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すでに記録された支出はグループに残ります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已记录的支出会保留在群组中"
           }
         }
       }
@@ -19434,6 +22194,12 @@
             "state": "translated",
             "value": "新規登録"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注册"
+          }
         }
       }
     },
@@ -19471,6 +22237,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Русский"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "Русский"
@@ -19516,6 +22288,12 @@
             "state": "translated",
             "value": "S"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
         }
       }
     },
@@ -19556,6 +22334,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "誰と分けますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你要和谁分摊？"
           }
         }
       }
@@ -19598,6 +22382,12 @@
             "state": "translated",
             "value": "誰がいくら"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "谁欠多少"
+          }
         }
       }
     },
@@ -19638,6 +22428,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最も大きな支出"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大的支出"
           }
         }
       }
@@ -19680,6 +22476,12 @@
             "state": "translated",
             "value": "手数料"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务费"
+          }
         }
       }
     },
@@ -19720,6 +22522,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "手数料は均等に分割されます。変更"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务费平均分摊。更改"
           }
         }
       }
@@ -19762,6 +22570,12 @@
             "state": "translated",
             "value": "手数料は比例して分割されます。変更"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务费按比例分摊。更改"
+          }
         }
       }
     },
@@ -19802,6 +22616,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "リセット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置"
           }
         }
       }
@@ -19844,6 +22664,12 @@
             "state": "translated",
             "value": "パスワードをリセットしますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要重置密码吗？"
+          }
         }
       }
     },
@@ -19884,6 +22710,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ライト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色"
           }
         }
       }
@@ -19926,6 +22758,12 @@
             "state": "translated",
             "value": "現在は品目ごとに分割しています"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前按项目分摊"
+          }
         }
       }
     },
@@ -19966,6 +22804,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "現在ご利用いただけません。しばらくしてからお試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前无法使用，请稍后再试"
           }
         }
       }
@@ -20008,6 +22852,12 @@
             "state": "translated",
             "value": "サーバー"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器"
+          }
         }
       }
     },
@@ -20048,6 +22898,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバーの応答に時間がかかっています。もう一度お試しください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器响应超时，请重试"
           }
         }
       }
@@ -20090,6 +22946,12 @@
             "state": "translated",
             "value": "セッションの有効期限が切れました。もう一度サインインしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会话已过期，请重新登录"
+          }
         }
       }
     },
@@ -20130,6 +22992,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "システム"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随系统"
           }
         }
       }
@@ -20172,6 +23040,12 @@
             "state": "translated",
             "value": "話すだけで記録します"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说出来即可 — 我们来记录"
+          }
         }
       }
     },
@@ -20212,6 +23086,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "話した内容が、4人で分割された支出になります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一句话就能变成分给四个人的支出"
           }
         }
       }
@@ -20254,6 +23134,12 @@
             "state": "translated",
             "value": "「%@」はいくらですか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」多少钱？"
+          }
         }
       }
     },
@@ -20294,6 +23180,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "リクエストが大きすぎます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求过大"
           }
         }
       }
@@ -20336,6 +23228,12 @@
             "state": "translated",
             "value": "リクエストが多すぎます。しばらくしてからお試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求过于频繁，请稍后再试"
+          }
         }
       }
     },
@@ -20376,6 +23274,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "聞いています…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在聆听…"
           }
         }
       }
@@ -20418,6 +23322,12 @@
             "state": "translated",
             "value": "パスワードの変更"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改密码"
+          }
         }
       }
     },
@@ -20458,6 +23368,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "通貨を %@ に変更しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要把货币改为 %@ 吗？"
           }
         }
       }
@@ -20500,6 +23416,12 @@
             "state": "translated",
             "value": "%@ に変更"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "改为 %@"
+          }
         }
       }
     },
@@ -20540,6 +23462,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "先にグループを選択してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先选择群组"
           }
         }
       }
@@ -20582,6 +23510,12 @@
             "state": "translated",
             "value": "先に品目の担当者を選んでください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先确定各项目由谁承担"
+          }
         }
       }
     },
@@ -20622,6 +23556,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "先に %@ が誰かを選んでください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先确定 %@ 是谁"
           }
         }
       }
@@ -20664,6 +23604,12 @@
             "state": "translated",
             "value": "写真は Splitty のサーバーと、認識のための外部モデルに送信されます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片会发送到 Splitty 服务器以及负责识别的第三方模型"
+          }
         }
       }
     },
@@ -20704,6 +23650,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty ありの場合"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 Splitty"
           }
         }
       }
@@ -20746,6 +23698,12 @@
             "state": "translated",
             "value": "自分も含む"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包括我"
+          }
         }
       }
     },
@@ -20786,6 +23744,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループを作成するか、招待コードで参加してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建群组，或用邀请码加入"
           }
         }
       }
@@ -20828,6 +23792,12 @@
             "state": "translated",
             "value": "作成しています…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在创建…"
+          }
         }
       }
     },
@@ -20868,6 +23838,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建"
           }
         }
       }
@@ -20910,6 +23886,12 @@
             "state": "translated",
             "value": "グループを作成"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建群组"
+          }
         }
       }
     },
@@ -20950,6 +23932,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グループを作成するか、コードで参加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建群组或用邀请码加入"
           }
         }
       }
@@ -20992,6 +23980,12 @@
             "state": "translated",
             "value": "問題を報告"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报告问题"
+          }
         }
       }
     },
@@ -21029,6 +24023,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "保存"
@@ -21074,6 +24074,12 @@
             "state": "translated",
             "value": "サインイン方法"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录方式"
+          }
         }
       }
     },
@@ -21111,6 +24117,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均支出"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "平均支出"
@@ -21156,6 +24168,12 @@
             "state": "translated",
             "value": "リンクまたはコード"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接或邀请码"
+          }
         }
       }
     },
@@ -21196,6 +24214,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "リンクは、まだ支出を分けたことのない人のためのものです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接是给那些还没和你分摊过支出的人用的。"
           }
         }
       }
@@ -21238,6 +24262,12 @@
             "state": "translated",
             "value": "古いパスワードは使えなくなります。新しいパスワードを設定すれば、%@ でのサインインは引き続きご利用いただけます。"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧密码将失效；设置新密码后仍可使用 %@ 登录。"
+          }
         }
       }
     },
@@ -21278,6 +24308,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この行はレシートから削除され、合計が再計算されます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该行将从小票中删除，合计会重新计算"
           }
         }
       }
@@ -21320,6 +24356,12 @@
             "state": "translated",
             "value": "金額"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金额"
+          }
         }
       }
     },
@@ -21360,6 +24402,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金額はすべて割り当て済みです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金额已全部分配"
           }
         }
       }
@@ -21402,6 +24450,12 @@
             "state": "translated",
             "value": "金額で"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按金额"
+          }
         }
       }
     },
@@ -21442,6 +24496,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金額は換算されません。表記だけがグループ全員で変わります"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金额不会换算 — 只是符号变化，对群组所有成员都一样"
           }
         }
       }
@@ -21484,6 +24544,12 @@
             "state": "translated",
             "value": "メンバーの金額の合計は、支出の合計と一致する必要があります"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员金额之和必须等于支出总额"
+          }
         }
       }
     },
@@ -21524,6 +24590,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "レシートを撮影"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拍摄小票"
           }
         }
       }
@@ -21566,6 +24638,12 @@
             "state": "translated",
             "value": "支出を読み取り、品目に分けています"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取支出并拆分为项目"
+          }
         }
       }
     },
@@ -21606,6 +24684,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "タクシー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "出租车"
           }
         }
       }
@@ -21648,6 +24732,12 @@
             "state": "translated",
             "value": "現在のパスワード"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前密码"
+          }
         }
       }
     },
@@ -21688,6 +24778,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "テーマ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题"
           }
         }
       }
@@ -21730,6 +24826,12 @@
             "state": "translated",
             "value": "日別の支出"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每日支出"
+          }
         }
       }
     },
@@ -21770,6 +24872,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "曜日別の支出"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按星期支出"
           }
         }
       }
@@ -21812,6 +24920,12 @@
             "state": "translated",
             "value": "サインインが必要です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要登录"
+          }
         }
       }
     },
@@ -21852,6 +24966,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ダーク"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
           }
         }
       }
@@ -21894,6 +25014,12 @@
             "state": "translated",
             "value": "このグループでのあなたの借りはありません"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在这个群组没有欠款"
+          }
         }
       }
     },
@@ -21934,6 +25060,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだグループがありません。「グループ」タブで作成してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你还没有群组 — 请在「群组」标签中创建"
           }
         }
       }
@@ -21976,6 +25108,12 @@
             "state": "translated",
             "value": "削除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
         }
       }
     },
@@ -22016,6 +25154,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ をグループから削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要把 %@ 移出群组吗？"
           }
         }
       }
@@ -22058,6 +25202,12 @@
             "state": "translated",
             "value": "グループから削除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移出群组"
+          }
         }
       }
     },
@@ -22099,6 +25249,12 @@
             "state": "translated",
             "value": "写真を削除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除照片"
+          }
         }
       }
     },
@@ -22136,6 +25292,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "通知"
@@ -22181,6 +25343,12 @@
             "state": "translated",
             "value": "削除しています…"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在删除…"
+          }
         }
       }
     },
@@ -22221,6 +25389,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
           }
         }
       }
@@ -22263,6 +25437,12 @@
             "state": "translated",
             "value": "アカウントを削除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除账号"
+          }
         }
       }
     },
@@ -22303,6 +25483,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除账号吗？"
           }
         }
       }
@@ -22345,6 +25531,12 @@
             "state": "translated",
             "value": "未送信の支出を削除しますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除这笔未发送的支出吗？"
+          }
         }
       }
     },
@@ -22385,6 +25577,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払いを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除这笔付款吗？"
           }
         }
       }
@@ -22427,6 +25625,12 @@
             "state": "translated",
             "value": "品目を削除"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除项目"
+          }
         }
       }
     },
@@ -22467,6 +25671,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この品目を削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除该项目吗？"
           }
         }
       }
@@ -22509,6 +25719,12 @@
             "state": "translated",
             "value": "この支出を削除しますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除这笔支出吗？"
+          }
         }
       }
     },
@@ -22549,6 +25765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "手数料を削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除服务费"
           }
         }
       }
@@ -22591,6 +25813,12 @@
             "state": "translated",
             "value": "この手数料を削除しますか？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要删除该服务费吗？"
+          }
         }
       }
     },
@@ -22631,6 +25859,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "押したまま話してください。上へスワイプで固定します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说话；上滑锁定"
           }
         }
       }
@@ -22673,6 +25907,12 @@
             "state": "translated",
             "value": "押したまま、変更したい内容をお話しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住并说出要修改的内容"
+          }
         }
       }
     },
@@ -22713,6 +25953,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "話している間はマイクを押したままにし、終わったら離してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说话时按住麦克风，说完后松开"
           }
         }
       }
@@ -22755,6 +26001,12 @@
             "state": "translated",
             "value": "押している間だけ話せます"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住说话"
+          }
         }
       }
     },
@@ -22795,6 +26047,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すでにアカウントをお持ちですか？サインイン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有账号？登录"
           }
         }
       }
@@ -22837,6 +26095,12 @@
             "state": "translated",
             "value": "夕食"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晚餐"
+          }
         }
       }
     },
@@ -22877,6 +26141,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "品目の価格を入力してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写该项目的价格"
           }
         }
       }
@@ -22919,6 +26189,12 @@
             "state": "translated",
             "value": "価格を入力してください。「価格？」と表示された品目をタップします。または「ピザは600円」のようにお話しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写价格 — 点按标有「价格？」的项目。也可以直接说：「披萨 60 元」"
+          }
         }
       }
     },
@@ -22959,6 +26235,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "品目の価格を入力してください。価格がないと取り分を計算できません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请填写各项目的价格 — 否则无法计算份额"
           }
         }
       }
@@ -23001,6 +26283,12 @@
             "state": "translated",
             "value": "サブスクリプションを管理"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理订阅"
+          }
         }
       }
     },
@@ -23041,6 +26329,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "利用規約"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条款"
           }
         }
       }
@@ -23083,6 +26377,12 @@
             "state": "translated",
             "value": "メンバー"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员"
+          }
         }
       }
     },
@@ -23123,6 +26423,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "メンバー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员"
           }
         }
       }
@@ -23165,6 +26471,12 @@
             "state": "translated",
             "value": "メンバー：%lld 人"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员：%lld 人"
+          }
         }
       }
     },
@@ -23205,6 +26517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "写真"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照片"
           }
         }
       }
@@ -23247,6 +26565,12 @@
             "state": "translated",
             "value": "レシートの写真"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小票照片"
+          }
         }
       }
     },
@@ -23287,6 +26611,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "価格"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "价格"
           }
         }
       }
@@ -23329,6 +26659,12 @@
             "state": "translated",
             "value": "レシートを撮影しました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已拍摄小票"
+          }
         }
       }
     },
@@ -23369,6 +26705,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下書きを更新しました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "草稿已更新"
           }
         }
       }
@@ -23411,6 +26753,12 @@
             "state": "translated",
             "value": "こちら側で問題が発生しました。もう一度お試しください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我们这边出了点问题，请重试"
+          }
         }
       }
     },
@@ -23451,6 +26799,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このサブスクリプションは別の Splitor アカウントのものです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该订阅属于另一个 Splitor 账号"
           }
         }
       }
@@ -23493,6 +26847,12 @@
             "state": "translated",
             "value": "このメールアドレスは登録済みです。新規登録ではなくサインインしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该邮箱已注册。请直接登录"
+          }
         }
       }
     },
@@ -23533,6 +26893,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このアカウントは削除できません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该账号无法删除"
           }
         }
       }
@@ -23575,6 +26941,12 @@
             "state": "translated",
             "value": "このアカウントはすでに別の Splitor プロフィールに連携されています。そちらでサインインしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该账号已关联到另一个 Splitor 账号。请用那个账号登录"
+          }
         }
       }
     },
@@ -23616,6 +26988,12 @@
             "state": "translated",
             "value": "このアカウントはすでに別の Splitty プロフィールに連携されています。そちらでサインインしてください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该账号已关联到另一个 Splitty 账号。请用那个账号登录"
+          }
         }
       }
     },
@@ -23653,6 +27031,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "Y"
@@ -23698,6 +27082,12 @@
             "state": "translated",
             "value": "言語"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
         }
       }
     },
@@ -23738,6 +27128,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Telegram ボットのメッセージの言語"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram 机器人消息的语言"
           }
         }
       }
@@ -23780,6 +27176,12 @@
             "state": "translated",
             "value": "自動"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动"
+          }
         }
       }
     },
@@ -23821,6 +27223,12 @@
             "state": "translated",
             "value": "自動・%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动 · %@"
+          }
         }
       }
     },
@@ -23861,6 +27269,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなたを除く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不含你"
           }
         }
       }
@@ -24010,6 +27424,12 @@
             "state": "translated",
             "value": "精算済み"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已结清"
+          }
         }
       }
     },
@@ -24050,6 +27470,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "受け取る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠你"
           }
         }
       }
@@ -24092,6 +27518,12 @@
             "state": "translated",
             "value": "あなたの負担分"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的分摊"
+          }
         }
       }
     },
@@ -24132,6 +27564,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなたの負担分：200円 + 100円"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的分摊：¥20.00 + ¥10.00"
           }
         }
       }
@@ -24174,6 +27612,12 @@
             "state": "translated",
             "value": "相互の貸し借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相互欠款"
+          }
         }
       }
     },
@@ -24214,6 +27658,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "メールでサインイン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用邮箱登录"
           }
         }
       }
@@ -24256,6 +27706,12 @@
             "state": "translated",
             "value": "日"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周日"
+          }
         }
       }
     },
@@ -24296,6 +27752,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合計"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合计"
           }
         }
       }
@@ -24338,6 +27800,12 @@
             "state": "translated",
             "value": "火"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周二"
+          }
         }
       }
     },
@@ -24378,6 +27846,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなた"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你"
           }
         }
       }
@@ -24420,6 +27894,12 @@
             "state": "translated",
             "value": "あなたの借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你欠"
+          }
         }
       }
     },
@@ -24461,6 +27941,12 @@
             "state": "translated",
             "value": "立て替え分"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你垫付"
+          }
         }
       }
     },
@@ -24498,6 +27984,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "年"
@@ -24543,6 +28035,12 @@
             "state": "translated",
             "value": "3人で分ける"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "三人平分"
+          }
         }
       }
     },
@@ -24583,6 +28081,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "均等に分割"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均分摊"
           }
         }
       }
@@ -24625,6 +28129,12 @@
             "state": "translated",
             "value": "食べた分に応じて分割"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按各自消费比例分摊"
+          }
         }
       }
     },
@@ -24665,6 +28175,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "貸し借りは計算されません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不计算欠款"
           }
         }
       }
@@ -24707,6 +28223,12 @@
             "state": "translated",
             "value": "借り"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠"
+          }
         }
       }
     },
@@ -24747,6 +28269,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あなたへの借り"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠你"
           }
         }
       }
@@ -24789,6 +28317,12 @@
             "state": "translated",
             "value": "負担分"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分摊"
+          }
         }
       }
     },
@@ -24829,6 +28363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "タクシー代"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打车费"
           }
         }
       }
@@ -24871,6 +28411,12 @@
             "state": "translated",
             "value": "夕食代"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晚餐费"
+          }
         }
       }
     },
@@ -24911,6 +28457,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全員分を支払い"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为所有人付款"
           }
         }
       }
@@ -24953,6 +28505,12 @@
             "state": "translated",
             "value": "全員分を支払い"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为所有人付款"
+          }
         }
       }
     },
@@ -24993,6 +28551,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分割済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "并已分摊"
           }
         }
       }
@@ -25035,6 +28599,12 @@
             "state": "translated",
             "value": "または"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "或"
+          }
         }
       }
     },
@@ -25076,6 +28646,12 @@
             "state": "translated",
             "value": "誰かを選んでください"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请选择是谁"
+          }
         }
       }
     },
@@ -25113,6 +28689,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "月"
+          }
+        },
+        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "月"
@@ -25158,6 +28740,12 @@
             "state": "translated",
             "value": "一部の価格が未入力です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分价格未填写"
+          }
         }
       }
     },
@@ -25198,6 +28786,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未送信"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未发送"
           }
         }
       }
@@ -25240,6 +28834,12 @@
             "state": "translated",
             "value": "未送信・%@"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未发送 · %@"
+          }
         }
       }
     },
@@ -25280,6 +28880,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支払っていません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未付款"
           }
         }
       }
@@ -25322,6 +28928,12 @@
             "state": "translated",
             "value": "ピザが800円、コーラが200円でサーニャと半分ずつ"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "披萨 80 元、可乐 20 元，和萨尼亚平分"
+          }
         }
       }
     },
@@ -25362,6 +28974,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "月"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周一"
           }
         }
       }
@@ -25404,6 +29022,12 @@
             "state": "translated",
             "value": "%1$@ × %2$lld"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 %1$@ × %2$lld"
+          }
         }
       }
     },
@@ -25444,6 +29068,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "100円ずつ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 ¥10.00"
           }
         }
       }
@@ -25486,6 +29116,12 @@
             "state": "translated",
             "value": "100円ずつ × 2"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 ¥10.00 × 2"
+          }
         }
       }
     },
@@ -25526,6 +29162,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "200円ずつ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 ¥20.00"
           }
         }
       }
@@ -25568,6 +29210,12 @@
             "state": "translated",
             "value": "400円ずつ × 2"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 ¥40.00 × 2"
+          }
         }
       }
     },
@@ -25608,6 +29256,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "800円ずつ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每份 ¥80.00"
           }
         }
       }
@@ -25650,6 +29304,12 @@
             "state": "translated",
             "value": "レシートの品目ごと"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按小票项目"
+          }
         }
       }
     },
@@ -25690,6 +29350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金額で"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按金额"
           }
         }
       }
@@ -25732,6 +29398,12 @@
             "state": "translated",
             "value": "品目"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目"
+          }
         }
       }
     },
@@ -25772,6 +29444,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "品目"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "项目"
           }
         }
       }
@@ -25814,6 +29492,12 @@
             "state": "translated",
             "value": "受け取りました"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已收到"
+          }
         }
       }
     },
@@ -25854,6 +29538,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "受け取りました"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已收到"
           }
         }
       }
@@ -25896,6 +29586,12 @@
             "state": "translated",
             "value": "均等"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平摊"
+          }
         }
       }
     },
@@ -25936,6 +29632,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周五"
           }
         }
       }
@@ -25978,6 +29680,12 @@
             "state": "translated",
             "value": "土"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周六"
+          }
         }
       }
     },
@@ -26018,6 +29726,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "誰が何を頼んだか言うと、より正確です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说出谁点了什么 — 更准确"
           }
         }
       }
@@ -26060,6 +29774,12 @@
             "state": "translated",
             "value": "水"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周三"
+          }
         }
       }
     },
@@ -26100,6 +29820,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "スム"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "苏姆"
           }
         }
       }
@@ -26142,6 +29868,12 @@
             "state": "translated",
             "value": "正確な金額"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准确金额"
+          }
         }
       }
     },
@@ -26182,6 +29914,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "価格を入力"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "填写价格"
           }
         }
       }
@@ -26224,6 +29962,12 @@
             "state": "translated",
             "value": "メンバー"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成员"
+          }
         }
       }
     },
@@ -26264,6 +30008,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全額"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全额"
           }
         }
       }
@@ -26306,6 +30056,12 @@
             "state": "translated",
             "value": "価格？"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "价格？"
+          }
         }
       }
     },
@@ -26347,6 +30103,12 @@
             "state": "translated",
             "value": "レシートの価格の方が正確です"
           }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用小票上的价格更准确"
+          }
         }
       }
     },
@@ -26387,6 +30149,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "木"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "周四"
           }
         }
       }
