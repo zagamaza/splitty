@@ -100,11 +100,82 @@ ITEMIZED = {
         ],
         "surcharge": ("Service", 10, 10),
     },
+    "ja": {
+        "room": "京都旅行",
+        "description": "先斗町の夕食",
+        "donor": "me",
+        "items": [
+            ("焼き魚の定食", 32, 1, ["me", 0]),
+            ("だし巻き卵", 16, 1, [0, 1]),
+            ("おばんざい盛り合わせ", 20, 1, "all"),
+            ("日本酒", 24, 2, ["me", 1]),
+            ("抹茶わらび餅", 8, 4, "all"),
+        ],
+        "surcharge": ("サービス料", 10, 10),
+    },
+    "zh-Hans": {
+        "room": "成都之行",
+        "description": "宽窄巷子晚餐",
+        "donor": "me",
+        "items": [
+            ("烤鱼", 32, 1, ["me", 0]),
+            ("口水鸡", 16, 1, [0, 1]),
+            ("凉菜拼盘", 20, 1, "all"),
+            ("精酿啤酒", 24, 2, ["me", 1]),
+            ("红糖糍粑", 8, 4, "all"),
+        ],
+        "surcharge": ("服务费", 10, 10),
+    },
+    "ko": {
+        "room": "제주도 여행",
+        "description": "흑돼지 저녁",
+        "donor": "me",
+        "items": [
+            ("흑돼지 구이", 32, 1, ["me", 0]),
+            ("전복 뚝배기", 16, 1, [0, 1]),
+            ("모둠 밑반찬", 20, 1, "all"),
+            ("한라산 소주", 24, 2, ["me", 1]),
+            ("한라봉 셔벗", 8, 4, "all"),
+        ],
+        "surcharge": ("봉사료", 10, 10),
+    },
+    "pt-BR": {
+        "room": "Viagem a Salvador",
+        "description": "Jantar no Pelourinho",
+        "donor": "me",
+        "items": [
+            ("Moqueca de peixe", 32, 1, ["me", 0]),
+            ("Bobó de camarão", 16, 1, [0, 1]),
+            ("Petiscos variados", 20, 1, "all"),
+            ("Caipirinha", 24, 2, ["me", 1]),
+            ("Cocada", 8, 4, "all"),
+        ],
+        "surcharge": ("Serviço", 10, 10),
+    },
+    "it": {
+        "room": "Viaggio a Napoli",
+        "description": "Cena a Spaccanapoli",
+        "donor": "me",
+        "items": [
+            ("Pesce alla griglia", 32, 1, ["me", 0]),
+            ("Impepata di cozze", 16, 1, [0, 1]),
+            ("Antipasto misto", 20, 1, "all"),
+            ("Falanghina", 24, 2, ["me", 1]),
+            ("Sfogliatelle", 8, 4, "all"),
+        ],
+        "surcharge": ("Coperto", 10, 10),
+    },
 }
 
 # Валюта комнат по языку витрины. Скриншоты для американского App Store с
 # рублёвыми ценами выглядят так, будто приложение не для этого рынка.
-CURRENCY = {"ru": "RUB", "en": "EUR", "es": "EUR", "de": "EUR", "fr": "EUR"}
+# Иены, воны, юани и реалы приложение НЕ знает: справочник валют это
+# RUB/USD/EUR/IDR/KZT/UZS (internal/api/currency.go:24), и незнакомый код
+# показывается как есть — на японском кадре стояло бы «410 JPY».
+CURRENCY = {
+    "ru": "RUB", "en": "EUR", "es": "EUR", "de": "EUR", "fr": "EUR",
+    "ja": "USD", "zh-Hans": "USD", "ko": "USD", "pt-BR": "USD", "it": "EUR",
+}
 
 DATA = {
     "ru": {
@@ -313,6 +384,216 @@ DATA = {
                 "ops": [
                     ("Viande et charbon", 54, 2, "all"),
                     ("Essence", 39, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "ja": {
+        "email": "shots-ja@splitty.test",
+        "me": "ハルカ",
+        "peers": [(9601, "ユウタ", "yuta"), (9602, "ミオ", "mio"), (9603, "ケンジ", "kenji")],
+        "rooms": [
+            {
+                "name": "京都旅行",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("ホテル3泊", 410, "me", "all"),
+                    ("先斗町の夕食", 84, 0, "all"),
+                    ("空港からのタクシー", 26, 1, "all"),
+                    ("嵐山の入場券", 32, "me", "all"),
+                    ("抹茶パフェ", 12, 2, "all"),
+                    ("市バス1日券", 7, 0, "all"),
+                    ("錦市場のランチ", 59, "me", "all"),
+                    ("鴨川沿いの夜", 68, 1, "all"),
+                ],
+            },
+            {
+                "name": "シェアハウス",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("8月の光熱費", 120, "me", "all"),
+                    ("インターネット", 30, 0, "all"),
+                    ("1週間の食材", 96, "me", "all"),
+                    ("ハウスクリーニング", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "週末の別荘",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("バーベキューと炭", 54, 2, "all"),
+                    ("ガソリン", 38, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "zh-Hans": {
+        "email": "shots-zh@splitty.test",
+        "me": "小雨",
+        "peers": [(9701, "子墨", "zimo"), (9702, "佳宁", "jianing"), (9703, "浩然", "haoran")],
+        "rooms": [
+            {
+                "name": "成都之行",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("酒店三晚", 410, "me", "all"),
+                    ("宽窄巷子晚餐", 84, 0, "all"),
+                    ("机场打车", 26, 1, "all"),
+                    ("大熊猫基地门票", 32, "me", "all"),
+                    ("盖碗茶", 12, 2, "all"),
+                    ("地铁一日票", 7, 0, "all"),
+                    ("锦里午餐", 59, "me", "all"),
+                    ("火锅之夜", 68, 1, "all"),
+                ],
+            },
+            {
+                "name": "合租公寓",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("八月水电费", 120, "me", "all"),
+                    ("宽带", 30, 0, "all"),
+                    ("一周买菜", 96, "me", "all"),
+                    ("保洁", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "周末民宿",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("烧烤和木炭", 54, 2, "all"),
+                    ("汽油", 38, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "ko": {
+        "email": "shots-ko@splitty.test",
+        "me": "지훈",
+        "peers": [(9801, "서연", "seoyeon"), (9802, "민준", "minjun"), (9803, "하늘", "haneul")],
+        "rooms": [
+            {
+                "name": "제주도 여행",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("호텔 3박", 410, "me", "all"),
+                    ("흑돼지 저녁", 84, 0, "all"),
+                    ("공항 택시", 26, 1, "all"),
+                    ("성산일출봉 입장권", 32, "me", "all"),
+                    ("한라봉 주스", 12, 2, "all"),
+                    ("버스 1일권", 7, 0, "all"),
+                    ("동문시장 점심", 59, "me", "all"),
+                    ("해변가의 저녁", 68, 1, "all"),
+                ],
+            },
+            {
+                "name": "셰어하우스",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("8월 공과금", 120, "me", "all"),
+                    ("인터넷", 30, 0, "all"),
+                    ("일주일 장보기", 96, "me", "all"),
+                    ("청소 서비스", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "주말 펜션",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("바비큐와 숯", 54, 2, "all"),
+                    ("기름값", 38, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "pt-BR": {
+        "email": "shots-pt@splitty.test",
+        "me": "Bruno",
+        "peers": [(9901, "Camila", "camila"), (9902, "Rafa", "rafa"), (9903, "Júlia", "julia")],
+        "rooms": [
+            {
+                "name": "Viagem a Salvador",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("Pousada, três noites", 410, "me", "all"),
+                    ("Jantar no Pelourinho", 84, 0, "all"),
+                    ("Táxi do aeroporto", 26, 1, "all"),
+                    ("Passeio de escuna", 32, "me", "all"),
+                    ("Água de coco", 12, 2, "all"),
+                    ("Passe de ônibus", 7, 0, "all"),
+                    ("Almoço no Mercado", 59, "me", "all"),
+                    ("Noite de samba", 68, 1, "all"),
+                ],
+            },
+            {
+                "name": "República",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("Contas de agosto", 120, "me", "all"),
+                    ("Internet", 30, 0, "all"),
+                    ("Compras da semana", 96, "me", "all"),
+                    ("Faxina", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "Sítio no fim de semana",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("Churrasco e carvão", 54, 2, "all"),
+                    ("Gasolina", 38, "me", "all"),
+                ],
+            },
+        ],
+    },
+    "it": {
+        "email": "shots-it@splitty.test",
+        "me": "Marco",
+        "peers": [(9051, "Giulia", "giulia"), (9052, "Luca", "luca"), (9053, "Sara", "sara")],
+        "rooms": [
+            {
+                "name": "Viaggio a Napoli",
+                "owner": "me",
+                "members": [0, 1, 2],
+                "ops": [
+                    ("Hotel, tre notti", 410, "me", "all"),
+                    ("Cena a Spaccanapoli", 84, 0, "all"),
+                    ("Taxi dall'aeroporto", 26, 1, "all"),
+                    ("Biglietti per Pompei", 32, "me", "all"),
+                    ("Caffè al bar", 12, 2, "all"),
+                    ("Biglietti metro", 7, 0, "all"),
+                    ("Pranzo al mercato", 59, "me", "all"),
+                    ("Serata in centro", 68, 1, "all"),
+                ],
+            },
+            {
+                "name": "Casa condivisa",
+                "owner": "me",
+                "members": [0],
+                "ops": [
+                    ("Bollette di agosto", 120, "me", "all"),
+                    ("Internet", 30, 0, "all"),
+                    ("Spesa della settimana", 96, "me", "all"),
+                    ("Pulizie", 48, 0, "all"),
+                ],
+            },
+            {
+                "name": "Weekend in montagna",
+                "owner": 2,
+                "members": ["me", 1],
+                "ops": [
+                    ("Grigliata e carbone", 54, 2, "all"),
+                    ("Benzina", 38, "me", "all"),
                 ],
             },
         ],

@@ -100,6 +100,56 @@ final class StoreShotsUITests: XCTestCase {
             pickRoomWarning: "Choisissez d'abord un groupe",
             manualEntry: "Saisir manuellement"
         ),
+        "ja": Labels(
+            appleLanguage: "ja", locale: "ja_JP",
+            tabGroups: "グループ", tabFriends: "友だち", tabAdd: "支出を追加",
+            totals: "集計", settle: "精算する", firstRoom: "京都旅行",
+            balances: "残高",
+            rooms: ["シェアハウス", "京都旅行", "週末の別荘"],
+            receiptExpense: "先斗町の夕食",
+            pickRoomWarning: "先にグループを選択してください",
+            manualEntry: "手入力する"
+        ),
+        "zh-Hans": Labels(
+            appleLanguage: "zh-Hans", locale: "zh_CN",
+            tabGroups: "群组", tabFriends: "好友", tabAdd: "添加支出",
+            totals: "合计", settle: "结算", firstRoom: "成都之行",
+            balances: "余额",
+            rooms: ["周末民宿", "合租公寓", "成都之行"],
+            receiptExpense: "宽窄巷子晚餐",
+            pickRoomWarning: "请先选择群组",
+            manualEntry: "手动输入"
+        ),
+        "ko": Labels(
+            appleLanguage: "ko", locale: "ko_KR",
+            tabGroups: "그룹", tabFriends: "친구", tabAdd: "지출 추가",
+            totals: "합계", settle: "정산하기", firstRoom: "제주도 여행",
+            balances: "잔액",
+            rooms: ["셰어하우스", "제주도 여행", "주말 펜션"],
+            receiptExpense: "흑돼지 저녁",
+            pickRoomWarning: "먼저 그룹을 선택해 주십시오",
+            manualEntry: "직접 입력"
+        ),
+        "pt-BR": Labels(
+            appleLanguage: "pt-BR", locale: "pt_BR",
+            tabGroups: "Grupos", tabFriends: "Amigos", tabAdd: "Adicionar despesa",
+            totals: "Totais", settle: "Acertar", firstRoom: "Viagem a Salvador",
+            balances: "Saldos",
+            rooms: ["República", "Sítio no fim de semana", "Viagem a Salvador"],
+            receiptExpense: "Jantar no Pelourinho",
+            pickRoomWarning: "Escolha um grupo primeiro",
+            manualEntry: "Digitar manualmente"
+        ),
+        "it": Labels(
+            appleLanguage: "it", locale: "it_IT",
+            tabGroups: "Gruppi", tabFriends: "Amici", tabAdd: "Aggiungi spesa",
+            totals: "Totali", settle: "Salda", firstRoom: "Viaggio a Napoli",
+            balances: "Saldi",
+            rooms: ["Casa condivisa", "Viaggio a Napoli", "Weekend in montagna"],
+            receiptExpense: "Cena a Spaccanapoli",
+            pickRoomWarning: "Scegli prima un gruppo",
+            manualEntry: "Inserisci a mano"
+        ),
     ]
 
     private var labels: Labels!

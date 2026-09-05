@@ -45,7 +45,37 @@ struct DemoRecording {
     Salade lyonnaise quatorze, c'est Léa et Hugo
     """
 
-    private static let byLanguage = ["ru": ru, "en": en, "es": es, "de": de, "fr": fr]
+    private static let ja = """
+    先斗町の夕食。焼き魚の定食、三十二ドル、わたしとユウタ。\
+    だし巻き卵、十六ドル、ユウタとミオ
+    """
+
+    private static let zh = """
+    宽窄巷子晚餐。烤鱼三十二美元，我和子墨。\
+    口水鸡十六美元，子墨和佳宁
+    """
+
+    private static let ko = """
+    흑돼지 저녁. 흑돼지 구이 삼십이 달러, 나랑 서연. \
+    전복 뚝배기 십육 달러, 서연이랑 민준
+    """
+
+    private static let pt = """
+    Jantar no Pelourinho. Moqueca de peixe trinta e dois dólares — eu e a Camila. \
+    Bobó de camarão dezesseis, isso é da Camila com o Rafa
+    """
+
+    private static let it = """
+    Cena a Spaccanapoli. Pesce alla griglia trentadue euro — io e Giulia. \
+    Impepata di cozze sedici, quella è di Giulia e Luca
+    """
+
+    /// Ключ — код ЯЗЫКА, а не локали: `languageCode` отдаёт «zh» и «pt», а не
+    /// «zh-Hans» и «pt-BR», и по полному коду набор бы не нашёлся.
+    private static let byLanguage = [
+        "ru": ru, "en": en, "es": es, "de": de, "fr": fr,
+        "ja": ja, "zh": zh, "ko": ko, "pt": pt, "it": it,
+    ]
 
     /// Стартовое время считается один раз: пересчёт на каждой перерисовке
     /// обнулял бы таймер и кольцо прямо в момент съёмки.

@@ -5,12 +5,17 @@
 // одной датой дают один столбик вместо картины месяца. Правим прямо в базе:
 // данные локальные и существуют только ради витрины.
 //
-//   docker exec splitty-app-mongo-1 mongosh splitty --quiet --file /tmp/backdate.js
+//   docker exec <mongo> mongosh <база> --quiet --file /tmp/backdate.js
 const ROOMS = ["Поездка в Стамбул", "Квартира на Тверской", "Дача на выходные",
                "Trip to Lisbon", "Flat share", "Weekend cabin",
                "Viaje a Barcelona", "Piso compartido", "Finca el finde",
                "Städtetrip Berlin", "WG Prenzlauer Berg", "Wochenende am See",
-               "Week-end à Lyon", "Coloc rue Vieille", "Chalet en montagne"];
+               "Week-end à Lyon", "Coloc rue Vieille", "Chalet en montagne",
+               "京都旅行", "シェアハウス", "週末の別荘",
+               "成都之行", "合租公寓", "周末民宿",
+               "제주도 여행", "셰어하우스", "주말 펜션",
+               "Viagem a Salvador", "República", "Sítio no fim de semana",
+               "Viaggio a Napoli", "Casa condivisa", "Weekend in montagna"];
 
 // Дни назад для i-й операции комнаты. Не равномерно: реальные траты идут
 // сгустками — поездка за несколько дней, квартира растянута на месяц.

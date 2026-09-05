@@ -303,5 +303,310 @@
         "screen": "friends"
       }
     ]
+  },
+  "ja": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "均等に",
+        "line2": "割り勘"
+      },
+      {
+        "icon": "∑",
+        "line1": "計算は",
+        "line2": "おまかせ"
+      },
+      {
+        "icon": "✈",
+        "line1": "オフライン",
+        "line2": "でも動く"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "声で",
+        "title": "話すだけで\n支出が完成",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "レシート",
+        "title": "頼んだ分だけ\nそれぞれ払う",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "グループ",
+        "title": "みんなの支出が\nひとつの場所に",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "支出",
+        "title": "誰が払って\n誰がいくら返すか",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "精算",
+        "title": "5回の送金が\n1回になる",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "残高",
+        "title": "誰が誰に —\n電卓はいらない",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "集計",
+        "title": "今月のお金は\nどこへ消えたか",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "友だち",
+        "title": "友だちとの貸し借りは\n自動で相殺",
+        "screen": "friends"
+      }
+    ]
+  },
+  "zh-Hans": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "平均",
+        "line2": "分摊"
+      },
+      {
+        "icon": "∑",
+        "line1": "自动",
+        "line2": "算清"
+      },
+      {
+        "icon": "✈",
+        "line1": "离线",
+        "line2": "也能用"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "用说的",
+        "title": "说一句\n支出就记好了",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "小票",
+        "title": "点了什么\n就付什么",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "群组",
+        "title": "共同的支出\n都在一处",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "支出",
+        "title": "谁付了钱\n谁还欠多少",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "结算",
+        "title": "五次转账\n变成一次",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "余额",
+        "title": "谁欠谁 —\n不用按计算器",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "合计",
+        "title": "这个月的钱\n花在哪儿",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "好友",
+        "title": "和朋友的欠款\n自动抵销",
+        "screen": "friends"
+      }
+    ]
+  },
+  "ko": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "똑같이",
+        "line2": "나누기"
+      },
+      {
+        "icon": "∑",
+        "line1": "계산은",
+        "line2": "알아서"
+      },
+      {
+        "icon": "✈",
+        "line1": "오프라인",
+        "line2": "에서도"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "음성으로",
+        "title": "말만 하면\n지출 완성",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "영수증",
+        "title": "시킨 만큼만\n각자 계산",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "그룹",
+        "title": "함께 쓴 돈이\n한곳에",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "지출",
+        "title": "누가 냈고\n누가 얼마 빚졌나",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "정산",
+        "title": "다섯 번 송금이\n한 번으로",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "잔액",
+        "title": "누가 누구에게 —\n계산기 없이",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "합계",
+        "title": "이번 달 돈이\n어디로 갔을까",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "친구",
+        "title": "친구와의 빚은\n알아서 상계",
+        "screen": "friends"
+      }
+    ]
+  },
+  "pt-BR": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Divide",
+        "line2": "igual"
+      },
+      {
+        "icon": "∑",
+        "line1": "Soma",
+        "line2": "por você"
+      },
+      {
+        "icon": "✈",
+        "line1": "Funciona",
+        "line2": "offline"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "POR VOZ",
+        "title": "Fale em voz alta —\na despesa está pronta",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "A CONTA",
+        "title": "Cada um paga\no que pediu",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "GRUPOS",
+        "title": "Toda despesa dividida\nem um só lugar",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "DESPESAS",
+        "title": "Veja quem pagou\ne quem deve o quê",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "ACERTO",
+        "title": "Uma transferência\nno lugar de cinco",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "SALDOS",
+        "title": "Quem deve a quem —\nsem calculadora",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "TOTAIS",
+        "title": "Para onde foi\no dinheiro este mês",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "AMIGOS",
+        "title": "Dívidas com amigos\nse compensam sozinhas",
+        "screen": "friends"
+      }
+    ]
+  },
+  "it": {
+    "chips": [
+      {
+        "icon": "⇄",
+        "line1": "Dividi",
+        "line2": "in parti"
+      },
+      {
+        "icon": "∑",
+        "line1": "Fa i conti",
+        "line2": "per te"
+      },
+      {
+        "icon": "✈",
+        "line1": "Funziona",
+        "line2": "offline"
+      }
+    ],
+    "shots": [
+      {
+        "eyebrow": "A VOCE",
+        "title": "Dillo ad alta voce —\nla spesa è fatta",
+        "screen": "add"
+      },
+      {
+        "eyebrow": "IL CONTO",
+        "title": "Ognuno paga\nquello che ha preso",
+        "screen": "receipt"
+      },
+      {
+        "eyebrow": "GRUPPI",
+        "title": "Tutte le spese comuni\nin un posto solo",
+        "screen": "groups"
+      },
+      {
+        "eyebrow": "SPESE",
+        "title": "Chi ha pagato\ne chi deve cosa",
+        "screen": "group"
+      },
+      {
+        "eyebrow": "SALDO",
+        "title": "Un bonifico\ninvece di cinque",
+        "screen": "settle"
+      },
+      {
+        "eyebrow": "SALDI",
+        "title": "Chi deve a chi —\nsenza calcolatrice",
+        "screen": "balances"
+      },
+      {
+        "eyebrow": "TOTALI",
+        "title": "Dove sono finiti\ni soldi questo mese",
+        "screen": "totals"
+      },
+      {
+        "eyebrow": "AMICI",
+        "title": "I debiti tra amici\nsi compensano da soli",
+        "screen": "friends"
+      }
+    ]
   }
 }
