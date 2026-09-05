@@ -33,6 +33,12 @@
             "state": "translated",
             "value": " в группе «%@»"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」で"
+          }
         }
       }
     },
@@ -67,6 +73,12 @@
           "stringUnit": {
             "state": "translated",
             "value": " добавил(а) «%@» в группе «%@»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "さんが「%2$@」に「%1$@」を追加しました"
           }
         }
       }
@@ -103,6 +115,12 @@
             "state": "translated",
             "value": " заплатил(а) "
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "さんが支払いました "
+          }
         }
       }
     },
@@ -137,6 +155,12 @@
           "stringUnit": {
             "state": "translated",
             "value": " заплатил(а) вам "
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "さんがあなたに支払いました "
           }
         }
       }
@@ -173,6 +197,12 @@
             "state": "translated",
             "value": " на всех"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全員で"
+          }
         }
       }
     },
@@ -207,6 +237,12 @@
           "stringUnit": {
             "state": "translated",
             "value": " съеденному"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "食べた分に応じて"
           }
         }
       }
@@ -243,6 +279,12 @@
             "state": "translated",
             "value": "%@ (вы)"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（あなた）"
+          }
         }
       }
     },
@@ -277,6 +319,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ / %lld = %@ с человека"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ ÷ %2$lld = 1人あたり %3$@"
           }
         }
       }
@@ -313,6 +361,12 @@
             "state": "translated",
             "value": "%@ · пароль не задан"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@・パスワード未設定"
+          }
         }
       }
     },
@@ -347,6 +401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ добавил вас в группу «%@»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ さんがあなたを「%2$@」に追加しました"
           }
         }
       }
@@ -383,6 +443,12 @@
             "state": "translated",
             "value": "%@ должен(на) вам"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんがあなたに借りています"
+          }
         }
       }
     },
@@ -417,6 +483,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ должен(на) — %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ さんの借り — %2$@"
           }
         }
       }
@@ -453,6 +525,12 @@
             "state": "translated",
             "value": "%@ за %@. Подписка продлевается автоматически, отменить можно в настройках Apple ID"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ あたり %1$@。自動更新されます。解約は Apple ID の設定からいつでも可能です"
+          }
         }
       }
     },
@@ -487,6 +565,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ заплатил(а) %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ さんが %2$@ を支払いました"
           }
         }
       }
@@ -523,6 +607,12 @@
             "state": "translated",
             "value": "%@ заплатил(а) вам"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんがあなたに支払いました"
+          }
         }
       }
     },
@@ -557,6 +647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ платит вам"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ さんがあなたに支払います"
           }
         }
       }
@@ -593,6 +689,12 @@
             "state": "translated",
             "value": "%@ платит — %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ さんが支払い — %2$@"
+          }
         }
       }
     },
@@ -628,6 +730,12 @@
             "state": "translated",
             "value": "%@ приглашает вас вернуться в «%@»"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ さんが「%2$@」への復帰に招待しています"
+          }
         }
       }
     },
@@ -662,6 +770,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ фиксом · остальное поровну"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は固定・残りは均等"
           }
         }
       }
@@ -912,6 +1026,12 @@
             "state": "translated",
             "value": "%lld шт · %@ за шт"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 個・1個あたり %2$@"
+          }
         }
       }
     },
@@ -947,6 +1067,12 @@
             "state": "translated",
             "value": "+%@ сбор"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@ の手数料"
+          }
         }
       }
     },
@@ -978,6 +1104,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "0"
@@ -1017,6 +1149,12 @@
             "state": "translated",
             "value": "0 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥0"
+          }
         }
       }
     },
@@ -1051,6 +1189,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 перевод"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送金 1 件"
           }
         }
       }
@@ -1087,6 +1231,12 @@
             "state": "translated",
             "value": "100 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥100"
+          }
         }
       }
     },
@@ -1121,6 +1271,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1000 ₽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥1,000"
           }
         }
       }
@@ -1157,6 +1313,12 @@
             "state": "translated",
             "value": "1350 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥1,350"
+          }
         }
       }
     },
@@ -1191,6 +1353,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "150 ₽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥150"
           }
         }
       }
@@ -1227,6 +1395,12 @@
             "state": "translated",
             "value": "1500 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥1,500"
+          }
         }
       }
     },
@@ -1261,6 +1435,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "2 перевода"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送金 2 件"
           }
         }
       }
@@ -1297,6 +1477,12 @@
             "state": "translated",
             "value": "2 поз."
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 品"
+          }
         }
       }
     },
@@ -1331,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "200 + 100 Бори"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥200 + ボリスの ¥100"
           }
         }
       }
@@ -1367,6 +1559,12 @@
             "state": "translated",
             "value": "200 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥200"
+          }
         }
       }
     },
@@ -1401,6 +1599,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "3 200 ₽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥3,200"
           }
         }
       }
@@ -1437,6 +1641,12 @@
             "state": "translated",
             "value": "300 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥300"
+          }
         }
       }
     },
@@ -1471,6 +1681,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "450 ₽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥450"
           }
         }
       }
@@ -1507,6 +1723,12 @@
             "state": "translated",
             "value": "600 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥600"
+          }
         }
       }
     },
@@ -1541,6 +1763,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "800 ₽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥800"
           }
         }
       }
@@ -1577,6 +1805,12 @@
             "state": "translated",
             "value": "900 ₽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¥900"
+          }
         }
       }
     },
@@ -1611,6 +1845,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple не вернул данные для входа. Попробуйте ещё раз"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple からサインイン情報が返されませんでした。もう一度お試しください"
           }
         }
       }
@@ -1647,6 +1887,12 @@
             "state": "translated",
             "value": "Apple не вернул данные для привязки. Попробуйте ещё раз"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple から連携に必要な情報が返されませんでした。もう一度お試しください"
+          }
         }
       }
     },
@@ -1681,6 +1927,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple не подтвердил вход. Попробуйте ещё раз"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple がサインインを確認できませんでした。もう一度お試しください"
           }
         }
       }
@@ -1717,6 +1969,12 @@
             "state": "translated",
             "value": "Email"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メール"
+          }
         }
       }
     },
@@ -1752,6 +2010,12 @@
             "state": "translated",
             "value": "Email и пароль"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メールとパスワード"
+          }
         }
       }
     },
@@ -1783,6 +2047,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "English"
@@ -1822,6 +2092,12 @@
             "state": "translated",
             "value": "Google не вернул данные для входа. Попробуйте ещё раз"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google からサインイン情報が返されませんでした。もう一度お試しください"
+          }
         }
       }
     },
@@ -1857,6 +2133,12 @@
             "state": "translated",
             "value": "Google не подтвердил вход. Попробуйте ещё раз"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google がサインインを確認できませんでした。もう一度お試しください"
+          }
         }
       }
     },
@@ -1888,6 +2170,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID: %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ID: %@"
@@ -1927,6 +2215,12 @@
             "state": "translated",
             "value": "Splitor"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
         }
       }
     },
@@ -1958,6 +2252,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Splitor Plus"
@@ -1997,6 +2297,12 @@
             "state": "translated",
             "value": "Splitor только ведёт учёт"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor は記録するだけです"
+          }
         }
       }
     },
@@ -2031,6 +2337,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty はすべての支出を参加者で分割します。夕食 600円 を3人なら1人 200円、タクシー 300円 なら1人 100円です。"
           }
         }
       }
@@ -2067,6 +2379,12 @@
             "state": "translated",
             "value": "Splitty только записывает: деньги передайте наличными или переводом"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty は記録するだけです。お金は現金または送金でお渡しください"
+          }
         }
       }
     },
@@ -2098,6 +2416,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Telegram"
@@ -2137,6 +2461,12 @@
             "state": "translated",
             "value": "Telegram не подтвердил вход. Попробуйте ещё раз"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram がサインインを確認できませんでした。もう一度お試しください"
+          }
         }
       }
     },
@@ -2168,6 +2498,12 @@
           }
         },
         "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "http://127.0.0.1:7171"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "http://127.0.0.1:7171"
@@ -2207,6 +2543,12 @@
             "state": "translated",
             "value": "«%@» — это %@. Запомнил, больше не спрошу"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」は %2$@ さんですね。覚えましたので、次からは伺いません"
+          }
         }
       }
     },
@@ -2241,6 +2583,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「均等」を選ぶとレシートの品目は破棄され、合計が全員で均等に分割されます。「取り消す」で元に戻せます"
           }
         }
       }
@@ -2277,6 +2625,12 @@
             "state": "translated",
             "value": "«Ужин 3200, делим на четверых»"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「夕食 3,200円、4人で割って」"
+          }
         }
       }
     },
@@ -2311,6 +2665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "· осталось %lld с"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "・残り %lld 秒"
           }
         }
       }
@@ -2347,6 +2707,12 @@
             "state": "translated",
             "value": "· по суммам"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "・金額で指定"
+          }
         }
       }
     },
@@ -2381,6 +2747,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "· поровну"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "・均等"
           }
         }
       }
@@ -2417,6 +2789,12 @@
             "state": "translated",
             "value": "А"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
         }
       }
     },
@@ -2451,6 +2829,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Аккаунт удалён, но очистка данных не завершена. Нажмите «Удалить аккаунт» ещё раз, чтобы её доделать"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントは削除されましたが、データの消去が完了していません。「アカウントを削除」をもう一度タップして完了してください"
           }
         }
       }
@@ -2487,6 +2871,12 @@
             "state": "translated",
             "value": "Активна"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効"
+          }
         }
       }
     },
@@ -2521,6 +2911,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ане"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アンナ"
           }
         }
       }
@@ -2557,6 +2953,12 @@
             "state": "translated",
             "value": "Аня"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アンナ"
+          }
         }
       }
     },
@@ -2591,6 +2993,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Архив"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブ"
           }
         }
       }
@@ -2627,6 +3035,12 @@
             "state": "translated",
             "value": "Архив пуст"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブは空です"
+          }
         }
       }
     },
@@ -2661,6 +3075,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Архив скрывает группу из списка только у вас. Операции и долги сохраняются."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブすると、そのグループはあなたの一覧からのみ非表示になります。支出と貸し借りはそのまま残ります。"
           }
         }
       }
@@ -2697,6 +3117,12 @@
             "state": "translated",
             "value": "Архивировать"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブする"
+          }
         }
       }
     },
@@ -2731,6 +3157,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Архивные группы появятся здесь"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブしたグループがここに表示されます"
           }
         }
       }
@@ -2767,6 +3199,12 @@
             "state": "translated",
             "value": "Б"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
         }
       }
     },
@@ -2801,6 +3239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Балансы"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残高"
           }
         }
       }
@@ -2837,6 +3281,12 @@
             "state": "translated",
             "value": "Без Splitty"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty なしの場合"
+          }
         }
       }
     },
@@ -2871,6 +3321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Бесплатные скоро вернутся. Plus снимает суточный лимит совсем"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無料分はまもなく回復します。Plus なら1日の上限がなくなります"
           }
         }
       }
@@ -2907,6 +3363,12 @@
             "state": "translated",
             "value": "Боре"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ボリス"
+          }
         }
       }
     },
@@ -2941,6 +3403,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Боря"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ボリス"
           }
         }
       }
@@ -2977,6 +3445,12 @@
             "state": "translated",
             "value": "В архив"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブへ"
+          }
         }
       }
     },
@@ -3011,6 +3485,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "В валюте группы показываются все её суммы: расходы, долги и итоги."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループの通貨で、支出・貸し借り・合計のすべての金額が表示されます。"
           }
         }
       }
@@ -3047,6 +3527,12 @@
             "state": "translated",
             "value": "В группе только вы"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このグループにはあなただけです"
+          }
         }
       }
     },
@@ -3081,6 +3567,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "В какой группе погасить?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのグループで精算しますか？"
           }
         }
       }
@@ -3117,6 +3609,12 @@
             "state": "translated",
             "value": "В этой группе накопилось слишком много расходов. Заведите новую — старая останется доступной для чтения"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このグループには支出が溜まりすぎました。新しいグループを作成してください。古いグループは閲覧のみ可能です"
+          }
         }
       }
     },
@@ -3151,6 +3649,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ВАМ ПЕРЕВОДИТЬ"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたが送金する"
           }
         }
       }
@@ -3187,6 +3691,12 @@
             "state": "translated",
             "value": "Валюта"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通貨"
+          }
         }
       }
     },
@@ -3221,6 +3731,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вам вернули долг"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返済を受けました"
           }
         }
       }
@@ -3257,6 +3773,12 @@
             "state": "translated",
             "value": "Вам вернули долг, и напоминания о ваших долгах"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返済を受けたとき、およびあなたの借りについてのお知らせ"
+          }
         }
       }
     },
@@ -3291,6 +3813,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Вам должны"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受け取る"
           }
         }
       }
@@ -3327,6 +3855,12 @@
             "state": "translated",
             "value": "Вас пригласили или добавили в группу"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループに招待または追加されたとき"
+          }
         }
       }
     },
@@ -3361,6 +3895,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの負担分 300円 は2回ではなく1回の送金で済みます。Splitty がグループ内の貸し借りを相殺します。"
           }
         }
       }
