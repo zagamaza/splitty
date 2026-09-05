@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.IO_WAIT_MS
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.SplittyJson
@@ -93,7 +96,7 @@ class OperationDetailViewModelTest {
         val vm = viewModel()
         vm.start("65af", "op1")
 
-        val card = withTimeout(5_000) {
+        val card = withTimeout(IO_WAIT_MS) {
             vm.state.first { it is UiState.Content } as UiState.Content
         }.value
 
@@ -114,10 +117,10 @@ class OperationDetailViewModelTest {
         val vm = viewModel()
         vm.start("65af", "nope")
 
-        val state = withTimeout(5_000) {
+        val state = withTimeout(IO_WAIT_MS) {
             vm.state.first { it is UiState.Error } as UiState.Error
         }
-        assertTrue(state.message.isNotBlank())
+        assertEquals(UiText.res(R.string.error_operation_not_found), state.message)
     }
 
     @Test

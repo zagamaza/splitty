@@ -1,5 +1,6 @@
 package com.zagir.splitty.core.analytics
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -121,7 +122,7 @@ class AnalyticsTerminalTest {
      * проверял бы гонку самого себя, а не поведение отправки.
      */
     private suspend fun awaitToken(token: String?) {
-        withTimeout(5_000) { session.state.first { it?.token == token } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == token } }
     }
 
     private fun analytics(withApi: SplittyApi = api, into: CoroutineScope = scope) =
@@ -149,7 +150,7 @@ class AnalyticsTerminalTest {
         awaitToken("token-B")
         gate.countDown()
 
-        val request = withTimeout(5_000) { server.takeRequest(5, TimeUnit.SECONDS) }
+        val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }
         assertEquals("Bearer token-A", request?.getHeader("Authorization"))
     }
 
@@ -166,7 +167,7 @@ class AnalyticsTerminalTest {
         awaitToken(null)
         gate.countDown()
 
-        val request = withTimeout(5_000) { server.takeRequest(5, TimeUnit.SECONDS) }
+        val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }
         assertEquals("Bearer token-A", request?.getHeader("Authorization"))
     }
 
@@ -188,7 +189,7 @@ class AnalyticsTerminalTest {
         analytics.trackTerminal(AnalyticsEvent.Logout)
         gate.countDown()
 
-        val request = withTimeout(5_000) { server.takeRequest(5, TimeUnit.SECONDS) }
+        val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }
         val body = SplittyJson.parseToJsonElement(request!!.body.readUtf8()).jsonObject
         val event = body["events"]!!.jsonArray.first().jsonObject
 
@@ -241,7 +242,7 @@ class AnalyticsTerminalTest {
             assertTrue(entered.await(5, TimeUnit.SECONDS), "отправка не дошла до вызова")
             val child = sendScope.coroutineContext.job.children.first()
             release.countDown()
-            withTimeout(5_000) { child.join() }
+            withTimeout(IO_WAIT_MS) { child.join() }
             assertTrue(child.isCancelled, "отмена проглочена: корутина завершилась как успешная")
             assertFalse(
                 sendScope.coroutineContext.job.isCancelled,

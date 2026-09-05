@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
+
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -70,7 +73,11 @@ internal val AUDIO_SOURCES = intArrayOf(
 internal val AUDIO_SAMPLE_RATES = intArrayOf(AUDIO_TARGET_SAMPLE_RATE, 44_100, 48_000)
 
 /** Ошибки записи голоса — текст показывается пользователю (как AudioRecorderError в iOS). */
-class AudioRecorderException(message: String) : Exception(message)
+/**
+ * Отказ записи. Текст несёт [UiText], а не готовая строка: контроллер живёт вне
+ * Compose, и локаль на момент броска может отличаться от локали показа.
+ */
+class AudioRecorderException(val text: UiText) : Exception()
 
 /**
  * Запись голосового ввода расхода (hold-to-talk) через [AudioRecord] — зеркало
@@ -175,14 +182,14 @@ class AudioRecorderController(
         readThread?.takeIf { it.isAlive }?.let { stale ->
             stale.join(JOIN_TIMEOUT_MS)
             if (stale.isAlive) {
-                throw AudioRecorderException("Микрофон ещё занят прошлой записью. Попробуйте ещё раз")
+                throw AudioRecorderException(UiText.res(R.string.error_mic_busy_previous))
             }
         }
         readThread = null
         audioData = null
         deviceLost = false
         val (rec, sampleRate) = openRecord()
-            ?: throw AudioRecorderException("Не удалось начать запись. Проверьте доступ к микрофону")
+            ?: throw AudioRecorderException(UiText.res(R.string.error_record_start))
         record = rec
         // Свежий буфер на сессию: общий копил хвост прошлой записи в новый WAV.
         val sessionPcm = CappedPcmBuffer(AUDIO_CAP_BYTES)

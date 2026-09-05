@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
@@ -69,7 +70,7 @@ class GroupDashboardViewModel @Inject constructor(
             throw e
         } catch (e: ApiException) {
             if (_statistics.value !is UiState.Content) {
-                _statistics.value = UiState.Error(e.message)
+                _statistics.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }

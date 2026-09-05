@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.ParseDraft
@@ -289,7 +291,11 @@ class AddExpenseAIFlowTest {
             ),
         ).copy(parseQuestions = listOf("Сколько стоила пицца?", "Кто платил?"))
         assertEquals(
-            listOf("Кто это — «Саня»?", "Сколько стоит «Пицца»?", "Кто платил?"),
+            listOf(
+                UiText.res(R.string.expense_hint_who_is, "Саня"),
+                UiText.res(R.string.expense_hint_how_much, "Пицца"),
+                UiText.Raw("Кто платил?"),
+            ),
             next.missingInfoHints,
         )
     }

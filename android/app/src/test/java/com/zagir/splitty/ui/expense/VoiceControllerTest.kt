@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import com.zagir.splitty.ui.components.Haptics
 import kotlin.test.Test
 import org.junit.runner.RunWith
@@ -30,7 +32,7 @@ class VoiceControllerTest {
         var failOnStart = false
 
         override fun start() {
-            if (failOnStart) throw AudioRecorderException("нет микрофона")
+            if (failOnStart) throw AudioRecorderException(UiText.Raw("нет микрофона"))
             startCount++
             isRecording = true
             lastAudioPath = "/cache/rec.wav"
@@ -69,7 +71,7 @@ class VoiceControllerTest {
         var finishedPath: String? = null
         var shortTaps = 0
         var cancels = 0
-        var error: String? = null
+        var error: UiText? = null
     }
 
     private fun controller(
@@ -285,7 +287,7 @@ class VoiceControllerTest {
 
         vc.began(0L)
 
-        assertEquals("нет микрофона", probe.error)
+        assertEquals(UiText.Raw("нет микрофона"), probe.error)
         assertFalse(vc.isMicPressed)
         assertFalse(vc.isLocked)
     }

@@ -85,7 +85,7 @@ fun FriendsListScreen(
         )
         when (val current = state) {
             is UiState.Loading -> FriendsLoadingView()
-            is UiState.Error -> FriendsErrorView(current.message, onRetry = viewModel::retry)
+            is UiState.Error -> FriendsErrorView(current.message.resolve(), onRetry = viewModel::retry)
             is UiState.Content -> FriendsList(
                 friends = current.value,
                 freshness = freshness,

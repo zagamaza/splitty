@@ -64,6 +64,21 @@ class MoneyTest {
         assertEquals("XYZ", currencySymbol("XYZ"))
     }
 
+    @Test
+    fun `sum is written in the language of the interface`() {
+        // У сума нет знака — только слово, и оно единственное во всей таблице,
+        // что зависит от языка. Было русским всегда: немец читал «12 000 сум»
+        // кириллицей. Значения совпадают с iOS.
+        MoneyLocale.override = Locale("de", "DE")
+        assertEquals("Sum", currencySymbol("UZS"))
+        for (language in listOf("en", "es", "fr")) {
+            MoneyLocale.override = Locale(language)
+            assertEquals("sum", currencySymbol("UZS"), "$language: сум написан не на своём языке")
+        }
+        MoneyLocale.override = Locale("ru", "RU")
+        assertEquals("сум", currencySymbol("UZS"))
+    }
+
     // --- shares(): каноническое правило деления (base = S/n, остаток первым r) ---
 
     @Test

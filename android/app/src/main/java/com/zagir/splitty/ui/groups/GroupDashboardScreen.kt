@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -204,7 +205,7 @@ internal fun GroupDashboardContent(
         }
 
         is UiState.Error -> Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            GroupsErrorState(message = state.message, onRetry = onRetry)
+            GroupsErrorState(message = state.message.resolve(), onRetry = onRetry)
         }
 
         is UiState.Content -> {

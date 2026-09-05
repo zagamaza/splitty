@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Splitor</string>
 
     <!-- Общие -->
     <string name="common_error_title">Ошибка</string>
@@ -39,7 +38,6 @@
     <string name="login_switch_to_login">Уже есть аккаунт? Войти</string>
     <string name="login_telegram_button">Войти через Telegram</string>
     <string name="login_server_section">Сервер</string>
-    <string name="login_server_placeholder">https://splitor.zagirnur.dev</string>
 
     <!-- Табы -->
     <string name="tab_friends">Друзья</string>
@@ -48,7 +46,6 @@
     <string name="tab_activity">Уведомления</string>
     <string name="tab_account">Профиль</string>
     <!-- Бейдж таба: всё, что больше сотни, показывается одинаково -->
-    <string name="notifications_badge_overflow">99+</string>
 
     <!-- Заглушки -->
     <string name="placeholder_friends">Здесь появятся балансы с друзьями</string>
@@ -166,7 +163,6 @@
     <string name="notifications_invites_footer">Вас пригласили или добавили в группу</string>
     <string name="notifications_edits">Правки расходов</string>
     <string name="notifications_edits_footer">Расход переименовали или добавили фото — сумма и ваша доля не изменились</string>
-    <string name="notifications_channel_telegram">Telegram</string>
     <string name="notifications_channel_push">Приложение</string>
     <string name="profile_theme">Тема</string>
     <string name="profile_theme_system">Системная</string>
@@ -174,8 +170,6 @@
     <string name="profile_theme_dark">Тёмная</string>
     <string name="profile_language">Язык</string>
     <string name="profile_language_caption">Язык сообщений бота в Telegram</string>
-    <string name="profile_language_ru">Русский</string>
-    <string name="profile_language_en">English</string>
     <string name="profile_server_section">Сервер</string>
     <string name="profile_logout_confirm">Выйти из аккаунта?</string>
     <string name="profile_edit_name_title">Изменить имя</string>
@@ -737,4 +731,65 @@
     <string name="plus_purchase_pending_server">Оплата прошла, но подтвердить её пока не удалось. Проверьте связь — доступ появится сам</string>
     <string name="plus_purchase_failed">Не удалось совершить покупку</string>
     <string name="plus_nothing_to_restore">Покупок для восстановления не нашлось</string>
+
+    <!-- Тексты, жившие в коде литералами вместо ресурсов -->
+    <string name="expense_toast_pick_group">Сначала выберите группу</string>
+    <string name="expense_parse_empty">Не удалось распознать. Скажите ещё раз — с блюдами и ценами</string>
+    <string name="expense_toast_person_learned">«%1$s» — это %2$s. Запомнил, больше не спрошу</string>
+    <string name="expense_hint_who_is">Кто это — «%1$s»?</string>
+    <string name="expense_hint_how_much">Сколько стоит «%1$s»?</string>
+    <string name="expense_hint_how_much_item">Сколько стоит эта позиция?</string>
+    <string name="expense_block_unknown_items">Сначала выберите, кто есть кто в позициях</string>
+    <string name="expense_block_priceless_items">Укажите цены позиций — без них не посчитать доли</string>
+    <string name="expense_block_items_mismatch">Проверьте позиции чека — доли не сходятся</string>
+    <string name="error_mic_busy_previous">Микрофон ещё занят прошлой записью. Попробуйте ещё раз</string>
+    <string name="error_record_start">Не удалось начать запись. Проверьте доступ к микрофону</string>
+    <string name="provider_password">Email и пароль</string>
+    <string name="plus_hero_each">по 800 ₽</string>
+    <string name="expense_alert_pick_group">Выберите группу</string>
+    <string name="expense_alert_recording_lost">Запись не сохранилась — надиктуйте или снимите чек заново</string>
+    <string name="expense_alert_need_title">Введите описание расхода</string>
+    <string name="expense_alert_need_sum">Введите сумму (целое число, не меньше 1)</string>
+    <string name="expense_alert_need_payer">Выберите, кто заплатил</string>
+    <string name="expense_alert_offline_edit">Нет соединения. Можно редактировать только неотправленные операции</string>
+    <string name="welcome_slip_dinner">Ужин</string>
+    <string name="welcome_slip_taxi">Такси</string>
+    <string name="welcome_slip_groceries">Продукты</string>
+    <string name="welcome_slip_coffee">Кофе</string>
+    <string name="welcome_rcpt_pizza">Пицца</string>
+    <string name="welcome_rcpt_cola">Кола</string>
+    <string name="welcome_dictation_phrase">пицца за восемьсот и кола за двести пополам с Саней</string>
+    <string name="welcome_avatar_you">Я</string>
+    <string name="welcome_avatar_sanya">С</string>
+    <string name="welcome_avatar_anya">А</string>
+    <string name="welcome_avatar_borya">Б</string>
+    <string name="plus_hero_sum">3 200 ₽</string>
+    <string name="welcome_each_400x2">по 400 ₽ × 2</string>
+    <string name="welcome_each_100x2">по 100 ₽ × 2</string>
+    <string name="welcome_each_200">по 200 ₽</string>
+    <string name="welcome_each_100">по 100 ₽</string>
+    <string name="provider_telegram" translatable="false">Telegram</string>
+    <string name="provider_google" translatable="false">Google</string>
+    <string name="provider_apple" translatable="false">Apple</string>
+    <string name="error_internal">Что-то пошло не так на нашей стороне. Попробуйте ещё раз</string>
+    <string name="error_unavailable">Сейчас это недоступно. Попробуйте позже</string>
+    <string name="error_email_taken">Этот email уже зарегистрирован. Войдите вместо регистрации</string>
+    <string name="error_invalid_credentials">Неверный email или пароль</string>
+    <string name="error_invalid_password">Неверный текущий пароль</string>
+    <string name="error_not_a_friend">Пригласить можно того, с кем у вас уже была общая группа. Остальным отправьте ссылку</string>
+    <string name="error_invalid_code">Код неверный, просрочен или уже использован. Запросите новый</string>
+
+    <!-- Суммы витрины: в локали это не рубли (шкала общая с iOS) -->
+    <string name="demo_sum_0">0 ₽</string>
+    <string name="demo_sum_100">100 ₽</string>
+    <string name="demo_sum_150">150 ₽</string>
+    <string name="demo_sum_200">200 ₽</string>
+    <string name="demo_sum_300">300 ₽</string>
+    <string name="demo_sum_450">450 ₽</string>
+    <string name="demo_sum_600">600 ₽</string>
+    <string name="demo_sum_800">800 ₽</string>
+    <string name="demo_sum_900">900 ₽</string>
+    <string name="demo_sum_1000">1000 ₽</string>
+    <string name="demo_sum_1350">1350 ₽</string>
+    <string name="demo_sum_1500">1500 ₽</string>
 </resources>

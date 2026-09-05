@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -172,7 +173,7 @@ private fun GroupsListContent(
             UiState.Loading -> GroupsLoading(Modifier.padding(innerPadding))
 
             is UiState.Error -> GroupsFullScreenError(
-                message = current.message,
+                message = current.message.resolve(),
                 onRetry = viewModel::retry,
                 modifier = Modifier.padding(innerPadding),
             )
@@ -542,7 +543,7 @@ fun ArchivedGroupsScreen(
             UiState.Loading -> GroupsLoading(Modifier.padding(innerPadding))
 
             is UiState.Error -> GroupsFullScreenError(
-                message = current.message,
+                message = current.message.resolve(),
                 onRetry = viewModel::onArchiveOpened,
                 modifier = Modifier.padding(innerPadding),
             )

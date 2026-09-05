@@ -45,6 +45,9 @@ fun humanErrorText(error: Throwable, isSelf: Boolean = true): UiText {
                 else R.string.error_remove_member_has_operations,
             )
             "last_member" -> UiText.res(R.string.error_leave_last_member)
+            // Своя офлайн-заглушка (OutboxSyncer): её `message` мы пишем сами,
+            // и по-русски — показывать его немцу нельзя.
+            "unsupported" -> UiText.res(R.string.error_outbox_unsupported)
             // Текст сервера уже человеческий и на языке пользователя; при пустом
             // теле ApiException сам подставит ресурс по коду.
             else -> api.uiText()

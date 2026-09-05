@@ -1,5 +1,6 @@
 package com.zagir.splitty.data
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -126,7 +127,7 @@ class OutboxSyncerTest {
 
     /** Ждёт условия на очереди: синк идёт в фоновой корутине scope. */
     private suspend fun awaitQueue(predicate: (List<OutboxEntry>) -> Boolean): List<OutboxEntry> =
-        withTimeout(5_000) { outbox.entries.first(predicate) }
+        withTimeout(IO_WAIT_MS) { outbox.entries.first(predicate) }
 
     @Test
     fun `success removes entry and bumps data version`(): Unit = runBlocking {

@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.IO_WAIT_MS
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
@@ -150,7 +151,7 @@ class EmailPasswordLoginTest {
     }
 
     private suspend fun LoginViewModel.awaitIdle(): LoginUiState =
-        withTimeout(5_000) { state.first { !it.isLoggingIn } }
+        withTimeout(IO_WAIT_MS) { state.first { !it.isLoggingIn } }
 
     @Test
     fun `login sends normalized email and stores session`() = runBlocking {
@@ -170,7 +171,7 @@ class EmailPasswordLoginTest {
         assertTrue(body.contains("\"password\":\"secret123\""))
         // Пароль не остаётся в состоянии экрана после успешного входа
         assertEquals("", state.password)
-        val stored = withTimeout(5_000) { session.state.first { it?.token != null } }
+        val stored = withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         assertEquals("jwt-token", stored?.token)
         assertEquals("olga@example.com", stored?.me?.loginEmail)
     }
@@ -207,8 +208,13 @@ class EmailPasswordLoginTest {
         vm.submitEmailForm()
         val state = vm.awaitIdle()
 
-        assertEquals(UiText.Raw("этот email уже зарегистрирован"), state.errorMessage)
-        assertNull(withTimeout(5_000) { session.state.first { it != null } }?.token)
+        // Текст сервера доезжает до экрана, но в паре с переводом по коду:
+        // сам он приходит только по-русски, и язык выбирает уже показ.
+        assertEquals(
+            UiText.Server("этот email уже зарегистрирован", R.string.error_email_taken),
+            state.errorMessage,
+        )
+        assertNull(withTimeout(IO_WAIT_MS) { session.state.first { it != null } }?.token)
     }
 
     @Test

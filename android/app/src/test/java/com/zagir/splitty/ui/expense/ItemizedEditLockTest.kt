@@ -1,10 +1,13 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.SplitType
 import com.zagir.splitty.core.model.User
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -56,7 +59,7 @@ class ItemizedEditLockTest {
         )
         assertFalse(form.canSave)
         assertTrue(form.hasUnknownItems)
-        assertTrue(form.saveBlockedReason!!.isNotBlank())
+        assertEquals(UiText.res(R.string.expense_block_unknown_items), form.saveBlockedReason)
     }
 
     @Test

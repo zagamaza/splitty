@@ -123,7 +123,7 @@ fun ActivityScreen(
         )
         when (val current = state) {
             is UiState.Loading -> ActivityLoadingView()
-            is UiState.Error -> ActivityErrorView(current.message, onRetry = viewModel::retry)
+            is UiState.Error -> ActivityErrorView(current.message.resolve(), onRetry = viewModel::retry)
             is UiState.Content -> ActivityFeed(
                 items = current.value,
                 invites = invites,

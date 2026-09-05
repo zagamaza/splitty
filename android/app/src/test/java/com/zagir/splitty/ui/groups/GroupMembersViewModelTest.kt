@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import com.zagir.splitty.R
@@ -134,7 +135,7 @@ class GroupMembersViewModelTest {
         server.enqueue(MockResponse().setBody(ROOM_JSON))
         val vm = viewModel()
         vm.start("65af")
-        withTimeout(5_000) { vm.room.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.room.first { it is UiState.Content } }
         awaitRequest("/api/v1/rooms/65af")
         return vm
     }
@@ -157,7 +158,7 @@ class GroupMembersViewModelTest {
         }
         assertTrue(invited.any { it.contains("\"userId\":7") }, "позван 7")
         assertTrue(invited.any { it.contains("\"userId\":8") }, "позван 8")
-        withTimeout(5_000) {
+        withTimeout(IO_WAIT_MS) {
             while (!done) kotlinx.coroutines.delay(20)
         }
     }
@@ -177,7 +178,7 @@ class GroupMembersViewModelTest {
         repeat(2) { assertEquals("POST", awaitRequest("/api/v1/rooms/65af/members").method) }
         // Комната перечитывается — успешное приглашение обязано появиться на экране.
         awaitRequest("/api/v1/rooms/65af")
-        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        val alert = withTimeout(IO_WAIT_MS) { vm.alertMessage.filterNotNull().first() }
         assertEquals(R.string.invite_friends_failed, (alert as UiText.Res).id)
         assertFalse(done, "шит не закрывается: часть друзей не позвана")
     }
@@ -194,9 +195,9 @@ class GroupMembersViewModelTest {
         vm.inviteFriends(setOf(7L)) { done = true }
 
         awaitRequest("/api/v1/rooms/65af/members")
-        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        val alert = withTimeout(IO_WAIT_MS) { vm.alertMessage.filterNotNull().first() }
         assertEquals(R.string.invite_friends_pending, (alert as UiText.Res).id)
-        withTimeout(5_000) {
+        withTimeout(IO_WAIT_MS) {
             while (!done) kotlinx.coroutines.delay(20)
         }
     }
@@ -211,7 +212,7 @@ class GroupMembersViewModelTest {
 
         val request = awaitRequest("/api/v1/rooms/65af/members/me")
         assertEquals("DELETE", request.method)
-        withTimeout(5_000) {
+        withTimeout(IO_WAIT_MS) {
             while (!closed) kotlinx.coroutines.delay(20)
         }
     }
@@ -229,7 +230,7 @@ class GroupMembersViewModelTest {
         vm.leaveRoom { closed = true }
 
         awaitRequest("/api/v1/rooms/65af/members/me")
-        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        val alert = withTimeout(IO_WAIT_MS) { vm.alertMessage.filterNotNull().first() }
         // Свой текст из ресурсов, а не `message` сервера: тот всегда по-русски,
         // и немец с испанцем прочитали бы русскую строку. Объяснить путь наружу
         // (убрать себя из расходов) обязан он же — «конфликт» не объясняет ничего.
@@ -264,7 +265,7 @@ class GroupMembersViewModelTest {
         vm.removeMember(2L)
 
         awaitRequest("/api/v1/rooms/65af/members/2")
-        val alert = withTimeout(5_000) { vm.alertMessage.filterNotNull().first() }
+        val alert = withTimeout(IO_WAIT_MS) { vm.alertMessage.filterNotNull().first() }
         // Текст «уберите СЕБЯ из расходов» здесь отправлял бы человека искать
         // свои расходы вместо чужих: сервер и iOS различают эти два случая.
         assertEquals(R.string.error_remove_member_has_operations, (alert as UiText.Res).id)

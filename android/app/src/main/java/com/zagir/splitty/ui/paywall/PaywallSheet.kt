@@ -329,7 +329,12 @@ private fun HeroCard() {
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text("3 200 ₽", color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                stringResource(R.string.plus_hero_sum),
+                color = colors.ink,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
             Text(
@@ -337,7 +342,12 @@ private fun HeroCard() {
                 color = colors.inkSecondary,
                 fontSize = 13.sp,
             )
-            Text("по 800 ₽", color = colors.accentText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text(
+                stringResource(R.string.plus_hero_each),
+                color = colors.accentText,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+            )
         }
     }
 }

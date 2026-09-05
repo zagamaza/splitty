@@ -183,12 +183,6 @@ class GroupDetailViewModel @Inject constructor(
         _alertMessage.value = UiText.res(R.string.error_settle_offline)
     }
 
-    companion object {
-        /** Ключ строки group_settle_offline (VM без ресурсов — константа-дубль). */
-        const val OFFLINE_SETTLE_MESSAGE =
-            "Нет соединения. Погашение долга доступно только онлайн"
-    }
-
     /** Загружает справочник валют для пикера (после ошибки можно повторить). */
     fun loadCurrencies() {
         if (_currencies.value is UiState.Content) return
@@ -199,7 +193,7 @@ class GroupDetailViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: ApiException) {
-                _currencies.value = UiState.Error(e.message)
+                _currencies.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }
@@ -488,7 +482,7 @@ class GroupDetailViewModel @Inject constructor(
             if (_room.value is UiState.Content) {
                 _alertMessage.value = humanErrorText(e)
             } else {
-                _room.value = UiState.Error(e.message)
+                _room.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }

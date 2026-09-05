@@ -223,7 +223,7 @@ fun GroupDetailScreen(
             UiState.Loading -> GroupsLoading(Modifier.padding(innerPadding))
 
             is UiState.Error -> GroupsFullScreenError(
-                message = current.message,
+                message = current.message.resolve(),
                 onRetry = viewModel::retry,
                 modifier = Modifier.padding(innerPadding),
             )
@@ -1672,7 +1672,7 @@ private fun GroupSettingsTab(
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Text(
-                                text = list.message,
+                                text = list.message.resolve(),
                                 fontSize = 13.sp,
                                 color = colors.inkSecondary,
                             )

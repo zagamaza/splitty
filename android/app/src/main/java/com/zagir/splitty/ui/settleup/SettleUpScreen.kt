@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.settleup
 
+import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -155,7 +156,7 @@ fun SettleUpScreen(
             }
 
             is UiState.Error -> LoadErrorPane(
-                message = current.message,
+                message = current.message.resolve(),
                 onRetry = viewModel::retry,
                 modifier = contentModifier,
             )

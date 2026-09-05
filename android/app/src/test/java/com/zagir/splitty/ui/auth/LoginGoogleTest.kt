@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.auth
 
+import com.zagir.splitty.IO_WAIT_MS
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
 import android.content.Context
@@ -132,7 +133,7 @@ class LoginGoogleTest {
 
     /** Ждём завершения входа: флаг ставится синхронно, снимается в finally. */
     private suspend fun LoginViewModel.awaitIdle(): LoginUiState =
-        withTimeout(5_000) { state.first { !it.isLoggingIn } }
+        withTimeout(IO_WAIT_MS) { state.first { !it.isLoggingIn } }
 
     @Test
     fun `successful google login stores session`() = runBlocking {
@@ -148,7 +149,7 @@ class LoginGoogleTest {
         assertEquals("/api/v1/auth/google", request.path)
         assertTrue(request.body.readUtf8().contains("\"idToken\":\"google-id-token\""))
         // Сессия сохранена — экран входа сменится табами.
-        val stored = withTimeout(5_000) { session.state.first { it?.token != null } }
+        val stored = withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         assertEquals("jwt-token", stored?.token)
         assertEquals("Загир", stored?.me?.displayName)
     }
@@ -163,7 +164,7 @@ class LoginGoogleTest {
 
         assertNotNull(state.errorMessage)
         assertEquals(UiText.res(R.string.error_google_failed), state.errorMessage)
-        assertNull(withTimeout(5_000) { session.state.first { it != null } }?.token)
+        assertNull(withTimeout(IO_WAIT_MS) { session.state.first { it != null } }?.token)
     }
 
     @Test

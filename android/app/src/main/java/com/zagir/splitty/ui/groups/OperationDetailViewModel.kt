@@ -130,7 +130,7 @@ class OperationDetailViewModel @Inject constructor(
                     )
                 )
             } else {
-                UiState.Error(OPERATION_NOT_FOUND)
+                UiState.Error(UiText.res(R.string.error_operation_not_found))
             }
         } catch (e: CancellationException) {
             throw e
@@ -138,13 +138,9 @@ class OperationDetailViewModel @Inject constructor(
             if (_state.value is UiState.Content) {
                 _alertMessage.value = humanErrorText(e)
             } else {
-                _state.value = UiState.Error(e.message)
+                _state.value = UiState.Error(UiText.Raw(e.message))
             }
         }
-    }
-
-    private companion object {
-        const val OPERATION_NOT_FOUND = "Операция не найдена"
     }
 }
 

@@ -100,7 +100,7 @@ fun FriendDetailScreen(
         )
         when (val current = state) {
             is UiState.Loading -> LoadingView()
-            is UiState.Error -> ErrorView(current.message, onRetry = viewModel::retry)
+            is UiState.Error -> ErrorView(current.message.resolve(), onRetry = viewModel::retry)
             is UiState.Content -> FriendDetailContent(
                 friend = current.value,
                 isRefreshing = isRefreshing,

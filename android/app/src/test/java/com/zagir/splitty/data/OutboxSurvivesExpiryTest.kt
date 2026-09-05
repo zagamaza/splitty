@@ -1,5 +1,6 @@
 package com.zagir.splitty.data
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.analytics.AnalyticsQueue
@@ -117,7 +118,7 @@ class OutboxSurvivesExpiryTest {
         session.notifyUnauthorized()
 
         // Ждём, пока чистка отработает переход «токен был → токена нет».
-        withTimeout(5_000) { session.state.first { it?.token == null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         kotlinx.coroutines.delay(500)
 
         assertEquals(
@@ -133,8 +134,8 @@ class OutboxSurvivesExpiryTest {
 
         session.logout()
 
-        withTimeout(5_000) { session.state.first { it?.token == null } }
-        withTimeout(5_000) { outbox.entries.first { it.isEmpty() } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
+        withTimeout(IO_WAIT_MS) { outbox.entries.first { it.isEmpty() } }
 
         assertTrue(
             outbox.entries.first().isEmpty(),

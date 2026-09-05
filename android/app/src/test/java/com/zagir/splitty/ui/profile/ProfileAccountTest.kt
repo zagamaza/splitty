@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.profile
 
+import com.zagir.splitty.IO_WAIT_MS
 import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
@@ -189,7 +190,7 @@ class ProfileAccountTest {
         }
         session = SessionStore(dataStore, FakeTokenCipher(), scope)
         session.signIn("jwt-token", me)
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         // НАСТОЯЩИЙ AuthInterceptor, а не голый Retrofit: именно он вешает
         // Authorization и делает глобальный разлогин на 401 — обе половины
         // сценария удаления аккаунта живут в нём, и подменять его фейком
@@ -244,7 +245,7 @@ class ProfileAccountTest {
 
         vm.refreshSubscription()
 
-        val state = withTimeout(5_000) { vm.subscription.first { it != null } }
+        val state = withTimeout(IO_WAIT_MS) { vm.subscription.first { it != null } }
         assertEquals(Tier.PLUS, vm.tier.value)
         assertEquals("2027-01-01T00:00:00Z", state?.expiresAt)
         // Ссылки «управлять» у подарка нет — вести в магазин некуда.
@@ -321,7 +322,7 @@ class ProfileAccountTest {
 
     /** Профиль в сессии после обновления способов входа. */
     private suspend fun awaitProviders(expected: List<String>): Me? =
-        withTimeout(5_000) { session.state.first { it?.me?.linkedProviders == expected } }?.me
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.me?.linkedProviders == expected } }?.me
 
     @Test
     fun `successful delete logs the user out`() = runBlocking {
@@ -329,12 +330,12 @@ class ProfileAccountTest {
         val vm = viewModel()
 
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
 
         assertNull(vm.errorMessage.value)
         // Токен и профиль стёрты — AppRoot покажет экран входа, а
         // OfflineDataCleaner по пропаже токена вычистит кеш и outbox.
-        val stored = withTimeout(5_000) { session.state.first { it?.token == null } }
+        val stored = withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         assertNull(stored?.token)
         assertNull(stored?.me)
         assertFalse(stored?.hasStoredToken ?: true)
@@ -347,7 +348,7 @@ class ProfileAccountTest {
         val vm = viewModel()
 
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
 
         // Аккаунт жив: выбросить человека на экран входа значило бы соврать,
         // что удаление прошло.
@@ -381,12 +382,12 @@ class ProfileAccountTest {
         val vm = viewModel()
 
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
 
         assertNotNull(vm.errorMessage.value)
         // Аккаунт был ЖИВ до этого нажатия — отвязка токена устройства законна.
         assertEquals(1, registrar.unregisterCalls)
-        val pending = withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        val pending = withTimeout(IO_WAIT_MS) { session.state.first { it?.purgePending == true } }
         assertEquals("jwt-token", pending?.token)
 
         // Второе нажатие «Удалить аккаунт» — тот самый повтор. Алерт «повторите»
@@ -395,7 +396,7 @@ class ProfileAccountTest {
         synchronized(seenRequests) { seenRequests.clear() }
         respond("DELETE /api/v1/me", MockResponse().setResponseCode(204))
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
 
         val requests = synchronized(seenRequests) { seenRequests.toList() }
         // Главное: повтор НЕ ходил в /me/devices. Именно этот запрос и сносил
@@ -411,7 +412,7 @@ class ProfileAccountTest {
             "повтор ушёл без Authorization: $requests",
         )
         // Дошёл до 204: сессия закрыта по-настоящему, флаг снят.
-        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        val ended = withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         assertNull(ended?.me)
         assertFalse(ended?.purgePending ?: true)
         assertNull(vm.errorMessage.value)
@@ -431,8 +432,8 @@ class ProfileAccountTest {
         )
         val vm = viewModel()
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
-        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.purgePending == true } }
 
         // Ровно то, что делает AuthInterceptor на 401 любого запроса.
         session.notifyUnauthorized()
@@ -455,7 +456,7 @@ class ProfileAccountTest {
 
         session.notifyUnauthorized()
 
-        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        val ended = withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         assertNull(ended?.token)
     }
 
@@ -465,9 +466,15 @@ class ProfileAccountTest {
         val vm = viewModel()
 
         vm.deleteAccount()
-        withTimeout(5_000) { vm.isDeleting.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isDeleting.first { !it } }
 
-        assertEquals(UiText.Raw("Демонстрационный аккаунт удалить нельзя"), vm.errorMessage.value)
+        // Под общим кодом forbidden сервер объясняет, ЧТО именно нельзя, — эта
+        // конкретика нужна, но приходит по-русски, поэтому едет вместе с
+        // переводом по коду (см. UiTextServerLanguageTest).
+        assertEquals(
+            UiText.Server("Демонстрационный аккаунт удалить нельзя", R.string.error_forbidden),
+            vm.errorMessage.value,
+        )
         assertEquals("jwt-token", session.state.value?.token)
     }
 
@@ -495,7 +502,7 @@ class ProfileAccountTest {
         val vm = viewModel(provider)
 
         vm.linkGoogle(context)
-        withTimeout(5_000) { vm.isIdentityBusy.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isIdentityBusy.first { !it } }
 
         assertNull(vm.errorMessage.value)
         assertEquals(1, provider.calls)
@@ -512,7 +519,7 @@ class ProfileAccountTest {
         val vm = viewModel(provider)
 
         vm.linkGoogle(context)
-        withTimeout(5_000) { vm.isIdentityBusy.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isIdentityBusy.first { !it } }
 
         assertNull(vm.errorMessage.value)
         assertEquals(1, provider.calls)
@@ -532,7 +539,7 @@ class ProfileAccountTest {
         val vm = viewModel()
 
         vm.linkGoogle(context)
-        withTimeout(5_000) { vm.isIdentityBusy.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isIdentityBusy.first { !it } }
 
         assertEquals(
             UiText.res(R.string.error_identity_taken),
@@ -548,7 +555,7 @@ class ProfileAccountTest {
         val vm = viewModel(me = ME.copy(linkedProviders = listOf("telegram", "google")))
 
         vm.unlink(LoginProvider.TELEGRAM)
-        withTimeout(5_000) { vm.isIdentityBusy.first { !it } }
+        withTimeout(IO_WAIT_MS) { vm.isIdentityBusy.first { !it } }
 
         // Предупреждение — НЕ ошибка: свой диалог, пустой errorMessage.
         assertNull(vm.errorMessage.value)

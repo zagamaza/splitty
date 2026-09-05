@@ -67,8 +67,21 @@ fun currencySymbol(currency: String): String = when (currency) {
     "EUR" -> "€"
     "IDR" -> "Rp"
     "KZT" -> "₸"
-    "UZS" -> "сум"
+    "UZS" -> uzbekSum(MoneyFormat.locale)
     else -> currency
+}
+
+/**
+ * Сум — единственная валюта контракта, у которой нет знака: она пишется словом,
+ * и слово у каждого языка своё. Ресурс сюда не дотянуть — функция чистая и
+ * живёт вне Compose, — но локаль тут ровно та же, что форматирует саму сумму,
+ * вместе с тестовым швом [MoneyLocale]. Раньше строка была русской всегда, и
+ * немец с испанцем читали «1 000 сум» кириллицей. Значения — те же, что на iOS.
+ */
+private fun uzbekSum(locale: Locale): String = when (locale.language) {
+    "ru" -> "сум"
+    "de" -> "Sum"
+    else -> "sum"
 }
 
 /**

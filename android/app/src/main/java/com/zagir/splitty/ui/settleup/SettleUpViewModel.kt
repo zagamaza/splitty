@@ -151,7 +151,7 @@ class SettleUpViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
             } catch (e: ApiException) {
-                _state.value = UiState.Error(e.message)
+                _state.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }

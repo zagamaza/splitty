@@ -69,8 +69,8 @@ private const val MAX_SUM_DIGITS = 9
 private fun digitsOnly(raw: String): String =
     raw.filter { it.isDigit() }.take(MAX_SUM_DIGITS)
 
-/** Текст нудж-тоста «выберите группу» — константа, чтобы выбор группы мог погасить его мгновенно. */
-internal const val SELECT_GROUP_TOAST = "Сначала выберите группу"
+/** Нудж-тост «выберите группу» — значение, чтобы выбор группы мог погасить его мгновенно. */
+internal val SELECT_GROUP_TOAST: UiText = UiText.res(R.string.expense_toast_pick_group)
 
 /**
  * Политика офлайн-редактирования (фиксированный дизайн v1): создание и правка
@@ -156,7 +156,7 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
     val questions = response.questionList
     // Совсем пусто и без вопросов — говорим явно, а не молча возвращаем форму.
     val emptyAlert = if (!recognizedSomething && questions.isEmpty()) {
-        "Не удалось распознать. Скажите ещё раз — с блюдами и ценами"
+        UiText.res(R.string.expense_parse_empty)
     } else {
         null
     }
@@ -294,7 +294,9 @@ internal fun AddExpenseForm.resolvingUnknown(itemIndex: Int, name: String, userI
         unknown = unknown.ifEmpty { null },
     )
     val member = members.firstOrNull { it.id == userId }
-    val toast = member?.let { "«$name» — это ${it.displayName}. Запомнил, больше не спрошу" }
+    val toast = member?.let {
+        UiText.res(R.string.expense_toast_person_learned, name, it.displayName)
+    }
     return replacingItem(itemIndex, updated).copy(toastMessage = toast ?: toastMessage)
 }
 
@@ -487,14 +489,14 @@ data class AddExpenseForm(
     /** Снапшот формы до последней правки — для [undoingParse]; null — отменять нечего. */
     val undoSnapshot: UndoSnapshot? = null,
     /** Короткое подтверждение действия (тост «…Запомнил»); null — тоста нет. */
-    val toastMessage: String? = null,
+    val toastMessage: UiText? = null,
     /**
      * null — ошибки распознавания нет; иначе текст с кнопкой «Повторить» (данные
      * НЕ теряются: фото сохранено в cacheDir, форма осталась как была).
      */
     val parseRetryMessage: UiText? = null,
     /** null — алерта нет; иначе диалог «Ошибка» с этим текстом. */
-    val alertMessage: String? = null,
+    val alertMessage: UiText? = null,
     /** true — расход сохранён, экран пора закрывать (onDone). */
     val isSaved: Boolean = false,
 ) {
@@ -567,26 +569,33 @@ data class AddExpenseForm(
      * позиции без цены и вопросы модели, не дублирующие первые два. Порт iOS
      * `missingInfoHints`.
      */
-    val missingInfoHints: List<String>
+    val missingInfoHints: List<UiText>
         get() {
-            val hints = ArrayList<String>()
+            val hints = ArrayList<UiText>()
             val covered = ArrayList<String>()
             for (item in draftItems) {
                 for (name in item.unknown ?: emptyList()) {
-                    hints.add("Кто это — «$name»?")
+                    hints.add(UiText.res(R.string.expense_hint_who_is, name))
                     covered.add(name.lowercase())
                 }
             }
             for (item in draftItems) {
                 if (item.isSurcharge || item.price >= 1) continue
-                val name = item.name.ifEmpty { "позиция" }
-                hints.add("Сколько стоит «$name»?")
-                covered.add(name.lowercase())
+                // Безымянная позиция спрашивается отдельной строкой, а не
+                // подстановкой слова «позиция»: подставлять было бы нечего в
+                // ресурс, а пустое имя в covered глушит все вопросы сервера —
+                // contains("") истинно для любого из них.
+                if (item.name.isEmpty()) {
+                    hints.add(UiText.res(R.string.expense_hint_how_much_item))
+                } else {
+                    hints.add(UiText.res(R.string.expense_hint_how_much, item.name))
+                    covered.add(item.name.lowercase())
+                }
             }
             for (question in parseQuestions) {
                 val lower = question.lowercase()
                 if (covered.any { lower.contains(it) }) continue
-                hints.add(question)
+                hints.add(UiText.Raw(question))
             }
             return hints.take(3)
         }
@@ -616,12 +625,14 @@ data class AddExpenseForm(
      * Живая подпись режима «По суммам»: остаток/перерасход/готово (порт iOS
      * `distributionHint`). Строится через [money] — чистая, годна для тоста и теста.
      */
-    val distributionHint: String
+    val distributionHint: UiText
         get() = when {
-            recipientIds.isEmpty() -> "Выберите хотя бы одного участника"
-            isDistributionBalanced -> "Сумма распределена полностью"
-            remainingToDistribute < 0 -> "Перерасход: ${money(-remainingToDistribute, currency)}"
-            else -> "Осталось распределить: ${money(remainingToDistribute, currency)}"
+            recipientIds.isEmpty() -> UiText.res(R.string.expense_hint_pick_member)
+            isDistributionBalanced -> UiText.res(R.string.expense_distributed)
+            remainingToDistribute < 0 ->
+                UiText.res(R.string.expense_overspent, money(-remainingToDistribute, currency))
+            else ->
+                UiText.res(R.string.expense_remaining, money(remainingToDistribute, currency))
         }
 
     /**
@@ -629,12 +640,14 @@ data class AddExpenseForm(
      * объясняет причину тостом, а не молча игнорирует). null — сохранять можно.
      * Порт iOS `saveBlockedReason`.
      */
-    val saveBlockedReason: String?
+    val saveBlockedReason: UiText?
         get() {
             if (hasDraftItems) {
-                if (hasUnknownItems) return "Сначала выберите, кто есть кто в позициях"
-                if (hasPricelessItems) return "Укажите цены позиций — без них не посчитать доли"
-                if (draftItems.derivedShares() == null) return "Проверьте позиции чека — доли не сходятся"
+                if (hasUnknownItems) return UiText.res(R.string.expense_block_unknown_items)
+                if (hasPricelessItems) return UiText.res(R.string.expense_block_priceless_items)
+                if (draftItems.derivedShares() == null) {
+                    return UiText.res(R.string.expense_block_items_mismatch)
+                }
                 return null
             }
             if (splitType == SplitType.BY_EXACT_AMOUNT && (!isDistributionBalanced || recipientIds.isEmpty())) {
@@ -846,7 +859,7 @@ class AddExpenseViewModel @Inject constructor(
                     val room = repository.room(roomId).value
                     val entry = outboxStore.entry(localId)
                     if (entry == null) {
-                        _state.value = UiState.Error("Операция не найдена")
+                        _state.value = UiState.Error(UiText.res(R.string.error_operation_not_found))
                         return@launch
                     }
                     _state.value = UiState.Content(localEntryForm(room, entry, meId))
@@ -855,7 +868,7 @@ class AddExpenseViewModel @Inject constructor(
                     val operation = editOperationId
                         ?.let { id -> room.operations.firstOrNull { it.id == id } }
                     if (editOperationId != null && operation == null) {
-                        _state.value = UiState.Error("Операция не найдена")
+                        _state.value = UiState.Error(UiText.res(R.string.error_operation_not_found))
                         return@launch
                     }
                     editOperationVersion = operation?.version
@@ -877,7 +890,7 @@ class AddExpenseViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
             } catch (e: ApiException) {
-                _state.value = UiState.Error(e.message)
+                _state.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }
@@ -1027,7 +1040,7 @@ class AddExpenseViewModel @Inject constructor(
     fun dismissToast() = updateForm { it.copy(toastMessage = null) }
 
     /** Показать короткий тост (причина блокировки «Сохранить», подтверждение). */
-    fun showToast(message: String) = updateForm { it.copy(toastMessage = message) }
+    fun showToast(message: UiText) = updateForm { it.copy(toastMessage = message) }
 
     /** Нудж «выберите группу»: тост показывается, поле группы вью встряхивает. */
     fun nudgeSelectGroup() = updateForm { it.copy(toastMessage = SELECT_GROUP_TOAST) }
@@ -1232,7 +1245,7 @@ class AddExpenseViewModel @Inject constructor(
         val form = currentForm() ?: return false
         val roomId = form.selectedRoomId
         if (roomId == null) {
-            updateForm { it.copy(alertMessage = "Выберите группу") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_pick_group)) }
             return false
         }
         parseGeneration++
@@ -1260,7 +1273,7 @@ class AddExpenseViewModel @Inject constructor(
                         it.copy(
                             isParsing = false,
                             parseRetryMessage = null,
-                            alertMessage = "Запись не сохранилась — надиктуйте или снимите чек заново",
+                            alertMessage = UiText.res(R.string.expense_alert_recording_lost),
                         )
                     }
                     return@launch
@@ -1336,12 +1349,12 @@ class AddExpenseViewModel @Inject constructor(
         if (form.saveBlockedReason != null) return
         val roomId = form.selectedRoomId
         if (roomId == null) {
-            updateForm { it.copy(alertMessage = "Выберите группу") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_pick_group)) }
             return
         }
         val description = form.description.trim()
         if (description.isEmpty()) {
-            updateForm { it.copy(alertMessage = "Введите описание расхода") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_title)) }
             return
         }
         val orderedIds = orderedRecipientIds(form)
@@ -1354,22 +1367,22 @@ class AddExpenseViewModel @Inject constructor(
         // руками негде — сохранение было тупиком.
         val sum = effectiveSum(form, itemSums)
         if (sum == null) {
-            updateForm { it.copy(alertMessage = "Введите сумму (целое число рублей, не меньше 1)") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_sum)) }
             return
         }
         val payerId = form.payerId
         if (payerId == null) {
-            updateForm { it.copy(alertMessage = "Выберите, кто заплатил") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_payer)) }
             return
         }
         if (form.recipientIds.isEmpty()) {
-            updateForm { it.copy(alertMessage = "Выберите хотя бы одного участника") }
+            updateForm { it.copy(alertMessage = UiText.res(R.string.expense_hint_pick_member)) }
             return
         }
         // Правка серверной операции офлайн невозможна (страховка от гонки).
         if (!canSaveExpenseOffline(form.isEditingSynced, isOnline.value)) {
             updateForm {
-                it.copy(alertMessage = "Нет соединения. Можно редактировать только неотправленные операции")
+                it.copy(alertMessage = UiText.res(R.string.expense_alert_offline_edit))
             }
             return
         }
@@ -1435,7 +1448,7 @@ class AddExpenseViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
             } catch (e: ApiException) {
-                updateForm { it.copy(isSaving = false, alertMessage = e.message) }
+                updateForm { it.copy(isSaving = false, alertMessage = UiText.Raw(e.message)) }
             }
         }
     }

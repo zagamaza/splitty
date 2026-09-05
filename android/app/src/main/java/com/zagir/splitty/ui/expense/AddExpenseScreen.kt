@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.core.ui.resolve
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
@@ -175,12 +176,12 @@ fun AddExpenseScreen(
         // Отказ в доступе к камере: экран разбора остаётся на месте (диктовка
         // не потеряна), пользователю объясняем, почему ничего не открылось.
         onCameraDenied = {
-            viewModel.showToast(context.getString(R.string.expense_camera_permission_denied))
+            viewModel.showToast(UiText.res(R.string.expense_camera_permission_denied))
         },
         // Камеры на устройстве нет (манифест допускает такие) — объясняем и
         // отправляем в галерею, вместо падения процесса на пустом Intent.
         onCameraUnavailable = {
-            viewModel.showToast(context.getString(R.string.expense_camera_unavailable))
+            viewModel.showToast(UiText.res(R.string.expense_camera_unavailable))
         },
         // Первый снимок в пустую форму останавливается на экране разбора — так же,
         // как первая диктовка (решает VM: см. [stopsAtReview]).
@@ -212,9 +213,9 @@ fun AddExpenseScreen(
 
     val showComposer = form?.isEmptyForm == true && !manualMode
     // AI требует сети и выбранной группы; кнопки остаются живыми — тап объясняет.
-    val aiDisabledReason = when {
-        !isOnline -> stringResource(R.string.expense_composer_ai_offline)
-        form?.selectedRoomId == null -> stringResource(R.string.expense_composer_ai_no_group)
+    val aiDisabledReason: UiText? = when {
+        !isOnline -> UiText.res(R.string.expense_composer_ai_offline)
+        form?.selectedRoomId == null -> UiText.res(R.string.expense_composer_ai_no_group)
         else -> null
     }
 
@@ -230,7 +231,7 @@ fun AddExpenseScreen(
             viewModel.onVoiceRecorded(path)
         }
     }
-    voice.onShortTap = { viewModel.showToast(context.getString(R.string.rec_short_tap_hint)) }
+    voice.onShortTap = { viewModel.showToast(UiText.res(R.string.rec_short_tap_hint)) }
     voice.onCancelled = { viewModel.trackCaptureCancelled("voice") }
     voice.onError = { message -> viewModel.showToast(message) }
 
@@ -282,7 +283,7 @@ fun AddExpenseScreen(
         val leftMs = RECORD_LIMIT_SECONDS * 1_000L - (SystemClock.elapsedRealtime() - startedAt)
         if (leftMs > 0) delay(leftMs)
         if (recorder.startedAtElapsedMs == startedAt) {
-            viewModel.showToast(context.getString(R.string.rec_limit_toast))
+            viewModel.showToast(UiText.res(R.string.rec_limit_toast))
             voice.autoStop()
         }
     }
@@ -291,7 +292,7 @@ fun AddExpenseScreen(
     // записанное до обрыва распознаём, но не делаем вид, что запись продолжается.
     LaunchedEffect(recorder.deviceLost) {
         if (recorder.deviceLost) {
-            viewModel.showToast(context.getString(R.string.rec_device_lost_toast))
+            viewModel.showToast(UiText.res(R.string.rec_device_lost_toast))
             voice.autoStop()
         }
     }
@@ -449,7 +450,7 @@ fun AddExpenseScreen(
                 }
 
                 is UiState.Error -> LoadErrorPane(
-                    message = current.message,
+                    message = current.message.resolve(),
                     onRetry = viewModel::retry,
                     modifier = Modifier
                         .fillMaxSize()
@@ -569,7 +570,7 @@ fun AddExpenseScreen(
         level = recorder.level,
         startedAtElapsedMs = recorder.startedAtElapsedMs,
         micFrame = micFrame,
-        hints = form?.missingInfoHints.orEmpty(),
+        hints = form?.missingInfoHints.orEmpty().map { it.resolve() },
         // null — ступень караоке выключена: окна транскрипта нет вовсе.
         transcript = recorder.transcript,
         onStop = voice::stopLocked,
@@ -578,7 +579,7 @@ fun AddExpenseScreen(
 
         // Тост — самым верхним слоем, поверх оверлеев.
         AppToast(
-            message = form?.toastMessage,
+            message = form?.toastMessage?.resolve(),
             onDismiss = viewModel::dismissToast,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -666,7 +667,7 @@ fun AddExpenseScreen(
                 }
             },
             title = { Text(stringResource(R.string.common_error_title)) },
-            text = { Text(message) },
+            text = { Text(message.resolve()) },
         )
     }
 
@@ -705,7 +706,7 @@ private fun ExpenseFormContent(
     viewModel: AddExpenseViewModel,
     groupNudge: Int,
     showComposer: Boolean,
-    aiDisabledReason: String?,
+    aiDisabledReason: UiText?,
     onManualMode: () -> Unit,
     onBackToVoice: () -> Unit,
     onTakePhoto: () -> Unit,
@@ -1578,7 +1579,7 @@ private fun ByAmountsSection(form: AddExpenseForm, onAmountChange: (Long, String
             else -> colors.inkSecondary
         }
         Text(
-            text = distributionHint(form),
+            text = form.distributionHint.resolve(),
             modifier = Modifier.fillMaxWidth(),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
@@ -1587,22 +1588,6 @@ private fun ByAmountsSection(form: AddExpenseForm, onAmountChange: (Long, String
             style = TextStyle(fontFeatureSettings = "tnum"),
         )
     }
-}
-
-/** Живая подпись режима «По суммам»: остаток/перерасход/готово. */
-@Composable
-private fun distributionHint(form: AddExpenseForm): String = when {
-    form.recipientIds.isEmpty() -> stringResource(R.string.expense_hint_pick_member)
-    form.isDistributionBalanced -> stringResource(R.string.expense_distributed)
-    form.remainingToDistribute < 0 -> stringResource(
-        R.string.expense_overspent,
-        money(-form.remainingToDistribute, form.currency),
-    )
-
-    else -> stringResource(
-        R.string.expense_remaining,
-        money(form.remainingToDistribute, form.currency),
-    )
 }
 
 /** Строка участника с полем точной суммы (tnum, только цифры). */
@@ -1837,7 +1822,7 @@ private fun LoadErrorPane(
  */
 @Composable
 private fun ComposerCard(
-    aiDisabledReason: String?,
+    aiDisabledReason: UiText?,
     onTakePhoto: () -> Unit,
     onPickPhoto: () -> Unit,
 ) {
@@ -1925,7 +1910,7 @@ private fun ComposerCard(
         aiDisabledReason?.let { reason ->
             Spacer(Modifier.height(8.dp))
             Text(
-                text = reason,
+                text = reason.resolve(),
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 12.sp,
                 color = colors.inkSecondary,

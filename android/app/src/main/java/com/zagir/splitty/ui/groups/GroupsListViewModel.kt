@@ -262,7 +262,7 @@ class GroupsListViewModel @Inject constructor(
             if (_rooms.value is UiState.Content) {
                 _alertMessage.value = humanErrorText(e) // тихое обновление поверх контента
             } else {
-                _rooms.value = UiState.Error(e.message)
+                _rooms.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }
@@ -276,7 +276,7 @@ class GroupsListViewModel @Inject constructor(
             if (_archived.value is UiState.Content) {
                 _alertMessage.value = humanErrorText(e)
             } else {
-                _archived.value = UiState.Error(e.message)
+                _archived.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }

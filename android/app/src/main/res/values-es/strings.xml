@@ -632,14 +632,14 @@
     <string name="welcome_rcpt_count">2 pos.</string>
     <string name="welcome_rcpt_total">Total</string>
     <string name="welcome_3_title">Quién pagó cuánto</string>
-    <string name="welcome_3_body">Splitor reparte cada gasto entre los participantes. Cena 600 entre tres — 200 cada uno, taxi 300 — 100 cada uno.</string>
+    <string name="welcome_3_body">Splitor reparte cada gasto entre los participantes. Una cena de 6,00 € entre tres — 2,00 € cada uno, un taxi de 3,00 € — 1,00 € cada uno.</string>
     <string name="welcome_paid_anya">Anya</string>
     <string name="welcome_paid_borya">Borya</string>
     <string name="welcome_split_three">dividimos entre tres</string>
     <string name="welcome_you_paid_nothing">Tú</string>
     <string name="welcome_your_share">no pagaste nada</string>
     <string name="welcome_4_title">Paga una sola vez</string>
-    <string name="welcome_4_body">Tus 300 ₽ salen en una transferencia y no en dos: Splitor compensa las deudas dentro del grupo.</string>
+    <string name="welcome_4_body">Tus 3,00 € salen en una transferencia y no en dos: Splitor compensa las deudas dentro del grupo.</string>
     <string name="welcome_you_transfer">Tú transfieres</string>
     <string name="welcome_to_anya">A Anya</string>
     <string name="welcome_to_borya">A Borya</string>
@@ -649,13 +649,13 @@
     <string name="welcome_paid_eyebrow">QUIÉN PAGÓ QUÉ</string>
     <string name="welcome_for_dinner">por la cena</string>
     <string name="welcome_for_taxi">por el taxi</string>
-    <string name="welcome_share_math">tu parte: 200 + 100</string>
+    <string name="welcome_share_math">tu parte: 2,00 € + 1,00 €</string>
     <string name="welcome_ready">Listo — el gasto está en el grupo</string>
     <string name="welcome_evening_share">Tu parte de la noche</string>
-    <string name="welcome_anya_note_with">200 tuyos + 100 de Borya</string>
+    <string name="welcome_anya_note_with">2,00 € tuyos + 1,00 € de Borya</string>
     <string name="welcome_settled">en paz</string>
     <string name="welcome_note_without">Dos transferencias, dos confirmaciones</string>
-    <string name="welcome_note_with">Sus 100 ₽ van a Anya con los tuyos</string>
+    <string name="welcome_note_with">Su 1,00 € va a Anya con los tuyos</string>
     <string name="welcome_without">Sin Splitor</string>
     <string name="welcome_with">Con Splitor</string>
 
@@ -665,7 +665,7 @@
     <string name="error_receipt_other_account">Esta suscripción pertenece a otra cuenta de Splitor</string>
     <string name="error_subscriptions_disabled">Las compras no están disponibles ahora</string>
     <string name="plus_title">Splitor Plus</string>
-    <string name="plus_hero_phrase">«Cena 3200, dividida entre cuatro»</string>
+    <string name="plus_hero_phrase">«Cena 32,00 €, dividida entre cuatro»</string>
     <string name="plus_hero_expense">Cena</string>
     <string name="plus_hero_split">A partes iguales entre cuatro</string>
     <string name="plus_mic_remaining">Quedan %1$d reconocimientos</string>
@@ -694,4 +694,65 @@
     <string name="plus_purchase_pending_server">El pago se realizó, pero aún no pudimos confirmarlo. Revisa la conexión: el acceso aparecerá solo</string>
     <string name="plus_purchase_failed">No se pudo completar la compra</string>
     <string name="plus_nothing_to_restore">No hay compras para restaurar</string>
+
+    <!-- Тексты, жившие в коде литералами вместо ресурсов -->
+    <string name="expense_toast_pick_group">Elige primero un grupo</string>
+    <string name="expense_parse_empty">No se pudo reconocer. Dilo otra vez, con platos y precios</string>
+    <string name="expense_toast_person_learned">«%1$s» es %2$s. Anotado, no volveré a preguntar</string>
+    <string name="expense_hint_who_is">¿Quién es «%1$s»?</string>
+    <string name="expense_hint_how_much">¿Cuánto cuesta «%1$s»?</string>
+    <string name="expense_hint_how_much_item">¿Cuánto cuesta este artículo?</string>
+    <string name="expense_block_unknown_items">Primero indica quién es quién en los artículos</string>
+    <string name="expense_block_priceless_items">Indica los precios de los artículos: sin ellos no se pueden calcular las partes</string>
+    <string name="expense_block_items_mismatch">Revisa los artículos del recibo: las partes no cuadran</string>
+    <string name="error_mic_busy_previous">El micrófono sigue ocupado con la grabación anterior. Inténtalo de nuevo</string>
+    <string name="error_record_start">No se pudo iniciar la grabación. Comprueba el acceso al micrófono</string>
+    <string name="provider_password">Correo y contraseña</string>
+    <string name="plus_hero_each">8,00 € c/u</string>
+    <string name="expense_alert_pick_group">Elige un grupo</string>
+    <string name="expense_alert_recording_lost">La grabación no se guardó: dilo otra vez o fotografía el recibo</string>
+    <string name="expense_alert_need_title">Escribe una descripción del gasto</string>
+    <string name="expense_alert_need_sum">Introduce un importe (número entero, mínimo 1)</string>
+    <string name="expense_alert_need_payer">Elige quién pagó</string>
+    <string name="expense_alert_offline_edit">Sin conexión. Solo se pueden editar las operaciones no enviadas</string>
+    <string name="welcome_slip_dinner">Cena</string>
+    <string name="welcome_slip_taxi">Taxi</string>
+    <string name="welcome_slip_groceries">Compra</string>
+    <string name="welcome_slip_coffee">Café</string>
+    <string name="welcome_rcpt_pizza">Pizza</string>
+    <string name="welcome_rcpt_cola">Cola</string>
+    <string name="welcome_dictation_phrase">pizza ochocientos y cola doscientos a medias con Sam</string>
+    <string name="welcome_avatar_you">T</string>
+    <string name="welcome_avatar_sanya">S</string>
+    <string name="welcome_avatar_anya">A</string>
+    <string name="welcome_avatar_borya">B</string>
+    <string name="plus_hero_sum">32,00 €</string>
+    <string name="welcome_each_400x2">4,00 € c/u × 2</string>
+    <string name="welcome_each_100x2">1,00 € c/u × 2</string>
+    <string name="welcome_each_200">2,00 € c/u</string>
+    <string name="welcome_each_100">1,00 € c/u</string>
+    <string name="provider_telegram" translatable="false">Telegram</string>
+    <string name="provider_google" translatable="false">Google</string>
+    <string name="provider_apple" translatable="false">Apple</string>
+    <string name="error_internal">Algo salió mal por nuestra parte. Inténtalo de nuevo</string>
+    <string name="error_unavailable">Esto no está disponible ahora. Inténtalo más tarde</string>
+    <string name="error_email_taken">Este correo ya está registrado. Inicia sesión en su lugar</string>
+    <string name="error_invalid_credentials">Correo o contraseña incorrectos</string>
+    <string name="error_invalid_password">La contraseña actual es incorrecta</string>
+    <string name="error_not_a_friend">Puedes invitar a alguien con quien ya compartiste grupo. A los demás envíales un enlace</string>
+    <string name="error_invalid_code">El código es incorrecto, caducó o ya se usó. Pide uno nuevo</string>
+
+    <!-- Суммы витрины: в локали это не рубли (шкала общая с iOS) -->
+    <string name="demo_sum_0">0,00 €</string>
+    <string name="demo_sum_100">1,00 €</string>
+    <string name="demo_sum_150">1,50 €</string>
+    <string name="demo_sum_200">2,00 €</string>
+    <string name="demo_sum_300">3,00 €</string>
+    <string name="demo_sum_450">4,50 €</string>
+    <string name="demo_sum_600">6,00 €</string>
+    <string name="demo_sum_800">8,00 €</string>
+    <string name="demo_sum_900">9,00 €</string>
+    <string name="demo_sum_1000">10,00 €</string>
+    <string name="demo_sum_1350">13,50 €</string>
+    <string name="demo_sum_1500">15,00 €</string>
 </resources>

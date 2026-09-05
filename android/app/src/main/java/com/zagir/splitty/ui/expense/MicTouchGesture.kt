@@ -1,5 +1,8 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.R
+import com.zagir.splitty.core.ui.UiText
+
 import android.content.Context
 import android.os.SystemClock
 import android.util.Log
@@ -163,7 +166,7 @@ class VoiceController(
     var onFinish: ((audioPath: String) -> Unit)? = null
     var onShortTap: (() -> Unit)? = null
     var onCancelled: (() -> Unit)? = null
-    var onError: ((String) -> Unit)? = null
+    var onError: ((UiText) -> Unit)? = null
 
     /** Касание микрофона: мгновенный хептик и старт записи (порт iOS `onBegan`). */
     fun began(downUptimeMs: Long) {
@@ -257,7 +260,7 @@ class VoiceController(
         } catch (e: AudioRecorderException) {
             isMicPressed = false
             isLocked = false
-            onError?.invoke(e.message ?: "Не удалось начать запись")
+            onError?.invoke((e as? AudioRecorderException)?.text ?: UiText.res(R.string.error_record_start))
         }
     }
 

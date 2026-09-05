@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.main
 
+import com.zagir.splitty.IO_WAIT_MS
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
@@ -126,7 +127,7 @@ class MainScaffoldBadgeTest {
         repeat(5) { server.enqueue(MockResponse().setBody(FEED_JSON)) }
         viewModel()
 
-        val unread = withTimeout(5_000) {
+        val unread = withTimeout(IO_WAIT_MS) {
             // Подписка VM поднимается в своей корутине, а событие прихода
             // ничего не буферизует (в жизни VM существует задолго до пуша) —
             // повторяем, пока не доедет.

@@ -149,7 +149,7 @@ fun OperationDetailScreen(
             UiState.Loading -> GroupsLoading(Modifier.padding(innerPadding))
 
             is UiState.Error -> GroupsFullScreenError(
-                message = current.message,
+                message = current.message.resolve(),
                 onRetry = viewModel::retry,
                 modifier = Modifier.padding(innerPadding),
             )

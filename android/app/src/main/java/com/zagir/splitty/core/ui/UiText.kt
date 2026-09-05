@@ -15,13 +15,25 @@ import androidx.compose.ui.platform.LocalContext
  * на каждой рекомпозиции и в текущей локали.
  *
  * [Raw] — не лазейка для литералов: он для текстов, пришедших снаружи и уже
- * локализованных, прежде всего для `message` из тела ошибки бэкенда.
+ * локализованных.
+ *
+ * [Server] — текст из тела ошибки бэкенда. Он конкретнее нашего (под общим
+ * кодом `forbidden` сервер объясняет, ЧТО именно нельзя), но приходит ТОЛЬКО
+ * по-русски: `Accept-Language` бэкенд не смотрит. Поэтому язык решает, что
+ * показать, и решает в момент показа — при создании ошибки локаль может быть
+ * ещё другой.
  */
 sealed interface UiText {
 
     data class Res(@StringRes val id: Int, val args: List<Any> = emptyList()) : UiText
 
     data class Raw(val value: String) : UiText
+
+    data class Server(
+        val value: String,
+        @StringRes val fallback: Int,
+        val fallbackArg: Int? = null,
+    ) : UiText
 
     fun resolve(context: Context): String = when (this) {
         is Raw -> value
@@ -30,6 +42,20 @@ sealed interface UiText {
         } else {
             context.getString(id, *args.toTypedArray())
         }
+        // Русскому интерфейсу — конкретный текст сервера, остальным — свой
+        // перевод по коду: конкретность не стоит показанной кириллицы.
+        is Server -> if (isRussian(context)) {
+            value
+        } else if (fallbackArg != null) {
+            context.getString(fallback, fallbackArg)
+        } else {
+            context.getString(fallback)
+        }
+    }
+
+    private fun isRussian(context: Context): Boolean {
+        val locales = context.resources.configuration.locales
+        return !locales.isEmpty && locales[0].language == "ru"
     }
 
     companion object {

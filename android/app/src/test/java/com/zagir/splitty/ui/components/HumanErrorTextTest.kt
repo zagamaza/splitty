@@ -48,16 +48,56 @@ class HumanErrorTextTest {
     }
 
     @Test
-    fun `server side message wins over local fallback`() {
-        // fromServer = true — бэкенд прислал свой текст, он уже на языке
-        // пользователя, подменять его локальным ресурсом нельзя.
+    fun `server text is paired with a translated fallback`() {
+        // Присланный текст конкретнее нашего, но приходит только по-русски.
+        // Поэтому наружу уходит пара «текст сервера + ресурс по коду», а язык
+        // выбирает уже показ (см. UiTextServerLanguageTest).
         val server = ApiException(
             status = 409,
             code = "conflict",
-            message = "Действие сейчас невозможно",
+            message = "Демонстрационный аккаунт трогать нельзя",
             fromServer = true,
         )
-        assertEquals(UiText.Raw("Действие сейчас невозможно"), humanErrorText(server))
+        assertEquals(
+            UiText.Server("Демонстрационный аккаунт трогать нельзя", R.string.error_conflict),
+            humanErrorText(server),
+        )
+    }
+
+    @Test
+    fun `unknown code keeps the status number as the fallback`() {
+        // Кода клиент не знает, переводить нечем — нерусскому интерфейсу
+        // достанется «Ошибка сервера (409)», и номер обязан быть подставлен.
+        val server = ApiException(
+            status = 409,
+            code = "brand_new_code",
+            message = "Так делать пока нельзя",
+            fromServer = true,
+        )
+        assertEquals(
+            UiText.Server("Так делать пока нельзя", R.string.error_server_status, 409),
+            humanErrorText(server),
+        )
+    }
+
+    @Test
+    fun `every backend code resolves to a translated string`() {
+        // Список снят с writeError() бэкенда. Код, выпавший из карты, молча
+        // уводит человека на русский текст сервера — поймать это можно только
+        // сверкой контракта, а не глазами на одном экране.
+        val codes = listOf(
+            "internal", "validation", "not_found", "unavailable", "unauthorized",
+            "rate_limited", "conflict", "forbidden", "unsupported_media", "too_large",
+            "identity_taken", "has_operations", "email_taken", "stale_operation",
+            "provider_rejected", "not_a_friend", "last_member", "last_identity",
+            "invalid_password", "invalid_credentials", "invalid_code",
+            "identity_already_linked", "ai_disabled", "room_too_large",
+            "ai_quota_exceeded", "receipt_belongs_to_other_account", "subscriptions_disabled",
+        )
+        val unmapped = codes.filter {
+            ApiException.fallbackRes(it) == R.string.error_server_status
+        }
+        assertEquals(emptyList(), unmapped, "коды без своего текста: $unmapped")
     }
 
     @Test

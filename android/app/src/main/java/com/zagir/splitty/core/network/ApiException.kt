@@ -11,10 +11,13 @@ import kotlinx.serialization.json.Json
 /**
  * Единая ошибка работы с REST API.
  *
- * [message] идёт в логи и в исключение. Человеку показывается [uiText]: если
- * бэкенд прислал свой `message`, берём его (он уже на языке пользователя),
- * иначе — локальный ресурс по коду. Русских литералов здесь нет: класс живёт
- * в сетевом слое, Context туда не дотянуть.
+ * [message] идёт в логи и в исключение. Человеку показывается [uiText]: текст
+ * сервера в паре с ресурсом по коду. Присланное конкретнее нашего, но приходит
+ * только по-русски (`Accept-Language` бэкенд не смотрит), поэтому выбирает
+ * между ними [UiText.Server] — в момент показа, по локали интерфейса.
+ *
+ * Русских литералов здесь нет: класс живёт в сетевом слое, Context туда
+ * не дотянуть.
  */
 class ApiException(
     /** HTTP-статус; null для сетевых/клиентских ошибок. */
@@ -58,13 +61,12 @@ class ApiException(
      * переставали быть равными, и это ловилось только тестом.
      */
     fun uiText(): UiText {
-        if (fromServer) return UiText.Raw(message)
         val res = fallbackRes(code)
-        return if (res == R.string.error_server_status) {
-            UiText.res(res, status ?: 0)
-        } else {
-            UiText.res(res)
+        val arg = if (res == R.string.error_server_status) status ?: 0 else null
+        if (fromServer && message.isNotBlank()) {
+            return UiText.Server(value = message, fallback = res, fallbackArg = arg)
         }
+        return if (arg != null) UiText.res(res, arg) else UiText.res(res)
     }
 
     /** true для 401 — сессию нужно сбросить (глобальный разлогин делает [AuthInterceptor]). */
@@ -97,17 +99,36 @@ class ApiException(
         const val CODE_PURGE_INCOMPLETE = "purge_incomplete"
 
         /**
-         * Ресурс подстановочного текста по коду ошибки. Только он и нужен:
-         * подставляется, когда тело ответа пустое и показывать нечего.
-         * Единственный ресурс с аргументом — «Ошибка сервера (%1$d)».
+         * Ресурс текста по коду ошибки — основной путь показа, а не запасной.
+         * Список обязан покрывать ВСЕ коды бэкенда: код, которого здесь нет,
+         * уводит человека на русский текст сервера. Единственный ресурс с
+         * аргументом — «Ошибка сервера (%1$d)».
          */
         @StringRes
         fun fallbackRes(code: String): Int = when (code) {
             "validation" -> R.string.error_validation
-            "unauthorized", "invalid_code" -> R.string.error_unauthorized
+            "internal" -> R.string.error_internal
+            "unavailable" -> R.string.error_unavailable
+            "unauthorized" -> R.string.error_unauthorized
+            "invalid_code" -> R.string.error_invalid_code
             "forbidden" -> R.string.error_forbidden
             "not_found" -> R.string.error_not_found
             "conflict" -> R.string.error_conflict
+            // Вход и профиль: у каждого отказа свой следующий шаг, и «Ошибка
+            // сервера (409)» на месте «этот email уже зарегистрирован» отправляет
+            // человека регистрироваться заново по кругу.
+            "email_taken" -> R.string.error_email_taken
+            "invalid_credentials" -> R.string.error_invalid_credentials
+            "invalid_password" -> R.string.error_invalid_password
+            "identity_taken" -> R.string.error_identity_taken
+            "identity_already_linked" -> R.string.error_identity_already_linked
+            "last_identity" -> R.string.error_last_identity
+            "provider_rejected" -> R.string.error_provider_rejected
+            "not_a_friend" -> R.string.error_not_a_friend
+            // has_operations различает «себя» и «соседа», last_member — нет;
+            // оба разбираются выше, в humanErrorText, здесь — общий случай.
+            "has_operations" -> R.string.error_leave_has_operations
+            "last_member" -> R.string.error_leave_last_member
             // Документ комнаты упёрся в потолок mongo: «что-то пошло не так»
             // означало бы, что человек жмёт «Сохранить» снова и снова
             "room_too_large" -> R.string.error_room_too_large

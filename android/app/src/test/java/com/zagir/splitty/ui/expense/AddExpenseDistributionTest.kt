@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.core.ui.UiText
+import com.zagir.splitty.R
 import com.zagir.splitty.core.money.MoneyLocale
 import java.util.Locale
 import kotlin.test.AfterTest
@@ -103,8 +105,16 @@ class AddExpenseDistributionTest {
     @Test
     fun `distribution hint shows remainder balanced overspent`() {
         val f = byAmounts("1000", setOf(1L), mapOf(1L to "400"))
-        assertEquals("Осталось распределить: 600 ₽", f.distributionHint)
-        assertEquals("Сумма распределена полностью", f.copy(amountTexts = mapOf(1L to "1000")).distributionHint)
-        assertEquals("Перерасход: 100 ₽", f.copy(amountTexts = mapOf(1L to "1100")).distributionHint)
+        // Сверяем ресурс и подстановку, а не готовый русский текст: текст
+        // зависит от локали, а подсказка обязана быть той же на любой.
+        assertEquals(UiText.res(R.string.expense_remaining, "600 ₽"), f.distributionHint)
+        assertEquals(
+            UiText.res(R.string.expense_distributed),
+            f.copy(amountTexts = mapOf(1L to "1000")).distributionHint,
+        )
+        assertEquals(
+            UiText.res(R.string.expense_overspent, "100 ₽"),
+            f.copy(amountTexts = mapOf(1L to "1100")).distributionHint,
+        )
     }
 }

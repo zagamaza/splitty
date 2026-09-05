@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.test.core.app.ApplicationProvider
 import com.zagir.splitty.core.UiState
@@ -192,7 +193,7 @@ class GroupSeenMarkTest {
         server.enqueue(MockResponse().setResponseCode(204))
         val vm = viewModel()
         vm.start("65af")
-        withTimeout(5_000) { vm.room.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.room.first { it is UiState.Content } }
 
         val seen = awaitRequest("/api/v1/rooms/65af/notifications-seen")
         assertEquals("POST", seen.method)

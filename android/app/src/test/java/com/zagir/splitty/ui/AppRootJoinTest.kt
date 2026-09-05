@@ -1,7 +1,11 @@
 package com.zagir.splitty.ui
 
+import com.zagir.splitty.IO_WAIT_MS
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
@@ -77,6 +81,7 @@ class AppRootJoinTest {
     private val server = MockWebServer()
     private lateinit var cacheDir: File
     private lateinit var sessionDir: File
+    private val vmStore = ViewModelStore()
     private lateinit var scope: CoroutineScope
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var session: SessionStore
@@ -125,6 +130,8 @@ class AppRootJoinTest {
 
     @AfterTest
     fun tearDown() {
+        // Сначала VM: её корутины иначе переживут и скоуп, и сам тест.
+        vmStore.clear()
         Dispatchers.resetMain()
         server.shutdown()
         scope.cancel()
@@ -132,12 +139,28 @@ class AppRootJoinTest {
         sessionDir.deleteRecursively()
     }
 
-    private fun viewModel() = AppRootViewModel(session, pendingJoin, repository, PushEventBus(), analytics())
+    /**
+     * VM живёт в [vmStore], чтобы [tearDown] мог её закрыть.
+     *
+     * `viewModelScope` не заканчивается сам: `stateIn(..., Eagerly)` и launch'и
+     * внутри VM продолжали крутиться и ПОСЛЕ теста, на Dispatchers.Default,
+     * доедая процессор у следующего. Под занятым CPU это выливалось в таймаут
+     * ожидания в соседнем тесте — красный без повода и всегда в разном месте.
+     * `ViewModelStore.clear()` зовёт `onCleared()`, а тот отменяет скоуп.
+     */
+    private fun viewModel(): AppRootViewModel {
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                AppRootViewModel(session, pendingJoin, repository, PushEventBus(), analytics()) as T
+        }
+        return ViewModelProvider(vmStore, factory)[AppRootViewModel::class.java]
+    }
 
     /** Вход: без токена вступление не начинается вовсе. */
     private suspend fun signIn(token: String = "jwt-token", me: Me = ME) {
         session.signIn(token, me)
-        withTimeout(5_000) { session.state.first { it?.token == token } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == token } }
     }
 
     /** Чистильщик офлайн-данных поверх тех же хранилищ, что и у VM. */
@@ -170,13 +193,13 @@ class AppRootJoinTest {
         signIn()
         // Прошлый запуск: DELETE /me упал после tombstone, флаг лёг на диск.
         session.markPurgePending()
-        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.purgePending == true } }
         respond("DELETE /api/v1/me", MockResponse().setResponseCode(204))
 
         viewModel()
 
         // 204 — чистка доведена: сессия закрыта, флаг снят.
-        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        val ended = withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         assertNull(ended?.token)
         assertEquals(false, ended?.purgePending)
         assertEquals("/api/v1/me", server.takeRequest(5, TimeUnit.SECONDS)?.path)
@@ -191,7 +214,7 @@ class AppRootJoinTest {
     fun `root keeps the token when the purge retry fails again`() = runBlocking {
         signIn()
         session.markPurgePending()
-        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.purgePending == true } }
         respond(
             "DELETE /api/v1/me",
             MockResponse().setResponseCode(500).setBody(PURGE_INCOMPLETE_JSON),
@@ -215,7 +238,7 @@ class AppRootJoinTest {
     fun `root gives up on the purge retry after unauthorized`() = runBlocking {
         signIn()
         session.markPurgePending()
-        withTimeout(5_000) { session.state.first { it?.purgePending == true } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.purgePending == true } }
         respond(
             "DELETE /api/v1/me",
             MockResponse().setResponseCode(401).setBody(UNAUTHORIZED_JSON),
@@ -223,7 +246,7 @@ class AppRootJoinTest {
 
         viewModel()
 
-        val ended = withTimeout(5_000) { session.state.first { it?.token == null } }
+        val ended = withTimeout(IO_WAIT_MS) { session.state.first { it?.token == null } }
         assertNull(ended?.token)
         assertEquals(false, ended?.purgePending)
     }
@@ -236,11 +259,11 @@ class AppRootJoinTest {
 
         val vm = viewModel()
 
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertNull(vm.joinError.value)
         // Намерение стирается ТОЛЬКО после успеха — иначе повторный запуск
         // приложения вступал бы в ту же группу второй раз.
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
     }
 
@@ -249,7 +272,7 @@ class AppRootJoinTest {
         respond("POST /api/v1/rooms/$ROOM_ID/join", MockResponse().setBody(ROOM_JSON))
         pendingJoin.set(ROOM_ID)
         // Токена нет: запрос ушёл бы анонимно, получил 401 и сжёг приглашение.
-        withTimeout(5_000) { session.state.first { it != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it != null } }
 
         val vm = viewModel()
 
@@ -260,7 +283,7 @@ class AppRootJoinTest {
 
         // Вошли — вступление доезжает само, без повторного открытия ссылки.
         signIn()
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
     }
 
@@ -277,7 +300,7 @@ class AppRootJoinTest {
 
         val vm = viewModel()
 
-        assertNotNull(withTimeout(5_000) { vm.joinError.first { it != null } })
+        assertNotNull(withTimeout(IO_WAIT_MS) { vm.joinError.first { it != null } })
         assertNull(vm.openRoomId.value)
         assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
 
@@ -300,9 +323,9 @@ class AppRootJoinTest {
 
         assertEquals(
             UiText.res(R.string.error_group_not_found),
-            withTimeout(5_000) { vm.joinError.first { it != null } },
+            withTimeout(IO_WAIT_MS) { vm.joinError.first { it != null } },
         )
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
     }
 
     @Test
@@ -318,9 +341,9 @@ class AppRootJoinTest {
 
         assertEquals(
             UiText.res(R.string.error_group_no_access),
-            withTimeout(5_000) { vm.joinError.first { it != null } },
+            withTimeout(IO_WAIT_MS) { vm.joinError.first { it != null } },
         )
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
     }
 
     @Test
@@ -368,7 +391,7 @@ class AppRootJoinTest {
         // Переавторизация: НОВЫЙ токен снимает блокировку unauthorizedToken.
         signIn(token = "fresh-token")
 
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
     }
 
@@ -379,7 +402,7 @@ class AppRootJoinTest {
         pendingJoin.set(ROOM_ID)
 
         val vm = viewModel()
-        withTimeout(5_000) { vm.openRoomId.first { it != null } }
+        withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } }
 
         // Гасим сразу: иначе комната откроется второй раз при пересоздании корня.
         vm.onRoomOpened()
@@ -403,7 +426,7 @@ class AppRootJoinTest {
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
         signIn(token = "second-token")
 
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertNull(server.takeRequest(700, TimeUnit.MILLISECONDS))
     }
 
@@ -418,15 +441,15 @@ class AppRootJoinTest {
         pendingJoin.set(ROOM_ID)
 
         val vm = viewModel()
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
         vm.onRoomOpened()
-        withTimeout(5_000) { pendingJoin.pending.first { it == null } }
+        withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } }
 
         pendingJoin.set(ROOM_ID)
 
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
         // Второго запроса на вступление нет.
         assertNull(server.takeRequest(500, TimeUnit.MILLISECONDS))
     }
@@ -448,7 +471,7 @@ class AppRootJoinTest {
 
         // Ни одного запроса на вступление.
         assertNull(server.takeRequest(1, TimeUnit.SECONDS))
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
         assertNull(vm.openRoomId.value)
     }
 
@@ -460,11 +483,11 @@ class AppRootJoinTest {
         // намерение скопом, чужое обязано выбрасываться сведением владельца.
         assertNotNull(cleaner())
         signIn()
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         pendingJoin.set(ROOM_ID, ownerId = ME.id)
 
         session.notifyUnauthorized()
-        withTimeout(5_000) { session.state.first { it?.hasStoredToken == false } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.hasStoredToken == false } }
         delay(500)
         // Протухшая сессия приглашение сохраняет — иначе проверять было бы нечего.
         assertEquals(ROOM_ID, pendingJoin.pending.first()?.roomId)
@@ -472,7 +495,7 @@ class AppRootJoinTest {
         val vm = viewModel()
         signIn(token = "other-token", me = OTHER)
 
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
         assertNull(server.takeRequest(1, TimeUnit.SECONDS))
         assertNull(vm.openRoomId.value)
     }
@@ -491,9 +514,9 @@ class AppRootJoinTest {
         // A поработал и вышел. Намерения тут нет — важно лишь то, что
         // чистильщик запомнил A как предыдущего владельца устройства.
         signIn()
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         session.logout()
-        withTimeout(5_000) { session.state.first { it?.hasStoredToken == false } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.hasStoredToken == false } }
         // Чистка асинхронная: без паузы «приглашение выжило» означало бы лишь
         // «чистильщик не успел до него добраться».
         delay(500)
@@ -507,12 +530,12 @@ class AppRootJoinTest {
         // запрос на вступление уходит быстрее, чем чистка добирается до диска,
         // и «вступление доехало» ничего не доказывало бы. Приглашение обязано
         // не просто выжить, а достаться вошедшему.
-        val adopted = withTimeout(5_000) { pendingJoin.pending.first { it?.ownerId == OTHER.id } }
+        val adopted = withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it?.ownerId == OTHER.id } }
         assertEquals(ROOM_ID, adopted?.roomId)
 
         // И оно исполняется: корень поднимается уже после сведения владельца.
         val vm = viewModel()
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
         assertEquals("/api/v1/rooms/$ROOM_ID/join", server.takeRequest(5, TimeUnit.SECONDS)?.path)
     }
 
@@ -527,7 +550,7 @@ class AppRootJoinTest {
         val vm = viewModel()
         signIn()
 
-        assertEquals(ROOM_ID, withTimeout(5_000) { vm.openRoomId.first { it != null } })
+        assertEquals(ROOM_ID, withTimeout(IO_WAIT_MS) { vm.openRoomId.first { it != null } })
     }
 
     @Test
@@ -538,11 +561,11 @@ class AppRootJoinTest {
         assertNotNull(cleaner())
         signIn()
         pendingJoin.set(ROOM_ID)
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
 
         // Протухшая сессия (401 → AuthInterceptor.notifyUnauthorized).
         session.notifyUnauthorized()
-        withTimeout(5_000) { session.state.first { it?.hasStoredToken == false } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.hasStoredToken == false } }
         // Даём чистке отработать: она асинхронная, и «не стёрла» без паузы
         // означало бы лишь «не успела».
         delay(500)
@@ -550,10 +573,10 @@ class AppRootJoinTest {
 
         // Явный выход — данные предыдущего владельца устройства стираются все.
         signIn()
-        withTimeout(5_000) { session.state.first { it?.token != null } }
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token != null } }
         session.logout()
 
-        assertNull(withTimeout(5_000) { pendingJoin.pending.first { it == null } })
+        assertNull(withTimeout(IO_WAIT_MS) { pendingJoin.pending.first { it == null } })
     }
 
     // MARK: - joinLinkErrorText / isTerminalJoinError

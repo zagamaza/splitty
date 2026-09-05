@@ -90,7 +90,7 @@ class FriendsViewModel @Inject constructor(
             if (_state.value is UiState.Content) {
                 _errorMessage.value = humanErrorText(e)
             } else {
-                _state.value = UiState.Error(e.message)
+                _state.value = UiState.Error(UiText.Raw(e.message))
             }
         }
     }

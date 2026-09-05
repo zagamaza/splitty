@@ -331,7 +331,20 @@ private fun AppRow(
 @Composable
 private fun SharedBillArt(isActive: Boolean) {
     val colors = Splitty.colors
-    val slips = listOf("Ужин" to 600, "Такси" to 300, "Продукты" to 450, "Кофе" to 150)
+    // Суммы витрины — строки, а не числа: в локали это не рубли, и «₽» тут
+    // дописать неоткуда. Итоги посчитаны заранее по той же причине.
+    val slips = listOf(
+        stringResource(R.string.welcome_slip_dinner) to stringResource(R.string.demo_sum_600),
+        stringResource(R.string.welcome_slip_taxi) to stringResource(R.string.demo_sum_300),
+        stringResource(R.string.welcome_slip_groceries) to stringResource(R.string.demo_sum_450),
+        stringResource(R.string.welcome_slip_coffee) to stringResource(R.string.demo_sum_150),
+    )
+    val runningTotals = listOf(
+        stringResource(R.string.demo_sum_600),
+        stringResource(R.string.demo_sum_900),
+        stringResource(R.string.demo_sum_1350),
+        stringResource(R.string.demo_sum_1500),
+    )
     var shown by remember { mutableIntStateOf(slips.size) }
 
     LaunchedEffect(isActive) {
@@ -381,7 +394,7 @@ private fun SharedBillArt(isActive: Boolean) {
                     Text(slip.first, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
                     Spacer(Modifier.weight(1f))
                     Text(
-                        "${slip.second} ₽",
+                        slip.second,
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace,
@@ -412,7 +425,7 @@ private fun SharedBillArt(isActive: Boolean) {
                     color = colors.accentText.copy(alpha = 0.8f),
                 )
                 Text(
-                    "${slips.take(shown).sumOf { it.second }} ₽",
+                    runningTotals[shown.coerceIn(1, runningTotals.size) - 1],
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
@@ -435,7 +448,9 @@ private enum class DictationStage { RECORDING, PARSING, RECEIPT }
 @Composable
 private fun DictationArt(isActive: Boolean) {
     val colors = Splitty.colors
-    val phrase = listOf("пицца", "за", "восемьсот", "и", "кола", "за", "двести", "пополам", "с", "Саней")
+    // Фраза переводится целиком и режется на слова здесь: по отдельности «за»
+    // и «с» перевести нельзя — в другом языке их может не быть вовсе.
+    val phrase = stringResource(R.string.welcome_dictation_phrase).split(" ")
     var words by remember { mutableIntStateOf(phrase.size) }
     var seconds by remember { mutableIntStateOf(6) }
     var stage by remember { mutableStateOf(DictationStage.RECORDING) }
@@ -704,8 +719,16 @@ private fun MiniReceipt(modifier: Modifier = Modifier) {
                 color = colors.inkSecondary,
             )
         }
-        ReceiptItem("Пицца", "800 ₽", "по 400 ₽ × 2")
-        ReceiptItem("Кола", "200 ₽", "по 100 ₽ × 2")
+        ReceiptItem(
+            stringResource(R.string.welcome_rcpt_pizza),
+            stringResource(R.string.demo_sum_800),
+            stringResource(R.string.welcome_each_400x2),
+        )
+        ReceiptItem(
+            stringResource(R.string.welcome_rcpt_cola),
+            stringResource(R.string.demo_sum_200),
+            stringResource(R.string.welcome_each_100x2),
+        )
         Spacer(Modifier.height(10.dp))
         Box(Modifier.fillMaxWidth().height(1.5.dp).background(colors.ink))
         Spacer(Modifier.height(10.dp))
@@ -718,7 +741,7 @@ private fun MiniReceipt(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.weight(1f))
             Text(
-                "1000 ₽",
+                stringResource(R.string.demo_sum_1000),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
@@ -746,9 +769,9 @@ private fun ReceiptItem(name: String, sum: String, each: String) {
         )
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Avatar("Я", colors.accent, size = 20)
+        Avatar(stringResource(R.string.welcome_avatar_you), colors.accent, size = 20)
         Spacer(Modifier.width(2.dp))
-        Avatar("С", colors.chartCategorical[1], size = 20)
+        Avatar(stringResource(R.string.welcome_avatar_sanya), colors.chartCategorical[1], size = 20)
         Spacer(Modifier.weight(1f))
         Text(each, fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = colors.inkSecondary)
     }
@@ -788,21 +811,21 @@ private fun WhoPaidArt(isActive: Boolean) {
         Spacer(Modifier.height(14.dp))
 
         PaidCard(
-            initial = "А",
+            initial = stringResource(R.string.welcome_avatar_anya),
             who = stringResource(R.string.welcome_paid_anya),
             what = stringResource(R.string.welcome_for_dinner),
-            sum = "600 ₽",
-            share = "по 200 ₽",
+            sum = stringResource(R.string.demo_sum_600),
+            share = stringResource(R.string.welcome_each_200),
             color = colors.accent,
             visible = shown > 0,
         )
         Spacer(Modifier.height(12.dp))
         PaidCard(
-            initial = "Б",
+            initial = stringResource(R.string.welcome_avatar_borya),
             who = stringResource(R.string.welcome_paid_borya),
             what = stringResource(R.string.welcome_for_taxi),
-            sum = "300 ₽",
-            share = "по 100 ₽",
+            sum = stringResource(R.string.demo_sum_300),
+            share = stringResource(R.string.welcome_each_100),
             color = colors.chartCategorical[2],
             visible = shown > 1,
         )
@@ -827,7 +850,7 @@ private fun WhoPaidArt(isActive: Boolean) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Avatar("Я", colors.inkSecondary)
+                Avatar(stringResource(R.string.welcome_avatar_you), colors.inkSecondary)
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
                         stringResource(R.string.welcome_you_paid_nothing),
@@ -843,7 +866,7 @@ private fun WhoPaidArt(isActive: Boolean) {
                 }
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "300 ₽",
+                    stringResource(R.string.demo_sum_300),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
@@ -961,7 +984,7 @@ private fun TransfersArt(isActive: Boolean) {
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    "300 ₽",
+                    stringResource(R.string.demo_sum_300),
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
@@ -976,13 +999,17 @@ private fun TransfersArt(isActive: Boolean) {
 
         Card(modifier = Modifier.fillMaxWidth()) {
             AppRow(
-                initial = "А",
+                initial = stringResource(R.string.welcome_avatar_anya),
                 avatarColor = colors.accent,
                 title = stringResource(R.string.welcome_to_anya),
                 subtitle = stringResource(
                     if (withSplitty) R.string.welcome_anya_note_with else R.string.welcome_for_dinner
                 ),
-                amount = if (withSplitty) "300 ₽" else "200 ₽",
+                amount = if (withSplitty) {
+                    stringResource(R.string.demo_sum_300)
+                } else {
+                    stringResource(R.string.demo_sum_200)
+                },
                 amountColor = if (withSplitty) colors.accentText else colors.negative,
             )
         }
@@ -997,11 +1024,11 @@ private fun TransfersArt(isActive: Boolean) {
                 if (!withSplitty) {
                     Card(modifier = Modifier.fillMaxWidth()) {
                         AppRow(
-                            initial = "Б",
+                            initial = stringResource(R.string.welcome_avatar_borya),
                             avatarColor = colors.chartCategorical[2],
                             title = stringResource(R.string.welcome_to_borya),
                             subtitle = stringResource(R.string.welcome_for_taxi),
-                            amount = "100 ₽",
+                            amount = stringResource(R.string.demo_sum_100),
                             amountColor = colors.negative,
                         )
                     }
@@ -1016,11 +1043,11 @@ private fun TransfersArt(isActive: Boolean) {
                         // Боря заплатил ровно свою долю: его баланс ноль, поэтому
                         // строка «вам переводить» исчезает — это и есть сведение.
                         AppRow(
-                            initial = "Б",
+                            initial = stringResource(R.string.welcome_avatar_borya),
                             avatarColor = colors.chartCategorical[2].copy(alpha = 0.35f),
                             title = stringResource(R.string.welcome_to_borya),
                             subtitle = stringResource(R.string.welcome_settled),
-                            amount = "0 ₽",
+                            amount = stringResource(R.string.demo_sum_0),
                             amountColor = colors.accentText,
                             titleColor = colors.inkSecondary,
                         )

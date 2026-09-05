@@ -2,6 +2,9 @@
 
 package com.zagir.splitty.core.model
 
+import androidx.annotation.StringRes
+import com.zagir.splitty.R
+
 import com.zagir.splitty.core.money.aggregateByCurrency
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -127,11 +130,11 @@ data class Me(
  * вошедшим с iPhone) — на Android его не привязать: Sign in with Apple без
  * веб-редиректа тут не работает, и строку без действия экран не рисует.
  */
-enum class LoginProvider(val id: String, val title: String) {
-    TELEGRAM("telegram", "Telegram"),
-    GOOGLE("google", "Google"),
-    APPLE("apple", "Apple"),
-    PASSWORD("password", "Email и пароль"),
+enum class LoginProvider(val id: String, @StringRes val titleRes: Int) {
+    TELEGRAM("telegram", R.string.provider_telegram),
+    GOOGLE("google", R.string.provider_google),
+    APPLE("apple", R.string.provider_apple),
+    PASSWORD("password", R.string.provider_password),
 }
 
 /**

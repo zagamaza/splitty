@@ -311,7 +311,7 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { providerToUnlink = null },
             title = {
-                Text(stringResource(R.string.profile_unlink_confirm_title, provider.title))
+                Text(stringResource(R.string.profile_unlink_confirm_title, stringResource(provider.titleRes)))
             },
             // Текст последствия — ПО ПРОВАЙДЕРУ: отвязка Telegram необратима
             // (бот заведёт второй профиль, обратно привязать нельзя), и общая
@@ -502,7 +502,7 @@ private fun LoginMethodRow(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = provider.title,
+                text = stringResource(provider.titleRes),
                 fontSize = 16.sp,
                 color = Splitty.colors.ink,
             )

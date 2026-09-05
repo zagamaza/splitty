@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.IO_WAIT_MS
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
@@ -130,7 +131,7 @@ class AddExpenseCaptureRoutingTest {
         server.enqueue(MockResponse().setBody(ROOM_JSON))
         val vm = viewModel()
         vm.start("65af", null)
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
         return vm
     }
 

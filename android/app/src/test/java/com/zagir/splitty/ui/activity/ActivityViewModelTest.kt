@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.activity
 
+import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
@@ -127,21 +128,21 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_JSON))
         val vm = viewModel()
 
-        val items = withTimeout(5_000) {
+        val items = withTimeout(IO_WAIT_MS) {
             vm.state.first { it is UiState.Content } as UiState.Content
         }.value
 
         assertEquals(1, items.size)
         assertEquals("Ужин", items.first().operation.description)
 
-        val invites = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }
+        val invites = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }
         assertEquals(1, invites.size)
         assertEquals("65b0", invites.first().roomId)
         assertEquals(InviteStatus.ADDED, invites.first().status)
 
         // Счётчик уезжает В СЕССИЮ, а не остаётся в VM: бейдж на табе рисуется
         // вне этого экрана, иначе он появлялся бы ровно когда его гасят.
-        assertEquals(3, withTimeout(5_000) { session.unreadNotifications.first { it != 0 } })
+        assertEquals(3, withTimeout(IO_WAIT_MS) { session.unreadNotifications.first { it != 0 } })
     }
 
     @Test
@@ -149,7 +150,7 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_JSON))
         server.enqueue(MockResponse().setResponseCode(204))
         val vm = viewModel()
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
 
         vm.markSeen()
 
@@ -159,7 +160,7 @@ class ActivityViewModelTest {
         // пришедшие между ответом и тапом, погасли бы непоказанными.
         assertTrue(seen.body.readUtf8().contains(SEEN_THROUGH), "seenThrough из ответа")
 
-        assertEquals(0, withTimeout(5_000) { session.unreadNotifications.first { it == 0 } })
+        assertEquals(0, withTimeout(IO_WAIT_MS) { session.unreadNotifications.first { it == 0 } })
     }
 
     @Test
@@ -189,7 +190,7 @@ class ActivityViewModelTest {
         repeat(2) { server.enqueue(MockResponse().setBody(FEED_JSON)) }
         repeat(2) { server.enqueue(MockResponse().setResponseCode(204)) }
         val vm = viewModel()
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
         awaitRequest("/api/v1/notifications")
         vm.onScreenHidden()
 
@@ -208,14 +209,14 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_WITH_PENDING_JSON))
         server.enqueue(MockResponse().setResponseCode(204))
         val vm = viewModel()
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
 
         vm.markSeen()
         awaitRequest("/api/v1/me/notifications-seen")
 
         // Ноль соврал бы: pending-приглашения сервер считает непрочитанными,
         // пока на них не ответили, и следующий ответ вернул бы бейдж обратно.
-        assertEquals(1, withTimeout(5_000) { session.unreadNotifications.first { it == 1 } })
+        assertEquals(1, withTimeout(IO_WAIT_MS) { session.unreadNotifications.first { it == 1 } })
     }
 
     @Test
@@ -225,16 +226,16 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_WITHOUT_INVITE_JSON))
         val vm = viewModel()
 
-        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val card = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }.first()
         vm.acceptInvite(card)
 
         awaitRequest("/api/v1/notifications")
         val accept = awaitRequest("/api/v1/invites/65b0/accept")
         assertEquals("POST", accept.method)
 
-        assertTrue(withTimeout(5_000) { vm.invites.first { it.isEmpty() } }.isEmpty())
+        assertTrue(withTimeout(IO_WAIT_MS) { vm.invites.first { it.isEmpty() } }.isEmpty())
         // Лента перезагружена — комната, в которую вступили, уже видна.
-        val items = withTimeout(5_000) {
+        val items = withTimeout(IO_WAIT_MS) {
             vm.state.first { it is UiState.Content && it.value.size == 2 }
         } as UiState.Content
         assertEquals(setOf("65af", "65b0"), items.value.map { it.roomId }.toSet())
@@ -247,12 +248,12 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_WITHOUT_INVITE_JSON))
         val vm = viewModel()
 
-        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val card = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }.first()
         vm.declineInvite(card)
 
         awaitRequest("/api/v1/notifications")
         assertEquals("POST", awaitRequest("/api/v1/invites/65b0/decline").method)
-        assertTrue(withTimeout(5_000) { vm.invites.first { it.isEmpty() } }.isEmpty())
+        assertTrue(withTimeout(IO_WAIT_MS) { vm.invites.first { it.isEmpty() } }.isEmpty())
     }
 
     @Test
@@ -262,7 +263,7 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(FEED_WITHOUT_INVITE_JSON))
         val vm = viewModel()
 
-        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val card = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }.first()
         vm.leaveFromCard(card)
 
         awaitRequest("/api/v1/notifications")
@@ -277,7 +278,7 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setBody(feedJson(PAGE_SIZE)))
         server.enqueue(MockResponse().setBody(activityPageJson(from = PAGE_SIZE, count = 1)))
         val vm = viewModel()
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
         awaitRequest("/api/v1/notifications")
         val afterFirstPage = server.requestCount
 
@@ -295,7 +296,7 @@ class ActivityViewModelTest {
         assertTrue(next.path.orEmpty().contains("offset=$PAGE_SIZE"), "offset следующей страницы")
         assertEquals(
             PAGE_SIZE + 1,
-            withTimeout(5_000) {
+            withTimeout(IO_WAIT_MS) {
                 vm.state.first { it is UiState.Content && it.value.size == PAGE_SIZE + 1 }
             }.let { (it as UiState.Content).value.size },
         )
@@ -310,13 +311,13 @@ class ActivityViewModelTest {
         )
         val vm = viewModel()
 
-        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val card = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }.first()
         vm.leaveFromCard(card)
 
         // Не «пришло хоть что-то» (filterNotNull это уже гарантирует), а
         // конкретный текст с путём наружу: сервер прислал message пустым, и без
         // маппинга по коду человек увидел бы дежурное «конфликт».
-        val error = withTimeout(5_000) { vm.errorMessage.filterNotNull().first() }
+        val error = withTimeout(IO_WAIT_MS) { vm.errorMessage.filterNotNull().first() }
         assertEquals(UiText.Res(R.string.error_leave_has_operations), error)
         // Карточка на месте: действие не состоялось, убирать её нечестно.
         assertEquals(1, vm.invites.value.size)
@@ -328,7 +329,7 @@ class ActivityViewModelTest {
         server.enqueue(MockResponse().setResponseCode(204)) // accept
         server.enqueue(MockResponse().setBody(FEED_WITHOUT_INVITE_JSON))
         val vm = viewModel()
-        val card = withTimeout(5_000) { vm.invites.first { it.isNotEmpty() } }.first()
+        val card = withTimeout(IO_WAIT_MS) { vm.invites.first { it.isNotEmpty() } }.first()
         val before = session.dataVersion.value
 
         vm.acceptInvite(card)
@@ -336,7 +337,7 @@ class ActivityViewModelTest {
         // Списки групп и друзей перезагружаются ТОЛЬКО по dataVersion, а вкладки
         // переживают переключение: без этого принятая группа не появлялась бы
         // в «Группах» до pull-to-refresh.
-        val after = withTimeout(5_000) { session.dataVersion.first { it > before } }
+        val after = withTimeout(IO_WAIT_MS) { session.dataVersion.first { it > before } }
         assertTrue(after > before, "dataVersion не сдвинулся — «Группы» не перезагрузятся")
     }
 
@@ -345,13 +346,13 @@ class ActivityViewModelTest {
         // 1) успешный ответ наполняет кеш первой страницы
         server.enqueue(MockResponse().setBody(feedPage(VM_PAGE_SIZE)))
         val warmUp = viewModel()
-        withTimeout(5_000) { warmUp.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { warmUp.state.first { it is UiState.Content } }
         awaitRequest("/api/v1/notifications")
 
         // 2) сети нет вовсе — новая VM поднимает ленту из кеша
         server.shutdown()
         val vm = viewModel()
-        withTimeout(5_000) { vm.state.first { it is UiState.Content } }
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
 
         vm.onItemShown(VM_PAGE_SIZE - 1)
         kotlinx.coroutines.delay(500)
