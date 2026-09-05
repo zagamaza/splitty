@@ -45,6 +45,12 @@
             "state": "translated",
             "value": "在「%@」中"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」에서"
+          }
         }
       }
     },
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "在「%2$@」中添加了「%1$@」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%2$@」에 「%1$@」을(를) 추가했습니다"
           }
         }
       }
@@ -139,6 +151,12 @@
             "state": "translated",
             "value": "支付了 "
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "님이 결제했습니다 "
+          }
         }
       }
     },
@@ -185,6 +203,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "向你支付了 "
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "님이 회원님께 지급했습니다 "
           }
         }
       }
@@ -233,6 +257,12 @@
             "state": "translated",
             "value": "由所有人平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전원이 균등하게"
+          }
         }
       }
     },
@@ -279,6 +309,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按各自消费"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각자 먹은 만큼"
           }
         }
       }
@@ -327,6 +363,12 @@
             "state": "translated",
             "value": "%@（你）"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(회원님)"
+          }
         }
       }
     },
@@ -373,6 +415,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ ÷ %2$lld = 每人 %3$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ ÷ %2$lld = 1인당 %3$@"
           }
         }
       }
@@ -421,6 +469,12 @@
             "state": "translated",
             "value": "%@ · 未设置密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 비밀번호 미설정"
+          }
         }
       }
     },
@@ -467,6 +521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 把你加入了「%2$@」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 님이 회원님을 「%2$@」에 추가했습니다"
           }
         }
       }
@@ -515,6 +575,12 @@
             "state": "translated",
             "value": "%@ 欠你"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님이 회원님께 빚졌습니다"
+          }
         }
       }
     },
@@ -561,6 +627,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 欠 — %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 님의 빚 — %2$@"
           }
         }
       }
@@ -609,6 +681,12 @@
             "state": "translated",
             "value": "每%2$@ %1$@。自动续订，可随时在 Apple ID 设置中取消"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@당 %1$@입니다. 자동으로 갱신되며 Apple ID 설정에서 언제든지 해지할 수 있습니다"
+          }
         }
       }
     },
@@ -655,6 +733,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 支付了 %2$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 님이 %2$@을(를) 결제했습니다"
           }
         }
       }
@@ -703,6 +787,12 @@
             "state": "translated",
             "value": "%@ 向你支付了"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님이 회원님께 지급했습니다"
+          }
         }
       }
     },
@@ -749,6 +839,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 付给你"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님이 회원님께 지급합니다"
           }
         }
       }
@@ -797,6 +893,12 @@
             "state": "translated",
             "value": "%1$@ 支付 — %2$@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 님이 결제 — %2$@"
+          }
         }
       }
     },
@@ -844,6 +946,12 @@
             "state": "translated",
             "value": "%1$@ 邀请你回到「%2$@」"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 님이 「%2$@」에 다시 초대했습니다"
+          }
         }
       }
     },
@@ -890,6 +998,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 固定金额 · 其余平摊"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@은(는) 고정 금액 · 나머지는 균등"
           }
         }
       }
@@ -1152,6 +1266,12 @@
             "state": "translated",
             "value": "%1$lld 件 · 每件 %2$@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld개 · 개당 %2$@"
+          }
         }
       }
     },
@@ -1199,6 +1319,12 @@
             "state": "translated",
             "value": "+%@ 服务费"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@ 수수료"
+          }
         }
       }
     },
@@ -1242,6 +1368,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "0"
@@ -1293,6 +1425,12 @@
             "state": "translated",
             "value": "¥0.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩0"
+          }
         }
       }
     },
@@ -1339,6 +1477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 笔转账"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "송금 1건"
           }
         }
       }
@@ -1387,6 +1531,12 @@
             "state": "translated",
             "value": "¥10.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩1,000"
+          }
         }
       }
     },
@@ -1433,6 +1583,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥100.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩10,000"
           }
         }
       }
@@ -1481,6 +1637,12 @@
             "state": "translated",
             "value": "¥135.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩13,500"
+          }
         }
       }
     },
@@ -1527,6 +1689,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥15.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩1,500"
           }
         }
       }
@@ -1575,6 +1743,12 @@
             "state": "translated",
             "value": "¥150.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩15,000"
+          }
         }
       }
     },
@@ -1621,6 +1795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "2 笔转账"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "송금 2건"
           }
         }
       }
@@ -1669,6 +1849,12 @@
             "state": "translated",
             "value": "2 项"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2개 항목"
+          }
         }
       }
     },
@@ -1715,6 +1901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥20.00 + 鲍里斯的 ¥10.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩2,000 + 보리스 님의 ₩1,000"
           }
         }
       }
@@ -1763,6 +1955,12 @@
             "state": "translated",
             "value": "¥20.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩2,000"
+          }
         }
       }
     },
@@ -1809,6 +2007,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥320.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩32,000"
           }
         }
       }
@@ -1857,6 +2061,12 @@
             "state": "translated",
             "value": "¥30.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩3,000"
+          }
         }
       }
     },
@@ -1903,6 +2113,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥45.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩4,500"
           }
         }
       }
@@ -1951,6 +2167,12 @@
             "state": "translated",
             "value": "¥60.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩6,000"
+          }
         }
       }
     },
@@ -1997,6 +2219,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "¥80.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩8,000"
           }
         }
       }
@@ -2045,6 +2273,12 @@
             "state": "translated",
             "value": "¥90.00"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "₩9,000"
+          }
         }
       }
     },
@@ -2091,6 +2325,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple 未返回登录信息，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple에서 로그인 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -2139,6 +2379,12 @@
             "state": "translated",
             "value": "Apple 未返回绑定所需的信息，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple에서 연결에 필요한 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -2185,6 +2431,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apple 未确认登录，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -2233,6 +2485,12 @@
             "state": "translated",
             "value": "邮箱"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일"
+          }
         }
       }
     },
@@ -2280,6 +2538,12 @@
             "state": "translated",
             "value": "邮箱和密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일과 비밀번호"
+          }
         }
       }
     },
@@ -2323,6 +2587,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "English"
@@ -2374,6 +2644,12 @@
             "state": "translated",
             "value": "Google 未返回登录信息，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google에서 로그인 정보를 반환하지 않았습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -2421,6 +2697,12 @@
             "state": "translated",
             "value": "Google 未确认登录，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -2464,6 +2746,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID: %@"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "ID: %@"
@@ -2515,6 +2803,12 @@
             "state": "translated",
             "value": "Splitor"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor"
+          }
         }
       }
     },
@@ -2558,6 +2852,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor Plus"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "Splitor Plus"
@@ -2609,6 +2909,12 @@
             "state": "translated",
             "value": "Splitor 只负责记账"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor는 기록만 합니다"
+          }
         }
       }
     },
@@ -2655,6 +2961,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Splitty 会把每笔支出分摊给成员。三人 ¥60.00 的晚餐每人 ¥20.00，¥30.00 的打车每人 ¥10.00。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty는 모든 지출을 참여자에게 나눕니다. 3인 ₩6,000 저녁은 1인 ₩2,000, ₩3,000 택시는 1인 ₩1,000입니다."
           }
         }
       }
@@ -2703,6 +3015,12 @@
             "state": "translated",
             "value": "Splitty 只做记录：请用现金或转账把钱交给对方"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty는 기록만 합니다. 금액은 현금이나 송금으로 직접 전달해 주십시오"
+          }
         }
       }
     },
@@ -2746,6 +3064,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "Telegram"
@@ -2797,6 +3121,12 @@
             "state": "translated",
             "value": "Telegram 未确认登录，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram이 로그인을 확인하지 못했습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -2840,6 +3170,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "http://127.0.0.1:7171"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "http://127.0.0.1:7171"
@@ -2891,6 +3227,12 @@
             "state": "translated",
             "value": "「%1$@」是 %2$@。已记住，不再询问"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」은(는) %2$@ 님이군요. 기억했으니 다시 여쭙지 않겠습니다"
+          }
         }
       }
     },
@@ -2937,6 +3279,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择「平摊」会舍弃小票上的项目，把总额在所有成员之间平均分配。可用「撤销」恢复"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「균등」을 선택하면 영수증 항목이 삭제되고 총액이 모든 참여자에게 균등하게 분배됩니다. 「실행 취소」로 되돌릴 수 있습니다"
           }
         }
       }
@@ -2985,6 +3333,12 @@
             "state": "translated",
             "value": "「晚餐 ¥320，四个人分」"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「저녁 ₩32,000, 네 명이서 나누기」"
+          }
         }
       }
     },
@@ -3031,6 +3385,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "· 剩余 %lld 秒"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· %lld초 남음"
           }
         }
       }
@@ -3079,6 +3439,12 @@
             "state": "translated",
             "value": "· 按金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 금액별"
+          }
         }
       }
     },
@@ -3126,6 +3492,12 @@
             "state": "translated",
             "value": "· 平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 균등"
+          }
         }
       }
     },
@@ -3169,6 +3541,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "A"
@@ -3220,6 +3598,12 @@
             "state": "translated",
             "value": "账号已删除，但数据清理尚未完成。请再次点按「删除账号」以完成"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정은 삭제되었지만 데이터 정리가 완료되지 않았습니다. 「계정 삭제」를 다시 눌러 완료해 주십시오"
+          }
         }
       }
     },
@@ -3266,6 +3650,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "有效"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용 중"
           }
         }
       }
@@ -3314,6 +3704,12 @@
             "state": "translated",
             "value": "安娜"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안나"
+          }
         }
       }
     },
@@ -3360,6 +3756,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "安娜"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안나"
           }
         }
       }
@@ -3408,6 +3810,12 @@
             "state": "translated",
             "value": "归档"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함"
+          }
         }
       }
     },
@@ -3454,6 +3862,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "归档为空"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함이 비어 있습니다"
           }
         }
       }
@@ -3502,6 +3916,12 @@
             "state": "translated",
             "value": "归档只会把该群组从你的列表中隐藏，支出和欠款都会保留。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관하면 해당 그룹은 회원님의 목록에서만 숨겨집니다. 지출과 빚은 그대로 유지됩니다."
+          }
         }
       }
     },
@@ -3548,6 +3968,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "归档"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관"
           }
         }
       }
@@ -3596,6 +4022,12 @@
             "state": "translated",
             "value": "归档的群组会显示在这里"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관한 그룹이 여기에 표시됩니다"
+          }
         }
       }
     },
@@ -3639,6 +4071,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "B"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "B"
@@ -3690,6 +4128,12 @@
             "state": "translated",
             "value": "余额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잔액"
+          }
         }
       }
     },
@@ -3736,6 +4180,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不用 Splitty"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty가 없다면"
           }
         }
       }
@@ -3784,6 +4234,12 @@
             "state": "translated",
             "value": "免费次数很快恢复。Plus 可完全取消每日上限"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료 횟수는 곧 회복됩니다. Plus를 이용하시면 일일 제한이 사라집니다"
+          }
         }
       }
     },
@@ -3830,6 +4286,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "鲍里斯"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보리스"
           }
         }
       }
@@ -3878,6 +4340,12 @@
             "state": "translated",
             "value": "鲍里斯"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보리스"
+          }
         }
       }
     },
@@ -3924,6 +4392,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "归档"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함으로"
           }
         }
       }
@@ -3972,6 +4446,12 @@
             "state": "translated",
             "value": "群组的所有金额都以其货币显示：支出、欠款和合计。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹의 모든 금액은 해당 통화로 표시됩니다. 지출, 빚, 합계 모두 해당됩니다."
+          }
         }
       }
     },
@@ -4018,6 +4498,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组里只有你"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 회원님만 있습니다"
           }
         }
       }
@@ -4066,6 +4552,12 @@
             "state": "translated",
             "value": "要在哪个群组结算？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어느 그룹에서 정산하시겠습니까?"
+          }
         }
       }
     },
@@ -4112,6 +4604,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "这个群组的支出太多了。请新建一个，旧群组仍可查看"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그룹에 지출이 너무 많이 쌓였습니다. 새 그룹을 만들어 주십시오. 기존 그룹은 계속 열람할 수 있습니다"
           }
         }
       }
@@ -4160,6 +4658,12 @@
             "state": "translated",
             "value": "你需转账"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 송금"
+          }
         }
       }
     },
@@ -4206,6 +4710,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "货币"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화"
           }
         }
       }
@@ -4254,6 +4764,12 @@
             "state": "translated",
             "value": "有人还了你钱"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚을 돌려받았습니다"
+          }
         }
       }
     },
@@ -4300,6 +4816,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "有人还款给你，以及关于你欠款的提醒"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚을 돌려받았을 때와 회원님의 빚에 대한 알림"
           }
         }
       }
@@ -4348,6 +4870,12 @@
             "state": "translated",
             "value": "别人欠你"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받을 금액"
+          }
         }
       }
     },
@@ -4394,6 +4922,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "有人邀请你或把你加入群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 초대되거나 추가되었을 때"
           }
         }
       }
@@ -4442,6 +4976,12 @@
             "state": "translated",
             "value": "你的 ¥30.00 只需一次转账，而不是两次：Splitty 会在群组内抵销欠款。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 몫 ₩3,000은 두 번이 아니라 한 번의 송금으로 나갑니다. Splitty가 그룹 내 빚을 상계합니다."
+          }
         }
       }
     },
@@ -4488,6 +5028,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你今晚的分摊"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 저녁 회원님의 몫"
           }
         }
       }
@@ -4536,6 +5082,12 @@
             "state": "translated",
             "value": "你的欠款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 빚"
+          }
         }
       }
     },
@@ -4582,6 +5134,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请输入支出说明"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 설명을 입력해 주십시오"
           }
         }
       }
@@ -4630,6 +5188,12 @@
             "state": "translated",
             "value": "请输入金额（不小于 1 的整数）"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액을 입력해 주십시오(1 이상의 정수)"
+          }
         }
       }
     },
@@ -4676,6 +5240,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "手动输入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 입력"
           }
         }
       }
@@ -4724,6 +5294,12 @@
             "state": "translated",
             "value": "请把手指放回以继续"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속하시려면 손가락을 다시 올려 주십시오"
+          }
         }
       }
     },
@@ -4770,6 +5346,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "从归档恢复"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관함에서 복원"
           }
         }
       }
@@ -4818,6 +5400,12 @@
             "state": "translated",
             "value": "版本 %@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전 %@"
+          }
         }
       }
     },
@@ -4864,6 +5452,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "视频"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동영상"
           }
         }
       }
@@ -4912,6 +5506,12 @@
             "state": "translated",
             "value": "附件"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일"
+          }
         }
       }
     },
@@ -4958,6 +5558,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "附件"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일"
           }
         }
       }
@@ -5006,6 +5612,12 @@
             "state": "translated",
             "value": "请注意"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주의"
+          }
         }
       }
     },
@@ -5052,6 +5664,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인"
           }
         }
       }
@@ -5100,6 +5718,12 @@
             "state": "translated",
             "value": "将无法再使用密码登录。邮箱地址仍会保留在账号中。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호로는 더 이상 로그인할 수 없습니다. 이메일 주소는 계정에 남습니다."
+          }
         }
       }
     },
@@ -5146,6 +5770,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "将无法再使用 %@ 登录。其他登录方式仍可使用。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(으)로는 더 이상 로그인할 수 없습니다. 다른 로그인 방법은 계속 사용할 수 있습니다."
           }
         }
       }
@@ -5194,6 +5824,12 @@
             "state": "translated",
             "value": "使用 Google 登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google로 로그인"
+          }
         }
       }
     },
@@ -5240,6 +5876,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用 Telegram 登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram으로 로그인"
           }
         }
       }
@@ -5288,6 +5930,12 @@
             "state": "translated",
             "value": "将无法再使用 Telegram 登录，下次给机器人发消息时会创建一个不含你群组的独立账号。此 Telegram 无法重新绑定。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram으로는 더 이상 로그인할 수 없으며, 다음에 봇에 메시지를 보내면 그룹이 없는 별도 프로필이 생성됩니다. 이 Telegram은 다시 연결할 수 없습니다."
+          }
         }
       }
     },
@@ -5334,6 +5982,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢复购买"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구입 복원"
           }
         }
       }
@@ -5382,6 +6036,12 @@
             "state": "translated",
             "value": "请输入每人的准确金额。留空表示「自动」：剩余金额平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1인당 정확한 금액을 입력해 주십시오. 비워 두면 「자동」으로 나머지가 균등하게 분배됩니다"
+          }
         }
       }
     },
@@ -5428,6 +6088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
           }
         }
       }
@@ -5476,6 +6142,12 @@
             "state": "translated",
             "value": "大家都已结清"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 정산되었습니다"
+          }
         }
       }
     },
@@ -5522,6 +6194,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已全部结清"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 정산 완료"
           }
         }
       }
@@ -5570,6 +6248,12 @@
             "state": "translated",
             "value": "所有成员都已结清"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 참여자가 정산했습니다"
+          }
         }
       }
     },
@@ -5616,6 +6300,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "总支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "총 지출"
           }
         }
       }
@@ -5664,6 +6354,12 @@
             "state": "translated",
             "value": "粘贴"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "붙여넣기"
+          }
         }
       }
     },
@@ -5710,6 +6406,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴邀请码或整条链接 — …/join/… 和 t.me/split_money_bot?start=room… 都可以"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대 코드나 링크 전체를 붙여넣어 주십시오. …/join/…과 t.me/split_money_bot?start=room… 모두 사용할 수 있습니다"
           }
         }
       }
@@ -5758,6 +6460,12 @@
             "state": "translated",
             "value": "使用邮箱登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일로 로그인"
+          }
         }
       }
     },
@@ -5804,6 +6512,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已取消 Google 登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 로그인이 취소되었습니다"
           }
         }
       }
@@ -5852,6 +6566,12 @@
             "state": "translated",
             "value": "你"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님"
+          }
         }
       }
     },
@@ -5898,6 +6618,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你已退出群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에서 나갔습니다"
           }
         }
       }
@@ -5946,6 +6672,12 @@
             "state": "translated",
             "value": "你欠"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 빚"
+          }
         }
       }
     },
@@ -5992,6 +6724,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你欠 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@을(를) 빚졌습니다"
           }
         }
       }
@@ -6040,6 +6778,12 @@
             "state": "translated",
             "value": "你支付了"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 결제"
+          }
         }
       }
     },
@@ -6086,6 +6830,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你支付了 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@을(를) 결제했습니다"
           }
         }
       }
@@ -6134,6 +6884,12 @@
             "state": "translated",
             "value": "与你无关"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여하지 않았습니다"
+          }
         }
       }
     },
@@ -6180,6 +6936,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你垫付了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 대신 냈습니다"
           }
         }
       }
@@ -6228,6 +6990,12 @@
             "state": "translated",
             "value": "你支付 — %@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 결제 — %@"
+          }
         }
       }
     },
@@ -6274,6 +7042,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你收到了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받았습니다"
           }
         }
       }
@@ -6322,6 +7096,12 @@
             "state": "translated",
             "value": "你是最后一名成员。若不再需要，可将群组归档"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 마지막 참여자입니다. 더 이상 필요하지 않다면 그룹을 보관해 주십시오"
+          }
         }
       }
     },
@@ -6368,6 +7148,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 선택"
           }
         }
       }
@@ -6416,6 +7202,12 @@
             "state": "translated",
             "value": "请至少选择一名成员"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자를 한 명 이상 선택해 주십시오"
+          }
         }
       }
     },
@@ -6462,6 +7254,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择付款人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제한 사람 선택"
           }
         }
       }
@@ -6510,6 +7308,12 @@
             "state": "translated",
             "value": "选择「%@」是谁：点按小票上的红色标记"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」이(가) 누구인지 선택해 주십시오. 영수증의 빨간 표시를 누르십시오"
+          }
         }
       }
     },
@@ -6556,6 +7360,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "退出登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그아웃"
           }
         }
       }
@@ -6604,6 +7414,12 @@
             "state": "translated",
             "value": "在所有设备退出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 로그아웃"
+          }
         }
       }
     },
@@ -6650,6 +7466,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要退出「%@」吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」에서 나가시겠습니까?"
           }
         }
       }
@@ -6698,6 +7520,12 @@
             "state": "translated",
             "value": "要退出账号吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정에서 로그아웃하시겠습니까?"
+          }
         }
       }
     },
@@ -6744,6 +7572,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "退出群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 나가기"
           }
         }
       }
@@ -6792,6 +7626,12 @@
             "state": "translated",
             "value": "在所有设备退出登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 로그아웃"
+          }
         }
       }
     },
@@ -6838,6 +7678,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要在所有设备退出登录吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 기기에서 로그아웃하시겠습니까?"
           }
         }
       }
@@ -6886,6 +7732,12 @@
             "state": "translated",
             "value": "相册"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "갤러리"
+          }
         }
       }
     },
@@ -6932,6 +7784,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可以松手，请继续说"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손을 떼셔도 됩니다. 편하게 말씀해 주십시오"
           }
         }
       }
@@ -6980,6 +7838,12 @@
             "state": "translated",
             "value": "请讲…"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말씀해 주십시오…"
+          }
         }
       }
     },
@@ -7026,6 +7890,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "语音录制 · %lld 秒"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 녹음 · %lld초"
           }
         }
       }
@@ -7074,6 +7944,12 @@
             "state": "translated",
             "value": "语音和小票照片会发送到 Splitty 服务器以及负责识别的第三方模型。生成的支出仍保留在你的群组中。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 녹음과 영수증 사진은 Splitty 서버와 이를 지출로 변환하는 외부 모델로 전송됩니다. 생성된 지출은 그룹 안에 남습니다."
+          }
         }
       }
     },
@@ -7120,6 +7996,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "语音或小票照片，任你选择"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로도, 영수증 사진으로도 편하신 방법으로"
           }
         }
       }
@@ -7168,6 +8050,12 @@
             "state": "translated",
             "value": "完成"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
         }
       }
     },
@@ -7214,6 +8102,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成 — 支出已加入群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료 — 지출이 그룹에 추가되었습니다"
           }
         }
       }
@@ -7262,6 +8156,12 @@
             "state": "translated",
             "value": "图表「%@」— 各成员金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "차트 「%@」 — 참여자별 금액"
+          }
         }
       }
     },
@@ -7308,6 +8208,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近一个月每日支出图表"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 한 달간 일별 지출 차트"
           }
         }
       }
@@ -7356,6 +8262,12 @@
             "state": "translated",
             "value": "按星期统计的支出图表"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요일별 지출 차트"
+          }
         }
       }
     },
@@ -7402,6 +8314,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹"
           }
         }
       }
@@ -7450,6 +8368,12 @@
             "state": "translated",
             "value": "群组已归档"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관된 그룹"
+          }
         }
       }
     },
@@ -7496,6 +8420,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该群组会从你的列表中消失。只有成员再次邀请你才能回来"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹이 목록에서 사라집니다. 참여자의 초대를 받아야만 다시 들어올 수 있습니다"
           }
         }
       }
@@ -7544,6 +8474,12 @@
             "state": "translated",
             "value": "未找到群组。它可能已被删除，或邀请链接已过期"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹을 찾을 수 없습니다. 삭제되었거나 초대 링크가 만료되었을 수 있습니다"
+          }
         }
       }
     },
@@ -7590,6 +8526,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组就是一份共同账单"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹은 공동 계산서입니다"
           }
         }
       }
@@ -7638,6 +8580,12 @@
             "state": "translated",
             "value": "群组"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹"
+          }
         }
       }
     },
@@ -7684,6 +8632,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组、支出和欠款始终免费"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹, 지출, 빚은 계속 무료입니다"
           }
         }
       }
@@ -7732,6 +8686,12 @@
             "state": "translated",
             "value": "下一步"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
         }
       }
     },
@@ -7778,6 +8738,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该群组的数据来自旧版本，余额无法对齐。支出和合计仍可使用。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그룹의 데이터는 이전 버전의 것이라 잔액이 맞지 않습니다. 지출과 합계는 이용할 수 있습니다."
           }
         }
       }
@@ -7826,6 +8792,12 @@
             "state": "translated",
             "value": "已保存的数据：无法连接服务器"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장된 데이터: 서버에 연결할 수 없습니다"
+          }
         }
       }
     },
@@ -7872,6 +8844,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "日期"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜"
           }
         }
       }
@@ -7920,6 +8898,12 @@
             "state": "translated",
             "value": "两次转账，两次确认"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "송금 두 번, 확인 두 번"
+          }
         }
       }
     },
@@ -7966,6 +8950,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前无法执行此操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금은 이 작업을 할 수 없습니다"
           }
         }
       }
@@ -8014,6 +9004,12 @@
             "state": "translated",
             "value": "和朋友分摊支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구들과 지출을 나누세요"
+          }
         }
       }
     },
@@ -8060,6 +9056,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "日"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
           }
         }
       }
@@ -8108,6 +9110,12 @@
             "state": "translated",
             "value": "钱由你们自己转"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액은 직접 주고받으십시오"
+          }
         }
       }
     },
@@ -8154,6 +9162,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请按住 — 麦克风正在准备"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속 누르고 계십시오. 마이크를 준비하고 있습니다"
           }
         }
       }
@@ -8202,6 +9216,12 @@
             "state": "translated",
             "value": "各成员付款占比图表"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자별 결제 비율 차트"
+          }
         }
       }
     },
@@ -8248,6 +9268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "想说几次就说几次，也可以随时拍小票"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필요한 만큼 몇 번이든 지출을 말하거나 영수증을 찍으십시오"
           }
         }
       }
@@ -8296,6 +9322,12 @@
             "state": "translated",
             "value": "添加"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추가"
+          }
         }
       }
     },
@@ -8342,6 +9374,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 추가"
           }
         }
       }
@@ -8390,6 +9428,12 @@
             "state": "translated",
             "value": "语音添加"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 추가"
+          }
         }
       }
     },
@@ -8436,6 +9480,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加项目"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목 추가"
           }
         }
       }
@@ -8484,6 +9534,12 @@
             "state": "translated",
             "value": "添加支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 추가"
+          }
         }
       }
     },
@@ -8530,6 +9586,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "手动添加支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 직접 추가"
           }
         }
       }
@@ -8578,6 +9640,12 @@
             "state": "translated",
             "value": "添加照片"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 추가"
+          }
         }
       }
     },
@@ -8624,6 +9692,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加小票照片"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 사진 추가"
           }
         }
       }
@@ -8672,6 +9746,12 @@
             "state": "translated",
             "value": "已加入群组：%@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 추가됨: %@"
+          }
         }
       }
     },
@@ -8718,6 +9798,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已添加 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 추가됨"
           }
         }
       }
@@ -8766,6 +9852,12 @@
             "state": "translated",
             "value": "添加第一笔支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 지출을 추가해 주십시오"
+          }
         }
       }
     },
@@ -8812,6 +9904,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加第一笔支出 — 群组统计会显示在这里"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 지출을 추가하시면 그룹 통계가 여기에 표시됩니다"
           }
         }
       }
@@ -8860,6 +9958,12 @@
             "state": "translated",
             "value": "添加第一笔支出 — 它会出现在这个列表中"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 지출을 추가하시면 이 목록에 표시됩니다"
+          }
         }
       }
     },
@@ -8906,6 +10010,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "文档"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문서"
           }
         }
       }
@@ -8954,6 +10064,12 @@
             "state": "translated",
             "value": "这笔欠款已结清"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 빚은 이미 정산되었습니다"
+          }
         }
       }
     },
@@ -9000,6 +10116,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "欠款：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚: %@"
           }
         }
       }
@@ -9048,6 +10170,12 @@
             "state": "translated",
             "value": "欠款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚"
+          }
         }
       }
     },
@@ -9094,6 +10222,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不计算欠款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚이 계산되지 않습니다"
           }
         }
       }
@@ -9142,6 +10276,12 @@
             "state": "translated",
             "value": "欠款已抵销：一次转账即可，无需多次"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚을 상계합니다. 여러 번이 아니라 한 번의 송금으로 끝납니다"
+          }
         }
       }
     },
@@ -9188,6 +10328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有群组都没有欠款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어느 그룹에도 빚이 없습니다"
           }
         }
       }
@@ -9236,6 +10382,12 @@
             "state": "translated",
             "value": "欠你"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님께 빚짐"
+          }
         }
       }
     },
@@ -9282,6 +10434,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按份额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비율로"
           }
         }
       }
@@ -9330,6 +10488,12 @@
             "state": "translated",
             "value": "好友"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구"
+          }
         }
       }
     },
@@ -9376,6 +10540,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "当你们共享含支出的群组后，好友就会出现"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출이 있는 그룹을 함께 쓰면 친구가 표시됩니다"
           }
         }
       }
@@ -9424,6 +10594,12 @@
             "state": "translated",
             "value": "好友是你已经一起分摊过账单的人"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구는 이미 함께 계산서를 나눈 사람들입니다"
+          }
         }
       }
     },
@@ -9470,6 +10646,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "他的 ¥10.00 和你的一起转给安娜"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그의 ₩1,000은 회원님의 몫과 함께 안나 님께 전달됩니다"
           }
         }
       }
@@ -9625,6 +10807,12 @@
             "state": "translated",
             "value": "有未发送的操作"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전송되지 않은 작업이 있습니다"
+          }
         }
       }
     },
@@ -9671,6 +10859,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可能在通知等待期间被删除了"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림이 대기하는 동안 삭제되었을 수 있습니다"
           }
         }
       }
@@ -9719,6 +10913,12 @@
             "state": "translated",
             "value": "%@ 的"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 분"
+          }
         }
       }
     },
@@ -9765,6 +10965,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止录音并识别"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 종료하고 인식"
           }
         }
       }
@@ -9813,6 +11019,12 @@
             "state": "translated",
             "value": "上传被中断，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드가 중단되었습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -9859,6 +11071,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
           }
         }
       }
@@ -9907,6 +11125,12 @@
             "state": "translated",
             "value": "按住下方麦克风，说出\n谁点了什么、花了多少"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 마이크를 누른 채\n누가 무엇을 얼마에 먹었는지 말씀해 주십시오"
+          }
         }
       }
     },
@@ -9953,6 +11177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
           }
         }
       }
@@ -10001,6 +11231,12 @@
             "state": "translated",
             "value": "更换照片"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 교체"
+          }
         }
       }
     },
@@ -10047,6 +11283,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已录制"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음됨"
           }
         }
       }
@@ -10095,6 +11337,12 @@
             "state": "translated",
             "value": "语音记录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 기록"
+          }
         }
       }
     },
@@ -10141,6 +11389,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "记录一笔付款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제 기록"
           }
         }
       }
@@ -10189,6 +11443,12 @@
             "state": "translated",
             "value": "录音仍在准备中，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 준비하고 있습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -10235,6 +11495,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在录音"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 중"
           }
         }
       }
@@ -10283,6 +11549,12 @@
             "state": "translated",
             "value": "系统中断了录音，请重新口述"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템이 녹음을 중단했습니다. 다시 말씀해 주십시오"
+          }
         }
       }
     },
@@ -10329,6 +11601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音会发送到 Splitty 服务器以及负责识别的第三方模型"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
           }
         }
       }
@@ -10377,6 +11655,12 @@
             "state": "translated",
             "value": "此记录仅保存在本设备上，尚未发送到服务器。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기록은 이 기기에만 저장되어 있으며 아직 서버로 전송되지 않았습니다."
+          }
         }
       }
     },
@@ -10423,6 +11707,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "付款人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제자"
           }
         }
       }
@@ -10471,6 +11761,12 @@
             "state": "translated",
             "value": "已支付"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제됨"
+          }
         }
       }
     },
@@ -10517,6 +11813,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "我支付"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 결제"
           }
         }
       }
@@ -10565,6 +11867,12 @@
             "state": "translated",
             "value": "语音填写"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 입력"
+          }
         }
       }
     },
@@ -10611,6 +11919,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "注册"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원가입"
           }
         }
       }
@@ -10659,6 +11973,12 @@
             "state": "translated",
             "value": "群组的支出和付款会显示在这里"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹의 지출과 결제가 여기에 표시됩니다"
+          }
         }
       }
     },
@@ -10705,6 +12025,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组的动态会显示在这里"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹의 활동이 여기에 표시됩니다"
           }
         }
       }
@@ -10753,6 +12079,12 @@
             "state": "translated",
             "value": "来自你的群组"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 그룹에서"
+          }
         }
       }
     },
@@ -10799,6 +12131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "改动已在小票上高亮显示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경 사항이 영수증에 강조 표시됩니다"
           }
         }
       }
@@ -10847,6 +12185,12 @@
             "state": "translated",
             "value": "修改"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "변경"
+          }
         }
       }
     },
@@ -10893,6 +12237,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "修改名字"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 변경"
           }
         }
       }
@@ -10941,6 +12291,12 @@
             "state": "translated",
             "value": "编辑支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 편집"
+          }
         }
       }
     },
@@ -10987,6 +12343,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "或"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "또는"
           }
         }
       }
@@ -11035,6 +12397,12 @@
             "state": "translated",
             "value": "名字"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름"
+          }
         }
       }
     },
@@ -11081,6 +12449,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "姓名"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 성"
           }
         }
       }
@@ -11129,6 +12503,12 @@
             "state": "translated",
             "value": "名字不能为空"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름을 비워 둘 수 없습니다"
+          }
         }
       }
     },
@@ -11175,6 +12555,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合计"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계"
           }
         }
       }
@@ -11223,6 +12609,12 @@
             "state": "translated",
             "value": "添加第一笔支出后会显示合计"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 지출을 추가하시면 합계가 표시됩니다"
+          }
         }
       }
     },
@@ -11269,6 +12661,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合计"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계"
           }
         }
       }
@@ -11317,6 +12715,12 @@
             "state": "translated",
             "value": "合计 ≥"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계 ≥"
+          }
         }
       }
     },
@@ -11363,6 +12767,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无需邀请码，一键就能把他们拉进新群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 없이 한 번의 탭으로 새 그룹에 초대할 수 있습니다"
           }
         }
       }
@@ -11411,6 +12821,12 @@
             "state": "translated",
             "value": "该登录方式的另一个账号已绑定。请先解绑当前账号"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 로그인 방법의 다른 계정이 이미 연결되어 있습니다. 먼저 현재 연결을 해제해 주십시오"
+          }
         }
       }
     },
@@ -11457,6 +12873,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "谁为什么付了钱"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 무엇을 결제했는가"
           }
         }
       }
@@ -11505,6 +12927,12 @@
             "state": "translated",
             "value": "相机"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카메라"
+          }
         }
       }
     },
@@ -11551,6 +12979,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下方的 + 按钮：口述、拍小票或手动输入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 + 버튼: 말하거나, 영수증을 찍거나, 직접 입력하십시오"
           }
         }
       }
@@ -11599,6 +13033,12 @@
             "state": "translated",
             "value": "邀请码有误、已过期或已被使用。请重新获取"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드가 올바르지 않거나 만료되었거나 이미 사용되었습니다. 새 코드를 요청해 주십시오"
+          }
         }
       }
     },
@@ -11645,6 +13085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可乐"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콜라"
           }
         }
       }
@@ -11693,6 +13139,12 @@
             "state": "translated",
             "value": "隐私"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보"
+          }
         }
       }
     },
@@ -11739,6 +13191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "咖啡"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "커피"
           }
         }
       }
@@ -11787,6 +13245,12 @@
             "state": "translated",
             "value": "谁多付了，谁少付了"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 더 냈고 누가 덜 냈는가"
+          }
         }
       }
     },
@@ -11833,6 +13297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "谁付的款？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 결제했습니까?"
           }
         }
       }
@@ -11881,6 +13351,12 @@
             "state": "translated",
             "value": "发送人"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낸 사람"
+          }
         }
       }
     },
@@ -11927,6 +13403,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "付款人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제자"
           }
         }
       }
@@ -11975,6 +13457,12 @@
             "state": "translated",
             "value": "接收人"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받은 사람"
+          }
         }
       }
     },
@@ -12021,6 +13509,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "谁付了多少"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 얼마를 결제했는가"
           }
         }
       }
@@ -12069,6 +13563,12 @@
             "state": "translated",
             "value": "参与者"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자"
+          }
         }
       }
     },
@@ -12115,6 +13615,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 是谁？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님은 누구입니까?"
           }
         }
       }
@@ -12163,6 +13669,12 @@
             "state": "translated",
             "value": "「%@」是谁？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」은(는) 누구입니까?"
+          }
         }
       }
     },
@@ -12209,6 +13721,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "某人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누군가"
           }
         }
       }
@@ -12257,6 +13775,12 @@
             "state": "translated",
             "value": "有人在你的群组中添加或修改了支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에서 누군가 지출을 추가하거나 변경했을 때"
+          }
         }
       }
     },
@@ -12303,6 +13827,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "任意一种已绑定的方式都可登录同一个账号。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결된 어떤 방법으로도 같은 계정에 로그인할 수 있습니다."
           }
         }
       }
@@ -12351,6 +13881,12 @@
             "state": "translated",
             "value": "麦克风正被其他应用或通话占用。请关闭后重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이크를 다른 앱이나 통화가 사용 중입니다. 종료 후 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -12397,6 +13933,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "录音上限为一分钟。将识别你已说出的内容"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음은 1분까지입니다. 지금까지 말씀하신 내용을 인식합니다"
           }
         }
       }
@@ -12445,6 +13987,12 @@
             "state": "translated",
             "value": "仍有支出记在你名下。请先把自己从这些支出中移除；如果是你付的款，请更换付款人或删除该支出。任何成员都可以编辑支出。之后即可退出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님 앞으로 기록된 지출이 남아 있습니다. 해당 지출에서 자신을 빼 주십시오. 회원님이 결제하셨다면 결제자를 변경하거나 지출을 삭제해 주십시오. 지출은 모든 참여자가 편집할 수 있습니다. 그 후에 나갈 수 있습니다"
+          }
         }
       }
     },
@@ -12491,6 +14039,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按年"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연간"
           }
         }
       }
@@ -12539,6 +14093,12 @@
             "state": "translated",
             "value": "为谁花的"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누구를 위해 쓴 것인가"
+          }
         }
       }
     },
@@ -12585,6 +14145,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按月"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월간"
           }
         }
       }
@@ -12633,6 +14199,12 @@
             "state": "translated",
             "value": "仍有支出记在该成员名下。请先把他从这些支出中移除；如果是他付的款，请更换付款人或删除该支出。之后即可移除该成员"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 참여자 앞으로 기록된 지출이 남아 있습니다. 해당 지출에서 빼 주십시오. 그가 결제했다면 결제자를 변경하거나 지출을 삭제해 주십시오. 그 후에 삭제할 수 있습니다"
+          }
         }
       }
     },
@@ -12679,6 +14251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "说出这笔支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출을 말씀해 주십시오"
           }
         }
       }
@@ -12727,6 +14305,12 @@
             "state": "translated",
             "value": "说完后点按"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝나시면 눌러 주십시오"
+          }
         }
       }
     },
@@ -12773,6 +14357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "返回"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
           }
         }
       }
@@ -12821,6 +14411,12 @@
             "state": "translated",
             "value": "返回欠款列表"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚 목록으로 돌아가기"
+          }
         }
       }
     },
@@ -12867,6 +14463,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "名称"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름"
           }
         }
       }
@@ -12915,6 +14517,12 @@
             "state": "translated",
             "value": "例如：「伊斯坦布尔旅行」或「合租房」。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 「이스탄불 여행」 또는 「셰어하우스」."
+          }
         }
       }
     },
@@ -12961,6 +14569,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
           }
         }
       }
@@ -13009,6 +14623,12 @@
             "state": "translated",
             "value": "群组设置"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 설정"
+          }
         }
       }
     },
@@ -13055,6 +14675,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "开始录音…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 시작합니다…"
           }
         }
       }
@@ -13103,6 +14729,12 @@
             "state": "translated",
             "value": "先从群组开始"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹부터 시작하십시오"
+          }
         }
       }
     },
@@ -13149,6 +14781,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不超过欠款：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚을 넘지 않게: %@"
           }
         }
       }
@@ -13197,6 +14835,12 @@
             "state": "translated",
             "value": "未找到"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "찾을 수 없습니다"
+          }
         }
       }
     },
@@ -13243,6 +14887,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法连接服务器，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버에 연결하지 못했습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -13291,6 +14941,12 @@
             "state": "translated",
             "value": "我不记得当前密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 비밀번호가 기억나지 않습니다"
+          }
         }
       }
     },
@@ -13337,6 +14993,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "这看起来不像群组邀请码或链接"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 코드나 링크가 아닌 것 같습니다"
           }
         }
       }
@@ -13385,6 +15047,12 @@
             "state": "translated",
             "value": "未绑定"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결되지 않음"
+          }
         }
       }
     },
@@ -13431,6 +15099,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不太对？按住下方麦克风，或添加小票照片"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아닌가요? 아래 마이크를 누르고 계시거나 영수증 사진을 추가해 주십시오"
           }
         }
       }
@@ -13479,6 +15153,12 @@
             "state": "translated",
             "value": "不对？请重新拍摄小票，或按住下方麦克风"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아닌가요? 영수증을 다시 찍거나 아래 마이크를 누르고 계십시오"
+          }
         }
       }
     },
@@ -13525,6 +15205,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "加载失败"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "불러오지 못했습니다"
           }
         }
       }
@@ -13573,6 +15259,12 @@
             "state": "translated",
             "value": "无法加载个人资料"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필을 불러오지 못했습니다"
+          }
         }
       }
     },
@@ -13619,6 +15311,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法加载套餐。请检查网络后重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요금제를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주십시오"
           }
         }
       }
@@ -13667,6 +15365,12 @@
             "state": "translated",
             "value": "无法开始使用 Apple 登录，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 로그인을 시작하지 못했습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -13713,6 +15417,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法开始录音。请检查麦克风权限"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 시작하지 못했습니다. 마이크 권한을 확인해 주십시오"
           }
         }
       }
@@ -13761,6 +15471,12 @@
             "state": "translated",
             "value": "无法开始绑定 Apple，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 연결을 시작하지 못했습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -13807,6 +15523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法处理服务器响应"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 응답을 처리하지 못했습니다"
           }
         }
       }
@@ -13855,6 +15577,12 @@
             "state": "translated",
             "value": "无法打开 Google 登录窗口，请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google 로그인 창을 열지 못했습니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -13901,6 +15629,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法确认账号，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정을 확인하지 못했습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -13949,6 +15683,12 @@
             "state": "translated",
             "value": "无法获取你的个人资料"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필 정보를 가져오지 못했습니다"
+          }
         }
       }
     },
@@ -13995,6 +15735,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请失败：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대하지 못했습니다: %@"
           }
         }
       }
@@ -14043,6 +15789,12 @@
             "state": "translated",
             "value": "无法读取照片"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진을 읽지 못했습니다"
+          }
         }
       }
     },
@@ -14089,6 +15841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法识别"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식하지 못했습니다"
           }
         }
       }
@@ -14137,6 +15895,12 @@
             "state": "translated",
             "value": "无法识别。请重新说一遍 — 带上菜品和价格"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식하지 못했습니다. 메뉴와 가격을 함께 다시 말씀해 주십시오"
+          }
         }
       }
     },
@@ -14183,6 +15947,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法完成购买"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구입을 완료하지 못했습니다"
           }
         }
       }
@@ -14231,6 +16001,12 @@
             "state": "translated",
             "value": "无法删除账号。账号和数据均完好 — 请重试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정을 삭제하지 못했습니다. 계정과 데이터는 그대로입니다. 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -14277,6 +16053,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邮箱或密码有误"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일 또는 비밀번호가 올바르지 않습니다"
           }
         }
       }
@@ -14325,6 +16107,12 @@
             "state": "translated",
             "value": "当前密码有误"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 비밀번호가 올바르지 않습니다"
+          }
         }
       }
     },
@@ -14371,6 +16159,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本地记录无效"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로컬 기록이 올바르지 않습니다"
           }
         }
       }
@@ -14419,6 +16213,12 @@
             "state": "translated",
             "value": "数据无效"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "데이터가 올바르지 않습니다"
+          }
         }
       }
     },
@@ -14465,6 +16265,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "服务器地址无效"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 주소가 올바르지 않습니다"
           }
         }
       }
@@ -14513,6 +16319,12 @@
             "state": "translated",
             "value": "不能解绑唯一的登录方式。请先绑定另一种"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유일한 로그인 방법은 해제할 수 없습니다. 먼저 다른 방법을 연결해 주십시오"
+          }
         }
       }
     },
@@ -14559,6 +16371,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不支持的文件格式"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지원하지 않는 파일 형식입니다"
           }
         }
       }
@@ -14607,6 +16425,12 @@
             "state": "translated",
             "value": "还没有账号？注册"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정이 없으신가요? 회원가입"
+          }
         }
       }
     },
@@ -14653,6 +16477,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有欠款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚이 없습니다"
           }
         }
       }
@@ -14701,6 +16531,12 @@
             "state": "translated",
             "value": "无访问权限"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "권한이 없습니다"
+          }
         }
       }
     },
@@ -14747,6 +16583,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无麦克风权限"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이크 권한이 없습니다"
           }
         }
       }
@@ -14795,6 +16637,12 @@
             "state": "translated",
             "value": "无权访问该群组。请让成员再发一次邀请"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그룹에 접근할 권한이 없습니다. 참여자에게 새 초대를 요청해 주십시오"
+          }
         }
       }
     },
@@ -14841,6 +16689,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无网络连接。请检查网络后重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인터넷에 연결되어 있지 않습니다. 네트워크를 확인하고 다시 시도해 주십시오"
           }
         }
       }
@@ -14889,6 +16743,12 @@
             "state": "translated",
             "value": "无法连接服务器"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버에 연결할 수 없습니다"
+          }
         }
       }
     },
@@ -14935,6 +16795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "无网络连接。只能编辑尚未发送的操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결이 없습니다. 전송되지 않은 작업만 편집할 수 있습니다"
           }
         }
       }
@@ -14983,6 +16849,12 @@
             "state": "translated",
             "value": "无网络连接。结算仅支持在线进行"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결이 없습니다. 정산은 온라인에서만 가능합니다"
+          }
         }
       }
     },
@@ -15029,6 +16901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新建群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 그룹"
           }
         }
       }
@@ -15077,6 +16955,12 @@
             "state": "translated",
             "value": "新的支出、结算和邀请 — 成员的所有动作"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로운 지출, 정산, 초대 등 참여자들의 모든 활동"
+          }
         }
       }
     },
@@ -15123,6 +17007,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新密码"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 비밀번호"
           }
         }
       }
@@ -15171,6 +17061,12 @@
             "state": "translated",
             "value": "再次输入新密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 비밀번호 확인"
+          }
         }
       }
     },
@@ -15217,6 +17113,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新消息：%@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 소식: %@"
           }
         }
       }
@@ -15265,6 +17167,12 @@
             "state": "translated",
             "value": "好"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
         }
       }
     },
@@ -15311,6 +17219,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "总余额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "총 잔액"
           }
         }
       }
@@ -15359,6 +17273,12 @@
             "state": "translated",
             "value": "群组合计"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 합계"
+          }
         }
       }
     },
@@ -15405,6 +17325,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一份账单，所有人分"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두를 위한 하나의 계산서"
           }
         }
       }
@@ -15453,6 +17379,12 @@
             "state": "translated",
             "value": "好"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인"
+          }
         }
       }
     },
@@ -15499,6 +17431,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "他们会立即加入群组，并看到包括以往在内的所有支出。应用不会再询问他们。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해당 사용자는 즉시 그룹에 참여하며 과거를 포함한 모든 지출을 볼 수 있습니다. 앱이 따로 확인하지 않습니다."
           }
         }
       }
@@ -15547,6 +17485,12 @@
             "state": "translated",
             "value": "支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출"
+          }
         }
       }
     },
@@ -15593,6 +17537,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "笔"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건"
           }
         }
       }
@@ -15641,6 +17591,12 @@
             "state": "translated",
             "value": "没有与你相关的内容"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님과 관련된 내용이 없습니다"
+          }
         }
       }
     },
@@ -15687,6 +17643,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该操作将从群组中删除，余额会重新计算。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 작업은 그룹에서 삭제되고 잔액이 다시 계산됩니다."
           }
         }
       }
@@ -15735,6 +17697,12 @@
             "state": "translated",
             "value": "该操作将从群组中删除，余额会重新计算。付款记录无法编辑 — 如有错误，请删除后重新添加。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 작업은 그룹에서 삭제되고 잔액이 다시 계산됩니다. 정산은 편집할 수 없으니 잘못된 경우 삭제 후 다시 기록해 주십시오."
+          }
         }
       }
     },
@@ -15781,6 +17749,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未找到该操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작업을 찾을 수 없습니다"
           }
         }
       }
@@ -15829,6 +17803,12 @@
             "state": "translated",
             "value": "说明"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설명"
+          }
         }
       }
     },
@@ -15875,6 +17855,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "付款已完成，但暂时无法确认。请检查网络 — 权限会自动开通"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제는 완료되었으나 아직 확인하지 못했습니다. 연결을 확인해 주십시오. 이용 권한은 자동으로 활성화됩니다"
           }
         }
       }
@@ -16137,6 +18123,12 @@
             "state": "translated",
             "value": "待分配：%@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 배분: %@"
+          }
         }
       }
     },
@@ -16183,6 +18175,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "仍需确认"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인이 필요합니다"
           }
         }
       }
@@ -16231,6 +18229,12 @@
             "state": "translated",
             "value": "解绑"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 해제"
+          }
         }
       }
     },
@@ -16277,6 +18281,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解绑 %@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 연결 해제"
           }
         }
       }
@@ -16325,6 +18335,12 @@
             "state": "translated",
             "value": "要解绑这种登录方式吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 로그인 방법의 연결을 해제하시겠습니까?"
+          }
         }
       }
     },
@@ -16371,6 +18387,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "拒绝"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "거절"
           }
         }
       }
@@ -16419,6 +18441,12 @@
             "state": "translated",
             "value": "将打开 Telegram 机器人。请发送「/report」并用一条消息描述问题 — 报告会发给开发者。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram에서 봇이 열립니다. 「/report」를 보내고 문제를 한 통의 메시지로 설명해 주십시오. 개발자에게 전달됩니다."
+          }
         }
       }
     },
@@ -16465,6 +18493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열기"
           }
         }
       }
@@ -16513,6 +18547,12 @@
             "state": "translated",
             "value": "打开／分享"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열기 / 공유"
+          }
         }
       }
     },
@@ -16559,6 +18599,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开设置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 열기"
           }
         }
       }
@@ -16607,6 +18653,12 @@
             "state": "translated",
             "value": "取消"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
         }
       }
     },
@@ -16653,6 +18705,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "撤销"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행 취소"
           }
         }
       }
@@ -16701,6 +18759,12 @@
             "state": "translated",
             "value": "取消录音"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 취소"
+          }
         }
       }
     },
@@ -16747,6 +18811,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "发送链接"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 보내기"
           }
         }
       }
@@ -16795,6 +18865,12 @@
             "state": "translated",
             "value": "发送中…"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전송 중…"
+          }
         }
       }
     },
@@ -16841,6 +18917,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "松手即取消"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손을 떼면 취소"
           }
         }
       }
@@ -16889,6 +18971,12 @@
             "state": "translated",
             "value": "松手识别 · 上滑锁定"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손을 떼면 인식 · 위로 밀면 고정"
+          }
         }
       }
     },
@@ -16935,6 +19023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "松手识别 · 上滑锁定 · 左滑取消"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손을 떼면 인식 · 위로 고정 · 왼쪽으로 취소"
           }
         }
       }
@@ -16983,6 +19077,12 @@
             "state": "translated",
             "value": "离线 — 改动保存在本设备"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오프라인 — 변경 사항은 이 기기에 저장됩니다"
+          }
         }
       }
     },
@@ -17029,6 +19129,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "订阅"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구독하기"
           }
         }
       }
@@ -17077,6 +19183,12 @@
             "state": "translated",
             "value": "以 %@ 订阅"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 구독"
+          }
         }
       }
     },
@@ -17123,6 +19235,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "错误"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오류"
           }
         }
       }
@@ -17171,6 +19289,12 @@
             "state": "translated",
             "value": "服务器错误（%lld）"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 오류(%lld)"
+          }
         }
       }
     },
@@ -17217,6 +19341,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "两次密码不一致"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호가 일치하지 않습니다"
           }
         }
       }
@@ -17265,6 +19395,12 @@
             "state": "translated",
             "value": "密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호"
+          }
         }
       }
     },
@@ -17311,6 +19447,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已设置密码"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호 설정됨"
           }
         }
       }
@@ -17359,6 +19501,12 @@
             "state": "translated",
             "value": "密码已修改"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호가 변경되었습니다"
+          }
         }
       }
     },
@@ -17405,6 +19553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密码至少需要 %lld 个字符"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호는 %lld자 이상이어야 합니다"
           }
         }
       }
@@ -17453,6 +19607,12 @@
             "state": "translated",
             "value": "超出：%@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초과: %@"
+          }
         }
       }
     },
@@ -17499,6 +19659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "披萨"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "피자"
           }
         }
       }
@@ -17547,6 +19713,12 @@
             "state": "translated",
             "value": "只需支付一次"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번만 결제"
+          }
         }
       }
     },
@@ -17593,6 +19765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹별"
           }
         }
       }
@@ -17641,6 +19819,12 @@
             "state": "translated",
             "value": "按金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액별"
+          }
         }
       }
     },
@@ -17687,6 +19871,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시도"
           }
         }
       }
@@ -17735,6 +19925,12 @@
             "state": "translated",
             "value": "结算"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정산하기"
+          }
         }
       }
     },
@@ -17781,6 +19977,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "付款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제"
           }
         }
       }
@@ -17829,6 +20031,12 @@
             "state": "translated",
             "value": "还款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚 상환"
+          }
         }
       }
     },
@@ -17875,6 +20083,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "结算仅支持在线进行"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정산은 온라인에서만 가능합니다"
           }
         }
       }
@@ -17923,6 +20137,12 @@
             "state": "translated",
             "value": "已记录结算"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정산이 기록되었습니다"
+          }
         }
       }
     },
@@ -17969,6 +20189,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享链接或邀请码 — 好友可通过「加入」进群。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크나 코드를 공유해 주십시오. 친구는 「참여하기」로 들어옵니다."
           }
         }
       }
@@ -18017,6 +20243,12 @@
             "state": "translated",
             "value": "分享链接"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 공유"
+          }
         }
       }
     },
@@ -18063,6 +20295,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "订阅"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구독"
           }
         }
       }
@@ -18111,6 +20349,12 @@
             "state": "translated",
             "value": "自动续订。可随时在 Apple ID 设置中取消"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동으로 갱신됩니다. Apple ID 설정에서 언제든지 해지할 수 있습니다"
+          }
         }
       }
     },
@@ -18157,6 +20401,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "小计"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소계"
           }
         }
       }
@@ -18205,6 +20455,12 @@
             "state": "translated",
             "value": "旅行、合租、晚餐 — 谁为什么付了钱"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행, 셰어하우스, 저녁 — 누가 무엇을 결제했는가"
+          }
         }
       }
     },
@@ -18251,6 +20507,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "旅行、合租房或一顿晚餐 — 任何你和别人分摊的开销"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행, 셰어하우스, 한 번의 저녁 — 누군가와 나누는 모든 것"
           }
         }
       }
@@ -18299,6 +20561,12 @@
             "state": "translated",
             "value": "旅行、租房或一顿晚餐。一个人付款，所有人分摊。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여행, 임대한 집, 한 번의 저녁. 한 사람이 결제하고 모두가 나눕니다."
+          }
         }
       }
     },
@@ -18345,6 +20613,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可以邀请已经同群的人。新朋友请用链接或邀请码"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 같은 그룹에 있던 분을 초대할 수 있습니다. 새로운 분은 링크나 초대 코드로 초대하십시오"
           }
         }
       }
@@ -18393,6 +20667,12 @@
             "state": "translated",
             "value": "项目"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목"
+          }
         }
       }
     },
@@ -18439,6 +20719,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "小票项目"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 항목"
           }
         }
       }
@@ -18487,6 +20773,12 @@
             "state": "translated",
             "value": "项目"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목"
+          }
         }
       }
     },
@@ -18533,6 +20825,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请好友一起分摊支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구를 초대해 지출을 나누세요"
           }
         }
       }
@@ -18581,6 +20879,12 @@
             "state": "translated",
             "value": "只要还有支出记在你名下，就无法退出 — 请先把自己从中移除。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님 앞으로 지출이 기록되어 있는 동안에는 나갈 수 없습니다. 먼저 해당 지출에서 자신을 빼 주십시오."
+          }
         }
       }
     },
@@ -18627,6 +20931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂时没有可邀请的人：与你同过群的人会显示在这里。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 초대할 사람이 없습니다. 함께 그룹을 쓴 분들이 여기에 표시됩니다."
           }
         }
       }
@@ -18675,6 +20985,12 @@
             "state": "translated",
             "value": "暂无动态"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 활동이 없습니다"
+          }
         }
       }
     },
@@ -18721,6 +21037,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 그룹이 없습니다"
           }
         }
       }
@@ -18769,6 +21091,12 @@
             "state": "translated",
             "value": "暂无好友"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 친구가 없습니다"
+          }
         }
       }
     },
@@ -18815,6 +21143,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暂无支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 지출이 없습니다"
           }
         }
       }
@@ -18863,6 +21197,12 @@
             "state": "translated",
             "value": "仅显示让你无法退出群组的支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 남아 있게 하는 지출만 표시하고 있습니다"
+          }
         }
       }
     },
@@ -18909,6 +21249,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示全部"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 보기"
           }
         }
       }
@@ -18957,6 +21303,12 @@
             "state": "translated",
             "value": "显示这些支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 지출 보기"
+          }
         }
       }
     },
@@ -19003,6 +21355,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "购买"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구입"
           }
         }
       }
@@ -19051,6 +21409,12 @@
             "state": "translated",
             "value": "购买等待批准"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구입 승인 대기 중"
+          }
         }
       }
     },
@@ -19097,6 +21461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前无法购买"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 구입할 수 없습니다"
           }
         }
       }
@@ -19145,6 +21515,12 @@
             "state": "translated",
             "value": "没有可恢复的购买"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복원할 구입 내역이 없습니다"
+          }
         }
       }
     },
@@ -19191,6 +21567,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "隐私政策"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침"
           }
         }
       }
@@ -19239,6 +21621,12 @@
             "state": "translated",
             "value": "知道了"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알겠습니다"
+          }
         }
       }
     },
@@ -19285,6 +21673,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "语音修正"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 수정"
           }
         }
       }
@@ -19333,6 +21727,12 @@
             "state": "translated",
             "value": "平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "균등"
+          }
         }
       }
     },
@@ -19379,6 +21779,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均分摊"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "균등하게 나누기"
           }
         }
       }
@@ -19427,6 +21833,12 @@
             "state": "translated",
             "value": "四人平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "네 명이서 균등하게"
+          }
         }
       }
     },
@@ -19473,6 +21885,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平摊 — 每人一份。吃得多？可增加份数"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "균등 — 모두 한 몫씩. 더 드셨다면 몫을 늘려 주십시오"
           }
         }
       }
@@ -19521,6 +21939,12 @@
             "state": "translated",
             "value": "不能解绑最后一种登录方式 — 否则将无法进入账号。请先绑定另一种。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 로그인 방법은 해제할 수 없습니다. 해제하면 계정에 들어올 방법이 없어집니다. 먼저 다른 방법을 연결해 주십시오."
+          }
         }
       }
     },
@@ -19567,6 +21991,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "花在我身上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나에게 쓴 금액"
           }
         }
       }
@@ -19615,6 +22045,12 @@
             "state": "translated",
             "value": "已应用修改"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수정이 적용되었습니다"
+          }
         }
       }
     },
@@ -19661,6 +22097,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出编辑"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 편집"
           }
         }
       }
@@ -19709,6 +22151,12 @@
             "state": "translated",
             "value": "已绑定"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결됨"
+          }
         }
       }
     },
@@ -19755,6 +22203,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "绑定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결"
           }
         }
       }
@@ -19803,6 +22257,12 @@
             "state": "translated",
             "value": "邀请"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대"
+          }
         }
       }
     },
@@ -19849,6 +22309,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请加入群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 초대"
           }
         }
       }
@@ -19897,6 +22363,12 @@
             "state": "translated",
             "value": "可以邀请已经同群的人。其他人请发送链接"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 같은 그룹에 있던 분을 초대할 수 있습니다. 다른 분께는 링크를 보내 주십시오"
+          }
         }
       }
     },
@@ -19943,6 +22415,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대"
           }
         }
       }
@@ -19991,6 +22469,12 @@
             "state": "translated",
             "value": "邀请已发送 — 等待对方接受：%@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대를 보냈습니다. 수락을 기다리는 중: %@"
+          }
         }
       }
     },
@@ -20037,6 +22521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "邀请"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초대"
           }
         }
       }
@@ -20085,6 +22575,12 @@
             "state": "translated",
             "value": "手机丢失时很有用：所有设备的访问权限都会被撤销，包括本机。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "휴대폰을 분실했을 때 유용합니다. 이 기기를 포함한 모든 기기의 접근 권한이 해제됩니다."
+          }
         }
       }
     },
@@ -20131,6 +22627,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你需要重新登录 — 本机也是。原有设备将不再收到通知。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 로그인하셔야 합니다. 이 기기도 마찬가지입니다. 이전 기기에는 알림이 오지 않습니다."
           }
         }
       }
@@ -20179,6 +22681,12 @@
             "state": "translated",
             "value": "应用"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱"
+          }
         }
       }
     },
@@ -20225,6 +22733,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "接受"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수락"
           }
         }
       }
@@ -20273,6 +22787,12 @@
             "state": "translated",
             "value": "正在加入…"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여하는 중…"
+          }
         }
       }
     },
@@ -20319,6 +22839,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "加入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여하기"
           }
         }
       }
@@ -20367,6 +22893,12 @@
             "state": "translated",
             "value": "用邀请码加入"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드로 참여"
+          }
         }
       }
     },
@@ -20413,6 +22945,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在加入群组…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에 참여하는 중…"
           }
         }
       }
@@ -20461,6 +22999,12 @@
             "state": "translated",
             "value": "加入 Splitor 上的群组「%1$@」：%2$@\n群组邀请码：%3$@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitor의 그룹 「%1$@」에 참여하세요: %2$@\n그룹 코드: %3$@"
+          }
         }
       }
     },
@@ -20507,6 +23051,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请检查小票项目 — 份额对不上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 항목을 확인해 주십시오. 몫이 맞지 않습니다"
           }
         }
       }
@@ -20555,6 +23105,12 @@
             "state": "translated",
             "value": "请检查小票项目 — 合计算不出来"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 항목을 확인해 주십시오. 합계가 계산되지 않습니다"
+          }
         }
       }
     },
@@ -20601,6 +23157,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请检查网络后重试。个人资料加载完成后会显示登录方式和设置。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결을 확인하고 다시 시도해 주십시오. 프로필이 로드되면 로그인 방법과 설정을 표시합니다."
           }
         }
       }
@@ -20649,6 +23211,12 @@
             "state": "translated",
             "value": "把支出说出来，它就会出现在群组里。也可以拍小票或手动输入。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출을 소리 내어 말씀하시면 그룹에 나타납니다. 영수증을 찍거나 직접 입력하셔도 됩니다."
+          }
         }
       }
     },
@@ -20695,6 +23263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "食品"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "식료품"
           }
         }
       }
@@ -20743,6 +23317,12 @@
             "state": "translated",
             "value": "按比例"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비례해서"
+          }
         }
       }
     },
@@ -20789,6 +23369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳过"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
           }
         }
       }
@@ -20837,6 +23423,12 @@
             "state": "translated",
             "value": "个人资料"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필"
+          }
         }
       }
     },
@@ -20883,6 +23475,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "个人资料未加载"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필이 로드되지 않았습니다"
           }
         }
       }
@@ -20931,6 +23529,12 @@
             "state": "translated",
             "value": "个人资料将被永久删除；群组中的支出和欠款仍会保留。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필은 영구히 삭제되지만, 그룹의 지출과 빚은 그대로 남습니다."
+          }
         }
       }
     },
@@ -20977,6 +23581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "个人资料、名字和登录方式将被永久删除 — 账号无法恢复。\n\n群组中的支出和欠款仍会保留：成员看到的将是「已删除用户」而不是你的名字，金额和计算均不变。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필, 이름, 로그인 방법이 영구히 삭제되며 계정은 복구할 수 없습니다.\n\n그룹의 지출과 빚은 남습니다. 참여자에게는 회원님의 이름 대신 「삭제된 사용자」가 표시되며 금액과 계산은 그대로입니다."
           }
         }
       }
@@ -21025,6 +23635,12 @@
             "state": "translated",
             "value": "其他"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기타"
+          }
         }
       }
     },
@@ -21071,6 +23687,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "群组支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 지출"
           }
         }
       }
@@ -21119,6 +23741,12 @@
             "state": "translated",
             "value": "取消归档"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보관 해제"
+          }
         }
       }
     },
@@ -21165,6 +23793,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分摊给"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나눌 대상"
           }
         }
       }
@@ -21213,6 +23847,12 @@
             "state": "translated",
             "value": "请在设置中允许权限，以便用语音记录支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 지출을 기록하시려면 설정에서 권한을 허용해 주십시오"
+          }
         }
       }
     },
@@ -21259,6 +23899,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "识别不受每日次数限制"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일일 제한 없이 인식"
           }
         }
       }
@@ -21307,6 +23953,12 @@
             "state": "translated",
             "value": "识别仅支持在线进行"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식은 온라인에서만 가능합니다"
+          }
         }
       }
     },
@@ -21353,6 +24005,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "识别在服务器上完成"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식은 서버에서 이루어집니다"
           }
         }
       }
@@ -21401,6 +24059,12 @@
             "state": "translated",
             "value": "支出识别，不受每日次数限制"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일일 제한 없는 지출 인식"
+          }
         }
       }
     },
@@ -21447,6 +24111,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前无法使用识别功能"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 인식을 이용할 수 없습니다"
           }
         }
       }
@@ -21495,6 +24165,12 @@
             "state": "translated",
             "value": "每天想识别多少次都可以"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루에 필요한 만큼 인식"
+          }
         }
       }
     },
@@ -21541,6 +24217,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "识别不限每日次数"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일일 제한 없는 인식"
           }
         }
       }
@@ -21589,6 +24271,12 @@
             "state": "translated",
             "value": "今天的识别次数已用完"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 인식 횟수를 모두 사용했습니다"
+          }
         }
       }
     },
@@ -21635,6 +24323,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "今天的识别次数已用完"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 인식 횟수가 남아 있지 않습니다"
           }
         }
       }
@@ -21683,6 +24377,12 @@
             "state": "translated",
             "value": "由语音识别"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성으로 인식됨"
+          }
         }
       }
     },
@@ -21729,6 +24429,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "由小票识别"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증으로 인식됨"
           }
         }
       }
@@ -21777,6 +24483,12 @@
             "state": "translated",
             "value": "识别"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식"
+          }
         }
       }
     },
@@ -21823,6 +24535,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在识别…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인식하는 중…"
           }
         }
       }
@@ -21871,6 +24589,12 @@
             "state": "translated",
             "value": "支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출"
+          }
         }
       }
     },
@@ -21917,6 +24641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "这笔支出已被其他人修改。请重新打开后再编辑"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 사람이 이 지출을 변경했습니다. 다시 열어 편집해 주십시오"
           }
         }
       }
@@ -21965,6 +24695,12 @@
             "state": "translated",
             "value": "支出被改名或添加了照片 — 金额和你的分摊没有变化"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출 이름이 바뀌었거나 사진이 추가되었습니다. 금액과 회원님의 몫은 변하지 않았습니다"
+          }
         }
       }
     },
@@ -22011,6 +24747,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出已保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출이 저장되었습니다"
           }
         }
       }
@@ -22059,6 +24801,12 @@
             "state": "translated",
             "value": "支出已保存 — 恢复联网后会自动发送"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출이 저장되었습니다. 연결이 복구되면 전송합니다"
+          }
         }
       }
     },
@@ -22105,6 +24853,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支出会在成员之间分摊 — 目前群组里只有你，无人可分"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출은 참여자끼리 나눕니다. 지금은 회원님뿐이라 나눌 상대가 없습니다"
           }
         }
       }
@@ -22153,6 +24907,12 @@
             "state": "translated",
             "value": "已记录的支出会保留在群组中"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 기록된 지출은 그룹에 남습니다"
+          }
         }
       }
     },
@@ -22200,6 +24960,12 @@
             "state": "translated",
             "value": "注册"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원가입"
+          }
         }
       }
     },
@@ -22243,6 +25009,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Русский"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "Русский"
@@ -22294,6 +25066,12 @@
             "state": "translated",
             "value": "S"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S"
+          }
         }
       }
     },
@@ -22340,6 +25118,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你要和谁分摊？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누구와 나누십니까?"
           }
         }
       }
@@ -22388,6 +25172,12 @@
             "state": "translated",
             "value": "谁欠多少"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 얼마를 내야 하는가"
+          }
         }
       }
     },
@@ -22434,6 +25224,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最大的支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 큰 지출"
           }
         }
       }
@@ -22482,6 +25278,12 @@
             "state": "translated",
             "value": "服务费"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수수료"
+          }
         }
       }
     },
@@ -22528,6 +25330,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "服务费平均分摊。更改"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수수료는 균등하게 나뉩니다. 변경"
           }
         }
       }
@@ -22576,6 +25384,12 @@
             "state": "translated",
             "value": "服务费按比例分摊。更改"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수수료는 비례해서 나뉩니다. 변경"
+          }
         }
       }
     },
@@ -22622,6 +25436,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "重置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초기화"
           }
         }
       }
@@ -22670,6 +25490,12 @@
             "state": "translated",
             "value": "要重置密码吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호를 재설정하시겠습니까?"
+          }
         }
       }
     },
@@ -22716,6 +25542,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "浅色"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라이트"
           }
         }
       }
@@ -22764,6 +25596,12 @@
             "state": "translated",
             "value": "当前按项目分摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 항목별로 나누고 있습니다"
+          }
         }
       }
     },
@@ -22810,6 +25648,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "当前无法使用，请稍后再试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재는 이용할 수 없습니다. 나중에 다시 시도해 주십시오"
           }
         }
       }
@@ -22858,6 +25702,12 @@
             "state": "translated",
             "value": "服务器"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버"
+          }
         }
       }
     },
@@ -22904,6 +25754,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "服务器响应超时，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서버 응답이 지연되고 있습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -22952,6 +25808,12 @@
             "state": "translated",
             "value": "会话已过期，请重新登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "세션이 만료되었습니다. 다시 로그인해 주십시오"
+          }
         }
       }
     },
@@ -22998,6 +25860,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "跟随系统"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템"
           }
         }
       }
@@ -23046,6 +25914,12 @@
             "state": "translated",
             "value": "说出来即可 — 我们来记录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말씀만 하십시오. 저희가 기록합니다"
+          }
         }
       }
     },
@@ -23092,6 +25966,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "一句话就能变成分给四个人的支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한마디면 네 명이 나누는 지출이 완성됩니다"
           }
         }
       }
@@ -23140,6 +26020,12 @@
             "state": "translated",
             "value": "「%@」多少钱？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」은(는) 얼마입니까?"
+          }
         }
       }
     },
@@ -23186,6 +26072,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请求过大"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청이 너무 큽니다"
           }
         }
       }
@@ -23234,6 +26126,12 @@
             "state": "translated",
             "value": "请求过于频繁，请稍后再试"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청이 너무 많습니다. 나중에 다시 시도해 주십시오"
+          }
         }
       }
     },
@@ -23280,6 +26178,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在聆听…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣고 있습니다…"
           }
         }
       }
@@ -23328,6 +26232,12 @@
             "state": "translated",
             "value": "修改密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비밀번호 변경"
+          }
         }
       }
     },
@@ -23374,6 +26284,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要把货币改为 %@ 吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화를 %@(으)로 변경하시겠습니까?"
           }
         }
       }
@@ -23422,6 +26338,12 @@
             "state": "translated",
             "value": "改为 %@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@(으)로 변경"
+          }
         }
       }
     },
@@ -23468,6 +26390,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请先选择群组"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 그룹을 선택해 주십시오"
           }
         }
       }
@@ -23516,6 +26444,12 @@
             "state": "translated",
             "value": "请先确定各项目由谁承担"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 항목별 담당자를 선택해 주십시오"
+          }
         }
       }
     },
@@ -23562,6 +26496,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请先确定 %@ 是谁"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 %@ 님이 누구인지 선택해 주십시오"
           }
         }
       }
@@ -23610,6 +26550,12 @@
             "state": "translated",
             "value": "照片会发送到 Splitty 服务器以及负责识别的第三方模型"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
+          }
         }
       }
     },
@@ -23656,6 +26602,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "用 Splitty"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splitty가 있다면"
           }
         }
       }
@@ -23704,6 +26656,12 @@
             "state": "translated",
             "value": "包括我"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나 포함"
+          }
         }
       }
     },
@@ -23750,6 +26708,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "创建群组，或用邀请码加入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹을 만들거나 초대 코드로 참여해 주십시오"
           }
         }
       }
@@ -23798,6 +26762,12 @@
             "state": "translated",
             "value": "正在创建…"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만드는 중…"
+          }
         }
       }
     },
@@ -23844,6 +26814,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "创建"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만들기"
           }
         }
       }
@@ -23892,6 +26868,12 @@
             "state": "translated",
             "value": "创建群组"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 만들기"
+          }
         }
       }
     },
@@ -23938,6 +26920,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "创建群组或用邀请码加入"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹을 만들거나 코드로 참여"
           }
         }
       }
@@ -23986,6 +26974,12 @@
             "state": "translated",
             "value": "报告问题"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 신고"
+          }
         }
       }
     },
@@ -24032,6 +27026,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "保存"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
           }
         }
       }
@@ -24080,6 +27080,12 @@
             "state": "translated",
             "value": "登录方式"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 방법"
+          }
         }
       }
     },
@@ -24126,6 +27132,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평균 지출"
           }
         }
       }
@@ -24174,6 +27186,12 @@
             "state": "translated",
             "value": "链接或邀请码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 또는 코드"
+          }
         }
       }
     },
@@ -24220,6 +27238,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "链接是给那些还没和你分摊过支出的人用的。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크는 아직 지출을 나눈 적이 없는 분들을 위한 것입니다."
           }
         }
       }
@@ -24268,6 +27292,12 @@
             "state": "translated",
             "value": "旧密码将失效；设置新密码后仍可使用 %@ 登录。"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 비밀번호는 사용할 수 없게 됩니다. 새 비밀번호를 설정하시면 %@ 로그인은 계속 이용할 수 있습니다."
+          }
         }
       }
     },
@@ -24314,6 +27344,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该行将从小票中删除，合计会重新计算"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 줄은 영수증에서 삭제되고 합계가 다시 계산됩니다"
           }
         }
       }
@@ -24362,6 +27398,12 @@
             "state": "translated",
             "value": "金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액"
+          }
         }
       }
     },
@@ -24408,6 +27450,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金额已全部分配"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액이 모두 배분되었습니다"
           }
         }
       }
@@ -24456,6 +27504,12 @@
             "state": "translated",
             "value": "按金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액별"
+          }
         }
       }
     },
@@ -24502,6 +27556,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "金额不会换算 — 只是符号变化，对群组所有成员都一样"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액은 환산되지 않습니다. 표기만 그룹 전원에게 바뀝니다"
           }
         }
       }
@@ -24550,6 +27610,12 @@
             "state": "translated",
             "value": "成员金额之和必须等于支出总额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자 금액의 합은 지출 총액과 일치해야 합니다"
+          }
         }
       }
     },
@@ -24596,6 +27662,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "拍摄小票"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 촬영"
           }
         }
       }
@@ -24644,6 +27716,12 @@
             "state": "translated",
             "value": "正在读取支出并拆分为项目"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지출을 읽고 항목별로 나누는 중"
+          }
         }
       }
     },
@@ -24690,6 +27768,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "出租车"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "택시"
           }
         }
       }
@@ -24738,6 +27822,12 @@
             "state": "translated",
             "value": "当前密码"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 비밀번호"
+          }
         }
       }
     },
@@ -24784,6 +27874,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "主题"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "테마"
           }
         }
       }
@@ -24832,6 +27928,12 @@
             "state": "translated",
             "value": "每日支出"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일별 지출"
+          }
         }
       }
     },
@@ -24878,6 +27980,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按星期支出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요일별 지출"
           }
         }
       }
@@ -24926,6 +28034,12 @@
             "state": "translated",
             "value": "需要登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인이 필요합니다"
+          }
         }
       }
     },
@@ -24972,6 +28086,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "深色"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다크"
           }
         }
       }
@@ -25020,6 +28140,12 @@
             "state": "translated",
             "value": "你在这个群组没有欠款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그룹에서 회원님의 빚은 없습니다"
+          }
         }
       }
     },
@@ -25066,6 +28192,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你还没有群组 — 请在「群组」标签中创建"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 그룹이 없습니다. 「그룹」 탭에서 만들어 주십시오"
           }
         }
       }
@@ -25114,6 +28246,12 @@
             "state": "translated",
             "value": "移除"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
         }
       }
     },
@@ -25160,6 +28298,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要把 %@ 移出群组吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 님을 그룹에서 삭제하시겠습니까?"
           }
         }
       }
@@ -25208,6 +28352,12 @@
             "state": "translated",
             "value": "移出群组"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹에서 삭제"
+          }
         }
       }
     },
@@ -25254,6 +28404,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除照片"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 삭제"
           }
         }
       }
@@ -25302,6 +28458,12 @@
             "state": "translated",
             "value": "通知"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림"
+          }
         }
       }
     },
@@ -25348,6 +28510,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在删除…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제하는 중…"
           }
         }
       }
@@ -25396,6 +28564,12 @@
             "state": "translated",
             "value": "删除"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
         }
       }
     },
@@ -25442,6 +28616,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除账号"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정 삭제"
           }
         }
       }
@@ -25490,6 +28670,12 @@
             "state": "translated",
             "value": "要删除账号吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정을 삭제하시겠습니까?"
+          }
         }
       }
     },
@@ -25536,6 +28722,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要删除这笔未发送的支出吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전송되지 않은 지출을 삭제하시겠습니까?"
           }
         }
       }
@@ -25584,6 +28776,12 @@
             "state": "translated",
             "value": "要删除这笔付款吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제를 삭제하시겠습니까?"
+          }
         }
       }
     },
@@ -25630,6 +28828,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除项目"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목 삭제"
           }
         }
       }
@@ -25678,6 +28882,12 @@
             "state": "translated",
             "value": "要删除该项目吗？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 항목을 삭제하시겠습니까?"
+          }
         }
       }
     },
@@ -25724,6 +28934,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要删除这笔支出吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 지출을 삭제하시겠습니까?"
           }
         }
       }
@@ -25772,6 +28988,12 @@
             "state": "translated",
             "value": "删除服务费"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수수료 삭제"
+          }
         }
       }
     },
@@ -25818,6 +29040,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "要删除该服务费吗？"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 수수료를 삭제하시겠습니까?"
           }
         }
       }
@@ -25866,6 +29094,12 @@
             "state": "translated",
             "value": "按住说话；上滑锁定"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누른 채 말씀하십시오. 위로 밀면 고정됩니다"
+          }
         }
       }
     },
@@ -25912,6 +29146,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按住并说出要修改的内容"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누른 채 변경할 내용을 말씀해 주십시오"
           }
         }
       }
@@ -25960,6 +29200,12 @@
             "state": "translated",
             "value": "说话时按住麦克风，说完后松开"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말씀하시는 동안 마이크를 누르고 계시다가 끝나면 손을 떼십시오"
+          }
         }
       }
     },
@@ -26006,6 +29252,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按住说话"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누르고 계시면 말할 수 있습니다"
           }
         }
       }
@@ -26054,6 +29306,12 @@
             "state": "translated",
             "value": "已有账号？登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 계정이 있으신가요? 로그인"
+          }
         }
       }
     },
@@ -26100,6 +29358,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "晚餐"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저녁"
           }
         }
       }
@@ -26148,6 +29412,12 @@
             "state": "translated",
             "value": "请填写该项目的价格"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목의 가격을 입력해 주십시오"
+          }
         }
       }
     },
@@ -26194,6 +29464,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "请填写价格 — 点按标有「价格？」的项目。也可以直接说：「披萨 60 元」"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가격을 입력해 주십시오. 「가격?」이라고 표시된 항목을 누르십시오. 또는 「피자는 6,000원」처럼 말씀해 주십시오"
           }
         }
       }
@@ -26242,6 +29518,12 @@
             "state": "translated",
             "value": "请填写各项目的价格 — 否则无法计算份额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목의 가격을 입력해 주십시오. 가격이 없으면 몫을 계산할 수 없습니다"
+          }
         }
       }
     },
@@ -26288,6 +29570,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "管理订阅"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구독 관리"
           }
         }
       }
@@ -26336,6 +29624,12 @@
             "state": "translated",
             "value": "条款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이용약관"
+          }
         }
       }
     },
@@ -26382,6 +29676,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "成员"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자"
           }
         }
       }
@@ -26430,6 +29730,12 @@
             "state": "translated",
             "value": "成员"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자"
+          }
         }
       }
     },
@@ -26476,6 +29782,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "成员：%lld 人"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자: %lld명"
           }
         }
       }
@@ -26524,6 +29836,12 @@
             "state": "translated",
             "value": "照片"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진"
+          }
         }
       }
     },
@@ -26570,6 +29888,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "小票照片"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 사진"
           }
         }
       }
@@ -26618,6 +29942,12 @@
             "state": "translated",
             "value": "价格"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가격"
+          }
         }
       }
     },
@@ -26664,6 +29994,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已拍摄小票"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증을 촬영했습니다"
           }
         }
       }
@@ -26712,6 +30048,12 @@
             "state": "translated",
             "value": "草稿已更新"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "초안이 업데이트되었습니다"
+          }
         }
       }
     },
@@ -26758,6 +30100,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "我们这边出了点问题，请重试"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저희 쪽에서 문제가 발생했습니다. 다시 시도해 주십시오"
           }
         }
       }
@@ -26806,6 +30154,12 @@
             "state": "translated",
             "value": "该订阅属于另一个 Splitor 账号"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구독은 다른 Splitor 계정의 것입니다"
+          }
         }
       }
     },
@@ -26852,6 +30206,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该邮箱已注册。请直接登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 가입된 이메일입니다. 회원가입 대신 로그인해 주십시오"
           }
         }
       }
@@ -26900,6 +30260,12 @@
             "state": "translated",
             "value": "该账号无法删除"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 계정은 삭제할 수 없습니다"
+          }
         }
       }
     },
@@ -26946,6 +30312,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "该账号已关联到另一个 Splitor 账号。请用那个账号登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 계정은 이미 다른 Splitor 프로필에 연결되어 있습니다. 해당 계정으로 로그인해 주십시오"
           }
         }
       }
@@ -26994,6 +30366,12 @@
             "state": "translated",
             "value": "该账号已关联到另一个 Splitty 账号。请用那个账号登录"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 계정은 이미 다른 Splitty 프로필에 연결되어 있습니다. 해당 계정으로 로그인해 주십시오"
+          }
         }
       }
     },
@@ -27037,6 +30415,12 @@
           }
         },
         "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y"
+          }
+        },
+        "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "Y"
@@ -27088,6 +30472,12 @@
             "state": "translated",
             "value": "语言"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어"
+          }
         }
       }
     },
@@ -27134,6 +30524,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Telegram 机器人消息的语言"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Telegram 봇 메시지의 언어"
           }
         }
       }
@@ -27182,6 +30578,12 @@
             "state": "translated",
             "value": "自动"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동"
+          }
         }
       }
     },
@@ -27229,6 +30631,12 @@
             "state": "translated",
             "value": "自动 · %@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 · %@"
+          }
         }
       }
     },
@@ -27275,6 +30683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "不含你"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님 제외"
           }
         }
       }
@@ -27430,6 +30844,12 @@
             "state": "translated",
             "value": "已结清"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정산 완료"
+          }
         }
       }
     },
@@ -27476,6 +30896,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "欠你"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받을 금액"
           }
         }
       }
@@ -27524,6 +30950,12 @@
             "state": "translated",
             "value": "你的分摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 몫"
+          }
         }
       }
     },
@@ -27570,6 +31002,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的分摊：¥20.00 + ¥10.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 몫: ₩2,000 + ₩1,000"
           }
         }
       }
@@ -27618,6 +31056,12 @@
             "state": "translated",
             "value": "相互欠款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상호 빚"
+          }
         }
       }
     },
@@ -27664,6 +31108,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "用邮箱登录"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일로 로그인"
           }
         }
       }
@@ -27712,6 +31162,12 @@
             "state": "translated",
             "value": "周日"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
+          }
         }
       }
     },
@@ -27758,6 +31214,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "合计"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계"
           }
         }
       }
@@ -27806,6 +31268,12 @@
             "state": "translated",
             "value": "周二"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화"
+          }
         }
       }
     },
@@ -27852,6 +31320,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님"
           }
         }
       }
@@ -27900,6 +31374,12 @@
             "state": "translated",
             "value": "你欠"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님의 빚"
+          }
         }
       }
     },
@@ -27946,6 +31426,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你垫付"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님이 대신 냈습니다"
           }
         }
       }
@@ -27994,6 +31480,12 @@
             "state": "translated",
             "value": "年"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "년"
+          }
         }
       }
     },
@@ -28040,6 +31532,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "三人平分"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "세 명이서 나누기"
           }
         }
       }
@@ -28088,6 +31586,12 @@
             "state": "translated",
             "value": "平均分摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "균등하게 나눔"
+          }
         }
       }
     },
@@ -28134,6 +31638,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按各自消费比例分摊"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각자 먹은 만큼 비례해서 나눔"
           }
         }
       }
@@ -28182,6 +31692,12 @@
             "state": "translated",
             "value": "不计算欠款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚이 계산되지 않습니다"
+          }
         }
       }
     },
@@ -28228,6 +31744,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "欠"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빚짐"
           }
         }
       }
@@ -28276,6 +31798,12 @@
             "state": "translated",
             "value": "欠你"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원님께 빚짐"
+          }
         }
       }
     },
@@ -28322,6 +31850,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分摊"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "몫"
           }
         }
       }
@@ -28370,6 +31904,12 @@
             "state": "translated",
             "value": "打车费"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "택시비"
+          }
         }
       }
     },
@@ -28416,6 +31956,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "晚餐费"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저녁 식사비"
           }
         }
       }
@@ -28464,6 +32010,12 @@
             "state": "translated",
             "value": "为所有人付款"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두의 몫을 결제"
+          }
         }
       }
     },
@@ -28510,6 +32062,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "为所有人付款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두의 몫을 결제"
           }
         }
       }
@@ -28558,6 +32116,12 @@
             "state": "translated",
             "value": "并已分摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그리고 나눔"
+          }
         }
       }
     },
@@ -28604,6 +32168,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "或"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "또는"
           }
         }
       }
@@ -28652,6 +32222,12 @@
             "state": "translated",
             "value": "请选择是谁"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누구인지 선택해 주십시오"
+          }
         }
       }
     },
@@ -28698,6 +32274,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "月"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월"
           }
         }
       }
@@ -28746,6 +32328,12 @@
             "state": "translated",
             "value": "部分价格未填写"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일부 가격이 입력되지 않았습니다"
+          }
         }
       }
     },
@@ -28792,6 +32380,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未发送"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전송되지 않음"
           }
         }
       }
@@ -28840,6 +32434,12 @@
             "state": "translated",
             "value": "未发送 · %@"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전송되지 않음 · %@"
+          }
         }
       }
     },
@@ -28886,6 +32486,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未付款"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제하지 않음"
           }
         }
       }
@@ -28934,6 +32540,12 @@
             "state": "translated",
             "value": "披萨 80 元、可乐 20 元，和萨尼亚平分"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "피자 8,000원, 콜라 2,000원을 사냐 님과 반씩"
+          }
         }
       }
     },
@@ -28980,6 +32592,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "周一"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "월"
           }
         }
       }
@@ -29028,6 +32646,12 @@
             "state": "translated",
             "value": "每份 %1$@ × %2$lld"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 %1$@ × %2$lld"
+          }
         }
       }
     },
@@ -29074,6 +32698,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "每份 ¥10.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 ₩1,000"
           }
         }
       }
@@ -29122,6 +32752,12 @@
             "state": "translated",
             "value": "每份 ¥10.00 × 2"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 ₩1,000 × 2"
+          }
         }
       }
     },
@@ -29168,6 +32804,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "每份 ¥20.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 ₩2,000"
           }
         }
       }
@@ -29216,6 +32858,12 @@
             "state": "translated",
             "value": "每份 ¥40.00 × 2"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 ₩4,000 × 2"
+          }
         }
       }
     },
@@ -29262,6 +32910,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "每份 ¥80.00"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 ₩8,000"
           }
         }
       }
@@ -29310,6 +32964,12 @@
             "state": "translated",
             "value": "按小票项目"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증 항목별"
+          }
         }
       }
     },
@@ -29356,6 +33016,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "按金额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액별"
           }
         }
       }
@@ -29404,6 +33070,12 @@
             "state": "translated",
             "value": "项目"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목"
+          }
         }
       }
     },
@@ -29450,6 +33122,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "项目"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목"
           }
         }
       }
@@ -29498,6 +33176,12 @@
             "state": "translated",
             "value": "已收到"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받았습니다"
+          }
         }
       }
     },
@@ -29544,6 +33228,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已收到"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받았습니다"
           }
         }
       }
@@ -29592,6 +33282,12 @@
             "state": "translated",
             "value": "平摊"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "균등"
+          }
         }
       }
     },
@@ -29638,6 +33334,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "周五"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금"
           }
         }
       }
@@ -29686,6 +33388,12 @@
             "state": "translated",
             "value": "周六"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "토"
+          }
         }
       }
     },
@@ -29732,6 +33440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "说出谁点了什么 — 更准确"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누가 무엇을 먹었는지 말씀하시면 더 정확합니다"
           }
         }
       }
@@ -29780,6 +33494,12 @@
             "state": "translated",
             "value": "周三"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수"
+          }
         }
       }
     },
@@ -29826,6 +33546,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "苏姆"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "숨"
           }
         }
       }
@@ -29874,6 +33600,12 @@
             "state": "translated",
             "value": "准确金额"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정확한 금액"
+          }
         }
       }
     },
@@ -29920,6 +33652,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "填写价格"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가격 입력"
           }
         }
       }
@@ -29968,6 +33706,12 @@
             "state": "translated",
             "value": "成员"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참여자"
+          }
         }
       }
     },
@@ -30014,6 +33758,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전액"
           }
         }
       }
@@ -30062,6 +33812,12 @@
             "state": "translated",
             "value": "价格？"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가격?"
+          }
         }
       }
     },
@@ -30109,6 +33865,12 @@
             "state": "translated",
             "value": "用小票上的价格更准确"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영수증의 가격이 더 정확합니다"
+          }
         }
       }
     },
@@ -30155,6 +33917,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "周四"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목"
           }
         }
       }
