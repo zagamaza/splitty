@@ -239,6 +239,10 @@ class SplittyRepository @Inject constructor(
         draft: ParseDraft? = null,
     ): ParseResponse = call {
         val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+        // Язык интерфейса: поле questions в ответе читает человек, и без него
+        // модель задавала уточняющие вопросы по-русски на любом языке.
+        // Канонизацию делает сервер: Android отдаёт zh-CN, iOS — zh-Hans.
+        builder.addFormDataPart("lang", parseLangTag())
         draft?.let {
             // Поле формы (не файл): сервер читает его через r.FormValue("draft").
             builder.addFormDataPart("draft", json.encodeToString(ParseDraft.serializer(), it))
@@ -422,3 +426,17 @@ class SplittyRepository @Inject constructor(
         throw ApiException(null, ApiException.CODE_TRANSPORT, "transport failure", cause = e)
     }
 }
+
+/**
+ * Язык интерфейса для поля `lang` запроса разбора.
+ *
+ * Берётся язык ПРИЛОЖЕНИЯ, а не системы: если системный язык мы не переводили,
+ * интерфейс говорит на английском, и вопросы модели должны совпадать с ним.
+ * Регион добавляем только там, где он различает язык (pt-BR, zh-CN).
+ */
+internal fun parseLangTag(locale: java.util.Locale = java.util.Locale.getDefault()): String =
+    when (locale.language) {
+        "pt" -> "pt-BR"
+        "zh" -> "zh-CN"
+        else -> locale.language
+    }

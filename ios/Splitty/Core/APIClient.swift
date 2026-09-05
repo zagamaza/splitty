@@ -797,6 +797,11 @@ final class APIClient: OperationAPI {
         var fields: [(name: String, value: String)] = []
         var parts: [MultipartFile] = []
 
+        // Язык интерфейса: поле questions в ответе читает человек, и без него
+        // модель задавала уточняющие вопросы по-русски на любом языке.
+        // Отдаём язык СБОРКИ, а не системы: интерфейс говорит именно на нём.
+        fields.append((name: "lang", value: Bundle.main.preferredLocalizations.first ?? "en"))
+
         if let draft {
             let draftData = try encoder.encode(draft)
             fields.append((name: "draft", value: String(decoding: draftData, as: UTF8.self)))

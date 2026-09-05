@@ -148,6 +148,10 @@ func parseMultipartInput(r *http.Request) (ai.ParseInput, *httpError) {
 	var in ai.ParseInput
 
 	// текущий черновик (для правки)
+	// Язык интерфейса клиента. Неизвестное значение не ошибка: пустой Lang
+	// означает прежнее поведение, а не отказ разбирать расход.
+	in.Lang = parseLang(r.FormValue("lang"))
+
 	if raw := r.FormValue("draft"); raw != "" {
 		if len(raw) > maxDraftBytes {
 			return ai.ParseInput{}, &httpError{http.StatusRequestEntityTooLarge, "too_large", "черновик слишком большой"}
@@ -251,4 +255,23 @@ func (s *Server) buildParticipants(ctx context.Context, room *api.Room) []ai.Par
 		})
 	}
 	return out
+}
+
+// parseLang канонизирует язык клиента к написанию App Store. Android присылает
+// zh-CN и pt-BR в своём формате, iOS — zh-Hans; в промпт должно уходить одно и
+// то же, иначе модель получает то zh-CN, то zh-Hans на один и тот же язык.
+func parseLang(raw string) string {
+	lang := strings.ToLower(strings.TrimSpace(raw))
+	switch lang {
+	case "zh", "zh-cn", "zh-hans", "zh-hans-cn":
+		return "zh-Hans"
+	case "pt-br", "pt_br":
+		return "pt-BR"
+	case "ru", "en", "de", "fr", "es", "ja", "ko", "it":
+		return lang
+	default:
+		// Незнакомый язык не передаём: выдуманный код собьёт модель сильнее,
+		// чем его отсутствие.
+		return ""
+	}
 }
