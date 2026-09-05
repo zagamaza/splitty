@@ -387,6 +387,14 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		return nil, nil, nil, errors.Wrap(err, "cannot backfill notifications_seen_at")
 	}
 
+	// Дубли push-токенов, накопленные прежней неатомарной регистрацией: одно
+	// устройство получало столько пушей, сколько его токен лежал копий.
+	// См. repository.DedupePushTokens
+	if _, err := repository.DedupePushTokens(ctx, db); err != nil {
+		cleanup()
+		return nil, nil, nil, errors.Wrap(err, "cannot dedupe push tokens")
+	}
+
 	// Подписки Splitor Plus. Коллекция и резолв тарифа заводятся ВСЕГДА, даже
 	// когда ключи сторов пусты: без них никто не станет платным, но тариф всё
 	// равно надо у кого-то спрашивать — иначе бесплатный лимит негде взять.

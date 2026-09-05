@@ -103,3 +103,56 @@ func TestAddPushTokenKeepsOtherDevices(t *testing.T) {
 		t.Fatalf("токенов %d, ожидалось два: %+v", len(got), got)
 	}
 }
+
+// Дубли, накопленные прежней неатомарной регистрацией, чинит миграция:
+// сам по себе AddPushToken их не тронет — он правит совпавшие записи на месте,
+// а их семь. Устройство получало по пушу на каждую копию.
+func TestDedupePushTokensCollapsesExistingDuplicates(t *testing.T) {
+	db := testDB(t)
+	ctx := testCtx(t)
+	seedUsers(t, db,
+		api.User{ID: 710, Username: "dup", DisplayName: "Dup", PushTokens: []api.PushToken{
+			{Token: "phone", Platform: "ios", Locale: "ru"},
+			{Token: "tablet", Platform: "ios", Locale: "en"},
+			{Token: "phone", Platform: "ios", Locale: "ru"},
+			{Token: "phone", Platform: "ios", Locale: "ja"}, // последняя — самая свежая
+		}},
+		api.User{ID: 711, Username: "clean", DisplayName: "Clean", PushTokens: []api.PushToken{
+			{Token: "one", Platform: "android", Locale: "de"},
+			{Token: "two", Platform: "android", Locale: "de"},
+		}},
+	)
+
+	if _, err := DedupePushTokens(ctx, db); err != nil {
+		t.Fatalf("миграция: %v", err)
+	}
+
+	got := pushTokens(t, db, 710)
+	if len(got) != 2 {
+		t.Fatalf("токенов %d, ожидалось два: %+v", len(got), got)
+	}
+	byToken := map[string]api.PushToken{}
+	for _, tok := range got {
+		byToken[tok.Token] = tok
+	}
+	if byToken["phone"].Locale != "ja" {
+		t.Errorf("у phone язык %q, ожидался ja: оставаться должна ПОСЛЕДНЯЯ копия", byToken["phone"].Locale)
+	}
+	if _, ok := byToken["tablet"]; !ok {
+		t.Error("второе устройство потеряно")
+	}
+
+	// Документ без дублей миграция не трогает.
+	if clean := pushTokens(t, db, 711); len(clean) != 2 {
+		t.Errorf("у чистого пользователя стало %d токенов: %+v", len(clean), clean)
+	}
+
+	// Маркер записан: второй запуск к коллекции user не идёт.
+	modified, err := DedupePushTokens(ctx, db)
+	if err != nil {
+		t.Fatalf("повторный запуск: %v", err)
+	}
+	if modified != 0 {
+		t.Errorf("повторный запуск тронул %d документов — маркер не сработал", modified)
+	}
+}

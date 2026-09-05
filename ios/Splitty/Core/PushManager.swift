@@ -116,7 +116,6 @@ final class PushManager: NSObject, PushTokenBinding {
         }
         isRegistering = true
         Task {
-            defer { isRegistering = false }
             do {
                 try await session.api.registerDevice(token: token, locale: locale)
                 lastRegisteredToken = token
@@ -124,6 +123,15 @@ final class PushManager: NSObject, PushTokenBinding {
             } catch {
                 // Молча: токен зарегистрируется при следующем триггере
                 // (повторный логин, ротация токена, перезапуск приложения).
+            }
+            isRegistering = false
+            // Пока запрос шёл, FCM мог принести новый токен, а человек —
+            // сменить язык. Тот триггер мы проглотили (запрос был в полёте), и
+            // без этой проверки новая пара залипала бы до следующего внешнего
+            // события. Повтор происходит только когда пара ДЕЙСТВИТЕЛЬНО
+            // изменилась, поэтому сетевая ошибка в цикл не уводит.
+            if fcmToken != token || currentLocale != locale {
+                registerIfPossible()
             }
         }
     }

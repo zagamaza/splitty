@@ -20,6 +20,9 @@ const backfillTelegramIDMarker = "backfill_telegram_id"
 // backfillSeenAtMarker — _id маркера бэкфилла notifications_seen_at
 const backfillSeenAtMarker = "backfill_notifications_seen_at"
 
+// dedupePushTokensMarker — _id маркера схлопывания дублей push-токенов
+const dedupePushTokensMarker = "dedupe_push_tokens"
+
 // BackfillTelegramID проставляет исторические telegram_id = _id: до этого плана
 // _id пользователя И БЫЛ его telegram id, а теперь это отдельные вещи.
 //
@@ -167,5 +170,74 @@ func BackfillNotificationsSeenAt(ctx context.Context, db *mongo.Database) (int64
 	}
 
 	log.Info().Int64("modified", ur.ModifiedCount).Msg("backfill notifications_seen_at done")
+	return ur.ModifiedCount, nil
+}
+
+// DedupePushTokens схлопывает повторы push-токенов внутри одного пользователя.
+//
+// Прежняя регистрация делала «$pull, потом $push» двумя операциями. Два
+// одновременных запроса с одним токеном (вход и колбэк FCM дёргают регистрацию
+// разом) успевали выполнить pull-pull-push-push, и токен оставался в массиве
+// дважды, а на восьми параллельных — семь раз. Воркер шлёт по сообщению на
+// запись, поэтому одно физическое устройство получало пуш столько раз, сколько
+// накопилось копий. Саму гонку закрыл AddPushToken; накопленное чинится здесь.
+//
+// Остаётся ПОСЛЕДНЯЯ копия: язык и платформа у неё свежее прочих.
+//
+// Фильтр узкий (push_tokens.1 существует, то есть токенов минимум два) — при
+// потере маркера повтор безвреден: pipeline идемпотентен, у документа без
+// дублей он оставляет массив как есть.
+func DedupePushTokens(ctx context.Context, db *mongo.Database) (int64, error) {
+	migrations := db.Collection(migrationCollection)
+
+	res := migrations.FindOne(ctx, bson.D{{Key: "_id", Value: dedupePushTokensMarker}})
+	switch {
+	case res.Err() == nil:
+		return 0, nil
+	case errors.Is(res.Err(), mongo.ErrNoDocuments):
+	default:
+		return 0, errors.Wrap(res.Err(), "cannot read migration marker")
+	}
+
+	// $reduce по перевёрнутому массиву оставляет первую встреченную копию, то
+	// есть последнюю в исходном порядке; второй $reverseArray возвращает
+	// порядок регистрации.
+	keepLast := bson.D{{Key: "$reverseArray", Value: bson.D{{Key: "$reduce", Value: bson.D{
+		{Key: "input", Value: bson.D{{Key: "$reverseArray", Value: "$push_tokens"}}},
+		{Key: "initialValue", Value: bson.A{}},
+		{Key: "in", Value: bson.D{{Key: "$cond", Value: bson.A{
+			bson.D{{Key: "$in", Value: bson.A{
+				"$$this.token",
+				bson.D{{Key: "$map", Value: bson.D{
+					{Key: "input", Value: "$$value"},
+					{Key: "as", Value: "v"},
+					{Key: "in", Value: "$$v.token"},
+				}}},
+			}}},
+			"$$value",
+			bson.D{{Key: "$concatArrays", Value: bson.A{"$$value", bson.A{"$$this"}}}},
+		}}}},
+	}}}}}
+
+	filter := bson.D{{Key: "push_tokens.1", Value: bson.D{{Key: "$exists", Value: true}}}}
+	update := mongo.Pipeline{bson.D{{Key: "$set", Value: bson.D{{Key: "push_tokens", Value: keepLast}}}}}
+
+	ur, err := db.Collection("user").UpdateMany(ctx, filter, update)
+	if err != nil {
+		return 0, errors.Wrap(err, "dedupe push tokens failed")
+	}
+
+	marker := bson.D{
+		{Key: "_id", Value: dedupePushTokensMarker},
+		{Key: "applied_at", Value: time.Now().UTC()},
+		{Key: "modified", Value: ur.ModifiedCount},
+	}
+	if _, err = migrations.InsertOne(ctx, marker); err != nil {
+		if !IsDuplicateKey(err) {
+			return ur.ModifiedCount, errors.Wrap(err, "cannot write migration marker")
+		}
+	}
+
+	log.Info().Int64("modified", ur.ModifiedCount).Msg("dedupe push tokens done")
 	return ur.ModifiedCount, nil
 }
