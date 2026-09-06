@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -263,3 +264,93 @@ func TestCreateOperationKeepsHandlerShares(t *testing.T) {
 }
 
 func ptrInt64(v int64) *int64 { return &v }
+
+// ⚠️ Главный инвариант на ПРОДОВОЙ форме документа: минорных долей в базе нет
+// вовсе, они выводятся при каждом чтении. Значит переключение тумблера не имеет
+// права их сдвинуть.
+func TestTogglingFractionKeepsSharesOnRawLegacyDocument(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	donor := api.User{ID: 1, DisplayName: "Первый"}
+	other := api.User{ID: 2, DisplayName: "Второй"}
+	third := api.User{ID: 3, DisplayName: "Третий"}
+	// Форма бота: доли лежат как float64(total)/n, минорных полей нет.
+	share := float64(100) / 3
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		Donor: &donor, Status: api.StatusActive, CreateAt: time.Now().UTC(),
+		SplitType: api.SplitTypeEqually,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: donor, Sum: share}, {User: other, Sum: share}, {User: third, Sum: share},
+		},
+	}
+	room := fractionalTestRoom(t, true)
+	room.Members = &[]api.User{donor, other, third}
+	room.Operations = &[]api.Operation{op}
+	id, err := repo.SaveRoom(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	read := func() []int64 {
+		t.Helper()
+		out := []int64{}
+		for _, r := range (*readRoom(t, repo, id.Hex()).Operations)[0].RecipientsWithSum {
+			if r.SumMinor == nil {
+				t.Fatal("у доли нет минорного значения")
+			}
+			out = append(out, *r.SumMinor)
+		}
+		return out
+	}
+
+	before := read()
+	for _, on := range []bool{false, true, false} {
+		if _, err := repo.SetRoomFractional(testCtx(t), id.Hex(), on); err != nil {
+			t.Fatalf("SetRoomFractional(%v): %v", on, err)
+		}
+		if got := read(); !equalInt64(got, before) {
+			t.Fatalf("копейки=%v: доли стали %v, были %v — долги поехали от тумблера",
+				on, got, before)
+		}
+	}
+}
+
+func equalInt64(a, b []int64) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Старая туса без поля currency — исторический рубль, у которого копейки есть.
+// Фильтр обязан её находить, иначе включение отвечает ложным отказом.
+func TestSetRoomFractionalWorksForRoomWithoutCurrencyField(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	// Пишем документ СЫРЫМ bson, без поля currency вовсе — так лежат старые тусы.
+	res, err := db.Collection("room").InsertOne(testCtx(t), bson.M{
+		"name":       "Старая туса",
+		"users":      []api.User{{ID: 1, DisplayName: "Первый"}},
+		"operations": []api.Operation{},
+		"create_at":  time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("InsertOne: %v", err)
+	}
+	id := res.InsertedID.(primitive.ObjectID).Hex()
+
+	if _, err := repo.SetRoomFractional(testCtx(t), id, true); err != nil {
+		t.Fatalf("SetRoomFractional: %v — старая туса без валюты не нашлась фильтром", err)
+	}
+	if !api.RoomFractional(readRoom(t, repo, id)) {
+		t.Error("признак не включился")
+	}
+}

@@ -393,14 +393,11 @@ func sanitizeUsers(users *[]api.User) *[]api.User {
 // четыре записи операции, и один забытый вызов положил бы в базу документ без
 // копеек — то есть тихо неполные деньги.
 //
-// fractional — считает ли туса копейки. Он нужен только для ТОЧНОСТИ ДЕЛЕНИЯ
-// расхода поровну; на хранение не влияет никак, деньги всегда лежат в копейках.
-// ⚠️ Поэтому устаревшее значение здесь безобидно: если человек переключил
-// признак между чтением и записью, доля одного расхода округлится с другим
-// шагом, но сумма долей всё равно сойдётся с итогом. Ни CAS, ни сторожа тут не
-// нужны — в отличие от прежней схемы, где то же расхождение меняло смысл суммы
-// в сто раз.
-func sanitizeOperation(o *api.Operation, fractional bool) *api.Operation {
+// ⚠️ Настройка тусы сюда НЕ передаётся намеренно. Доли, посчитанные
+// обработчиком, приезжают уже записанными и сохраняются как есть; а там, где их
+// нет (пишет бот), они выводятся целым шагом — одинаково при любом положении
+// тумблера. Иначе доли существующих расходов ездили бы от настройки.
+func sanitizeOperation(o *api.Operation) *api.Operation {
 	if o == nil {
 		return nil
 	}
@@ -433,21 +430,8 @@ func sanitizeOperation(o *api.Operation, fractional bool) *api.Operation {
 		}
 		c.Items = items
 	}
-	api.ReconcileMoney(&c, fractional)
+	api.ReconcileMoney(&c)
 	return &c
-}
-
-// roomFractional — считает ли туса копейки, одним лёгким запросом (проекция на
-// два поля). Спрашивает сам репозиторий: так запись операции не может обойтись
-// без признака, даже если вызывающий про него не думал.
-func (rr MongoRoomRepository) roomFractional(ctx context.Context, id primitive.ObjectID) (bool, error) {
-	var room api.Room
-	err := rr.col.FindOne(ctx, bson.M{"_id": id},
-		options.FindOne().SetProjection(bson.M{"currency": 1, "fractional_amounts": 1})).Decode(&room)
-	if err != nil {
-		return false, err
-	}
-	return api.RoomFractional(&room), nil
 }
 
 // ErrFractionNotSupported — у валюты тусы нет дробной части, включать копейки
@@ -473,9 +457,16 @@ func (rr MongoRoomRepository) SetRoomFractional(ctx context.Context, roomId stri
 		// сменить на иену — тогда безусловная запись оставила бы валюту без
 		// дробной части с включёнными копейками, и ввод копеек в ней заработал бы.
 		//
-		// Пустая валюта в базе означает исторический рубль, поэтому она тоже
-		// перечислена.
-		codes := append(api.FractionCurrencyCodes(), "")
+		// ⚠️ У большинства старых тус поля currency НЕТ вовсе (или оно null) —
+		// это исторический рубль, у которого копейки есть. `$in` со списком
+		// кодов такие документы не находит: отсутствующее поле совпадает только
+		// со списком, где есть null. Без этой ветки включение копеек в старой
+		// тусе отвечало бы ложным «у валюты нет дробной части».
+		codes := make([]interface{}, 0, len(api.FractionCurrencyCodes())+2)
+		for _, c := range api.FractionCurrencyCodes() {
+			codes = append(codes, c)
+		}
+		codes = append(codes, "", nil)
 		filter["currency"] = bson.M{"$in": codes}
 	}
 	res, err := rr.col.UpdateOne(ctx, filter,
@@ -509,7 +500,7 @@ func sanitizeRoom(r *api.Room) *api.Room {
 	if c.Operations != nil {
 		ops := make([]api.Operation, len(*c.Operations))
 		for i := range *c.Operations {
-			ops[i] = *sanitizeOperation(&(*c.Operations)[i], api.RoomFractional(r))
+			ops[i] = *sanitizeOperation(&(*c.Operations)[i])
 		}
 		c.Operations = &ops
 	}
@@ -900,14 +891,10 @@ func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operat
 	if err := api.ValidateMoneyRange(o); err != nil {
 		return err
 	}
-	fractional, err := rr.roomFractional(ctx, hex)
-	if err != nil {
-		return err
-	}
 
 	next := *o
 	next.Version = o.Version + 1
-	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next, fractional)}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next)}})
 	if err != nil {
 		return err
 	}
@@ -962,11 +949,7 @@ func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Oper
 	if err := api.ValidateMoneyRange(o); err != nil {
 		return err
 	}
-	fractional, err := rr.roomFractional(ctx, hex)
-	if err != nil {
-		return err
-	}
-	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o, fractional)}}
+	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o)}}
 	opts := options.Update().SetArrayFilters(options.ArrayFilters{
 		Filters: []interface{}{bson.M{"op._id": o.ID}},
 	})
@@ -1065,11 +1048,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	if err := api.ValidateMoneyRange(o); err != nil {
 		return err
 	}
-	fractional, err := rr.roomFractional(ctx, hex)
-	if err != nil {
-		return err
-	}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, fractional)}}}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return err
 	}
@@ -1114,11 +1093,7 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	if err := api.ValidateMoneyRange(o); err != nil {
 		return false, err
 	}
-	fractional, err := rr.roomFractional(ctx, hex)
-	if err != nil {
-		return false, err
-	}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, fractional)}}}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
 	if err != nil {
 		return false, err
 	}

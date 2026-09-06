@@ -23,8 +23,15 @@ func ShareOf(sum, n, i int) int {
 
 // ShareStepFor — шаг деления для тусы: копейка, если копейки считаются, иначе
 // целая единица валюты.
+//
+// ⚠️ Применяется ТОЛЬКО при создании и правке операции, где доли считает
+// обработчик и сразу записывает. На чтении шаг всегда целый, иначе доли
+// существующих расходов ездили бы от тумблера — см. SharesMinor.
 func ShareStepFor(fractional bool) int64 {
-	return shareStep(fractional)
+	if fractional {
+		return 1
+	}
+	return MinorFactor
 }
 
 // ShareOfMinorStep — каноническое деление в копейках с ШАГОМ: каждая доля

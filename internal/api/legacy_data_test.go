@@ -35,24 +35,41 @@ func sumShares(op *Operation) int64 {
 
 func ptr64(v int64) *int64 { return &v }
 
-// 100 на троих от бота: доли обязаны сойтись с итогом и с копейками, и без них.
+// 100 на троих от бота: доли обязаны сойтись с итогом.
 func TestBotEqualSplitSharesSumToTotal(t *testing.T) {
-	for _, fractional := range []bool{false, true} {
-		op := botEqualSplit(100, 3)
-		FillMoney(&op, fractional)
+	op := botEqualSplit(100, 3)
+	FillMoney(&op)
 
-		if got := sumShares(&op); got != *op.SumMinor {
-			t.Errorf("копейки=%v: сумма долей %d, итог %d — деньги разошлись",
-				fractional, got, *op.SumMinor)
+	if got := sumShares(&op); got != *op.SumMinor {
+		t.Errorf("сумма долей %d, итог %d — деньги разошлись", got, *op.SumMinor)
+	}
+}
+
+// ⚠️ ГЛАВНЫЙ инвариант этой переделки, на ПРОДОВОЙ форме данных.
+//
+// У существующих расходов минорных долей в базе нет вовсе — они выводятся при
+// каждом чтении. Значит вывод не имеет права зависеть от настройки тусы: иначе
+// один и тот же расход показывал бы 33,34 + 33,33 + 33,33 при включённых
+// копейках и 34 + 33 + 33 при выключенных, и долги людей ездили бы от тумблера,
+// хотя в базе ничего не менялось.
+func TestDerivedSharesDoNotDependOnSetting(t *testing.T) {
+	want := []int64{3400, 3300, 3300}
+	for _, name := range []string{"первое чтение", "после переключения", "после обратного"} {
+		op := botEqualSplit(100, 3)
+		FillMoney(&op)
+		for i, r := range op.RecipientsWithSum {
+			if *r.SumMinor != want[i] {
+				t.Fatalf("%s: доля[%d] = %d, want %d", name, i, *r.SumMinor, want[i])
+			}
 		}
 	}
 }
 
-// Без копеек доли обязаны быть кратны единице валюты: иначе человеку показывают
-// долю, которую он не может заплатить, а столбик на экране не сходится.
-func TestSharesAreWholeUnitsWithoutFraction(t *testing.T) {
+// Выведенные доли кратны единице валюты: иначе человеку показывают долю,
+// которую он не может заплатить, а столбик на экране не сходится.
+func TestDerivedSharesAreWholeUnits(t *testing.T) {
 	op := botEqualSplit(100, 3)
-	FillMoney(&op, false)
+	FillMoney(&op)
 
 	want := []int64{3400, 3300, 3300}
 	for i, r := range op.RecipientsWithSum {
@@ -65,41 +82,12 @@ func TestSharesAreWholeUnitsWithoutFraction(t *testing.T) {
 	}
 }
 
-// С копейками остаток раздаётся по копейке, а не по рублю.
-func TestSharesSplitToKopeckWithFraction(t *testing.T) {
-	op := botEqualSplit(100, 3)
-	FillMoney(&op, true)
-
-	want := []int64{3334, 3333, 3333}
-	for i, r := range op.RecipientsWithSum {
-		if *r.SumMinor != want[i] {
-			t.Errorf("доля[%d] = %d, want %d", i, *r.SumMinor, want[i])
-		}
-	}
-}
-
-// Переключение признака НЕ трогает записанные суммы: меняется только то, с
-// какой точностью выводятся доли. Итог остаётся тем же до копейки.
-func TestTogglingFractionKeepsTotal(t *testing.T) {
-	op := botEqualSplit(100, 3)
-	FillMoney(&op, true)
-	total := *op.SumMinor
-
-	FillMoney(&op, false)
-	if *op.SumMinor != total {
-		t.Errorf("итог изменился от переключения признака: %d, было %d", *op.SumMinor, total)
-	}
-	if got := sumShares(&op); got != total {
-		t.Errorf("сумма долей = %d, итог %d", got, total)
-	}
-}
-
 // Старая дробная сумма в тусе, где копейки выключили, остаётся дробной:
 // округлять её значило бы соврать, а доли перестали бы сходиться с итогом.
 func TestFractionalAmountSurvivesFractionOff(t *testing.T) {
 	sum := int64(2080)
 	op := Operation{SumMinor: &sum, RecipientsWithSum: []RecipientWithSum{{SumMinor: ptr64(2080)}}}
-	FillMoney(&op, false)
+	FillMoney(&op)
 
 	if *op.SumMinor != 2080 {
 		t.Errorf("сумма = %d, want 2080 — дробь округлили", *op.SumMinor)
@@ -113,10 +101,10 @@ func TestFractionalAmountSurvivesFractionOff(t *testing.T) {
 // правило считало его «настоящей дробью», выбрасывая правку человека.
 func TestBotEditOfEqualSplitSurvivesWrite(t *testing.T) {
 	op := botEqualSplit(100, 3)
-	FillMoney(&op, true)
+	FillMoney(&op)
 
 	op.Sum = 120 // человек поправил сумму в боте
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if op.Sum != 120 {
 		t.Errorf("сумма = %d, want 120 — правка потерялась", op.Sum)
@@ -140,7 +128,7 @@ func TestBotEditOfExactShareSurvivesWrite(t *testing.T) {
 	}
 	op.RecipientsWithSum[0].Sum = 60
 	op.RecipientsWithSum[1].Sum = 40
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if got := *op.RecipientsWithSum[0].SumMinor; got != 6000 {
 		t.Errorf("доля = %d, want 6000 — правка доли потерялась", got)
@@ -154,7 +142,7 @@ func TestBotEditOfExactShareSurvivesWrite(t *testing.T) {
 func TestRepaymentShareEqualsTotal(t *testing.T) {
 	op := Operation{Sum: 50, IsDebtRepayment: true,
 		RecipientsWithSum: []RecipientWithSum{{Sum: 50}}}
-	FillMoney(&op, true)
+	FillMoney(&op)
 
 	if got := sumShares(&op); got != *op.SumMinor {
 		t.Errorf("сумма долей = %d, итог %d", got, *op.SumMinor)
@@ -165,7 +153,7 @@ func TestRepaymentShareEqualsTotal(t *testing.T) {
 // делает проекция recipientShare.
 func TestLegacyOperationWithoutSplitTypeIsEqual(t *testing.T) {
 	op := Operation{Sum: 100, RecipientsWithSum: []RecipientWithSum{{}, {}, {}}}
-	FillMoney(&op, false)
+	FillMoney(&op)
 
 	want := []int64{3400, 3300, 3300}
 	for i, r := range op.RecipientsWithSum {
@@ -189,7 +177,7 @@ func TestTogglingFractionKeepsRecordedShares(t *testing.T) {
 	want := []int64{3334, 3333, 3333}
 
 	for _, fractional := range []bool{false, true, false} {
-		FillMoney(&op, fractional)
+		FillMoney(&op)
 		for i, r := range op.RecipientsWithSum {
 			if *r.SumMinor != want[i] {
 				t.Fatalf("копейки=%v: доля[%d] = %d, want %d — долг человека поехал от тумблера",
@@ -203,7 +191,7 @@ func TestTogglingFractionKeepsRecordedShares(t *testing.T) {
 // иначе доли не сойдутся с итогом.
 func TestInconsistentSharesAreStillDerived(t *testing.T) {
 	op := botEqualSplit(100, 3)
-	FillMoney(&op, false)
+	FillMoney(&op)
 
 	if got := sumShares(&op); got != 10000 {
 		t.Errorf("сумма долей = %d, want 10000", got)

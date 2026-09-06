@@ -95,7 +95,7 @@ func TestFillMoneyOnLegacyDocument(t *testing.T) {
 			Shares: []ItemShare{{UserId: 1, Weight: 1, Amount: &amount}, {UserId: 2, Weight: 1}},
 		}},
 	}
-	FillMoney(&op, true)
+	FillMoney(&op)
 
 	if op.SumMinor == nil || *op.SumMinor != 2000 {
 		t.Fatalf("sumMinor = %v, want 2000", op.SumMinor)
@@ -103,11 +103,21 @@ func TestFillMoneyOnLegacyDocument(t *testing.T) {
 	if op.Sum != 20 {
 		t.Errorf("старое поле изменилось: %d", op.Sum)
 	}
-	want := []int64{667, 667, 666}
+	// Доли выводятся канонически из итога, а хранимые float-значения бота
+	// игнорируются — ровно так же, как их всегда показывала проекция старых
+	// полей (recipientShare для equally пересчитывает, а не округляет).
+	want := []int64{700, 700, 600}
 	for i, r := range op.RecipientsWithSum {
 		if r.SumMinor == nil || *r.SumMinor != want[i] {
 			t.Errorf("доля[%d] = %v, want %d", i, r.SumMinor, want[i])
 		}
+	}
+	var total int64
+	for _, r := range op.RecipientsWithSum {
+		total += *r.SumMinor
+	}
+	if total != 2000 {
+		t.Errorf("сумма долей = %d, want 2000", total)
 	}
 	if op.Items[0].PriceMinor == nil || *op.Items[0].PriceMinor != 2000 {
 		t.Errorf("priceMinor = %v, want 2000", op.Items[0].PriceMinor)
@@ -135,7 +145,7 @@ func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 		},
 		Items: []OperationItem{{PriceMinor: &price}},
 	}
-	FillMoney(&op, true)
+	FillMoney(&op)
 
 	if op.Sum != 21 {
 		t.Errorf("проекция суммы = %d, want 21", op.Sum)
@@ -164,7 +174,7 @@ func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 func TestReconcileMoneyKeepsLegacyEdit(t *testing.T) {
 	stale := int64(2000)
 	op := Operation{Sum: 30, SumMinor: &stale}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if op.Sum != 30 {
 		t.Errorf("сумма = %d, want 30 — правка потерялась", op.Sum)
@@ -181,7 +191,7 @@ func TestReconcileMoneyKeepsLegacyShareEdit(t *testing.T) {
 		Sum:               30,
 		RecipientsWithSum: []RecipientWithSum{{Sum: 30, SumMinor: &stale}},
 	}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if got := op.RecipientsWithSum[0].SumMinor; got == nil || *got != 3000 {
 		t.Errorf("доля = %v, want 3000", got)
@@ -200,7 +210,7 @@ func TestReconcileMoneyKeepsLegacyItemEdit(t *testing.T) {
 			Shares:     []ItemShare{{UserId: 1, Amount: &amount, AmountMinor: &staleAmount}},
 		}},
 	}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if got := op.Items[0].PriceMinor; got == nil || *got != 3000 {
 		t.Errorf("цена = %v, want 3000", got)
@@ -214,7 +224,7 @@ func TestReconcileMoneyKeepsLegacyItemEdit(t *testing.T) {
 func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 21, SumMinor: &minor}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if *op.SumMinor != 2080 {
 		t.Errorf("sumMinor = %d, want 2080 — дробную сумму испортили", *op.SumMinor)
@@ -234,7 +244,7 @@ func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
 func TestReconcileMoneyLegacyWinsOverFractionalMinor(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 30, SumMinor: &minor}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if *op.SumMinor != 3000 {
 		t.Errorf("sumMinor = %d, want 3000 — правка человека потерялась", *op.SumMinor)
@@ -248,7 +258,7 @@ func TestReconcileMoneyLegacyWinsOverFractionalMinor(t *testing.T) {
 func TestReconcileMoneyKeepsConsistentFractionalPair(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 21, SumMinor: &minor}
-	ReconcileMoney(&op, true)
+	ReconcileMoney(&op)
 
 	if *op.SumMinor != 2080 {
 		t.Errorf("sumMinor = %d, want 2080 — дробь потеряли на ровном месте", *op.SumMinor)
@@ -260,7 +270,7 @@ func TestReconcileMoneyKeepsConsistentFractionalPair(t *testing.T) {
 // клиент честно показывал как ноль.
 func TestOverflowDoesNotBecomeZero(t *testing.T) {
 	op := Operation{Sum: 184467440737095517}
-	FillMoney(&op, true)
+	FillMoney(&op)
 
 	if op.SumMinor != nil {
 		t.Errorf("sumMinor = %d, want отсутствие: ноль соврал бы, что расход без денег", *op.SumMinor)

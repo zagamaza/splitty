@@ -135,16 +135,6 @@ func (s ItemShare) AmountMinorOrLegacy() (int64, bool) {
 	return 0, false
 }
 
-// shareStep — шаг, с которым делится расход в этой тусе. Без копеек доли обязаны
-// быть кратны единице валюты: иначе человеку показывают долю, которую он не
-// может ни заплатить, ни увидеть — а сумма долей на экране расходится с итогом.
-func shareStep(fractional bool) int64 {
-	if fractional {
-		return 1
-	}
-	return MinorFactor
-}
-
 // SharesMinor выводит доли получателей в копейках ВЕКТОРОМ относительно итога —
 // а не полем за полем.
 //
@@ -154,7 +144,17 @@ func shareStep(fractional bool) int64 {
 //
 // Правило то же, что у проекции старых полей: при равном делении доли выводятся
 // канонически из итога, при точных суммах хранимые значения служат ВЕСАМИ.
-func SharesMinor(o *Operation, totalMinor int64, fractional bool) ([]int64, bool) {
+//
+// ⚠️ Вывод ВСЕГДА идёт целым шагом и от настройки тусы НЕ зависит. Настройка
+// применяется только к НОВОЙ операции, где доли считает обработчик и сразу
+// записывает. Иначе получалось вот что: у продовых расходов минорных долей нет
+// вовсе, они выводятся при каждом чтении — и один и тот же расход 100 на троих
+// показывал 33,34 + 33,33 + 33,33 при включённых копейках и 34 + 33 + 33 при
+// выключенных. Долги людей ездили от тумблера, хотя в базе ничего не менялось.
+//
+// Заодно это уравнивает два поколения легаси: доли, синтезированные из
+// древнего поля recipients, тоже целые.
+func SharesMinor(o *Operation, totalMinor int64) ([]int64, bool) {
 	if o == nil || len(o.RecipientsWithSum) == 0 {
 		return nil, true
 	}
@@ -162,9 +162,8 @@ func SharesMinor(o *Operation, totalMinor int64, fractional bool) ([]int64, bool
 
 	if !o.IsDebtRepayment && o.SplitType != SplitTypeByExactAmount {
 		out := make([]int64, n)
-		step := shareStep(fractional)
 		for i := range out {
-			out[i] = ShareOfMinorStep(totalMinor, n, i, step)
+			out[i] = ShareOfMinorStep(totalMinor, n, i, MinorFactor)
 		}
 		return out, true
 	}
@@ -187,7 +186,16 @@ func sharesAreConsistent(o *Operation, totalMinor int64) bool {
 		if r.SumMinor == nil {
 			return false
 		}
-		sum += *r.SumMinor
+		// Складываем С ПРОВЕРКОЙ: испорченный документ может переполнить сумму
+		// и «сойтись» с итогом по кругу — такой вектор согласованным не считаем.
+		v := *r.SumMinor
+		if v > 0 && sum > maxInt64-v {
+			return false
+		}
+		if v < 0 && sum < -maxInt64-v {
+			return false
+		}
+		sum += v
 	}
 	return sum == totalMinor
 }
@@ -207,7 +215,7 @@ func applyShares(o *Operation, shares []int64) {
 
 // FillMoney достраивает у операции оба представления денег: копейки по старым
 // полям, если их нет, и старые поля как проекцию копеек, если копейки есть.
-func FillMoney(o *Operation, fractional bool) {
+func FillMoney(o *Operation) {
 	if o == nil {
 		return
 	}
@@ -231,7 +239,7 @@ func FillMoney(o *Operation, fractional bool) {
 	// Выводим вектор только когда его нет или он не сходится с итогом — то есть
 	// на легаси-данных бота, где долей в копейках не было вовсе.
 	if o.SumMinor != nil && !sharesAreConsistent(o, *o.SumMinor) {
-		if shares, ok := SharesMinor(o, *o.SumMinor, fractional); ok {
+		if shares, ok := SharesMinor(o, *o.SumMinor); ok {
 			applyShares(o, shares)
 		}
 	}
@@ -265,10 +273,9 @@ func FillRoomMoney(r *Room) {
 	if r == nil || r.Operations == nil {
 		return
 	}
-	fractional := RoomFractional(r)
 	ops := *r.Operations
 	for i := range ops {
-		FillMoney(&ops[i], fractional)
+		FillMoney(&ops[i])
 	}
 }
 
@@ -286,7 +293,7 @@ func FillRoomMoney(r *Room) {
 // редакция доверяла старому полю только при минорном, кратном ста, и ломалась
 // ровно на данных бота: доля 100/3 лежит как 33.333…, её минорное 3333 не
 // кратно ста, и правка на 34 молча выбрасывалась.
-func ReconcileMoney(o *Operation, fractional bool) {
+func ReconcileMoney(o *Operation) {
 	if o == nil {
 		return
 	}
@@ -314,5 +321,5 @@ func ReconcileMoney(o *Operation, fractional bool) {
 			}
 		}
 	}
-	FillMoney(o, fractional)
+	FillMoney(o)
 }
