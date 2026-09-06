@@ -695,8 +695,5 @@
     <string name="push_locale">ko</string>
     <string name="group_settings_cents">소수점 표시</string>
     <string name="group_cents_toggle">소수점 사용</string>
-    <string name="group_settings_cents_footer">그룹 금액이 소수로 표시됩니다. 21 대신 20.80입니다. 변환은 정확하며 금액은 달라지지 않습니다.</string>
-    <string name="group_cents_off_title">소수점을 끌까요?</string>
-    <string name="group_cents_off_confirm">끄기</string>
-    <string name="group_cents_off_message">금액이 반올림됩니다. 20.80은 21이 됩니다. 소수점은 다시 켤 수 있지만 반올림은 되돌릴 수 없습니다.</string>
+    <string name="group_settings_cents_footer">금액을 소수점까지 입력할 수 있고 지출도 소수점 단위로 나뉩니다. 이미 기록된 내용은 바뀌지 않습니다.</string>
 </resources>

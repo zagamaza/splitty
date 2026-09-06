@@ -568,12 +568,11 @@ struct CurrencyInfo: Codable, Identifiable, Hashable {
     let code: String
     let symbol: String
     let flag: String
-    /// Сколько знаков после запятой получает НОВАЯ группа в этой валюте.
-    /// Шкала — свойство группы, а не валюты: здесь только умолчание.
-    var displayExponent: Int = 0
-    /// Предел, до которого шкалу группы можно поднять. Ноль — дробной части у
-    /// валюты нет в обороте (иена, вона), переключатель не показывается.
-    var maxExponent: Int = 0
+    /// Считает ли НОВАЯ группа в этой валюте копейки.
+    var fractional: Bool = false
+    /// Есть ли у валюты дробная часть в обороте. Ложь — переключатель копеек
+    /// не показывается вовсе (иена, вона).
+    var supportsFraction: Bool = false
     /// Разрешено ли сейчас ВВОДИТЬ дроби. Признак сервера, одинаковый во всех
     /// строках справочника. Старый сервер его не шлёт — отсутствие читается как
     /// запрет, и это нарочно: разрешение должно приходить явно.
@@ -591,8 +590,8 @@ extension CurrencyInfo {
         code = try c.decode(String.self, forKey: .code)
         symbol = try c.decode(String.self, forKey: .symbol)
         flag = try c.decode(String.self, forKey: .flag)
-        displayExponent = try c.decodeIfPresent(Int.self, forKey: .displayExponent) ?? 0
-        maxExponent = try c.decodeIfPresent(Int.self, forKey: .maxExponent) ?? 0
+        fractional = try c.decodeIfPresent(Bool.self, forKey: .fractional) ?? false
+        supportsFraction = try c.decodeIfPresent(Bool.self, forKey: .supportsFraction) ?? false
         fractionalInput = try c.decodeIfPresent(Bool.self, forKey: .fractionalInput) ?? false
     }
 }
@@ -607,15 +606,10 @@ struct RoomSummary: Codable, Identifiable, Hashable {
     let memberCount: Int
     /// Валюта комнаты («RUB»/«USD»/«EUR»/«IDR») — в ней все суммы комнаты.
     let currency: String
-    /// Шкала ЭТОЙ группы: сколько знаков после запятой у её сумм. Ноль —
-    /// суммы целые. Старый сервер поля не шлёт, и ноль тут единственное
-    /// честное значение: выводить шкалу из справочника валют нельзя, суммы
-    /// в ответе всё равно целые.
-    var displayExponent: Int = 0
-    /// Растёт при каждой смене шкалы группы. По нему офлайн-очередь узнаёт,
-    /// что её снимок устарел: путь 0 → 2 → 0 вернул бы прежнюю шкалу, а суммы
-    /// за это время пересчитали дважды.
-    var scaleVersion: Int = 0
+    /// Считает ли группа копейки. Влияет на показ и на ввод; на хранение — нет,
+    /// сервер всегда держит деньги в копейках. Старый сервер поля не шлёт, и
+    /// «нет» тут единственное честное значение.
+    var fractional: Bool = false
     /// Сумма всех расходов комнаты (без погашений).
     let totalSpent: Int
     /// >0 — мне должны, <0 — я должен, 0 — расчёт.
@@ -648,8 +642,7 @@ extension RoomSummary {
         members = try c.decode([User].self, forKey: .members)
         memberCount = try c.decode(Int.self, forKey: .memberCount)
         currency = try c.decode(String.self, forKey: .currency)
-        displayExponent = try c.decodeIfPresent(Int.self, forKey: .displayExponent) ?? 0
-        scaleVersion = try c.decodeIfPresent(Int.self, forKey: .scaleVersion) ?? 0
+        fractional = try c.decodeIfPresent(Bool.self, forKey: .fractional) ?? false
         totalSpent = try c.decode(Int.self, forKey: .totalSpent)
         myBalance = try c.decode(Int.self, forKey: .myBalance)
         debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
@@ -669,15 +662,10 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     let members: [User]
     /// Валюта комнаты — в ней показываются ВСЕ суммы экрана группы.
     let currency: String
-    /// Шкала ЭТОЙ группы: сколько знаков после запятой у её сумм. Ноль —
-    /// суммы целые. Старый сервер поля не шлёт, и ноль тут единственное
-    /// честное значение: выводить шкалу из справочника валют нельзя, суммы
-    /// в ответе всё равно целые.
-    var displayExponent: Int = 0
-    /// Растёт при каждой смене шкалы группы. По нему офлайн-очередь узнаёт,
-    /// что её снимок устарел: путь 0 → 2 → 0 вернул бы прежнюю шкалу, а суммы
-    /// за это время пересчитали дважды.
-    var scaleVersion: Int = 0
+    /// Считает ли группа копейки. Влияет на показ и на ввод; на хранение — нет,
+    /// сервер всегда держит деньги в копейках. Старый сервер поля не шлёт, и
+    /// «нет» тут единственное честное значение.
+    var fractional: Bool = false
     let totalSpent: Int
     /// Моя доля расходов.
     let mySpent: Int
@@ -723,8 +711,7 @@ extension RoomDetail {
         isArchived = try c.decode(Bool.self, forKey: .isArchived)
         members = try c.decode([User].self, forKey: .members)
         currency = try c.decode(String.self, forKey: .currency)
-        displayExponent = try c.decodeIfPresent(Int.self, forKey: .displayExponent) ?? 0
-        scaleVersion = try c.decodeIfPresent(Int.self, forKey: .scaleVersion) ?? 0
+        fractional = try c.decodeIfPresent(Bool.self, forKey: .fractional) ?? false
         totalSpent = try c.decode(Int.self, forKey: .totalSpent)
         mySpent = try c.decode(Int.self, forKey: .mySpent)
         myBalance = try c.decode(Int.self, forKey: .myBalance)

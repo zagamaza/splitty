@@ -1,15 +1,15 @@
 package store
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/pem"
-	"strings"
-	"context"
 	"errors"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 

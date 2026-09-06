@@ -156,8 +156,7 @@ func (s *Server) buildRoomDetail(room *api.Room, userId int, seenThrough time.Ti
 		CreatedAt:        room.CreateAt,
 		IsArchived:       isRoomArchived(room, userId),
 		Currency:         roomCurrencyCode(room),
-		DisplayExponent:  api.RoomExponent(room),
-		ScaleVersion:     room.ScaleVersion,
+		Fractional:       api.RoomFractional(room),
 		Members:          toUserDtos(roomMembers(room)),
 		TotalSpent:       roomTotalSpent(ops),
 		MySpent:          userSpentSum(ops, userId),
@@ -345,8 +344,7 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 				CreatedAt:        room.CreateAt,
 				IsArchived:       isRoomArchived(room, userId),
 				Currency:         roomCurrencyCode(room),
-				DisplayExponent:  api.RoomExponent(room),
-				ScaleVersion:     room.ScaleVersion,
+				Fractional:       api.RoomFractional(room),
 				Members:          toUserDtos(members),
 				MemberCount:      len(members),
 				TotalSpent:       roomTotalSpent(activeOperations(room)),
@@ -389,16 +387,11 @@ func (s *Server) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Шкалу проставляем ЯВНО, а не полагаемся на умолчание валюты при чтении:
-	// иначе смена умолчания в справочнике переистолковала бы суммы всех уже
-	// заведённых комнат — записанное «1200» стало бы читаться как 12.00.
-	exponent := api.DefaultExponentFor(api.DefaultCurrency)
 	room, err := s.roomSrv.CreateRoom(ctx, &api.Room{
-		Name:            name,
-		Members:         &[]api.User{*user},
-		Operations:      &[]api.Operation{},
-		CreateAt:        time.Now(),
-		DisplayExponent: &exponent,
+		Name:       name,
+		Members:    &[]api.User{*user},
+		Operations: &[]api.Operation{},
+		CreateAt:   time.Now(),
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("cannot create room")
@@ -528,20 +521,8 @@ func (s *Server) handleUpdateCurrency(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.roomRepo.UpdateCurrency(ctx, roomId, req.Currency); err != nil {
-		// Отказ объясняет причину, а не просто «нельзя»: человек должен
-		// понять, что мешает именно эта пара «копейки + валюта без них».
-		if errors.Is(err, repository.ErrScaleNotSupported) {
-			writeError(w, http.StatusBadRequest, "validation",
-				"в этой валюте нет копеек — сначала выключите их в настройках группы")
-			return
-		}
 		// Комнату писали, пока шла смена валюты: тот же ответ, что и у смены
 		// шкалы, — человеку понятно, что делать.
-		if errors.Is(err, repository.ErrRoomBusy) {
-			writeError(w, http.StatusConflict, "conflict",
-				"в группе только что записали расход, попробуйте ещё раз")
-			return
-		}
 		log.Error().Err(err).Msgf("cannot update currency for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось обновить валюту")
 		return
@@ -549,21 +530,26 @@ func (s *Server) handleUpdateCurrency(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Шкала комнаты
+// Копейки в тусе
 
-type updateScaleRequest struct {
-	DisplayExponent *int `json:"displayExponent"`
+type updateFractionalRequest struct {
+	// Fractional — указатель: без него отсутствие поля неотличимо от
+	// осознанного «выключить».
+	Fractional *bool `json:"fractional"`
 }
 
-// handleUpdateScale PUT /api/v1/rooms/{roomId}/scale — включение и выключение
-// копеек в комнате.
+// handleUpdateFractional PUT /api/v1/rooms/{roomId}/fractional — включение и
+// выключение копеек в тусе.
 //
-// Включение точное: 1200 становится 120000, ничего не теряется. Выключение
-// теряет копейки, и подтверждает его человек НА КЛИЕНТЕ — сервер тут только
-// исполнитель: спрашивать подтверждение второй раз в протоколе нечем, а молча
-// округлять чужие деньги нельзя. Отсюда и отдельная ручка, а не поле в общем
-// PATCH: у неё одной есть цена, которую человек обязан увидеть заранее.
-func (s *Server) handleUpdateScale(w http.ResponseWriter, r *http.Request) {
+// ⚠️ Обычная настройка, и это главное. Деньги ВСЕГДА хранятся в копейках,
+// поэтому переключение не трогает ни одной записи: ни пересчёта сумм, ни
+// округления чужих денег, ни подтверждения «20,80 станет 21». Признак решает
+// лишь что принимать на вводе и с какой точностью делить расход поровну.
+//
+// Уже записанные дробные суммы остаются дробными и показываются как есть — даже
+// после выключения. Округлить их значило бы соврать: сумма долей на экране
+// разошлась бы с итогом.
+func (s *Server) handleUpdateFractional(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	roomId := r.PathValue("roomId")
 
@@ -573,62 +559,26 @@ func (s *Server) handleUpdateScale(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req updateScaleRequest
+	var req updateFractionalRequest
 	if hErr := decodeJSON(r, &req); hErr != nil {
 		hErr.write(w)
 		return
 	}
-	// Указатель: без него отсутствие поля неотличимо от осознанного нуля, то
-	// есть от просьбы выключить копейки.
-	if req.DisplayExponent == nil {
-		writeError(w, http.StatusBadRequest, "validation", "не указана шкала")
+	if req.Fractional == nil {
+		writeError(w, http.StatusBadRequest, "validation", "не указано, считать ли копейки")
 		return
 	}
-	exp := *req.DisplayExponent
-	currency := roomCurrencyCode(room)
-	if !api.IsValidExponent(currency, exp) {
-		if api.MaxExponentFor(currency) == 0 {
-			writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
-			return
-		}
-		writeError(w, http.StatusBadRequest, "validation", "недопустимая шкала для этой валюты")
-		return
-	}
-
-	// Пересчёт читает операции, считает их в памяти и кладёт обратно целиком,
-	// поэтому чужая запись в это окно отменяет попытку. Повтор дешевле блокировки
-	// комнаты: окно — миллисекунды, а конкурируют за него живые люди.
-	var updated *api.Room
-	var err error
-	for attempt := 0; attempt < 3; attempt++ {
-		updated, err = s.roomRepo.SetRoomScale(ctx, roomId, exp)
-		if !errors.Is(err, repository.ErrRoomBusy) {
-			break
-		}
-	}
-	if errors.Is(err, repository.ErrRoomBusy) {
-		writeError(w, http.StatusConflict, "conflict", "в группе только что записали расход, попробуйте ещё раз")
-		return
-	}
-	// Валюту комнаты могли сменить между проверкой в обработчике и записью:
-	// шкалу проверяет ещё раз сам репозиторий, по свежему состоянию.
-	if errors.Is(err, repository.ErrScaleNotSupported) {
+	if *req.Fractional && !api.SupportsFraction(roomCurrencyCode(room)) {
 		writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
 		return
 	}
-	// Пересчитать невозможно: у комнаты испорченный документ, где суммы
-	// позиций не сходятся с итогом расхода. Молча записать половину нельзя.
-	if errors.Is(err, api.ErrRescaleImpossible) {
-		writeError(w, http.StatusConflict, "conflict",
-			"в группе есть расход, суммы которого не сходятся — обратитесь в поддержку")
-		return
-	}
-	if err != nil {
-		log.Error().Err(err).Msgf("cannot set scale for room %s", roomId)
-		writeError(w, http.StatusInternalServerError, "internal", "не удалось изменить шкалу")
-		return
-	}
 
+	updated, err := s.roomRepo.SetRoomFractional(ctx, roomId, *req.Fractional)
+	if err != nil {
+		log.Error().Err(err).Msgf("cannot set fractional for room %s", roomId)
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось изменить настройку")
+		return
+	}
 	writeJSON(w, http.StatusOK, s.buildRoomDetail(updated, userIdFromCtx(ctx), s.now().UTC()))
 }
 
@@ -639,12 +589,12 @@ func (s *Server) handleCurrencies(w http.ResponseWriter, _ *http.Request) {
 	for _, code := range api.CurrencyCodes {
 		info := api.Currencies[code]
 		currencies = append(currencies, currencyInfoDto{
-			Code:            info.Code,
-			Symbol:          info.Symbol,
-			Flag:            info.Flag,
-			DisplayExponent: info.DisplayExponent,
-			MaxExponent:     info.MaxExponent,
-			FractionalInput: s.cfg.FractionalInput,
+			Code:             info.Code,
+			Symbol:           info.Symbol,
+			Flag:             info.Flag,
+			Fractional:       info.FractionalDefault,
+			SupportsFraction: info.SupportsFraction,
+			FractionalInput:  s.cfg.FractionalInput,
 		})
 	}
 	writeJSON(w, http.StatusOK, currencies)
@@ -723,7 +673,7 @@ type operationRequest struct {
 //   - recipientSums — by_exact_amount: суммы целые положительные, Σ == sum (400 иначе).
 //
 // Возвращает донора, готовые доли и тип деления
-func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fractionalAllowed bool) (*api.User, []api.RecipientWithSum, api.SplitType, int64, *httpError) {
+func validateOperationRequest(req *operationRequest, room *api.Room, fractionalAllowed bool) (*api.User, []api.RecipientWithSum, api.SplitType, int64, *httpError) {
 	req.Description = strings.TrimSpace(req.Description)
 	if req.Description == "" {
 		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
@@ -731,11 +681,11 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 	if utf8.RuneCountInString(req.Description) > maxDescriptionRunes {
 		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
 	}
-	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, exp, fractionalAllowed)
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, fractionalAllowed)
 	if hErr != nil {
 		return nil, nil, "", 0, hErr
 	}
-	if sumMinor < minAmountMinor(exp) || sumMinor > maxAmountMinor(exp) {
+	if sumMinor < minAmountMinor(fractionalAllowed) || sumMinor > maxAmountMinor() {
 		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "сумма должна быть от 1 до 1 000 000 000"}
 	}
 	if (len(req.RecipientIds) > 0) == (len(req.RecipientSums) > 0) {
@@ -763,14 +713,15 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 			}
 			recipients = append(recipients, *recipient)
 		}
-		// Делим МИНОРНЫЕ единицы: раздели целые и умножь — и остаток в
-		// копейках просто исчезнет. Правило деления то же самое.
+		// Делим КОПЕЙКИ с шагом тусы: без копеек шаг равен единице валюты,
+		// иначе человеку показали бы долю, которую он не может заплатить, а
+		// сумма долей на экране разошлась бы с итогом.
 		withSum := make([]api.RecipientWithSum, 0, len(recipients))
 		for i := range recipients {
-			share := int64(api.ShareOf(int(sumMinor), len(recipients), i))
+			share := api.ShareOfMinorStep(sumMinor, len(recipients), i, api.ShareStepFor(fractionalAllowed))
 			withSum = append(withSum, api.RecipientWithSum{
 				User:     recipients[i],
-				Sum:      float64(share) / float64(api.MinorFactor(exp)),
+				Sum:      float64(share) / float64(api.MinorFactor),
 				SumMinor: &share,
 			})
 		}
@@ -786,11 +737,11 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "получатель не может повторяться в recipientSums"}
 		}
 		seen[rs.UserId] = true
-		shareMinor, hErr := resolveAmount("recipientSums[].sum", rs.Sum, rs.SumMinor, exp, fractionalAllowed)
+		shareMinor, hErr := resolveAmount("recipientSums[].sum", rs.Sum, rs.SumMinor, fractionalAllowed)
 		if hErr != nil {
 			return nil, nil, "", 0, hErr
 		}
-		if shareMinor < 1 || shareMinor > maxAmountMinor(exp) {
+		if shareMinor < 1 || shareMinor > maxAmountMinor() {
 			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "суммы получателей должны быть от 1 до 1 000 000 000"}
 		}
 		recipient := findMember(room, rs.UserId)
@@ -800,7 +751,7 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 		share := shareMinor
 		withSum = append(withSum, api.RecipientWithSum{
 			User:     *recipient,
-			Sum:      float64(share) / float64(api.MinorFactor(exp)),
+			Sum:      float64(share) / float64(api.MinorFactor),
 			SumMinor: &share,
 		})
 		total += shareMinor
@@ -997,23 +948,23 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
-	exp := api.RoomExponent(room)
+	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
 	if len(req.Items) > 0 {
 		// Позиции чека пока считаются целыми единицами (Задача 7): дробную
 		// цену на этом входе отвергает resolveItemsScale
 		donor, recipientsWithSum, items, sum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
 		var okRange bool
-		sumMinor, okRange = api.ToMinorChecked(sum, exp)
+		sumMinor, okRange = api.ToMinorChecked(sum)
 		if hErr2 == nil && !okRange {
 			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
 		}
 		if hErr2 == nil {
-			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
+			hErr2 = validateItemMoney(&req, fractional)
 		}
 	} else {
-		donor, recipientsWithSum, splitType, sumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)
-		sum = api.FromMinor(sumMinor, exp)
+		donor, recipientsWithSum, splitType, sumMinor, hErr2 = validateOperationRequest(&req, room, fractional)
+		sum = api.FromMinor(sumMinor)
 	}
 	if hErr2 != nil {
 		hErr2.write(w)
@@ -1125,21 +1076,21 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
-	exp := api.RoomExponent(room)
+	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
 	if len(req.Items) > 0 {
 		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
 		var okRange bool
-		newSumMinor, okRange = api.ToMinorChecked(newSum, exp)
+		newSumMinor, okRange = api.ToMinorChecked(newSum)
 		if hErr2 == nil && !okRange {
 			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
 		}
 		if hErr2 == nil {
-			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
+			hErr2 = validateItemMoney(&req, fractional)
 		}
 	} else {
-		donor, recipientsWithSum, splitType, newSumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)
-		newSum = api.FromMinor(newSumMinor, exp)
+		donor, recipientsWithSum, splitType, newSumMinor, hErr2 = validateOperationRequest(&req, room, fractional)
+		newSum = api.FromMinor(newSumMinor)
 	}
 	if hErr2 != nil {
 		hErr2.write(w)
@@ -1307,20 +1258,20 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, toOperationDto(existing))
 		return
 	}
-	exp := api.RoomExponent(room)
-	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, exp, s.cfg.FractionalInput)
+	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, fractional)
 	if hErr != nil {
 		hErr.write(w)
 		return
 	}
-	if sumMinor < minAmountMinor(exp) {
+	if sumMinor < minAmountMinor(fractional) {
 		writeError(w, http.StatusBadRequest, "validation", "сумма должна быть не меньше 1")
 		return
 	}
 	// Долги пока считаются целыми единицами (Задача 8), поэтому сверка с
 	// долгом идёт по проекции. Дробное погашение до фазы 5 не пройдёт признак
 	// дробного ввода и сюда просто не доедет.
-	sum := api.FromMinor(sumMinor, exp)
+	sum := api.FromMinor(sumMinor)
 	if req.DebtorId == req.LenderId {
 		writeError(w, http.StatusBadRequest, "validation", "должник и кредитор должны быть разными")
 		return
@@ -1370,7 +1321,7 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		Sum:               sum,
 		SumMinor:          &sumMinor,
 		Donor:             debtor,
-		RecipientsWithSum: []api.RecipientWithSum{{User: *lender, Sum: float64(sumMinor) / float64(api.MinorFactor(exp)), SumMinor: &sumMinor}},
+		RecipientsWithSum: []api.RecipientWithSum{{User: *lender, Sum: float64(sumMinor) / float64(api.MinorFactor), SumMinor: &sumMinor}},
 		IsDebtRepayment:   true,
 		Status:            statusActive,
 		CreateAt:          time.Now(),

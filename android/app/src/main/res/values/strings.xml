@@ -778,8 +778,5 @@
     <string name="push_locale">en</string>
     <string name="group_settings_cents">Cents</string>
     <string name="group_cents_toggle">Count cents</string>
-    <string name="group_settings_cents_footer">Group amounts become decimal: 20.80 instead of 21. The conversion is exact — no money changes.</string>
-    <string name="group_cents_off_title">Turn off cents?</string>
-    <string name="group_cents_off_confirm">Turn off</string>
-    <string name="group_cents_off_message">Amounts will be rounded: 20.80 becomes 21. You can turn cents back on, but the rounding cannot be undone.</string>
+    <string name="group_settings_cents_footer">You will be able to enter amounts with cents, and expenses will be split down to the cent. Nothing already recorded changes.</string>
 </resources>

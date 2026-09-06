@@ -758,8 +758,5 @@
     <string name="push_locale">fr</string>
     <string name="group_settings_cents">Centimes</string>
     <string name="group_cents_toggle">Compter les centimes</string>
-    <string name="group_settings_cents_footer">Les montants du groupe deviennent décimaux : 20,80 au lieu de 21. La conversion est exacte, l\'argent ne change pas.</string>
-    <string name="group_cents_off_title">Désactiver les centimes ?</string>
-    <string name="group_cents_off_confirm">Désactiver</string>
-    <string name="group_cents_off_message">Les montants seront arrondis : 20,80 deviendra 21. Vous pouvez réactiver les centimes, mais l\'arrondi ne sera pas annulé.</string>
+    <string name="group_settings_cents_footer">Vous pourrez saisir des montants avec les centimes, et les dépenses seront partagées au centime près. Ce qui est déjà enregistré ne change pas.</string>
 </resources>

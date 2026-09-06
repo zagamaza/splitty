@@ -721,15 +721,14 @@ final class APIClient: OperationAPI {
         try await send("PUT", "/api/v1/rooms/\(roomId)/currency", body: Body(currency: currency))
     }
 
-    /// Включение и выключение копеек в группе: PUT /rooms/{id}/scale.
-    /// Отвечает обновлённой группой — суммы в ней уже пересчитаны, и второй
-    /// запрос за ними не нужен.
-    func setRoomScale(roomId: String, displayExponent: Int) async throws -> RoomDetail {
+    /// Включение и выключение копеек в группе: PUT /rooms/{id}/fractional.
+    /// Обычная настройка — записанные суммы не меняются.
+    func setRoomFractional(roomId: String, fractional: Bool) async throws -> RoomDetail {
         struct Body: Encodable {
-            let displayExponent: Int
+            let fractional: Bool
         }
         return try await request(
-            "PUT", "/api/v1/rooms/\(roomId)/scale", body: Body(displayExponent: displayExponent)
+            "PUT", "/api/v1/rooms/\(roomId)/fractional", body: Body(fractional: fractional)
         )
     }
 

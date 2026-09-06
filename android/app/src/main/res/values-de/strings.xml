@@ -758,8 +758,5 @@
     <string name="push_locale">de</string>
     <string name="group_settings_cents">Cent-Beträge</string>
     <string name="group_cents_toggle">Cent berücksichtigen</string>
-    <string name="group_settings_cents_footer">Die Beträge der Gruppe werden dezimal: 20,80 statt 21. Die Umrechnung ist exakt, es geht kein Geld verloren.</string>
-    <string name="group_cents_off_title">Cent-Beträge deaktivieren?</string>
-    <string name="group_cents_off_confirm">Deaktivieren</string>
-    <string name="group_cents_off_message">Beträge werden gerundet: aus 20,80 wird 21. Sie können Cent-Beträge wieder aktivieren, die Rundung lässt sich jedoch nicht rückgängig machen.</string>
+    <string name="group_settings_cents_footer">Sie können Beträge dann mit Cent eingeben, und Ausgaben werden centgenau geteilt. Bereits Erfasstes bleibt unverändert.</string>
 </resources>

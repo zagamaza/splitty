@@ -221,39 +221,37 @@ class GroupDetailViewModel @Inject constructor(
     }
 
     /**
-     * Шкала группы после локальной смены: тумблер копеек обязан отзываться
-     * сразу, не дожидаясь перечитывания группы.
+     * Считает ли группа копейки после локальной смены: тумблер обязан
+     * отзываться сразу, не дожидаясь перечитывания группы.
      */
-    private val _displayExponentOverride = MutableStateFlow<Int?>(null)
-    val displayExponentOverride: StateFlow<Int?> = _displayExponentOverride.asStateFlow()
+    private val _fractionalOverride = MutableStateFlow<Boolean?>(null)
+    val fractionalOverride: StateFlow<Boolean?> = _fractionalOverride.asStateFlow()
 
-    private val _isSavingScale = MutableStateFlow(false)
-    val isSavingScale: StateFlow<Boolean> = _isSavingScale.asStateFlow()
+    private val _isSavingFractional = MutableStateFlow(false)
+    val isSavingFractional: StateFlow<Boolean> = _isSavingFractional.asStateFlow()
 
     /**
-     * PUT /rooms/{id}/scale: включение и выключение копеек.
+     * PUT /rooms/{id}/fractional: включение и выключение копеек.
      *
-     * Включение точное, выключение округляет уже записанные деньги — поэтому
-     * подтверждение спрашивает экран, а не эта функция: сюда приходит уже
-     * принятое человеком решение.
+     * Обычная настройка — записанные суммы от неё не меняются, поэтому
+     * подтверждения не требуется ни в одну сторону.
      */
-    fun setScale(exponent: Int) {
+    fun setFractional(on: Boolean) {
         val id = roomIdFlow.value ?: return
-        val current = _displayExponentOverride.value
-            ?: (_room.value as? UiState.Content)?.value?.displayExponent
-        if (_isSavingScale.value || exponent == current) return
+        val current = _fractionalOverride.value
+            ?: (_room.value as? UiState.Content)?.value?.fractional
+        if (_isSavingFractional.value || on == current) return
         viewModelScope.launch {
-            _isSavingScale.value = true
+            _isSavingFractional.value = true
             try {
-                val updated = repository.setRoomScale(id, exponent)
-                analytics.track(AnalyticsEvent.RoomSettingsChanged("scale"))
-                _displayExponentOverride.value = updated.displayExponent
-                // Единая инвалидация: экран и списки перечитают пересчитанные суммы.
+                val updated = repository.setRoomFractional(id, on)
+                analytics.track(AnalyticsEvent.RoomSettingsChanged("fractional"))
+                _fractionalOverride.value = updated.fractional
                 sessionStore.noteDataChanged()
             } catch (e: ApiException) {
                 _alertMessage.value = humanErrorText(e)
             } finally {
-                _isSavingScale.value = false
+                _isSavingFractional.value = false
             }
         }
     }

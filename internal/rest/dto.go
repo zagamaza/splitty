@@ -149,15 +149,16 @@ type roomAvatarDto struct {
 }
 
 type roomSummaryDto struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	CreatedAt       time.Time `json:"createdAt"`
-	IsArchived      bool      `json:"isArchived"`
-	Currency        string    `json:"currency"`
-	DisplayExponent int       `json:"displayExponent"`
-	ScaleVersion    int       `json:"scaleVersion"`
-	Members         []userDto `json:"members"`
-	MemberCount     int       `json:"memberCount"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	CreatedAt  time.Time `json:"createdAt"`
+	IsArchived bool      `json:"isArchived"`
+	Currency   string    `json:"currency"`
+	// Fractional — считает ли туса копейки (показ и ввод; хранение всегда в
+	// копейках)
+	Fractional  bool      `json:"fractional"`
+	Members     []userDto `json:"members"`
+	MemberCount int       `json:"memberCount"`
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
 	AvatarFileId string `json:"avatarFileId,omitempty"`
 	TotalSpent   int    `json:"totalSpent"`
@@ -177,12 +178,10 @@ type roomDetailDto struct {
 	CreatedAt  time.Time `json:"createdAt"`
 	IsArchived bool      `json:"isArchived"`
 	Currency   string    `json:"currency"`
-	// DisplayExponent — шкала ЭТОЙ комнаты: сколько знаков после запятой у её
-	// сумм. ScaleVersion растёт при каждой смене шкалы, по нему офлайн-очередь
-	// узнаёт, что её снимок устарел.
-	DisplayExponent int       `json:"displayExponent"`
-	ScaleVersion    int       `json:"scaleVersion"`
-	Members         []userDto `json:"members"`
+	// Fractional — считает ли туса копейки. Влияет на показ и на ввод; на
+	// хранение — нет, деньги всегда в копейках.
+	Fractional bool      `json:"fractional"`
+	Members    []userDto `json:"members"`
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
 	AvatarFileId string    `json:"avatarFileId,omitempty"`
 	TotalSpent   int       `json:"totalSpent"`
@@ -243,10 +242,11 @@ type currencyInfoDto struct {
 	Code   string `json:"code"`
 	Symbol string `json:"symbol"`
 	Flag   string `json:"flag"`
-	// DisplayExponent — шкала для НОВОЙ комнаты в этой валюте, MaxExponent —
-	// предел, до которого её можно поднять (ноль прячет переключатель совсем).
-	DisplayExponent int `json:"displayExponent"`
-	MaxExponent     int `json:"maxExponent"`
+	// Fractional — считает ли НОВАЯ туса в этой валюте копейки.
+	// SupportsFraction — есть ли у валюты дробная часть вообще; ложь прячет
+	// переключатель совсем.
+	Fractional       bool `json:"fractional"`
+	SupportsFraction bool `json:"supportsFraction"`
 	// FractionalInput — разрешено ли сейчас ПИСАТЬ дроби. Значение одинаково
 	// во всех строках справочника: это свойство сервера, а не валюты, а
 	// конвертом сверху его отдать нельзя — установленные сборки декодируют

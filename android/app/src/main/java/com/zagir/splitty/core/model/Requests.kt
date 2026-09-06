@@ -80,9 +80,9 @@ data class CreateRoomBody(val name: String)
 @Serializable
 data class SetCurrencyBody(val currency: String)
 
-/** Шкала группы: 0 — суммы целые, 2 — с копейками. */
+/** Считает ли группа копейки. Записанные суммы от этого не меняются. */
 @Serializable
-data class SetScaleBody(val displayExponent: Int)
+data class SetFractionalBody(val fractional: Boolean)
 
 /** Доля получателя в теле запроса by_exact_amount (целые единицы валюты). */
 @Serializable

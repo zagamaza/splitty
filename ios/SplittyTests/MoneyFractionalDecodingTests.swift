@@ -2,14 +2,13 @@ import Foundation
 import XCTest
 @testable import Splitty
 
-/// Разбор полей шкалы: справочник валют и группа.
+/// Разбор полей копеек: справочник валют и группа.
 ///
 /// Главное тут не «новые поля читаются», а «их ОТСУТСТВИЕ не ломает клиент».
-/// Сервер могут откатить на прежнюю версию, и тогда ни `displayExponent`, ни
+/// Сервер могут откатить на прежнюю версию, и тогда ни `fractional`, ни
 /// `fractionalInput` в ответе не будет вовсе. Единственное честное поведение —
-/// считать шкалу нулевой и дроби запрещёнными: выводить шкалу из справочника
-/// нельзя, суммы в таком ответе всё равно целые.
-final class MoneyScaleDecodingTests: XCTestCase {
+/// считать, что копейки выключены и дроби запрещены.
+final class MoneyFractionalDecodingTests: XCTestCase {
     private let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
@@ -23,29 +22,29 @@ final class MoneyScaleDecodingTests: XCTestCase {
     func testDecodesCurrencyWithScaleFields() throws {
         let currency = try decodeCurrency("""
         {"code": "USD", "symbol": "$", "flag": "🇺🇸",
-         "displayExponent": 2, "maxExponent": 2, "fractionalInput": true}
+         "fractional": true, "supportsFraction": true, "fractionalInput": true}
         """)
-        XCTAssertEqual(currency.displayExponent, 2)
-        XCTAssertEqual(currency.maxExponent, 2)
+        XCTAssertTrue(currency.fractional)
+        XCTAssertTrue(currency.supportsFraction)
         XCTAssertTrue(currency.fractionalInput)
     }
 
-    /// Иена: предел шкалы нулевой — переключатель копеек не показывается вовсе.
+    /// Иена: дробной части нет — переключатель копеек не показывается вовсе.
     func testDecodesCurrencyWithoutMinorUnit() throws {
         let currency = try decodeCurrency("""
         {"code": "JPY", "symbol": "¥", "flag": "🇯🇵",
-         "displayExponent": 0, "maxExponent": 0, "fractionalInput": false}
+         "fractional": false, "supportsFraction": false, "fractionalInput": false}
         """)
-        XCTAssertEqual(currency.maxExponent, 0)
+        XCTAssertFalse(currency.supportsFraction)
     }
 
-    /// Ответ сервера, откатанного на прежнюю версию: полей шкалы нет вовсе.
+    /// Ответ сервера, откатанного на прежнюю версию: новых полей нет вовсе.
     func testDecodesCurrencyFromOldServer() throws {
         let currency = try decodeCurrency("""
         {"code": "RUB", "symbol": "₽", "flag": "🇷🇺"}
         """)
-        XCTAssertEqual(currency.displayExponent, 0)
-        XCTAssertEqual(currency.maxExponent, 0, "без предела шкалы переключатель обязан быть скрыт")
+        XCTAssertFalse(currency.fractional)
+        XCTAssertFalse(currency.supportsFraction, "без признака переключатель обязан быть скрыт")
         XCTAssertFalse(currency.fractionalInput, "отсутствие признака читается как запрет, а не как разрешение")
     }
 
@@ -69,20 +68,18 @@ final class MoneyScaleDecodingTests: XCTestCase {
         """
     }
 
-    func testDecodesRoomScale() throws {
+    func testDecodesRoomFractional() throws {
         let room = try decoder.decode(
             RoomDetail.self,
-            from: Data(roomJSON(extra: "\"displayExponent\": 2, \"scaleVersion\": 3,").utf8)
+            from: Data(roomJSON(extra: "\"fractional\": true,").utf8)
         )
-        XCTAssertEqual(room.displayExponent, 2)
-        XCTAssertEqual(room.scaleVersion, 3)
+        XCTAssertTrue(room.fractional)
     }
 
-    /// Группа от прежнего сервера: полей шкалы нет — суммы целые.
+    /// Группа от прежнего сервера: признака нет — считаем, что копеек нет.
     func testDecodesRoomFromOldServer() throws {
         let room = try decoder.decode(RoomDetail.self, from: Data(roomJSON(extra: "").utf8))
-        XCTAssertEqual(room.displayExponent, 0)
-        XCTAssertEqual(room.scaleVersion, 0)
+        XCTAssertFalse(room.fractional)
     }
 
     /// Точная доля приходит отдельным полем; старое `sum` — округлённая

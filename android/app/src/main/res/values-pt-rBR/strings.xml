@@ -699,8 +699,5 @@
     <string name="push_locale">pt-BR</string>
     <string name="group_settings_cents">Centavos</string>
     <string name="group_cents_toggle">Contar centavos</string>
-    <string name="group_settings_cents_footer">Os valores do grupo passam a ter decimais: 20,80 em vez de 21. A conversão é exata e o dinheiro não muda.</string>
-    <string name="group_cents_off_title">Desativar centavos?</string>
-    <string name="group_cents_off_confirm">Desativar</string>
-    <string name="group_cents_off_message">Os valores serão arredondados: 20,80 passará a 21. Você pode reativar os centavos, mas o arredondamento não será desfeito.</string>
+    <string name="group_settings_cents_footer">Você poderá inserir valores com centavos, e as despesas serão divididas até o centavo. O que já foi registrado não muda.</string>
 </resources>

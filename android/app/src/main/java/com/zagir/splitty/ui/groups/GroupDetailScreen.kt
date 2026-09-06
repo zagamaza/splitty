@@ -1524,8 +1524,8 @@ private fun GroupSettingsTab(
     val savingCurrency by viewModel.savingCurrency.collectAsStateWithLifecycle()
     val selectedOverride by viewModel.selectedCurrencyOverride.collectAsStateWithLifecycle()
     val isArchiving by viewModel.isArchiving.collectAsStateWithLifecycle()
-    val exponentOverride by viewModel.displayExponentOverride.collectAsStateWithLifecycle()
-    val isSavingScale by viewModel.isSavingScale.collectAsStateWithLifecycle()
+    val fractionalOverride by viewModel.fractionalOverride.collectAsStateWithLifecycle()
+    val isSavingFractional by viewModel.isSavingFractional.collectAsStateWithLifecycle()
 
     val colors = Splitty.colors
     val haptics = rememberHaptics()
@@ -1533,36 +1533,13 @@ private fun GroupSettingsTab(
     // Смена валюты — с подтверждением: суммы НЕ пересчитываются, меняется
     // только обозначение у всех участников (порт iOS confirmationDialog).
     var pendingCurrency by remember { mutableStateOf<CurrencyInfo?>(null) }
-    val displayExponent = exponentOverride ?: room.displayExponent
-    // Предел шкалы берём из справочника: у иены и воны он нулевой, и секции
-    // копеек в такой группе нет вовсе. Пока справочник не пришёл — тоже нет:
-    // тумблер, который получит отказ, хуже отсутствующего.
-    val maxExponent = (currencies as? UiState.Content)?.value
-        ?.firstOrNull { it.code == selectedCurrency }?.maxExponent ?: 0
-    // Выключение копеек округляет уже записанные деньги — спрашиваем.
-    var isDropCentsConfirmVisible by remember { mutableStateOf(false) }
+    val fractional = fractionalOverride ?: room.fractional
+    // Наличие дробной части берём из справочника: у иены и воны её нет, и
+    // секции копеек в такой группе нет вовсе. Пока справочник не пришёл — тоже
+    // нет: тумблер, который получит отказ, хуже отсутствующего.
+    val supportsFraction = (currencies as? UiState.Content)?.value
+        ?.firstOrNull { it.code == selectedCurrency }?.supportsFraction ?: false
 
-    if (isDropCentsConfirmVisible) {
-        AlertDialog(
-            onDismissRequest = { isDropCentsConfirmVisible = false },
-            title = { Text(stringResource(R.string.group_cents_off_title)) },
-            text = { Text(stringResource(R.string.group_cents_off_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    haptics.tap()
-                    viewModel.setScale(0)
-                    isDropCentsConfirmVisible = false
-                }) {
-                    Text(stringResource(R.string.group_cents_off_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { isDropCentsConfirmVisible = false }) {
-                    Text(stringResource(R.string.common_cancel))
-                }
-            },
-        )
-    }
 
     pendingCurrency?.let { currency ->
         AlertDialog(
@@ -1742,7 +1719,7 @@ private fun GroupSettingsTab(
             }
 
             // Копейки
-            if (maxExponent > 0) {
+            if (supportsFraction) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionHeader(
                         stringResource(R.string.group_settings_cents),
@@ -1763,7 +1740,7 @@ private fun GroupSettingsTab(
                                 color = colors.ink,
                                 modifier = Modifier.weight(1f),
                             )
-                            if (isSavingScale) {
+                            if (isSavingFractional) {
                                 CircularProgressIndicator(
                                     color = colors.accent,
                                     modifier = Modifier.size(20.dp),
@@ -1771,18 +1748,14 @@ private fun GroupSettingsTab(
                                 )
                             }
                             Switch(
-                                checked = displayExponent > 0,
-                                enabled = !isSavingScale,
+                                checked = fractional,
+                                enabled = !isSavingFractional,
                                 colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
-                                onCheckedChange = { wantsCents ->
+                                onCheckedChange = { wants ->
                                     haptics.tap()
-                                    // Включение уходит сразу — оно точное.
-                                    // Выключение сначала спрашивает.
-                                    if (wantsCents) {
-                                        viewModel.setScale(maxExponent)
-                                    } else {
-                                        isDropCentsConfirmVisible = true
-                                    }
+                                    // В обе стороны сразу: записанные суммы не
+                                    // меняются, округлять нечего, спрашивать не о чем.
+                                    viewModel.setFractional(wants)
                                 },
                             )
                         }

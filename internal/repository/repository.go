@@ -128,10 +128,9 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
-	// SetRoomScale переводит комнату в другую шкалу, пересчитывая деньги всех её
-	// операций одним обновлением документа. ErrRoomBusy — комнату писали, пока
-	// шёл пересчёт, и правку нужно повторить
-	SetRoomScale(ctx context.Context, roomId string, exp int) (*api.Room, error)
+	// SetRoomFractional включает и выключает копейки в тусе. Обычная настройка:
+	// записи не трогаются, деньги всегда хранятся в копейках
+	SetRoomFractional(ctx context.Context, roomId string, on bool) (*api.Room, error)
 	// SetAvatarFileId ставит ссылку на аву комнаты (пустая строка снимает её) и
 	// возвращает ПРЕЖНЮЮ ссылку — ту, которую этот вызов вытеснил
 	SetAvatarFileId(ctx context.Context, roomId string, fileId string) (string, error)
@@ -185,12 +184,7 @@ type MongoUserRepository struct {
 }
 
 type MongoRoomRepository struct {
-	// beforeScaleWrite — шов для тестов гонки пересчёта шкалы, см. SetRoomScale
-	beforeScaleWrite func()
-	// beforeOperationWrite — шов для тестов ОБРАТНОЙ гонки: позволяет
-	// вклиниться между чтением шкалы и записью операции, см. writeUnderScale
-	beforeOperationWrite func()
-	col                  *mongo.Collection
+	col *mongo.Collection
 }
 
 type MongoChatStateRepository struct {
@@ -333,8 +327,8 @@ func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Roo
 	if err := res.Decode(rm); err != nil {
 		return nil, err
 	}
-	// Документ мог быть записан до появления минорных полей — достраиваем их
-	// на чтении, чтобы выше по стеку не пришлось знать, какого возраста запись.
+	// Документ мог быть записан до появления копеек — достраиваем их на чтении,
+	// чтобы выше по стеку не пришлось знать, какого возраста запись.
 	api.FillRoomMoney(rm)
 	return rm, nil
 }
@@ -363,7 +357,7 @@ func (rr MongoRoomRepository) JoinToRoom(ctx context.Context, u api.User, roomId
 	// MatchedCount == 0 значит «комнаты нет ИЛИ пользователь уже участник».
 	// Оба случая для вызывающего одинаковы: состояние уже такое, каким он его
 	// хотел видеть, либо комнату он проверил раньше (roomForMember/findRoom).
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(update))
+	_, err = rr.col.UpdateOne(ctx, filter, update)
 	return err
 }
 
@@ -394,11 +388,18 @@ func sanitizeUsers(users *[]api.User) *[]api.User {
 // sanitizeOperation возвращает копию операции с санитайзнутыми снимками
 // пользователей и достроенными деньгами; id не трогаются.
 //
-// Деньги достраиваются ЗДЕСЬ, а не у вызывающих: через эту функцию проходят
-// все четыре записи операции, и один забытый вызов на стороне бота или REST
-// положил бы в базу документ без минорных полей — то есть тихо неполные
-// деньги. exp — шкала комнаты, в которую идёт запись.
-func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
+// Деньги достраиваются ЗДЕСЬ, а не у вызывающих: через эту функцию проходят все
+// четыре записи операции, и один забытый вызов положил бы в базу документ без
+// копеек — то есть тихо неполные деньги.
+//
+// fractional — считает ли туса копейки. Он нужен только для ТОЧНОСТИ ДЕЛЕНИЯ
+// расхода поровну; на хранение не влияет никак, деньги всегда лежат в копейках.
+// ⚠️ Поэтому устаревшее значение здесь безобидно: если человек переключил
+// признак между чтением и записью, доля одного расхода округлится с другим
+// шагом, но сумма долей всё равно сойдётся с итогом. Ни CAS, ни сторожа тут не
+// нужны — в отличие от прежней схемы, где то же расхождение меняло смысл суммы
+// в сто раз.
+func sanitizeOperation(o *api.Operation, fractional bool) *api.Operation {
 	if o == nil {
 		return nil
 	}
@@ -416,8 +417,8 @@ func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
 		}
 		c.RecipientsWithSum = rws
 	}
-	// Позиции копируются вглубь: FillMoney правит доли на месте, а срез Shares
-	// у поверхностной копии тот же самый, и правка уехала бы в операцию
+	// Позиции копируются вглубь: ReconcileMoney правит доли на месте, а срез
+	// Shares у поверхностной копии тот же самый, и правка уехала бы в операцию
 	// вызывающего.
 	if c.Items != nil {
 		items := make([]api.OperationItem, len(c.Items))
@@ -431,163 +432,44 @@ func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
 		}
 		c.Items = items
 	}
-	api.ReconcileMoney(&c, exp)
+	api.ReconcileMoney(&c, fractional)
 	return &c
 }
 
-// ErrRoomBusy — комнату писали, пока шёл пересчёт шкалы. Пересчёт читает
-// операции, пересчитывает их в памяти и кладёт обратно целиком, поэтому чужая
-// запись в этот момент была бы затёрта. Вызывающему остаётся повторить.
-var ErrRoomBusy = errors.New("room changed during rescale")
+// roomFractional — считает ли туса копейки, одним лёгким запросом (проекция на
+// два поля). Спрашивает сам репозиторий: так запись операции не может обойтись
+// без признака, даже если вызывающий про него не думал.
+func (rr MongoRoomRepository) roomFractional(ctx context.Context, id primitive.ObjectID) (bool, error) {
+	var room api.Room
+	err := rr.col.FindOne(ctx, bson.M{"_id": id},
+		options.FindOne().SetProjection(bson.M{"currency": 1, "fractional_amounts": 1})).Decode(&room)
+	if err != nil {
+		return false, err
+	}
+	return api.RoomFractional(&room), nil
+}
 
-// SetRoomScale переводит комнату в шкалу exp: пересчитывает деньги всех
-// операций и записывает их ОДНИМ обновлением документа. Одним — потому что
-// половина комнаты в одной шкале и половина в другой это деньги, которых нет.
+// SetRoomFractional включает и выключает копейки в тусе.
 //
-// Запись условная: если между чтением и записью в комнате появилась, исчезла
-// или изменилась операция, обновление не срабатывает и возвращается
-// ErrRoomBusy. Сторожей два, и оба нужны: размер массива ловит добавление и
-// удаление, максимальная версия операции — правку существующей.
-func (rr MongoRoomRepository) SetRoomScale(ctx context.Context, roomId string, exp int) (*api.Room, error) {
+// ⚠️ Обычная настройка: НИ ОДНА запись не трогается. Деньги всегда хранятся в
+// копейках, а признак решает лишь что принимать на вводе и с какой точностью
+// делить расход. Именно поэтому здесь нет ни пересчёта сумм, ни атомарности, ни
+// сторожей, ни отката — всего того, что прежняя схема со сменой единицы
+// хранения требовала и на чём ломалась.
+func (rr MongoRoomRepository) SetRoomFractional(ctx context.Context, roomId string, on bool) (*api.Room, error) {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return nil, err
 	}
-	room, err := rr.FindById(ctx, roomId)
-	if err != nil {
-		return nil, err
-	}
-	// ⚠️ Допустимость шкалы проверяется здесь, по СВЕЖЕ прочитанной комнате.
-	// Обработчик REST проверял её по комнате, прочитанной до вызова, и после
-	// конкурентной смены валюты на иену запрос, законный для рубля, поставил
-	// бы иеновой комнате шкалу 2 — которой у иены не существует.
-	if !api.IsValidExponent(api.RoomCurrency(room), exp) {
-		return nil, ErrScaleNotSupported
-	}
-	if api.RoomExponent(room) == exp {
-		return room, nil
-	}
-
-	var ops []api.Operation
-	if room.Operations != nil {
-		ops = *room.Operations
-	}
-	revision := room.Revision
-	// Пересчёт может оказаться невозможным: у испорченного документа сумма
-	// позиций не сходится с итогом расхода. Записывать половину пересчёта
-	// нельзя, поэтому отказ доезжает до вызывающего.
-	if err := api.RescaleRoom(room, exp); err != nil {
-		return nil, err
-	}
-
-	// Шов для тестов: позволяет вклиниться ровно между чтением комнаты и
-	// записью пересчёта — окно, которое и стережёт ревизия.
-	if rr.beforeScaleWrite != nil {
-		rr.beforeScaleWrite()
-	}
-
-	// ⚠️ Сторож ровно один, и это РЕВИЗИЯ КОМНАТЫ. Прежняя редакция сторожила
-	// размер массива операций и максимальную их версию — и пропускала три вещи
-	// разом: правку операции с версией ниже максимальной, отметку о доставке
-	// пуша и архивирование расхода (обе version не поднимают вовсе), а также
-	// затирание личности в снимках участников. Пересчёт кладёт массив целиком,
-	// поэтому каждая из них была бы затёрта: удалённый расход воскрес бы, пуш
-	// ушёл бы второй раз, стёртые данные человека вернулись бы в базу.
-	filter := bson.M{"_id": hex, "revision": versionFilter(revision)}
-	sanitized := make([]api.Operation, len(ops))
-	for i := range ops {
-		sanitized[i] = *sanitizeOperation(&ops[i], exp)
-	}
-	update := bson.M{
-		"$set": bson.M{"display_exponent": exp, "operations": sanitized},
-		"$inc": bson.M{"scale_version": 1},
-	}
-	res, err := rr.col.UpdateOne(ctx, filter, withRevision(update))
+	res, err := rr.col.UpdateOne(ctx, bson.M{"_id": hex},
+		bson.M{"$set": bson.M{"fractional_amounts": on}})
 	if err != nil {
 		return nil, err
 	}
 	if res.MatchedCount == 0 {
-		return nil, ErrRoomBusy
+		return nil, mongo.ErrNoDocuments
 	}
-	return room, nil
-}
-
-// roomExponent — шкала комнаты одним лёгким запросом (проекция на два поля).
-// Спрашивает её сам репозиторий: так запись операции не может обойтись без
-// шкалы, даже если вызывающий про неё не думал.
-// checkMoneyRange отвергает запись операции, чьи суммы не помещаются в
-// продуктовый потолок.
-//
-// ⚠️ Бот не ограничивает вводимую сумму (`internal/bot/operation_screen.go`,
-// defineSum), и до этой проверки огромное значение доходило до нормализации,
-// где молча превращалось в SumMinor = 0 — расход без денег.
-func checkMoneyRange(o *api.Operation, exp int) error {
-	return api.ValidateMoneyRange(o, exp)
-}
-
-func (rr MongoRoomRepository) roomScale(ctx context.Context, id primitive.ObjectID) (exp, version int, err error) {
-	var room api.Room
-	err = rr.col.FindOne(ctx, bson.M{"_id": id},
-		options.FindOne().SetProjection(bson.M{
-			"currency": 1, "display_exponent": 1, "scale_version": 1,
-		})).Decode(&room)
-	if err != nil {
-		return 0, 0, err
-	}
-	return api.RoomExponent(&room), room.ScaleVersion, nil
-}
-
-// errScaleUnchanged — запись не совпала, но шкала комнаты ни при чём: причину
-// разбирает вызывающий своими прежними правилами.
-var errScaleUnchanged = errors.New("write missed for a reason other than scale")
-
-// writeUnderScale выполняет запись операции под условием «шкала комнаты не
-// менялась с момента её чтения».
-//
-// ⚠️ Без этого условия есть ОБРАТНОЕ окно гонки. Нормализация денег считает по
-// шкале, прочитанной отдельным запросом; если между чтением и записью прошёл
-// пересчёт шкалы, расход ложится в комнату уже по новой шкале, а посчитан был
-// по старой — и толкуется в сто раз иначе. Сторож на стороне пересчёта это
-// окно не закрывает: он стережёт свою запись, а не чужую.
-//
-// write получает шкалу и сторож для фильтра и отвечает, совпал ли документ.
-// Не совпал, а шкала за это время уехала — повторяем с новой.
-func (rr MongoRoomRepository) writeUnderScale(
-	ctx context.Context, hex primitive.ObjectID, op *api.Operation,
-	write func(exp int, guard bson.M) (bool, error),
-) error {
-	for attempt := 0; attempt < 3; attempt++ {
-		exp, version, err := rr.roomScale(ctx, hex)
-		if err != nil {
-			return err
-		}
-		// Диапазон проверяем ПОД прочитанной шкалой: при шкале 2 потолок в
-		// минорных единицах в сто раз выше, и то, что годится для целых
-		// рублей, может не поместиться в копейках.
-		if err := checkMoneyRange(op, exp); err != nil {
-			return err
-		}
-		if rr.beforeOperationWrite != nil {
-			hook := rr.beforeOperationWrite
-			rr.beforeOperationWrite = nil
-			hook()
-		}
-		matched, err := write(exp, bson.M{"scale_version": versionFilter(version)})
-		if err != nil {
-			return err
-		}
-		if matched {
-			return nil
-		}
-		_, current, err := rr.roomScale(ctx, hex)
-		if err != nil {
-			return err
-		}
-		if current == version {
-			return errScaleUnchanged
-		}
-	}
-	return ErrRoomBusy
+	return rr.FindById(ctx, roomId)
 }
 
 // sanitizeRoom возвращает копию комнаты с санитайзнутыми участниками и
@@ -601,7 +483,7 @@ func sanitizeRoom(r *api.Room) *api.Room {
 	if c.Operations != nil {
 		ops := make([]api.Operation, len(*c.Operations))
 		for i := range *c.Operations {
-			ops[i] = *sanitizeOperation(&(*c.Operations)[i], api.RoomExponent(r))
+			ops[i] = *sanitizeOperation(&(*c.Operations)[i], api.RoomFractional(r))
 		}
 		c.Operations = &ops
 	}
@@ -645,7 +527,7 @@ func (rr MongoRoomRepository) LeaveRoom(ctx context.Context, userId int, roomId 
 			"room_states.finished_add_operation": userId,
 		},
 	}
-	res, err := rr.col.UpdateOne(ctx, filter, withRevision(update))
+	res, err := rr.col.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return false, err
 	}
@@ -706,7 +588,7 @@ func (rr MongoRoomRepository) ArchiveRoom(ctx context.Context, userId int, roomI
 	}
 
 	filter := bson.M{"_id": hex, "users._id": userId}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$addToSet": bson.M{"room_states.archived": userId}}))
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$addToSet": bson.M{"room_states.archived": userId}})
 	return err
 }
 
@@ -717,7 +599,7 @@ func (rr MongoRoomRepository) UnArchiveRoom(ctx context.Context, userId int, roo
 	}
 
 	filter := bson.M{"_id": hex, "users._id": userId}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$pull": bson.M{"room_states.archived": userId}}))
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.archived": userId}})
 	if err != nil {
 		log.Error().Err(err).Msg("get all debts failed")
 		return err
@@ -732,7 +614,7 @@ func (rr MongoRoomRepository) FinishedAddOperation(ctx context.Context, userId i
 	}
 
 	filter := bson.M{"_id": hex, "users._id": userId}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$addToSet": bson.M{"room_states.finished_add_operation": userId}}))
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$addToSet": bson.M{"room_states.finished_add_operation": userId}})
 	return err
 }
 
@@ -743,7 +625,7 @@ func (rr MongoRoomRepository) UnFinishedAddOperation(ctx context.Context, userId
 	}
 
 	filter := bson.M{"_id": hex, "users._id": userId}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$pull": bson.M{"room_states.finished_add_operation": userId}}))
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"room_states.finished_add_operation": userId}})
 	if err != nil {
 		log.Error().Err(err).Msg("UpdateOne failed")
 		return err
@@ -759,7 +641,7 @@ func (rr MongoRoomRepository) PaidOfDebts(ctx context.Context, userIds []int, ro
 
 	filter := bson.M{"_id": hex}
 	update := bson.D{{Key: "$set", Value: bson.M{"room_states.paid_off_debts": userIds}}}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(update))
+	_, err = rr.col.UpdateOne(ctx, filter, update)
 	if err != nil {
 		log.Error().Err(err).Msg("PaidOfDebts")
 		return err
@@ -854,7 +736,7 @@ func (rr MongoRoomRepository) SetNotificationSent(ctx context.Context, roomId st
 		return err
 	}
 	filter := bson.M{"_id": hex, "operations._id": operationId}
-	res, err := rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$set": bson.M{"operations.$.notification_sent": sent}}))
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$.notification_sent": sent}})
 	if err != nil {
 		return err
 	}
@@ -987,33 +869,23 @@ func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operat
 	}
 	filter := bson.M{"_id": hex, "operations": bson.M{"$elemMatch": elem}}
 
-	next := *o
-	next.Version = o.Version + 1
-	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
-		f := bson.M{}
-		for k, v := range filter {
-			f[k] = v
-		}
-		for k, v := range guard {
-			f[k] = v
-		}
-		res, uErr := rr.col.UpdateOne(ctx, f,
-			withRevision(bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next, exp)}}))
-		if uErr != nil {
-			return false, uErr
-		}
-		return res.MatchedCount > 0, nil
-	})
-	if err == nil {
-		// версия ушла вперёд — вызывающий отдаёт её клиенту, иначе следующая
-		// правка оказалась бы конфликтной сразу же
-		o.Version = next.Version
-		return nil
-	}
-	if !errors.Is(err, errScaleUnchanged) {
+	// ⚠️ Бот не ограничивает вводимую сумму, и без этой проверки огромное
+	// значение переполняло перевод в копейки и молча превращалось в ноль.
+	if err := api.ValidateMoneyRange(o); err != nil {
 		return err
 	}
-	{
+	fractional, err := rr.roomFractional(ctx, hex)
+	if err != nil {
+		return err
+	}
+
+	next := *o
+	next.Version = o.Version + 1
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next, fractional)}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
 		if conditional {
 			// операция на месте, не совпала только версия — это конфликт правок,
 			// а не пропавшая операция: человеку про них говорят разное
@@ -1027,6 +899,10 @@ func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operat
 		}
 		return mongo.ErrNoDocuments
 	}
+	// версия ушла вперёд — вызывающий отдаёт её клиенту, иначе следующая правка
+	// оказалась бы конфликтной сразу же
+	o.Version = next.Version
+	return nil
 }
 
 // ActivateOperation — тот же UpdateOperation, но с условием состава: все, кого
@@ -1055,31 +931,24 @@ func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Oper
 	// $[op] вместо позиционного $: в фильтре два массива (users и operations),
 	// и обычный $ берёт индекс совпадения по ПЕРВОМУ из них — обновление молча
 	// уходило бы не в ту операцию. arrayFilters выбирает элемент сам
+	// ⚠️ Бот не ограничивает вводимую сумму, и без этой проверки огромное
+	// значение переполняло перевод в копейки и молча превращалось в ноль.
+	if err := api.ValidateMoneyRange(o); err != nil {
+		return err
+	}
+	fractional, err := rr.roomFractional(ctx, hex)
+	if err != nil {
+		return err
+	}
+	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o, fractional)}}
 	opts := options.Update().SetArrayFilters(options.ArrayFilters{
 		Filters: []interface{}{bson.M{"op._id": o.ID}},
 	})
-	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
-		f := bson.M{}
-		for k, v := range filter {
-			f[k] = v
-		}
-		for k, v := range guard {
-			f[k] = v
-		}
-		res, uErr := rr.col.UpdateOne(ctx, f,
-			withRevision(bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o, exp)}}), opts)
-		if uErr != nil {
-			return false, uErr
-		}
-		return res.MatchedCount > 0, nil
-	})
-	if err == nil {
-		return nil
-	}
-	if !errors.Is(err, errScaleUnchanged) {
+	res, err := rr.col.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
 		return err
 	}
-	{
+	if res.MatchedCount == 0 {
 		n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex, "operations._id": o.ID})
 		if cErr != nil {
 			return cErr
@@ -1089,6 +958,7 @@ func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Oper
 		}
 		return ErrParticipantLeft
 	}
+	return nil
 }
 
 // ErrParticipantLeft — участник новой операции вышел из комнаты, пока запрос
@@ -1164,28 +1034,20 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
-		f := bson.M{}
-		for k, v := range filter {
-			f[k] = v
-		}
-		for k, v := range guard {
-			f[k] = v
-		}
-		res, uErr := rr.col.UpdateOne(ctx, f,
-			withRevision(bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, exp)}}}}))
-		if uErr != nil {
-			return false, uErr
-		}
-		return res.MatchedCount > 0, nil
-	})
-	if err == nil {
-		return nil
-	}
-	if !errors.Is(err, errScaleUnchanged) {
+	// ⚠️ Бот не ограничивает вводимую сумму, и без этой проверки огромное
+	// значение переполняло перевод в копейки и молча превращалось в ноль.
+	if err := api.ValidateMoneyRange(o); err != nil {
 		return err
 	}
-	{
+	fractional, err := rr.roomFractional(ctx, hex)
+	if err != nil {
+		return err
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, fractional)}}}})
+	if err != nil {
+		return err
+	}
+	if res.MatchedCount == 0 {
 		n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex})
 		if cErr != nil {
 			return cErr
@@ -1195,6 +1057,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 		}
 		return ErrParticipantLeft
 	}
+	return nil
 }
 
 // CreateOperationIfAbsent идемпотентная вставка операции по клиентскому ключу
@@ -1220,26 +1083,21 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
-		f := bson.M{}
-		for k, v := range filter {
-			f[k] = v
-		}
-		for k, v := range guard {
-			f[k] = v
-		}
-		res, uErr := rr.col.UpdateOne(ctx, f,
-			withRevision(bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, exp)}}}}))
-		if uErr != nil {
-			return false, uErr
-		}
-		return res.MatchedCount > 0, nil
-	})
-	if err == nil {
-		return true, nil
-	}
-	if !errors.Is(err, errScaleUnchanged) {
+	// ⚠️ Бот не ограничивает вводимую сумму, и без этой проверки огромное
+	// значение переполняло перевод в копейки и молча превращалось в ноль.
+	if err := api.ValidateMoneyRange(o); err != nil {
 		return false, err
+	}
+	fractional, err := rr.roomFractional(ctx, hex)
+	if err != nil {
+		return false, err
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, fractional)}}}})
+	if err != nil {
+		return false, err
+	}
+	if res.MatchedCount > 0 {
+		return true, nil
 	}
 	n, err := rr.col.CountDocuments(ctx, bson.M{"_id": hex})
 	if err != nil {
@@ -1288,7 +1146,7 @@ func (rr MongoRoomRepository) DeleteOperation(ctx context.Context, roomId string
 		}},
 	}
 	update := bson.M{"$set": bson.M{"operations.$.status": api.StatusArchive}}
-	res, err := rr.col.UpdateOne(ctx, filter, withRevision(update))
+	res, err := rr.col.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return false, err
 	}
@@ -1305,80 +1163,32 @@ func (rr MongoRoomRepository) PurgeOperation(ctx context.Context, roomId string,
 		return err
 	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.M{"$pull": bson.M{"operations": bson.M{"_id": operationId}}}))
+	_, err = rr.col.UpdateOne(ctx, filter, bson.M{"$pull": bson.M{"operations": bson.M{"_id": operationId}}})
 	return err
 }
 
-// ErrScaleNotSupported — у новой валюты нет дробной части, а комната считает
-// копейки. Сменить валюту, не тронув суммы, тут нельзя: комната в шкале 2
-// хранит 2080, и в иенах это число уже ничего не значит.
-var ErrScaleNotSupported = errors.New("currency does not support room scale")
-
-// UpdateCurrency меняет валюту комнаты. Суммы при этом НЕ пересчитываются —
+// UpdateCurrency меняет валюту тусы. Суммы при этом НЕ пересчитываются —
 // меняется обозначение, и это давнее осознанное поведение.
 //
-// ⚠️ Оно безопасно ровно до тех пор, пока новая валюта допускает шкалу
-// комнаты. Комната с копейками хранит 20,80 как 2080; переведи её в иены, где
-// дробной части нет, и то же число прочтётся как 2080 иен — деньги вырастут в
-// сто раз, не изменившись в базе ни на единицу.
+// ⚠️ Переезд в валюту без дробной части (иена, вона) просто ГАСИТ признак
+// копеек: новые суммы пойдут целыми. Уже записанные дробные остаются как есть и
+// показываются как есть — врать про них округлением хуже, чем показать 20,80
+// там, где сотых у валюты нет.
 //
-// Проверка живёт ЗДЕСЬ, а не в обработчике REST: валюту меняет и бот
-// (internal/bot/setting_screen.go), мимо всякого REST.
+// Отказывать тут не за что: деньги всегда хранятся в копейках, и смена валюты
+// ничего не переистолковывает.
 func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string, currency string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
-
-	// ⚠️ Читаем и пишем под CAS по ревизии. Без него смена валюты пробивала
-	// сторож шкалы в обе стороны: она видела пустую комнату, а к моменту
-	// записи там уже лежал расход — и шкала переключалась под записанными
-	// деньгами. Обратный порядок ломался так же: расход ложился между чтением
-	// и записью и оказывался истолкован по новой шкале.
-	for attempt := 0; attempt < 3; attempt++ {
-		// Проекция на первую операцию, а не чтение комнаты целиком: нужно знать
-		// лишь «есть ли в ней хоть один расход».
-		var head api.Room
-		err = rr.col.FindOne(ctx, bson.M{"_id": hex},
-			options.FindOne().SetProjection(bson.M{
-				"currency":         1,
-				"display_exponent": 1,
-				"revision":         1,
-				"operations":       bson.M{"$slice": 1},
-			})).Decode(&head)
-		if err != nil {
-			return err
-		}
-
-		exp := api.RoomExponent(&head)
-		hasOperations := head.Operations != nil && len(*head.Operations) > 0
-		newExp, ok := api.ScaleAfterCurrencyChange(exp, hasOperations, currency)
-		if !ok {
-			return ErrScaleNotSupported
-		}
-
-		update := bson.M{"currency": currency}
-		inc := bson.M{}
-		if newExp != exp {
-			update["display_exponent"] = newExp
-			// ⚠️ Шкала поменялась — значит обязана вырасти и ЕЁ версия, а не
-			// только ревизия. По scale_version сторожатся записи операций, и
-			// без подъёма расход, посчитанный по прежней шкале, спокойно лёг
-			// бы в комнату с новой.
-			inc["scale_version"] = 1
-		}
-
-		res, uErr := rr.col.UpdateOne(ctx,
-			bson.M{"_id": hex, "revision": versionFilter(head.Revision)},
-			withRevision(bson.M{"$set": update, "$inc": inc}))
-		if uErr != nil {
-			return uErr
-		}
-		if res.MatchedCount > 0 {
-			return nil
-		}
+	update := bson.M{"currency": currency}
+	if !api.SupportsFraction(currency) {
+		update["fractional_amounts"] = false
 	}
-	return ErrRoomBusy
+	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: update}})
+	return err
 }
 
 // EnsureRoomIndexes создаёт индексы коллекции room. Идемпотентно; вызывать при старте.
@@ -1460,7 +1270,7 @@ func (rr MongoRoomRepository) SetAvatarFileId(ctx context.Context, roomId string
 	var before struct {
 		AvatarFileId *string `bson:"avatar_file_id"`
 	}
-	if err := rr.col.FindOneAndUpdate(ctx, filter, withRevision(update), opts).Decode(&before); err != nil {
+	if err := rr.col.FindOneAndUpdate(ctx, filter, update, opts).Decode(&before); err != nil {
 		if err == mongo.ErrNoDocuments {
 			return "", nil
 		}
@@ -1696,7 +1506,7 @@ func (rr MongoRoomRepository) AnonymizeUser(ctx context.Context, userId int, pla
 			{Key: "$unset", Value: unset},
 		}
 		opts := options.Update().SetArrayFilters(options.ArrayFilters{Filters: t.arrayFilters})
-		if _, err := rr.col.UpdateMany(ctx, t.filter, withRevision(update), opts); err != nil {
+		if _, err := rr.col.UpdateMany(ctx, t.filter, update, opts); err != nil {
 			return errors.Wrapf(err, "анонимизация снимков по пути %s", t.path)
 		}
 	}
@@ -2667,51 +2477,4 @@ func (br MongoButtonRepository) FindById(ctx context.Context, id string) (*api.B
 		return nil, err
 	}
 	return btn, nil
-}
-
-// withRevision добавляет в обновление документа комнаты подъём ревизии.
-//
-// Через него обязана проходить КАЖДАЯ запись в комнату. Пересчёт шкалы кладёт
-// массив операций целиком, и любая пропущенная мутация будет им затёрта:
-// отметка о доставке пуша, архивирование расхода, затирание личности в
-// снимках. Версии операций для этого не годятся — их поднимает только правка.
-func withRevision(update interface{}) interface{} {
-	const field = "revision"
-	switch u := update.(type) {
-	case bson.M:
-		out := bson.M{}
-		for k, v := range u {
-			out[k] = v
-		}
-		if inc, ok := out["$inc"].(bson.M); ok {
-			merged := bson.M{field: 1}
-			for k, v := range inc {
-				merged[k] = v
-			}
-			out["$inc"] = merged
-			return out
-		}
-		out["$inc"] = bson.M{field: 1}
-		return out
-	case bson.D:
-		out := append(bson.D{}, u...)
-		for i, e := range out {
-			if e.Key != "$inc" {
-				continue
-			}
-			if inc, ok := e.Value.(bson.M); ok {
-				merged := bson.M{field: 1}
-				for k, v := range inc {
-					merged[k] = v
-				}
-				out[i].Value = merged
-				return out
-			}
-		}
-		return append(out, bson.E{Key: "$inc", Value: bson.M{field: 1}})
-	default:
-		// Неизвестная форма обновления — лучше упасть на ревью, чем молча
-		// пропустить мутацию мимо ревизии.
-		panic("withRevision: неподдерживаемый вид обновления")
-	}
 }

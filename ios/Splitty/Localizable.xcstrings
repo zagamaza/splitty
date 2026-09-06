@@ -10158,136 +10158,6 @@
         }
       }
     },
-    "Выключить": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выключить"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn off"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deaktivieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desactivar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactiver"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disattiva"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無効にする"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끄기"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desativar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关闭"
-          }
-        }
-      }
-    },
-    "Выключить копейки?": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выключить копейки?"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turn off cents?"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cent-Beträge deaktivieren?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Desactivar los céntimos?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactiver les centimes ?"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disattivare i centesimi?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "小数を無効にしますか？"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "소수점을 끌까요?"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desativar centavos?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关闭小数？"
-          }
-        }
-      }
-    },
     "Галерея": {
       "extractionState": "manual",
       "localizations": {
@@ -35070,67 +34940,67 @@
         }
       }
     },
-    "Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются.": {
+    "Суммы можно будет вводить с копейками, и расходы разделятся до копейки. Уже записанное не изменится.": {
       "extractionState": "manual",
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются."
+            "value": "Суммы можно будет вводить с копейками, и расходы разделятся до копейки. Уже записанное не изменится."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Group amounts become decimal: 20.80 instead of 21. The conversion is exact — no money changes."
+            "value": "You will be able to enter amounts with cents, and expenses will be split down to the cent. Nothing already recorded changes."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Beträge der Gruppe werden dezimal: 20,80 statt 21. Die Umrechnung ist exakt, es geht kein Geld verloren."
+            "value": "Sie können Beträge dann mit Cent eingeben, und Ausgaben werden centgenau geteilt. Bereits Erfasstes bleibt unverändert."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los importes del grupo pasarán a tener decimales: 20,80 en lugar de 21. La conversión es exacta y el dinero no cambia."
+            "value": "Podrá introducir importes con céntimos, y los gastos se dividirán al céntimo. Lo ya registrado no cambia."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les montants du groupe deviennent décimaux : 20,80 au lieu de 21. La conversion est exacte, l'argent ne change pas."
+            "value": "Vous pourrez saisir des montants avec les centimes, et les dépenses seront partagées au centime près. Ce qui est déjà enregistré ne change pas."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gli importi del gruppo diventano decimali: 20,80 invece di 21. La conversione è esatta, il denaro non cambia."
+            "value": "Potrà inserire importi con i centesimi e le spese saranno divise al centesimo. Quanto già registrato non cambia."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "グループの金額が小数になります（21 ではなく 20.80）。変換は正確で、金額は変わりません。"
+            "value": "金額を小数で入力でき、支出も小数単位で分割されます。すでに記録された内容は変わりません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "그룹 금액이 소수로 표시됩니다. 21 대신 20.80입니다. 변환은 정확하며 금액은 달라지지 않습니다."
+            "value": "금액을 소수점까지 입력할 수 있고 지출도 소수점 단위로 나뉩니다. 이미 기록된 내용은 바뀌지 않습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os valores do grupo passam a ter decimais: 20,80 em vez de 21. A conversão é exata e o dinheiro não muda."
+            "value": "Você poderá inserir valores com centavos, e as despesas serão divididas até o centavo. O que já foi registrado não muda."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "群组金额将显示小数：20.80 而非 21。换算精确，金额不变。"
+            "value": "您将可以输入带小数的金额，支出也会精确到小数分摊。已记录的内容不会改变。"
           }
         }
       }
@@ -35196,71 +35066,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gli importi non vengono convertiti: cambia solo il simbolo, per tutto il gruppo"
-          }
-        }
-      }
-    },
-    "Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится": {
-      "extractionState": "manual",
-      "localizations": {
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amounts will be rounded: 20.80 becomes 21. You can turn cents back on, but the rounding cannot be undone."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beträge werden gerundet: aus 20,80 wird 21. Sie können Cent-Beträge wieder aktivieren, die Rundung lässt sich jedoch nicht rückgängig machen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los importes se redondearán: 20,80 pasará a ser 21. Puede volver a activar los céntimos, pero el redondeo no se deshará."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les montants seront arrondis : 20,80 deviendra 21. Vous pouvez réactiver les centimes, mais l'arrondi ne sera pas annulé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gli importi verranno arrotondati: 20,80 diventerà 21. Può riattivare i centesimi, ma l'arrotondamento non si annulla."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金額は四捨五入されます（20.80 は 21 になります）。小数は再び有効にできますが、四捨五入は元に戻せません。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "금액이 반올림됩니다. 20.80은 21이 됩니다. 소수점은 다시 켤 수 있지만 반올림은 되돌릴 수 없습니다."
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os valores serão arredondados: 20,80 passará a 21. Você pode reativar os centavos, mas o arredondamento não será desfeito."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金额将被四舍五入：20.80 变为 21。您可以重新开启小数，但四舍五入无法撤销。"
           }
         }
       }

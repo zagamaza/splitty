@@ -31,7 +31,7 @@ import com.zagir.splitty.core.model.RoomAvatarResponse
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SetCurrencyBody
-import com.zagir.splitty.core.model.SetScaleBody
+import com.zagir.splitty.core.model.SetFractionalBody
 import com.zagir.splitty.core.model.SetPasswordBody
 import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
@@ -225,13 +225,13 @@ interface SplittyApi {
     )
 
     /**
-     * Включение и выключение копеек. Отвечает обновлённой группой — суммы в
-     * ней уже пересчитаны, второй запрос за ними не нужен.
+     * Включение и выключение копеек. Обычная настройка: записанные суммы не
+     * меняются.
      */
-    @PUT("api/v1/rooms/{roomId}/scale")
-    suspend fun setRoomScale(
+    @PUT("api/v1/rooms/{roomId}/fractional")
+    suspend fun setRoomFractional(
         @Path("roomId") roomId: String,
-        @Body body: SetScaleBody,
+        @Body body: SetFractionalBody,
     ): RoomDetail
 
     // --- Валюты ---

@@ -695,8 +695,5 @@
     <string name="push_locale">zh-Hans</string>
     <string name="group_settings_cents">小数显示</string>
     <string name="group_cents_toggle">使用小数</string>
-    <string name="group_settings_cents_footer">群组金额将显示小数：20.80 而非 21。换算精确，金额不变。</string>
-    <string name="group_cents_off_title">关闭小数？</string>
-    <string name="group_cents_off_confirm">关闭</string>
-    <string name="group_cents_off_message">金额将被四舍五入：20.80 变为 21。您可以重新开启小数，但四舍五入无法撤销。</string>
+    <string name="group_settings_cents_footer">您将可以输入带小数的金额，支出也会精确到小数分摊。已记录的内容不会改变。</string>
 </resources>

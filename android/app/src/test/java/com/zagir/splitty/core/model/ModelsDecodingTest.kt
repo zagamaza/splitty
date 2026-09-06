@@ -449,20 +449,20 @@ class ModelsDecodingTest {
         assertEquals(-huge, room.myBalance)
     }
 
-    // --- Шкала группы и минорные суммы ---
+    // --- Копейки в группе и минорные суммы ---
     //
     // Главное тут не «новые поля читаются», а «их ОТСУТСТВИЕ не ломает клиент».
-    // Сервер могут откатить, и тогда полей шкалы в ответе не будет вовсе.
-    // Единственное честное поведение — считать шкалу нулевой и дроби
-    // запрещёнными: выводить шкалу из справочника валют нельзя.
+    // Сервер могут откатить, и тогда новых полей в ответе не будет вовсе.
+    // Единственное честное поведение — считать, что копейки выключены и дроби
+    // запрещены.
 
     @Test
-    fun `decodes CurrencyInfo with scale fields`() {
+    fun `decodes CurrencyInfo with fractional fields`() {
         val currency = SplittyJson.decodeFromString<CurrencyInfo>(
-            """{"code":"USD","symbol":"$","flag":"US","displayExponent":2,"maxExponent":2,"fractionalInput":true}"""
+            """{"code":"USD","symbol":"$","flag":"US","fractional":true,"supportsFraction":true,"fractionalInput":true}"""
         )
-        assertEquals(2, currency.displayExponent)
-        assertEquals(2, currency.maxExponent)
+        assertTrue(currency.fractional)
+        assertTrue(currency.supportsFraction)
         assertTrue(currency.fractionalInput)
     }
 
@@ -470,19 +470,19 @@ class ModelsDecodingTest {
     @Test
     fun `decodes CurrencyInfo without minor unit`() {
         val currency = SplittyJson.decodeFromString<CurrencyInfo>(
-            """{"code":"JPY","symbol":"Y","flag":"JP","displayExponent":0,"maxExponent":0,"fractionalInput":false}"""
+            """{"code":"JPY","symbol":"Y","flag":"JP","fractional":false,"supportsFraction":false,"fractionalInput":false}"""
         )
-        assertEquals(0, currency.maxExponent)
+        assertFalse(currency.supportsFraction)
     }
 
-    /** Ответ сервера, откатанного на прежнюю версию: полей шкалы нет вовсе. */
+    /** Ответ сервера, откатанного на прежнюю версию: новых полей нет вовсе. */
     @Test
     fun `decodes CurrencyInfo from old server`() {
         val currency = SplittyJson.decodeFromString<CurrencyInfo>(
             """{"code":"RUB","symbol":"R","flag":"RU"}"""
         )
-        assertEquals(0, currency.displayExponent)
-        assertEquals(0, currency.maxExponent)
+        assertFalse(currency.fractional)
+        assertFalse(currency.supportsFraction)
         assertFalse(currency.fractionalInput)
     }
 

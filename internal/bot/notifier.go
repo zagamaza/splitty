@@ -236,7 +236,7 @@ func (n *Notifier) NotifyOperationUpdated(ctx context.Context, room api.Room, ol
 	if oldOp.Donor == nil || newOp.Donor == nil {
 		return
 	}
-	diff := computeOperationDiff(oldOp, newOp, api.RoomExponent(&room))
+	diff := computeOperationDiff(oldOp, newOp)
 	if diff == nil {
 		return
 	}
@@ -305,8 +305,8 @@ func (n *Notifier) pushOperationUpdated(ctx context.Context, room api.Room, oldO
 	for _, change := range diff.RecipientsShareChanged {
 		send(change.User.ID, api.NotifyOperations, pushtext.ShareChanged,
 			author.DisplayName, newOp.Description,
-			moneySpace(api.FromMinor(change.OldSumMinor, api.RoomExponent(&room)), room.Currency),
-			moneySpace(api.FromMinor(change.NewSumMinor, api.RoomExponent(&room)), room.Currency))
+			moneySpace(api.FromMinor(change.OldSumMinor), room.Currency),
+			moneySpace(api.FromMinor(change.NewSumMinor), room.Currency))
 	}
 	for _, removed := range diff.RecipientsRemoved {
 		send(removed.User.ID, api.NotifyOperations, pushtext.RecipientRemoved,

@@ -23,9 +23,8 @@ import (
 // принималась молча, хотя проекция минорного равна единице и поля расходятся.
 // Присутствие поля важно именно для обнаружения конфликта.
 func resolveAmount(
-	field string, legacy *int, minor *int64, exp int, fractionalAllowed bool,
+	field string, legacy *int, minor *int64, fractionalAllowed bool,
 ) (int64, *httpError) {
-	factor := int64(api.MinorFactor(exp))
 
 	if minor == nil {
 		if legacy == nil {
@@ -35,7 +34,7 @@ func resolveAmount(
 		// Старое поле — целые единицы валюты, дробным оно быть не может.
 		// Умножение проверенное: без него огромное значение сворачивалось в
 		// маленькое дробное и проходило мимо лимита и мимо запрета дробей.
-		v, ok := api.ToMinorChecked(*legacy, exp)
+		v, ok := api.ToMinorChecked(*legacy)
 		if !ok {
 			return 0, &httpError{http.StatusBadRequest, "validation",
 				fmt.Sprintf("значение поля %s вне допустимого диапазона", field)}
@@ -45,7 +44,7 @@ func resolveAmount(
 
 	// Дробь запрещена признаком СЕРВЕРА, а не клавиатурой в приложении: запрет
 	// обязан накрывать все входы разом, включая бота и разбор чека.
-	if !fractionalAllowed && *minor%factor != 0 {
+	if !fractionalAllowed && *minor%api.MinorFactor != 0 {
 		return 0, &httpError{http.StatusBadRequest, "validation",
 			"дробные суммы пока недоступны"}
 	}
@@ -53,7 +52,7 @@ func resolveAmount(
 	// Прислали оба — они обязаны сходиться. Сходятся означает «старое поле
 	// равно ПРОЕКЦИИ минорного», а не «старое × 100 == минорное»: у дробной
 	// суммы второе не выполняется никогда.
-	if legacy != nil && *legacy != api.FromMinor(*minor, exp) {
+	if legacy != nil && *legacy != api.FromMinor(*minor) {
 		return 0, &httpError{http.StatusBadRequest, "validation",
 			fmt.Sprintf("поля %s и %sMinor не сходятся", field, field)}
 	}
@@ -63,17 +62,17 @@ func resolveAmount(
 // minAmountMinor — наименьшая допустимая сумма: половина единицы валюты.
 // Меньше — и старое поле, которое читают прежние сборки, оказывается нулём,
 // то есть расход без суммы.
-func minAmountMinor(exp int) int64 {
-	factor := int64(api.MinorFactor(exp))
-	if factor == 1 {
-		return 1
+func minAmountMinor(fractionalAllowed bool) int64 {
+	if fractionalAllowed {
+		return api.MinorFactor / 2
 	}
-	return factor / 2
+	// Без копеек наименьшая сумма — единица валюты: доли всё равно кратны ей.
+	return api.MinorFactor
 }
 
 // maxAmountMinor — прежний потолок в единицах валюты, переведённый в минорные.
-func maxAmountMinor(exp int) int64 {
-	return int64(maxItemsTotal) * int64(api.MinorFactor(exp))
+func maxAmountMinor() int64 {
+	return int64(maxItemsTotal) * api.MinorFactor
 }
 
 // validateItemMoney проверяет деньги позиций чека.
@@ -83,8 +82,8 @@ func maxAmountMinor(exp int) int64 {
 // и только если они сходятся. Молча проигнорировать присланное минорное, как
 // было раньше, нельзя: контракт выглядел бы рабочим, а точное значение
 // терялось бы по дороге.
-func validateItemMoney(req *operationRequest, exp int, _ bool) *httpError {
-	factor := int64(api.MinorFactor(exp))
+func validateItemMoney(req *operationRequest, _ bool) *httpError {
+	factor := int64(api.MinorFactor)
 	reject := func(msg string) *httpError {
 		return &httpError{http.StatusBadRequest, "validation", msg}
 	}

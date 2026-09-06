@@ -758,8 +758,5 @@
     <string name="push_locale">es</string>
     <string name="group_settings_cents">Céntimos</string>
     <string name="group_cents_toggle">Contar céntimos</string>
-    <string name="group_settings_cents_footer">Los importes del grupo pasarán a tener decimales: 20,80 en lugar de 21. La conversión es exacta y el dinero no cambia.</string>
-    <string name="group_cents_off_title">¿Desactivar los céntimos?</string>
-    <string name="group_cents_off_confirm">Desactivar</string>
-    <string name="group_cents_off_message">Los importes se redondearán: 20,80 pasará a ser 21. Puede volver a activar los céntimos, pero el redondeo no se deshará.</string>
+    <string name="group_settings_cents_footer">Podrá introducir importes con céntimos, y los gastos se dividirán al céntimo. Lo ya registrado no cambia.</string>
 </resources>

@@ -17,43 +17,42 @@ func TestResolveAmount(t *testing.T) {
 		name          string
 		legacy        *int
 		minor         *int64
-		exp           int
 		allowFraction bool
 		want          int64
 		wantErr       bool
 	}{
-		{name: "только старое поле, шкала 0", legacy: legacyPtr(20), exp: 0, want: 20},
-		{name: "только старое поле, шкала 2", legacy: legacyPtr(20), exp: 2, want: 2000},
-		{name: "только минорное", minor: minor(2080), exp: 2, allowFraction: true, want: 2080},
-		{name: "оба поля сходятся", legacy: legacyPtr(20), minor: minor(2000), exp: 2, want: 2000},
+		{name: "только старое поле без копеек", legacy: legacyPtr(20), want: 2000},
+
+		{name: "только минорное", minor: minor(2080), allowFraction: true, want: 2080},
+		{name: "оба поля сходятся", legacy: legacyPtr(20), minor: minor(2000), want: 2000},
 		{
 			name:   "оба поля сходятся у дробной суммы: 21 — проекция 20.80",
-			legacy: legacyPtr(21), minor: minor(2080), exp: 2, allowFraction: true, want: 2080,
+			legacy: legacyPtr(21), minor: minor(2080), allowFraction: true, want: 2080,
 		},
 		{
 			name:   "старое поле не сходится с проекцией минорного",
-			legacy: legacyPtr(20), minor: minor(2080), exp: 2, allowFraction: true, wantErr: true,
+			legacy: legacyPtr(20), minor: minor(2080), allowFraction: true, wantErr: true,
 		},
 		{
 			name:  "дробь при выключенном признаке отвергается",
-			minor: minor(2080), exp: 2, allowFraction: false, wantErr: true,
+			minor: minor(2080), allowFraction: false, wantErr: true,
 		},
 		{
 			name:  "целое минорное при выключенном признаке проходит",
-			minor: minor(2000), exp: 2, allowFraction: false, want: 2000,
+			minor: minor(2000), allowFraction: false, want: 2000,
 		},
-		{name: "нет ни одного поля", exp: 2, wantErr: true},
+		{name: "нет ни одного поля", wantErr: true},
 		{
 			name:   "ноль в старом поле — это ПРИСЛАННЫЙ ноль, а не отсутствие",
-			legacy: legacyPtr(0), minor: minor(100), exp: 2, allowFraction: true, wantErr: true,
+			legacy: legacyPtr(0), minor: minor(100), allowFraction: true, wantErr: true,
 		},
 		{
 			name:   "огромное старое поле не сворачивается в маленькое дробное",
-			legacy: legacyPtr(184467440737095517), exp: 2, wantErr: true,
+			legacy: legacyPtr(184467440737095517), wantErr: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, hErr := resolveAmount("sum", tc.legacy, tc.minor, tc.exp, tc.allowFraction)
+			got, hErr := resolveAmount("sum", tc.legacy, tc.minor, tc.allowFraction)
 			if tc.wantErr {
 				if hErr == nil {
 					t.Fatalf("ожидался отказ, получено %d", got)
@@ -71,23 +70,23 @@ func TestResolveAmount(t *testing.T) {
 }
 
 func TestMinAmountMinor(t *testing.T) {
-	// Меньше половины единицы — и старое поле, которое читают прежние сборки,
-	// оказывается нулём: расход без суммы.
-	if got := minAmountMinor(0); got != 1 {
-		t.Errorf("шкала 0: got %d, want 1", got)
+	// С копейками наименьшая сумма — половина единицы валюты: меньше даёт в
+	// старом поле ноль, то есть расход без суммы.
+	if got := minAmountMinor(true); got != 50 {
+		t.Errorf("с копейками: got %d, want 50", got)
 	}
-	if got := minAmountMinor(2); got != 50 {
-		t.Errorf("шкала 2: got %d, want 50", got)
+	// Без копеек доли всё равно кратны единице валюты.
+	if got := minAmountMinor(false); got != 100 {
+		t.Errorf("без копеек: got %d, want 100", got)
 	}
 }
 
 // Целый расход, присланный обоими полями, — основной путь прежних и новых
 // сборок.
 func TestCreateOperationAcceptsBothFields(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Ужин","sum":20,"sumMinor":2000,"donorId":1,"recipientIds":[1,2]}`
 	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
@@ -120,9 +119,8 @@ func TestCreateOperationAcceptsBothFields(t *testing.T) {
 // Расхождение полей — отказ, а не молчаливый выбор одного из них: расходятся
 // они только по ошибке клиента, и угадывать за него нельзя.
 func TestCreateOperationRejectsMismatchedFields(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Ужин","sum":20,"sumMinor":2080,"donorId":1,"recipientIds":[1,2]}`
 	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
@@ -152,9 +150,8 @@ func TestFractionalRejectedWhileFlagOff(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			room := scaleRoom("USD")
+			room := fractionalRoom("USD", true)
 			s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-			setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 			rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+tc.path,
 				mustToken(t, s, testUser1.ID), tc.body)
@@ -165,10 +162,9 @@ func TestFractionalRejectedWhileFlagOff(t *testing.T) {
 
 // Признак включён — те же дроби принимаются, и доли сходятся с суммой точно.
 func TestFractionalAcceptedWhileFlagOn(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Ужин","sumMinor":2080,"donorId":1,"recipientIds":[1,2]}`
 	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
@@ -199,9 +195,8 @@ func TestFractionalAcceptedWhileFlagOn(t *testing.T) {
 // Сверка долей идёт в минорных единицах: в целых 10,40 + 10,40 округлились бы
 // до 10 + 10 и разошлись бы с суммой 20,80 на ровном месте.
 func TestExactSharesCheckedInMinorUnits(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Ужин","sumMinor":2080,"donorId":1,` +
 		`"recipientSums":[{"userId":1,"sumMinor":1040},{"userId":2,"sumMinor":1040}]}`
@@ -221,7 +216,7 @@ func TestExactSharesCheckedInMinorUnits(t *testing.T) {
 
 // Прежняя сборка шлёт только старое поле — и продолжает работать как раньше.
 func TestLegacyOnlyRequestStillWorks(t *testing.T) {
-	room := scaleRoom("RUB")
+	room := fractionalRoom("RUB", false)
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
 
 	body := `{"description":"Ужин","sum":100,"donorId":1,"recipientIds":[1,2]}`
@@ -234,10 +229,11 @@ func TestLegacyOnlyRequestStillWorks(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &op); err != nil {
 		t.Fatalf("cannot parse operation %q: %v", rec.Body.String(), err)
 	}
-	// Сервер САМ достраивает минорное поле: старый клиент читает ту же комнату
-	// и обязан увидеть в ней число, а не пустоту
-	if op.SumMinor == nil || *op.SumMinor != 100 {
-		t.Errorf("sumMinor = %v, want 100 (шкала 0)", op.SumMinor)
+	// Сервер САМ достраивает минорное поле: старый клиент читает ту же тусу и
+	// обязан увидеть в ней число, а не пустоту. Хранение всегда в копейках,
+	// поэтому 100 единиц валюты — это 10000.
+	if op.SumMinor == nil || *op.SumMinor != 10000 {
+		t.Errorf("sumMinor = %v, want 10000", op.SumMinor)
 	}
 	if op.Sum != 100 {
 		t.Errorf("sum = %d, want 100", op.Sum)
@@ -248,10 +244,9 @@ func TestLegacyOnlyRequestStillWorks(t *testing.T) {
 // сходиться между собой: 20,80 с долями 10,40 + 10,40 давал раньше итог 21 и
 // доли 10 + 10 — единица исчезала прямо в ответе.
 func TestLegacyProjectionOfFractionalSharesSumsToTotal(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Ужин","sumMinor":2080,"donorId":1,` +
 		`"recipientSums":[{"userId":1,"sumMinor":1040},{"userId":2,"sumMinor":1040}]}`
@@ -280,7 +275,7 @@ func TestLegacyProjectionOfFractionalSharesSumsToTotal(t *testing.T) {
 // Данные бота: равное деление лежит как float64(total)/n. Ответ REST обязан
 // отдавать доли, сходящиеся с итогом, на любой шкале.
 func TestBotEqualSplitProjectionSumsToTotal(t *testing.T) {
-	room := scaleRoom("RUB")
+	room := fractionalRoom("RUB", false)
 	ops := *room.Operations
 	ops[0].Sum = 100
 	ops[0].SplitType = api.SplitTypeEqually
@@ -340,10 +335,9 @@ func TestItemMinorFieldsAreValidated(t *testing.T) {
 		{"дробная фикс-доля", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1,"amount":50,"amountMinor":5050}]}`, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			room := scaleRoom("USD")
+			room := fractionalRoom("USD", true)
 			s := newTestServer(Config{FractionalInput: tc.flagOn},
 				newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-			setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 			body := `{"description":"Чек","donorId":1,"items":[` + tc.item + `]}`
 			rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
@@ -374,9 +368,8 @@ func TestItemMinorFieldsAreValidated(t *testing.T) {
 // Контракт разрешает её давно (отвергаются только отрицательные), и пара
 // amount:0 + amountMinor:0 обязана проходить.
 func TestZeroFixedShareIsAccepted(t *testing.T) {
-	room := scaleRoom("USD")
+	room := fractionalRoom("USD", true)
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
-	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
 
 	body := `{"description":"Чек","donorId":1,"items":[{"name":"Кофе","price":100,"priceMinor":10000,` +
 		`"qty":1,"kind":"item","shares":[{"userId":1,"amount":0,"amountMinor":0},{"userId":2,"weight":1}]}]}`

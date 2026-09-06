@@ -1137,19 +1137,19 @@ func TestCurrenciesDictionary(t *testing.T) {
 		t.Fatalf("cannot parse currencies %q: %v", rec.Body.String(), err)
 	}
 	want := []currencyInfoDto{
-		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺", DisplayExponent: 0, MaxExponent: 2},
-		{Code: "USD", Symbol: "$", Flag: "🇺🇸", DisplayExponent: 2, MaxExponent: 2},
-		{Code: "EUR", Symbol: "€", Flag: "🇪🇺", DisplayExponent: 2, MaxExponent: 2},
+		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺", Fractional: false, SupportsFraction: true},
+		{Code: "USD", Symbol: "$", Flag: "🇺🇸", Fractional: true, SupportsFraction: true},
+		{Code: "EUR", Symbol: "€", Flag: "🇪🇺", Fractional: true, SupportsFraction: true},
 		// Валюты рынков, на языки которых переведено приложение: японец видел
 		// свою комнату в долларах, потому что иены в справочнике не было.
-		// У иены и воны предел шкалы нулевой — минорной единицы нет в обороте.
-		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵", DisplayExponent: 0, MaxExponent: 0},
-		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳", DisplayExponent: 2, MaxExponent: 2},
-		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷", DisplayExponent: 0, MaxExponent: 0},
-		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷", DisplayExponent: 2, MaxExponent: 2},
-		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩", DisplayExponent: 0, MaxExponent: 2},
-		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿", DisplayExponent: 0, MaxExponent: 2},
-		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿", DisplayExponent: 0, MaxExponent: 2},
+		// У иены и воны дробной части нет в обороте.
+		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵", Fractional: false, SupportsFraction: false},
+		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳", Fractional: true, SupportsFraction: true},
+		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷", Fractional: false, SupportsFraction: false},
+		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷", Fractional: true, SupportsFraction: true},
+		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩", Fractional: false, SupportsFraction: true},
+		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿", Fractional: false, SupportsFraction: true},
+		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿", Fractional: false, SupportsFraction: true},
 	}
 	if len(currencies) != len(want) {
 		t.Fatalf("currencies = %+v, want %+v", currencies, want)
@@ -1560,10 +1560,8 @@ func TestCurrenciesFractionalInputFlag(t *testing.T) {
 	}
 }
 
-// Шкала новой комнаты записывается в документ ЯВНО, а не выводится из
-// справочника при чтении: иначе смена умолчания валюты переистолковала бы
-// суммы всех уже заведённых комнат.
-func TestCreateRoomMaterializesExponent(t *testing.T) {
+// Новая рублёвая туса заводится без копеек — по умолчанию валюты.
+func TestCreateRoomDefaultsToNoFraction(t *testing.T) {
 	repo := newFakeRoomRepo()
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1), repo)
 
@@ -1575,21 +1573,15 @@ func TestCreateRoomMaterializesExponent(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
 		t.Fatalf("cannot parse room %q: %v", rec.Body.String(), err)
 	}
-	if detail.DisplayExponent != 0 {
-		t.Errorf("displayExponent = %d, want 0 (умолчание рубля)", detail.DisplayExponent)
-	}
-	if detail.ScaleVersion != 0 {
-		t.Errorf("scaleVersion = %d, want 0 у только что созданной комнаты", detail.ScaleVersion)
+	if detail.Fractional {
+		t.Error("новая рублёвая туса считает копейки, хотя умолчание рубля — без них")
 	}
 
 	stored, err := repo.FindById(context.Background(), detail.ID)
 	if err != nil {
 		t.Fatalf("FindById: %v", err)
 	}
-	if stored.DisplayExponent == nil {
-		t.Fatal("шкала не записана в документ: осталась nil, значит зависит от справочника")
-	}
-	if *stored.DisplayExponent != 0 {
-		t.Errorf("сохранённая шкала = %d, want 0", *stored.DisplayExponent)
+	if api.RoomFractional(stored) {
+		t.Error("сохранённая туса считает копейки")
 	}
 }

@@ -5,12 +5,12 @@ import "testing"
 func TestToFromMinorRoundTrip(t *testing.T) {
 	for _, exp := range []int{0, 2} {
 		for _, units := range []int{0, 1, -1, 7, -7, 1200, -1200, 1_000_000} {
-			m, ok := ToMinorChecked(units, exp)
+			m, ok := ToMinorChecked(units)
 			if !ok {
 				t.Errorf("exp=%d units=%d: перевод отвергнут", exp, units)
 				continue
 			}
-			if got := FromMinor(m, exp); got != units {
+			if got := FromMinor(m); got != units {
 				t.Errorf("exp=%d units=%d: обратный перевод дал %d", exp, units, got)
 			}
 		}
@@ -28,7 +28,7 @@ func TestFromMinorRounding(t *testing.T) {
 		{0, 0}, {49, 0}, {50, 1}, {51, 1}, {149, 1}, {150, 2}, {2080, 21},
 		{-49, 0}, {-50, -1}, {-51, -1}, {-150, -2}, {-2080, -21},
 	} {
-		if got := FromMinor(tc.minor, 2); got != tc.want {
+		if got := FromMinor(tc.minor); got != tc.want {
 			t.Errorf("FromMinor(%d, 2) = %d, want %d", tc.minor, got, tc.want)
 		}
 	}
@@ -43,7 +43,7 @@ func TestFloatToMinorDoesNotTruncate(t *testing.T) {
 	}{
 		{20.8, 2080}, {0.1, 10}, {0.2, 20}, {0.3, 30}, {6.93, 693}, {33.33, 3333}, {-6.93, -693},
 	} {
-		if got := FloatToMinor(tc.sum, 2); got != tc.want {
+		if got := FloatToMinor(tc.sum); got != tc.want {
 			t.Errorf("FloatToMinor(%v, 2) = %d, want %d", tc.sum, got, tc.want)
 		}
 	}
@@ -52,14 +52,14 @@ func TestFloatToMinorDoesNotTruncate(t *testing.T) {
 // Немигрированный документ отвечает так же, как мигрированный: вызывающему
 // не нужно знать, какой ему достался.
 func TestSumMinorAtFallsBackToLegacyField(t *testing.T) {
-	if got := (Operation{Sum: 12}).SumMinorAt(2); got != 1200 {
+	if got := (Operation{Sum: 12}).SumMinorOrLegacy(); got != 1200 {
 		t.Errorf("операция без sum_minor: got %d, want 1200", got)
 	}
 	m := int64(2080)
-	if got := (Operation{Sum: 21, SumMinor: &m}).SumMinorAt(2); got != 2080 {
+	if got := (Operation{Sum: 21, SumMinor: &m}).SumMinorOrLegacy(); got != 2080 {
 		t.Errorf("операция с sum_minor: got %d, want 2080", got)
 	}
-	if got := (RecipientWithSum{Sum: 6.93}).SumMinorAt(2); got != 693 {
+	if got := (RecipientWithSum{Sum: 6.93}).SumMinorOrLegacy(); got != 693 {
 		t.Errorf("доля без sum_minor: got %d, want 693", got)
 	}
 }
@@ -67,16 +67,16 @@ func TestSumMinorAtFallsBackToLegacyField(t *testing.T) {
 // У ItemShare.Amount ноль ОСМЫСЛЕН: человек не платит за позицию. Отличить его
 // от «фиксированной доли нет» больше нечем, отсюда второе возвращаемое значение.
 func TestAmountMinorAtDistinguishesZeroFromAbsent(t *testing.T) {
-	if _, ok := (ItemShare{}).AmountMinorAt(2); ok {
+	if _, ok := (ItemShare{}).AmountMinorOrLegacy(); ok {
 		t.Error("доли нет, а функция сказала, что есть")
 	}
 	zero := 0
-	got, ok := (ItemShare{Amount: &zero}).AmountMinorAt(2)
+	got, ok := (ItemShare{Amount: &zero}).AmountMinorOrLegacy()
 	if !ok || got != 0 {
 		t.Errorf("осознанный ноль: got (%d, %v), want (0, true)", got, ok)
 	}
 	m := int64(150)
-	got, ok = (ItemShare{AmountMinor: &m}).AmountMinorAt(2)
+	got, ok = (ItemShare{AmountMinor: &m}).AmountMinorOrLegacy()
 	if !ok || got != 150 {
 		t.Errorf("минорная доля: got (%d, %v), want (150, true)", got, ok)
 	}
@@ -95,7 +95,7 @@ func TestFillMoneyOnLegacyDocument(t *testing.T) {
 			Shares: []ItemShare{{UserId: 1, Weight: 1, Amount: &amount}, {UserId: 2, Weight: 1}},
 		}},
 	}
-	FillMoney(&op, 2)
+	FillMoney(&op, true)
 
 	if op.SumMinor == nil || *op.SumMinor != 2000 {
 		t.Fatalf("sumMinor = %v, want 2000", op.SumMinor)
@@ -135,7 +135,7 @@ func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 		},
 		Items: []OperationItem{{PriceMinor: &price}},
 	}
-	FillMoney(&op, 2)
+	FillMoney(&op, true)
 
 	if op.Sum != 21 {
 		t.Errorf("проекция суммы = %d, want 21", op.Sum)
@@ -158,30 +158,13 @@ func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 	}
 }
 
-// В комнате нулевой шкалы минорная единица равна единице валюты: перевод не
-// должен ничего умножать.
-func TestFillRoomMoneyAtExponentZero(t *testing.T) {
-	room := &Room{
-		Currency:   "RUB",
-		Operations: &[]Operation{{Sum: 1200}},
-	}
-	FillRoomMoney(room)
-	op := (*room.Operations)[0]
-	if op.SumMinor == nil || *op.SumMinor != 1200 {
-		t.Errorf("sumMinor = %v, want 1200 (шкала 0)", op.SumMinor)
-	}
-	if op.Sum != 1200 {
-		t.Errorf("sum = %d, want 1200", op.Sum)
-	}
-}
-
 // Бот правит СТАРОЕ поле и про минорные ничего не знает. Если запись возьмёт
 // устаревшее минорное значение, правка человека потеряется молча — он увидит
 // прежнюю сумму и не поймёт, почему.
 func TestReconcileMoneyKeepsLegacyEdit(t *testing.T) {
 	stale := int64(2000)
 	op := Operation{Sum: 30, SumMinor: &stale}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if op.Sum != 30 {
 		t.Errorf("сумма = %d, want 30 — правка потерялась", op.Sum)
@@ -198,7 +181,7 @@ func TestReconcileMoneyKeepsLegacyShareEdit(t *testing.T) {
 		Sum:               30,
 		RecipientsWithSum: []RecipientWithSum{{Sum: 30, SumMinor: &stale}},
 	}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if got := op.RecipientsWithSum[0].SumMinor; got == nil || *got != 3000 {
 		t.Errorf("доля = %v, want 3000", got)
@@ -217,7 +200,7 @@ func TestReconcileMoneyKeepsLegacyItemEdit(t *testing.T) {
 			Shares:     []ItemShare{{UserId: 1, Amount: &amount, AmountMinor: &staleAmount}},
 		}},
 	}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if got := op.Items[0].PriceMinor; got == nil || *got != 3000 {
 		t.Errorf("цена = %v, want 3000", got)
@@ -231,7 +214,7 @@ func TestReconcileMoneyKeepsLegacyItemEdit(t *testing.T) {
 func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 21, SumMinor: &minor}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if *op.SumMinor != 2080 {
 		t.Errorf("sumMinor = %d, want 2080 — дробную сумму испортили", *op.SumMinor)
@@ -251,7 +234,7 @@ func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
 func TestReconcileMoneyLegacyWinsOverFractionalMinor(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 30, SumMinor: &minor}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if *op.SumMinor != 3000 {
 		t.Errorf("sumMinor = %d, want 3000 — правка человека потерялась", *op.SumMinor)
@@ -265,22 +248,10 @@ func TestReconcileMoneyLegacyWinsOverFractionalMinor(t *testing.T) {
 func TestReconcileMoneyKeepsConsistentFractionalPair(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 21, SumMinor: &minor}
-	ReconcileMoney(&op, 2)
+	ReconcileMoney(&op, true)
 
 	if *op.SumMinor != 2080 {
 		t.Errorf("sumMinor = %d, want 2080 — дробь потеряли на ровном месте", *op.SumMinor)
-	}
-}
-
-// В комнате нулевой шкалы минорная единица равна единице валюты, и никакой
-// пересборки не требуется.
-func TestReconcileMoneyAtExponentZero(t *testing.T) {
-	stale := int64(100)
-	op := Operation{Sum: 250, SumMinor: &stale}
-	ReconcileMoney(&op, 0)
-
-	if op.SumMinor == nil || *op.SumMinor != 250 {
-		t.Errorf("sumMinor = %v, want 250", op.SumMinor)
 	}
 }
 
@@ -289,7 +260,7 @@ func TestReconcileMoneyAtExponentZero(t *testing.T) {
 // клиент честно показывал как ноль.
 func TestOverflowDoesNotBecomeZero(t *testing.T) {
 	op := Operation{Sum: 184467440737095517}
-	FillMoney(&op, 2)
+	FillMoney(&op, true)
 
 	if op.SumMinor != nil {
 		t.Errorf("sumMinor = %d, want отсутствие: ноль соврал бы, что расход без денег", *op.SumMinor)
@@ -315,7 +286,7 @@ func TestValidateMoneyRange(t *testing.T) {
 		{"огромная цена позиции", Operation{Sum: 100, Items: []OperationItem{{Price: MaxMoneyUnits + 1}}}, 2, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateMoneyRange(&tc.op, tc.exp)
+			err := ValidateMoneyRange(&tc.op)
 			if tc.ok && err != nil {
 				t.Errorf("отвергнуто: %v", err)
 			}
@@ -323,5 +294,25 @@ func TestValidateMoneyRange(t *testing.T) {
 				t.Error("принято, хотя сумма вне диапазона")
 			}
 		})
+	}
+}
+
+// Хранение НЕ зависит от настройки тусы: деньги всегда в копейках, даже там,
+// где копейки не считают. Признак решает только точность деления и ввода.
+func TestStorageIsAlwaysKopecks(t *testing.T) {
+	for _, fractional := range []bool{false, true} {
+		room := &Room{
+			Currency:          "RUB",
+			FractionalAmounts: &fractional,
+			Operations:        &[]Operation{{Sum: 1200}},
+		}
+		FillRoomMoney(room)
+		op := (*room.Operations)[0]
+		if op.SumMinor == nil || *op.SumMinor != 120000 {
+			t.Errorf("копейки=%v: sumMinor = %v, want 120000", fractional, op.SumMinor)
+		}
+		if op.Sum != 1200 {
+			t.Errorf("копейки=%v: проекция = %d, want 1200", fractional, op.Sum)
+		}
 	}
 }
