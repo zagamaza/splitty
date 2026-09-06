@@ -432,7 +432,7 @@ func TestSanitizeDoesNotMutateArgument(t *testing.T) {
 	}
 	room := &api.Room{Members: &[]api.User{u}, Operations: &[]api.Operation{*op}}
 
-	sanitizedOp := sanitizeOperation(op)
+	sanitizedOp := sanitizeOperation(op, 0)
 	sanitizedRoom := sanitizeRoom(room)
 
 	if op.Donor.Email == "" || !op.Donor.HasTelegram() {
@@ -450,7 +450,7 @@ func TestSanitizeDoesNotMutateArgument(t *testing.T) {
 	if (*sanitizedRoom.Members)[0].Email != "" || (*sanitizedRoom.Operations)[0].Donor.Email != "" {
 		t.Fatalf("комната не санитайзнута")
 	}
-	if sanitizeOperation(nil) != nil || sanitizeRoom(nil) != nil || sanitizeUsers(nil) != nil {
+	if sanitizeOperation(nil, 0) != nil || sanitizeRoom(nil) != nil || sanitizeUsers(nil) != nil {
 		t.Fatalf("nil должен оставаться nil")
 	}
 }

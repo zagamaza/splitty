@@ -34,6 +34,10 @@ type config struct {
 	// случайный эфемерный секрет (см. resolveJwtSecret в main.go)
 	ApiJwtSecret string `env:"API_JWT_SECRET" envDefault:""`
 	ApiDevAuth   bool   `env:"API_DEV_AUTH" envDefault:"false"`
+	// FractionalInput разрешает писать дробные суммы. Выключен по умолчанию:
+	// включение и откат делаются переменной окружения, без похода в магазин
+	// приложений.
+	FractionalInput bool `env:"FRACTIONAL_INPUT" envDefault:"false"`
 	// TokenMinIssuedAt — дата в RFC3339 (например 2026-08-13T00:00:00Z): токены,
 	// выпущенные раньше, перестают работать. Пусто — отсечки нет.
 	//

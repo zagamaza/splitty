@@ -156,6 +156,8 @@ func (s *Server) buildRoomDetail(room *api.Room, userId int, seenThrough time.Ti
 		CreatedAt:        room.CreateAt,
 		IsArchived:       isRoomArchived(room, userId),
 		Currency:         roomCurrencyCode(room),
+		DisplayExponent:  api.RoomExponent(room),
+		ScaleVersion:     room.ScaleVersion,
 		Members:          toUserDtos(roomMembers(room)),
 		TotalSpent:       roomTotalSpent(ops),
 		MySpent:          userSpentSum(ops, userId),
@@ -343,6 +345,8 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 				CreatedAt:        room.CreateAt,
 				IsArchived:       isRoomArchived(room, userId),
 				Currency:         roomCurrencyCode(room),
+				DisplayExponent:  api.RoomExponent(room),
+				ScaleVersion:     room.ScaleVersion,
 				Members:          toUserDtos(members),
 				MemberCount:      len(members),
 				TotalSpent:       roomTotalSpent(activeOperations(room)),
@@ -385,11 +389,16 @@ func (s *Server) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Шкалу проставляем ЯВНО, а не полагаемся на умолчание валюты при чтении:
+	// иначе смена умолчания в справочнике переистолковала бы суммы всех уже
+	// заведённых комнат — записанное «1200» стало бы читаться как 12.00.
+	exponent := api.DefaultExponentFor(api.DefaultCurrency)
 	room, err := s.roomSrv.CreateRoom(ctx, &api.Room{
-		Name:       name,
-		Members:    &[]api.User{*user},
-		Operations: &[]api.Operation{},
-		CreateAt:   time.Now(),
+		Name:            name,
+		Members:         &[]api.User{*user},
+		Operations:      &[]api.Operation{},
+		CreateAt:        time.Now(),
+		DisplayExponent: &exponent,
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("cannot create room")
@@ -532,7 +541,14 @@ func (s *Server) handleCurrencies(w http.ResponseWriter, _ *http.Request) {
 	currencies := make([]currencyInfoDto, 0, len(api.CurrencyCodes))
 	for _, code := range api.CurrencyCodes {
 		info := api.Currencies[code]
-		currencies = append(currencies, currencyInfoDto{Code: info.Code, Symbol: info.Symbol, Flag: info.Flag})
+		currencies = append(currencies, currencyInfoDto{
+			Code:            info.Code,
+			Symbol:          info.Symbol,
+			Flag:            info.Flag,
+			DisplayExponent: info.DisplayExponent,
+			MaxExponent:     info.MaxExponent,
+			FractionalInput: s.cfg.FractionalInput,
+		})
 	}
 	writeJSON(w, http.StatusOK, currencies)
 }

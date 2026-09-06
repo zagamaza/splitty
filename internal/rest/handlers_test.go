@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -1136,18 +1137,19 @@ func TestCurrenciesDictionary(t *testing.T) {
 		t.Fatalf("cannot parse currencies %q: %v", rec.Body.String(), err)
 	}
 	want := []currencyInfoDto{
-		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺"},
-		{Code: "USD", Symbol: "$", Flag: "🇺🇸"},
-		{Code: "EUR", Symbol: "€", Flag: "🇪🇺"},
+		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺", DisplayExponent: 0, MaxExponent: 2},
+		{Code: "USD", Symbol: "$", Flag: "🇺🇸", DisplayExponent: 2, MaxExponent: 2},
+		{Code: "EUR", Symbol: "€", Flag: "🇪🇺", DisplayExponent: 2, MaxExponent: 2},
 		// Валюты рынков, на языки которых переведено приложение: японец видел
 		// свою комнату в долларах, потому что иены в справочнике не было.
-		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵"},
-		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳"},
-		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷"},
-		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷"},
-		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩"},
-		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿"},
-		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿"},
+		// У иены и воны предел шкалы нулевой — минорной единицы нет в обороте.
+		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵", DisplayExponent: 0, MaxExponent: 0},
+		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳", DisplayExponent: 2, MaxExponent: 2},
+		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷", DisplayExponent: 0, MaxExponent: 0},
+		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷", DisplayExponent: 2, MaxExponent: 2},
+		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩", DisplayExponent: 0, MaxExponent: 2},
+		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿", DisplayExponent: 0, MaxExponent: 2},
+		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿", DisplayExponent: 0, MaxExponent: 2},
 	}
 	if len(currencies) != len(want) {
 		t.Fatalf("currencies = %+v, want %+v", currencies, want)
@@ -1521,5 +1523,73 @@ func TestFriendsMarkDeletedAccounts(t *testing.T) {
 	}
 	if flags[testUser2.ID] != false {
 		t.Error("живой друг помечен как удалённый")
+	}
+}
+
+// Признак дробного ввода — свойство СЕРВЕРА, а не валюты: он одинаков во всех
+// строках справочника. Конвертом сверху его отдать нельзя, установленные
+// сборки декодируют голый массив.
+func TestCurrenciesFractionalInputFlag(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		cfg  Config
+		want bool
+	}{
+		{"по умолчанию выключен", Config{}, false},
+		{"включён в конфиге", Config{FractionalInput: true}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newTestServer(tc.cfg, newFakeUserRepo(testUser1), newFakeRoomRepo())
+			rec := doRequest(t, s, http.MethodGet, "/api/v1/currencies", mustToken(t, s, testUser1.ID), "")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+			}
+			var currencies []currencyInfoDto
+			if err := json.Unmarshal(rec.Body.Bytes(), &currencies); err != nil {
+				t.Fatalf("cannot parse currencies %q: %v", rec.Body.String(), err)
+			}
+			if len(currencies) == 0 {
+				t.Fatal("пустой справочник")
+			}
+			for _, c := range currencies {
+				if c.FractionalInput != tc.want {
+					t.Errorf("%s: fractionalInput = %v, want %v", c.Code, c.FractionalInput, tc.want)
+				}
+			}
+		})
+	}
+}
+
+// Шкала новой комнаты записывается в документ ЯВНО, а не выводится из
+// справочника при чтении: иначе смена умолчания валюты переистолковала бы
+// суммы всех уже заведённых комнат.
+func TestCreateRoomMaterializesExponent(t *testing.T) {
+	repo := newFakeRoomRepo()
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1), repo)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms", mustToken(t, s, testUser1.ID), `{"name":"Стамбул"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+	}
+	var detail roomDetailDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("cannot parse room %q: %v", rec.Body.String(), err)
+	}
+	if detail.DisplayExponent != 0 {
+		t.Errorf("displayExponent = %d, want 0 (умолчание рубля)", detail.DisplayExponent)
+	}
+	if detail.ScaleVersion != 0 {
+		t.Errorf("scaleVersion = %d, want 0 у только что созданной комнаты", detail.ScaleVersion)
+	}
+
+	stored, err := repo.FindById(context.Background(), detail.ID)
+	if err != nil {
+		t.Fatalf("FindById: %v", err)
+	}
+	if stored.DisplayExponent == nil {
+		t.Fatal("шкала не записана в документ: осталась nil, значит зависит от справочника")
+	}
+	if *stored.DisplayExponent != 0 {
+		t.Errorf("сохранённая шкала = %d, want 0", *stored.DisplayExponent)
 	}
 }

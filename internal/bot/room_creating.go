@@ -90,6 +90,8 @@ func (rs RoomSetName) HasReact(u *api.Update) bool {
 func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
 	defer rs.css.CleanChatState(ctx, u.ChatState)
 
+	// Шкала фиксируется в момент создания — см. комментарий в handleCreateRoom
+	exponent := api.DefaultExponentFor(api.DefaultCurrency)
 	r := &api.Room{
 		// Создатель попадает в снимок участников комнаты, а значит его ID
 		// участвует в расчёте долгов. u.Message.From — сырой пользователь из
@@ -98,6 +100,8 @@ func (rs RoomSetName) OnMessage(ctx context.Context, u *api.Update) (response ap
 		Name:       u.Message.Text,
 		Operations: &[]api.Operation{},
 		CreateAt:   time.Now(),
+
+		DisplayExponent: &exponent,
 	}
 
 	room, err := rs.rs.CreateRoom(ctx, r)

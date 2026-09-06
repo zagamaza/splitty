@@ -324,6 +324,9 @@ func (rr MongoRoomRepository) FindById(ctx context.Context, id string) (*api.Roo
 	if err := res.Decode(rm); err != nil {
 		return nil, err
 	}
+	// Документ мог быть записан до появления минорных полей — достраиваем их
+	// на чтении, чтобы выше по стеку не пришлось знать, какого возраста запись.
+	api.FillRoomMoney(rm)
 	return rm, nil
 }
 
@@ -380,8 +383,13 @@ func sanitizeUsers(users *[]api.User) *[]api.User {
 }
 
 // sanitizeOperation возвращает копию операции с санитайзнутыми снимками
-// пользователей; суммы, доли и id не трогаются
-func sanitizeOperation(o *api.Operation) *api.Operation {
+// пользователей и достроенными деньгами; id не трогаются.
+//
+// Деньги достраиваются ЗДЕСЬ, а не у вызывающих: через эту функцию проходят
+// все четыре записи операции, и один забытый вызов на стороне бота или REST
+// положил бы в базу документ без минорных полей — то есть тихо неполные
+// деньги. exp — шкала комнаты, в которую идёт запись.
+func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
 	if o == nil {
 		return nil
 	}
@@ -399,7 +407,36 @@ func sanitizeOperation(o *api.Operation) *api.Operation {
 		}
 		c.RecipientsWithSum = rws
 	}
+	// Позиции копируются вглубь: FillMoney правит доли на месте, а срез Shares
+	// у поверхностной копии тот же самый, и правка уехала бы в операцию
+	// вызывающего.
+	if c.Items != nil {
+		items := make([]api.OperationItem, len(c.Items))
+		copy(items, c.Items)
+		for i := range items {
+			if items[i].Shares != nil {
+				sh := make([]api.ItemShare, len(items[i].Shares))
+				copy(sh, items[i].Shares)
+				items[i].Shares = sh
+			}
+		}
+		c.Items = items
+	}
+	api.FillMoney(&c, exp)
 	return &c
+}
+
+// roomExponent — шкала комнаты одним лёгким запросом (проекция на два поля).
+// Спрашивает её сам репозиторий: так запись операции не может обойтись без
+// шкалы, даже если вызывающий про неё не думал.
+func (rr MongoRoomRepository) roomExponent(ctx context.Context, id primitive.ObjectID) (int, error) {
+	var room api.Room
+	err := rr.col.FindOne(ctx, bson.M{"_id": id},
+		options.FindOne().SetProjection(bson.M{"currency": 1, "display_exponent": 1})).Decode(&room)
+	if err != nil {
+		return 0, err
+	}
+	return api.RoomExponent(&room), nil
 }
 
 // sanitizeRoom возвращает копию комнаты с санитайзнутыми участниками и
@@ -413,7 +450,7 @@ func sanitizeRoom(r *api.Room) *api.Room {
 	if c.Operations != nil {
 		ops := make([]api.Operation, len(*c.Operations))
 		for i := range *c.Operations {
-			ops[i] = *sanitizeOperation(&(*c.Operations)[i])
+			ops[i] = *sanitizeOperation(&(*c.Operations)[i], api.RoomExponent(r))
 		}
 		c.Operations = &ops
 	}
@@ -602,6 +639,9 @@ func (rr MongoRoomRepository) FindRoomsByUserId(ctx context.Context, userId int)
 	if err != nil {
 		return nil, err
 	}
+	for i := range m {
+		api.FillRoomMoney(&m[i])
+	}
 	return &m, nil
 }
 
@@ -618,6 +658,9 @@ func (rr MongoRoomRepository) FindArchivedRoomsByUserId(ctx context.Context, use
 	if err != nil {
 		return nil, err
 	}
+	for i := range m {
+		api.FillRoomMoney(&m[i])
+	}
 	return &m, nil
 }
 
@@ -633,6 +676,9 @@ func (rr MongoRoomRepository) FindRoomsByLikeName(ctx context.Context, userId in
 	var m []api.Room
 	if err = cur.All(ctx, &m); err != nil {
 		return nil, err
+	}
+	for i := range m {
+		api.FillRoomMoney(&m[i])
 	}
 	return &m, nil
 }
@@ -790,9 +836,14 @@ func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operat
 	}
 	filter := bson.M{"_id": hex, "operations": bson.M{"$elemMatch": elem}}
 
+	exp, err := rr.roomExponent(ctx, hex)
+	if err != nil {
+		return err
+	}
+
 	next := *o
 	next.Version = o.Version + 1
-	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next)}})
+	res, err := rr.col.UpdateOne(ctx, filter, bson.M{"$set": bson.M{"operations.$": sanitizeOperation(&next, exp)}})
 	if err != nil {
 		return err
 	}
@@ -842,7 +893,11 @@ func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Oper
 	// $[op] вместо позиционного $: в фильтре два массива (users и operations),
 	// и обычный $ берёт индекс совпадения по ПЕРВОМУ из них — обновление молча
 	// уходило бы не в ту операцию. arrayFilters выбирает элемент сам
-	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o)}}
+	exp, err := rr.roomExponent(ctx, hex)
+	if err != nil {
+		return err
+	}
+	update := bson.M{"$set": bson.M{"operations.$[op]": sanitizeOperation(o, exp)}}
 	opts := options.Update().SetArrayFilters(options.ArrayFilters{
 		Filters: []interface{}{bson.M{"op._id": o.ID}},
 	})
@@ -936,7 +991,11 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
+	exp, err := rr.roomExponent(ctx, hex)
+	if err != nil {
+		return err
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, exp)}}}})
 	if err != nil {
 		return err
 	}
@@ -976,7 +1035,11 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o)}}}})
+	exp, err := rr.roomExponent(ctx, hex)
+	if err != nil {
+		return false, err
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$push", Value: bson.D{{Key: "operations", Value: sanitizeOperation(o, exp)}}}})
 	if err != nil {
 		return false, err
 	}

@@ -18,12 +18,29 @@ type Room struct {
 	// комнаты не лежат: тут уже все её операции и потолок mongo 16 МБ.
 	// nil — фото не загружали, клиент рисует градиент по хэшу id.
 	AvatarFileId *string `json:"avatarFileId,omitempty" bson:"avatar_file_id,omitempty"`
+	// DisplayExponent — шкала ЭТОЙ комнаты. Указатель, а не число: у комнат,
+	// заведённых до появления поля, его в документе нет, и отличить «не задано»
+	// от осознанного нуля иначе нечем. Читать только через RoomExponent.
+	DisplayExponent *int `json:"displayExponent,omitempty" bson:"display_exponent,omitempty"`
+	// ScaleVersion растёт при каждой смене шкалы комнаты. Нужен офлайн-очереди
+	// на телефоне: снимка самой шкалы мало, потому что путь 0 → 2 → 0 вернул бы
+	// прежнее значение, а суммы за это время пересчитали дважды с округлением.
+	ScaleVersion int `json:"scaleVersion,omitempty" bson:"scale_version,omitempty"`
 }
 
 type CurrencyInfo struct {
 	Code   string // ISO-код, например, "RUB"
 	Symbol string // Символ валюты, например, "₽"
 	Flag   string // Флаг страны, например, "🇷🇺"
+	// DisplayExponent — сколько знаков после запятой показывает НОВАЯ комната
+	// в этой валюте. Имя не Exponent и не MinorUnit: те обещали бы соответствие
+	// ISO 4217, которого у нас нет намеренно — у рубля по ISO двойка, а комнаты
+	// заводятся без копеек.
+	DisplayExponent int
+	// MaxExponent — предел, до которого шкалу комнаты можно поднять. Ноль
+	// означает, что дробной части у валюты нет в обороте и переключателя не
+	// существует.
+	MaxExponent int
 }
 
 type RoomStatesUsers struct {
@@ -41,11 +58,16 @@ type Operation struct {
 	RecipientsWithSum []RecipientWithSum  `json:"recipientsWithSum" bson:"recipients_with_sum"`
 	IsDebtRepayment   bool                `json:"IsDebtRepayment" bson:"is_debt_repayment"`
 	Sum               int                 `json:"sum" bson:"sum"`
-	NotificationSent  []int               `json:"notificationSent" bson:"notification_sent"`
-	CreateAt          time.Time           `json:"createAt" bson:"create_at"`
-	Files             []File              `json:"files" bson:"files,omitempty"`
-	Status            OperationStatus     `json:"status" bson:"status"`
-	SplitType         SplitType           `json:"splitType" bson:"split_type"`
+	// SumMinor — та же сумма в МИНОРНЫХ единицах шкалы комнаты (копейки,
+	// центы). Указатель: у немигрированного документа поля нет вовсе, и ноль
+	// в нём был бы неотличим от честного нуля. После Задачи 7 источник правды
+	// именно здесь, а Sum — округлённая проекция для старых сборок.
+	SumMinor         *int64          `json:"sumMinor,omitempty" bson:"sum_minor,omitempty"`
+	NotificationSent []int           `json:"notificationSent" bson:"notification_sent"`
+	CreateAt         time.Time       `json:"createAt" bson:"create_at"`
+	Files            []File          `json:"files" bson:"files,omitempty"`
+	Status           OperationStatus `json:"status" bson:"status"`
+	SplitType        SplitType       `json:"splitType" bson:"split_type"`
 	// ClientOpId клиентский идемпотентный ключ операции (uuid из outbox
 	// офлайн-клиента): заполняется только REST, бот его не пишет
 	ClientOpId string `bson:"client_op_id,omitempty" json:"clientOpId,omitempty"`
@@ -63,8 +85,13 @@ type Operation struct {
 }
 
 type RecipientWithSum struct {
-	User User    `json:"user" bson:"user"`
-	Sum  float64 `json:"sum" bson:"sum"`
+	User User `json:"user" bson:"user"`
+	// Sum — доля получателя. float64 достался от бота и уезжает вместе с
+	// Задачей 7: считать деньги дробным типом нельзя, 0.1 + 0.2 != 0.3.
+	Sum float64 `json:"sum" bson:"sum"`
+	// SumMinor — та же доля целым числом минорных единиц. Указатель по той же
+	// причине, что у Operation.SumMinor.
+	SumMinor *int64 `json:"sumMinor,omitempty" bson:"sum_minor,omitempty"`
 }
 
 // ItemKind различает обычную позицию и надбавку (сервисный сбор, чаевые, доставка)
@@ -88,6 +115,10 @@ type ItemShare struct {
 	UserId int  `json:"userId" bson:"user_id"`
 	Weight int  `json:"weight" bson:"weight"`
 	Amount *int `json:"amount,omitempty" bson:"amount,omitempty"`
+	// AmountMinor — фиксированная доля в минорных единицах. Здесь указатель
+	// особенно важен: у Amount ноль ОСМЫСЛЕН («этот человек не платит за
+	// позицию»), и отличить его от «поля нет» больше нечем.
+	AmountMinor *int64 `json:"amountMinor,omitempty" bson:"amount_minor,omitempty"`
 }
 
 // OperationItem одна строка чека. Price — всегда суммарная стоимость строки
@@ -95,13 +126,15 @@ type ItemShare struct {
 // участвуют. У Kind==surcharge поле Shares не используется (сбор делится по
 // долям людей от обычных позиций согласно Split).
 type OperationItem struct {
-	Name    string      `json:"name" bson:"name"`
-	Price   int         `json:"price" bson:"price"`
-	Qty     int         `json:"qty" bson:"qty"`
-	Shares  []ItemShare `json:"shares" bson:"shares"`
-	Kind    ItemKind    `json:"kind" bson:"kind"`
-	Split   SplitRule   `json:"split,omitempty" bson:"split,omitempty"`
-	Percent *int        `json:"percent,omitempty" bson:"percent,omitempty"`
+	Name  string `json:"name" bson:"name"`
+	Price int    `json:"price" bson:"price"`
+	// PriceMinor — цена строки в минорных единицах, см. Operation.SumMinor.
+	PriceMinor *int64      `json:"priceMinor,omitempty" bson:"price_minor,omitempty"`
+	Qty        int         `json:"qty" bson:"qty"`
+	Shares     []ItemShare `json:"shares" bson:"shares"`
+	Kind       ItemKind    `json:"kind" bson:"kind"`
+	Split      SplitRule   `json:"split,omitempty" bson:"split,omitempty"`
+	Percent    *int        `json:"percent,omitempty" bson:"percent,omitempty"`
 }
 
 type File struct {
@@ -186,10 +219,13 @@ type OperationDiff struct {
 }
 
 // Изменение суммы конкретного получателя
+// RecipientShareChange изменение доли получателя. Суммы в МИНОРНЫХ единицах
+// комнаты: через них идут тексты уведомлений, и обещание «float уходит
+// отовсюду» обязано накрыть и их.
 type RecipientShareChange struct {
-	User   User
-	OldSum float64
-	NewSum float64
+	User        User
+	OldSumMinor int64
+	NewSumMinor int64
 }
 
 // BugReport репорт о баге, отправленный командой /report в боте

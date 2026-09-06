@@ -217,6 +217,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		Listen:          cfg.Listen,
 		JwtSecret:       jwtSecret,
 		DevAuth:         cfg.ApiDevAuth,
+		FractionalInput: cfg.FractionalInput,
 		TgToken:         cfg.TgToken,
 		ReviewLoginCode: cfg.ReviewLoginCode,
 		ReviewUserId:    int(cfg.ReviewUserId),

@@ -1415,7 +1415,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 // канонические документы участников: chat id и упоминания нельзя брать из
 // встроенных снимков операции, там нет telegram_id
 func notificationWhenUpdateOperation(cu *canonicalUsers, u *api.Update, oldOp api.Operation, newOp api.Operation, room *api.Room, buttons []*api.Button, messages []tgbotapi.Chattable) ([]*api.Button, []tgbotapi.Chattable) {
-	diff := computeOperationDiff(oldOp, newOp)
+	diff := computeOperationDiff(oldOp, newOp, api.RoomExponent(room))
 	if diff == nil {
 		return buttons, messages
 	}
@@ -1570,7 +1570,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 				continue
 			}
 			msg := NewMessage(chatId,
-				I18n(&change.User, "scrn_notification_operation_share_changed", cu.link(&change.User), newDesc, cu.link(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%.2f -> %.2f", change.OldSum, change.NewSum)), keyboard)
+				I18n(&change.User, "scrn_notification_operation_share_changed", cu.link(&change.User), newDesc, cu.link(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%s -> %s", moneySpace(api.FromMinor(change.OldSumMinor, api.RoomExponent(room)), room.Currency), moneySpace(api.FromMinor(change.NewSumMinor, api.RoomExponent(room)), room.Currency))), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1594,7 +1594,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 }
 
 // Функция для вычисления разницы между операциями
-func computeOperationDiff(oldOp, newOp api.Operation) *api.OperationDiff {
+func computeOperationDiff(oldOp, newOp api.Operation, exp int) *api.OperationDiff {
 	if oldOp.ID == primitive.NilObjectID || newOp.ID == primitive.NilObjectID {
 		return nil
 	}
@@ -1624,11 +1624,11 @@ func computeOperationDiff(oldOp, newOp api.Operation) *api.OperationDiff {
 	for _, rNew := range newOp.RecipientsWithSum {
 		if rOld, exists := oldRecipients[rNew.User.ID]; !exists {
 			diff.RecipientsAdded = append(diff.RecipientsAdded, rNew)
-		} else if rOld.Sum != rNew.Sum {
+		} else if oldMinor, newMinor := rOld.SumMinorAt(exp), rNew.SumMinorAt(exp); oldMinor != newMinor {
 			diff.RecipientsShareChanged = append(diff.RecipientsShareChanged, api.RecipientShareChange{
-				User:   rNew.User,
-				OldSum: rOld.Sum,
-				NewSum: rNew.Sum,
+				User:        rNew.User,
+				OldSumMinor: oldMinor,
+				NewSumMinor: newMinor,
 			})
 		}
 	}
