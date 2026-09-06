@@ -409,6 +409,13 @@ func defineSum(text string) (int, error) {
 		log.Error().Err(err).Msgf("sum can not be les zero %v", sum)
 		return 0, errors.New("sum can not be les zero")
 	}
+	// Потолок тот же, что и у REST. Без него огромное число доходило до
+	// перевода в минорные единицы, где переполняло int64 и превращалось в
+	// ноль — расход без денег.
+	if sum > api.MaxMoneyUnits {
+		log.Error().Msgf("sum is too large %v", sum)
+		return 0, errors.New("sum is too large")
+	}
 	return sum, nil
 }
 

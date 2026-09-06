@@ -457,6 +457,13 @@ func (rr MongoRoomRepository) SetRoomScale(ctx context.Context, roomId string, e
 	if err != nil {
 		return nil, err
 	}
+	// ⚠️ Допустимость шкалы проверяется здесь, по СВЕЖЕ прочитанной комнате.
+	// Обработчик REST проверял её по комнате, прочитанной до вызова, и после
+	// конкурентной смены валюты на иену запрос, законный для рубля, поставил
+	// бы иеновой комнате шкалу 2 — которой у иены не существует.
+	if !api.IsValidExponent(api.RoomCurrency(room), exp) {
+		return nil, ErrScaleNotSupported
+	}
 	if api.RoomExponent(room) == exp {
 		return room, nil
 	}
@@ -503,6 +510,16 @@ func (rr MongoRoomRepository) SetRoomScale(ctx context.Context, roomId string, e
 // roomExponent — шкала комнаты одним лёгким запросом (проекция на два поля).
 // Спрашивает её сам репозиторий: так запись операции не может обойтись без
 // шкалы, даже если вызывающий про неё не думал.
+// checkMoneyRange отвергает запись операции, чьи суммы не помещаются в
+// продуктовый потолок.
+//
+// ⚠️ Бот не ограничивает вводимую сумму (`internal/bot/operation_screen.go`,
+// defineSum), и до этой проверки огромное значение доходило до нормализации,
+// где молча превращалось в SumMinor = 0 — расход без денег.
+func checkMoneyRange(o *api.Operation, exp int) error {
+	return api.ValidateMoneyRange(o, exp)
+}
+
 func (rr MongoRoomRepository) roomScale(ctx context.Context, id primitive.ObjectID) (exp, version int, err error) {
 	var room api.Room
 	err = rr.col.FindOne(ctx, bson.M{"_id": id},
@@ -531,12 +548,18 @@ var errScaleUnchanged = errors.New("write missed for a reason other than scale")
 // write получает шкалу и сторож для фильтра и отвечает, совпал ли документ.
 // Не совпал, а шкала за это время уехала — повторяем с новой.
 func (rr MongoRoomRepository) writeUnderScale(
-	ctx context.Context, hex primitive.ObjectID,
+	ctx context.Context, hex primitive.ObjectID, op *api.Operation,
 	write func(exp int, guard bson.M) (bool, error),
 ) error {
 	for attempt := 0; attempt < 3; attempt++ {
 		exp, version, err := rr.roomScale(ctx, hex)
 		if err != nil {
+			return err
+		}
+		// Диапазон проверяем ПОД прочитанной шкалой: при шкале 2 потолок в
+		// минорных единицах в сто раз выше, и то, что годится для целых
+		// рублей, может не поместиться в копейках.
+		if err := checkMoneyRange(op, exp); err != nil {
 			return err
 		}
 		if rr.beforeOperationWrite != nil {
@@ -961,7 +984,7 @@ func (rr MongoRoomRepository) updateOperation(ctx context.Context, o *api.Operat
 
 	next := *o
 	next.Version = o.Version + 1
-	err = rr.writeUnderScale(ctx, hex, func(exp int, guard bson.M) (bool, error) {
+	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
 		f := bson.M{}
 		for k, v := range filter {
 			f[k] = v
@@ -1030,7 +1053,7 @@ func (rr MongoRoomRepository) ActivateOperation(ctx context.Context, o *api.Oper
 	opts := options.Update().SetArrayFilters(options.ArrayFilters{
 		Filters: []interface{}{bson.M{"op._id": o.ID}},
 	})
-	err = rr.writeUnderScale(ctx, hex, func(exp int, guard bson.M) (bool, error) {
+	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
 		f := bson.M{}
 		for k, v := range filter {
 			f[k] = v
@@ -1136,7 +1159,7 @@ func (rr MongoRoomRepository) CreateOperation(ctx context.Context, o *api.Operat
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	err = rr.writeUnderScale(ctx, hex, func(exp int, guard bson.M) (bool, error) {
+	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
 		f := bson.M{}
 		for k, v := range filter {
 			f[k] = v
@@ -1192,7 +1215,7 @@ func (rr MongoRoomRepository) CreateOperationIfAbsent(ctx context.Context, o *ap
 	for k, v := range boundMembersFilter(o) {
 		filter[k] = v
 	}
-	err = rr.writeUnderScale(ctx, hex, func(exp int, guard bson.M) (bool, error) {
+	err = rr.writeUnderScale(ctx, hex, o, func(exp int, guard bson.M) (bool, error) {
 		f := bson.M{}
 		for k, v := range filter {
 			f[k] = v
@@ -1302,33 +1325,55 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 		return err
 	}
 
-	// Проекция на первую операцию, а не чтение комнаты целиком: нужно знать
-	// лишь «есть ли в ней хоть один расход».
-	var head api.Room
-	err = rr.col.FindOne(ctx, bson.M{"_id": hex},
-		options.FindOne().SetProjection(bson.M{
-			"currency":         1,
-			"display_exponent": 1,
-			"operations":       bson.M{"$slice": 1},
-		})).Decode(&head)
-	if err != nil {
-		return err
-	}
+	// ⚠️ Читаем и пишем под CAS по ревизии. Без него смена валюты пробивала
+	// сторож шкалы в обе стороны: она видела пустую комнату, а к моменту
+	// записи там уже лежал расход — и шкала переключалась под записанными
+	// деньгами. Обратный порядок ломался так же: расход ложился между чтением
+	// и записью и оказывался истолкован по новой шкале.
+	for attempt := 0; attempt < 3; attempt++ {
+		// Проекция на первую операцию, а не чтение комнаты целиком: нужно знать
+		// лишь «есть ли в ней хоть один расход».
+		var head api.Room
+		err = rr.col.FindOne(ctx, bson.M{"_id": hex},
+			options.FindOne().SetProjection(bson.M{
+				"currency":         1,
+				"display_exponent": 1,
+				"revision":         1,
+				"operations":       bson.M{"$slice": 1},
+			})).Decode(&head)
+		if err != nil {
+			return err
+		}
 
-	exp := api.RoomExponent(&head)
-	hasOperations := head.Operations != nil && len(*head.Operations) > 0
-	newExp, ok := api.ScaleAfterCurrencyChange(exp, hasOperations, currency)
-	if !ok {
-		return ErrScaleNotSupported
-	}
-	update := bson.M{"currency": currency}
-	if newExp != exp {
-		update["display_exponent"] = newExp
-	}
+		exp := api.RoomExponent(&head)
+		hasOperations := head.Operations != nil && len(*head.Operations) > 0
+		newExp, ok := api.ScaleAfterCurrencyChange(exp, hasOperations, currency)
+		if !ok {
+			return ErrScaleNotSupported
+		}
 
-	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	_, err = rr.col.UpdateOne(ctx, filter, withRevision(bson.D{{Key: "$set", Value: update}}))
-	return err
+		update := bson.M{"currency": currency}
+		inc := bson.M{}
+		if newExp != exp {
+			update["display_exponent"] = newExp
+			// ⚠️ Шкала поменялась — значит обязана вырасти и ЕЁ версия, а не
+			// только ревизия. По scale_version сторожатся записи операций, и
+			// без подъёма расход, посчитанный по прежней шкале, спокойно лёг
+			// бы в комнату с новой.
+			inc["scale_version"] = 1
+		}
+
+		res, uErr := rr.col.UpdateOne(ctx,
+			bson.M{"_id": hex, "revision": versionFilter(head.Revision)},
+			withRevision(bson.M{"$set": update, "$inc": inc}))
+		if uErr != nil {
+			return uErr
+		}
+		if res.MatchedCount > 0 {
+			return nil
+		}
+	}
+	return ErrRoomBusy
 }
 
 // EnsureRoomIndexes создаёт индексы коллекции room. Идемпотентно; вызывать при старте.

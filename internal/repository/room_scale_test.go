@@ -326,3 +326,104 @@ func TestCreateOperationRefusesStaleScale(t *testing.T) {
 		t.Errorf("sum = %d, want 20", stored.Sum)
 	}
 }
+
+// Смена валюты обязана поднимать ВЕРСИЮ ШКАЛЫ, когда она меняет шкалу. Иначе
+// сторож у записей операций её не видит: расход, посчитанный по прежней шкале,
+// ложится в комнату с новой и толкуется в сто раз иначе.
+func TestUpdateCurrencyBumpsScaleVersion(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	// Пустая долларовая комната с копейками: переезд в иены допустим, но
+	// шкалу приходится опустить.
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 2))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+	before := readRoom(t, repo, id.Hex()).ScaleVersion
+
+	if err := repo.UpdateCurrency(testCtx(t), id.Hex(), "JPY"); err != nil {
+		t.Fatalf("UpdateCurrency: %v", err)
+	}
+
+	room := readRoom(t, repo, id.Hex())
+	if api.RoomExponent(room) != 0 {
+		t.Fatalf("шкала = %d, want 0", api.RoomExponent(room))
+	}
+	if room.ScaleVersion <= before {
+		t.Errorf("версия шкалы = %d, была %d — сторож у записей операций её не увидит",
+			room.ScaleVersion, before)
+	}
+}
+
+// Смена валюты, не трогающая шкалу, версию шкалы не двигает.
+func TestUpdateCurrencyKeepsScaleVersionWhenScaleUnchanged(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 2, scaleTestOperation(20)))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+	before := readRoom(t, repo, id.Hex()).ScaleVersion
+
+	if err := repo.UpdateCurrency(testCtx(t), id.Hex(), "EUR"); err != nil {
+		t.Fatalf("UpdateCurrency: %v", err)
+	}
+	if got := readRoom(t, repo, id.Hex()).ScaleVersion; got != before {
+		t.Errorf("версия шкалы = %d, была %d — её никто не просил менять", got, before)
+	}
+}
+
+// Пересчёт проверяет шкалу против ТЕКУЩЕЙ валюты комнаты. Запрос, законный для
+// рубля, не должен поставить иеновой комнате шкалу, которой у иены нет.
+func TestSetRoomScaleValidatesAgainstCurrentCurrency(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	room := scaleTestRoom(t, 0)
+	room.Currency = "JPY"
+	id, err := repo.SaveRoom(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	if _, err := repo.SetRoomScale(testCtx(t), id.Hex(), 2); !errors.Is(err, ErrScaleNotSupported) {
+		t.Fatalf("SetRoomScale: %v, want ErrScaleNotSupported", err)
+	}
+	if api.RoomExponent(readRoom(t, repo, id.Hex())) != 0 {
+		t.Error("шкала всё-таки поменялась")
+	}
+}
+
+// Смена валюты пишет под CAS: если комнату успели изменить между чтением и
+// записью, она повторяет попытку на свежем состоянии, а не переключает шкалу
+// под уже записанными деньгами.
+func TestUpdateCurrencyRefusesUnderConcurrentInsert(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	// Пустая долларовая комната с копейками: пока она пуста, переезд в иены
+	// разрешён и опускает шкалу.
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 2))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	// Расход приезжает ДО смены валюты — теперь комната уже не пуста.
+	op := scaleTestOperation(20)
+	if err := repo.CreateOperation(testCtx(t), &op, id.Hex()); err != nil {
+		t.Fatalf("CreateOperation: %v", err)
+	}
+
+	if err := repo.UpdateCurrency(testCtx(t), id.Hex(), "JPY"); !errors.Is(err, ErrScaleNotSupported) {
+		t.Fatalf("UpdateCurrency: %v, want ErrScaleNotSupported", err)
+	}
+	room := readRoom(t, repo, id.Hex())
+	if room.Currency != "USD" {
+		t.Errorf("валюта = %q, want USD", room.Currency)
+	}
+	if api.RoomExponent(room) != 2 {
+		t.Errorf("шкала = %d, want 2 — её опустили под записанными деньгами", api.RoomExponent(room))
+	}
+}

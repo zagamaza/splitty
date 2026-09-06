@@ -5,7 +5,12 @@ import "testing"
 func TestToFromMinorRoundTrip(t *testing.T) {
 	for _, exp := range []int{0, 2} {
 		for _, units := range []int{0, 1, -1, 7, -7, 1200, -1200, 1_000_000} {
-			if got := FromMinor(ToMinor(units, exp), exp); got != units {
+			m, ok := ToMinorChecked(units, exp)
+			if !ok {
+				t.Errorf("exp=%d units=%d: перевод отвергнут", exp, units)
+				continue
+			}
+			if got := FromMinor(m, exp); got != units {
 				t.Errorf("exp=%d units=%d: обратный перевод дал %d", exp, units, got)
 			}
 		}
@@ -276,5 +281,47 @@ func TestReconcileMoneyAtExponentZero(t *testing.T) {
 
 	if op.SumMinor == nil || *op.SumMinor != 250 {
 		t.Errorf("sumMinor = %v, want 250", op.SumMinor)
+	}
+}
+
+// Переполнение денег больше не превращается в ноль. Раньше огромная сумма от
+// бота молча становилась SumMinor = 0 — расход без денег, который новый
+// клиент честно показывал как ноль.
+func TestOverflowDoesNotBecomeZero(t *testing.T) {
+	op := Operation{Sum: 184467440737095517}
+	FillMoney(&op, 2)
+
+	if op.SumMinor != nil {
+		t.Errorf("sumMinor = %d, want отсутствие: ноль соврал бы, что расход без денег", *op.SumMinor)
+	}
+	if op.Sum != 184467440737095517 {
+		t.Errorf("старое поле изменилось: %d", op.Sum)
+	}
+}
+
+// И такая операция не должна записываться вовсе.
+func TestValidateMoneyRange(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		op   Operation
+		exp  int
+		ok   bool
+	}{
+		{"обычный расход", Operation{Sum: 1200}, 2, true},
+		{"ровно на потолке", Operation{Sum: MaxMoneyUnits}, 2, true},
+		{"выше потолка", Operation{Sum: MaxMoneyUnits + 1}, 2, false},
+		{"переполнение int64", Operation{Sum: 184467440737095517}, 2, false},
+		{"огромная доля", Operation{Sum: 100, RecipientsWithSum: []RecipientWithSum{{Sum: 1e18}}}, 2, false},
+		{"огромная цена позиции", Operation{Sum: 100, Items: []OperationItem{{Price: MaxMoneyUnits + 1}}}, 2, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateMoneyRange(&tc.op, tc.exp)
+			if tc.ok && err != nil {
+				t.Errorf("отвергнуто: %v", err)
+			}
+			if !tc.ok && err == nil {
+				t.Error("принято, хотя сумма вне диапазона")
+			}
+		})
 	}
 }

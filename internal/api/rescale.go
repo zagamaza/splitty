@@ -15,19 +15,6 @@ import "math/bits"
 // maxInt64 — потолок для проверки переполнения при сложении весов.
 const maxInt64 = int64(^uint64(0) >> 1)
 
-// equalSplit — запасной путь на невозможных весах: делим поровну по
-// каноническому правилу, чтобы сумма всё равно сошлась с итогом.
-func equalSplit(total int64, weights []int64) []int64 {
-	out := make([]int64, len(weights))
-	if len(weights) == 0 {
-		return out
-	}
-	for i := range out {
-		out[i] = ShareOfMinor(total, len(weights), i)
-	}
-	return out
-}
-
 // remainderTaken помечает долю, уже получившую единицу остатка: остаток
 // раздаётся по одной на участника, и второй раз одному и тому же не достаётся.
 const remainderTaken = ^uint64(0)
@@ -39,10 +26,14 @@ const remainderTaken = ^uint64(0)
 //
 // Нулевая сумма весов означает, что делить не по чему: тогда total уходит
 // первому — иначе деньги просто исчезли бы.
-func Distribute(total int64, weights []int64) []int64 {
+//
+// Второе значение false — веса вне области определения (их сумма не помещается
+// в int64). Раздавать в этом случае нечего, и вызывающий обязан отказать, а не
+// получить правдоподобный, но неверный вектор.
+func Distribute(total int64, weights []int64) ([]int64, bool) {
 	out := make([]int64, len(weights))
 	if len(weights) == 0 {
-		return out
+		return out, true
 	}
 
 	// Сумму весов считаем С ПРОВЕРКОЙ переполнения. Без неё веса
@@ -56,13 +47,16 @@ func Distribute(total int64, weights []int64) []int64 {
 			continue
 		}
 		if sum > maxInt64-w {
-			return equalSplit(total, weights)
+			// Веса вне области определения. Молча подменять смысл нельзя:
+			// прежняя редакция делила поровну и раздавала деньги участникам с
+			// НУЛЕВЫМ весом, то есть тем, кто ни за что не платил.
+			return nil, false
 		}
 		sum += w
 	}
 	if sum == 0 {
 		out[0] = total
-		return out
+		return out, true
 	}
 
 	// Отрицательный итог (возврат, корректировка) раздаём тем же кодом на
@@ -113,7 +107,7 @@ func Distribute(total int64, weights []int64) []int64 {
 			out[i] = -out[i]
 		}
 	}
-	return out
+	return out, true
 }
 
 // rescaleUp множитель перевода из шкалы from в БОЛЬШУЮ шкалу to.
@@ -168,7 +162,9 @@ func RescaleOperation(o *Operation, from, to int) {
 			return
 		}
 	}
-	applySharesWithLegacy(o, SharesMinorFrom(o, total, weights), to)
+	if shares, ok := SharesMinorFrom(o, total, weights); ok {
+		applySharesWithLegacy(o, shares, to)
+	}
 	FillMoney(o, to)
 }
 
@@ -196,7 +192,14 @@ func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [
 			prices[i] = rescaleUp(w, from, to)
 		}
 	} else {
-		prices = Distribute(total, itemWeights)
+		var ok bool
+		prices, ok = Distribute(total, itemWeights)
+		if !ok {
+			// Веса позиций вне области определения — пересчитывать нечего,
+			// оставляем как есть, а запись такой комнаты отвергнет проверка
+			// диапазона денег.
+			return
+		}
 	}
 
 	for i := range o.Items {
@@ -226,7 +229,11 @@ func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [
 		if newFixedTotal > price {
 			newFixedTotal = price
 		}
-		for k, v := range Distribute(newFixedTotal, fixed) {
+		spread, ok := Distribute(newFixedTotal, fixed)
+		if !ok {
+			continue
+		}
+		for k, v := range spread {
 			amount := v
 			it.Shares[idx[k]].AmountMinor = &amount
 		}

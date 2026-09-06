@@ -15,7 +15,7 @@ func TestDistributeSumsExactly(t *testing.T) {
 		{-21, []int64{694, 693, 693}},
 		{13, []int64{0, 100, 0}},
 	} {
-		got := Distribute(tc.total, tc.weights)
+		got, _ := Distribute(tc.total, tc.weights)
 		var sum int64
 		for _, v := range got {
 			sum += v
@@ -30,7 +30,7 @@ func TestDistributeSumsExactly(t *testing.T) {
 // поодиночке: 1.50 на троих это 50+50+50 копеек, а поштучное округление дало бы
 // 1+1+1 = 3 при итоге 2.
 func TestDistributeDoesNotInventMoney(t *testing.T) {
-	got := Distribute(2, []int64{50, 50, 50})
+	got, _ := Distribute(2, []int64{50, 50, 50})
 	var sum int64
 	for _, v := range got {
 		sum += v
@@ -43,7 +43,7 @@ func TestDistributeDoesNotInventMoney(t *testing.T) {
 // Нулевые веса не получают ничего: человек, который ни за что не платил, не
 // должен получить копейку от смены шкалы.
 func TestDistributeSkipsZeroWeights(t *testing.T) {
-	got := Distribute(10, []int64{0, 5, 5})
+	got, _ := Distribute(10, []int64{0, 5, 5})
 	if got[0] != 0 {
 		t.Errorf("нулевой вес получил %d", got[0])
 	}
@@ -51,7 +51,7 @@ func TestDistributeSkipsZeroWeights(t *testing.T) {
 
 // Делить не по чему — деньги всё равно не исчезают.
 func TestDistributeAllZeroWeights(t *testing.T) {
-	got := Distribute(10, []int64{0, 0})
+	got, _ := Distribute(10, []int64{0, 0})
 	if got[0]+got[1] != 10 {
 		t.Errorf("Distribute(10, [0 0]) = %v, деньги потерялись", got)
 	}
@@ -244,7 +244,7 @@ func TestDistributeSurvivesLargeAmounts(t *testing.T) {
 	const huge = int64(100_000_000_000)
 	weights := []int64{huge / 3, huge / 3, huge - 2*(huge/3)}
 
-	got := Distribute(huge/100, weights)
+	got, _ := Distribute(huge/100, weights)
 	var sum int64
 	for _, v := range got {
 		sum += v
@@ -278,5 +278,33 @@ func TestRescaleDownSurvivesLargeAmounts(t *testing.T) {
 	}
 	if *op.SumMinor != 1_000_000_000 {
 		t.Errorf("итог = %d, want 1000000000", *op.SumMinor)
+	}
+}
+
+// Веса вне области определения: их сумма не помещается в int64. Раздавать
+// нечего, и функция обязана СКАЗАТЬ об этом, а не вернуть правдоподобный
+// вектор. Прежняя редакция делила поровну — и выдавала деньги участнику с
+// нулевым весом, то есть тому, кто ни за что не платил.
+func TestDistributeRefusesWeightsOutOfDomain(t *testing.T) {
+	const maxI64 = int64(^uint64(0) >> 1)
+
+	got, ok := Distribute(10, []int64{maxI64, maxI64, 3, 0})
+	if ok {
+		t.Fatalf("веса вне области определения приняты: %v", got)
+	}
+	if got != nil {
+		t.Errorf("вместе с отказом вернулся вектор %v", got)
+	}
+}
+
+// Нулевой вес не получает ничего и в обычном случае — правило отдельное, и
+// подменять его «делением поровну» нельзя.
+func TestDistributeNeverPaysZeroWeight(t *testing.T) {
+	got, ok := Distribute(10, []int64{0, 5, 5, 0})
+	if !ok {
+		t.Fatal("обычные веса отвергнуты")
+	}
+	if got[0] != 0 || got[3] != 0 {
+		t.Errorf("нулевые веса получили деньги: %v", got)
 	}
 }

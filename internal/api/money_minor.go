@@ -1,6 +1,9 @@
 package api
 
-import "math"
+import (
+	"errors"
+	"math"
+)
 
 // Деньги живут в двух представлениях, пока живы прежние сборки клиентов:
 // МИНОРНЫЕ единицы (копейки, центы) целым числом — источник правды, и старые
@@ -17,21 +20,54 @@ import "math"
 // сохраняя 0,84. ok=false означает «столько денег не бывает» и обязан стать
 // отказом на входе, а не тихим числом.
 func ToMinorChecked(units int, exp int) (int64, bool) {
-	factor := int64(MinorFactor(exp))
-	v := int64(units)
-	if v > maxInt64/factor || v < -maxInt64/factor {
+	if units > MaxMoneyUnits || units < -MaxMoneyUnits {
 		return 0, false
 	}
-	return v * factor, true
+	return int64(units) * int64(MinorFactor(exp)), true
 }
 
-// ToMinor — то же без проверки, для значений, чья величина уже проверена.
-func ToMinor(units int, exp int) int64 {
-	v, ok := ToMinorChecked(units, exp)
-	if !ok {
-		return 0
+// MaxMoneyUnits — продуктовый потолок суммы в целых единицах валюты. Общий
+// для всех входов: REST его проверял и раньше, бот не проверял вовсе.
+const MaxMoneyUnits = 1_000_000_000
+
+// ErrMoneyOutOfRange — сумма вне продуктового потолка. Записывать такую
+// операцию нельзя: в минорных единицах она либо переполняет int64, либо
+// становится числом, которого не бывает.
+var ErrMoneyOutOfRange = errors.New("money value out of range")
+
+// ValidateMoneyRange проверяет, что все деньги операции помещаются в
+// продуктовый потолок и переводятся в минорные без переполнения.
+//
+// ⚠️ Нужна на ЗАПИСИ. Прежде переполнение молча превращалось в ноль: бот не
+// ограничивает вводимую сумму (`defineSum`), 184467440737095517 доходило до
+// нормализации, и в документ ложился SumMinor = 0 — расход без денег, который
+// новый клиент показывал как ноль.
+func ValidateMoneyRange(o *Operation, exp int) error {
+	if o == nil {
+		return nil
 	}
-	return v
+	if _, ok := ToMinorChecked(o.Sum, exp); !ok {
+		return ErrMoneyOutOfRange
+	}
+	for _, r := range o.RecipientsWithSum {
+		if r.Sum > float64(MaxMoneyUnits) || r.Sum < -float64(MaxMoneyUnits) {
+			return ErrMoneyOutOfRange
+		}
+	}
+	for _, it := range o.Items {
+		if _, ok := ToMinorChecked(it.Price, exp); !ok {
+			return ErrMoneyOutOfRange
+		}
+		for _, sh := range it.Shares {
+			if sh.Amount == nil {
+				continue
+			}
+			if _, ok := ToMinorChecked(*sh.Amount, exp); !ok {
+				return ErrMoneyOutOfRange
+			}
+		}
+	}
+	return nil
 }
 
 // FromMinor — проекция минорных единиц в целые единицы валюты. ЕДИНСТВЕННОЕ
@@ -69,7 +105,8 @@ func (o Operation) SumMinorAt(exp int) int64 {
 	if o.SumMinor != nil {
 		return *o.SumMinor
 	}
-	return ToMinor(o.Sum, exp)
+	v, _ := ToMinorChecked(o.Sum, exp)
+	return v
 }
 
 // SumMinorAt — доля получателя в минорных единицах.
@@ -85,7 +122,8 @@ func (i OperationItem) PriceMinorAt(exp int) int64 {
 	if i.PriceMinor != nil {
 		return *i.PriceMinor
 	}
-	return ToMinor(i.Price, exp)
+	v, _ := ToMinorChecked(i.Price, exp)
+	return v
 }
 
 // AmountMinorAt — фиксированная доля позиции в минорных единицах. Второе
@@ -97,7 +135,8 @@ func (s ItemShare) AmountMinorAt(exp int) (int64, bool) {
 		return *s.AmountMinor, true
 	}
 	if s.Amount != nil {
-		return ToMinor(*s.Amount, exp), true
+		v, ok := ToMinorChecked(*s.Amount, exp)
+		return v, ok
 	}
 	return 0, false
 }
@@ -113,19 +152,30 @@ func FillMoney(o *Operation, exp int) {
 		return
 	}
 	if o.SumMinor == nil {
-		m := ToMinor(o.Sum, exp)
-		o.SumMinor = &m
+		// Не помещается — поле остаётся ПУСТЫМ. Ноль соврал бы, что расход
+		// без денег; отсутствие честно говорит «точного значения нет», и
+		// клиент читает старое поле.
+		if m, ok := ToMinorChecked(o.Sum, exp); ok {
+			o.SumMinor = &m
+		}
 	} else {
 		o.Sum = FromMinor(*o.SumMinor, exp)
 	}
 
-	applyShares(o, SharesMinor(o, *o.SumMinor, exp))
+	// Итог не поместился в минорные — выводить от него доли не из чего.
+	// Оставляем их как есть: старые поля читаются, точных значений просто нет.
+	if o.SumMinor != nil {
+		if shares, ok := SharesMinor(o, *o.SumMinor, exp); ok {
+			applyShares(o, shares)
+		}
+	}
 
 	for i := range o.Items {
 		it := &o.Items[i]
 		if it.PriceMinor == nil {
-			m := ToMinor(it.Price, exp)
-			it.PriceMinor = &m
+			if m, ok := ToMinorChecked(it.Price, exp); ok {
+				it.PriceMinor = &m
+			}
 		} else {
 			it.Price = FromMinor(*it.PriceMinor, exp)
 		}
@@ -136,8 +186,9 @@ func FillMoney(o *Operation, exp int) {
 				u := FromMinor(*sh.AmountMinor, exp)
 				sh.Amount = &u
 			case sh.Amount != nil:
-				m := ToMinor(*sh.Amount, exp)
-				sh.AmountMinor = &m
+				if m, ok := ToMinorChecked(*sh.Amount, exp); ok {
+					sh.AmountMinor = &m
+				}
 			}
 		}
 	}
@@ -157,25 +208,11 @@ func FillMoney(o *Operation, exp int) {
 // итога, а хранимые значения игнорируются; при точных суммах хранимые значения
 // служат ВЕСАМИ, по которым итог раздаётся целиком. Уже сходящийся набор
 // Distribute возвращает без изменений.
-func SharesMinor(o *Operation, totalMinor int64, exp int) []int64 {
+func SharesMinor(o *Operation, totalMinor int64, exp int) ([]int64, bool) {
 	if o == nil || len(o.RecipientsWithSum) == 0 {
-		return nil
+		return nil, true
 	}
-	n := len(o.RecipientsWithSum)
-
-	if !o.IsDebtRepayment && o.SplitType != SplitTypeByExactAmount {
-		out := make([]int64, n)
-		for i := range out {
-			out[i] = ShareOfMinor(totalMinor, n, i)
-		}
-		return out
-	}
-
-	weights := make([]int64, n)
-	for i := range o.RecipientsWithSum {
-		weights[i] = o.RecipientsWithSum[i].SumMinorAt(exp)
-	}
-	return Distribute(totalMinor, weights)
+	return SharesMinorFrom(o, totalMinor, shareWeights(o, exp))
 }
 
 // applyShares записывает выведенный вектор ТОЛЬКО в минорные поля.
@@ -276,17 +313,17 @@ func shareWeights(o *Operation, exp int) []int64 {
 
 // SharesMinorFrom — то же, что SharesMinor, но с явными весами: при пересчёте
 // шкалы веса снимаются в ПРЕЖНЕЙ шкале, а итог уже в новой.
-func SharesMinorFrom(o *Operation, totalMinor int64, weights []int64) []int64 {
+func SharesMinorFrom(o *Operation, totalMinor int64, weights []int64) ([]int64, bool) {
 	n := len(o.RecipientsWithSum)
 	if n == 0 {
-		return nil
+		return nil, true
 	}
 	if !o.IsDebtRepayment && o.SplitType != SplitTypeByExactAmount {
 		out := make([]int64, n)
 		for i := range out {
 			out[i] = ShareOfMinor(totalMinor, n, i)
 		}
-		return out
+		return out, true
 	}
 	return Distribute(totalMinor, weights)
 }
@@ -331,12 +368,30 @@ func DeriveSharesMinor(items []OperationItem, exp int) (map[int]int64, int64, er
 // 1,50 из трёх позиций по 0,50 давал по позициям A=2, B=0, а по плоским долям
 // A=1, B=1. Долг зависел от того, каким путём считать.
 func sharesFromItems(o *Operation, exp int) ([]int64, bool) {
-	byUser, _, err := DeriveSharesMinor(o.Items, exp)
+	byUser, derivedTotal, err := DeriveSharesMinor(o.Items, exp)
 	if err != nil {
 		return nil, false
 	}
+	// ⚠️ Выведенный итог обязан совпасть с итогом расхода. У старого или
+	// испорченного документа они расходятся, и «вывести доли из позиций» там
+	// значит угадать: дальше FillMoney дотянул бы плоский вектор до итога
+	// расхода, и позиции снова разошлись бы с ним. Лучше отказаться.
+	if o.SumMinor == nil || derivedTotal != *o.SumMinor {
+		return nil, false
+	}
+	// Состав получателей тоже обязан совпасть: лишний человек в позициях или
+	// пропавший в плоских долях означают, что документ описывает две разные
+	// компании, и складывать их нельзя.
+	if len(byUser) != len(o.RecipientsWithSum) {
+		return nil, false
+	}
+	seen := make(map[int]bool, len(o.RecipientsWithSum))
 	out := make([]int64, len(o.RecipientsWithSum))
 	for i, r := range o.RecipientsWithSum {
+		if seen[r.User.ID] {
+			return nil, false
+		}
+		seen[r.User.ID] = true
 		v, ok := byUser[r.User.ID]
 		if !ok {
 			return nil, false

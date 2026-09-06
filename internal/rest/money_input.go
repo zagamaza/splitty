@@ -83,7 +83,7 @@ func maxAmountMinor(exp int) int64 {
 // и только если они сходятся. Молча проигнорировать присланное минорное, как
 // было раньше, нельзя: контракт выглядел бы рабочим, а точное значение
 // терялось бы по дороге.
-func validateItemMoney(req *operationRequest, exp int, fractionalAllowed bool) *httpError {
+func validateItemMoney(req *operationRequest, exp int, _ bool) *httpError {
 	factor := int64(api.MinorFactor(exp))
 	reject := func(msg string) *httpError {
 		return &httpError{http.StatusBadRequest, "validation", msg}
@@ -91,30 +91,45 @@ func validateItemMoney(req *operationRequest, exp int, fractionalAllowed bool) *
 
 	for _, item := range req.Items {
 		if item.PriceMinor != nil {
-			if !fractionalAllowed && *item.PriceMinor%factor != 0 {
-				return reject("дробные суммы пока недоступны")
-			}
-			if item.Price == 0 {
-				return reject("позиция чека требует поля price вместе с priceMinor")
-			}
-			if item.Price != api.FromMinor(*item.PriceMinor, exp) {
-				return reject("поля price и priceMinor позиции не сходятся")
+			if err := checkItemAmount("price", item.Price, *item.PriceMinor, factor, reject); err != nil {
+				return err
 			}
 		}
 		for _, sh := range item.Shares {
 			if sh.AmountMinor == nil {
 				continue
 			}
-			if !fractionalAllowed && *sh.AmountMinor%factor != 0 {
-				return reject("дробные суммы пока недоступны")
-			}
 			if sh.Amount == nil {
 				return reject("доля позиции требует поля amount вместе с amountMinor")
 			}
-			if *sh.Amount != api.FromMinor(*sh.AmountMinor, exp) {
-				return reject("поля amount и amountMinor доли не сходятся")
+			if err := checkItemAmount("amount", *sh.Amount, *sh.AmountMinor, factor, reject); err != nil {
+				return err
 			}
 		}
+	}
+	return nil
+}
+
+// checkItemAmount сверяет пару полей у позиции чека.
+//
+// ⚠️ Требование СТРОГОЕ: минорное обязано быть ровно старым, умноженным на
+// шкалу. Проекции тут мало — она сходится и у несовместимых единиц: при шкале 2
+// пара price=101, priceMinor=10050 «сходится», потому что 100,50 округляется до
+// 101, но арифметика позиций считает по 101, а в документе остаётся 10050, и
+// позиции расходятся с итогом на полтинник.
+//
+// ⚠️ Дробное минорное отвергается НЕЗАВИСИМО от признака дробного ввода.
+// Позиции чека считаются целыми единицами до Задачи 7, и принимать дробь,
+// которую арифметика всё равно не умеет, нельзя даже с включённым признаком.
+func checkItemAmount(field string, legacy int, minor, factor int64, reject func(string) *httpError) *httpError {
+	if minor%factor != 0 {
+		return reject("дробные суммы в позициях чека пока недоступны")
+	}
+	if legacy == 0 {
+		return reject("позиция чека требует поля " + field + " вместе с " + field + "Minor")
+	}
+	if int64(legacy)*factor != minor {
+		return reject("поля " + field + " и " + field + "Minor позиции не сходятся")
 	}
 	return nil
 }

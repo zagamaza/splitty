@@ -603,6 +603,12 @@ func (s *Server) handleUpdateScale(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "conflict", "в группе только что записали расход, попробуйте ещё раз")
 		return
 	}
+	// Валюту комнаты могли сменить между проверкой в обработчике и записью:
+	// шкалу проверяет ещё раз сам репозиторий, по свежему состоянию.
+	if errors.Is(err, repository.ErrScaleNotSupported) {
+		writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
+		return
+	}
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot set scale for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось изменить шкалу")
@@ -983,7 +989,11 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		// цену на этом входе отвергает resolveItemsScale
 		donor, recipientsWithSum, items, sum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
-		sumMinor = api.ToMinor(sum, exp)
+		var okRange bool
+		sumMinor, okRange = api.ToMinorChecked(sum, exp)
+		if hErr2 == nil && !okRange {
+			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
+		}
 		if hErr2 == nil {
 			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
 		}
@@ -1105,7 +1115,11 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 	if len(req.Items) > 0 {
 		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
-		newSumMinor = api.ToMinor(newSum, exp)
+		var okRange bool
+		newSumMinor, okRange = api.ToMinorChecked(newSum, exp)
+		if hErr2 == nil && !okRange {
+			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
+		}
 		if hErr2 == nil {
 			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
 		}

@@ -458,7 +458,18 @@ func legacyShareCache(o *api.Operation) []int64 {
 		}
 		weights[i] = int64(math.Round(o.RecipientsWithSum[i].Sum))
 	}
-	return api.Distribute(int64(o.Sum), weights)
+	spread, ok := api.Distribute(int64(o.Sum), weights)
+	if !ok {
+		// Веса вне области определения: отдаём округление поштучно, как было
+		// исторически. Хуже, чем сходящаяся раздача, но честнее выдуманного
+		// вектора — и достижимо только на испорченном документе.
+		out := make([]int64, len(weights))
+		for i := range o.RecipientsWithSum {
+			out[i] = int64(math.Round(o.RecipientsWithSum[i].Sum))
+		}
+		return out
+	}
+	return spread
 }
 
 // toOperationDtos маппит операции, новые первыми

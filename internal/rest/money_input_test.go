@@ -331,7 +331,12 @@ func TestItemMinorFieldsAreValidated(t *testing.T) {
 		{"поля не сходятся", `{"name":"Кофе","price":100,"priceMinor":20000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
 		{"минорное без старого", `{"name":"Кофе","priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
 		{"дробная цена при выключенном признаке", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
-		{"дробная цена при включённом — всё равно требует сходимости", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
+		{"дробная цена при включённом признаке — тоже отказ, позиции считаются целыми", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
+		// Именно этот случай проходил раньше: проекция 10050 при шкале 2 равна
+		// 101, пара «сходилась», а арифметика считала по 101 и расходилась с
+		// сохранённым 10050 на полтинник.
+		{"проекция сходится, а единицы разные", `{"name":"Кофе","price":101,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
+		{"целая дробь при включённом признаке проходит", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, false},
 		{"дробная фикс-доля", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1,"amount":50,"amountMinor":5050}]}`, false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
