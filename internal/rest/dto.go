@@ -329,11 +329,12 @@ func toMeDto(u *api.User) meDto {
 
 // toOperationDto маппит НОРМАЛИЗОВАННУЮ операцию (см. normalizedOperation)
 func toOperationDto(o *api.Operation) operationDto {
+	shares := recipientShares(o)
 	recipients := make([]operationRecipientDto, 0, len(o.RecipientsWithSum))
 	for i := range o.RecipientsWithSum {
 		recipients = append(recipients, operationRecipientDto{
 			User:     toUserDto(&o.RecipientsWithSum[i].User),
-			Sum:      recipientShare(o, i),
+			Sum:      shares[i],
 			SumMinor: o.RecipientsWithSum[i].SumMinor,
 		})
 	}
@@ -400,11 +401,55 @@ func operationSplitType(o *api.Operation) string {
 // для equally (и легаси) — канонический пересчёт api.ShareOf по порядку массива,
 // потому что бот develop хранит дробные float-доли (100/3 = 33.33…), которые
 // нельзя просто привести к int
-func recipientShare(o *api.Operation, i int) int {
-	if o.IsDebtRepayment || o.SplitType == splitByExactAmount {
-		return int(math.Round(o.RecipientsWithSum[i].Sum))
+// recipientShare — доля получателя в СТАРЫХ целых единицах: то, что видит
+// сборка, которая про минорные не знает.
+//
+// ⚠️ Округлять доли поштучно нельзя. Расход 20,80 с точными долями
+// 10,40 + 10,40 давал старому клиенту итог 21 и доли 10 + 10: единица
+// исчезала прямо в ответе. Проекция долей строится ОДНОЙ раздачей округлённого
+// итога по минорным долям как по весам — так она сходится с проекцией итога
+// по построению.
+func recipientShares(o *api.Operation) []int {
+	n := len(o.RecipientsWithSum)
+	if n == 0 {
+		return nil
 	}
-	return api.ShareOf(o.Sum, len(o.RecipientsWithSum), i)
+	shares := legacyShareCache(o)
+	out := make([]int, n)
+	for i, v := range shares {
+		out[i] = int(v)
+	}
+	return out
+}
+
+// recipientShare — доля одного получателя. Обёртка над recipientShares:
+// доли считаются вектором, поодиночке их брать нельзя.
+func recipientShare(o *api.Operation, i int) int {
+	shares := recipientShares(o)
+	if i < 0 || i >= len(shares) {
+		return 0
+	}
+	return shares[i]
+}
+
+func legacyShareCache(o *api.Operation) []int64 {
+	n := len(o.RecipientsWithSum)
+	if !o.IsDebtRepayment && o.SplitType != splitByExactAmount {
+		out := make([]int64, n)
+		for i := range out {
+			out[i] = int64(api.ShareOf(o.Sum, n, i))
+		}
+		return out
+	}
+	weights := make([]int64, n)
+	for i := range o.RecipientsWithSum {
+		if m := o.RecipientsWithSum[i].SumMinor; m != nil {
+			weights[i] = *m
+			continue
+		}
+		weights[i] = int64(math.Round(o.RecipientsWithSum[i].Sum))
+	}
+	return api.Distribute(int64(o.Sum), weights)
 }
 
 // toOperationDtos маппит операции, новые первыми

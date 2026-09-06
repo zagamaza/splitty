@@ -170,6 +170,13 @@ type OperationStatus string
 
 type SplitType string
 
+// Способы деления расхода. Живут здесь, а не в пакете rest: правило деления
+// одно на сервер, бота и клиентов, и выводить доли по нему обязан api.
+const (
+	SplitTypeEqually       SplitType = "equally"
+	SplitTypeByExactAmount SplitType = "by_exact_amount"
+)
+
 type Debt struct {
 	Lender *User `json:"lender" bson:"lender"`
 	Debtor *User `json:"debtor" bson:"debtor"`

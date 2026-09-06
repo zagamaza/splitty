@@ -18,21 +18,29 @@ import (
 
 // resolveAmount возвращает сумму в минорных единицах шкалы exp.
 //
-// legacyPresent отличает «поле прислали» от «поля нет»: у большинства сумм
-// ноль недопустим и сходит за отсутствие, но у фиксированной доли позиции ноль
-// осмыслен, и там это приходится говорить явно.
+// legacy — указатель, а не число с флагом: `req.Sum != 0` не отличает
+// отсутствующее поле от присланного нуля, и пара {"sum":0,"sumMinor":100}
+// принималась молча, хотя проекция минорного равна единице и поля расходятся.
+// Присутствие поля важно именно для обнаружения конфликта.
 func resolveAmount(
-	field string, legacy int, legacyPresent bool, minor *int64, exp int, fractionalAllowed bool,
+	field string, legacy *int, minor *int64, exp int, fractionalAllowed bool,
 ) (int64, *httpError) {
 	factor := int64(api.MinorFactor(exp))
 
 	if minor == nil {
-		if !legacyPresent {
+		if legacy == nil {
 			return 0, &httpError{http.StatusBadRequest, "validation",
 				fmt.Sprintf("не указано поле %s", field)}
 		}
 		// Старое поле — целые единицы валюты, дробным оно быть не может.
-		return int64(legacy) * factor, nil
+		// Умножение проверенное: без него огромное значение сворачивалось в
+		// маленькое дробное и проходило мимо лимита и мимо запрета дробей.
+		v, ok := api.ToMinorChecked(*legacy, exp)
+		if !ok {
+			return 0, &httpError{http.StatusBadRequest, "validation",
+				fmt.Sprintf("значение поля %s вне допустимого диапазона", field)}
+		}
+		return v, nil
 	}
 
 	// Дробь запрещена признаком СЕРВЕРА, а не клавиатурой в приложении: запрет
@@ -45,7 +53,7 @@ func resolveAmount(
 	// Прислали оба — они обязаны сходиться. Сходятся означает «старое поле
 	// равно ПРОЕКЦИИ минорного», а не «старое × 100 == минорное»: у дробной
 	// суммы второе не выполняется никогда.
-	if legacyPresent && legacy != api.FromMinor(*minor, exp) {
+	if legacy != nil && *legacy != api.FromMinor(*minor, exp) {
 		return 0, &httpError{http.StatusBadRequest, "validation",
 			fmt.Sprintf("поля %s и %sMinor не сходятся", field, field)}
 	}

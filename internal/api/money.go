@@ -20,3 +20,21 @@ func ShareOf(sum, n, i int) int {
 	}
 	return share
 }
+
+// ShareOfMinor — то же каноническое правило деления, но в минорных единицах.
+// Отдельная функция, а не приведение к int: единица денег в модели одна, и
+// смешивать типы на границе значит однажды перепутать их.
+func ShareOfMinor(sum int64, n, i int) int64 {
+	share := sum / int64(n)
+	rem := sum % int64(n)
+	if rem < 0 {
+		if int64(i) < -rem {
+			share--
+		}
+		return share
+	}
+	if int64(i) < rem {
+		share++
+	}
+	return share
+}

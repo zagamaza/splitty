@@ -760,6 +760,12 @@ func (f *fakeRoomRepo) FindById(_ context.Context, id string) (*api.Room, error)
 }
 
 // snapshotRoom копирует комнату вместе с участниками и операциями.
+// snapshotRoom повторяет ЧТЕНИЕ mongo-репозитория, включая достройку денег.
+//
+// ⚠️ Без FillRoomMoney фейк отдавал бы комнату без минорных полей, а живой
+// FindById — с ними. Ровно это расхождение и спрятало дефект, из-за которого
+// доли не сходились с итогом на данных бота: тесты видели идеальные фикстуры,
+// а прод — float64(total)/n.
 func snapshotRoom(r *api.Room) *api.Room {
 	c := *r
 	if r.Members != nil {
@@ -770,6 +776,7 @@ func snapshotRoom(r *api.Room) *api.Room {
 		ops := append([]api.Operation(nil), *r.Operations...)
 		c.Operations = &ops
 	}
+	api.FillRoomMoney(&c)
 	return &c
 }
 
@@ -860,7 +867,7 @@ func (f *fakeRoomRepo) findRooms(userId int, archived bool) *[]api.Room {
 	var rooms []api.Room
 	for _, r := range f.rooms {
 		if isRoomMember(r, userId) && isRoomArchived(r, userId) == archived {
-			rooms = append(rooms, *r)
+			rooms = append(rooms, *snapshotRoom(r))
 		}
 	}
 	return &rooms

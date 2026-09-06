@@ -4,32 +4,35 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+
+	"github.com/almaznur91/splitty/internal/api"
 )
 
 func TestResolveAmount(t *testing.T) {
 	minor := func(v int64) *int64 { return &v }
 
+	legacyPtr := func(v int) *int { return &v }
+
 	for _, tc := range []struct {
 		name          string
-		legacy        int
-		legacyPresent bool
+		legacy        *int
 		minor         *int64
 		exp           int
 		allowFraction bool
 		want          int64
 		wantErr       bool
 	}{
-		{name: "только старое поле, шкала 0", legacy: 20, legacyPresent: true, exp: 0, want: 20},
-		{name: "только старое поле, шкала 2", legacy: 20, legacyPresent: true, exp: 2, want: 2000},
+		{name: "только старое поле, шкала 0", legacy: legacyPtr(20), exp: 0, want: 20},
+		{name: "только старое поле, шкала 2", legacy: legacyPtr(20), exp: 2, want: 2000},
 		{name: "только минорное", minor: minor(2080), exp: 2, allowFraction: true, want: 2080},
-		{name: "оба поля сходятся", legacy: 20, legacyPresent: true, minor: minor(2000), exp: 2, want: 2000},
+		{name: "оба поля сходятся", legacy: legacyPtr(20), minor: minor(2000), exp: 2, want: 2000},
 		{
 			name:   "оба поля сходятся у дробной суммы: 21 — проекция 20.80",
-			legacy: 21, legacyPresent: true, minor: minor(2080), exp: 2, allowFraction: true, want: 2080,
+			legacy: legacyPtr(21), minor: minor(2080), exp: 2, allowFraction: true, want: 2080,
 		},
 		{
 			name:   "старое поле не сходится с проекцией минорного",
-			legacy: 20, legacyPresent: true, minor: minor(2080), exp: 2, allowFraction: true, wantErr: true,
+			legacy: legacyPtr(20), minor: minor(2080), exp: 2, allowFraction: true, wantErr: true,
 		},
 		{
 			name:  "дробь при выключенном признаке отвергается",
@@ -40,9 +43,17 @@ func TestResolveAmount(t *testing.T) {
 			minor: minor(2000), exp: 2, allowFraction: false, want: 2000,
 		},
 		{name: "нет ни одного поля", exp: 2, wantErr: true},
+		{
+			name:   "ноль в старом поле — это ПРИСЛАННЫЙ ноль, а не отсутствие",
+			legacy: legacyPtr(0), minor: minor(100), exp: 2, allowFraction: true, wantErr: true,
+		},
+		{
+			name:   "огромное старое поле не сворачивается в маленькое дробное",
+			legacy: legacyPtr(184467440737095517), exp: 2, wantErr: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, hErr := resolveAmount("sum", tc.legacy, tc.legacyPresent, tc.minor, tc.exp, tc.allowFraction)
+			got, hErr := resolveAmount("sum", tc.legacy, tc.minor, tc.exp, tc.allowFraction)
 			if tc.wantErr {
 				if hErr == nil {
 					t.Fatalf("ожидался отказ, получено %d", got)
@@ -230,5 +241,77 @@ func TestLegacyOnlyRequestStillWorks(t *testing.T) {
 	}
 	if op.Sum != 100 {
 		t.Errorf("sum = %d, want 100", op.Sum)
+	}
+}
+
+// Старая сборка читает только целые поля. Итог и доли в ответе обязаны
+// сходиться между собой: 20,80 с долями 10,40 + 10,40 давал раньше итог 21 и
+// доли 10 + 10 — единица исчезала прямо в ответе.
+func TestLegacyProjectionOfFractionalSharesSumsToTotal(t *testing.T) {
+	room := scaleRoom("USD")
+	repo := newFakeRoomRepo(room)
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)
+	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
+
+	body := `{"description":"Ужин","sumMinor":2080,"donorId":1,` +
+		`"recipientSums":[{"userId":1,"sumMinor":1040},{"userId":2,"sumMinor":1040}]}`
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+	}
+	var op operationDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &op); err != nil {
+		t.Fatalf("cannot parse operation %q: %v", rec.Body.String(), err)
+	}
+
+	var legacy int
+	for _, r := range op.Recipients {
+		legacy += r.Sum
+	}
+	if legacy != op.Sum {
+		t.Errorf("старые доли дают %d, старый итог %d — единица исчезла в ответе", legacy, op.Sum)
+	}
+	if op.Sum != 21 {
+		t.Errorf("итог = %d, want 21", op.Sum)
+	}
+}
+
+// Данные бота: равное деление лежит как float64(total)/n. Ответ REST обязан
+// отдавать доли, сходящиеся с итогом, на любой шкале.
+func TestBotEqualSplitProjectionSumsToTotal(t *testing.T) {
+	room := scaleRoom("RUB")
+	ops := *room.Operations
+	ops[0].Sum = 100
+	ops[0].SplitType = api.SplitTypeEqually
+	ops[0].RecipientsWithSum = []api.RecipientWithSum{
+		{User: testUser1, Sum: 100.0 / 3}, {User: testUser2, Sum: 100.0 / 3}, {User: testUser1, Sum: 100.0 / 3},
+	}
+	room.Operations = &ops
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+
+	rec := doRequest(t, s, http.MethodGet, "/api/v1/rooms/"+room.ID.Hex(), mustToken(t, s, testUser1.ID), "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200, body: %s", rec.Code, rec.Body.String())
+	}
+	var detail roomDetailDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("cannot parse room %q: %v", rec.Body.String(), err)
+	}
+	op := detail.Operations[0]
+
+	var legacy int
+	var minor int64
+	for _, r := range op.Recipients {
+		legacy += r.Sum
+		if r.SumMinor != nil {
+			minor += *r.SumMinor
+		}
+	}
+	if legacy != op.Sum {
+		t.Errorf("старые доли дают %d, итог %d", legacy, op.Sum)
+	}
+	if op.SumMinor == nil || minor != *op.SumMinor {
+		t.Errorf("минорные доли дают %d, минорный итог %v", minor, op.SumMinor)
 	}
 }

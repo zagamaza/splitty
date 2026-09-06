@@ -12,6 +12,22 @@ import "math/bits"
 // раздаются заново пропорционально прежним — тем же способом, каким делится
 // расход.
 
+// maxInt64 — потолок для проверки переполнения при сложении весов.
+const maxInt64 = int64(^uint64(0) >> 1)
+
+// equalSplit — запасной путь на невозможных весах: делим поровну по
+// каноническому правилу, чтобы сумма всё равно сошлась с итогом.
+func equalSplit(total int64, weights []int64) []int64 {
+	out := make([]int64, len(weights))
+	if len(weights) == 0 {
+		return out
+	}
+	for i := range out {
+		out[i] = ShareOfMinor(total, len(weights), i)
+	}
+	return out
+}
+
 // remainderTaken помечает долю, уже получившую единицу остатка: остаток
 // раздаётся по одной на участника, и второй раз одному и тому же не достаётся.
 const remainderTaken = ^uint64(0)
@@ -29,11 +45,20 @@ func Distribute(total int64, weights []int64) []int64 {
 		return out
 	}
 
+	// Сумму весов считаем С ПРОВЕРКОЙ переполнения. Без неё веса
+	// [MaxInt64, MaxInt64, 3] сворачиваются в единицу, и доказательство
+	// «w <= sum», на котором держится безопасность bits.Div64, рушится —
+	// функция уронила бы процесс паникой. Переполнение означает, что весов
+	// таких быть не может: делим поровну и уходим.
 	var sum int64
 	for _, w := range weights {
-		if w > 0 {
-			sum += w
+		if w <= 0 {
+			continue
 		}
+		if sum > maxInt64-w {
+			return equalSplit(total, weights)
+		}
+		sum += w
 	}
 	if sum == 0 {
 		out[0] = total
@@ -103,104 +128,109 @@ func rescaleDown(v int64, from, to int) int64 {
 }
 
 // RescaleOperation переводит все деньги операции из шкалы from в шкалу to.
-// Вверх — точно, вниз — с округлением итога и пропорциональной раздачей долей,
-// так что «сумма долей равна сумме расхода» остаётся верным и после перехода.
+// Вверх — точно, вниз — с округлением ИТОГА и повторной раздачей долей, так
+// что «сумма долей равна сумме расхода» остаётся верным и после перехода.
+//
+// ⚠️ Доли и цены позиций НЕ переводятся поштучно. Округли их по отдельности —
+// и расход 1,50 на троих даст 1+1+1 = 3 при итоге 2, то есть деньги, которых
+// нет. Округляется только итог, всё остальное раздаётся по нему заново.
 func RescaleOperation(o *Operation, from, to int) {
 	if o == nil || from == to {
 		return
 	}
+
+	// Веса снимаем ДО перевода: пропорции от шкалы не зависят.
+	weights := shareWeights(o, from)
+	itemWeights := make([]int64, len(o.Items))
+	fixedWeights := make([][]int64, len(o.Items))
+	for i, it := range o.Items {
+		itemWeights[i] = it.PriceMinorAt(from)
+		for _, sh := range it.Shares {
+			amount, ok := sh.AmountMinorAt(from)
+			if !ok {
+				amount = -1
+			}
+			fixedWeights[i] = append(fixedWeights[i], amount)
+		}
+	}
+
+	total := convertMinor(o.SumMinorAt(from), from, to)
+	o.SumMinor = &total
+
+	rescaleItems(o, total, itemWeights, fixedWeights, from, to)
+
+	// У itemized-расхода плоские доли ВЫВОДЯТСЯ из позиций, а не считаются
+	// отдельно: иначе после смены шкалы два пути дают разные деньги.
+	if len(o.Items) > 0 {
+		if derived, ok := sharesFromItems(o, to); ok {
+			applySharesWithLegacy(o, derived, to)
+			FillMoney(o, to)
+			return
+		}
+	}
+	applySharesWithLegacy(o, SharesMinorFrom(o, total, weights), to)
+	FillMoney(o, to)
+}
+
+// convertMinor переводит значение из шкалы from в шкалу to: вверх точно, вниз
+// по единственному правилу округления продукта.
+func convertMinor(v int64, from, to int) int64 {
 	if to > from {
-		rescaleOperationUp(o, from, to)
+		return rescaleUp(v, from, to)
+	}
+	return rescaleDown(v, from, to)
+}
+
+// rescaleItems переводит позиции чека. Вверх — умножением, вниз — раздачей
+// нового итога по прежним ценам как по весам, чтобы сумма позиций сходилась с
+// суммой расхода.
+func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [][]int64, from, to int) {
+	if len(o.Items) == 0 {
 		return
 	}
-	rescaleOperationDown(o, from, to)
-}
 
-func rescaleOperationUp(o *Operation, from, to int) {
-	total := rescaleUp(o.SumMinorAt(from), from, to)
-	o.SumMinor = &total
-
-	for i := range o.RecipientsWithSum {
-		r := &o.RecipientsWithSum[i]
-		v := rescaleUp(r.SumMinorAt(from), from, to)
-		r.SumMinor = &v
+	var prices []int64
+	if to > from {
+		prices = make([]int64, len(o.Items))
+		for i, w := range itemWeights {
+			prices[i] = rescaleUp(w, from, to)
+		}
+	} else {
+		prices = Distribute(total, itemWeights)
 	}
+
 	for i := range o.Items {
 		it := &o.Items[i]
-		p := rescaleUp(it.PriceMinorAt(from), from, to)
-		it.PriceMinor = &p
-		for j := range it.Shares {
-			if amount, ok := it.Shares[j].AmountMinorAt(from); ok {
-				v := rescaleUp(amount, from, to)
-				it.Shares[j].AmountMinor = &v
-			}
-		}
-	}
-	FillMoney(o, to)
-}
+		price := prices[i]
+		it.PriceMinor = &price
 
-func rescaleOperationDown(o *Operation, from, to int) {
-	total := rescaleDown(o.SumMinorAt(from), from, to)
-	o.SumMinor = &total
-
-	// Доли раздаются заново от округлённого итога: округли их поодиночке — и
-	// сумма долей разойдётся с суммой расхода.
-	if len(o.RecipientsWithSum) > 0 {
-		weights := make([]int64, len(o.RecipientsWithSum))
-		for i, r := range o.RecipientsWithSum {
-			weights[i] = r.SumMinorAt(from)
-		}
-		for i, v := range Distribute(total, weights) {
-			share := v
-			o.RecipientsWithSum[i].SumMinor = &share
-		}
-	}
-
-	// Позиции чека — тем же способом: сначала итог, потом раздача, иначе
-	// сумма позиций перестаёт сходиться с суммой расхода.
-	if len(o.Items) > 0 {
-		weights := make([]int64, len(o.Items))
-		for i, it := range o.Items {
-			weights[i] = it.PriceMinorAt(from)
-		}
-		prices := Distribute(total, weights)
-		for i := range o.Items {
-			it := &o.Items[i]
-			price := prices[i]
-			it.PriceMinor = &price
-
-			// Фиксированные доли внутри позиции раздаются от её новой цены —
-			// но только те, что заданы: доля без Amount так и остаётся без него,
-			// иначе весовой участник превратился бы в фиксированного.
-			idx := make([]int, 0, len(it.Shares))
-			fixed := make([]int64, 0, len(it.Shares))
-			for j := range it.Shares {
-				if amount, ok := it.Shares[j].AmountMinorAt(from); ok {
-					idx = append(idx, j)
-					fixed = append(fixed, amount)
-				}
-			}
-			if len(idx) == 0 {
+		// Фиксированные доли делят не всю цену, а ровно ту часть, что делили
+		// раньше: остальное принадлежит весовым участникам.
+		var idx []int
+		var fixed []int64
+		for j, w := range fixedWeights[i] {
+			if w < 0 {
 				continue
 			}
-			// Фиксы делят не всю цену, а ровно ту часть, что и делили раньше:
-			// остальное уходит весовым участникам, и их доля не должна
-			// раздуться от смены шкалы.
-			var fixedTotal int64
-			for _, v := range fixed {
-				fixedTotal += v
-			}
-			newFixedTotal := rescaleDown(fixedTotal, from, to)
-			if newFixedTotal > price {
-				newFixedTotal = price
-			}
-			for k, v := range Distribute(newFixedTotal, fixed) {
-				amount := v
-				it.Shares[idx[k]].AmountMinor = &amount
-			}
+			idx = append(idx, j)
+			fixed = append(fixed, w)
+		}
+		if len(idx) == 0 {
+			continue
+		}
+		var fixedTotal int64
+		for _, v := range fixed {
+			fixedTotal += v
+		}
+		newFixedTotal := convertMinor(fixedTotal, from, to)
+		if newFixedTotal > price {
+			newFixedTotal = price
+		}
+		for k, v := range Distribute(newFixedTotal, fixed) {
+			amount := v
+			it.Shares[idx[k]].AmountMinor = &amount
 		}
 	}
-	FillMoney(o, to)
 }
 
 // RescaleRoom переводит комнату в шкалу to: все операции пересчитываются,

@@ -120,12 +120,15 @@ func TestFillMoneyOnLegacyDocument(t *testing.T) {
 func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 	sum := int64(2080)
 	price := int64(2080)
-	share := int64(693)
+	a, b, c := int64(694), int64(693), int64(693)
 	op := Operation{
-		Sum:               0,
-		SumMinor:          &sum,
-		RecipientsWithSum: []RecipientWithSum{{SumMinor: &share}},
-		Items:             []OperationItem{{PriceMinor: &price}},
+		Sum:       0,
+		SumMinor:  &sum,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{SumMinor: &a}, {SumMinor: &b}, {SumMinor: &c},
+		},
+		Items: []OperationItem{{PriceMinor: &price}},
 	}
 	FillMoney(&op, 2)
 
@@ -135,8 +138,18 @@ func TestFillMoneyProjectsLegacyFromMinor(t *testing.T) {
 	if op.Items[0].Price != 21 {
 		t.Errorf("проекция цены = %d, want 21", op.Items[0].Price)
 	}
-	if op.RecipientsWithSum[0].Sum != 6.93 {
-		t.Errorf("проекция доли = %v, want 6.93", op.RecipientsWithSum[0].Sum)
+	// Старую дробную долю FillMoney НЕ переписывает: по ней сервер узнаёт
+	// легаси-комнату с несходящимися долями и отказывается считать долги.
+	// Проекция для старых сборок собирается на границе API (recipientShares).
+	if op.RecipientsWithSum[0].Sum != 0 {
+		t.Errorf("старую долю переписали: %v", op.RecipientsWithSum[0].Sum)
+	}
+	var total int64
+	for _, r := range op.RecipientsWithSum {
+		total += *r.SumMinor
+	}
+	if total != 2080 {
+		t.Errorf("сумма долей = %d, want 2080", total)
 	}
 }
 
@@ -223,18 +236,34 @@ func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
 	}
 }
 
-// Дробное минорное значение старым полем не выразить: перезаписывать его
-// проекцией нельзя, иначе копейки исчезнут при любой чужой записи.
-func TestReconcileMoneyKeepsFractionalMinor(t *testing.T) {
+// Расхождение пары не может означать ничего, кроме правки старого поля: REST
+// пишет оба поля согласованными по построению. Значит и дробное минорное
+// уступает — иначе правка выбрасывается молча.
+//
+// ⚠️ Отказывать старой сборке в правке ДРОБНОЙ операции — работа входного
+// слоя (Задача 5 для REST, Задача 14 для бота), а не этой функции. Здесь
+// последняя линия, и её дело — не потерять то, что человек написал.
+func TestReconcileMoneyLegacyWinsOverFractionalMinor(t *testing.T) {
 	minor := int64(2080)
 	op := Operation{Sum: 30, SumMinor: &minor}
 	ReconcileMoney(&op, 2)
 
-	if *op.SumMinor != 2080 {
-		t.Errorf("sumMinor = %d, want 2080 — дробь потеряли", *op.SumMinor)
+	if *op.SumMinor != 3000 {
+		t.Errorf("sumMinor = %d, want 3000 — правка человека потерялась", *op.SumMinor)
 	}
-	if op.Sum != 21 {
-		t.Errorf("sum = %d, want 21 (проекция дроби)", op.Sum)
+	if op.Sum != 30 {
+		t.Errorf("sum = %d, want 30", op.Sum)
+	}
+}
+
+// Согласованную дробную пару никто не трогает.
+func TestReconcileMoneyKeepsConsistentFractionalPair(t *testing.T) {
+	minor := int64(2080)
+	op := Operation{Sum: 21, SumMinor: &minor}
+	ReconcileMoney(&op, 2)
+
+	if *op.SumMinor != 2080 {
+		t.Errorf("sumMinor = %d, want 2080 — дробь потеряли на ровном месте", *op.SumMinor)
 	}
 }
 

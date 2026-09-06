@@ -662,7 +662,9 @@ func (s *Server) handleListOperations(w http.ResponseWriter, r *http.Request) {
 
 type recipientSumRequest struct {
 	UserId int `json:"userId"`
-	Sum    int `json:"sum"`
+	// Sum — указатель: присланный ноль и отсутствующее поле значат разное, и
+	// различить их надо, чтобы поймать расхождение пары полей.
+	Sum *int `json:"sum,omitempty"`
 	// SumMinor — та же доля в минорных единицах шкалы комнаты. Дробную долю
 	// клиент шлёт ТОЛЬКО этим полем, целую — обоими.
 	SumMinor *int64 `json:"sumMinor,omitempty"`
@@ -670,7 +672,8 @@ type recipientSumRequest struct {
 
 type operationRequest struct {
 	Description string `json:"description"`
-	Sum         int    `json:"sum"`
+	// Sum — указатель, см. recipientSumRequest.Sum
+	Sum *int `json:"sum,omitempty"`
 	// SumMinor — сумма расхода в минорных единицах шкалы комнаты. Дробную
 	// сумму клиент шлёт ТОЛЬКО этим полем, целую — обоими: так сервер прежней
 	// версии откажет на дробной и примет целую.
@@ -708,7 +711,7 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 	if utf8.RuneCountInString(req.Description) > maxDescriptionRunes {
 		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
 	}
-	sumMinor, hErr := resolveAmount("sum", req.Sum, req.Sum != 0, req.SumMinor, exp, fractionalAllowed)
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, exp, fractionalAllowed)
 	if hErr != nil {
 		return nil, nil, "", 0, hErr
 	}
@@ -763,7 +766,7 @@ func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fr
 			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "получатель не может повторяться в recipientSums"}
 		}
 		seen[rs.UserId] = true
-		shareMinor, hErr := resolveAmount("recipientSums[].sum", rs.Sum, rs.Sum != 0, rs.SumMinor, exp, fractionalAllowed)
+		shareMinor, hErr := resolveAmount("recipientSums[].sum", rs.Sum, rs.SumMinor, exp, fractionalAllowed)
 		if hErr != nil {
 			return nil, nil, "", 0, hErr
 		}
@@ -1239,9 +1242,9 @@ func (s *Server) handleListDebts(w http.ResponseWriter, r *http.Request) {
 }
 
 type repaymentRequest struct {
-	DebtorId int `json:"debtorId"`
-	LenderId int `json:"lenderId"`
-	Sum      int `json:"sum"`
+	DebtorId int  `json:"debtorId"`
+	LenderId int  `json:"lenderId"`
+	Sum      *int `json:"sum,omitempty"`
 	// SumMinor — сумма погашения в минорных единицах, см. operationRequest
 	SumMinor *int64 `json:"sumMinor,omitempty"`
 	// ClientOpId опциональный клиентский идемпотентный ключ (uuid ≤ 64 симв.):
@@ -1277,7 +1280,7 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	exp := api.RoomExponent(room)
-	sumMinor, hErr := resolveAmount("sum", req.Sum, req.Sum != 0, req.SumMinor, exp, s.cfg.FractionalInput)
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, exp, s.cfg.FractionalInput)
 	if hErr != nil {
 		hErr.write(w)
 		return
