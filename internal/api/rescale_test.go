@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 )
 
@@ -221,13 +222,24 @@ func TestRescaleDownKeepsSharesConsistent(t *testing.T) {
 func TestRescaleDownKeepsItemPricesConsistent(t *testing.T) {
 	total := int64(1000)
 	p1, p2, p3 := int64(333), int64(333), int64(334)
+	a, b, c := int64(333), int64(333), int64(334)
 	op := Operation{
-		SumMinor: &total,
+		SumMinor:  &total,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, SumMinor: &a},
+			{User: User{ID: 2}, SumMinor: &b},
+			{User: User{ID: 3}, SumMinor: &c},
+		},
 		Items: []OperationItem{
-			{PriceMinor: &p1}, {PriceMinor: &p2}, {PriceMinor: &p3},
+			{PriceMinor: &p1, Shares: []ItemShare{{UserId: 1, Weight: 1}}},
+			{PriceMinor: &p2, Shares: []ItemShare{{UserId: 2, Weight: 1}}},
+			{PriceMinor: &p3, Shares: []ItemShare{{UserId: 3, Weight: 1}}},
 		},
 	}
-	RescaleOperation(&op, 2, 0)
+	if err := RescaleOperation(&op, 2, 0); err != nil {
+		t.Fatalf("RescaleOperation: %v", err)
+	}
 
 	if *op.SumMinor != 10 {
 		t.Fatalf("итог = %d, want 10", *op.SumMinor)
@@ -246,8 +258,15 @@ func TestRescaleDownKeepsItemPricesConsistent(t *testing.T) {
 func TestRescaleDownKeepsFixedSharesWithinPrice(t *testing.T) {
 	total, price := int64(1000), int64(1000)
 	f1, f2 := int64(250), int64(250)
+	a, b, c := int64(250), int64(250), int64(500)
 	op := Operation{
-		SumMinor: &total,
+		SumMinor:  &total,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, SumMinor: &a},
+			{User: User{ID: 2}, SumMinor: &b},
+			{User: User{ID: 3}, SumMinor: &c},
+		},
 		Items: []OperationItem{{
 			PriceMinor: &price,
 			Shares: []ItemShare{
@@ -257,7 +276,9 @@ func TestRescaleDownKeepsFixedSharesWithinPrice(t *testing.T) {
 			},
 		}},
 	}
-	RescaleOperation(&op, 2, 0)
+	if err := RescaleOperation(&op, 2, 0); err != nil {
+		t.Fatalf("RescaleOperation: %v", err)
+	}
 
 	var fixed int64
 	for _, sh := range op.Items[0].Shares {
@@ -458,5 +479,78 @@ func TestRescaleRoomLeavesOperationsUntouchedOnError(t *testing.T) {
 	}
 	if ops[1].Sum != 20 {
 		t.Errorf("сумма плохой операции изменилась: %d", ops[1].Sum)
+	}
+}
+
+// Контракт самой RescaleOperation, а не только через комнату: на ошибке
+// аргумент обязан остаться нетронутым до последнего поля.
+func TestRescaleOperationLeavesArgumentIntactOnError(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		op   Operation
+		want []error
+	}{
+		{
+			name: "огромная легаси-сумма",
+			op:   Operation{Sum: 184467440737095517},
+			want: []error{ErrRescaleImpossible, ErrMoneyOutOfRange},
+		},
+		{
+			name: "несогласованный itemized",
+			op: Operation{
+				Sum:       20,
+				SplitType: SplitTypeByExactAmount,
+				RecipientsWithSum: []RecipientWithSum{
+					{User: User{ID: 1}, Sum: 10}, {User: User{ID: 2}, Sum: 10},
+				},
+				Items: []OperationItem{{
+					Price:  15,
+					Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}},
+				}},
+			},
+			want: []error{ErrRescaleImpossible},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := copyOperation(&tc.op)
+			err := RescaleOperation(&tc.op, 0, 2)
+			for _, w := range tc.want {
+				if !errors.Is(err, w) {
+					t.Fatalf("ошибка %v не несёт %v", err, w)
+				}
+			}
+			if !reflect.DeepEqual(before, tc.op) {
+				t.Errorf("аргумент изменён на ошибке:\nбыло:  %+v\nстало: %+v", before, tc.op)
+			}
+		})
+	}
+}
+
+// И у комнаты сверяем целиком, а не по нескольким полям: частичная проверка
+// пропустит новый указатель, который забыли скопировать.
+func TestRescaleRoomDeepEqualOnError(t *testing.T) {
+	bad := Operation{
+		Sum:       20,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, Sum: 10}, {User: User{ID: 2}, Sum: 10},
+		},
+		Items: []OperationItem{{Price: 15, Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}}}},
+	}
+	good := Operation{Sum: 100, RecipientsWithSum: []RecipientWithSum{{User: User{ID: 1}, Sum: 100}}}
+	zero := 0
+	room := &Room{Currency: "USD", DisplayExponent: &zero, Operations: &[]Operation{good, bad}}
+
+	before := []Operation{copyOperation(&good), copyOperation(&bad)}
+	beforeExp, beforeVersion := RoomExponent(room), room.ScaleVersion
+
+	if err := RescaleRoom(room, 2); !errors.Is(err, ErrRescaleImpossible) {
+		t.Fatalf("RescaleRoom: %v, want ErrRescaleImpossible", err)
+	}
+	if !reflect.DeepEqual(before, *room.Operations) {
+		t.Errorf("операции изменены на ошибке:\nбыло:  %+v\nстало: %+v", before, *room.Operations)
+	}
+	if RoomExponent(room) != beforeExp || room.ScaleVersion != beforeVersion {
+		t.Errorf("шкала комнаты тронута на ошибке")
 	}
 }

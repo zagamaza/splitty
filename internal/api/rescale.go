@@ -138,7 +138,39 @@ func rescaleDown(v int64, from, to int) int64 {
 // ⚠️ Доли и цены позиций НЕ переводятся поштучно. Округли их по отдельности —
 // и расход 1,50 на троих даст 1+1+1 = 3 при итоге 2, то есть деньги, которых
 // нет. Округляется только итог, всё остальное раздаётся по нему заново.
+// RescaleOperation переводит все деньги операции из шкалы from в шкалу to.
+//
+// Безопасна: проверяет диапазон исходных сумм, считает на копии и присваивает
+// только после полного успеха. На ошибке аргумент остаётся нетронутым.
+//
+// ⚠️ Прежняя редакция правила аргумент на месте и валидировала диапазон только
+// в RescaleRoom. Прямой вызов на легаси-сумме вне диапазона возвращал nil и
+// обнулял деньги, а на несогласованном itemized успевал записать часть полей
+// и лишь потом отказывал. База была цела только потому, что единственный
+// боевой вызов шёл из RescaleRoom по его собственной копии, — то есть
+// безопасность держалась на вызывающем, а не на контракте.
 func RescaleOperation(o *Operation, from, to int) error {
+	if o == nil || from == to {
+		return nil
+	}
+	if err := ValidateMoneyRange(o, from); err != nil {
+		return fmt.Errorf("%w: %w", ErrRescaleImpossible, err)
+	}
+	if err := ValidateMoneyRange(o, to); err != nil {
+		return fmt.Errorf("%w: %w", ErrRescaleImpossible, err)
+	}
+	next := copyOperation(o)
+	if err := rescaleOperationInPlace(&next, from, to); err != nil {
+		return err
+	}
+	*o = next
+	return nil
+}
+
+// rescaleOperationInPlace — тот же пересчёт, но правит аргумент на месте и
+// диапазон не проверяет. Вызывать только на копии, чью пригодность уже
+// проверили: на ошибке оставляет операцию наполовину переведённой.
+func rescaleOperationInPlace(o *Operation, from, to int) error {
 	if o == nil || from == to {
 		return nil
 	}
@@ -300,7 +332,7 @@ func RescaleRoom(r *Room, to int) error {
 	next := make([]Operation, len(ops))
 	for i := range ops {
 		next[i] = copyOperation(&ops[i])
-		if err := RescaleOperation(&next[i], from, to); err != nil {
+		if err := rescaleOperationInPlace(&next[i], from, to); err != nil {
 			return err
 		}
 	}
