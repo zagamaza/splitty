@@ -448,4 +448,68 @@ class ModelsDecodingTest {
         assertEquals(huge, room.totalSpent)
         assertEquals(-huge, room.myBalance)
     }
+
+    // --- Шкала группы и минорные суммы ---
+    //
+    // Главное тут не «новые поля читаются», а «их ОТСУТСТВИЕ не ломает клиент».
+    // Сервер могут откатить, и тогда полей шкалы в ответе не будет вовсе.
+    // Единственное честное поведение — считать шкалу нулевой и дроби
+    // запрещёнными: выводить шкалу из справочника валют нельзя.
+
+    @Test
+    fun `decodes CurrencyInfo with scale fields`() {
+        val currency = SplittyJson.decodeFromString<CurrencyInfo>(
+            """{"code":"USD","symbol":"$","flag":"US","displayExponent":2,"maxExponent":2,"fractionalInput":true}"""
+        )
+        assertEquals(2, currency.displayExponent)
+        assertEquals(2, currency.maxExponent)
+        assertTrue(currency.fractionalInput)
+    }
+
+    /** Иена: предел шкалы нулевой — переключатель копеек не показывается вовсе. */
+    @Test
+    fun `decodes CurrencyInfo without minor unit`() {
+        val currency = SplittyJson.decodeFromString<CurrencyInfo>(
+            """{"code":"JPY","symbol":"Y","flag":"JP","displayExponent":0,"maxExponent":0,"fractionalInput":false}"""
+        )
+        assertEquals(0, currency.maxExponent)
+    }
+
+    /** Ответ сервера, откатанного на прежнюю версию: полей шкалы нет вовсе. */
+    @Test
+    fun `decodes CurrencyInfo from old server`() {
+        val currency = SplittyJson.decodeFromString<CurrencyInfo>(
+            """{"code":"RUB","symbol":"R","flag":"RU"}"""
+        )
+        assertEquals(0, currency.displayExponent)
+        assertEquals(0, currency.maxExponent)
+        assertFalse(currency.fractionalInput)
+    }
+
+    @Test
+    fun `decodes Operation with minor sums`() {
+        val operation = SplittyJson.decodeFromString<Operation>(
+            """{"id":"65def","description":"Ужин","sum":21,"sumMinor":2080,"isDebtRepayment":false,
+                "donor":{"id":10,"displayName":"Загир"},
+                "recipients":[{"user":{"id":10,"displayName":"Загир"},"sum":11,"sumMinor":1040},
+                              {"user":{"id":11,"displayName":"Алмаз"},"sum":10,"sumMinor":1040}],
+                "createdAt":"2026-09-06T03:00:00Z"}"""
+        )
+        assertEquals(2080L, operation.sumMinor)
+        assertEquals(21L, operation.sum)
+        assertEquals(1040L, operation.recipients.first().sumMinor)
+    }
+
+    /** Операция от прежнего сервера: минорных полей нет, и это не ошибка. */
+    @Test
+    fun `decodes Operation without minor sums`() {
+        val operation = SplittyJson.decodeFromString<Operation>(
+            """{"id":"65def","description":"Ужин","sum":100,"isDebtRepayment":false,
+                "donor":{"id":10,"displayName":"Загир"},
+                "recipients":[{"user":{"id":10,"displayName":"Загир"},"sum":100}],
+                "createdAt":"2026-09-06T03:00:00Z"}"""
+        )
+        assertNull(operation.sumMinor)
+        assertEquals(100L, operation.sum)
+    }
 }

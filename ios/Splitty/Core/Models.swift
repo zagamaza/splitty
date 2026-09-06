@@ -198,6 +198,10 @@ enum SplitType: String, Codable, Hashable {
 struct OperationRecipient: Codable, Hashable, Identifiable {
     let user: User
     let sum: Int
+    /// Точная доля в МИНОРНЫХ единицах шкалы группы (копейки). Клиент обязан
+    /// предпочитать её: `sum` выше — округлённая проекция для сборок, которые
+    /// про минорные не знают. nil — ответ сервера прежней версии.
+    var sumMinor: Int? = nil
 
     var id: Int { user.id }
 }
@@ -316,6 +320,9 @@ struct Operation: Codable, Identifiable, Hashable {
     let id: String
     let description: String
     let sum: Int
+    /// Точная сумма в МИНОРНЫХ единицах шкалы группы; `sum` выше —
+    /// округлённая проекция. nil — ответ сервера прежней версии.
+    var sumMinor: Int? = nil
     let isDebtRepayment: Bool
     /// Кто заплатил.
     let donor: User

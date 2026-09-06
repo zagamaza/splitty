@@ -243,6 +243,11 @@ object SplitTypeSerializer : KSerializer<SplitType> {
 data class OperationRecipient(
     val user: User,
     val sum: Long,
+    /**
+     * Точная доля в МИНОРНЫХ единицах шкалы группы. Клиент обязан предпочитать
+     * её: [sum] — округлённая проекция. null — ответ сервера прежней версии.
+     */
+    val sumMinor: Long? = null,
 )
 
 /**
@@ -325,6 +330,12 @@ data class Operation(
     val id: String,
     val description: String,
     val sum: Long,
+    /**
+     * Точная сумма в МИНОРНЫХ единицах шкалы группы (копейки). Клиент обязан
+     * предпочитать её: [sum] — округлённая проекция для сборок, которые про
+     * минорные не знают. null — ответ сервера прежней версии.
+     */
+    val sumMinor: Long? = null,
     val isDebtRepayment: Boolean = false,
     /** Кто заплатил. */
     val donor: User,
