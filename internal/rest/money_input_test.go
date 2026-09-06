@@ -315,3 +315,52 @@ func TestBotEqualSplitProjectionSumsToTotal(t *testing.T) {
 		t.Errorf("минорные доли дают %d, минорный итог %v", minor, op.SumMinor)
 	}
 }
+
+// Минорные поля позиций больше не игнорируются молча. Пока позиции считаются
+// целыми единицами, минорное принимается только вместе со старым и только
+// если они сходятся — иначе контракт выглядел бы рабочим, а точное значение
+// терялось бы по дороге.
+func TestItemMinorFieldsAreValidated(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		item    string
+		flagOn  bool
+		wantErr bool
+	}{
+		{"оба поля сходятся", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, false},
+		{"поля не сходятся", `{"name":"Кофе","price":100,"priceMinor":20000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
+		{"минорное без старого", `{"name":"Кофе","priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
+		{"дробная цена при выключенном признаке", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
+		{"дробная цена при включённом — всё равно требует сходимости", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
+		{"дробная фикс-доля", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1,"amount":50,"amountMinor":5050}]}`, false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			room := scaleRoom("USD")
+			s := newTestServer(Config{FractionalInput: tc.flagOn},
+				newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+			setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
+
+			body := `{"description":"Чек","donorId":1,"items":[` + tc.item + `]}`
+			rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+				mustToken(t, s, testUser1.ID), body)
+			if tc.wantErr {
+				assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+				return
+			}
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+			}
+			var op operationDto
+			if err := json.Unmarshal(rec.Body.Bytes(), &op); err != nil {
+				t.Fatalf("cannot parse operation %q: %v", rec.Body.String(), err)
+			}
+			if len(op.Items) == 0 {
+				t.Fatal("позиции не вернулись")
+			}
+			// Минорное поле обязано доехать до документа и вернуться в ответе
+			if op.Items[0].PriceMinor == nil || *op.Items[0].PriceMinor != 10000 {
+				t.Errorf("priceMinor = %v, want 10000 — минорное поле потерялось", op.Items[0].PriceMinor)
+			}
+		})
+	}
+}

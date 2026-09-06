@@ -93,18 +93,23 @@ type itemShareDto struct {
 	UserId int  `json:"userId"`
 	Weight int  `json:"weight"`
 	Amount *int `json:"amount,omitempty"`
+	// AmountMinor — точная фиксированная доля в минорных единицах
+	AmountMinor *int64 `json:"amountMinor,omitempty"`
 }
 
 // operationItemDto позиция чека в ответе API (read-path). Отдаётся только для
 // itemized-операций (AI-распознанных); nil для обычных
 type operationItemDto struct {
-	Name    string         `json:"name"`
-	Price   int            `json:"price"`
-	Qty     int            `json:"qty"`
-	Shares  []itemShareDto `json:"shares,omitempty"`
-	Kind    string         `json:"kind"`
-	Split   string         `json:"split,omitempty"`
-	Percent *int           `json:"percent,omitempty"`
+	Name string `json:"name"`
+	// PriceMinor — точная цена строки в минорных единицах шкалы комнаты;
+	// Price — округлённая проекция для прежних сборок.
+	PriceMinor *int64         `json:"priceMinor,omitempty"`
+	Price      int            `json:"price"`
+	Qty        int            `json:"qty"`
+	Shares     []itemShareDto `json:"shares,omitempty"`
+	Kind       string         `json:"kind"`
+	Split      string         `json:"split,omitempty"`
+	Percent    *int           `json:"percent,omitempty"`
 }
 
 type operationDto struct {
@@ -357,7 +362,10 @@ func toOperationDto(o *api.Operation) operationDto {
 	for _, it := range o.Items {
 		shares := make([]itemShareDto, 0, len(it.Shares))
 		for _, s := range it.Shares {
-			shares = append(shares, itemShareDto{UserId: s.UserId, Weight: s.Weight, Amount: s.Amount})
+			shares = append(shares, itemShareDto{
+				UserId: s.UserId, Weight: s.Weight,
+				Amount: s.Amount, AmountMinor: s.AmountMinor,
+			})
 		}
 		// Легаси-документы лежат в базе с пустым kind. Отдавать "" наружу
 		// нельзя: клиент честно вернёт его в PUT, а валидация kind ответит
@@ -372,13 +380,14 @@ func toOperationDto(o *api.Operation) operationDto {
 			split = api.SplitProportional
 		}
 		dto.Items = append(dto.Items, operationItemDto{
-			Name:    it.Name,
-			Price:   it.Price,
-			Qty:     it.Qty,
-			Shares:  shares,
-			Kind:    string(kind),
-			Split:   string(split),
-			Percent: it.Percent,
+			Name:       it.Name,
+			Price:      it.Price,
+			PriceMinor: it.PriceMinor,
+			Qty:        it.Qty,
+			Shares:     shares,
+			Kind:       string(kind),
+			Split:      string(split),
+			Percent:    it.Percent,
 		})
 	}
 	return dto

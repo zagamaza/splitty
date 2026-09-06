@@ -985,7 +985,7 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		splitType = splitByExactAmount
 		sumMinor = api.ToMinor(sum, exp)
 		if hErr2 == nil {
-			hErr2 = rejectFractionalItems(&req, exp, s.cfg.FractionalInput)
+			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
 		}
 	} else {
 		donor, recipientsWithSum, splitType, sumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)
@@ -1107,7 +1107,7 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		splitType = splitByExactAmount
 		newSumMinor = api.ToMinor(newSum, exp)
 		if hErr2 == nil {
-			hErr2 = rejectFractionalItems(&req, exp, s.cfg.FractionalInput)
+			hErr2 = validateItemMoney(&req, exp, s.cfg.FractionalInput)
 		}
 	} else {
 		donor, recipientsWithSum, splitType, newSumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)

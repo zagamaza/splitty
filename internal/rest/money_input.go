@@ -76,22 +76,43 @@ func maxAmountMinor(exp int) int64 {
 	return int64(maxItemsTotal) * int64(api.MinorFactor(exp))
 }
 
-// rejectFractionalItems отвергает дробные цены и доли позиций, пока признак
-// дробного ввода выключен. Позиции чека сами по себе считаются целыми
-// единицами до Задачи 7, но вход всё равно обязан отказывать явно: молча
-// округлить чужой чек хуже, чем не принять его.
-func rejectFractionalItems(req *operationRequest, exp int, fractionalAllowed bool) *httpError {
-	if fractionalAllowed {
-		return nil
-	}
+// validateItemMoney проверяет деньги позиций чека.
+//
+// ⚠️ Позиции пока считаются ЦЕЛЫМИ единицами: перевод их арифметики в минорные
+// — Задача 7. Поэтому минорное поле здесь принимается только ВМЕСТЕ со старым
+// и только если они сходятся. Молча проигнорировать присланное минорное, как
+// было раньше, нельзя: контракт выглядел бы рабочим, а точное значение
+// терялось бы по дороге.
+func validateItemMoney(req *operationRequest, exp int, fractionalAllowed bool) *httpError {
 	factor := int64(api.MinorFactor(exp))
+	reject := func(msg string) *httpError {
+		return &httpError{http.StatusBadRequest, "validation", msg}
+	}
+
 	for _, item := range req.Items {
-		if item.PriceMinor != nil && *item.PriceMinor%factor != 0 {
-			return &httpError{http.StatusBadRequest, "validation", "дробные суммы пока недоступны"}
+		if item.PriceMinor != nil {
+			if !fractionalAllowed && *item.PriceMinor%factor != 0 {
+				return reject("дробные суммы пока недоступны")
+			}
+			if item.Price == 0 {
+				return reject("позиция чека требует поля price вместе с priceMinor")
+			}
+			if item.Price != api.FromMinor(*item.PriceMinor, exp) {
+				return reject("поля price и priceMinor позиции не сходятся")
+			}
 		}
 		for _, sh := range item.Shares {
-			if sh.AmountMinor != nil && *sh.AmountMinor%factor != 0 {
-				return &httpError{http.StatusBadRequest, "validation", "дробные суммы пока недоступны"}
+			if sh.AmountMinor == nil {
+				continue
+			}
+			if !fractionalAllowed && *sh.AmountMinor%factor != 0 {
+				return reject("дробные суммы пока недоступны")
+			}
+			if sh.Amount == nil {
+				return reject("доля позиции требует поля amount вместе с amountMinor")
+			}
+			if *sh.Amount != api.FromMinor(*sh.AmountMinor, exp) {
+				return reject("поля amount и amountMinor доли не сходятся")
 			}
 		}
 	}

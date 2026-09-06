@@ -116,49 +116,55 @@ func TestSetRoomScaleNoopOnSameScale(t *testing.T) {
 	}
 }
 
-// Сторож номер один: пока шёл пересчёт, в комнату добавили расход. Массив
-// операций изменился в размере — запись обязана не сработать, иначе новый
-// расход был бы затёрт вместе со всем массивом.
-func TestSetRoomScaleRefusesWhenOperationAdded(t *testing.T) {
+// Ревизия комнаты растёт при ЛЮБОЙ записи. Прежние сторожа — размер массива и
+// максимальная версия операции — пропускали три случая разом, и каждый из них
+// пересчёт шкалы затёр бы: он кладёт массив операций целиком.
+func TestRoomRevisionGrowsOnEveryMutation(t *testing.T) {
 	db := testDB(t)
 	repo := NewRoomRepository(db)
 
-	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0, scaleTestOperation(20)))
+	op := scaleTestOperation(20)
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0, op))
 	if err != nil {
 		t.Fatalf("SaveRoom: %v", err)
 	}
 
-	// Читаем комнату так же, как это делает SetRoomScale, и вклиниваемся между
-	// чтением и записью: имитируем чужой расход, доехавший в это окно.
-	room := readRoom(t, repo, id.Hex())
-	ops := *room.Operations
-	before := len(ops)
-
-	added := scaleTestOperation(50)
-	if err := repo.CreateOperation(testCtx(t), &added, id.Hex()); err != nil {
-		t.Fatalf("CreateOperation: %v", err)
-	}
-
-	// Фильтр строится по состоянию, снятому ДО добавления: подделываем его,
-	// записав документ с прежним размером массива в переменной запроса.
-	hex, _ := primitive.ObjectIDFromHex(id.Hex())
-	res, err := db.Collection("room").UpdateOne(testCtx(t),
-		bson.M{"$and": bson.A{
-			bson.M{"_id": hex},
-			bson.M{"operations": bson.M{"$size": before}},
+	for _, tc := range []struct {
+		name string
+		do   func(t *testing.T)
+	}{
+		{"отметка о доставке пуша", func(t *testing.T) {
+			if err := repo.SetNotificationSent(testCtx(t), id.Hex(), op.ID, []int{1}); err != nil {
+				t.Fatalf("SetNotificationSent: %v", err)
+			}
 		}},
-		bson.M{"$set": bson.M{"display_exponent": 2}})
-	if err != nil {
-		t.Fatalf("UpdateOne: %v", err)
-	}
-	if res.MatchedCount != 0 {
-		t.Fatal("сторож по размеру массива не сработал: запись прошла бы поверх чужого расхода")
+		{"архивирование расхода", func(t *testing.T) {
+			if _, err := repo.DeleteOperation(testCtx(t), id.Hex(), op.ID); err != nil {
+				t.Fatalf("DeleteOperation: %v", err)
+			}
+		}},
+		{"затирание личности в снимках", func(t *testing.T) {
+			if err := repo.AnonymizeUser(testCtx(t), 2, DeletedUserPlaceholder); err != nil {
+				t.Fatalf("AnonymizeUser: %v", err)
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			before := readRoom(t, repo, id.Hex()).Revision
+			tc.do(t)
+			after := readRoom(t, repo, id.Hex()).Revision
+			if after <= before {
+				t.Errorf("ревизия не выросла: было %d, стало %d — пересчёт шкалы затёр бы эту запись",
+					before, after)
+			}
+		})
 	}
 }
 
-// Сторож номер два: пока шёл пересчёт, существующий расход отредактировали.
-// Размер массива тот же, но version операции вырос.
-func TestSetRoomScaleRefusesWhenOperationEdited(t *testing.T) {
+// Пересчёт отказывается, если комнату писали между чтением и записью — на том
+// самом случае, который прежние сторожа пропускали: отметка о доставке пуша
+// не меняет ни длину массива, ни версию операции.
+func TestSetRoomScaleRefusesAfterNotificationMark(t *testing.T) {
 	db := testDB(t)
 	repo := NewRoomRepository(db)
 
@@ -169,31 +175,47 @@ func TestSetRoomScaleRefusesWhenOperationEdited(t *testing.T) {
 	}
 
 	room := readRoom(t, repo, id.Hex())
-	maxVersion := 0
-	for _, o := range *room.Operations {
-		if o.Version > maxVersion {
-			maxVersion = o.Version
-		}
-	}
+	revision := room.Revision
 
-	edited := (*room.Operations)[0]
-	edited.Sum = 30
-	if err := repo.UpdateOperation(testCtx(t), &edited, id.Hex()); err != nil {
-		t.Fatalf("UpdateOperation: %v", err)
+	if err := repo.SetNotificationSent(testCtx(t), id.Hex(), op.ID, []int{1}); err != nil {
+		t.Fatalf("SetNotificationSent: %v", err)
 	}
 
 	hex, _ := primitive.ObjectIDFromHex(id.Hex())
 	res, err := db.Collection("room").UpdateOne(testCtx(t),
-		bson.M{"$and": bson.A{
-			bson.M{"_id": hex},
-			bson.M{"operations": bson.M{"$not": bson.M{"$elemMatch": bson.M{"version": bson.M{"$gt": maxVersion}}}}},
-		}},
+		bson.M{"_id": hex, "revision": versionFilter(revision)},
 		bson.M{"$set": bson.M{"display_exponent": 2}})
 	if err != nil {
 		t.Fatalf("UpdateOne: %v", err)
 	}
 	if res.MatchedCount != 0 {
-		t.Fatal("сторож по версии операции не сработал: правка была бы затёрта")
+		t.Fatal("сторож по ревизии не сработал: пересчёт вернул бы отметку о доставке и пуш ушёл бы второй раз")
+	}
+}
+
+// Живой путь: пересчёт под конкурентной записью отдаёт ErrRoomBusy, а не
+// молча затирает.
+func TestSetRoomScaleReturnsBusyOnConcurrentWrite(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	op := scaleTestOperation(20)
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0, op))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	// Вклиниваемся ровно между чтением комнаты и записью пересчёта.
+	repo.beforeScaleWrite = func() {
+		if err := repo.SetNotificationSent(testCtx(t), id.Hex(), op.ID, []int{1}); err != nil {
+			t.Errorf("SetNotificationSent: %v", err)
+		}
+	}
+	if _, err := repo.SetRoomScale(testCtx(t), id.Hex(), 2); !errors.Is(err, ErrRoomBusy) {
+		t.Fatalf("SetRoomScale: %v, want ErrRoomBusy", err)
+	}
+	if api.RoomExponent(readRoom(t, repo, id.Hex())) != 0 {
+		t.Error("шкала всё-таки поменялась при отказе")
 	}
 }
 
@@ -259,5 +281,48 @@ func TestUpdateCurrencyKeepsScaleWhenAllowed(t *testing.T) {
 	}
 	if api.RoomExponent(room) != 2 {
 		t.Errorf("шкала = %d, want 2 — её никто не просил менять", api.RoomExponent(room))
+	}
+}
+
+// Обратное окно гонки: расход, посчитанный по прежней шкале, не должен лечь в
+// комнату, шкалу которой успели поменять. Иначе 20 рублей превратятся в 20
+// копеек — или наоборот, смотря куда двигали шкалу.
+func TestCreateOperationRefusesStaleScale(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	// Вклиниваемся между чтением шкалы и записью операции: в это окно комната
+	// переезжает с целых единиц на копейки.
+	repo.beforeOperationWrite = func() {
+		if _, err := repo.SetRoomScale(testCtx(t), id.Hex(), 2); err != nil {
+			t.Errorf("SetRoomScale: %v", err)
+		}
+	}
+
+	op := scaleTestOperation(20)
+	if err := repo.CreateOperation(testCtx(t), &op, id.Hex()); err != nil {
+		t.Fatalf("CreateOperation: %v", err)
+	}
+
+	room := readRoom(t, repo, id.Hex())
+	if api.RoomExponent(room) != 2 {
+		t.Fatalf("шкала комнаты = %d, want 2", api.RoomExponent(room))
+	}
+	stored := (*room.Operations)[0]
+	if stored.SumMinor == nil {
+		t.Fatal("у операции нет минорной суммы")
+	}
+	// 20 единиц валюты при шкале 2 — это 2000 минорных. Если бы запись
+	// прошла по прежней шкале, здесь лежало бы 20, то есть 0,20.
+	if *stored.SumMinor != 2000 {
+		t.Errorf("sumMinor = %d, want 2000 — расход записан по устаревшей шкале", *stored.SumMinor)
+	}
+	if stored.Sum != 20 {
+		t.Errorf("sum = %d, want 20", stored.Sum)
 	}
 }

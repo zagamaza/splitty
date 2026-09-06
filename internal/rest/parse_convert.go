@@ -160,16 +160,22 @@ func toApiItems(items []ai.DraftItem) []api.OperationItem {
 	for _, it := range items {
 		shares := make([]api.ItemShare, 0, len(it.Shares))
 		for _, s := range it.Shares {
-			shares = append(shares, api.ItemShare{UserId: s.UserId, Weight: s.Weight, Amount: s.Amount})
+			shares = append(shares, api.ItemShare{
+				UserId: s.UserId, Weight: s.Weight,
+				Amount: s.Amount, AmountMinor: s.AmountMinor,
+			})
 		}
 		out = append(out, api.OperationItem{
-			Name:    it.Name,
-			Price:   it.Price,
-			Qty:     it.Qty,
-			Shares:  shares,
-			Kind:    api.ItemKind(it.Kind),
-			Split:   api.SplitRule(it.Split),
-			Percent: it.Percent,
+			Name: it.Name,
+			// Минорные поля обязаны доезжать до документа: без них позиции
+			// молча теряли точное значение, а контракт выглядел рабочим.
+			PriceMinor: it.PriceMinor,
+			Price:      it.Price,
+			Qty:        it.Qty,
+			Shares:     shares,
+			Kind:       api.ItemKind(it.Kind),
+			Split:      api.SplitRule(it.Split),
+			Percent:    it.Percent,
 		})
 	}
 	return out
