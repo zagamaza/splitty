@@ -693,4 +693,10 @@
         <item quantity="other">未送信の操作が %d 件あります。ログアウトして削除しますか？</item>
     </plurals>
     <string name="push_locale">ja</string>
+    <string name="group_settings_cents">小数表示</string>
+    <string name="group_cents_toggle">小数を使う</string>
+    <string name="group_settings_cents_footer">グループの金額が小数になります（21 ではなく 20.80）。変換は正確で、金額は変わりません。</string>
+    <string name="group_cents_off_title">小数を無効にしますか？</string>
+    <string name="group_cents_off_confirm">無効にする</string>
+    <string name="group_cents_off_message">金額は四捨五入されます（20.80 は 21 になります）。小数は再び有効にできますが、四捨五入は元に戻せません。</string>
 </resources>

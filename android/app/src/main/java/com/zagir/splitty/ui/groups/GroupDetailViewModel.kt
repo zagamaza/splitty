@@ -220,6 +220,44 @@ class GroupDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Шкала группы после локальной смены: тумблер копеек обязан отзываться
+     * сразу, не дожидаясь перечитывания группы.
+     */
+    private val _displayExponentOverride = MutableStateFlow<Int?>(null)
+    val displayExponentOverride: StateFlow<Int?> = _displayExponentOverride.asStateFlow()
+
+    private val _isSavingScale = MutableStateFlow(false)
+    val isSavingScale: StateFlow<Boolean> = _isSavingScale.asStateFlow()
+
+    /**
+     * PUT /rooms/{id}/scale: включение и выключение копеек.
+     *
+     * Включение точное, выключение округляет уже записанные деньги — поэтому
+     * подтверждение спрашивает экран, а не эта функция: сюда приходит уже
+     * принятое человеком решение.
+     */
+    fun setScale(exponent: Int) {
+        val id = roomIdFlow.value ?: return
+        val current = _displayExponentOverride.value
+            ?: (_room.value as? UiState.Content)?.value?.displayExponent
+        if (_isSavingScale.value || exponent == current) return
+        viewModelScope.launch {
+            _isSavingScale.value = true
+            try {
+                val updated = repository.setRoomScale(id, exponent)
+                analytics.track(AnalyticsEvent.RoomSettingsChanged("scale"))
+                _displayExponentOverride.value = updated.displayExponent
+                // Единая инвалидация: экран и списки перечитают пересчитанные суммы.
+                sessionStore.noteDataChanged()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e)
+            } finally {
+                _isSavingScale.value = false
+            }
+        }
+    }
+
     /** Друзья для выбора при приглашении (без тех, кто уже в группе). */
     private val _friends = MutableStateFlow<List<FriendBalance>>(emptyList())
     val friends: StateFlow<List<FriendBalance>> = _friends.asStateFlow()

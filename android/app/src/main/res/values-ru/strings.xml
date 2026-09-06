@@ -793,4 +793,10 @@
     <string name="demo_sum_1350">1350 ₽</string>
     <string name="demo_sum_1500">1500 ₽</string>
     <string name="push_locale">ru</string>
+    <string name="group_settings_cents">Копейки</string>
+    <string name="group_cents_toggle">Считать копейки</string>
+    <string name="group_settings_cents_footer">Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются.</string>
+    <string name="group_cents_off_title">Выключить копейки?</string>
+    <string name="group_cents_off_confirm">Выключить</string>
+    <string name="group_cents_off_message">Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится</string>
 </resources>

@@ -111,3 +111,33 @@ func TestDefaultExponentForUnknownCurrency(t *testing.T) {
 		t.Errorf("незнакомый код: got %d, want как у %s", got, DefaultCurrency)
 	}
 }
+
+// Смена валюты не пересчитывает суммы — она безопасна ровно пока новая валюта
+// допускает шкалу комнаты.
+func TestScaleAfterCurrencyChange(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		exp       int
+		hasOps    bool
+		currency  string
+		wantExp   int
+		wantAllow bool
+	}{
+		{"рубль без копеек в иены — можно, число то же", 0, true, "JPY", 0, true},
+		{"доллар с копейками в евро — можно, шкала общая", 2, true, "EUR", 2, true},
+		{"доллар с копейками в иены — нельзя: 2080 стало бы 2080 иен", 2, true, "JPY", 2, false},
+		{"та же пара, но комната пустая — можно, терять нечего", 2, false, "JPY", 0, true},
+		{"рубль без копеек в доллар — шкала не поднимается сама", 0, true, "USD", 0, true},
+		{"незнакомый код ведёт себя как валюта по умолчанию", 2, true, "GBP", 2, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			gotExp, gotAllow := ScaleAfterCurrencyChange(tc.exp, tc.hasOps, tc.currency)
+			if gotAllow != tc.wantAllow {
+				t.Fatalf("разрешено = %v, want %v", gotAllow, tc.wantAllow)
+			}
+			if gotExp != tc.wantExp {
+				t.Errorf("шкала = %d, want %d", gotExp, tc.wantExp)
+			}
+		})
+	}
+}

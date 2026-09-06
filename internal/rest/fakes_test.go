@@ -684,6 +684,9 @@ func (f *fakeUserRepo) AddAlias(_ context.Context, userId int, alias string) err
 // fakeRoomRepo in-memory реализация repository.RoomRepository для тестов
 type fakeRoomRepo struct {
 	rooms map[string]*api.Room
+	// busyOnScale — сколько раз SetRoomScale ответит ErrRoomBusy, прежде чем
+	// сработать: так проверяется повтор в обработчике
+	busyOnScale int
 	// afterCreate вызывается после успешного CreateOperation —
 	// позволяет симулировать конкурентную запись между вставкой и перепроверкой
 	afterCreate func(roomId string)
@@ -1105,8 +1108,31 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 	if !ok {
 		return mongo.ErrNoDocuments
 	}
+	// Тот же запрет, что и в mongo-реализации, и той же функцией: иначе тест
+	// проверял бы фейк, а не правило
+	hasOps := room.Operations != nil && len(*room.Operations) > 0
+	newExp, allowed := api.ScaleAfterCurrencyChange(api.RoomExponent(room), hasOps, currency)
+	if !allowed {
+		return repository.ErrScaleNotSupported
+	}
 	room.Currency = currency
+	room.DisplayExponent = &newExp
 	return nil
+}
+
+// busyOnScale — одноразовый отказ SetRoomScale: имитирует чужую запись в
+// комнату между чтением и обновлением.
+func (f *fakeRoomRepo) SetRoomScale(_ context.Context, roomId string, exp int) (*api.Room, error) {
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return nil, mongo.ErrNoDocuments
+	}
+	if f.busyOnScale > 0 {
+		f.busyOnScale--
+		return nil, repository.ErrRoomBusy
+	}
+	api.RescaleRoom(room, exp)
+	return room, nil
 }
 
 // EachRoomCreatedAfter как mongo-реализация: порциями, только свежие комнаты.

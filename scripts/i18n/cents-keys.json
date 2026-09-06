@@ -1,0 +1,74 @@
+{
+  "Копейки": {
+    "ru": "Копейки",
+    "en": "Cents",
+    "de": "Cent-Beträge",
+    "es": "Céntimos",
+    "fr": "Centimes",
+    "it": "Centesimi",
+    "ja": "小数表示",
+    "ko": "소수점 표시",
+    "pt-BR": "Centavos",
+    "zh-Hans": "小数显示"
+  },
+  "Считать копейки": {
+    "ru": "Считать копейки",
+    "en": "Count cents",
+    "de": "Cent berücksichtigen",
+    "es": "Contar céntimos",
+    "fr": "Compter les centimes",
+    "it": "Contare i centesimi",
+    "ja": "小数を使う",
+    "ko": "소수점 사용",
+    "pt-BR": "Contar centavos",
+    "zh-Hans": "使用小数"
+  },
+  "Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются.": {
+    "ru": "Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются.",
+    "en": "Group amounts become decimal: 20.80 instead of 21. The conversion is exact — no money changes.",
+    "de": "Die Beträge der Gruppe werden dezimal: 20,80 statt 21. Die Umrechnung ist exakt, es geht kein Geld verloren.",
+    "es": "Los importes del grupo pasarán a tener decimales: 20,80 en lugar de 21. La conversión es exacta y el dinero no cambia.",
+    "fr": "Les montants du groupe deviennent décimaux : 20,80 au lieu de 21. La conversion est exacte, l'argent ne change pas.",
+    "it": "Gli importi del gruppo diventano decimali: 20,80 invece di 21. La conversione è esatta, il denaro non cambia.",
+    "ja": "グループの金額が小数になります（21 ではなく 20.80）。変換は正確で、金額は変わりません。",
+    "ko": "그룹 금액이 소수로 표시됩니다. 21 대신 20.80입니다. 변환은 정확하며 금액은 달라지지 않습니다.",
+    "pt-BR": "Os valores do grupo passam a ter decimais: 20,80 em vez de 21. A conversão é exata e o dinheiro não muda.",
+    "zh-Hans": "群组金额将显示小数：20.80 而非 21。换算精确，金额不变。"
+  },
+  "Выключить копейки?": {
+    "ru": "Выключить копейки?",
+    "en": "Turn off cents?",
+    "de": "Cent-Beträge deaktivieren?",
+    "es": "¿Desactivar los céntimos?",
+    "fr": "Désactiver les centimes ?",
+    "it": "Disattivare i centesimi?",
+    "ja": "小数を無効にしますか？",
+    "ko": "소수점을 끌까요?",
+    "pt-BR": "Desativar centavos?",
+    "zh-Hans": "关闭小数？"
+  },
+  "Выключить": {
+    "ru": "Выключить",
+    "en": "Turn off",
+    "de": "Deaktivieren",
+    "es": "Desactivar",
+    "fr": "Désactiver",
+    "it": "Disattiva",
+    "ja": "無効にする",
+    "ko": "끄기",
+    "pt-BR": "Desativar",
+    "zh-Hans": "关闭"
+  },
+  "Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится": {
+    "ru": "Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится",
+    "en": "Amounts will be rounded: 20.80 becomes 21. You can turn cents back on, but the rounding cannot be undone.",
+    "de": "Beträge werden gerundet: aus 20,80 wird 21. Sie können Cent-Beträge wieder aktivieren, die Rundung lässt sich jedoch nicht rückgängig machen.",
+    "es": "Los importes se redondearán: 20,80 pasará a ser 21. Puede volver a activar los céntimos, pero el redondeo no se deshará.",
+    "fr": "Les montants seront arrondis : 20,80 deviendra 21. Vous pouvez réactiver les centimes, mais l'arrondi ne sera pas annulé.",
+    "it": "Gli importi verranno arrotondati: 20,80 diventerà 21. Può riattivare i centesimi, ma l'arrotondamento non si annulla.",
+    "ja": "金額は四捨五入されます（20.80 は 21 になります）。小数は再び有効にできますが、四捨五入は元に戻せません。",
+    "ko": "금액이 반올림됩니다. 20.80은 21이 됩니다. 소수점은 다시 켤 수 있지만 반올림은 되돌릴 수 없습니다.",
+    "pt-BR": "Os valores serão arredondados: 20,80 passará a 21. Você pode reativar os centavos, mas o arredondamento não será desfeito.",
+    "zh-Hans": "金额将被四舍五入：20.80 变为 21。您可以重新开启小数，但四舍五入无法撤销。"
+  }
+}

@@ -128,6 +128,10 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
+	// SetRoomScale переводит комнату в другую шкалу, пересчитывая деньги всех её
+	// операций одним обновлением документа. ErrRoomBusy — комнату писали, пока
+	// шёл пересчёт, и правку нужно повторить
+	SetRoomScale(ctx context.Context, roomId string, exp int) (*api.Room, error)
 	// SetAvatarFileId ставит ссылку на аву комнаты (пустая строка снимает её) и
 	// возвращает ПРЕЖНЮЮ ссылку — ту, которую этот вызов вытеснил
 	SetAvatarFileId(ctx context.Context, roomId string, fileId string) (string, error)
@@ -424,6 +428,70 @@ func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
 	}
 	api.FillMoney(&c, exp)
 	return &c
+}
+
+// ErrRoomBusy — комнату писали, пока шёл пересчёт шкалы. Пересчёт читает
+// операции, пересчитывает их в памяти и кладёт обратно целиком, поэтому чужая
+// запись в этот момент была бы затёрта. Вызывающему остаётся повторить.
+var ErrRoomBusy = errors.New("room changed during rescale")
+
+// SetRoomScale переводит комнату в шкалу exp: пересчитывает деньги всех
+// операций и записывает их ОДНИМ обновлением документа. Одним — потому что
+// половина комнаты в одной шкале и половина в другой это деньги, которых нет.
+//
+// Запись условная: если между чтением и записью в комнате появилась, исчезла
+// или изменилась операция, обновление не срабатывает и возвращается
+// ErrRoomBusy. Сторожей два, и оба нужны: размер массива ловит добавление и
+// удаление, максимальная версия операции — правку существующей.
+func (rr MongoRoomRepository) SetRoomScale(ctx context.Context, roomId string, exp int) (*api.Room, error) {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return nil, err
+	}
+	room, err := rr.FindById(ctx, roomId)
+	if err != nil {
+		return nil, err
+	}
+	if api.RoomExponent(room) == exp {
+		return room, nil
+	}
+
+	var ops []api.Operation
+	if room.Operations != nil {
+		ops = *room.Operations
+	}
+	maxVersion := 0
+	for _, o := range ops {
+		if o.Version > maxVersion {
+			maxVersion = o.Version
+		}
+	}
+
+	before := room.ScaleVersion
+	api.RescaleRoom(room, exp)
+
+	filter := bson.M{"$and": bson.A{
+		bson.M{"_id": hex},
+		bson.M{"scale_version": versionFilter(before)},
+		bson.M{"operations": bson.M{"$size": len(ops)}},
+		bson.M{"operations": bson.M{"$not": bson.M{"$elemMatch": bson.M{"version": bson.M{"$gt": maxVersion}}}}},
+	}}
+	sanitized := make([]api.Operation, len(ops))
+	for i := range ops {
+		sanitized[i] = *sanitizeOperation(&ops[i], exp)
+	}
+	update := bson.M{
+		"$set": bson.M{"display_exponent": exp, "operations": sanitized},
+		"$inc": bson.M{"scale_version": 1},
+	}
+	res, err := rr.col.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return nil, err
+	}
+	if res.MatchedCount == 0 {
+		return nil, ErrRoomBusy
+	}
+	return room, nil
 }
 
 // roomExponent — шкала комнаты одним лёгким запросом (проекция на два поля).
@@ -1114,14 +1182,53 @@ func (rr MongoRoomRepository) PurgeOperation(ctx context.Context, roomId string,
 	return err
 }
 
+// ErrScaleNotSupported — у новой валюты нет дробной части, а комната считает
+// копейки. Сменить валюту, не тронув суммы, тут нельзя: комната в шкале 2
+// хранит 2080, и в иенах это число уже ничего не значит.
+var ErrScaleNotSupported = errors.New("currency does not support room scale")
+
+// UpdateCurrency меняет валюту комнаты. Суммы при этом НЕ пересчитываются —
+// меняется обозначение, и это давнее осознанное поведение.
+//
+// ⚠️ Оно безопасно ровно до тех пор, пока новая валюта допускает шкалу
+// комнаты. Комната с копейками хранит 20,80 как 2080; переведи её в иены, где
+// дробной части нет, и то же число прочтётся как 2080 иен — деньги вырастут в
+// сто раз, не изменившись в базе ни на единицу.
+//
+// Проверка живёт ЗДЕСЬ, а не в обработчике REST: валюту меняет и бот
+// (internal/bot/setting_screen.go), мимо всякого REST.
 func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string, currency string) error {
 	hex, err := primitive.ObjectIDFromHex(roomId)
 	if err != nil {
 		return err
 	}
+
+	// Проекция на первую операцию, а не чтение комнаты целиком: нужно знать
+	// лишь «есть ли в ней хоть один расход».
+	var head api.Room
+	err = rr.col.FindOne(ctx, bson.M{"_id": hex},
+		options.FindOne().SetProjection(bson.M{
+			"currency":         1,
+			"display_exponent": 1,
+			"operations":       bson.M{"$slice": 1},
+		})).Decode(&head)
+	if err != nil {
+		return err
+	}
+
+	exp := api.RoomExponent(&head)
+	hasOperations := head.Operations != nil && len(*head.Operations) > 0
+	newExp, ok := api.ScaleAfterCurrencyChange(exp, hasOperations, currency)
+	if !ok {
+		return ErrScaleNotSupported
+	}
+	update := bson.M{"currency": currency}
+	if newExp != exp {
+		update["display_exponent"] = newExp
+	}
+
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
-	update := bson.D{{Key: "$set", Value: bson.M{"currency": currency}}}
-	_, err = rr.col.UpdateOne(ctx, filter, update)
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: update}})
 	return err
 }
 

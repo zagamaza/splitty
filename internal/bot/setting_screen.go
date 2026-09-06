@@ -2,7 +2,9 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"github.com/almaznur91/splitty/internal/api"
+	"github.com/almaznur91/splitty/internal/repository"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -39,6 +41,14 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 
 	if hasAction(u, choseCurrency) {
 		if err := bot.rs.UpdateCurrency(ctx, roomId, u.Button.CallbackData.ExternalId); err != nil {
+			// В группе считают копейки, а у выбранной валюты их нет: молча
+			// вернуть прежний экран значит соврать, что ничего не просили.
+			if errors.Is(err, repository.ErrScaleNotSupported) {
+				return api.TelegramMessage{
+					CallbackConfig: createCallback(u, I18n(u.User, "msg_currency_without_cents"), true),
+					Send:           true,
+				}
+			}
 			log.Error().Err(err).Msg("update currency failed")
 			return
 		}

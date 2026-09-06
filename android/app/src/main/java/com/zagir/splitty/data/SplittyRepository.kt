@@ -32,6 +32,7 @@ import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.model.SetCurrencyBody
+import com.zagir.splitty.core.model.SetScaleBody
 import com.zagir.splitty.core.model.SetPasswordBody
 import com.zagir.splitty.core.model.Statistics
 import com.zagir.splitty.core.model.UpdateMeBody
@@ -159,6 +160,9 @@ class SplittyRepository @Inject constructor(
 
     suspend fun setRoomCurrency(roomId: String, currency: String) =
         call { api.setRoomCurrency(roomId, SetCurrencyBody(currency)) }
+
+    suspend fun setRoomScale(roomId: String, displayExponent: Int) =
+        call { api.setRoomScale(roomId, SetScaleBody(displayExponent)) }
 
     // --- Валюты ---
 

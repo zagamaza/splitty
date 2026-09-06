@@ -80,6 +80,10 @@ data class CreateRoomBody(val name: String)
 @Serializable
 data class SetCurrencyBody(val currency: String)
 
+/** Шкала группы: 0 — суммы целые, 2 — с копейками. */
+@Serializable
+data class SetScaleBody(val displayExponent: Int)
+
 /** Доля получателя в теле запроса by_exact_amount (целые единицы валюты). */
 @Serializable
 data class RecipientSum(

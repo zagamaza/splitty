@@ -697,4 +697,10 @@
         <item quantity="other">Ci sono %d operazioni non inviate: vuoi uscire ed eliminarle?</item>
     </plurals>
     <string name="push_locale">it</string>
+    <string name="group_settings_cents">Centesimi</string>
+    <string name="group_cents_toggle">Contare i centesimi</string>
+    <string name="group_settings_cents_footer">Gli importi del gruppo diventano decimali: 20,80 invece di 21. La conversione è esatta, il denaro non cambia.</string>
+    <string name="group_cents_off_title">Disattivare i centesimi?</string>
+    <string name="group_cents_off_confirm">Disattiva</string>
+    <string name="group_cents_off_message">Gli importi verranno arrotondati: 20,80 diventerà 21. Può riattivare i centesimi, ma l\'arrotondamento non si annulla.</string>
 </resources>

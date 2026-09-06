@@ -528,11 +528,88 @@ func (s *Server) handleUpdateCurrency(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.roomRepo.UpdateCurrency(ctx, roomId, req.Currency); err != nil {
+		// Отказ объясняет причину, а не просто «нельзя»: человек должен
+		// понять, что мешает именно эта пара «копейки + валюта без них».
+		if errors.Is(err, repository.ErrScaleNotSupported) {
+			writeError(w, http.StatusBadRequest, "validation",
+				"в этой валюте нет копеек — сначала выключите их в настройках группы")
+			return
+		}
 		log.Error().Err(err).Msgf("cannot update currency for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось обновить валюту")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// Шкала комнаты
+
+type updateScaleRequest struct {
+	DisplayExponent *int `json:"displayExponent"`
+}
+
+// handleUpdateScale PUT /api/v1/rooms/{roomId}/scale — включение и выключение
+// копеек в комнате.
+//
+// Включение точное: 1200 становится 120000, ничего не теряется. Выключение
+// теряет копейки, и подтверждает его человек НА КЛИЕНТЕ — сервер тут только
+// исполнитель: спрашивать подтверждение второй раз в протоколе нечем, а молча
+// округлять чужие деньги нельзя. Отсюда и отдельная ручка, а не поле в общем
+// PATCH: у неё одной есть цена, которую человек обязан увидеть заранее.
+func (s *Server) handleUpdateScale(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	roomId := r.PathValue("roomId")
+
+	room, hErr := s.roomForMember(ctx, roomId, userIdFromCtx(ctx))
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	var req updateScaleRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
+		hErr.write(w)
+		return
+	}
+	// Указатель: без него отсутствие поля неотличимо от осознанного нуля, то
+	// есть от просьбы выключить копейки.
+	if req.DisplayExponent == nil {
+		writeError(w, http.StatusBadRequest, "validation", "не указана шкала")
+		return
+	}
+	exp := *req.DisplayExponent
+	currency := roomCurrencyCode(room)
+	if !api.IsValidExponent(currency, exp) {
+		if api.MaxExponentFor(currency) == 0 {
+			writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
+			return
+		}
+		writeError(w, http.StatusBadRequest, "validation", "недопустимая шкала для этой валюты")
+		return
+	}
+
+	// Пересчёт читает операции, считает их в памяти и кладёт обратно целиком,
+	// поэтому чужая запись в это окно отменяет попытку. Повтор дешевле блокировки
+	// комнаты: окно — миллисекунды, а конкурируют за него живые люди.
+	var updated *api.Room
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		updated, err = s.roomRepo.SetRoomScale(ctx, roomId, exp)
+		if !errors.Is(err, repository.ErrRoomBusy) {
+			break
+		}
+	}
+	if errors.Is(err, repository.ErrRoomBusy) {
+		writeError(w, http.StatusConflict, "conflict", "в группе только что записали расход, попробуйте ещё раз")
+		return
+	}
+	if err != nil {
+		log.Error().Err(err).Msgf("cannot set scale for room %s", roomId)
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось изменить шкалу")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, s.buildRoomDetail(updated, userIdFromCtx(ctx), s.now().UTC()))
 }
 
 // handleCurrencies GET /api/v1/currencies — справочник поддерживаемых валют

@@ -62,6 +62,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -1522,6 +1524,8 @@ private fun GroupSettingsTab(
     val savingCurrency by viewModel.savingCurrency.collectAsStateWithLifecycle()
     val selectedOverride by viewModel.selectedCurrencyOverride.collectAsStateWithLifecycle()
     val isArchiving by viewModel.isArchiving.collectAsStateWithLifecycle()
+    val exponentOverride by viewModel.displayExponentOverride.collectAsStateWithLifecycle()
+    val isSavingScale by viewModel.isSavingScale.collectAsStateWithLifecycle()
 
     val colors = Splitty.colors
     val haptics = rememberHaptics()
@@ -1529,6 +1533,36 @@ private fun GroupSettingsTab(
     // Смена валюты — с подтверждением: суммы НЕ пересчитываются, меняется
     // только обозначение у всех участников (порт iOS confirmationDialog).
     var pendingCurrency by remember { mutableStateOf<CurrencyInfo?>(null) }
+    val displayExponent = exponentOverride ?: room.displayExponent
+    // Предел шкалы берём из справочника: у иены и воны он нулевой, и секции
+    // копеек в такой группе нет вовсе. Пока справочник не пришёл — тоже нет:
+    // тумблер, который получит отказ, хуже отсутствующего.
+    val maxExponent = (currencies as? UiState.Content)?.value
+        ?.firstOrNull { it.code == selectedCurrency }?.maxExponent ?: 0
+    // Выключение копеек округляет уже записанные деньги — спрашиваем.
+    var isDropCentsConfirmVisible by remember { mutableStateOf(false) }
+
+    if (isDropCentsConfirmVisible) {
+        AlertDialog(
+            onDismissRequest = { isDropCentsConfirmVisible = false },
+            title = { Text(stringResource(R.string.group_cents_off_title)) },
+            text = { Text(stringResource(R.string.group_cents_off_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    haptics.tap()
+                    viewModel.setScale(0)
+                    isDropCentsConfirmVisible = false
+                }) {
+                    Text(stringResource(R.string.group_cents_off_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDropCentsConfirmVisible = false }) {
+                    Text(stringResource(R.string.common_cancel))
+                }
+            },
+        )
+    }
 
     pendingCurrency?.let { currency ->
         AlertDialog(
@@ -1705,6 +1739,61 @@ private fun GroupSettingsTab(
                     color = colors.inkSecondary,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
+            }
+
+            // Копейки
+            if (maxExponent > 0) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SectionHeader(
+                        stringResource(R.string.group_settings_cents),
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Text(
+                                text = stringResource(R.string.group_cents_toggle),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.ink,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (isSavingScale) {
+                                CircularProgressIndicator(
+                                    color = colors.accent,
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                            Switch(
+                                checked = displayExponent > 0,
+                                enabled = !isSavingScale,
+                                colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
+                                onCheckedChange = { wantsCents ->
+                                    haptics.tap()
+                                    // Включение уходит сразу — оно точное.
+                                    // Выключение сначала спрашивает.
+                                    if (wantsCents) {
+                                        viewModel.setScale(maxExponent)
+                                    } else {
+                                        isDropCentsConfirmVisible = true
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.group_settings_cents_footer),
+                        fontSize = 12.sp,
+                        color = colors.inkSecondary,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
             }
 
             // Архив

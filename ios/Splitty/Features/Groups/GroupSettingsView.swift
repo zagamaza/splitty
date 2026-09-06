@@ -33,6 +33,14 @@ struct GroupSettingsView: View {
     /// видна всем участникам группы — без подтверждения слишком легко
     /// сменить случайным тапом.
     @State private var pendingCurrency: CurrencyInfo?
+    /// Шкала группы: 0 — суммы целые, 2 — с копейками. Локальная копия, чтобы
+    /// тумблер отзывался сразу, не дожидаясь перечитывания группы.
+    @State private var displayExponent: Int
+    /// Тумблер копеек в полёте.
+    @State private var isSavingScale = false
+    /// Ждёт подтверждения ВЫКЛЮЧЕНИЕ копеек: включение точное и подтверждения
+    /// не требует, а выключение округляет чужие деньги.
+    @State private var isDropCentsConfirmPresented = false
     /// Фото группы: выбранный в пикере элемент и id уже загруженной картинки.
     /// Локальная копия id нужна, чтобы фото сменилось сразу после загрузки, не
     /// дожидаясь перечитывания комнаты.
@@ -53,6 +61,7 @@ struct GroupSettingsView: View {
         self.onShowBlocking = onShowBlocking
         self.onChange = onChange
         _selectedCurrency = State(initialValue: room.currency)
+        _displayExponent = State(initialValue: room.displayExponent)
         _avatarFileId = State(initialValue: room.avatarFileId)
     }
 
@@ -80,6 +89,7 @@ struct GroupSettingsView: View {
                 avatarSection
                 membersSection
                 currencySection
+                centsSection
                 archiveSection
                 leaveSection
             }
@@ -140,6 +150,20 @@ struct GroupSettingsView: View {
             Button("Отмена", role: .cancel) {}
         } message: { _ in
             Text("Суммы не пересчитываются — изменится только обозначение, у всех участников группы")
+        }
+        .confirmationDialog(
+            "Выключить копейки?",
+            isPresented: $isDropCentsConfirmPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Выключить", role: .destructive) {
+                Task { await changeScale(to: 0) }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            // Конкретный пример, а не «суммы округлятся»: человек должен
+            // увидеть, что именно случится с его деньгами.
+            Text("Суммы округлятся: 20,80 станет 21. Вернуть копейки можно, но округление уже не отменится")
         }
     }
 
@@ -449,6 +473,73 @@ struct GroupSettingsView: View {
         }
         .buttonStyle(.plain)
         .disabled(savingCurrency != nil)
+    }
+
+    /// Копейки в группе. Секции нет вовсе у валют без дробной части (иена,
+    /// вона): показывать выключенный навсегда тумблер — врать про выбор.
+    @ViewBuilder
+    private var centsSection: some View {
+        if maxExponent > 0 {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Копейки")
+                    .sectionHeaderStyle()
+                    .padding(.leading, 4)
+                HStack(spacing: 12) {
+                    Toggle(isOn: centsBinding) {
+                        Text("Считать копейки")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(Color.ink)
+                    }
+                    .disabled(isSavingScale)
+                    if isSavingScale {
+                        ProgressView()
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .surfaceCard(padding: 0)
+                Text("Суммы группы станут дробными: 20,80 вместо 21. Пересчёт точный, деньги не меняются.")
+                    .font(.caption)
+                    .foregroundStyle(Color.inkSecondary)
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    /// Предел шкалы у валюты группы. Пока справочник не пришёл — считаем, что
+    /// дробной части нет: показать тумблер и получить отказ хуже, чем подождать.
+    private var maxExponent: Int {
+        currencies?.first { $0.code == selectedCurrency }?.maxExponent ?? 0
+    }
+
+    /// Включение уходит на сервер сразу — оно точное. Выключение сначала
+    /// спрашивает: оно округляет уже записанные деньги.
+    private var centsBinding: Binding<Bool> {
+        Binding(
+            get: { displayExponent > 0 },
+            set: { wantsCents in
+                if wantsCents {
+                    Task { await changeScale(to: maxExponent) }
+                } else {
+                    isDropCentsConfirmPresented = true
+                }
+            }
+        )
+    }
+
+    private func changeScale(to exponent: Int) async {
+        guard !isSavingScale, exponent != displayExponent else { return }
+        isSavingScale = true
+        defer { isSavingScale = false }
+        do {
+            let updated = try await session.api.setRoomScale(roomId: room.id, displayExponent: exponent)
+            displayExponent = updated.displayExponent
+            Analytics.shared.track(.roomSettingsChanged(what: "scale"))
+            session.noteDataChanged()
+            onChange()
+        } catch {
+            alertMessage = humanErrorText(error)
+        }
     }
 
     private var archiveSection: some View {

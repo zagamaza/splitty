@@ -85,6 +85,25 @@ func RoomExponent(r *Room) int {
 	return DefaultExponentFor(RoomCurrency(r))
 }
 
+// ScaleAfterCurrencyChange решает судьбу шкалы комнаты при смене валюты.
+//
+// Суммы при смене валюты НЕ пересчитываются — меняется обозначение. Это
+// безопасно ровно до тех пор, пока новая валюта допускает шкалу комнаты:
+// комната с копейками хранит 20,80 как 2080, и в иенах то же число прочтётся
+// как 2080 иен.
+//
+// ok=false — менять нельзя. Пустой комнате терять нечего, и она просто
+// садится на умолчание новой валюты.
+func ScaleAfterCurrencyChange(exp int, hasOperations bool, currency string) (int, bool) {
+	if IsValidExponent(currency, exp) {
+		return exp, true
+	}
+	if hasOperations {
+		return exp, false
+	}
+	return DefaultExponentFor(currency), true
+}
+
 // MinorFactor множитель перевода единиц валюты в минорные для шкалы exp:
 // 0 → 1, 2 → 100.
 func MinorFactor(exp int) int {
