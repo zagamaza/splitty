@@ -17,19 +17,24 @@ type ItemShare struct {
 	UserId int  `json:"userId" bson:"user_id"`
 	Weight int  `json:"weight" bson:"weight"`
 	Amount *int `json:"amount,omitempty" bson:"amount,omitempty"`
+	// AmountMinor — фиксированная доля в минорных единицах, см. DraftItem.PriceMinor
+	AmountMinor *int64 `json:"amountMinor,omitempty" bson:"amount_minor,omitempty"`
 }
 
 // DraftItem позиция черновика. Unknown — имена, которые модель не смогла
 // сопоставить участникам (их разрешает пользователь в UI).
 type DraftItem struct {
-	Name    string      `json:"name" bson:"name"`
-	Price   int         `json:"price" bson:"price"`
-	Qty     int         `json:"qty" bson:"qty"`
-	Shares  []ItemShare `json:"shares" bson:"shares"`
-	Kind    string      `json:"kind" bson:"kind"`
-	Split   string      `json:"split,omitempty" bson:"split,omitempty"`
-	Percent *int        `json:"percent,omitempty" bson:"percent,omitempty"`
-	Unknown []string    `json:"unknown,omitempty" bson:"unknown,omitempty"`
+	Name  string `json:"name" bson:"name"`
+	Price int    `json:"price" bson:"price"`
+	// PriceMinor — цена строки в минорных единицах шкалы комнаты. Пока признак
+	// дробного ввода выключен, дробное значение здесь отвергается на входе.
+	PriceMinor *int64      `json:"priceMinor,omitempty" bson:"price_minor,omitempty"`
+	Qty        int         `json:"qty" bson:"qty"`
+	Shares     []ItemShare `json:"shares" bson:"shares"`
+	Kind       string      `json:"kind" bson:"kind"`
+	Split      string      `json:"split,omitempty" bson:"split,omitempty"`
+	Percent    *int        `json:"percent,omitempty" bson:"percent,omitempty"`
+	Unknown    []string    `json:"unknown,omitempty" bson:"unknown,omitempty"`
 }
 
 // Draft черновик расхода — транспортный контракт между сервером, моделью и

@@ -663,11 +663,18 @@ func (s *Server) handleListOperations(w http.ResponseWriter, r *http.Request) {
 type recipientSumRequest struct {
 	UserId int `json:"userId"`
 	Sum    int `json:"sum"`
+	// SumMinor — та же доля в минорных единицах шкалы комнаты. Дробную долю
+	// клиент шлёт ТОЛЬКО этим полем, целую — обоими.
+	SumMinor *int64 `json:"sumMinor,omitempty"`
 }
 
 type operationRequest struct {
-	Description   string                `json:"description"`
-	Sum           int                   `json:"sum"`
+	Description string `json:"description"`
+	Sum         int    `json:"sum"`
+	// SumMinor — сумма расхода в минорных единицах шкалы комнаты. Дробную
+	// сумму клиент шлёт ТОЛЬКО этим полем, целую — обоими: так сервер прежней
+	// версии откажет на дробной и примет целую.
+	SumMinor      *int64                `json:"sumMinor,omitempty"`
 	DonorId       int                   `json:"donorId"`
 	RecipientIds  []int                 `json:"recipientIds"`
 	RecipientSums []recipientSumRequest `json:"recipientSums"`
@@ -693,25 +700,29 @@ type operationRequest struct {
 //   - recipientSums — by_exact_amount: суммы целые положительные, Σ == sum (400 иначе).
 //
 // Возвращает донора, готовые доли и тип деления
-func validateOperationRequest(req *operationRequest, room *api.Room) (*api.User, []api.RecipientWithSum, api.SplitType, *httpError) {
+func validateOperationRequest(req *operationRequest, room *api.Room, exp int, fractionalAllowed bool) (*api.User, []api.RecipientWithSum, api.SplitType, int64, *httpError) {
 	req.Description = strings.TrimSpace(req.Description)
 	if req.Description == "" {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
 	}
 	if utf8.RuneCountInString(req.Description) > maxDescriptionRunes {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "слишком длинное описание"}
 	}
-	if req.Sum < 1 || req.Sum > maxItemsTotal {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "сумма должна быть от 1 до 1 000 000 000"}
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.Sum != 0, req.SumMinor, exp, fractionalAllowed)
+	if hErr != nil {
+		return nil, nil, "", 0, hErr
+	}
+	if sumMinor < minAmountMinor(exp) || sumMinor > maxAmountMinor(exp) {
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "сумма должна быть от 1 до 1 000 000 000"}
 	}
 	if (len(req.RecipientIds) > 0) == (len(req.RecipientSums) > 0) {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation",
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation",
 			"нужен ровно один способ деления: recipientIds (поровну) или recipientSums (точными суммами)"}
 	}
 
 	donor := findMember(room, req.DonorId)
 	if donor == nil {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "донор должен быть участником комнаты"}
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "донор должен быть участником комнаты"}
 	}
 
 	if len(req.RecipientIds) > 0 {
@@ -725,44 +736,59 @@ func validateOperationRequest(req *operationRequest, room *api.Room) (*api.User,
 			seen[id] = true
 			recipient := findMember(room, id)
 			if recipient == nil {
-				return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "все получатели должны быть участниками комнаты"}
+				return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "все получатели должны быть участниками комнаты"}
 			}
 			recipients = append(recipients, *recipient)
 		}
+		// Делим МИНОРНЫЕ единицы: раздели целые и умножь — и остаток в
+		// копейках просто исчезнет. Правило деления то же самое.
 		withSum := make([]api.RecipientWithSum, 0, len(recipients))
 		for i := range recipients {
+			share := int64(api.ShareOf(int(sumMinor), len(recipients), i))
 			withSum = append(withSum, api.RecipientWithSum{
-				User: recipients[i],
-				Sum:  float64(api.ShareOf(req.Sum, len(recipients), i)),
+				User:     recipients[i],
+				Sum:      float64(share) / float64(api.MinorFactor(exp)),
+				SumMinor: &share,
 			})
 		}
-		return donor, withSum, splitEqually, nil
+		return donor, withSum, splitEqually, sumMinor, nil
 	}
 
 	// by_exact_amount: каждый получатель ровно один раз, суммы целые положительные, Σ == sum
 	withSum := make([]api.RecipientWithSum, 0, len(req.RecipientSums))
 	seen := map[int]bool{}
-	var total int
+	var total int64
 	for _, rs := range req.RecipientSums {
 		if seen[rs.UserId] {
-			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "получатель не может повторяться в recipientSums"}
+			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "получатель не может повторяться в recipientSums"}
 		}
 		seen[rs.UserId] = true
-		if rs.Sum < 1 || rs.Sum > maxItemsTotal {
-			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "суммы получателей должны быть от 1 до 1 000 000 000"}
+		shareMinor, hErr := resolveAmount("recipientSums[].sum", rs.Sum, rs.Sum != 0, rs.SumMinor, exp, fractionalAllowed)
+		if hErr != nil {
+			return nil, nil, "", 0, hErr
+		}
+		if shareMinor < 1 || shareMinor > maxAmountMinor(exp) {
+			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "суммы получателей должны быть от 1 до 1 000 000 000"}
 		}
 		recipient := findMember(room, rs.UserId)
 		if recipient == nil {
-			return nil, nil, "", &httpError{http.StatusBadRequest, "validation", "все получатели должны быть участниками комнаты"}
+			return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation", "все получатели должны быть участниками комнаты"}
 		}
-		withSum = append(withSum, api.RecipientWithSum{User: *recipient, Sum: float64(rs.Sum)})
-		total += rs.Sum
+		share := shareMinor
+		withSum = append(withSum, api.RecipientWithSum{
+			User:     *recipient,
+			Sum:      float64(share) / float64(api.MinorFactor(exp)),
+			SumMinor: &share,
+		})
+		total += shareMinor
 	}
-	if total != req.Sum {
-		return nil, nil, "", &httpError{http.StatusBadRequest, "validation",
+	// Сверка идёт в МИНОРНЫХ единицах: в целых 6,94 + 6,93 + 6,93 округлились
+	// бы до 7 + 7 + 7 и разошлись с суммой 21 на ровном месте.
+	if total != sumMinor {
+		return nil, nil, "", 0, &httpError{http.StatusBadRequest, "validation",
 			"сумма долей получателей должна равняться сумме операции"}
 	}
-	return donor, withSum, splitByExactAmount, nil
+	return donor, withSum, splitByExactAmount, sumMinor, nil
 }
 
 // findMember возвращает участника комнаты по id или nil
@@ -944,15 +970,23 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		recipientsWithSum []api.RecipientWithSum
 		splitType         api.SplitType
 		sum               int
+		sumMinor          int64
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
+	exp := api.RoomExponent(room)
 	if len(req.Items) > 0 {
+		// Позиции чека пока считаются целыми единицами (Задача 7): дробную
+		// цену на этом входе отвергает resolveItemsScale
 		donor, recipientsWithSum, items, sum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
+		sumMinor = api.ToMinor(sum, exp)
+		if hErr2 == nil {
+			hErr2 = rejectFractionalItems(&req, exp, s.cfg.FractionalInput)
+		}
 	} else {
-		donor, recipientsWithSum, splitType, hErr2 = validateOperationRequest(&req, room)
-		sum = req.Sum
+		donor, recipientsWithSum, splitType, sumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)
+		sum = api.FromMinor(sumMinor, exp)
 	}
 	if hErr2 != nil {
 		hErr2.write(w)
@@ -965,6 +999,7 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		ID:                primitive.NewObjectID(),
 		Description:       req.Description,
 		Sum:               sum,
+		SumMinor:          &sumMinor,
 		Donor:             donor,
 		RecipientsWithSum: recipientsWithSum,
 		SplitType:         splitType,
@@ -1059,15 +1094,21 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		recipientsWithSum []api.RecipientWithSum
 		splitType         api.SplitType
 		newSum            int
+		newSumMinor       int64
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
+	exp := api.RoomExponent(room)
 	if len(req.Items) > 0 {
 		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
+		newSumMinor = api.ToMinor(newSum, exp)
+		if hErr2 == nil {
+			hErr2 = rejectFractionalItems(&req, exp, s.cfg.FractionalInput)
+		}
 	} else {
-		donor, recipientsWithSum, splitType, hErr2 = validateOperationRequest(&req, room)
-		newSum = req.Sum
+		donor, recipientsWithSum, splitType, newSumMinor, hErr2 = validateOperationRequest(&req, room, exp, s.cfg.FractionalInput)
+		newSum = api.FromMinor(newSumMinor, exp)
 	}
 	if hErr2 != nil {
 		hErr2.write(w)
@@ -1078,6 +1119,7 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 	oldOp := *operation
 	operation.Description = req.Description
 	operation.Sum = newSum
+	operation.SumMinor = &newSumMinor
 	operation.Donor = donor
 	operation.RecipientsWithSum = recipientsWithSum
 	operation.SplitType = splitType
@@ -1200,6 +1242,8 @@ type repaymentRequest struct {
 	DebtorId int `json:"debtorId"`
 	LenderId int `json:"lenderId"`
 	Sum      int `json:"sum"`
+	// SumMinor — сумма погашения в минорных единицах, см. operationRequest
+	SumMinor *int64 `json:"sumMinor,omitempty"`
 	// ClientOpId опциональный клиентский идемпотентный ключ (uuid ≤ 64 симв.):
 	// повтор с тем же ключом не создаёт дубль (см. docs/API.md «Идемпотентность»)
 	ClientOpId string `json:"clientOpId"`
@@ -1232,10 +1276,20 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, toOperationDto(existing))
 		return
 	}
-	if req.Sum < 1 {
+	exp := api.RoomExponent(room)
+	sumMinor, hErr := resolveAmount("sum", req.Sum, req.Sum != 0, req.SumMinor, exp, s.cfg.FractionalInput)
+	if hErr != nil {
+		hErr.write(w)
+		return
+	}
+	if sumMinor < minAmountMinor(exp) {
 		writeError(w, http.StatusBadRequest, "validation", "сумма должна быть не меньше 1")
 		return
 	}
+	// Долги пока считаются целыми единицами (Задача 8), поэтому сверка с
+	// долгом идёт по проекции. Дробное погашение до фазы 5 не пройдёт признак
+	// дробного ввода и сюда просто не доедет.
+	sum := api.FromMinor(sumMinor, exp)
 	if req.DebtorId == req.LenderId {
 		writeError(w, http.StatusBadRequest, "validation", "должник и кредитор должны быть разными")
 		return
@@ -1273,7 +1327,7 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "conflict", "долга нет")
 		return
 	}
-	if req.Sum > debt.Sum {
+	if sum > debt.Sum {
 		writeError(w, http.StatusConflict, "conflict", "сумма превышает текущий долг")
 		return
 	}
@@ -1282,9 +1336,10 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 	// единственный получатель-кредитор на всю сумму, SplitType не заполняется
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
-		Sum:               req.Sum,
+		Sum:               sum,
+		SumMinor:          &sumMinor,
 		Donor:             debtor,
-		RecipientsWithSum: []api.RecipientWithSum{{User: *lender, Sum: float64(req.Sum)}},
+		RecipientsWithSum: []api.RecipientWithSum{{User: *lender, Sum: float64(sumMinor) / float64(api.MinorFactor(exp)), SumMinor: &sumMinor}},
 		IsDebtRepayment:   true,
 		Status:            statusActive,
 		CreateAt:          time.Now(),

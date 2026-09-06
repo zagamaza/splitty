@@ -82,6 +82,10 @@ type fileDto struct {
 type operationRecipientDto struct {
 	User userDto `json:"user"`
 	Sum  int     `json:"sum"`
+	// SumMinor — точная доля в минорных единицах шкалы комнаты. Клиент,
+	// который умеет минорные, обязан предпочитать ЭТО поле: Sum выше —
+	// округлённая проекция для прежних сборок.
+	SumMinor *int64 `json:"sumMinor,omitempty"`
 }
 
 // itemShareDto доля участника в позиции (read-path)
@@ -104,9 +108,12 @@ type operationItemDto struct {
 }
 
 type operationDto struct {
-	ID              string                  `json:"id"`
-	Description     string                  `json:"description"`
-	Sum             int                     `json:"sum"`
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Sum         int    `json:"sum"`
+	// SumMinor — точная сумма в минорных единицах шкалы комнаты, см.
+	// operationRecipientDto.SumMinor
+	SumMinor        *int64                  `json:"sumMinor,omitempty"`
 	IsDebtRepayment bool                    `json:"isDebtRepayment"`
 	SplitType       string                  `json:"splitType,omitempty"`
 	Donor           userDto                 `json:"donor"`
@@ -325,14 +332,16 @@ func toOperationDto(o *api.Operation) operationDto {
 	recipients := make([]operationRecipientDto, 0, len(o.RecipientsWithSum))
 	for i := range o.RecipientsWithSum {
 		recipients = append(recipients, operationRecipientDto{
-			User: toUserDto(&o.RecipientsWithSum[i].User),
-			Sum:  recipientShare(o, i),
+			User:     toUserDto(&o.RecipientsWithSum[i].User),
+			Sum:      recipientShare(o, i),
+			SumMinor: o.RecipientsWithSum[i].SumMinor,
 		})
 	}
 	dto := operationDto{
 		ID:              o.ID.Hex(),
 		Description:     o.Description,
 		Sum:             o.Sum,
+		SumMinor:        o.SumMinor,
 		IsDebtRepayment: o.IsDebtRepayment,
 		SplitType:       operationSplitType(o),
 		Donor:           toUserDto(o.Donor),
