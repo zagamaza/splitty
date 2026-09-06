@@ -535,6 +535,13 @@ func (s *Server) handleUpdateCurrency(w http.ResponseWriter, r *http.Request) {
 				"в этой валюте нет копеек — сначала выключите их в настройках группы")
 			return
 		}
+		// Комнату писали, пока шла смена валюты: тот же ответ, что и у смены
+		// шкалы, — человеку понятно, что делать.
+		if errors.Is(err, repository.ErrRoomBusy) {
+			writeError(w, http.StatusConflict, "conflict",
+				"в группе только что записали расход, попробуйте ещё раз")
+			return
+		}
 		log.Error().Err(err).Msgf("cannot update currency for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось обновить валюту")
 		return
@@ -607,6 +614,13 @@ func (s *Server) handleUpdateScale(w http.ResponseWriter, r *http.Request) {
 	// шкалу проверяет ещё раз сам репозиторий, по свежему состоянию.
 	if errors.Is(err, repository.ErrScaleNotSupported) {
 		writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
+		return
+	}
+	// Пересчитать невозможно: у комнаты испорченный документ, где суммы
+	// позиций не сходятся с итогом расхода. Молча записать половину нельзя.
+	if errors.Is(err, api.ErrRescaleImpossible) {
+		writeError(w, http.StatusConflict, "conflict",
+			"в группе есть расход, суммы которого не сходятся — обратитесь в поддержку")
 		return
 	}
 	if err != nil {

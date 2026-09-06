@@ -121,12 +121,15 @@ func validateItemMoney(req *operationRequest, exp int, _ bool) *httpError {
 // ⚠️ Дробное минорное отвергается НЕЗАВИСИМО от признака дробного ввода.
 // Позиции чека считаются целыми единицами до Задачи 7, и принимать дробь,
 // которую арифметика всё равно не умеет, нельзя даже с включённым признаком.
+//
+// ⚠️ Нулевое старое значение здесь ЗАКОННО и отсутствием не считается.
+// У фиксированной доли ноль осмыслен («этот человек за позицию не платит») и
+// разрешён контрактом (`parse_sanitize.go` отвергает только отрицательные), а
+// присутствие поля доказано указателем у вызывающего. Ноль у цены позиции
+// отвергает `validateItemizedRequest`, и дублировать его здесь незачем.
 func checkItemAmount(field string, legacy int, minor, factor int64, reject func(string) *httpError) *httpError {
 	if minor%factor != 0 {
 		return reject("дробные суммы в позициях чека пока недоступны")
-	}
-	if legacy == 0 {
-		return reject("позиция чека требует поля " + field + " вместе с " + field + "Minor")
 	}
 	if int64(legacy)*factor != minor {
 		return reject("поля " + field + " и " + field + "Minor позиции не сходятся")

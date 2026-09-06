@@ -1,6 +1,9 @@
 package api
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestDistributeSumsExactly(t *testing.T) {
 	for _, tc := range []struct {
@@ -58,17 +61,27 @@ func TestDistributeAllZeroWeights(t *testing.T) {
 }
 
 // Включение копеек точное: суммы на вид те же, ничего не потеряно.
+//
+// Фикстура СОГЛАСОВАННАЯ: позиции описывают тех же людей, что и плоские доли,
+// и их сумма равна итогу. Несогласованная теперь отвергается — см.
+// TestRescaleRefusesIncoherentItemized.
 func TestRescaleUpIsExact(t *testing.T) {
 	amount := 3
 	op := Operation{
-		Sum:               20,
-		RecipientsWithSum: []RecipientWithSum{{Sum: 7}, {Sum: 7}, {Sum: 6}},
+		Sum:       20,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, Sum: 3},
+			{User: User{ID: 2}, Sum: 17},
+		},
 		Items: []OperationItem{{
 			Price:  20,
 			Shares: []ItemShare{{UserId: 1, Weight: 1, Amount: &amount}, {UserId: 2, Weight: 1}},
 		}},
 	}
-	RescaleOperation(&op, 0, 2)
+	if err := RescaleOperation(&op, 0, 2); err != nil {
+		t.Fatalf("RescaleOperation: %v", err)
+	}
 
 	if *op.SumMinor != 2000 {
 		t.Errorf("sumMinor = %d, want 2000", *op.SumMinor)
@@ -91,6 +104,80 @@ func TestRescaleUpIsExact(t *testing.T) {
 	}
 	if op.Items[0].Shares[1].AmountMinor != nil {
 		t.Error("весовой участник получил фиксированную долю")
+	}
+}
+
+// Испорченный itemized-документ: сумма позиций не сходится с итогом расхода.
+// Пересчитать его, не соврав, нельзя — и свалиться на плоские доли тоже:
+// получилась бы комната, где два пути расчёта дают разные деньги.
+func TestRescaleRefusesIncoherentItemized(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		op   Operation
+	}{
+		{
+			name: "сумма позиций не равна итогу",
+			op: Operation{
+				Sum:       20,
+				SplitType: SplitTypeByExactAmount,
+				RecipientsWithSum: []RecipientWithSum{
+					{User: User{ID: 1}, Sum: 10}, {User: User{ID: 2}, Sum: 10},
+				},
+				Items: []OperationItem{{
+					Price:  15,
+					Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}},
+				}},
+			},
+		},
+		{
+			name: "в позициях не те люди",
+			op: Operation{
+				Sum:       20,
+				SplitType: SplitTypeByExactAmount,
+				RecipientsWithSum: []RecipientWithSum{
+					{User: User{ID: 1}, Sum: 10}, {User: User{ID: 3}, Sum: 10},
+				},
+				Items: []OperationItem{{
+					Price:  20,
+					Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}},
+				}},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			op := tc.op
+			if err := RescaleOperation(&op, 0, 2); !errors.Is(err, ErrRescaleImpossible) {
+				t.Fatalf("RescaleOperation: %v, want ErrRescaleImpossible", err)
+			}
+		})
+	}
+}
+
+// Отказ обязан быть на уровне КОМНАТЫ: пересчёт либо проходит целиком, либо не
+// проходит вовсе. Половина сумм в одной шкале, половина в другой — это деньги,
+// которых нет.
+func TestRescaleRoomRefusesWholeRoomOnOneBadOperation(t *testing.T) {
+	good := Operation{Sum: 100, RecipientsWithSum: []RecipientWithSum{{User: User{ID: 1}, Sum: 100}}}
+	bad := Operation{
+		Sum:       20,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, Sum: 10}, {User: User{ID: 2}, Sum: 10},
+		},
+		Items: []OperationItem{{Price: 15, Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}}}},
+	}
+	room := &Room{Currency: "USD", Operations: &[]Operation{good, bad}}
+	zero := 0
+	room.DisplayExponent = &zero
+
+	if err := RescaleRoom(room, 2); !errors.Is(err, ErrRescaleImpossible) {
+		t.Fatalf("RescaleRoom: %v, want ErrRescaleImpossible", err)
+	}
+	if RoomExponent(room) != 0 {
+		t.Errorf("шкала = %d, want 0 — комнату не должны были тронуть", RoomExponent(room))
+	}
+	if room.ScaleVersion != 0 {
+		t.Errorf("версия шкалы выросла на отказе: %d", room.ScaleVersion)
 	}
 }
 

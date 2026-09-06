@@ -473,7 +473,12 @@ func (rr MongoRoomRepository) SetRoomScale(ctx context.Context, roomId string, e
 		ops = *room.Operations
 	}
 	revision := room.Revision
-	api.RescaleRoom(room, exp)
+	// Пересчёт может оказаться невозможным: у испорченного документа сумма
+	// позиций не сходится с итогом расхода. Записывать половину пересчёта
+	// нельзя, поэтому отказ доезжает до вызывающего.
+	if err := api.RescaleRoom(room, exp); err != nil {
+		return nil, err
+	}
 
 	// Шов для тестов: позволяет вклиниться ровно между чтением комнаты и
 	// записью пересчёта — окно, которое и стережёт ревизия.

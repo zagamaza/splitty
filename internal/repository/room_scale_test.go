@@ -427,3 +427,47 @@ func TestUpdateCurrencyRefusesUnderConcurrentInsert(t *testing.T) {
 		t.Errorf("шкала = %d, want 2 — её опустили под записанными деньгами", api.RoomExponent(room))
 	}
 }
+
+// Пересчёт всей комнаты отменяется, если хоть одна операция не переводится:
+// половина сумм в одной шкале, половина в другой — деньги, которых нет.
+// Проверяем на живой базе, а не только в памяти: важно, что документ не тронут.
+func TestSetRoomScaleRefusesIncoherentRoom(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	donor := api.User{ID: 1, DisplayName: "Первый"}
+	other := api.User{ID: 2, DisplayName: "Второй"}
+	// Позиции описывают 15, а итог расхода 20 — документ испорчен.
+	bad := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Чек", Sum: 20,
+		Donor: &donor, Status: api.StatusActive, CreateAt: time.Now().UTC(),
+		SplitType: api.SplitTypeByExactAmount,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: donor, Sum: 10}, {User: other, Sum: 10},
+		},
+		Items: []api.OperationItem{{
+			Price:  15,
+			Shares: []api.ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}},
+		}},
+	}
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0, scaleTestOperation(20), bad))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+	before := readRoom(t, repo, id.Hex())
+
+	if _, err := repo.SetRoomScale(testCtx(t), id.Hex(), 2); !errors.Is(err, api.ErrRescaleImpossible) {
+		t.Fatalf("SetRoomScale: %v, want ErrRescaleImpossible", err)
+	}
+
+	after := readRoom(t, repo, id.Hex())
+	if api.RoomExponent(after) != 0 {
+		t.Errorf("шкала = %d, want 0 — комнату записали несмотря на отказ", api.RoomExponent(after))
+	}
+	if after.ScaleVersion != before.ScaleVersion {
+		t.Errorf("версия шкалы выросла на отказе: %d была %d", after.ScaleVersion, before.ScaleVersion)
+	}
+	if after.Revision != before.Revision {
+		t.Errorf("ревизия выросла на отказе: %d была %d", after.Revision, before.Revision)
+	}
+}

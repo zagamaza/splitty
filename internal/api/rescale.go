@@ -1,6 +1,15 @@
 package api
 
-import "math/bits"
+import (
+	"errors"
+	"math/bits"
+)
+
+// ErrRescaleImpossible — комнату нельзя перевести в другую шкалу, не соврав.
+// Так бывает у испорченного документа: сумма позиций не сходится с итогом
+// расхода, состав участников в позициях не тот, или веса вне области
+// определения. Записывать половину пересчёта нельзя, поэтому отказ.
+var ErrRescaleImpossible = errors.New("cannot rescale room without losing money")
 
 // Смена шкалы комнаты — это пересчёт ВСЕХ её денег. Вверх (0 → 2) он точен:
 // каждое число умножается на сто, ничего не теряется. Вниз (2 → 0) он теряет
@@ -128,9 +137,9 @@ func rescaleDown(v int64, from, to int) int64 {
 // ⚠️ Доли и цены позиций НЕ переводятся поштучно. Округли их по отдельности —
 // и расход 1,50 на троих даст 1+1+1 = 3 при итоге 2, то есть деньги, которых
 // нет. Округляется только итог, всё остальное раздаётся по нему заново.
-func RescaleOperation(o *Operation, from, to int) {
+func RescaleOperation(o *Operation, from, to int) error {
 	if o == nil || from == to {
-		return
+		return nil
 	}
 
 	// Веса снимаем ДО перевода: пропорции от шкалы не зависят.
@@ -151,21 +160,32 @@ func RescaleOperation(o *Operation, from, to int) {
 	total := convertMinor(o.SumMinorAt(from), from, to)
 	o.SumMinor = &total
 
-	rescaleItems(o, total, itemWeights, fixedWeights, from, to)
+	if err := rescaleItems(o, total, itemWeights, fixedWeights, from, to); err != nil {
+		return err
+	}
 
 	// У itemized-расхода плоские доли ВЫВОДЯТСЯ из позиций, а не считаются
 	// отдельно: иначе после смены шкалы два пути дают разные деньги.
 	if len(o.Items) > 0 {
-		if derived, ok := sharesFromItems(o, to); ok {
-			applySharesWithLegacy(o, derived, to)
-			FillMoney(o, to)
-			return
+		derived, ok := sharesFromItems(o, to)
+		if !ok {
+			// Позиции объявлены источником правды, но вывести из них доли не
+			// вышло: их сумма разошлась с итогом расхода или состав участников
+			// не тот. Свалиться на плоские доли значит записать комнату, где
+			// два пути расчёта дают разные деньги.
+			return ErrRescaleImpossible
 		}
+		applySharesWithLegacy(o, derived, to)
+		FillMoney(o, to)
+		return nil
 	}
-	if shares, ok := SharesMinorFrom(o, total, weights); ok {
-		applySharesWithLegacy(o, shares, to)
+	shares, ok := SharesMinorFrom(o, total, weights)
+	if !ok {
+		return ErrRescaleImpossible
 	}
+	applySharesWithLegacy(o, shares, to)
 	FillMoney(o, to)
+	return nil
 }
 
 // convertMinor переводит значение из шкалы from в шкалу to: вверх точно, вниз
@@ -180,9 +200,9 @@ func convertMinor(v int64, from, to int) int64 {
 // rescaleItems переводит позиции чека. Вверх — умножением, вниз — раздачей
 // нового итога по прежним ценам как по весам, чтобы сумма позиций сходилась с
 // суммой расхода.
-func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [][]int64, from, to int) {
+func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [][]int64, from, to int) error {
 	if len(o.Items) == 0 {
-		return
+		return nil
 	}
 
 	var prices []int64
@@ -195,10 +215,7 @@ func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [
 		var ok bool
 		prices, ok = Distribute(total, itemWeights)
 		if !ok {
-			// Веса позиций вне области определения — пересчитывать нечего,
-			// оставляем как есть, а запись такой комнаты отвергнет проверка
-			// диапазона денег.
-			return
+			return ErrRescaleImpossible
 		}
 	}
 
@@ -231,34 +248,44 @@ func rescaleItems(o *Operation, total int64, itemWeights []int64, fixedWeights [
 		}
 		spread, ok := Distribute(newFixedTotal, fixed)
 		if !ok {
-			continue
+			return ErrRescaleImpossible
 		}
 		for k, v := range spread {
 			amount := v
 			it.Shares[idx[k]].AmountMinor = &amount
 		}
 	}
+	return nil
 }
 
 // RescaleRoom переводит комнату в шкалу to: все операции пересчитываются,
 // шкала записывается, версия шкалы растёт. Версия нужна офлайн-очереди на
 // телефоне: снимка самой шкалы мало, потому что путь 0 → 2 → 0 вернул бы
 // прежнее значение при дважды пересчитанных суммах.
-func RescaleRoom(r *Room, to int) {
+func RescaleRoom(r *Room, to int) error {
 	if r == nil {
-		return
+		return nil
 	}
 	from := RoomExponent(r)
 	if from == to {
-		return
+		return nil
 	}
+	// ⚠️ Пересчёт либо проходит ЦЕЛИКОМ, либо не проходит вовсе. Пропустить
+	// одну операцию и записать остальные — это комната, у которой половина
+	// сумм в одной шкале, а половина в другой.
 	if r.Operations != nil {
 		ops := *r.Operations
 		for i := range ops {
-			RescaleOperation(&ops[i], from, to)
+			if err := RescaleOperation(&ops[i], from, to); err != nil {
+				return err
+			}
+			if err := ValidateMoneyRange(&ops[i], to); err != nil {
+				return err
+			}
 		}
 	}
 	exp := to
 	r.DisplayExponent = &exp
 	r.ScaleVersion++
+	return nil
 }

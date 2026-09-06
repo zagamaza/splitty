@@ -369,3 +369,20 @@ func TestItemMinorFieldsAreValidated(t *testing.T) {
 		})
 	}
 }
+
+// Нулевая фиксированная доля законна: «этот человек за позицию не платит».
+// Контракт разрешает её давно (отвергаются только отрицательные), и пара
+// amount:0 + amountMinor:0 обязана проходить.
+func TestZeroFixedShareIsAccepted(t *testing.T) {
+	room := scaleRoom("USD")
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	setScale(t, s, room.ID.Hex(), `{"displayExponent":2}`)
+
+	body := `{"description":"Чек","donorId":1,"items":[{"name":"Кофе","price":100,"priceMinor":10000,` +
+		`"qty":1,"kind":"item","shares":[{"userId":1,"amount":0,"amountMinor":0},{"userId":2,"weight":1}]}]}`
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+	}
+}
