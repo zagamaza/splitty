@@ -156,3 +156,96 @@ func TestFillRoomMoneyAtExponentZero(t *testing.T) {
 		t.Errorf("sum = %d, want 1200", op.Sum)
 	}
 }
+
+// Бот правит СТАРОЕ поле и про минорные ничего не знает. Если запись возьмёт
+// устаревшее минорное значение, правка человека потеряется молча — он увидит
+// прежнюю сумму и не поймёт, почему.
+func TestReconcileMoneyKeepsLegacyEdit(t *testing.T) {
+	stale := int64(2000)
+	op := Operation{Sum: 30, SumMinor: &stale}
+	ReconcileMoney(&op, 2)
+
+	if op.Sum != 30 {
+		t.Errorf("сумма = %d, want 30 — правка потерялась", op.Sum)
+	}
+	if op.SumMinor == nil || *op.SumMinor != 3000 {
+		t.Errorf("sumMinor = %v, want 3000 — минорное не пересобрали из правки", op.SumMinor)
+	}
+}
+
+// То же для долей: бот меняет долю получателя, минорное поле остаётся прежним.
+func TestReconcileMoneyKeepsLegacyShareEdit(t *testing.T) {
+	stale := int64(1000)
+	op := Operation{
+		Sum:               30,
+		RecipientsWithSum: []RecipientWithSum{{Sum: 30, SumMinor: &stale}},
+	}
+	ReconcileMoney(&op, 2)
+
+	if got := op.RecipientsWithSum[0].SumMinor; got == nil || *got != 3000 {
+		t.Errorf("доля = %v, want 3000", got)
+	}
+}
+
+// И для цен позиций с фиксированными долями.
+func TestReconcileMoneyKeepsLegacyItemEdit(t *testing.T) {
+	stalePrice, staleAmount := int64(2000), int64(500)
+	amount := 7
+	op := Operation{
+		Sum: 30,
+		Items: []OperationItem{{
+			Price:      30,
+			PriceMinor: &stalePrice,
+			Shares:     []ItemShare{{UserId: 1, Amount: &amount, AmountMinor: &staleAmount}},
+		}},
+	}
+	ReconcileMoney(&op, 2)
+
+	if got := op.Items[0].PriceMinor; got == nil || *got != 3000 {
+		t.Errorf("цена = %v, want 3000", got)
+	}
+	if got := op.Items[0].Shares[0].AmountMinor; got == nil || *got != 700 {
+		t.Errorf("фикс-доля = %v, want 700", got)
+	}
+}
+
+// Согласованную пару трогать не за что: REST пишет оба поля сам.
+func TestReconcileMoneyLeavesConsistentPairAlone(t *testing.T) {
+	minor := int64(2080)
+	op := Operation{Sum: 21, SumMinor: &minor}
+	ReconcileMoney(&op, 2)
+
+	if *op.SumMinor != 2080 {
+		t.Errorf("sumMinor = %d, want 2080 — дробную сумму испортили", *op.SumMinor)
+	}
+	if op.Sum != 21 {
+		t.Errorf("sum = %d, want 21", op.Sum)
+	}
+}
+
+// Дробное минорное значение старым полем не выразить: перезаписывать его
+// проекцией нельзя, иначе копейки исчезнут при любой чужой записи.
+func TestReconcileMoneyKeepsFractionalMinor(t *testing.T) {
+	minor := int64(2080)
+	op := Operation{Sum: 30, SumMinor: &minor}
+	ReconcileMoney(&op, 2)
+
+	if *op.SumMinor != 2080 {
+		t.Errorf("sumMinor = %d, want 2080 — дробь потеряли", *op.SumMinor)
+	}
+	if op.Sum != 21 {
+		t.Errorf("sum = %d, want 21 (проекция дроби)", op.Sum)
+	}
+}
+
+// В комнате нулевой шкалы минорная единица равна единице валюты, и никакой
+// пересборки не требуется.
+func TestReconcileMoneyAtExponentZero(t *testing.T) {
+	stale := int64(100)
+	op := Operation{Sum: 250, SumMinor: &stale}
+	ReconcileMoney(&op, 0)
+
+	if op.SumMinor == nil || *op.SumMinor != 250 {
+		t.Errorf("sumMinor = %v, want 250", op.SumMinor)
+	}
+}

@@ -137,3 +137,52 @@ func FillRoomMoney(r *Room) {
 		FillMoney(&ops[i], exp)
 	}
 }
+
+// ReconcileMoney сводит деньги операции ПЕРЕД записью.
+//
+// Отличается от FillMoney направлением, в котором разрешается конфликт. На
+// ЧТЕНИИ минорное поле — источник правды: документ записывали согласованно.
+// На ЗАПИСИ вызывающий мог поменять СТАРОЕ поле и не тронуть минорное — именно
+// так правит бот, который про минорные единицы ничего не знает. Взять там
+// минорное значило бы молча вернуть прежнюю сумму и потерять правку человека.
+//
+// Правило: поля разошлись — верим СТАРОМУ и пересобираем минорное из него.
+// Исключение одно: минорное ДРОБНОЕ, и старым полем его не выразить —
+// тогда правку принимать нельзя, и минорное остаётся как есть.
+//
+// ⚠️ Второй случай сегодня недостижим: дробные значения появляются только с
+// включённым признаком дробного ввода, а до него старым клиентам правку
+// дробной операции запрещает сам сервер. Когда бот узнает про дроби
+// (Задача 14), этот случай обязан стать явным отказом, а не тихим выбором.
+func ReconcileMoney(o *Operation, exp int) {
+	if o == nil {
+		return
+	}
+	factor := int64(MinorFactor(exp))
+
+	if o.SumMinor != nil && *o.SumMinor%factor == 0 && FromMinor(*o.SumMinor, exp) != o.Sum {
+		o.SumMinor = nil
+	}
+	for i := range o.RecipientsWithSum {
+		r := &o.RecipientsWithSum[i]
+		if r.SumMinor != nil && *r.SumMinor%factor == 0 && float64(*r.SumMinor)/float64(factor) != r.Sum {
+			r.SumMinor = nil
+		}
+	}
+	for i := range o.Items {
+		it := &o.Items[i]
+		if it.PriceMinor != nil && *it.PriceMinor%factor == 0 && FromMinor(*it.PriceMinor, exp) != it.Price {
+			it.PriceMinor = nil
+		}
+		for j := range it.Shares {
+			sh := &it.Shares[j]
+			if sh.AmountMinor == nil || sh.Amount == nil {
+				continue
+			}
+			if *sh.AmountMinor%factor == 0 && FromMinor(*sh.AmountMinor, exp) != *sh.Amount {
+				sh.AmountMinor = nil
+			}
+		}
+	}
+	FillMoney(o, exp)
+}

@@ -426,7 +426,7 @@ func sanitizeOperation(o *api.Operation, exp int) *api.Operation {
 		}
 		c.Items = items
 	}
-	api.FillMoney(&c, exp)
+	api.ReconcileMoney(&c, exp)
 	return &c
 }
 
