@@ -80,8 +80,8 @@ logs: ## логи контейнера на сервере (follow)
 android-publish: ## Android → Google Play (PLAY_TRACK=internal по умолчанию)
 	cd android && ./gradlew :app:publishReleaseBundle --track $(PLAY_TRACK)
 
-ios-publish: ## iOS → TestFlight (архив, экспорт, загрузка)
-	cd ios && rm -rf build/Splitty.xcarchive build/export && \
+ios-publish: ## iOS → App Store Connect (архив, заливка)
+	cd ios && rm -rf build/Splitty.xcarchive build/upload && \
 	  xcodegen generate && \
 	  xcodebuild -project Splitty.xcodeproj -scheme Splitty -configuration Release \
 	    -archivePath build/Splitty.xcarchive -destination 'generic/platform=iOS' \
@@ -90,10 +90,8 @@ ios-publish: ## iOS → TestFlight (архив, экспорт, загрузка
 	    -authenticationKeyID "$(ASC_KEY)" \
 	    -authenticationKeyIssuerID "$(ASC_ISSUER)" archive && \
 	  xcodebuild -exportArchive -archivePath build/Splitty.xcarchive \
-	    -exportOptionsPlist ExportOptions.plist -exportPath build/export \
+	    -exportOptionsPlist ExportUpload.plist -exportPath build/upload \
 	    -allowProvisioningUpdates \
 	    -authenticationKeyPath "$(ASC_P8)" \
 	    -authenticationKeyID "$(ASC_KEY)" \
-	    -authenticationKeyIssuerID "$(ASC_ISSUER)" && \
-	  xcrun altool --upload-app -f build/export/Splitty.ipa -t ios \
-	    --apiKey "$(ASC_KEY)" --apiIssuer "$(ASC_ISSUER)"
+	    -authenticationKeyIssuerID "$(ASC_ISSUER)"
