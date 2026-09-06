@@ -285,12 +285,42 @@ func TestTogglingFractionKeepsSharesOnRawLegacyDocument(t *testing.T) {
 			{User: donor, Sum: share}, {User: other, Sum: share}, {User: third, Sum: share},
 		},
 	}
-	room := fractionalTestRoom(t, true)
-	room.Members = &[]api.User{donor, other, third}
-	room.Operations = &[]api.Operation{op}
-	id, err := repo.SaveRoom(testCtx(t), room)
+	// ⚠️ Пишем СЫРЫМ bson, минуя SaveRoom. Через репозиторий документ прошёл бы
+	// нормализацию и получил минорный вектор ещё до первого чтения — тест
+	// проверял бы уже материализованные доли, а не продовую форму, где их нет.
+	fractional := true
+	res, err := db.Collection("room").InsertOne(testCtx(t), bson.M{
+		"name":               "Стамбул",
+		"currency":           "USD",
+		"fractional_amounts": fractional,
+		"users":              []api.User{donor, other, third},
+		"operations":         []api.Operation{op},
+		"create_at":          time.Now().UTC(),
+	})
 	if err != nil {
-		t.Fatalf("SaveRoom: %v", err)
+		t.Fatalf("InsertOne: %v", err)
+	}
+	id := res.InsertedID.(primitive.ObjectID)
+
+	// Убеждаемся, что в документе минорных полей действительно нет
+	var raw struct {
+		Operations []struct {
+			SumMinor          *int64 `bson:"sum_minor"`
+			RecipientsWithSum []struct {
+				SumMinor *int64 `bson:"sum_minor"`
+			} `bson:"recipients_with_sum"`
+		} `bson:"operations"`
+	}
+	if err := db.Collection("room").FindOne(testCtx(t), bson.M{"_id": id}).Decode(&raw); err != nil {
+		t.Fatalf("FindOne: %v", err)
+	}
+	if raw.Operations[0].SumMinor != nil {
+		t.Fatal("в сыром документе оказалось sum_minor — фикстура не та")
+	}
+	for i, r := range raw.Operations[0].RecipientsWithSum {
+		if r.SumMinor != nil {
+			t.Fatalf("в сыром документе доля[%d] уже имеет sum_minor", i)
+		}
 	}
 
 	read := func() []int64 {
