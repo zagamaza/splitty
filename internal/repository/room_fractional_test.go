@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -177,3 +178,88 @@ func TestCreateOperationRefusesHugeSum(t *testing.T) {
 		t.Errorf("в комнате оказалась операция: %+v", ops)
 	}
 }
+
+// Гонка: валюту сменили на иену, пока шёл запрос на включение копеек.
+// Обработчик решает по комнате, прочитанной ДО вызова, поэтому валюту обязан
+// сверить сам репозиторий — тем же запросом, что и пишет.
+func TestSetRoomFractionalRefusesCurrencyWithoutFraction(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	room := fractionalTestRoom(t, false)
+	room.Currency = "JPY"
+	id, err := repo.SaveRoom(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	if _, err := repo.SetRoomFractional(testCtx(t), id.Hex(), true); !errors.Is(err, ErrFractionNotSupported) {
+		t.Fatalf("SetRoomFractional: %v, want ErrFractionNotSupported", err)
+	}
+	if api.RoomFractional(readRoom(t, repo, id.Hex())) {
+		t.Error("копейки включились у валюты, где их нет")
+	}
+}
+
+// Выключать можно в любой валюте: это не включение, запрещать нечего.
+func TestSetRoomFractionalOffAlwaysAllowed(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	room := fractionalTestRoom(t, true)
+	room.Currency = "JPY"
+	id, err := repo.SaveRoom(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+	if _, err := repo.SetRoomFractional(testCtx(t), id.Hex(), false); err != nil {
+		t.Fatalf("SetRoomFractional: %v", err)
+	}
+}
+
+// Расход 100 на троих в тусе с копейками: доли, посчитанные обработчиком,
+// доезжают до базы КАК ЕСТЬ. Прежде репозиторий выводил вектор заново по
+// своему признаку, и ответ POST расходился с тем, что легло в mongo.
+func TestCreateOperationKeepsHandlerShares(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	donor := api.User{ID: 1, DisplayName: "Первый"}
+	other := api.User{ID: 2, DisplayName: "Второй"}
+	third := api.User{ID: 3, DisplayName: "Третий"}
+
+	room := fractionalTestRoom(t, false)
+	room.Members = &[]api.User{donor, other, third}
+	id, err := repo.SaveRoom(testCtx(t), room)
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+
+	// Доли посчитаны с шагом «до копейки», как это сделал бы обработчик при
+	// включённом серверном признаке дробного ввода.
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100,
+		SumMinor: ptrInt64(10000), Donor: &donor,
+		Status: api.StatusActive, CreateAt: time.Now().UTC(),
+		SplitType: api.SplitTypeEqually,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: donor, Sum: 33.34, SumMinor: ptrInt64(3334)},
+			{User: other, Sum: 33.33, SumMinor: ptrInt64(3333)},
+			{User: third, Sum: 33.33, SumMinor: ptrInt64(3333)},
+		},
+	}
+	if err := repo.CreateOperation(testCtx(t), &op, id.Hex()); err != nil {
+		t.Fatalf("CreateOperation: %v", err)
+	}
+
+	stored := (*readRoom(t, repo, id.Hex()).Operations)[0]
+	want := []int64{3334, 3333, 3333}
+	for i, r := range stored.RecipientsWithSum {
+		if r.SumMinor == nil || *r.SumMinor != want[i] {
+			t.Errorf("доля[%d] = %v, want %d — репозиторий пересобрал вектор по-своему",
+				i, r.SumMinor, want[i])
+		}
+	}
+}
+
+func ptrInt64(v int64) *int64 { return &v }

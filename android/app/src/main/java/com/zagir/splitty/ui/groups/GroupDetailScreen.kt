@@ -1534,11 +1534,14 @@ private fun GroupSettingsTab(
     // только обозначение у всех участников (порт iOS confirmationDialog).
     var pendingCurrency by remember { mutableStateOf<CurrencyInfo?>(null) }
     val fractional = fractionalOverride ?: room.fractional
-    // Наличие дробной части берём из справочника: у иены и воны её нет, и
-    // секции копеек в такой группе нет вовсе. Пока справочник не пришёл — тоже
-    // нет: тумблер, который получит отказ, хуже отсутствующего.
-    val supportsFraction = (currencies as? UiState.Content)?.value
-        ?.firstOrNull { it.code == selectedCurrency }?.supportsFraction ?: false
+    // Секцию копеек показываем при двух условиях сразу. У валюты должна быть
+    // дробная часть — иначе выбора не существует. И сервер должен разрешать
+    // дробный ввод: пока признак выключен, включённая настройка обещала бы то,
+    // чего сервер не примет. Пока справочник не пришёл — тоже не показываем.
+    val currencyInfo = (currencies as? UiState.Content)?.value
+        ?.firstOrNull { it.code == selectedCurrency }
+    val canShowCents = currencyInfo != null &&
+        currencyInfo.supportsFraction && currencyInfo.fractionalInput
 
 
     pendingCurrency?.let { currency ->
@@ -1719,7 +1722,7 @@ private fun GroupSettingsTab(
             }
 
             // Копейки
-            if (supportsFraction) {
+            if (canShowCents) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionHeader(
                         stringResource(R.string.group_settings_cents),

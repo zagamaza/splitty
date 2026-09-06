@@ -23,10 +23,20 @@ func NormalizedOperation(o Operation) Operation {
 		recipients := *o.Recipients
 		withSum := make([]RecipientWithSum, 0, len(recipients))
 		for i := range recipients {
-			withSum = append(withSum, RecipientWithSum{
-				User: recipients[i],
-				Sum:  float64(ShareOf(o.Sum, len(recipients), i)),
-			})
+			share := ShareOf(o.Sum, len(recipients), i)
+			// Копейки заполняем ЗДЕСЬ же. Достройка денег идёт на чтении
+			// документа, до синтеза, и такая операция осталась бы с суммой в
+			// копейках и пустыми долями — вопреки контракту API, где у каждой
+			// доли есть точное значение.
+			//
+			// Шаг тут не нужен: синтезированные доли целые по построению, и их
+			// копейки — точные сотни, сходящиеся с итогом.
+			minor, ok := ToMinorChecked(share)
+			r := RecipientWithSum{User: recipients[i], Sum: float64(share)}
+			if ok {
+				r.SumMinor = &minor
+			}
+			withSum = append(withSum, r)
 		}
 		o.RecipientsWithSum = withSum
 	}

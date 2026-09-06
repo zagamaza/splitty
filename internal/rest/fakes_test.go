@@ -1128,6 +1128,11 @@ func (f *fakeRoomRepo) SetRoomFractional(_ context.Context, roomId string, on bo
 	if !ok {
 		return nil, mongo.ErrNoDocuments
 	}
+	// То же правило, что и в mongo: включать копейки можно только у валюты,
+	// у которой они есть
+	if on && !api.SupportsFraction(api.RoomCurrency(room)) {
+		return nil, repository.ErrFractionNotSupported
+	}
 	v := on
 	room.FractionalAmounts = &v
 	return snapshotRoom(room), nil

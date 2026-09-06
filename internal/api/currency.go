@@ -107,3 +107,17 @@ func RoomFractional(r *Room) bool {
 	}
 	return FractionalDefaultFor(RoomCurrency(r))
 }
+
+// FractionCurrencyCodes — коды валют, у которых есть дробная часть. Нужен
+// условной записи признака копеек: включать его можно только у такой валюты, и
+// проверять это надо ТЕМ ЖЕ запросом, что и пишет, иначе конкурентная смена
+// валюты оставит иену с включёнными копейками.
+func FractionCurrencyCodes() []string {
+	out := make([]string, 0, len(CurrencyCodes))
+	for _, code := range CurrencyCodes {
+		if Currencies[code].SupportsFraction {
+			out = append(out, code)
+		}
+	}
+	return out
+}

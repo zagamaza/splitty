@@ -574,6 +574,12 @@ func (s *Server) handleUpdateFractional(w http.ResponseWriter, r *http.Request) 
 	}
 
 	updated, err := s.roomRepo.SetRoomFractional(ctx, roomId, *req.Fractional)
+	if errors.Is(err, repository.ErrFractionNotSupported) {
+		// Валюту успели сменить между проверкой выше и записью: репозиторий
+		// сверяет её тем же запросом, что и пишет.
+		writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
+		return
+	}
 	if err != nil {
 		log.Error().Err(err).Msgf("cannot set fractional for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось изменить настройку")

@@ -129,7 +129,8 @@ type RoomRepository interface {
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
 	// SetRoomFractional включает и выключает копейки в тусе. Обычная настройка:
-	// записи не трогаются, деньги всегда хранятся в копейках
+	// записи не трогаются, деньги всегда хранятся в копейках.
+	// ErrFractionNotSupported — у валюты тусы нет дробной части
 	SetRoomFractional(ctx context.Context, roomId string, on bool) (*api.Room, error)
 	// SetAvatarFileId ставит ссылку на аву комнаты (пустая строка снимает её) и
 	// возвращает ПРЕЖНЮЮ ссылку — ту, которую этот вызов вытеснил
@@ -449,6 +450,10 @@ func (rr MongoRoomRepository) roomFractional(ctx context.Context, id primitive.O
 	return api.RoomFractional(&room), nil
 }
 
+// ErrFractionNotSupported — у валюты тусы нет дробной части, включать копейки
+// нечем. Прилетает и на гонке: валюту сменили, пока шёл запрос.
+var ErrFractionNotSupported = errors.New("currency has no fractional part")
+
 // SetRoomFractional включает и выключает копейки в тусе.
 //
 // ⚠️ Обычная настройка: НИ ОДНА запись не трогается. Деньги всегда хранятся в
@@ -461,13 +466,34 @@ func (rr MongoRoomRepository) SetRoomFractional(ctx context.Context, roomId stri
 	if err != nil {
 		return nil, err
 	}
-	res, err := rr.col.UpdateOne(ctx, bson.M{"_id": hex},
+	filter := bson.M{"_id": hex}
+	if on {
+		// ⚠️ Валюту проверяем ТЕМ ЖЕ запросом, что и пишем. Обработчик решает по
+		// комнате, прочитанной до вызова, и между чтением и записью валюту могли
+		// сменить на иену — тогда безусловная запись оставила бы валюту без
+		// дробной части с включёнными копейками, и ввод копеек в ней заработал бы.
+		//
+		// Пустая валюта в базе означает исторический рубль, поэтому она тоже
+		// перечислена.
+		codes := append(api.FractionCurrencyCodes(), "")
+		filter["currency"] = bson.M{"$in": codes}
+	}
+	res, err := rr.col.UpdateOne(ctx, filter,
 		bson.M{"$set": bson.M{"fractional_amounts": on}})
 	if err != nil {
 		return nil, err
 	}
 	if res.MatchedCount == 0 {
-		return nil, mongo.ErrNoDocuments
+		// Либо комнаты нет, либо валюта не поддерживает копейки: различаем
+		// вторым чтением, чтобы вызывающий сказал человеку правду.
+		n, cErr := rr.col.CountDocuments(ctx, bson.M{"_id": hex})
+		if cErr != nil {
+			return nil, cErr
+		}
+		if n == 0 {
+			return nil, mongo.ErrNoDocuments
+		}
+		return nil, ErrFractionNotSupported
 	}
 	return rr.FindById(ctx, roomId)
 }

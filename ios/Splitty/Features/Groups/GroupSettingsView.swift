@@ -462,7 +462,7 @@ struct GroupSettingsView: View {
     /// вона): показывать выключенный навсегда тумблер — врать про выбор.
     @ViewBuilder
     private var centsSection: some View {
-        if supportsFraction {
+        if canShowCents {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Копейки")
                     .sectionHeaderStyle()
@@ -489,10 +489,17 @@ struct GroupSettingsView: View {
         }
     }
 
-    /// Есть ли у валюты группы дробная часть. Пока справочник не пришёл —
-    /// считаем, что нет: тумблер, который получит отказ, хуже отсутствующего.
-    private var supportsFraction: Bool {
-        currencies?.first { $0.code == selectedCurrency }?.supportsFraction ?? false
+    /// Показывать ли секцию копеек.
+    ///
+    /// Два условия, и оба обязательны. У валюты должна быть дробная часть —
+    /// иначе выбора не существует. И сервер должен разрешать дробный ввод: пока
+    /// признак выключен, включённая настройка обещала бы то, чего сервер не
+    /// примет, и человек упёрся бы в отказ при первом же вводе копеек.
+    private var canShowCents: Bool {
+        guard let currency = currencies?.first(where: { $0.code == selectedCurrency }) else {
+            return false
+        }
+        return currency.supportsFraction && currency.fractionalInput
     }
 
     /// Переключение уходит на сервер сразу, в обе стороны: записанные суммы от

@@ -176,6 +176,22 @@ func SharesMinor(o *Operation, totalMinor int64, fractional bool) ([]int64, bool
 	return Distribute(totalMinor, weights)
 }
 
+// sharesAreConsistent — у каждой доли есть записанное значение в копейках, и
+// вместе они в точности дают итог. Такой вектор пересобирать не за чем.
+func sharesAreConsistent(o *Operation, totalMinor int64) bool {
+	if len(o.RecipientsWithSum) == 0 {
+		return true
+	}
+	var sum int64
+	for _, r := range o.RecipientsWithSum {
+		if r.SumMinor == nil {
+			return false
+		}
+		sum += *r.SumMinor
+	}
+	return sum == totalMinor
+}
+
 // applyShares записывает выведенный вектор ТОЛЬКО в минорные поля.
 //
 // ⚠️ Старые дробные доли на чтении не трогаем. По ним сервер узнаёт легаси-тусу,
@@ -205,7 +221,16 @@ func FillMoney(o *Operation, fractional bool) {
 		o.Sum = FromMinor(*o.SumMinor)
 	}
 
-	if o.SumMinor != nil {
+	// ⚠️ Уже записанный и СОГЛАСОВАННЫЙ вектор долей не трогаем. Он записан
+	// человеком (или выведен при записи) и является обязательством конкретных
+	// людей друг перед другом; пересобрать его по текущей настройке значило бы
+	// задним числом двигать чьи-то долги — расход 100 на троих превращался из
+	// 33,34 + 33,33 + 33,33 в 34 + 33 + 33 от одного тумблера. Интерфейс прямо
+	// обещает обратное: «уже записанное не изменится».
+	//
+	// Выводим вектор только когда его нет или он не сходится с итогом — то есть
+	// на легаси-данных бота, где долей в копейках не было вовсе.
+	if o.SumMinor != nil && !sharesAreConsistent(o, *o.SumMinor) {
 		if shares, ok := SharesMinor(o, *o.SumMinor, fractional); ok {
 			applyShares(o, shares)
 		}

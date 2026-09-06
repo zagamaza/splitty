@@ -174,3 +174,72 @@ func TestLegacyOperationWithoutSplitTypeIsEqual(t *testing.T) {
 		}
 	}
 }
+
+// Переключение признака НЕ двигает уже записанные доли. Это обязательства
+// конкретных людей друг перед другом: расход 100 на троих, сохранённый как
+// 33,34 + 33,33 + 33,33, обязан остаться таким и после выключения копеек.
+// Интерфейс обещает ровно это — «уже записанное не изменится».
+func TestTogglingFractionKeepsRecordedShares(t *testing.T) {
+	op := Operation{
+		Sum: 100, SumMinor: ptr64(10000), SplitType: SplitTypeEqually,
+		RecipientsWithSum: []RecipientWithSum{
+			{SumMinor: ptr64(3334)}, {SumMinor: ptr64(3333)}, {SumMinor: ptr64(3333)},
+		},
+	}
+	want := []int64{3334, 3333, 3333}
+
+	for _, fractional := range []bool{false, true, false} {
+		FillMoney(&op, fractional)
+		for i, r := range op.RecipientsWithSum {
+			if *r.SumMinor != want[i] {
+				t.Fatalf("копейки=%v: доля[%d] = %d, want %d — долг человека поехал от тумблера",
+					fractional, i, *r.SumMinor, want[i])
+			}
+		}
+	}
+}
+
+// А несогласованный вектор — легаси-данные бота — по-прежнему выводится заново:
+// иначе доли не сойдутся с итогом.
+func TestInconsistentSharesAreStillDerived(t *testing.T) {
+	op := botEqualSplit(100, 3)
+	FillMoney(&op, false)
+
+	if got := sumShares(&op); got != 10000 {
+		t.Errorf("сумма долей = %d, want 10000", got)
+	}
+	if *op.RecipientsWithSum[0].SumMinor != 3400 {
+		t.Errorf("доля[0] = %d, want 3400 — вектор не вывели", *op.RecipientsWithSum[0].SumMinor)
+	}
+}
+
+// Очень старая операция эпохи master-2021: получатели лежат в легаси-поле
+// recipients, а recipients_with_sum нет вовсе. Доли синтезируются при
+// нормализации — и обязаны получить копейки там же, иначе в ответе API у
+// операции сумма в копейках есть, а у каждой доли пусто.
+func TestLegacyRecipientsGetMinorShares(t *testing.T) {
+	op := NormalizedOperation(Operation{
+		Sum:        100,
+		Recipients: &[]User{{ID: 1}, {ID: 2}, {ID: 3}},
+	})
+
+	if len(op.RecipientsWithSum) != 3 {
+		t.Fatalf("получателей %d, want 3", len(op.RecipientsWithSum))
+	}
+	var sum int64
+	for i, r := range op.RecipientsWithSum {
+		if r.SumMinor == nil {
+			t.Fatalf("доля[%d] без минорного значения", i)
+		}
+		sum += *r.SumMinor
+	}
+	if sum != 10000 {
+		t.Errorf("сумма долей = %d, want 10000", sum)
+	}
+	want := []int64{3400, 3300, 3300}
+	for i, r := range op.RecipientsWithSum {
+		if *r.SumMinor != want[i] {
+			t.Errorf("доля[%d] = %d, want %d", i, *r.SumMinor, want[i])
+		}
+	}
+}
