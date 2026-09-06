@@ -219,3 +219,28 @@ func TestChangeCurrencyAllowedWithoutCents(t *testing.T) {
 		t.Errorf("валюта = %q, want JPY", got)
 	}
 }
+
+// Ветка отказа в обработчике: комната, которую нельзя пересчитать, отдаёт 409
+// с человеческим текстом, а не пятисотку. Фейк репозитория пропускает ошибку
+// пересчёта так же, как mongo, — иначе тест был бы ложнозелёным.
+func TestSetScaleReturnsConflictOnIncoherentRoom(t *testing.T) {
+	room := scaleRoom("USD")
+	ops := *room.Operations
+	// Позиции описывают 15, а итог расхода 21 — пересчитать, не соврав, нельзя.
+	ops[0].SplitType = api.SplitTypeByExactAmount
+	ops[0].Items = []api.OperationItem{{
+		Price:  15,
+		Shares: []api.ItemShare{{UserId: testUser1.ID, Weight: 1}, {UserId: testUser2.ID, Weight: 1}},
+	}}
+	room.Operations = &ops
+	repo := newFakeRoomRepo(room)
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
+
+	rec := doRequest(t, s, http.MethodPut, "/api/v1/rooms/"+room.ID.Hex()+"/scale",
+		mustToken(t, s, testUser1.ID), `{"displayExponent":2}`)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+
+	if api.RoomExponent(repo.rooms[room.ID.Hex()]) != 0 {
+		t.Error("шкала поменялась несмотря на отказ")
+	}
+}

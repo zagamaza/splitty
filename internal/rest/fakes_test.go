@@ -1138,7 +1138,12 @@ func (f *fakeRoomRepo) SetRoomScale(_ context.Context, roomId string, exp int) (
 		f.busyOnScale--
 		return nil, repository.ErrRoomBusy
 	}
-	api.RescaleRoom(room, exp)
+	// Ошибку пересчёта фейк обязан пропускать наружу так же, как mongo:
+	// иначе ветка отказа в обработчике остаётся непокрытой и будущие тесты
+	// дают ложное зелёное.
+	if err := api.RescaleRoom(room, exp); err != nil {
+		return nil, err
+	}
 	return room, nil
 }
 

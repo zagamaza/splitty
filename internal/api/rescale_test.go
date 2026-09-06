@@ -395,3 +395,68 @@ func TestDistributeNeverPaysZeroWeight(t *testing.T) {
 		t.Errorf("нулевые веса получили деньги: %v", got)
 	}
 }
+
+// Огромная легаси-сумма без минорного поля. Прежде проверка диапазона стояла
+// ПОСЛЕ пересчёта и ловила ноль вместо исходной суммы: SumMinorAt отдавал ноль,
+// пересчёт клал его в документ, проекция обнуляла Sum — и «безопасный» ноль
+// проходил. Деньги исчезали целиком, без ошибки.
+func TestRescaleRoomRefusesHugeLegacySum(t *testing.T) {
+	op := Operation{Sum: 184467440737095517}
+	room := &Room{Currency: "USD", Operations: &[]Operation{op}}
+	zero := 0
+	room.DisplayExponent = &zero
+
+	err := RescaleRoom(room, 2)
+	if !errors.Is(err, ErrRescaleImpossible) {
+		t.Fatalf("RescaleRoom: %v, want ErrRescaleImpossible", err)
+	}
+	if !errors.Is(err, ErrMoneyOutOfRange) {
+		t.Errorf("ошибка не несёт причину: %v", err)
+	}
+
+	after := (*room.Operations)[0]
+	if after.Sum != 184467440737095517 {
+		t.Errorf("сумма изменилась: %d — деньги исчезли", after.Sum)
+	}
+	if after.SumMinor != nil {
+		t.Errorf("в документ записали минорное значение %d", *after.SumMinor)
+	}
+	if RoomExponent(room) != 0 {
+		t.Errorf("шкала = %d, want 0", RoomExponent(room))
+	}
+}
+
+// «Целиком или никак» верно и для самой функции, а не только для записи в базу:
+// вызывающий, не проверивший ошибку, не должен получить комнату, где часть
+// операций уже в новой шкале.
+func TestRescaleRoomLeavesOperationsUntouchedOnError(t *testing.T) {
+	good := Operation{Sum: 100, RecipientsWithSum: []RecipientWithSum{{User: User{ID: 1}, Sum: 100}}}
+	bad := Operation{
+		Sum:       20,
+		SplitType: SplitTypeByExactAmount,
+		RecipientsWithSum: []RecipientWithSum{
+			{User: User{ID: 1}, Sum: 10}, {User: User{ID: 2}, Sum: 10},
+		},
+		Items: []OperationItem{{Price: 15, Shares: []ItemShare{{UserId: 1, Weight: 1}, {UserId: 2, Weight: 1}}}},
+	}
+	room := &Room{Currency: "USD", Operations: &[]Operation{good, bad}}
+	zero := 0
+	room.DisplayExponent = &zero
+
+	if err := RescaleRoom(room, 2); !errors.Is(err, ErrRescaleImpossible) {
+		t.Fatalf("RescaleRoom: %v, want ErrRescaleImpossible", err)
+	}
+
+	ops := *room.Operations
+	// Первая операция переводится без проблем — и всё же обязана остаться
+	// нетронутой, потому что вторая не переводится.
+	if ops[0].SumMinor != nil {
+		t.Errorf("хорошую операцию всё-таки пересчитали: sumMinor = %d", *ops[0].SumMinor)
+	}
+	if ops[0].Sum != 100 {
+		t.Errorf("сумма хорошей операции изменилась: %d", ops[0].Sum)
+	}
+	if ops[1].Sum != 20 {
+		t.Errorf("сумма плохой операции изменилась: %d", ops[1].Sum)
+	}
+}

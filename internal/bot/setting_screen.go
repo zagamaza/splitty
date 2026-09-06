@@ -49,6 +49,14 @@ func (bot *RoomSetting) OnMessage(ctx context.Context, u *api.Update) (response 
 					Send:           true,
 				}
 			}
+			// CAS не сошёлся трижды: комнату всё это время писали. Молчание
+			// здесь читается как «ничего не просили», поэтому объясняем.
+			if errors.Is(err, repository.ErrRoomBusy) {
+				return api.TelegramMessage{
+					CallbackConfig: createCallback(u, I18n(u.User, "msg_room_busy"), true),
+					Send:           true,
+				}
+			}
 			log.Error().Err(err).Msg("update currency failed")
 			return
 		}

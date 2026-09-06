@@ -471,3 +471,43 @@ func TestSetRoomScaleRefusesIncoherentRoom(t *testing.T) {
 		t.Errorf("ревизия выросла на отказе: %d была %d", after.Revision, before.Revision)
 	}
 }
+
+// Огромная легаси-сумма: пересчёт обязан отказать, а документ остаться
+// нетронутым до последнего поля. Раньше сумма превращалась в ноль и
+// записывалась.
+func TestSetRoomScaleRefusesHugeLegacySum(t *testing.T) {
+	db := testDB(t)
+	repo := NewRoomRepository(db)
+
+	donor := api.User{ID: 1, DisplayName: "Первый"}
+	huge := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Легаси", Sum: 184467440737095517,
+		Donor: &donor, Status: api.StatusActive, CreateAt: time.Now().UTC(),
+		RecipientsWithSum: []api.RecipientWithSum{{User: donor, Sum: 184467440737095517}},
+	}
+	id, err := repo.SaveRoom(testCtx(t), scaleTestRoom(t, 0, huge))
+	if err != nil {
+		t.Fatalf("SaveRoom: %v", err)
+	}
+	before := readRoom(t, repo, id.Hex())
+
+	if _, err := repo.SetRoomScale(testCtx(t), id.Hex(), 2); !errors.Is(err, api.ErrRescaleImpossible) {
+		t.Fatalf("SetRoomScale: %v, want ErrRescaleImpossible", err)
+	}
+
+	after := readRoom(t, repo, id.Hex())
+	if api.RoomExponent(after) != 0 {
+		t.Errorf("шкала = %d, want 0", api.RoomExponent(after))
+	}
+	if after.ScaleVersion != before.ScaleVersion || after.Revision != before.Revision {
+		t.Errorf("документ тронули на отказе: версия %d→%d, ревизия %d→%d",
+			before.ScaleVersion, after.ScaleVersion, before.Revision, after.Revision)
+	}
+	stored := (*after.Operations)[0]
+	if stored.Sum != 184467440737095517 {
+		t.Errorf("сумма в базе = %d — деньги исчезли", stored.Sum)
+	}
+	if stored.SumMinor != nil {
+		t.Errorf("в базу записали минорное значение %d", *stored.SumMinor)
+	}
+}

@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"math/bits"
 )
 
@@ -270,22 +271,90 @@ func RescaleRoom(r *Room, to int) error {
 	if from == to {
 		return nil
 	}
-	// ⚠️ Пересчёт либо проходит ЦЕЛИКОМ, либо не проходит вовсе. Пропустить
-	// одну операцию и записать остальные — это комната, у которой половина
-	// сумм в одной шкале, а половина в другой.
-	if r.Operations != nil {
-		ops := *r.Operations
-		for i := range ops {
-			if err := RescaleOperation(&ops[i], from, to); err != nil {
-				return err
-			}
-			if err := ValidateMoneyRange(&ops[i], to); err != nil {
-				return err
-			}
+	if r.Operations == nil {
+		exp := to
+		r.DisplayExponent = &exp
+		r.ScaleVersion++
+		return nil
+	}
+	ops := *r.Operations
+
+	// ⚠️ Диапазон проверяем ДО первой правки, по ИСХОДНЫМ суммам. Проверка
+	// после пересчёта не ловила ничего: у легаси-операции с суммой вне
+	// диапазона минорного поля нет, SumMinorAt отдаёт ноль, пересчёт кладёт
+	// этот ноль в документ, проекция делает Sum нулём — и «безопасный» ноль
+	// спокойно проходит проверку. Деньги исчезали целиком.
+	for i := range ops {
+		if err := ValidateMoneyRange(&ops[i], from); err != nil {
+			return fmt.Errorf("%w: %w", ErrRescaleImpossible, err)
+		}
+		if err := ValidateMoneyRange(&ops[i], to); err != nil {
+			return fmt.Errorf("%w: %w", ErrRescaleImpossible, err)
 		}
 	}
+
+	// ⚠️ Считаем на КОПИИ и присваиваем только после полного успеха.
+	// «Целиком или никак» обязано быть верным и для самой функции, а не только
+	// для записи в базу: иначе вызывающий, не проверивший ошибку, получает
+	// комнату, где часть операций уже в новой шкале, а часть в старой.
+	next := make([]Operation, len(ops))
+	for i := range ops {
+		next[i] = copyOperation(&ops[i])
+		if err := RescaleOperation(&next[i], from, to); err != nil {
+			return err
+		}
+	}
+
+	copy(ops, next)
 	exp := to
 	r.DisplayExponent = &exp
 	r.ScaleVersion++
 	return nil
+}
+
+// copyOperation — копия операции вглубь по всем полям, которые правит пересчёт.
+func copyOperation(o *Operation) Operation {
+	c := *o
+	if o.SumMinor != nil {
+		v := *o.SumMinor
+		c.SumMinor = &v
+	}
+	if o.RecipientsWithSum != nil {
+		rws := make([]RecipientWithSum, len(o.RecipientsWithSum))
+		copy(rws, o.RecipientsWithSum)
+		for i := range rws {
+			if rws[i].SumMinor != nil {
+				v := *rws[i].SumMinor
+				rws[i].SumMinor = &v
+			}
+		}
+		c.RecipientsWithSum = rws
+	}
+	if o.Items != nil {
+		items := make([]OperationItem, len(o.Items))
+		copy(items, o.Items)
+		for i := range items {
+			if items[i].PriceMinor != nil {
+				v := *items[i].PriceMinor
+				items[i].PriceMinor = &v
+			}
+			if items[i].Shares != nil {
+				sh := make([]ItemShare, len(items[i].Shares))
+				copy(sh, items[i].Shares)
+				for j := range sh {
+					if sh[j].AmountMinor != nil {
+						v := *sh[j].AmountMinor
+						sh[j].AmountMinor = &v
+					}
+					if sh[j].Amount != nil {
+						v := *sh[j].Amount
+						sh[j].Amount = &v
+					}
+				}
+				items[i].Shares = sh
+			}
+		}
+		c.Items = items
+	}
+	return c
 }
