@@ -388,3 +388,30 @@ func TestZeroFixedShareIsAccepted(t *testing.T) {
 		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
 	}
 }
+
+// Итог трат в приложении и в боте считается ОДИНАКОВО: точные величины
+// складываются, округление одно в конце. Сумма округлений не равна округлению
+// суммы — два расхода по 20,50 дают 41, а не 42.
+func TestTotalsRoundOnceNotPerOperation(t *testing.T) {
+	ops := []api.Operation{
+		{Sum: 21, SumMinor: ptr64(2050), Status: statusActive},
+		{Sum: 21, SumMinor: ptr64(2050), Status: statusActive},
+	}
+
+	if got := roomTotalSpent(ops); got != 41 {
+		t.Errorf("итог = %d, want 41 — округлили каждый расход вместо суммы", got)
+	}
+	if got := roomTotalSpentMinor(ops); got != 4100 {
+		t.Errorf("точный итог = %d, want 4100", got)
+	}
+}
+
+// У суммы, не помещающейся в копейки, точного значения нет — итог обязан
+// остаться честным, а не обнулиться.
+func TestTotalsStayHonestWhenAmountDoesNotFitMinor(t *testing.T) {
+	ops := []api.Operation{{Sum: 2_000_000_000, Status: statusActive}}
+
+	if got := roomTotalSpent(ops); got != 2_000_000_000 {
+		t.Errorf("итог = %d, want 2000000000 — траты комнаты пропали", got)
+	}
+}

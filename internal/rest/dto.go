@@ -606,17 +606,37 @@ func roomTotalSpentMinor(ops []api.Operation) int64 {
 
 // roomTotalSpent — целая сумма расходов.
 //
-// ⚠️ Считается ОТДЕЛЬНО, а не выводится из минорной: у суммы, не помещающейся
-// в копейки, минорного значения нет вовсе, и проекция обнулила бы траты
-// комнаты. Целое поле обязано оставаться честным для прежних сборок.
+// Складываем ТОЧНЫЕ величины и округляем один раз: сумма округлений не равна
+// округлению суммы, и два расхода по 20,50 дали бы 42 вместо 41. Так же считает
+// бот (service.GetAllCostsSum) — иначе итоги в приложении и в боте расходились
+// бы на единицу.
+//
+// ⚠️ Если у какого-то расхода минорного значения нет вовсе (сумма не помещается
+// в копейки), складываем целые: проекция обнулила бы траты комнаты.
 func roomTotalSpent(ops []api.Operation) int {
-	var total int
+	if !allAmountsFitMinor(ops) {
+		var total int
+		for i := range ops {
+			if !ops[i].IsDebtRepayment {
+				total += ops[i].Sum
+			}
+		}
+		return total
+	}
+	return api.FromMinor(roomTotalSpentMinor(ops))
+}
+
+// allAmountsFitMinor — у каждого расхода есть точная величина в копейках.
+func allAmountsFitMinor(ops []api.Operation) bool {
 	for i := range ops {
-		if !ops[i].IsDebtRepayment {
-			total += ops[i].Sum
+		if ops[i].SumMinor != nil {
+			continue
+		}
+		if _, ok := api.ToMinorChecked(ops[i].Sum); !ok {
+			return false
 		}
 	}
-	return total
+	return true
 }
 
 // userSpentSumMinor доля пользователя в активных расходах (без погашений).
@@ -636,22 +656,24 @@ func userSpentSumMinor(ops []api.Operation, userId int) int64 {
 	return total
 }
 
-// userSpentSum — целая доля пользователя; считается отдельно от минорной по той
-// же причине, что и roomTotalSpent.
+// userSpentSum — целая доля пользователя; та же логика, что у roomTotalSpent.
 func userSpentSum(ops []api.Operation, userId int) int {
-	var total int
-	for i := range ops {
-		o := &ops[i]
-		if o.IsDebtRepayment {
-			continue
-		}
-		for j := range o.RecipientsWithSum {
-			if o.RecipientsWithSum[j].User.ID == userId {
-				total += recipientShare(o, j)
+	if !allAmountsFitMinor(ops) {
+		var total int
+		for i := range ops {
+			o := &ops[i]
+			if o.IsDebtRepayment {
+				continue
+			}
+			for j := range o.RecipientsWithSum {
+				if o.RecipientsWithSum[j].User.ID == userId {
+					total += recipientShare(o, j)
+				}
 			}
 		}
+		return total
 	}
-	return total
+	return api.FromMinor(userSpentSumMinor(ops, userId))
 }
 
 // balanceFromDebtsMinor баланс пользователя по вычисленным долгам в минорных:
