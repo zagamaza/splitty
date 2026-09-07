@@ -159,8 +159,11 @@ func (s *Server) buildRoomDetail(room *api.Room, userId int, seenThrough time.Ti
 		Fractional:       api.RoomFractional(room),
 		Members:          toUserDtos(roomMembers(room)),
 		TotalSpent:       roomTotalSpent(ops),
+		TotalSpentMinor:  roomTotalSpentMinor(ops),
 		MySpent:          userSpentSum(ops, userId),
+		MySpentMinor:     userSpentSumMinor(ops, userId),
 		MyBalance:        balanceFromDebts(debts, userId),
+		MyBalanceMinor:   balanceFromDebtsMinor(debts, userId),
 		Debts:            toDebtDtos(debts),
 		DebtsUnavailable: !ok,
 		AvatarFileId:     roomAvatarFileId(room),
@@ -348,7 +351,9 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 				Members:          toUserDtos(members),
 				MemberCount:      len(members),
 				TotalSpent:       roomTotalSpent(activeOperations(room)),
+				TotalSpentMinor:  roomTotalSpentMinor(activeOperations(room)),
 				MyBalance:        balanceFromDebts(debts, userId),
+				MyBalanceMinor:   balanceFromDebtsMinor(debts, userId),
 				DebtsUnavailable: !ok,
 				UnreadCount:      roomUnreadCount(room, user),
 				AvatarFileId:     roomAvatarFileId(room),
@@ -1673,7 +1678,7 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 	friends := map[int]*friendBalanceDto{}
 	// итог по другу считается отдельно на каждую валюту:
 	// суммы в разных валютах складывать нельзя
-	totalsByFriend := map[int]map[string]int{}
+	totalsByFriend := map[int]map[string]int64{}
 	if rooms != nil {
 		for i := range *rooms {
 			room := &(*rooms)[i]
@@ -1683,7 +1688,7 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 				}
 				if _, ok := friends[m.ID]; !ok {
 					friends[m.ID] = &friendBalanceDto{User: toUserDto(&m), Rooms: []friendRoomBalanceDto{}}
-					totalsByFriend[m.ID] = map[string]int{}
+					totalsByFriend[m.ID] = map[string]int64{}
 				}
 			}
 
@@ -1694,16 +1699,18 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			// баланс по каждому другу в этой комнате: >0 — друг должен мне
-			balances := map[int]int{}
+			// ⚠️ Копим ТОЧНЫЕ величины: сумма округлений не равна округлению
+			// суммы, и два долга по 20,50 дали бы 42 вместо 41.
+			balances := map[int]int64{}
 			for _, d := range debts {
 				if d.Debtor == nil || d.Lender == nil {
 					continue
 				}
 				if d.Lender.ID == userId {
-					balances[d.Debtor.ID] += d.Sum
+					balances[d.Debtor.ID] += d.SumMinor
 				}
 				if d.Debtor.ID == userId {
-					balances[d.Lender.ID] -= d.Sum
+					balances[d.Lender.ID] -= d.SumMinor
 				}
 			}
 			currency := roomCurrencyCode(room)
@@ -1716,8 +1723,9 @@ func (s *Server) handleFriends(w http.ResponseWriter, r *http.Request) {
 				friend.Rooms = append(friend.Rooms, friendRoomBalanceDto{
 					RoomId:   room.ID.Hex(),
 					RoomName: room.Name,
-					Currency: currency,
-					Balance:  balance,
+					Currency:     currency,
+					Balance:      api.FromMinor(balance),
+					BalanceMinor: balance,
 				})
 			}
 		}
@@ -1784,11 +1792,11 @@ func (s *Server) markDeletedFriends(ctx context.Context, friends map[int]*friend
 
 // currencyTotals ненулевые итоги по валютам в стабильном порядке справочника
 // (api.CurrencyCodes; неизвестные коды — после, по алфавиту)
-func currencyTotals(sums map[string]int) []currencySumDto {
+func currencyTotals(sums map[string]int64) []currencySumDto {
 	totals := make([]currencySumDto, 0, len(sums))
 	for _, code := range api.CurrencyCodes {
 		if sum := sums[code]; sum != 0 {
-			totals = append(totals, currencySumDto{Currency: code, Sum: sum})
+			totals = append(totals, currencySumDto{Currency: code, Sum: api.FromMinor(sum), SumMinor: sum})
 		}
 	}
 	var rest []string
@@ -1799,7 +1807,7 @@ func currencyTotals(sums map[string]int) []currencySumDto {
 	}
 	sort.Strings(rest)
 	for _, code := range rest {
-		totals = append(totals, currencySumDto{Currency: code, Sum: sums[code]})
+		totals = append(totals, currencySumDto{Currency: code, Sum: api.FromMinor(sums[code]), SumMinor: sums[code]})
 	}
 	return totals
 }

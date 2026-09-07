@@ -14,8 +14,8 @@ private enum MoneyFormat {
 
     static var locale: Locale { localeOverride ?? Locale.current }
 
-    static func formatter(currency: String) -> NumberFormatter {
-        let key = "\(locale.identifier)|\(currency)"
+    static func formatter(currency: String, fractional: Bool = false) -> NumberFormatter {
+        let key = "\(locale.identifier)|\(currency)|\(fractional)"
         lock.lock()
         defer { lock.unlock() }
         if let cached = cache[key] { return cached }
@@ -23,9 +23,11 @@ private enum MoneyFormat {
         formatter.numberStyle = .currency
         formatter.locale = locale
         formatter.currencyCode = currency
-        // Копеек в продукте нет: суммы всегда целые
-        formatter.maximumFractionDigits = 0
-        formatter.minimumFractionDigits = 0
+        // Копейки показываются только там, где туса их считает. В остальных
+        // суммы целые: дробная часть у рублёвой поездки — визуальный шум.
+        let digits = fractional ? 2 : 0
+        formatter.maximumFractionDigits = digits
+        formatter.minimumFractionDigits = digits
         // Символ — свой: у системы для IDR это «IDR», для KZT «KZT», а незнакомый
         // код она подменяет символом чужой валюты (GBP → «£»). От системы берём
         // только разделитель тысяч и СТОРОНУ, с которой стоит символ
@@ -87,6 +89,33 @@ func money(_ sum: Int, currency: String) -> String {
     let formatter = MoneyFormat.formatter(currency: currency)
     return formatter.string(from: NSNumber(value: sum))
         ?? "\(sum) \(currencySymbol(currency))"
+}
+
+/// Форматирует сумму, ЗАДАННУЮ В КОПЕЙКАХ: `money(minor: 2080, currency: "USD",
+/// fractional: true)` → `"20,80 $"`. В тусе без копеек значение округляется до
+/// целого — там дробей не показывают вовсе.
+///
+/// Минорные единицы — точное значение суммы, старое целое поле лишь его
+/// проекция. Показывать надо это, иначе 20,80 на экране превратится в 21.
+func money(minor: Int, currency: String, fractional: Bool) -> String {
+    let formatter = MoneyFormat.formatter(currency: currency, fractional: fractional)
+    let value = Double(minor) / Double(minorFactor)
+    return formatter.string(from: NSNumber(value: value))
+        ?? "\(minor / minorFactor) \(currencySymbol(currency))"
+}
+
+/// Сотая доля единицы валюты: в этих единицах сервер хранит все суммы.
+let minorFactor = 100
+
+/// Форматирует точную сумму в копейках, САМ решая, показывать ли дробную часть:
+/// `2080` → `"20,80 $"`, `2100` → `"21 $"`.
+///
+/// Точность выводится из значения, а не из настройки тусы, намеренно. Иначе
+/// признак пришлось бы тянуть в два десятка мест показа, включая экраны позиций
+/// чека, где комнаты под рукой нет вовсе. В тусе без копеек нецелых сумм не
+/// возникает — там ничего и не изменится.
+func money(minor: Int, currency: String) -> String {
+    money(minor: minor, currency: currency, fractional: minor % minorFactor != 0)
 }
 
 /// Форматирует сумму в рублях: `1234567` → `"1 234 567 ₽"` (обёртка money(_, "RUB")).

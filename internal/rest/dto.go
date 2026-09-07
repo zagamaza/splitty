@@ -140,6 +140,11 @@ type debtDto struct {
 	Debtor userDto `json:"debtor"`
 	Lender userDto `json:"lender"`
 	Sum    int     `json:"sum"`
+	// SumMinor — точная величина долга в минорных единицах. Клиент, который
+	// умеет минорные, обязан предпочитать ЕЁ: Sum — округлённая проекция, и в
+	// тусе с копейками долг 20,80 в ней выглядит как 21. Не указатель:
+	// долг вычисляется, «значения нет» не бывает.
+	SumMinor int64 `json:"sumMinor"`
 }
 
 // roomAvatarDto ответ на загрузку авы: клиенту нужен новый id, чтобы сразу
@@ -162,7 +167,11 @@ type roomSummaryDto struct {
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
 	AvatarFileId string `json:"avatarFileId,omitempty"`
 	TotalSpent   int    `json:"totalSpent"`
-	MyBalance    int    `json:"myBalance"`
+	// TotalSpentMinor и MyBalanceMinor — точные величины в минорных единицах.
+	// Целые поля выше — округлённые проекции для прежних сборок.
+	TotalSpentMinor int64 `json:"totalSpentMinor"`
+	MyBalance       int   `json:"myBalance"`
+	MyBalanceMinor  int64 `json:"myBalanceMinor"`
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
 	// (см. roomDebtsSafe): myBalance отдан нулём, клиент может показать бейдж
 	DebtsUnavailable bool `json:"debtsUnavailable,omitempty"`
@@ -183,10 +192,14 @@ type roomDetailDto struct {
 	Fractional bool      `json:"fractional"`
 	Members    []userDto `json:"members"`
 	// AvatarFileId ссылка на фото группы; пусто — клиент рисует градиент
-	AvatarFileId string    `json:"avatarFileId,omitempty"`
-	TotalSpent   int       `json:"totalSpent"`
-	MySpent      int       `json:"mySpent"`
-	MyBalance    int       `json:"myBalance"`
+	AvatarFileId string `json:"avatarFileId,omitempty"`
+	TotalSpent   int    `json:"totalSpent"`
+	// *Minor — точные величины; целые поля рядом — округлённые проекции.
+	TotalSpentMinor int64     `json:"totalSpentMinor"`
+	MySpent         int       `json:"mySpent"`
+	MySpentMinor    int64     `json:"mySpentMinor"`
+	MyBalance       int       `json:"myBalance"`
+	MyBalanceMinor  int64     `json:"myBalanceMinor"`
 	Debts        []debtDto `json:"debts"`
 	// DebtsUnavailable true — долги комнаты не считаются на легаси-данных
 	// (см. roomDebtsSafe): debts=[] и myBalance=0, остальное поле комнаты
@@ -209,12 +222,16 @@ type friendRoomBalanceDto struct {
 	RoomName string `json:"roomName"`
 	Currency string `json:"currency"`
 	Balance  int    `json:"balance"`
+	// BalanceMinor — точная величина; Balance — округлённая проекция.
+	BalanceMinor int64 `json:"balanceMinor"`
 }
 
 // currencySumDto итог по одной валюте — суммы в разных валютах не складываются
 type currencySumDto struct {
 	Currency string `json:"currency"`
 	Sum      int    `json:"sum"`
+	// SumMinor — точная величина; Sum — округлённая проекция.
+	SumMinor int64 `json:"sumMinor"`
 }
 
 type friendBalanceDto struct {
@@ -489,7 +506,10 @@ func toOperationDtos(ops []api.Operation) []operationDto {
 func toDebtDtos(debts []api.Debt) []debtDto {
 	dtos := make([]debtDto, 0, len(debts))
 	for _, d := range debts {
-		dtos = append(dtos, debtDto{Debtor: toUserDto(d.Debtor), Lender: toUserDto(d.Lender), Sum: d.Sum})
+		dtos = append(dtos, debtDto{
+			Debtor: toUserDto(d.Debtor), Lender: toUserDto(d.Lender),
+			Sum: d.Sum, SumMinor: d.SumMinor,
+		})
 	}
 	return dtos
 }
@@ -569,7 +589,26 @@ func isRoomArchived(r *api.Room, userId int) bool {
 	return false
 }
 
-// roomTotalSpent сумма всех расходов (без погашений) по активным операциям
+// roomTotalSpentMinor сумма всех расходов (без погашений) по активным операциям
+// в минорных единицах.
+//
+// ⚠️ Складываем ТОЧНЫЕ величины и округляем один раз в конце. Сумма округлений
+// не равна округлению суммы: два расхода по 20,50 — это 41, а не 42.
+func roomTotalSpentMinor(ops []api.Operation) int64 {
+	var total int64
+	for i := range ops {
+		if !ops[i].IsDebtRepayment {
+			total += ops[i].SumMinorOrLegacy()
+		}
+	}
+	return total
+}
+
+// roomTotalSpent — целая сумма расходов.
+//
+// ⚠️ Считается ОТДЕЛЬНО, а не выводится из минорной: у суммы, не помещающейся
+// в копейки, минорного значения нет вовсе, и проекция обнулила бы траты
+// комнаты. Целое поле обязано оставаться честным для прежних сборок.
 func roomTotalSpent(ops []api.Operation) int {
 	var total int
 	for i := range ops {
@@ -580,7 +619,25 @@ func roomTotalSpent(ops []api.Operation) int {
 	return total
 }
 
-// userSpentSum доля пользователя в активных расходах (без погашений), целые рубли
+// userSpentSumMinor доля пользователя в активных расходах (без погашений).
+func userSpentSumMinor(ops []api.Operation, userId int) int64 {
+	var total int64
+	for i := range ops {
+		o := &ops[i]
+		if o.IsDebtRepayment {
+			continue
+		}
+		for j := range o.RecipientsWithSum {
+			if o.RecipientsWithSum[j].User.ID == userId {
+				total += o.RecipientsWithSum[j].SumMinorOrLegacy()
+			}
+		}
+	}
+	return total
+}
+
+// userSpentSum — целая доля пользователя; считается отдельно от минорной по той
+// же причине, что и roomTotalSpent.
 func userSpentSum(ops []api.Operation, userId int) int {
 	var total int
 	for i := range ops {
@@ -597,17 +654,22 @@ func userSpentSum(ops []api.Operation, userId int) int {
 	return total
 }
 
-// balanceFromDebts баланс пользователя по вычисленным долгам:
-// >0 — пользователю должны, <0 — пользователь должен
-func balanceFromDebts(debts []api.Debt, userId int) int {
-	var balance int
+// balanceFromDebtsMinor баланс пользователя по вычисленным долгам в минорных:
+// >0 — пользователю должны, <0 — пользователь должен.
+func balanceFromDebtsMinor(debts []api.Debt, userId int) int64 {
+	var balance int64
 	for _, d := range debts {
 		if d.Lender != nil && d.Lender.ID == userId {
-			balance += d.Sum
+			balance += d.SumMinor
 		}
 		if d.Debtor != nil && d.Debtor.ID == userId {
-			balance -= d.Sum
+			balance -= d.SumMinor
 		}
 	}
 	return balance
+}
+
+// balanceFromDebts — округлённая проекция balanceFromDebtsMinor.
+func balanceFromDebts(debts []api.Debt, userId int) int {
+	return api.FromMinor(balanceFromDebtsMinor(debts, userId))
 }

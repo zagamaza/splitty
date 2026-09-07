@@ -1070,7 +1070,7 @@ func TestCurrencyInDtos(t *testing.T) {
 		t.Errorf("usd room = %+v, want {USD -100}", got)
 	}
 	// суммы в разных валютах не складываются: два независимых итога
-	wantTotals := []currencySumDto{{Currency: "RUB", Sum: 50}, {Currency: "USD", Sum: -100}}
+	wantTotals := []currencySumDto{{Currency: "RUB", Sum: 50, SumMinor: 5000}, {Currency: "USD", Sum: -100, SumMinor: -10000}}
 	if len(friend.TotalsByCurrency) != 2 ||
 		friend.TotalsByCurrency[0] != wantTotals[0] || friend.TotalsByCurrency[1] != wantTotals[1] {
 		t.Errorf("totalsByCurrency = %+v, want %+v", friend.TotalsByCurrency, wantTotals)
@@ -1448,7 +1448,7 @@ func TestBrokenRoomDegradesGracefully(t *testing.T) {
 	if len(friend.Rooms) != 1 || friend.Rooms[0].RoomId != healthy.ID.Hex() || friend.Rooms[0].Balance != 50 {
 		t.Errorf("friend rooms = %+v, want только здоровая комната с балансом 50", friend.Rooms)
 	}
-	if len(friend.TotalsByCurrency) != 1 || friend.TotalsByCurrency[0] != (currencySumDto{Currency: "RUB", Sum: 50}) {
+	if len(friend.TotalsByCurrency) != 1 || friend.TotalsByCurrency[0] != (currencySumDto{Currency: "RUB", Sum: 50, SumMinor: 5000}) {
 		t.Errorf("totalsByCurrency = %+v, want [{RUB 50}] (без вклада битой)", friend.TotalsByCurrency)
 	}
 
