@@ -60,6 +60,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Debt
 import com.zagir.splitty.core.money.currencySymbol
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
@@ -279,6 +280,7 @@ private fun DebtRow(
                 )
                 MoneyText(
                     amount = debt.sum,
+                    exactMinor = debt.exactMinor,
                     role = if (debt.debtor.id == meId) MoneyRole.NEGATIVE else MoneyRole.POSITIVE,
                     currency = currency,
                 )
@@ -475,7 +477,9 @@ private fun PaymentSumCard(
                     ),
                     singleLine = true,
                     cursorBrush = SolidColor(colors.accent),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (form.fractional) KeyboardType.Decimal else KeyboardType.Number,
+                    ),
                     decorationBox = { innerTextField ->
                         Box(contentAlignment = Alignment.Center) {
                             if (form.sumText.isEmpty()) {
@@ -498,11 +502,11 @@ private fun PaymentSumCard(
                     .height(1.dp)
                     .background(colors.hairline, RoundedCornerShape(1.dp)),
             )
-            val isOverDebt = (form.sum ?: 0) > debt.sum
+            val isOverDebt = (form.sumMinor ?: 0) > debt.exactMinor
             Text(
                 text = stringResource(
                     if (isOverDebt) R.string.settleup_debt_max else R.string.settleup_debt_hint,
-                    money(debt.sum, form.currency),
+                    moneyMinor(debt.exactMinor, form.currency),
                 ),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,

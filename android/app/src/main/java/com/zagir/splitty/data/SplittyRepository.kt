@@ -302,10 +302,12 @@ class SplittyRepository @Inject constructor(
         roomId: String,
         debtorId: Long,
         lenderId: Long,
-        sum: Long,
+        sumMinor: Long,
         clientOpId: String,
     ): Operation =
-        call { api.repay(roomId, RepaymentBody(debtorId = debtorId, lenderId = lenderId, sum = sum, clientOpId = clientOpId)) }
+        // Шлём ТОЧНУЮ величину: старое целое поле сервер выведет сам, а платёж
+        // на 20,80 в нём превратился бы в 21.
+        call { api.repay(roomId, RepaymentBody(debtorId = debtorId, lenderId = lenderId, sumMinor = sumMinor, clientOpId = clientOpId)) }
 
     // --- Друзья, активность, статистика ---
 

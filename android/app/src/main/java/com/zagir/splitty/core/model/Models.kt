@@ -2,6 +2,8 @@
 
 package com.zagir.splitty.core.model
 
+import com.zagir.splitty.core.money.MINOR_FACTOR
+
 import androidx.annotation.StringRes
 import com.zagir.splitty.R
 
@@ -199,7 +201,16 @@ data class Debt(
     val debtor: User,
     val lender: User,
     val sum: Long,
-)
+    /**
+     * Точная величина долга в МИНОРНЫХ единицах. Показывать надо её: [sum] —
+     * округлённая проекция, и долг 20,80 в ней выглядит как 21.
+     * null — ответ сервера прежней версии.
+     */
+    val sumMinor: Long? = null,
+) {
+    /** Точная величина в копейках: записанная, иначе выведенная из целой. */
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /** Файл, прикреплённый к операции (чек/фото из Telegram). */
 @Serializable
@@ -248,7 +259,10 @@ data class OperationRecipient(
      * её: [sum] — округлённая проекция. null — ответ сервера прежней версии.
      */
     val sumMinor: Long? = null,
-)
+) {
+    /** Точная доля в копейках: записанная, иначе выведенная из целой. */
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /**
  * Доля участника в позиции чека (itemized-операция, AI-распознавание).
@@ -365,6 +379,9 @@ data class Operation(
 ) {
     val hasFiles: Boolean get() = !files.isNullOrEmpty()
 
+    /** Точная сумма в копейках: записанная, иначе выведенная из целой. */
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+
     /** Позиции чека без опциональности (зеркало iOS `operation.itemList`). */
     val itemList: List<OperationItem> get() = items ?: emptyList()
 
@@ -454,7 +471,11 @@ data class ParseResponse(
 data class CurrencySum(
     val currency: String,
     val sum: Long,
-)
+    /** Точная величина; [sum] — округлённая проекция. */
+    val sumMinor: Long? = null,
+) {
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /** Валюта из справочника GET /currencies: код, символ и флаг для пикера. */
 @Serializable
@@ -596,7 +617,11 @@ data class FriendRoomBalance(
     /** Валюта комнаты. */
     val currency: String,
     val balance: Long,
-)
+    /** Точная величина; [balance] — округлённая проекция. */
+    val balanceMinor: Long? = null,
+) {
+    val exactMinor: Long get() = balanceMinor ?: (balance * MINOR_FACTOR)
+}
 
 /**
  * Друг и нетто-балансы с ним ПО ВАЛЮТАМ: >0 — друг должен мне, <0 — я должен.

@@ -40,7 +40,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zagir.splitty.core.model.CurrencySum
+import com.zagir.splitty.core.money.MINOR_FACTOR
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.ui.theme.Splitty
 import kotlin.math.abs
 
@@ -216,6 +218,11 @@ fun MoneyText(
     weight: FontWeight = FontWeight.SemiBold,
     currency: String = "RUB",
     /**
+     * Точная величина в минорных единицах; null — вызывающий её не знает, и
+     * показывается целое.
+     */
+    exactMinor: Long? = null,
+    /**
      * Минимальный масштаб шрифта при нехватке ширины (аналог iOS
      * `.minimumScaleFactor`): 1f — не ужимать (по умолчанию); <1f — крупная
      * сумма в узкой плитке уменьшается вместо обрезки. Значение = нижняя граница.
@@ -237,7 +244,7 @@ fun MoneyText(
     // переполнении строки уменьшаем шрифт до нижней границы size*minScale.
     var scaledSize by remember(amount, currency, size) { mutableStateOf(size) }
     Text(
-        text = money(abs(amount), currency),
+        text = moneyMinor(abs(exactMinor ?: (amount * MINOR_FACTOR)), currency),
         modifier = modifier,
         color = color,
         fontSize = scaledSize,

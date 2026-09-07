@@ -19,7 +19,7 @@ import kotlin.math.abs
  * пробел и всегда символ справа. Это русский формат — человек с английским
  * интерфейсом видел «1 234 567 $» вместо «$1,234,567».
  */
-private object MoneyFormat {
+internal object MoneyFormat {
     private val cache = HashMap<String, NumberFormat>()
 
     /** Шов для тестов: подменяемая локаль. null — текущая локаль системы. */
@@ -28,13 +28,15 @@ private object MoneyFormat {
     val locale: Locale get() = localeOverride ?: Locale.getDefault()
 
     @Synchronized
-    fun formatter(currency: String): NumberFormat {
-        val key = "${locale.toLanguageTag()}|$currency"
+    fun formatter(currency: String, fractional: Boolean = false): NumberFormat {
+        val key = "${locale.toLanguageTag()}|$currency|$fractional"
         cache[key]?.let { return it }
         val formatter = NumberFormat.getCurrencyInstance(locale)
-        // Копеек в продукте нет: суммы всегда целые
-        formatter.maximumFractionDigits = 0
-        formatter.minimumFractionDigits = 0
+        // Копейки показываются только там, где туса их считает. В остальных
+        // суммы целые: дробная часть у рублёвой поездки — визуальный шум.
+        val digits = if (fractional) 2 else 0
+        formatter.maximumFractionDigits = digits
+        formatter.minimumFractionDigits = digits
         val symbols = (formatter as? DecimalFormat)?.decimalFormatSymbols
         if (symbols != null) {
             // Символ — свой: у системы для IDR это «IDR», для KZT «KZT», а
@@ -94,6 +96,53 @@ private fun uzbekSum(locale: Locale): String = when (locale.language) {
  * Форматирует сумму в валюте: money(1234567, "USD") -> "1 234 567 $".
  * Разделитель тысяч — обычный пробел, символ валюты ПОСЛЕ суммы, суммы целые.
  */
+/** Сотая доля единицы валюты: в этих единицах сервер хранит все суммы. */
+const val MINOR_FACTOR = 100L
+
+/**
+ * Форматирует точную сумму в копейках, САМ решая, показывать ли дробную часть:
+ * `2080` → «20,80 $», `2100` → «21 $».
+ *
+ * Точность выводится из значения, а не из настройки тусы: иначе признак
+ * пришлось бы тянуть в два десятка мест показа. В тусе без копеек нецелых сумм
+ * не возникает — там ничего и не меняется.
+ */
+fun moneyMinor(minor: Long, currency: String): String {
+    val fractional = minor % MINOR_FACTOR != 0L
+    val formatter = MoneyFormat.formatter(currency, fractional)
+    return formatter.format(minor.toDouble() / MINOR_FACTOR)
+}
+
+/**
+ * Разбирает введённую человеком сумму в МИНОРНЫЕ единицы: «20,80» и «20.80» →
+ * 2080, «21» → 2100, null — это не сумма.
+ *
+ * Оба разделителя принимаются намеренно: запятую даёт русская клавиатура,
+ * точку — цифровая панель, и человек не обязан гадать, какая правильная.
+ */
+fun minorFromInput(text: String): Long? {
+    val trimmed = text.trim().replace(',', '.')
+    if (trimmed.isEmpty()) return null
+    val parts = trimmed.split('.')
+    if (parts.size > 2) return null
+    val units = parts[0].toLongOrNull() ?: return null
+    if (units < 0) return null
+    if (parts.size == 1) return units * MINOR_FACTOR
+    val fraction = parts[1]
+    if (fraction.isEmpty() || fraction.length > 2 || !fraction.all { it.isDigit() }) return null
+    val value = fraction.toLong()
+    // «20.8» — это 80 копеек, а не 8.
+    return units * MINOR_FACTOR + if (fraction.length == 1) value * 10 else value
+}
+
+/** Готовит сумму для поля ввода: `2080` → «20,80», `2100` → «21». */
+fun inputTextFromMinor(minor: Long): String {
+    if (minor % MINOR_FACTOR == 0L) return (minor / MINOR_FACTOR).toString()
+    val separator = (NumberFormat.getInstance(MoneyFormat.locale) as? DecimalFormat)
+        ?.decimalFormatSymbols?.decimalSeparator ?: ','
+    return "%d%s%02d".format(minor / MINOR_FACTOR, separator, abs(minor % MINOR_FACTOR))
+}
+
 fun money(sum: Long, currency: String): String =
     MoneyFormat.formatter(currency).format(sum)
 

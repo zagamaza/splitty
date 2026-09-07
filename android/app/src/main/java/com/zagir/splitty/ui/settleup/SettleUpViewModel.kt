@@ -10,6 +10,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.Debt
+import com.zagir.splitty.core.money.minorFromInput
+import com.zagir.splitty.core.money.inputTextFromMinor
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -32,6 +34,34 @@ private const val MAX_SUM_DIGITS = 10
 
 private fun digitsOnly(raw: String): String =
     raw.filter { it.isDigit() }.take(MAX_SUM_DIGITS)
+
+/**
+ * В тусе без копеек в поле только цифры. В тусе с копейками пропускаем ОДИН
+ * разделитель и не больше двух знаков после него: третий знак — уже не сумма, и
+ * молча его отбрасывать хуже, чем не дать набрать.
+ */
+internal fun filterSumInput(raw: String, fractional: Boolean): String {
+    if (!fractional) return digitsOnly(raw)
+    val out = StringBuilder()
+    var separatorSeen = false
+    var afterSeparator = 0
+    for (ch in raw) {
+        when {
+            ch.isDigit() -> {
+                if (separatorSeen) {
+                    if (afterSeparator == 2) continue
+                    afterSeparator++
+                }
+                out.append(ch)
+            }
+            (ch == ',' || ch == '.') && !separatorSeen && out.isNotEmpty() -> {
+                separatorSeen = true
+                out.append(ch)
+            }
+        }
+    }
+    return out.take(MAX_SUM_DIGITS + 3).toString()
+}
 
 /**
  * Долг для предвыбора по nav-аргументам (переход из строки балансов/друга):
@@ -67,17 +97,25 @@ data class SettleUpForm(
     val alert: SettleUpAlert? = null,
     /** true — платёж записан, экран пора закрывать (onDone). */
     val isSaved: Boolean = false,
+    /** Туса считает копейки: тогда в поле принимается дробная сумма. */
+    val fractional: Boolean = false,
 ) {
-    val sum: Long? get() = sumText.toLongOrNull()
+    /** Введённая сумма в МИНОРНЫХ единицах; null — это не сумма. */
+    val sumMinor: Long? get() = minorFromInput(sumText)
 
     /** Кнопка «назад к списку» видна, когда на шаг 2 пришли из списка. */
     val showsBackToList: Boolean get() = selectedDebt != null && debts.size > 1
 
-    /** Платёж валиден: 1 <= сумма <= текущему долгу. */
+    /**
+     * Платёж валиден: от одной минорной единицы до текущего долга.
+     *
+     * Сравниваем по ТОЧНОЙ величине: округлённый долг 20,80 равен 21, и по нему
+     * платёж на 21 прошёл бы с переплатой в 20 копеек.
+     */
     val isSumValid: Boolean
         get() {
             val debt = selectedDebt ?: return false
-            return (sum ?: 0) in 1..debt.sum
+            return (sumMinor ?: 0) in 1..debt.exactMinor
         }
 }
 
@@ -144,10 +182,11 @@ class SettleUpViewModel @Inject constructor(
                         meId = sessionStore.state.value?.me?.id,
                         debts = debts,
                         selectedDebt = selected,
-                        // Через digitsOnly, как и пользовательский ввод: иначе
-                        // поле сеялось строкой, которую onSumChange потом молча
+                        // Тем же путём, что и пользовательский ввод: иначе поле
+                        // сеялось строкой, которую onSumChange потом молча
                         // укорачивал при первом же касании.
-                        sumText = selected?.sum?.let { sum -> digitsOnly(sum.toString()) }.orEmpty(),
+                        sumText = selected?.let { inputTextFromMinor(it.exactMinor) }.orEmpty(),
+                        fractional = room.fractional,
                     )
                 )
             } catch (e: CancellationException) {
@@ -160,13 +199,13 @@ class SettleUpViewModel @Inject constructor(
 
     /** Выбор долга из списка: шаг 2 с prefill полной суммой долга. */
     fun selectDebt(debt: Debt) = updateForm {
-        it.copy(selectedDebt = debt, sumText = debt.sum.toString())
+        it.copy(selectedDebt = debt, sumText = inputTextFromMinor(debt.exactMinor))
     }
 
     /** Назад к списку долгов (шаг 1). */
     fun backToList() = updateForm { it.copy(selectedDebt = null) }
 
-    fun onSumChange(raw: String) = updateForm { it.copy(sumText = digitsOnly(raw)) }
+    fun onSumChange(raw: String) = updateForm { it.copy(sumText = filterSumInput(raw, it.fractional)) }
 
     fun dismissAlert() = updateForm { it.copy(alert = null) }
 
@@ -184,7 +223,7 @@ class SettleUpViewModel @Inject constructor(
         val roomId = roomId ?: return
         val form = currentForm() ?: return
         val debt = form.selectedDebt ?: return
-        val sum = form.sum ?: return
+        val sumMinor = form.sumMinor ?: return
         if (form.isSaving || !form.isSumValid) return
         // Погашения офлайн недоступны (фиксированный дизайн v1): долг мог
         // измениться на сервере, а конфликт 409 офлайн не разрешить. CTA уже
@@ -198,8 +237,8 @@ class SettleUpViewModel @Inject constructor(
                     roomId,
                     debtorId = debt.debtor.id,
                     lenderId = debt.lender.id,
-                    sum = sum,
-                    clientOpId = idempotency.key(debt.debtor.id, debt.lender.id, sum),
+                    sumMinor = sumMinor,
+                    clientOpId = idempotency.key(debt.debtor.id, debt.lender.id, sumMinor),
                 )
                 sessionStore.noteDataChanged()
                 sessionStore.confirm(UiText.res(R.string.toast_repayment_saved))
@@ -228,7 +267,7 @@ class SettleUpViewModel @Inject constructor(
                             alert = SettleUpAlert.DebtSettled,
                             debts = debts,
                             selectedDebt = single,
-                            sumText = single?.sum?.let { sum -> digitsOnly(sum.toString()) }.orEmpty(),
+                            sumText = single?.let { inputTextFromMinor(it.exactMinor) }.orEmpty(),
                         )
                     }
                 } else {
