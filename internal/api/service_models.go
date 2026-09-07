@@ -176,7 +176,18 @@ const (
 type Debt struct {
 	Lender *User `json:"lender" bson:"lender"`
 	Debtor *User `json:"debtor" bson:"debtor"`
-	Sum    int   `json:"sum" bson:"sum"`
+	// Sum — округлённая проекция SumMinor. Остаётся ради сборок, которые про
+	// копейки не знают: пустое поле они показали бы нулём.
+	Sum int `json:"sum" bson:"sum"`
+	// SumMinor — точная величина долга в минорных единицах. Не указатель:
+	// долг вычисляется, а не читается из документа, и «значения нет» тут не
+	// бывает.
+	SumMinor int64 `json:"sumMinor" bson:"sum_minor"`
+}
+
+// NewDebt собирает долг из точной величины, держа обе проекции согласованными.
+func NewDebt(lender, debtor *User, sumMinor int64) Debt {
+	return Debt{Lender: lender, Debtor: debtor, Sum: FromMinor(sumMinor), SumMinor: sumMinor}
 }
 
 // ChatState stores user state

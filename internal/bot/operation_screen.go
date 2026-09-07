@@ -2252,7 +2252,11 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	}
 
 	sum, err := defineSum(u.Message.Text)
-	if err != nil || sum > debt.Sum {
+	// Сравниваем по ТОЧНОЙ величине долга: округлённая проекция долга в 20,80
+	// равна 21, и погашение на 21 прошло бы, переплатив 20 копеек. Бот вводит
+	// только целые, поэтому переводим введённое в копейки.
+	sumMinor, fits := api.ToMinorChecked(sum)
+	if err != nil || !fits || sumMinor > debt.SumMinor {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
 		text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))

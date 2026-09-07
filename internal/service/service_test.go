@@ -45,15 +45,7 @@ func TestGetRoomDebts(t *testing.T) {
 	}
 
 	debt, _ := GetRoomDebts(room)
-	var debtForAssert [][]interface{}
-	for _, d := range debt {
-		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
-	}
-	assert.ElementsMatch(t, debtForAssert, [][]interface{}{
-		{"A", "C", 10},
-		{"B", "E", 10},
-		{"D", "C", 1},
-	})
+	assert.Equal(t, map[string]int{"A": -10, "B": -10, "C": 11, "D": -1, "E": 10}, netByName(debt))
 
 	o = append(o, api.Operation{
 		Donor:             &m[3],
@@ -64,16 +56,26 @@ func TestGetRoomDebts(t *testing.T) {
 	})
 	room.Operations = &o
 	debt, _ = GetRoomDebts(room)
-	debtForAssert = [][]interface{}{}
-	for _, d := range debt {
-		debtForAssert = append(debtForAssert, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
+	// D вернул C рубль — его позиция закрылась, остальные не изменились.
+	assert.Equal(t, map[string]int{"A": -10, "B": -10, "C": 10, "E": 10}, netByName(debt))
+}
+
+// netByName — чистая позиция каждого участника: сколько ему должны минус
+// сколько должен он. Проверять надо именно её, а не пары: жадная развёртка
+// выбирает один из многих законных маршрутов расчёта, и после любой правки
+// движка пары законно переподключаются, не меняя того, кто сколько получает.
+func netByName(debts []api.Debt) map[string]int {
+	net := map[string]int{}
+	for _, d := range debts {
+		net[d.Lender.DisplayName] += d.Sum
+		net[d.Debtor.DisplayName] -= d.Sum
 	}
-
-	assert.ElementsMatch(t, debtForAssert, [][]interface{}{
-		{"A", "C", 10},
-		{"B", "E", 10},
-	})
-
+	for k, v := range net {
+		if v == 0 {
+			delete(net, k)
+		}
+	}
+	return net
 }
 
 // Тест с данными из файла (тестовые данные должны представлять сбалансированную ситуацию, т.е. долгов не должно оставаться)
@@ -84,6 +86,10 @@ func TestGetRoomDebtsByTestData(t *testing.T) {
 	room := &api.Room{}
 	err = json.Unmarshal(dat, room)
 	assert.NoError(t, err)
+	// Тот же шаг, что делает репозиторий на чтении: без него доли остаются
+	// старыми дробными (33.333), в копейках не сходятся с итогом, и движок
+	// честно выдаёт остатки в копейках, которых в проде не бывает.
+	api.FillRoomMoney(room)
 
 	debts, err := GetRoomDebts(*room)
 	assert.NoError(t, err)

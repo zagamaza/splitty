@@ -1311,11 +1311,13 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if debt == nil || debt.Sum <= 0 {
+	// Сравниваем по ТОЧНОЙ величине: округлённая проекция долга в 20,80 равна 21,
+	// и по ней погашение на 21 прошло бы, переплатив 20 копеек.
+	if debt == nil || debt.SumMinor <= 0 {
 		writeError(w, http.StatusConflict, "conflict", "долга нет")
 		return
 	}
-	if sum > debt.Sum {
+	if sumMinor > debt.SumMinor {
 		writeError(w, http.StatusConflict, "conflict", "сумма превышает текущий долг")
 		return
 	}
@@ -1373,7 +1375,7 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 	var overpaid, verified bool
 	if hErrAfter == nil {
 		var err error
-		if overpaid, err = repaymentOverpaid(roomAfter, req.DebtorId, req.LenderId); err == nil {
+		if overpaid, err = repaymentOverpaid(roomAfter, operation, req.DebtorId, req.LenderId); err == nil {
 			verified = true
 		} else {
 			// расчёт после вставки сломался (данные комнаты стали неисчислимыми
@@ -1407,39 +1409,46 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, toOperationDto(operation))
 }
 
-// repaymentOverpaid распознаёт переплату после вставки погашения. В расчёте develop
-// (AddReturnToDebts) излишек возврата не инвертирует долг, а молча теряется, поэтому
-// по итоговым долгам гонку не увидеть. Сравниваем валовый долг пары (расчёт по одним
-// расходам, без погашений) с суммой прямых возвратов debtor→lender: возвратов больше
-// валового долга — конкурентное погашение перегасило тот же долг
-func repaymentOverpaid(room *api.Room, debtorId, lenderId int) (bool, error) {
+// repaymentOverpaid распознаёт переплату после вставки погашения: проходит ли
+// предпроверка на состоянии БЕЗ этого погашения. Считаем долги комнаты, исключив
+// только что вставленную операцию, и сравниваем долг пары с её суммой — если
+// долга столько уже нет, погашение проиграло гонку и подлежит откату.
+//
+// ⚠️ Прежняя редакция страдала тем же дефектом, что и движок до фикса: она
+// сравнивала сумму прямых возвратов пары с «валовым» долгом из жадной развёртки
+// по одним расходам. Но пары в развёртке произвольны — реального перевода могло
+// не быть ни на одном ребре, — и вопрос «переплатили ли» на них не отвечался.
+// Плюс считалось во float по округлённым суммам: в тусе с копейками переплата
+// на копейки была невидима. Здесь сравнение по точным минорным единицам.
+func repaymentOverpaid(room *api.Room, inserted *api.Operation, debtorId, lenderId int) (bool, error) {
+	if inserted == nil {
+		return false, errors.New("нечего проверять: погашение не передано")
+	}
 	norm := normalizedRoom(room)
-	spends := make([]api.Operation, 0, len(*norm.Operations))
-	var returns float64
+	before := make([]api.Operation, 0, len(*norm.Operations))
 	for _, o := range *norm.Operations {
-		if !o.IsDebtRepayment {
-			spends = append(spends, o)
+		if o.ID == inserted.ID {
 			continue
 		}
-		if o.Donor != nil && o.Donor.ID == debtorId {
-			for _, r := range o.RecipientsWithSum {
-				if r.User.ID == lenderId {
-					returns += r.Sum
-				}
-			}
-		}
+		before = append(before, o)
 	}
-	grossDebts, err := service.GetRoomDebts(api.Room{ID: room.ID, Members: norm.Members, Operations: &spends})
+	debts, err := service.GetRoomDebts(api.Room{
+		ID:                room.ID,
+		Currency:          room.Currency,
+		FractionalAmounts: room.FractionalAmounts,
+		Members:           norm.Members,
+		Operations:        &before,
+	})
 	if err != nil {
 		return false, err
 	}
-	var gross float64
-	for _, d := range grossDebts {
+	var covered int64
+	for _, d := range debts {
 		if d.Debtor != nil && d.Lender != nil && d.Debtor.ID == debtorId && d.Lender.ID == lenderId {
-			gross += float64(d.Sum)
+			covered += d.SumMinor
 		}
 	}
-	return returns > gross, nil
+	return covered < inserted.SumMinorOrLegacy(), nil
 }
 
 // Статистика

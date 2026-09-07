@@ -160,8 +160,14 @@ func TestFingerprintIsStableAndSensitive(t *testing.T) {
 // счётчику джоб решает, можно ли верить выводу «долгов не осталось».
 func TestUncountableRoomIsSkippedAndCounted(t *testing.T) {
 	now := time.Now().UTC()
-	// Операция с долями, не сходящимися с суммой, — легаси-форма бота.
+	// Сумма расхода не помещается в копейки: точного значения у него нет, и
+	// достроить доли не из чего.
+	//
+	// ⚠️ Прежде здесь стояли доли, не сходящиеся с суммой. Это перестало быть
+	// негодностью намеренно: от документа такой случай неотличим от «сумму
+	// отредактировали, а доли устарели», и доли пересобираются от текущего итога.
 	broken := room("Легаси", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)
+	(*broken.Operations)[0].Sum = 2_000_000_000
 	(*broken.Operations)[0].RecipientsWithSum = []api.RecipientWithSum{
 		{User: zagir, Sum: 1},
 		{User: almaz, Sum: 1},

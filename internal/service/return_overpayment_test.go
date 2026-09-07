@@ -129,19 +129,33 @@ func TestGetRoomDebtsByKazahRoom(t *testing.T) {
 	room := &api.Room{}
 	err = json.Unmarshal(dat, room)
 	assert.NoError(t, err)
+	// Тот же шаг, что делает репозиторий на чтении: без него доли остаются
+	// старыми дробными (33.333), в копейках не сходятся с итогом, и движок
+	// честно выдаёт остатки в копейках, которых в проде не бывает.
+	api.FillRoomMoney(room)
 
 	debts, err := GetRoomDebts(*room)
 	assert.NoError(t, err)
 
-	var got [][]interface{}
+	// Проверяем ВЕКТОР позиций, а не пары. Прежнее ожидание фиксировало цепочку
+	// «Артур→Александр 1313, No Mercy→Александр 1313, Алмаз→No Mercy 1313,
+	// Zagir→Артур 9611» — четыре ребра на 13 550 ₽ при том, что чистых денег в
+	// комнате на 10 926 ₽. Разница — транзит, который наводил старый движок:
+	// он строил долги по одним расходам, а потом вычитал погашения по парам, и
+	// непопавшие погашения разворачивались во встречные долги. Одна развёртка
+	// транзит убирает; позиция Загира (−9611) при этом совпала в точности.
+	assert.Equal(t, map[string]int{
+		"Zagir Nurgaliev": -9611,
+		"Алмаз":           -1315,
+		"Артур":           8298,
+		"Александр":       2627,
+		"No Mercy":        1,
+	}, netByName(debts))
+
+	var total int
 	for _, d := range debts {
-		got = append(got, []interface{}{d.Debtor.DisplayName, d.Lender.DisplayName, d.Sum})
+		total += d.Sum
 	}
-	expected := [][]interface{}{
-		{"Артур", "Александр", 1313},
-		{"Алмаз", "No Mercy", 1313},
-		{"Zagir Nurgaliev", "Артур", 9611},
-		{"No Mercy", "Александр", 1313},
-	}
-	assert.Equal(t, expected, got)
+	assert.Equal(t, 10926, total, "сумма рёбер равна сумме положительных позиций")
+	assert.Len(t, debts, 4, "лишних транзитных рёбер быть не должно")
 }

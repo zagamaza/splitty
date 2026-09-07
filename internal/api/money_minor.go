@@ -175,29 +175,39 @@ func SharesMinor(o *Operation, totalMinor int64) ([]int64, bool) {
 	return Distribute(totalMinor, weights)
 }
 
-// sharesAreConsistent — у каждой доли есть записанное значение в копейках, и
-// вместе они в точности дают итог. Такой вектор пересобирать не за чем.
-func sharesAreConsistent(o *Operation, totalMinor int64) bool {
+// recordedShares — вектор долей, ЗАПИСАННЫЙ в документе, если он в точности
+// даёт итог. false означает «согласованного вектора в документе нет, выводи».
+//
+// ⚠️ Старая дробная доля считается записанной наравне с копеечной. Доля 3,50 —
+// это ровно 350 копеек, и расход 35 на десятерых сходится без остатка. Пока эта
+// проверка требовала копеечных полей, такой вектор объявлялся отсутствующим и
+// выводился заново целым шагом (4 и 3 вместо 3,50). Погашения в старых тусах
+// делались против прежних долей, и на сверке прода это давало долги в уже
+// рассчитанных компаниях: «Сочи Тай», «Пикник у моста», «Москва майские»,
+// «Ночь чудесного сна» — во всех записанные доли сходились идеально.
+//
+// Неточные доли (100/3 = 33,33…) в итог не сходятся и сюда не попадают: там
+// записанного вектора действительно нет, и вывод неизбежен.
+func recordedShares(o *Operation, totalMinor int64) ([]int64, bool) {
 	if len(o.RecipientsWithSum) == 0 {
-		return true
+		return nil, true
 	}
+	out := make([]int64, len(o.RecipientsWithSum))
 	var sum int64
-	for _, r := range o.RecipientsWithSum {
-		if r.SumMinor == nil {
-			return false
-		}
+	for i, r := range o.RecipientsWithSum {
 		// Складываем С ПРОВЕРКОЙ: испорченный документ может переполнить сумму
 		// и «сойтись» с итогом по кругу — такой вектор согласованным не считаем.
-		v := *r.SumMinor
+		v := r.SumMinorOrLegacy()
 		if v > 0 && sum > maxInt64-v {
-			return false
+			return nil, false
 		}
 		if v < 0 && sum < -maxInt64-v {
-			return false
+			return nil, false
 		}
+		out[i] = v
 		sum += v
 	}
-	return sum == totalMinor
+	return out, sum == totalMinor
 }
 
 // applyShares записывает выведенный вектор ТОЛЬКО в минорные поля.
@@ -238,8 +248,16 @@ func FillMoney(o *Operation) {
 	//
 	// Выводим вектор только когда его нет или он не сходится с итогом — то есть
 	// на легаси-данных бота, где долей в копейках не было вовсе.
-	if o.SumMinor != nil && !sharesAreConsistent(o, *o.SumMinor) {
-		if shares, ok := SharesMinor(o, *o.SumMinor); ok {
+	if o.SumMinor != nil {
+		if shares, ok := recordedShares(o, *o.SumMinor); ok {
+			// Записанный вектор переносим в копеечные поля как есть: значения
+			// не меняются, меняется только представление.
+			applyShares(o, shares)
+		} else if shares, ok := SharesMinor(o, *o.SumMinor); ok {
+			// Записанного вектора нет или он не сходится с итогом: доли либо не
+			// писали вовсе, либо сумму потом отредактировали и они устарели.
+			// От документа эти случаи неотличимы, и оба лечатся одинаково —
+			// пересобрать доли от текущего итога.
 			applyShares(o, shares)
 		}
 	}

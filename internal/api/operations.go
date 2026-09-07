@@ -115,5 +115,15 @@ func NormalizedRoom(r *Room) Room {
 	if r == nil {
 		return Room{Members: &members, Operations: &ops}
 	}
-	return Room{ID: r.ID, Name: r.Name, Members: &members, Operations: &ops}
+	// Валюта и признак копеек едут вместе с комнатой: по ним расчёт долгов
+	// выбирает шаг, ниже которого остаток долгом не считается. Без них
+	// нормализованная комната всегда выглядела бы рублёвой.
+	return Room{
+		ID:                r.ID,
+		Name:              r.Name,
+		Currency:          r.Currency,
+		FractionalAmounts: r.FractionalAmounts,
+		Members:           &members,
+		Operations:        &ops,
+	}
 }

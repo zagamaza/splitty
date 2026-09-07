@@ -1332,15 +1332,23 @@ func TestRepaymentNotifies(t *testing.T) {
 
 // «Неисчислимые» комнаты (легаси-данные, на которых балансы не сходятся)
 
-// newBrokenLegacyRoom комната с легаси-данными старых версий бота, на которых
-// service.GetRoomDebts возвращает «cannot calculate debts»: донор заплатил 227,
-// а доли получателей — только 100, баланс комнаты не сходится на 127
-// (реальный прод-кейс, ср. комнату 677e48c1c1751966168d1364)
+// newBrokenLegacyRoom комната, на которой service.GetRoomDebts возвращает
+// «cannot calculate debts»: сумма расхода не помещается в копейки, достроить её
+// нечем, и балансы не сходятся.
+//
+// ⚠️ Раньше здесь стояла другая негодность — донор заплатил 227, а в долях
+// записано 100. Она перестала быть негодностью намеренно: от документа этот
+// случай НЕОТЛИЧИМ от «сумму отредактировали, а доли устарели», и лечится он
+// так же — доли пересобираются от текущего итога. Отказываться считать там,
+// где расход прекрасно показан человеку, значит упереть его в тупик; долг
+// теперь совпадает с тем, что написано в самой карточке расхода.
 func newBrokenLegacyRoom() *api.Room {
 	operation := api.Operation{
-		ID:                primitive.NewObjectID(),
-		Description:       "Легаси-расход",
-		Sum:               227,
+		ID:          primitive.NewObjectID(),
+		Description: "Легаси-расход",
+		// Больше api.MaxMoneyUnits: в копейки не переводится, значит точного
+		// значения у расхода нет вовсе.
+		Sum:               2_000_000_000,
 		Donor:             &testUser1,
 		RecipientsWithSum: []api.RecipientWithSum{{User: testUser2, Sum: 100}},
 		Status:            statusActive,
@@ -1384,8 +1392,8 @@ func TestBrokenRoomDegradesGracefully(t *testing.T) {
 	if brokenSummary.MyBalance != 0 || !brokenSummary.DebtsUnavailable {
 		t.Errorf("broken summary = %+v, want myBalance=0 и debtsUnavailable=true", brokenSummary)
 	}
-	if brokenSummary.TotalSpent != 227 || brokenSummary.MemberCount != 2 {
-		t.Errorf("broken summary = %+v, want totalSpent=227 и memberCount=2 (комната видна целиком)", brokenSummary)
+	if brokenSummary.TotalSpent != 2_000_000_000 || brokenSummary.MemberCount != 2 {
+		t.Errorf("broken summary = %+v, want totalSpent=2000000000 и memberCount=2 (комната видна целиком)", brokenSummary)
 	}
 	healthySummary := byId[healthy.ID.Hex()]
 	if healthySummary.MyBalance != 50 || healthySummary.DebtsUnavailable {
@@ -1404,7 +1412,7 @@ func TestBrokenRoomDegradesGracefully(t *testing.T) {
 	if len(detail.Debts) != 0 || detail.MyBalance != 0 || !detail.DebtsUnavailable {
 		t.Errorf("broken detail = %+v, want debts=[], myBalance=0, debtsUnavailable=true", detail)
 	}
-	if len(detail.Operations) != 1 || len(detail.Members) != 2 || detail.TotalSpent != 227 || detail.Currency != "RUB" {
+	if len(detail.Operations) != 1 || len(detail.Members) != 2 || detail.TotalSpent != 2_000_000_000 || detail.Currency != "RUB" {
 		t.Errorf("broken detail = %+v, want полные операции/участников/валюту", detail)
 	}
 

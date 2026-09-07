@@ -62,7 +62,12 @@ func repayOp(sum int, debtor, lender api.User) api.Operation {
 }
 
 func moneyRoom(members []api.User, ops []api.Operation) api.Room {
-	return api.Room{ID: primitive.NewObjectID(), Members: &members, Operations: &ops}
+	r := api.Room{ID: primitive.NewObjectID(), Members: &members, Operations: &ops}
+	// Тот же шаг, что делает репозиторий на чтении. Без него движок получил бы
+	// операции бота с дробными долями и без минорных полей — форму, которой в
+	// проде не существует.
+	api.FillRoomMoney(&r)
+	return r
 }
 
 func findMoneyDebt(debts []api.Debt, debtorId, lenderId int) int {
@@ -74,34 +79,40 @@ func findMoneyDebt(debts []api.Debt, debtorId, lenderId int) int {
 	return 0
 }
 
-// moneyToInt поглощает float-погрешность (round при отклонении < 1e-6),
-// но сохраняет усечение честных дробных остатков — семантику develop
-func TestMoneyToInt(t *testing.T) {
-	assert.Equal(t, 26, moneyToInt(25.999999999999996), "float-погрешность округляется вверх")
-	assert.Equal(t, 26, moneyToInt(26.000000000000004), "float-погрешность округляется вниз")
-	assert.Equal(t, 1, moneyToInt(0.9999999999999999), "почти-рубль не должен пропадать")
-	assert.Equal(t, 33, moneyToInt(33.333333333333336), "честная дробная доля усекается")
-	assert.Equal(t, 33, moneyToInt(33.9), "усечение develop сохранено")
-	assert.Equal(t, 34, moneyToInt(34.0))
-}
-
-// накопленная float-погрешность долей бота: 6 операций по 13 ₽ на троих дают
-// баланс 25.999999999999996, который старый int() усекал до 25 при точном долге 26
-func TestDebtsFloatNoiseRounded(t *testing.T) {
+// 6 операций по 13 ₽ на троих.
+//
+// ⚠️ Долг здесь СОВПАДАЕТ с тем, что показано в самих расходах, и именно этим
+// отличается от прежнего ответа. Раньше движок считал по старым дробным долям
+// (13/3 = 4,333…) и выдавал 26, тогда как в карточке расхода стояло 5 + 4 + 4:
+// два экрана противоречили друг другу. Теперь и то и другое — 24.
+//
+// Перекос осознанный: целый шаг отдаёт остаток первому получателю, и на шести
+// одинаковых расходах он каждый раз достаётся одному человеку. Лечится не
+// движком, а копейками — при дробном шаге доли ровные.
+func TestDebtsMatchStoredShares(t *testing.T) {
 	var ops []api.Operation
 	for i := 0; i < 6; i++ {
 		ops = append(ops, botEquallySpend(13, moneyUserA, moneyUserA, moneyUserB, moneyUserC))
 	}
-	debts, err := GetRoomDebts(moneyRoom([]api.User{moneyUserA, moneyUserB, moneyUserC}, ops))
-	assert.NoError(t, err)
+	room := moneyRoom([]api.User{moneyUserA, moneyUserB, moneyUserC}, ops)
 
-	assert.Equal(t, 26, findMoneyDebt(debts, moneyUserB.ID, moneyUserA.ID), "долг B→A")
-	assert.Equal(t, 26, findMoneyDebt(debts, moneyUserC.ID, moneyUserA.ID), "долг C→A")
+	shares := (*room.Operations)[0].RecipientsWithSum
+	assert.Equal(t, int64(500), shares[0].SumMinorOrLegacy(), "доля A в расходе")
+	assert.Equal(t, int64(400), shares[1].SumMinorOrLegacy(), "доля B в расходе")
+
+	debts, err := GetRoomDebts(room)
+	assert.NoError(t, err)
+	assert.Equal(t, 24, findMoneyDebt(debts, moneyUserB.ID, moneyUserA.ID), "долг B→A = шесть долей по 4")
+	assert.Equal(t, 24, findMoneyDebt(debts, moneyUserC.ID, moneyUserA.ID), "долг C→A = шесть долей по 4")
 }
 
-// 6 операций по 1 ₽ на шестерых: баланс должника 0.9999999999999999 —
-// старый int() давал долг 0 и долги молча пропадали из ответа целиком
-func TestDebtsSmallFloatSharesNotLost(t *testing.T) {
+// 6 операций по 1 ₽ на шестерых — рубль целым шагом на шестерых не делится.
+//
+// Весь рубль ложится на первого получателя, он же донор, поэтому долгов нет
+// вовсе. Это честный ответ для тусы без копеек: показать «каждый должен по
+// рублю» значило бы придумать 5 ₽ из воздуха на расходе в 1 ₽. Ровно этот
+// случай и чинят копейки.
+func TestDebtsWholeStepCannotSplitOneUnit(t *testing.T) {
 	members := []api.User{moneyUserA}
 	for i := 2; i <= 6; i++ {
 		members = append(members, api.User{ID: i})
@@ -113,12 +124,36 @@ func TestDebtsSmallFloatSharesNotLost(t *testing.T) {
 	debts, err := GetRoomDebts(moneyRoom(members, ops))
 	assert.NoError(t, err)
 
-	assert.Len(t, debts, 5, "по одному долгу от каждого из пяти должников")
-	for _, d := range debts {
-		assert.Equal(t, 1, d.Sum, "долг %d→%d", d.Debtor.ID, d.Lender.ID)
-		assert.Equal(t, moneyUserA.ID, d.Lender.ID)
-	}
+	assert.Empty(t, debts, "долгов быть не может: платил и получил один и тот же человек")
 }
+
+// Долг ровно в одну минорную единицу доживает до ответа: прежние пороги
+// сравнивали деньги с рублём и такой долг отсеивали.
+func TestDebtsSingleMinorUnitSurvives(t *testing.T) {
+	a := api.Operation{
+		ID:    primitive.NewObjectID(),
+		Sum:   1,
+		Donor: &moneyUserA,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: moneyUserA, Sum: 0, SumMinor: ptrInt64(99)},
+			{User: moneyUserB, Sum: 0, SumMinor: ptrInt64(1)},
+		},
+		Status:    "active",
+		SplitType: api.SplitTypeByExactAmount,
+		SumMinor:  ptrInt64(100),
+	}
+	room := moneyRoom([]api.User{moneyUserA, moneyUserB}, []api.Operation{a})
+	fractional := true
+	room.FractionalAmounts = &fractional // туса с копейками: шаг равен копейке
+	debts, err := GetRoomDebts(room)
+	assert.NoError(t, err)
+
+	assert.Len(t, debts, 1, "долг в одну копейку отсеян порогом")
+	assert.Equal(t, int64(1), debts[0].SumMinor, "точная величина долга")
+	assert.Equal(t, 0, debts[0].Sum, "округлённая проекция копейки — ноль")
+}
+
+func ptrInt64(v int64) *int64 { return &v }
 
 // больше 100 должников: старый жёсткий лимит в 100 итераций молча обрывал список долгов
 func TestDebtsManyParticipants(t *testing.T) {
@@ -178,8 +213,10 @@ func TestGetUserCostsSumFloatNoise(t *testing.T) {
 	repo := fakeMoneyRoomRepo{room: &room}
 	ss := NewStatisticService(NewRoomService(repo), NewOperationService(repo))
 
-	// доля B: 6 × 13/3 = 25.999999999999996 → 26 (старый int() давал 25)
+	// Доля B — сумма ЕГО долей в расходах: шесть раз по 4 (13 целым шагом на
+	// троих даёт 5+4+4). Прежний ответ 26 брался из старых дробных долей
+	// (13/3 = 4,333…) и с карточкой расхода не сходился.
 	got, err := ss.GetUserCostsSum(context.Background(), moneyUserB.ID, room.ID.Hex())
 	assert.NoError(t, err)
-	assert.Equal(t, 26, got)
+	assert.Equal(t, 24, got)
 }

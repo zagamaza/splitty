@@ -230,17 +230,20 @@ func TestDryRunCountsChannels(t *testing.T) {
 	}
 }
 
-// Долг не крупнее числа расходов неотличим от погрешности деления: доли режутся
-// с усечением копеек, и каждый расход оставляет до единицы валюты. Напоминать
-// по такому — прислать человеку «верните 3 ₽».
-func TestJobIgnoresRoundingNoise(t *testing.T) {
+// Мелкий долг не стоит напоминания: порог — число расходов в тусе. Напоминать
+// по рублю значит однажды прислать человеку «верните 3 ₽», и это ровно то, за
+// что приложения выключают.
+//
+// ⚠️ Прежде тест назывался «остаток от округления» и строил расход 3 на двоих
+// с долями по 1,50. На точной арифметике это НЕ погрешность, а настоящий долг
+// в полтора рубля, и порог его больше не прячет. Здесь долг ровно в рубль —
+// он и должен молчать.
+func TestJobIgnoresSmallDebt(t *testing.T) {
 	now := time.Now().UTC()
-	// Комната с одним расходом на 3 единицы: долг выйдет 1–2, то есть в
-	// пределах погрешности
 	tiny := room("Мелочь", "RUB", now.AddDate(0, 0, -3), zagir, zagir, almaz)
-	(*tiny.Operations)[0].Sum = 3
+	(*tiny.Operations)[0].Sum = 2
 	for i := range (*tiny.Operations)[0].RecipientsWithSum {
-		(*tiny.Operations)[0].RecipientsWithSum[i].Sum = 1.5
+		(*tiny.Operations)[0].RecipientsWithSum[i].Sum = 1
 	}
 
 	job, state, queue, tg := jobWithTelegram(t, []api.Room{tiny}, map[int]api.User{
@@ -253,7 +256,7 @@ func TestJobIgnoresRoundingNoise(t *testing.T) {
 		t.Fatalf("прогон: %v", err)
 	}
 	if stats.Debtors != 0 || stats.Sent != 0 {
-		t.Fatalf("напомнили про остаток от округления: %+v", stats)
+		t.Fatalf("напомнили про мелкий долг: %+v", stats)
 	}
 	if len(tg.sent) != 0 || len(queue.sent) != 0 || len(state.claims) != 0 {
 		t.Errorf("что-то ушло: tg %d, push %d", len(tg.sent), len(queue.sent))

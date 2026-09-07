@@ -181,11 +181,11 @@ func TestViewUserDebtsUsesCanonicalUserID(t *testing.T) {
 	loadLang(t)
 	roomID := primitive.NewObjectID()
 	rs := &recordingRoomService{room: &api.Room{ID: roomID, Name: "Тусa", Currency: "RUB"}}
-	os := &recordingOperationService{debts: []api.Debt{{
-		Debtor: &api.User{ID: canonicalUserID, DisplayName: "Канонический"},
-		Lender: &api.User{ID: 7, DisplayName: "Кредитор"},
-		Sum:    100,
-	}}}
+	os := &recordingOperationService{debts: []api.Debt{api.NewDebt(
+		&api.User{ID: 7, DisplayName: "Кредитор"},
+		&api.User{ID: canonicalUserID, DisplayName: "Канонический"},
+		10000,
+	)}}
 	screen := NewViewUserDebts(noopChatStateService{}, rs, noopButtonService{}, os, &Config{})
 
 	screen.OnMessage(context.Background(), canonicalUpdate(viewUserDebts, &api.CallbackData{RoomId: roomID.Hex()}))
@@ -263,11 +263,10 @@ func TestDebtRepaymentOperationDonorIsCanonical(t *testing.T) {
 	roomID := primitive.NewObjectID()
 	lender := &api.User{ID: 7, DisplayName: "Кредитор"}
 	rs := &recordingRoomService{room: &api.Room{ID: roomID, Name: "Тусa", Currency: "RUB"}}
-	os := &recordingOperationService{debt: &api.Debt{
-		Debtor: &api.User{ID: canonicalUserID, DisplayName: "Канонический"},
-		Lender: lender,
-		Sum:    500,
-	}}
+	// NewDebt, а не литерал: у долга две согласованные проекции, и сравнение
+	// суммы погашения идёт по точной.
+	debt := api.NewDebt(lender, &api.User{ID: canonicalUserID, DisplayName: "Канонический"}, 50000)
+	os := &recordingOperationService{debt: &debt}
 	us := stubBotUserService{users: map[int]*api.User{7: lender, canonicalUserID: {ID: canonicalUserID}}}
 	screen := NewAddRecepientOperation(noopChatStateService{}, noopButtonService{}, os, us, rs, noopRoomStateService{}, &Config{})
 

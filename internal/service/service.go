@@ -236,34 +236,68 @@ func (s *OperationService) GetAllDebts(ctx context.Context, roomId string) ([]ap
 }
 
 func GetRoomDebts(room api.Room) ([]api.Debt, error) {
+	// Шаг тусы — это и есть порог «долг или пыль». В рублёвой тусе 70 копеек
+	// отдать нечем: там нет ни ввода, ни показа дробей, и такой остаток обязан
+	// схлопнуться, а не превратиться в «должен 1 ₽». В тусе с копейками шаг
+	// равен минорной единице, и точный долг доживает до ответа целиком.
+	//
+	// Прежний код сравнивал деньги с рублём ВСЮДУ и на float — отсюда и «до
+	// рубля пыли», которую приходилось прощать. Здесь порог один, он явный и
+	// зависит от самой тусы.
+	step := api.ShareStepFor(api.RoomFractional(&room))
+
+	// Движок считает по минорным полям, а у операций бота их в документе нет.
+	// Достраиваем здесь, а не полагаемся на вызывающего: репозиторий это делает,
+	// но комната приходит и другими путями (напоминания, тесты), и молча
+	// посчитать долги по старым дробным полям — это разойтись с тем, что
+	// показано в самом расходе. Повторный вызов ничего не меняет: значения те же.
+	api.FillRoomMoney(&room)
+
 	idUser := map[int]api.User{}
 	for _, user := range *room.Members {
 		idUser[user.ID] = user
 	}
 
-	var notDebt []api.Operation
-	var debtReturn []api.Operation
+	// ⚠️ Погашения идут в ОДНУ кучу с расходами, а не вычитаются из готовых
+	// долгов. Погашение — это тот же расход, только участники переставлены:
+	// должник выступает донором и получает +sum, кредитор единственным
+	// получателем и получает -sum. Вектор выходит противоположным исходному
+	// расходу именно из-за перестановки, отдельная арифметика для этого не нужна.
+	//
+	// Прежняя схема строила долги по одним расходам, а потом вычитала погашения
+	// по парам «должник-кредитор». Но пары в жадной развёртке произвольны: это
+	// один из многих законных маршрутов расчёта, а не история переводов. Если
+	// пара не совпадала с теми, между кем реально был перевод, погашение не
+	// засчитывалось, оставалось в остатках и разворачивалось во ВСТРЕЧНЫЙ долг.
+	// На проде это давало комнаты, где люди рассчитались, а долги появлялись
+	// заново: 0 → 22 ₽ в «Нг 2026», 1 долг на 397 ₽ → 17 долгов на 1208 ₽
+	// в «Тимбилдинге». Одна развёртка в конце от порядка пар не зависит.
+	var ops []api.Operation
 	for _, op := range *room.Operations {
-		if op.Status != "active" {
+		if op.Status != api.StatusActive {
 			continue
 		}
-		if op.IsDebtRepayment {
-			debtReturn = append(debtReturn, op)
-		} else {
-			notDebt = append(notDebt, op)
+		ops = append(ops, op)
+		// Участник мог выйти из комнаты, оставшись в операции. Без него в
+		// справочнике долг вышел бы на пользователя с нулевым id.
+		if op.Donor != nil {
+			if _, ok := idUser[op.Donor.ID]; !ok {
+				idUser[op.Donor.ID] = *op.Donor
+			}
+		}
+		for _, r := range op.RecipientsWithSum {
+			if _, ok := idUser[r.User.ID]; !ok {
+				idUser[r.User.ID] = r.User
+			}
 		}
 	}
 
-	debts, err := calculateDebt(idUser, notDebt)
+	debts, err := calculateDebt(idUser, ops, step)
 	if err != nil {
 		return nil, err
 	}
 	sortDebts(debts)
-
-	debts, err = AddReturnToDebts(debts, debtReturn)
-	sortDebts(debts)
-	return debts, err
-
+	return debts, nil
 }
 
 func sortDebts(debts []api.Debt) {
@@ -275,150 +309,37 @@ func sortDebts(debts []api.Debt) {
 	})
 }
 
-func AddReturnToDebts(debts []api.Debt, debtReturn []api.Operation) ([]api.Debt, error) {
-	// Создаем карту для хранения всех возвратов долгов
-	// Ключ: ID пользователя, значение: общий баланс возвратов
-	returned, err := calculateUserBalance(debtReturn)
-	if err != nil {
-		return nil, err
-	}
-
-	// Создаем карту для хранения возвратов между конкретными пользователями
-	// Ключ внешней карты: ID должника, ключ внутренней карты: ID кредитора, значение: сумма возврата
-	specificReturns := make(map[int]map[int]float64)
-
-	// Заполняем карту прямых возвратов между должниками и кредиторами
-	for _, op := range debtReturn {
-		donorID := op.Donor.ID
-		for _, recipient := range op.RecipientsWithSum {
-			recipientID := recipient.User.ID
-
-			// Проверяем существование внешней карты
-			if _, exists := specificReturns[donorID]; !exists {
-				specificReturns[donorID] = make(map[int]float64)
-			}
-
-			// Донор возвращает деньги получателю
-			specificReturns[donorID][recipientID] += recipient.Sum
-		}
-	}
-
-	var result []api.Debt
-	for _, debt := range debts {
-		debtorID := debt.Debtor.ID
-		lenderID := debt.Lender.ID
-
-		// Проверяем, существует ли прямой возврат от должника к кредитору
-		directReturn := float64(0)
-		if returns, exists := specificReturns[debtorID]; exists {
-			if amount, exists := returns[lenderID]; exists {
-				directReturn = amount
-			}
-		}
-
-		// Если есть прямой возврат, уменьшаем долг.
-		// Применённую сумму списываем из общих балансов returned — иначе шаг
-		// по балансам ниже вычтет тот же возврат второй раз (долг 50, возврат 20
-		// давал 10 вместо 30).
-		if directReturn > 0 {
-			applied := getMin(directReturn, float64(debt.Sum))
-			returned[debtorID] -= applied
-			returned[lenderID] += applied
-			if directReturn >= float64(debt.Sum) {
-				// Долг полностью погашен
-				continue
-			} else {
-				// Уменьшаем долг на сумму возврата
-				debt.Sum -= int(directReturn)
-			}
-		}
-
-		// Также учитываем общий баланс, как в оригинальном алгоритме
-		if returned[debtorID] >= 1 && returned[lenderID] < 1 {
-			min := getMin(returned[debtorID], -returned[lenderID], float64(debt.Sum))
-			returned[debtorID] -= min
-			returned[lenderID] += min
-			debt.Sum -= int(min)
-		}
-
-		// Если после всех расчетов долг все еще существует, добавляем его в результат
-		if debt.Sum >= 1 {
-			result = append(result, debt)
-		}
-	}
-
-	// Возвраты могут превышать расчётные долги пары: должник по тратам вернул
-	// больше, чем жадная развёртка ему насчитала (например, потом снова платил
-	// за всех). Раньше такой излишек просто выбрасывался с записью в лог, и
-	// переплатившему «никто ничего не должен». Теперь остатки балансов
-	// превращаются в долги в обратную сторону: положительный остаток — этому
-	// пользователю должны, отрицательный — он должен вернуть.
-	users := map[int]api.User{}
-	for _, op := range debtReturn {
-		users[op.Donor.ID] = *op.Donor
-		for _, r := range op.RecipientsWithSum {
-			users[r.User.ID] = r.User
-		}
-	}
-	// Остатки в пределах рубля не превращаем в долги: усечение копеек при
-	// делении долей (100/3 и т.п.) накапливает у участника до рубля пыли,
-	// неотличимой по значению от честной переплаты в 1 ₽. Осознанно жертвуем
-	// максимум рублём на участника, чтобы не показывать людям долги «верни 1 ₽»
-	// из округлений — develop в этой ситуации выбрасывал переплату целиком
-	var leftover []*UserBalance
-	for uid, b := range returned {
-		if b > 1 || b < -1 {
-			leftover = append(leftover, &UserBalance{user: users[uid], balance: b})
-		}
-	}
-	result = append(result, settleBalances(leftover)...)
-
-	for _, ub := range leftover {
-		if ub.balance > 5 {
-			log.Printf("cannot calculate debts, sum is %f", ub.balance)
-		}
-	}
-	return mergeDebtPairs(result), nil
-}
-
-// mergeDebtPairs суммирует долги с одинаковой парой должник-кредитор: развёртка
-// остатков возвратов может выдать пару, которая уже есть в списке из трат
-// (например, кредитор перевёл деньги своему же должнику операцией возврата)
-func mergeDebtPairs(debts []api.Debt) []api.Debt {
-	type pair struct{ debtorID, lenderID int }
-	seen := map[pair]int{}
-	var merged []api.Debt
-	for _, d := range debts {
-		p := pair{d.Debtor.ID, d.Lender.ID}
-		if i, ok := seen[p]; ok {
-			merged[i].Sum += d.Sum
-			continue
-		}
-		seen[p] = len(merged)
-		merged = append(merged, d)
-	}
-	return merged
-}
-
-func getMin(f ...float64) float64 {
-	min := f[0]
-	for _, v := range f {
-		if v < min {
-			min = v
-		}
-	}
-	return min
-}
-
-func isUserBalanceValid(userBalance map[int]float64) bool {
-	var sum float64
+// isUserBalanceValid — предохранитель на легаси-данных. Балансы участников
+// обязаны сходиться в ноль: каждая операция добавляет донору ровно столько,
+// сколько снимает с получателей. Ненулевая сумма означает, что доли в документе
+// не сходятся с итогом и FillMoney не смог вывести их заново, — на таких данных
+// долги не считаются вовсе (debtsUnavailable), а не считаются «примерно».
+//
+// Прежнее `sum < 1` было допуском на float-шум; в целых минорных допуск не нужен.
+func isUserBalanceValid(userBalance map[int]int64) bool {
+	var sum int64
 	for _, ub := range userBalance {
-		sum += ub
+		var overflow bool
+		if sum, overflow = addChecked(sum, ub); overflow {
+			return false
+		}
 	}
-	return sum < 1
+	return sum == 0
 }
 
-func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, error) {
+// addChecked складывает минорные единицы, сообщая о переполнении вместо тихого
+// заворота по кругу.
+func addChecked(a, b int64) (int64, bool) {
+	if b > 0 && a > math.MaxInt64-b {
+		return 0, true
+	}
+	if b < 0 && a < math.MinInt64-b {
+		return 0, true
+	}
+	return a + b, false
+}
+
+func calculateDebt(users map[int]api.User, ops []api.Operation, step int64) ([]api.Debt, error) {
 
 	balance, err := calculateUserBalance(ops)
 	if err != nil {
@@ -430,18 +351,18 @@ func calculateDebt(users map[int]api.User, ops []api.Operation) ([]api.Debt, err
 		usrBl = append(usrBl, &UserBalance{user: users[uid], balance: b})
 	}
 
-	return settleBalances(usrBl), nil
+	return settleBalances(usrBl, step), nil
 }
 
 // settleBalances жадно сводит балансы к нулю: самый крупный кредитор получает
 // от самого крупного должника, пока есть кому платить. Балансы в usrBl
 // обнуляются по ходу работы.
-func settleBalances(usrBl []*UserBalance) []api.Debt {
+func settleBalances(usrBl []*UserBalance, step int64) []api.Debt {
 	var debts []api.Debt
 	// лимит итераций — от числа участников, а не константа 100: каждая итерация
 	// обнуляет баланс хотя бы одного из двух участников, поэтому шагов не больше
 	// len(usrBl); жёсткие 100 молча обрывали список долгов в больших комнатах
-	for i := 0; hasDebt(usrBl) && i < len(usrBl); i++ {
+	for i := 0; hasDebt(usrBl, step) && i < len(usrBl); i++ {
 		sort.Slice(usrBl, func(i, j int) bool {
 			if usrBl[i].balance > usrBl[j].balance {
 				return true
@@ -450,26 +371,42 @@ func settleBalances(usrBl []*UserBalance) []api.Debt {
 			}
 			return false
 		})
-		// платить некому: не осталось отрицательного баланса хотя бы на рубль
-		// (с учётом float-шума долей) — без этой проверки repayment спарил бы
-		// кредитора с самим собой
-		if moneyToInt(-usrBl[len(usrBl)-1].balance) < 1 {
+		// платить некому: отрицательного баланса не осталось вовсе — без этой
+		// проверки repayment спарил бы кредитора с самим собой. Прежний порог в
+		// рубль скрывал float-шум долей; на точных минорных единицах шума нет.
+		if -usrBl[len(usrBl)-1].balance < step {
 			break
 		}
 		debt := repayment(usrBl[0], usrBl[len(usrBl)-1])
-		if debt.Sum != 0 {
+		// По ТОЧНОЙ величине, а не по округлённой проекции: в тусе с копейками
+		// долг в одну копейку проецируется в ноль рублей, и проверка по Sum
+		// выбрасывала бы его.
+		if debt.SumMinor >= step {
 			debts = append(debts, debt)
 		}
 	}
 	return debts
 }
 
-func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
-	balance := map[int]float64{}
+// calculateUserBalance считает балансы в минорных единицах: сколько человек
+// внёс сверх того, что на него записано. Источник — минорные поля операции
+// (FillMoney достраивает их на чтении), а не старые дробные.
+//
+// Сложения проверяемые: испорченное записанное sum_minor способно завернуть
+// баланс по кругу и ложно пройти проверку схождения — тогда люди увидят долги,
+// выведенные из мусора. Финансовому ядру лучше отказаться считать.
+func calculateUserBalance(ops []api.Operation) (map[int]int64, error) {
+	balance := map[int]int64{}
 	for _, op := range ops {
-		balance[op.Donor.ID] += float64(op.Sum)
+		var overflow bool
+		if balance[op.Donor.ID], overflow = addChecked(balance[op.Donor.ID], op.SumMinorOrLegacy()); overflow {
+			return nil, errors.New("cannot calculate debts: money value out of range")
+		}
 		for _, recipient := range op.RecipientsWithSum {
-			balance[recipient.User.ID] -= recipient.Sum
+			id := recipient.User.ID
+			if balance[id], overflow = addChecked(balance[id], -recipient.SumMinorOrLegacy()); overflow {
+				return nil, errors.New("cannot calculate debts: money value out of range")
+			}
 		}
 		//на время тестов оставил
 		if !isUserBalanceValid(balance) {
@@ -480,22 +417,19 @@ func calculateUserBalance(ops []api.Operation) (map[int]float64, error) {
 }
 
 func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
-	var sum float64
-	if lender.balance < -debtor.balance {
-		sum = lender.balance
-	} else {
-		sum = -debtor.balance
-	}
+	sum := min(lender.balance, -debtor.balance)
 
 	lender.balance -= sum
 	debtor.balance += sum
 
-	return api.Debt{Lender: &lender.user, Debtor: &debtor.user, Sum: moneyToInt(sum)}
+	return api.NewDebt(&lender.user, &debtor.user, sum)
 }
 
-func hasDebt(balance []*UserBalance) bool {
+// hasDebt — есть ли кому платить. Порог — шаг тусы: в тусе с копейками долгом
+// считается и одна копейка, в рублёвой — только целый рубль.
+func hasDebt(balance []*UserBalance, step int64) bool {
 	for _, b := range balance {
-		if b.balance >= 1 {
+		if b.balance >= step {
 			return true
 		}
 	}
@@ -503,8 +437,10 @@ func hasDebt(balance []*UserBalance) bool {
 }
 
 type UserBalance struct {
-	user    api.User
-	balance float64
+	user api.User
+	// balance — минорные единицы: положительный означает «внёс больше, чем на
+	// него записано», то есть ему должны.
+	balance int64
 }
 
 func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (int, error) {
@@ -512,13 +448,13 @@ func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (i
 	if err != nil {
 		return 0, err
 	}
-	var totalSpendSum int
+	var totalSpendSum int64
 	for _, v := range *room.Operations {
 		if v.Status == "active" && !v.IsDebtRepayment {
-			totalSpendSum += v.Sum
+			totalSpendSum += v.SumMinorOrLegacy()
 		}
 	}
-	return totalSpendSum, nil
+	return api.FromMinor(totalSpendSum), nil
 }
 
 func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, roomId string) (int, error) {
@@ -526,30 +462,17 @@ func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, room
 	if err != nil {
 		return 0, err
 	}
-	var totalUserSpendSum float64
+	var totalUserSpendSum int64
 	for _, v := range *room.Operations {
 		if v.Status == "active" && !v.IsDebtRepayment && containsUserId(v.RecipientsWithSum, userId) {
 			for _, r := range v.RecipientsWithSum {
 				if r.User.ID == userId {
-					totalUserSpendSum += r.Sum
+					totalUserSpendSum += r.SumMinorOrLegacy()
 				}
 			}
 		}
 	}
-	return moneyToInt(totalUserSpendSum), nil
-}
-
-// moneyToInt переводит float-сумму в целые рубли, поглощая накопленную
-// float-погрешность: у операций бота в recipients_with_sum лежат дробные доли
-// (100/3 = 33.33…), и шесть операций по 13 ₽ на троих давали баланс 25.999999…,
-// который int() усекал до 25 при точном долге 26. Честные дробные остатки
-// (0.6 ₽) по-прежнему усекаются вниз — семантика develop сохранена
-func moneyToInt(f float64) int {
-	r := math.Round(f)
-	if math.Abs(f-r) < 1e-6 {
-		return int(r)
-	}
-	return int(f)
+	return api.FromMinor(totalUserSpendSum), nil
 }
 
 func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (int, error) {
@@ -557,11 +480,11 @@ func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (i
 	if err != nil {
 		return 0, err
 	}
-	var allDebtsSum int
+	var allDebtsSum int64
 	for _, v := range debts {
-		allDebtsSum += v.Sum
+		allDebtsSum += v.SumMinor
 	}
-	return allDebtsSum, nil
+	return api.FromMinor(allDebtsSum), nil
 }
 
 func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
@@ -569,17 +492,17 @@ func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int
 	if err != nil {
 		return 0, 0, err
 	}
-	var debtorSum int
-	var lenderSum int
+	var debtorSum int64
+	var lenderSum int64
 	for _, v := range *debts {
 		if v.Debtor.ID == userId {
-			debtorSum += v.Sum
+			debtorSum += v.SumMinor
 		}
 		if v.Lender.ID == userId {
-			lenderSum += v.Sum
+			lenderSum += v.SumMinor
 		}
 	}
-	return debtorSum, lenderSum, nil
+	return api.FromMinor(debtorSum), api.FromMinor(lenderSum), nil
 }
 
 func containsUserId(users []api.RecipientWithSum, id int) bool {
@@ -599,7 +522,7 @@ func (s RoomStateService) DefinePaidOfDebtsUserIdsAndSave(ctx context.Context, r
 			return err
 		}
 		for _, v := range debts {
-			if v.Sum != 0 {
+			if v.SumMinor != 0 {
 				*room.Members = deleteUser(*room.Members, v.Debtor.ID)
 			}
 		}
