@@ -3,5 +3,5 @@
   "keywords": "group,trip,roommate,debt,friends,travel,budget,receipt,tab,iou,owe,splitter,rent,dinner,tracker",
   "promotionalText": "Say the expense out loud or snap the receipt — Splitor works out who owes whom and turns five transfers into one. Free, no ads, works offline.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• Yen, yuan, won and real — you can now run a group in the currency of Japan, China, Korea or Brazil\n• Notifications arrive in your phone’s language, not the language of whoever added the expense\n• Fixed duplicate notifications: one expense no longer arrives twice\n• The app now speaks five more languages: Japanese, Korean, Chinese, Portuguese and Italian"
+  "whatsNew": "• Fixed how debts are calculated. Repayments were not always credited: after paying someone back, the debt could linger or reappear. That is fixed — in some groups the amounts will change for the better.\n• Cents. Groups in dollars and euros now count and show amounts to the cent; groups in whole currencies are unchanged. The switch is in group settings.\n\nIf Splitor has been useful, please rate it on the App Store — that is how we get found by everyone still splitting bills in a notes app."
 }

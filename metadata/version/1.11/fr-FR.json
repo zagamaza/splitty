@@ -3,5 +3,5 @@
   "keywords": "addition,groupe,voyage,coloc,dette,rembourser,amis,budget,ticket,note,vacances,cagnotte,resto,loyer",
   "promotionalText": "Dites la dépense ou photographiez le ticket : Splitor calcule qui doit quoi à qui et transforme cinq virements en un. Gratuit, sans pub, hors ligne.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• Yen, yuan, won et réal : vous pouvez désormais tenir un groupe dans la monnaie du Japon, de la Chine, de la Corée ou du Brésil\n• Les notifications arrivent dans la langue de votre téléphone, et non dans celle de la personne qui a ajouté la dépense\n• Notifications en double corrigées : une dépense n’arrive plus deux fois\n• L’application parle cinq langues de plus : japonais, coréen, chinois, portugais et italien"
+  "whatsNew": "• Correction du calcul des dettes. Les remboursements n'étaient pas toujours pris en compte : après avoir rendu l'argent, la dette pouvait subsister ou réapparaître. C'est corrigé — dans certains groupes, les montants changeront.\n• Les centimes. Les groupes en dollars et en euros calculent et affichent les montants au centime ; les autres restent inchangés. Le réglage est dans les paramètres du groupe.\n\nSi Splitor vous a été utile, notez-le sur l'App Store."
 }

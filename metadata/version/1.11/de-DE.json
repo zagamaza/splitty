@@ -3,5 +3,5 @@
   "keywords": "rechnung,gruppe,reise,wg,schulden,ausgleich,freunde,budget,beleg,urlaub,mitbewohner,abrechnung,essen",
   "promotionalText": "Ausgabe ansagen oder Beleg fotografieren — Splitor rechnet aus, wer wem was schuldet, und macht aus fünf Überweisungen eine. Kostenlos, werbefrei, offline.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• Yen, Yuan, Won und Real — Sie können eine Gruppe jetzt in der Währung Japans, Chinas, Koreas oder Brasiliens führen\n• Benachrichtigungen kommen in der Sprache Ihres Telefons an, nicht in der Sprache dessen, der die Ausgabe eingetragen hat\n• Doppelte Benachrichtigungen behoben: eine Ausgabe kommt nicht mehr zweimal an\n• Die App spricht fünf weitere Sprachen: Japanisch, Koreanisch, Chinesisch, Portugiesisch und Italienisch"
+  "whatsNew": "• Die Schuldenberechnung wurde korrigiert. Rückzahlungen wurden nicht immer angerechnet: Nach einer Zahlung konnte die Schuld bestehen bleiben oder erneut auftauchen. Das ist behoben — in einigen Gruppen ändern sich die Beträge.\n• Cent-Beträge. Gruppen in Dollar und Euro rechnen und zeigen jetzt auf den Cent genau; Gruppen in ganzen Einheiten bleiben unverändert. Der Schalter steht in den Gruppeneinstellungen.\n\nWenn Ihnen Splitor geholfen hat, bewerten Sie die App bitte im App Store."
 }

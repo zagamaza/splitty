@@ -220,3 +220,52 @@ func TestGetUserCostsSumFloatNoise(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 24, got)
 }
+
+// Долг в тусе без копеек ОБЯЗАН быть кратен рублю — иначе его не погасить.
+//
+// Бот пишет доли вроде 3,50 (35 на десятерых) и 50,50 (101 на двоих), и они
+// сходятся с итогом до копейки, поэтому сохраняются как записанные. Но долг из
+// них не может отдать ни один клиент: бот и старые сборки шлют целое — больше
+// долга, новые шлют точное — дробную сумму, которую рублёвая туса не принимает.
+func TestWholeStepRoomDebtsArePayable(t *testing.T) {
+	cases := []struct {
+		name    string
+		sum     int
+		people  int
+		wantMax int64
+	}{
+		{"101 на двоих — доли по 50,50", 101, 2, 5100},
+		{"35 на десятерых — доли по 3,50", 35, 10, 3500},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			members := make([]api.User, tc.people)
+			for i := range members {
+				members[i] = api.User{ID: i + 1}
+			}
+			withSum := make([]api.RecipientWithSum, tc.people)
+			for i := range withSum {
+				withSum[i] = api.RecipientWithSum{
+					User: members[i],
+					Sum:  float64(tc.sum) / float64(tc.people),
+				}
+			}
+			op := api.Operation{
+				ID: primitive.NewObjectID(), Sum: tc.sum, Donor: &members[0],
+				RecipientsWithSum: withSum, Status: "active", SplitType: "equally",
+			}
+			// Комната рублёвая: признак копеек не выставлен, шаг — рубль.
+			debts, err := GetRoomDebts(moneyRoom(members, []api.Operation{op}))
+			assert.NoError(t, err)
+
+			for _, d := range debts {
+				assert.Zero(t, d.SumMinor%100,
+					"долг %d→%d = %d копеек, его не погасить ни одним клиентом",
+					d.Debtor.ID, d.Lender.ID, d.SumMinor)
+				assert.Equal(t, int64(d.Sum)*100, d.SumMinor,
+					"округлённая проекция разошлась с точной — клиенты покажут разное")
+			}
+		})
+	}
+}

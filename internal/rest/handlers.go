@@ -1431,7 +1431,11 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 // Только для равного деления: у деления по суммам вектор задаёт сам человек, и
 // если он прислал другие суммы, их и надо записать.
 func keepsRecordedShares(old *api.Operation, sumMinor int64, splitType api.SplitType, next []api.RecipientWithSum) bool {
-	if splitType != splitEqually || old.SplitType != splitEqually {
+	// У легаси-операций эпохи бота способ деления в документе пуст, а клиенту
+	// он отдаётся как equally: доли им синтезирует NormalizedOperation. Не
+	// признать их равными значило бы пересобирать доли при каждом переименовании
+	// именно у самых старых расходов.
+	if splitType != splitEqually || (old.SplitType != splitEqually && old.SplitType != "") {
 		return false
 	}
 	if old.SumMinorOrLegacy() != sumMinor || len(old.RecipientsWithSum) != len(next) {

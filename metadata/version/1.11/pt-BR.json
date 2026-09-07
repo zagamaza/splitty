@@ -3,5 +3,5 @@
   "keywords": "rachar,grupo,viagem,rateio,dívida,amigos,república,recibo,acerto,vaquinha,churrasco,pagar,aluguel",
   "promotionalText": "Fale a despesa em voz alta ou fotografe o recibo — o Splitor calcula quem deve a quem e transforma cinco transferências em uma. Grátis, sem anúncios, funciona offline.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• O app agora fala português: telas, dicas e mensagens de erro\n• As notificações também chegam no idioma do aparelho\n• Foto do grupo nos ajustes\n• Arquive um grupo com um toque longo no card\n• Avisos quando uma despesa é editada ou excluída\n• \"Relatar um problema\" direto no seu perfil"
+  "whatsNew": "• Corrigimos o cálculo das dívidas. Os pagamentos nem sempre eram considerados: depois de devolver o dinheiro, a dívida podia continuar ou reaparecer. Isso foi resolvido — em alguns grupos os valores vão mudar.\n• Centavos. Grupos em dólares e euros passam a calcular e mostrar os valores até o centavo; os demais seguem como antes. A chave está nas configurações do grupo.\n\nSe o Splitor foi útil para você, avalie-o na App Store."
 }

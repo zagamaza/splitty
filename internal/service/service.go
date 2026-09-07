@@ -377,7 +377,7 @@ func settleBalances(usrBl []*UserBalance, step int64) []api.Debt {
 		if -usrBl[len(usrBl)-1].balance < step {
 			break
 		}
-		debt := repayment(usrBl[0], usrBl[len(usrBl)-1])
+		debt := repayment(usrBl[0], usrBl[len(usrBl)-1], step)
 		// По ТОЧНОЙ величине, а не по округлённой проекции: в тусе с копейками
 		// долг в одну копейку проецируется в ноль рублей, и проверка по Sum
 		// выбрасывала бы его.
@@ -416,8 +416,19 @@ func calculateUserBalance(ops []api.Operation) (map[int]int64, error) {
 	return balance, nil
 }
 
-func repayment(lender *UserBalance, debtor *UserBalance) api.Debt {
+func repayment(lender *UserBalance, debtor *UserBalance, step int64) api.Debt {
 	sum := min(lender.balance, -debtor.balance)
+
+	// ⚠️ Долг обязан быть КРАТЕН шагу тусы. В рублёвой тусе долг 50,50 отдать
+	// нечем: бот и старые сборки шлют целое 51 — больше долга, а новые шлют
+	// точные 50,50 — дробную сумму, которую рублёвая туса не принимает. Долг,
+	// который не может погасить ни один клиент, хуже, чем недосведённые
+	// полтинники.
+	//
+	// Остаток остаётся в балансах и до долга не дорастает: порог в развёртке
+	// отсеивает всё меньше шага. Ровно эта семантика была у develop, где
+	// усечение делал moneyToInt.
+	sum -= sum % step
 
 	lender.balance -= sum
 	debtor.balance += sum

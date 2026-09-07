@@ -3,5 +3,5 @@
   "keywords": "gruppo,viaggio,coinquilini,debito,amici,saldo,scontrino,cassa,comune,vacanza,cena,rimborso,affitto",
   "promotionalText": "Di' la spesa ad alta voce o fotografa lo scontrino — Splitor calcola chi deve a chi e trasforma cinque bonifici in uno. Gratis, senza pubblicità, funziona offline.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• L'app ora parla italiano: schermate, suggerimenti e messaggi di errore\n• Anche le notifiche arrivano nella lingua del dispositivo\n• Foto del gruppo nelle impostazioni\n• Archivia un gruppo con un tocco prolungato sulla scheda\n• Avvisi quando una spesa viene modificata o eliminata\n• \"Segnala un problema\" direttamente nel profilo"
+  "whatsNew": "• Corretto il calcolo dei debiti. I rimborsi non venivano sempre conteggiati: dopo aver restituito il denaro, il debito poteva restare o ricomparire. Ora è risolto: in alcuni gruppi gli importi cambieranno.\n• I centesimi. I gruppi in dollari ed euro calcolano e mostrano gli importi al centesimo; gli altri restano invariati. L'interruttore è nelle impostazioni del gruppo.\n\nSe Splitor le è stato utile, lo valuti sull'App Store."
 }

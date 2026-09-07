@@ -3,5 +3,5 @@
   "keywords": "dividir,viaje,piso,deuda,saldar,amigos,presupuesto,recibo,cena,vacaciones,pagar,reparto,ticket,bote",
   "promotionalText": "Di el gasto en voz alta o fotografía el recibo: Splitor calcula quién debe a quién y convierte cinco transferencias en una. Gratis, sin anuncios, sin conexión.",
   "supportUrl": "https://t.me/split_money_bot",
-  "whatsNew": "• Yen, yuan, won y real: ahora puede llevar un grupo en la moneda de Japón, China, Corea o Brasil\n• Las notificaciones llegan en el idioma de su teléfono, no en el de quien añadió el gasto\n• Corregidas las notificaciones duplicadas: un gasto ya no llega dos veces\n• La aplicación habla cinco idiomas más: japonés, coreano, chino, portugués e italiano"
+  "whatsNew": "• Corregimos el cálculo de las deudas. Los pagos no siempre se descontaban: tras devolver el dinero, la deuda podía seguir ahí o reaparecer. Ya está resuelto: en algunos grupos los importes cambiarán.\n• Céntimos. Los grupos en dólares y euros calculan y muestran los importes al céntimo; los demás siguen igual. El interruptor está en los ajustes del grupo.\n\nSi Splitor le ha resultado útil, valórelo en el App Store."
 }
