@@ -347,12 +347,30 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		return
 	}
 
+	sumMinor, fits := api.ToMinorChecked(u.ChatState.CallbackData.Page)
+	if !fits {
+		log.Error().Msgf("сумма расхода не помещается в копейки: %d", u.ChatState.CallbackData.Page)
+		return
+	}
+
 	recipientsWithSum := make([]api.RecipientWithSum, 0)
 	var splitType api.SplitType
 	if u.Button.CallbackData.ExternalData == string(equally) {
 		splitType = equally
-		for _, user := range *room.Members {
-			recipientsWithSum = append(recipientsWithSum, api.RecipientWithSum{User: user, Sum: float64(u.ChatState.CallbackData.Page) / float64(len(*room.Members))})
+		// ⚠️ Делим ТЕМ ЖЕ шагом, что и приложение. Раньше бот писал доли как
+		// float64(sum)/n — те самые 33,333… — и в одной тусе расход из
+		// приложения делился до копейки, а из бота по рублю. Обещание «расходы
+		// разделятся до копейки» нарушалось ровно там, где человек его проверял.
+		members := *room.Members
+		step := api.ShareStepFor(api.RoomFractional(room))
+		for i, user := range members {
+			share := api.ShareOfMinorStep(sumMinor, len(members), i, step)
+			minor := share
+			recipientsWithSum = append(recipientsWithSum, api.RecipientWithSum{
+				User:     user,
+				Sum:      float64(share) / float64(api.MinorFactor),
+				SumMinor: &minor,
+			})
 		}
 	} else {
 		splitType = by_exact_amount
@@ -362,6 +380,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		ID:                primitive.NewObjectID(),
 		Description:       u.ChatState.CallbackData.ExternalData,
 		Sum:               u.ChatState.CallbackData.Page,
+		SumMinor:          &sumMinor,
 		Donor:             u.User,
 		RecipientsWithSum: recipientsWithSum,
 		CreateAt:          time.Now(),
@@ -2287,8 +2306,9 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
 		Sum:               sum,
+		SumMinor:          &sumMinor,
 		Donor:             donor,
-		RecipientsWithSum: []api.RecipientWithSum{{User: *recipient, Sum: float64(sum)}},
+		RecipientsWithSum: []api.RecipientWithSum{{User: *recipient, Sum: float64(sum), SumMinor: &sumMinor}},
 		IsDebtRepayment:   true,
 		Status:            active,
 		CreateAt:          time.Now(),

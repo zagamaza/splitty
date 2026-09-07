@@ -1105,6 +1105,17 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 
 	// копия до мутации — по диффу old/new собираются уведомления участникам
 	oldOp := *operation
+
+	// ⚠️ Правка, не тронувшая ни сумму, ни состав, НЕ пересобирает доли.
+	// Полный PUT приходит и когда человек всего лишь переименовал расход, а
+	// доли выводятся по ТЕКУЩЕМУ шагу тусы: включили копейки — и расход 100 на
+	// троих превратился бы из записанных 34+33+33 в 33,34+33,33+33,33, то есть
+	// переименование задним числом сдвинуло бы чьи-то долги. Интерфейс обещает
+	// обратное: уже записанное не меняется.
+	if keepsRecordedShares(&oldOp, newSumMinor, splitType, recipientsWithSum) {
+		recipientsWithSum = oldOp.RecipientsWithSum
+	}
+
 	operation.Description = req.Description
 	operation.Sum = newSum
 	operation.SumMinor = &newSumMinor
@@ -1407,6 +1418,26 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 			n.NotifyRepaymentCreated(nctx, room, op, author)
 		})
 	writeJSON(w, http.StatusCreated, toOperationDto(operation))
+}
+
+// keepsRecordedShares — правка не меняет исходные данные деления, значит
+// записанный вектор долей остаётся как есть.
+//
+// Только для равного деления: у деления по суммам вектор задаёт сам человек, и
+// если он прислал другие суммы, их и надо записать.
+func keepsRecordedShares(old *api.Operation, sumMinor int64, splitType api.SplitType, next []api.RecipientWithSum) bool {
+	if splitType != splitEqually || old.SplitType != splitEqually {
+		return false
+	}
+	if old.SumMinorOrLegacy() != sumMinor || len(old.RecipientsWithSum) != len(next) {
+		return false
+	}
+	for i := range next {
+		if old.RecipientsWithSum[i].User.ID != next[i].User.ID {
+			return false
+		}
+	}
+	return true
 }
 
 // repaymentOverpaid распознаёт переплату после вставки погашения: проходит ли
