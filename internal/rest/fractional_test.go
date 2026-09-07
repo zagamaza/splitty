@@ -42,13 +42,12 @@ func setFractional(t *testing.T, s *Server, roomId, body string) *roomDetailDto 
 
 // Включение и выключение копеек — обычная настройка: суммы не меняются.
 func TestSetFractionalDoesNotChangeAmounts(t *testing.T) {
-	// Серверный рубильник — над настройкой тусы: без него признак не читается.
-	api.SetFractionalInput(true)
+	// Серверный рубильник ставится из конфига сервера (см. NewServer).
 	defer api.SetFractionalInput(false)
 
 	room := fractionalRoom("USD", false)
 	repo := newFakeRoomRepo(room)
-	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)
 
 	before := readTotal(t, s, room.ID.Hex())
 
@@ -85,7 +84,7 @@ func readTotal(t *testing.T, s *Server, roomId string) int {
 // У иены дробной части нет: включить копейки нельзя, и отказ объясняет причину.
 func TestSetFractionalRejectedForCurrencyWithoutIt(t *testing.T) {
 	room := fractionalRoom("JPY", false)
-	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
 
 	rec := doRequest(t, s, http.MethodPut, "/api/v1/rooms/"+room.ID.Hex()+"/fractional",
 		mustToken(t, s, testUser1.ID), `{"fractional":true}`)
@@ -131,5 +130,38 @@ func TestChangeCurrencyTurnsFractionOff(t *testing.T) {
 	}
 	if got := readTotal(t, s, room.ID.Hex()); got != before {
 		t.Errorf("сумма изменилась от смены валюты: %d, было %d", got, before)
+	}
+}
+
+// Пока рубильник выключен, настройка копеек не записывается вовсе.
+//
+// В клиентах переключатель скрыт, но прямой запрос молча положил бы в документ
+// «копейки включены», ответ вернул бы «выключены» — и настройка сработала бы
+// сама в тот день, когда рубильник поднимут.
+func TestFractionalSettingRejectedWhileFlagOff(t *testing.T) {
+	room := fractionalRoom("USD", false)
+	repo := newFakeRoomRepo(room)
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/fractional", token, `{"fractional":true}`)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+
+	saved := repo.rooms[room.ID.Hex()]
+	if saved.FractionalAmounts != nil && *saved.FractionalAmounts {
+		t.Error("настройка записалась при выключенном рубильнике — включится сама при его подъёме")
+	}
+
+	// Долларовая туса отдаётся как туса БЕЗ копеек, хотя валюта включает их
+	// умолчанием: иначе клиент показал бы дробную клавиатуру, а сервер отверг бы
+	// дробную сумму.
+	detail := doRequest(t, s, http.MethodGet, "/api/v1/rooms/"+room.ID.Hex(), token, "")
+	var dto roomDetailDto
+	if err := json.Unmarshal(detail.Body.Bytes(), &dto); err != nil {
+		t.Fatalf("не разобрал комнату: %v", err)
+	}
+	if dto.Fractional {
+		t.Error("долларовая туса объявлена дробной при выключенном рубильнике")
 	}
 }

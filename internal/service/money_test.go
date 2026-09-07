@@ -273,3 +273,53 @@ func TestWholeStepRoomDebtsArePayable(t *testing.T) {
 		})
 	}
 }
+
+// Евровая туса при ВЫКЛЮЧЕННОМ рубильнике ведёт себя как рублёвая.
+//
+// У евро копейки включены умолчанием валюты, поэтому без рубильника выкатка
+// одного бэкенда сделала бы долги дробными до выхода новых сборок: старая
+// показала бы долг 20,50 € как 21 € и не смогла бы его погасить.
+func TestEuroRoomIsWholeWhileFlagOff(t *testing.T) {
+	api.SetFractionalInput(false)
+
+	members := []api.User{{ID: 1}, {ID: 2}}
+	ops := []api.Operation{{
+		ID: primitive.NewObjectID(), Sum: 41, Donor: &members[0],
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: members[0], Sum: 20.5},
+			{User: members[1], Sum: 20.5},
+		},
+		Status: "active", SplitType: "equally",
+	}}
+	room := api.Room{ID: primitive.NewObjectID(), Currency: "EUR", Members: &members, Operations: &ops}
+
+	assert.False(t, api.RoomFractional(&room), "евровая туса считает копейки при выключенном рубильнике")
+
+	debts, err := GetRoomDebts(room)
+	assert.NoError(t, err)
+	assert.Len(t, debts, 1)
+	assert.Equal(t, int64(2000), debts[0].SumMinor, "долг не усечён до целого евро")
+	assert.Equal(t, 20, debts[0].Sum, "проекция разошлась с точной величиной")
+}
+
+// Долг ровно в один шаг доживает до ответа, меньше шага — исчезает.
+func TestDebtOfExactlyOneStepSurvives(t *testing.T) {
+	api.SetFractionalInput(false)
+
+	members := []api.User{{ID: 1}, {ID: 2}, {ID: 3}}
+	// 3 на троих поровну — долгов нет; 4 на троих даёт по рублю двоим.
+	ops := []api.Operation{{
+		ID: primitive.NewObjectID(), Sum: 4, Donor: &members[0],
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: members[0]}, {User: members[1]}, {User: members[2]},
+		},
+		Status: "active", SplitType: "equally",
+	}}
+	debts, err := GetRoomDebts(moneyRoom(members, ops))
+	assert.NoError(t, err)
+
+	assert.Len(t, debts, 2, "долги ровно в рубль отсеялись порогом")
+	for _, d := range debts {
+		assert.Equal(t, int64(100), d.SumMinor, "долг %d→%d не равен рублю", d.Debtor.ID, d.Lender.ID)
+	}
+}

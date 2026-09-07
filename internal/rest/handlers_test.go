@@ -1122,7 +1122,10 @@ func TestUpdateCurrency(t *testing.T) {
 
 // (к) GET /currencies — справочник валют для пикера в стабильном порядке
 func TestCurrenciesDictionary(t *testing.T) {
-	s := newTestServer(Config{}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	// Умолчания валют имеют силу только при поднятом рубильнике: иначе
+	// справочник обещал бы копейки там, где сервер их не примет.
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1), newFakeRoomRepo())
+	defer api.SetFractionalInput(false)
 
 	// как и весь API — только с токеном
 	rec := doRequest(t, s, http.MethodGet, "/api/v1/currencies", "", "")
@@ -1137,19 +1140,19 @@ func TestCurrenciesDictionary(t *testing.T) {
 		t.Fatalf("cannot parse currencies %q: %v", rec.Body.String(), err)
 	}
 	want := []currencyInfoDto{
-		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺", Fractional: false, SupportsFraction: true},
-		{Code: "USD", Symbol: "$", Flag: "🇺🇸", Fractional: true, SupportsFraction: true},
-		{Code: "EUR", Symbol: "€", Flag: "🇪🇺", Fractional: true, SupportsFraction: true},
+		{Code: "RUB", Symbol: "₽", Flag: "🇷🇺", Fractional: false, SupportsFraction: true, FractionalInput: true},
+		{Code: "USD", Symbol: "$", Flag: "🇺🇸", Fractional: true, SupportsFraction: true, FractionalInput: true},
+		{Code: "EUR", Symbol: "€", Flag: "🇪🇺", Fractional: true, SupportsFraction: true, FractionalInput: true},
 		// Валюты рынков, на языки которых переведено приложение: японец видел
 		// свою комнату в долларах, потому что иены в справочнике не было.
 		// У иены и воны дробной части нет в обороте.
-		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵", Fractional: false, SupportsFraction: false},
-		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳", Fractional: true, SupportsFraction: true},
-		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷", Fractional: false, SupportsFraction: false},
-		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷", Fractional: true, SupportsFraction: true},
-		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩", Fractional: false, SupportsFraction: true},
-		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿", Fractional: false, SupportsFraction: true},
-		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿", Fractional: false, SupportsFraction: true},
+		{Code: "JPY", Symbol: "¥", Flag: "🇯🇵", Fractional: false, SupportsFraction: false, FractionalInput: true},
+		{Code: "CNY", Symbol: "¥", Flag: "🇨🇳", Fractional: true, SupportsFraction: true, FractionalInput: true},
+		{Code: "KRW", Symbol: "₩", Flag: "🇰🇷", Fractional: false, SupportsFraction: false, FractionalInput: true},
+		{Code: "BRL", Symbol: "R$", Flag: "🇧🇷", Fractional: true, SupportsFraction: true, FractionalInput: true},
+		{Code: "IDR", Symbol: "Rp", Flag: "🇮🇩", Fractional: false, SupportsFraction: true, FractionalInput: true},
+		{Code: "KZT", Symbol: "₸", Flag: "🇰🇿", Fractional: false, SupportsFraction: true, FractionalInput: true},
+		{Code: "UZS", Symbol: "сум", Flag: "🇺🇿", Fractional: false, SupportsFraction: true, FractionalInput: true},
 	}
 	if len(currencies) != len(want) {
 		t.Fatalf("currencies = %+v, want %+v", currencies, want)

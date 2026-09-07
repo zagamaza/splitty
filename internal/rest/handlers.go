@@ -573,6 +573,14 @@ func (s *Server) handleUpdateFractional(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "validation", "не указано, считать ли копейки")
 		return
 	}
+	// ⚠️ Пока серверный рубильник выключен, настройку НЕ ЗАПИСЫВАЕМ. Иначе
+	// прямой запрос (в клиентах переключатель скрыт) молча положил бы в документ
+	// «копейки включены», ответ вернул бы «выключены» — и настройка сработала бы
+	// сама в тот день, когда рубильник поднимут.
+	if !api.FractionalInputEnabled() {
+		writeError(w, http.StatusConflict, "conflict", "копейки пока недоступны")
+		return
+	}
 	if *req.Fractional && !api.SupportsFraction(roomCurrencyCode(room)) {
 		writeError(w, http.StatusBadRequest, "validation", "у этой валюты нет дробной части")
 		return
@@ -603,9 +611,11 @@ func (s *Server) handleCurrencies(w http.ResponseWriter, _ *http.Request) {
 			Code:             info.Code,
 			Symbol:           info.Symbol,
 			Flag:             info.Flag,
-			Fractional:       info.FractionalDefault,
+			// Умолчание валюты имеет силу только при поднятом рубильнике: иначе
+			// справочник обещал бы копейки там, где сервер их не примет.
+			Fractional:       info.FractionalDefault && api.FractionalInputEnabled(),
 			SupportsFraction: info.SupportsFraction,
-			FractionalInput:  s.cfg.FractionalInput,
+			FractionalInput:  api.FractionalInputEnabled(),
 		})
 	}
 	writeJSON(w, http.StatusOK, currencies)
@@ -959,7 +969,7 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
-	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
+	fractional := api.RoomFractional(room)
 	if len(req.Items) > 0 {
 		// Позиции чека пока считаются целыми единицами (Задача 7): дробную
 		// цену на этом входе отвергает resolveItemsScale
@@ -1087,7 +1097,7 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
-	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
+	fractional := api.RoomFractional(room)
 	if len(req.Items) > 0 {
 		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
@@ -1280,7 +1290,7 @@ func (s *Server) handleCreateRepayment(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, toOperationDto(existing))
 		return
 	}
-	fractional := api.RoomFractional(room) && s.cfg.FractionalInput
+	fractional := api.RoomFractional(room)
 	sumMinor, hErr := resolveAmount("sum", req.Sum, req.SumMinor, fractional)
 	if hErr != nil {
 		hErr.write(w)
