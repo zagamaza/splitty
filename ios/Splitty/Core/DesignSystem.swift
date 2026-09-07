@@ -150,21 +150,30 @@ struct MoneyText: View {
         case neutral
     }
 
+    /// Округлённая сумма — она же семантика знака (кому должны).
     let amount: Int
+    /// Точная величина в минорных единицах; nil — вызывающий её не знает, и
+    /// показывается целое.
+    var exactMinorValue: Int?
     var role: Role = .auto
     var size: CGFloat = 17
     var weight: Font.Weight = .semibold
     /// Валюта суммы (код контракта); символ рисуется как у рублей: «1 234 $».
     var currency: String = "RUB"
 
+    /// Точная величина в копейках: переданная, иначе выведенная из целой.
+    var exactMinor: Int { exactMinorValue ?? amount * minorFactor }
+
     init(
         _ amount: Int,
+        exactMinor: Int? = nil,
         role: Role = .auto,
         size: CGFloat = 17,
         weight: Font.Weight = .semibold,
         currency: String = "RUB"
     ) {
         self.amount = amount
+        self.exactMinorValue = exactMinor
         self.role = role
         self.size = size
         self.weight = weight
@@ -186,7 +195,7 @@ struct MoneyText: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Text(money(abs(amount), currency: currency))
+        Text(money(minor: abs(exactMinor), currency: currency))
             .scaledFont(size: size, weight: weight)
             .monospacedDigit()
             .foregroundStyle(color)

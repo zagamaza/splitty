@@ -165,6 +165,13 @@ struct Debt: Codable, Identifiable, Hashable {
     let debtor: User
     let lender: User
     let sum: Int
+    /// Точная величина долга в МИНОРНЫХ единицах. Показывать надо её: `sum` —
+    /// округлённая проекция, и долг 20,80 в ней выглядит как 21.
+    /// nil — ответ сервера прежней версии.
+    var sumMinor: Int? = nil
+
+    /// Точная величина в копейках: записанная, иначе выведенная из целой.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 
     var id: String { "\(debtor.id)->\(lender.id)" }
 }
@@ -202,6 +209,9 @@ struct OperationRecipient: Codable, Hashable, Identifiable {
     /// предпочитать её: `sum` выше — округлённая проекция для сборок, которые
     /// про минорные не знают. nil — ответ сервера прежней версии.
     var sumMinor: Int? = nil
+
+    /// Точная доля в копейках: записанная, иначе выведенная из целой.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 
     var id: Int { user.id }
 }
@@ -323,6 +333,10 @@ struct Operation: Codable, Identifiable, Hashable {
     /// Точная сумма в МИНОРНЫХ единицах шкалы группы; `sum` выше —
     /// округлённая проекция. nil — ответ сервера прежней версии.
     var sumMinor: Int? = nil
+
+    /// Точная сумма в копейках: записанная, иначе выведенная из целой.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
+
     let isDebtRepayment: Bool
     /// Кто заплатил.
     let donor: User
@@ -561,6 +575,10 @@ private func splitSurcharge(_ price: Int, _ rule: String?, _ base: [Int: Int]) -
 struct CurrencySum: Codable, Hashable {
     let currency: String
     let sum: Int
+    /// Точная величина в минорных единицах; `sum` — округлённая проекция.
+    var sumMinor: Int? = nil
+
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 /// Валюта из справочника GET /currencies: код, символ и флаг для пикера.
@@ -736,6 +754,10 @@ struct FriendRoomBalance: Codable, Identifiable, Hashable {
     /// Валюта комнаты.
     let currency: String
     let balance: Int
+    /// Точная величина баланса в минорных единицах; `balance` — проекция.
+    var balanceMinor: Int? = nil
+
+    var exactMinor: Int { balanceMinor ?? balance * minorFactor }
 
     var id: String { roomId }
 }

@@ -231,7 +231,7 @@ private struct ActivityRow: View {
         let donor = Text(op.donor.displayName).fontWeight(.semibold)
         if op.isDebtRepayment {
             // «заплатил(а) вам» — когда кредитор текущий пользователь; иначе имя без склонения.
-            let sum = Text(money(op.sum, currency: item.roomCurrency))
+            let sum = Text(money(minor: op.exactMinor, currency: item.roomCurrency))
                 .fontWeight(.semibold)
                 .monospacedDigit()
             if let lender = op.recipients.first?.user, lender.id == myUserId {

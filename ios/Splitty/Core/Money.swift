@@ -5,7 +5,7 @@ import SwiftUI
 /// Раньше разделитель тысяч и место символа валюты склеивались руками: всегда
 /// пробел и всегда символ справа. Это русский формат — человек с английским
 /// интерфейсом видел «1 234 567 $» вместо «$1,234,567».
-private enum MoneyFormat {
+enum MoneyFormat {
     private static var cache: [String: NumberFormatter] = [:]
     private static let lock = NSLock()
 
@@ -116,6 +116,33 @@ let minorFactor = 100
 /// возникает — там ничего и не изменится.
 func money(minor: Int, currency: String) -> String {
     money(minor: minor, currency: currency, fractional: minor % minorFactor != 0)
+}
+
+/// Разбирает введённую человеком сумму в МИНОРНЫЕ единицы: `"20,80"` и
+/// `"20.80"` → `2080`, `"21"` → `2100`.
+///
+/// Оба разделителя принимаются намеренно: запятую даёт русская клавиатура,
+/// точку — цифровая панель и большинство раскладок, и человек не обязан гадать,
+/// какая из них «правильная». Дробная часть длиннее двух знаков — не сумма.
+func minorFromInput(_ text: String) -> Int? {
+    let trimmed = text.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")
+    if trimmed.isEmpty { return nil }
+    let parts = trimmed.split(separator: ".", omittingEmptySubsequences: false)
+    guard parts.count <= 2, let units = Int(parts[0]), units >= 0 else { return nil }
+    if parts.count == 1 { return units * minorFactor }
+    let fraction = parts[1]
+    guard !fraction.isEmpty, fraction.count <= 2, fraction.allSatisfy(\.isNumber),
+          let value = Int(fraction) else { return nil }
+    // «20.8» — это 80 копеек, а не 8.
+    return units * minorFactor + (fraction.count == 1 ? value * 10 : value)
+}
+
+/// Готовит сумму для поля ввода: `2080` → `"20,80"`, `2100` → `"21"`.
+/// Разделитель — из локали, чтобы человек увидел привычный ему знак.
+func inputTextFromMinor(_ minor: Int) -> String {
+    if minor % minorFactor == 0 { return String(minor / minorFactor) }
+    let separator = MoneyFormat.locale.decimalSeparator ?? ","
+    return String(format: "%d%@%02d", minor / minorFactor, separator, abs(minor % minorFactor))
 }
 
 /// Форматирует сумму в рублях: `1234567` → `"1 234 567 ₽"` (обёртка money(_, "RUB")).

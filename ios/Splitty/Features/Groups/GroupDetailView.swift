@@ -90,6 +90,7 @@ struct GroupDetailView: View {
                     SettleUpView(
                         roomId: roomId,
                         currency: model.room?.currency ?? "RUB",
+                        fractional: model.room?.fractional ?? false,
                         preselectedDebt: myDebts.count == 1 ? myDebts.first : nil
                     )
                 }
@@ -710,9 +711,9 @@ private struct OperationRow: View {
             return nil
         }
         if operation.donor.id == currentUserId {
-            return String(localized: "Вы заплатили \(money(operation.sum, currency: currency))")
+            return String(localized: "Вы заплатили \(money(minor: operation.exactMinor, currency: currency))")
         }
-        return String(localized: "\(operation.donor.displayName) заплатил(а) \(money(operation.sum, currency: currency))")
+        return String(localized: "\(operation.donor.displayName) заплатил(а) \(money(minor: operation.exactMinor, currency: currency))")
     }
 
     /// Моя позиция по операции: >0 — одолжил, <0 — должен, nil — не участвую.

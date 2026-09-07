@@ -8,6 +8,8 @@ struct SettleUpView: View {
     private let roomId: String
     /// Валюта комнаты — в ней долг и сумма платежа.
     private let currency: String
+    /// Туса считает копейки: тогда в поле принимается дробная сумма.
+    private let fractional: Bool
     private let preselectedDebt: Debt?
     private let onDone: (() -> Void)?
 
@@ -29,15 +31,17 @@ struct SettleUpView: View {
     init(
         roomId: String,
         currency: String,
+        fractional: Bool = false,
         preselectedDebt: Debt? = nil,
         onDone: (() -> Void)? = nil
     ) {
         self.roomId = roomId
         self.currency = currency
+        self.fractional = fractional
         self.preselectedDebt = preselectedDebt
         self.onDone = onDone
         _selectedDebt = State(initialValue: preselectedDebt)
-        _sumText = State(initialValue: preselectedDebt.map { String($0.sum) } ?? "")
+        _sumText = State(initialValue: preselectedDebt.map { inputTextFromMinor($0.exactMinor) } ?? "")
     }
 
     /// nil, пока профиль не загружен. Фейковый `?? 0` делал `debt.debtor.id ==
@@ -168,6 +172,7 @@ struct SettleUpView: View {
                     .lineLimit(2)
                 MoneyText(
                     debt.sum,
+                    exactMinor: debt.exactMinor,
                     role: debt.debtor.id == meId ? .negative : .positive,
                     size: 16,
                     currency: currency
@@ -273,12 +278,12 @@ struct SettleUpView: View {
                     .scaledFont(size: 42, weight: .semibold, relativeTo: .title)
                     .monospacedDigit()
                     .foregroundStyle(Color.ink)
-                    .keyboardType(.numberPad)
+                    .keyboardType(fractional ? .decimalPad : .numberPad)
                     .multilineTextAlignment(.center)
                     .focused($isSumFocused)
                     .fixedSize()
                     .onChange(of: sumText) { _, newValue in
-                        let filtered = String(newValue.filter(\.isNumber).prefix(9))
+                        let filtered = filterSumInput(newValue)
                         if filtered != newValue {
                             sumText = filtered
                         }
@@ -293,13 +298,13 @@ struct SettleUpView: View {
                 .frame(height: 1)
                 .frame(maxWidth: 160)
 
-            if let sum = Int(sumText), sum > debt.sum {
-                Text("Не больше долга: \(money(debt.sum, currency: currency))")
+            if let minor = minorFromInput(sumText), minor > debt.exactMinor {
+                Text("Не больше долга: \(money(minor: debt.exactMinor, currency: currency))")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.negativeText)
             } else {
-                Text("Долг: \(money(debt.sum, currency: currency))")
+                Text("Долг: \(money(minor: debt.exactMinor, currency: currency))")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
@@ -308,16 +313,41 @@ struct SettleUpView: View {
         .surfaceCard(padding: 20)
     }
 
+    /// В тусе без копеек в поле только цифры. В тусе с копейками пропускаем
+    /// ОДИН разделитель и не больше двух знаков после него: третий знак — уже
+    /// не сумма, и молча его отбрасывать хуже, чем не дать набрать.
+    private func filterSumInput(_ text: String) -> String {
+        guard fractional else { return String(text.filter(\.isNumber).prefix(9)) }
+        var out = ""
+        var separatorSeen = false
+        var afterSeparator = 0
+        for ch in text {
+            if ch.isNumber {
+                if separatorSeen {
+                    if afterSeparator == 2 { continue }
+                    afterSeparator += 1
+                }
+                out.append(ch)
+            } else if (ch == "," || ch == ".") && !separatorSeen && !out.isEmpty {
+                separatorSeen = true
+                out.append(ch)
+            }
+        }
+        return String(out.prefix(12))
+    }
+
+    /// Сравниваем по ТОЧНОЙ величине: округлённый долг 20,80 равен 21, и по нему
+    /// платёж на 21 прошёл бы с переплатой в 20 копеек.
     private func isSumValid(debt: Debt) -> Bool {
-        guard let sum = Int(sumText) else { return false }
-        return sum >= 1 && sum <= debt.sum
+        guard let minor = minorFromInput(sumText) else { return false }
+        return minor >= 1 && minor <= debt.exactMinor
     }
 
     // MARK: Действия
 
     private func select(_ debt: Debt) {
         selectedDebt = debt
-        sumText = String(debt.sum)
+        sumText = inputTextFromMinor(debt.exactMinor)
     }
 
     private func loadDebts() async {
@@ -342,7 +372,7 @@ struct SettleUpView: View {
         // Погашения офлайн не работают (зафиксированный дизайн v1):
         // CTA задизейблен с подписью-причиной, это молчаливая страховка.
         guard session.isOnline else { return }
-        guard let sum = Int(sumText), isSumValid(debt: debt) else { return }
+        guard let sumMinor = minorFromInput(sumText), isSumValid(debt: debt) else { return }
         isSaving = true
         defer { isSaving = false }
         do {
@@ -350,8 +380,8 @@ struct SettleUpView: View {
                 roomId: roomId,
                 debtorId: debt.debtor.id,
                 lenderId: debt.lender.id,
-                sum: sum,
-                clientOpId: idempotency.key(debtorId: debt.debtor.id, lenderId: debt.lender.id, sum: sum)
+                sumMinor: sumMinor,
+                clientOpId: idempotency.key(debtorId: debt.debtor.id, lenderId: debt.lender.id, sum: sumMinor)
             )
             Analytics.shared.track(.settleUpDone)
             ReviewPrompt.shared.note(.debtSettled)

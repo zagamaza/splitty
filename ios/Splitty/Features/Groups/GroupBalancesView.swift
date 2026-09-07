@@ -84,7 +84,7 @@ struct GroupBalancesView: View {
         .background(Color.bg)
         .errorAlert($alertMessage)
         .sheet(item: $settleDebt) { debt in
-            SettleUpView(roomId: room.id, currency: room.currency, preselectedDebt: debt) {
+            SettleUpView(roomId: room.id, currency: room.currency, fractional: room.fractional, preselectedDebt: debt) {
                 onChange()
                 // В embedded-режиме экран остаётся: данные перечитаются
                 // через session.dataVersion; sheet закрываем только сам.

@@ -872,18 +872,20 @@ final class APIClient: OperationAPI {
         roomId: String,
         debtorId: Int,
         lenderId: Int,
-        sum: Int,
+        sumMinor: Int,
         clientOpId: String
     ) async throws -> Operation {
+        // Шлём ТОЧНУЮ величину: старое целое поле сервер выведет сам, а платёж
+        // на 20,80 в нём превратился бы в 21.
         struct Body: Encodable {
             let debtorId: Int
             let lenderId: Int
-            let sum: Int
+            let sumMinor: Int
             let clientOpId: String
         }
         return try await request(
             "POST", "/api/v1/rooms/\(roomId)/repayments",
-            body: Body(debtorId: debtorId, lenderId: lenderId, sum: sum, clientOpId: clientOpId)
+            body: Body(debtorId: debtorId, lenderId: lenderId, sumMinor: sumMinor, clientOpId: clientOpId)
         )
     }
 
