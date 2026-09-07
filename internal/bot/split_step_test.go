@@ -26,6 +26,10 @@ func TestBotSplitsWithRoomStep(t *testing.T) {
 		{"туса с копейками — копеечный шаг", true, []int64{3334, 3333, 3333}},
 	}
 
+	// Серверный рубильник включён: здесь проверяется настройка самой тусы.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			fractional := tc.fractional

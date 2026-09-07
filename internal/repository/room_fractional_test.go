@@ -113,6 +113,10 @@ func TestSetRoomFractionalDoesNotTouchMoney(t *testing.T) {
 
 // Признак читается обратно из документа.
 func TestSetRoomFractionalPersists(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	db := testDB(t)
 	repo := NewRoomRepository(db)
 
@@ -362,6 +366,10 @@ func equalInt64(a, b []int64) bool {
 // Старая туса без поля currency — исторический рубль, у которого копейки есть.
 // Фильтр обязан её находить, иначе включение отвечает ложным отказом.
 func TestSetRoomFractionalWorksForRoomWithoutCurrencyField(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	db := testDB(t)
 	repo := NewRoomRepository(db)
 

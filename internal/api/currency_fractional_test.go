@@ -54,6 +54,11 @@ func TestCurrenciesWithoutMinorUnit(t *testing.T) {
 }
 
 func TestRoomFractional(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы; здесь проверяется сама
+	// настройка, поэтому он включён.
+	SetFractionalInput(true)
+	defer SetFractionalInput(false)
+
 	yes, no := true, false
 
 	// Явная настройка сильнее умолчания валюты — в обе стороны
@@ -76,5 +81,23 @@ func TestRoomFractional(t *testing.T) {
 	}
 	if RoomFractional(nil) {
 		t.Error("nil: want false")
+	}
+}
+
+// Выключённый серверный признак гасит копейки везде, даже там, где валюта
+// включает их умолчанием. Без этого выкатка бэкенда сама по себе делала бы
+// долги в евровых тусах дробными — и старая сборка не смогла бы их погасить.
+func TestServerFlagOverridesRoom(t *testing.T) {
+	SetFractionalInput(false)
+	yes := true
+
+	if RoomFractional(&Room{Currency: "EUR"}) {
+		t.Error("евровая туса считает копейки при выключенном признаке")
+	}
+	if RoomFractional(&Room{Currency: "USD", FractionalAmounts: &yes}) {
+		t.Error("явно включённые копейки переживают выключенный признак сервера")
+	}
+	if ShareStepFor(RoomFractional(&Room{Currency: "EUR"})) != MinorFactor {
+		t.Error("шаг деления не стал целым при выключенном признаке")
 	}
 }

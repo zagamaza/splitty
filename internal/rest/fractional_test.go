@@ -42,6 +42,10 @@ func setFractional(t *testing.T, s *Server, roomId, body string) *roomDetailDto 
 
 // Включение и выключение копеек — обычная настройка: суммы не меняются.
 func TestSetFractionalDoesNotChangeAmounts(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	room := fractionalRoom("USD", false)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)

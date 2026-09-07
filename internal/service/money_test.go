@@ -130,6 +130,10 @@ func TestDebtsWholeStepCannotSplitOneUnit(t *testing.T) {
 // Долг ровно в одну минорную единицу доживает до ответа: прежние пороги
 // сравнивали деньги с рублём и такой долг отсеивали.
 func TestDebtsSingleMinorUnitSurvives(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	a := api.Operation{
 		ID:    primitive.NewObjectID(),
 		Sum:   1,

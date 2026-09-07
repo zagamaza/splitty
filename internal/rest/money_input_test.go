@@ -162,6 +162,10 @@ func TestFractionalRejectedWhileFlagOff(t *testing.T) {
 
 // Признак включён — те же дроби принимаются, и доли сходятся с суммой точно.
 func TestFractionalAcceptedWhileFlagOn(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	room := fractionalRoom("USD", true)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)
@@ -195,6 +199,10 @@ func TestFractionalAcceptedWhileFlagOn(t *testing.T) {
 // Сверка долей идёт в минорных единицах: в целых 10,40 + 10,40 округлились бы
 // до 10 + 10 и разошлись бы с суммой 20,80 на ровном месте.
 func TestExactSharesCheckedInMinorUnits(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	room := fractionalRoom("USD", true)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
 
@@ -244,6 +252,10 @@ func TestLegacyOnlyRequestStillWorks(t *testing.T) {
 // сходиться между собой: 20,80 с долями 10,40 + 10,40 давал раньше итог 21 и
 // доли 10 + 10 — единица исчезала прямо в ответе.
 func TestLegacyProjectionOfFractionalSharesSumsToTotal(t *testing.T) {
+	// Серверный рубильник — над настройкой тусы: без него признак не читается.
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
 	room := fractionalRoom("USD", true)
 	repo := newFakeRoomRepo(room)
 	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), repo)

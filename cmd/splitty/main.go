@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/almaznur91/splitty/internal/ai"
+	"github.com/almaznur91/splitty/internal/api"
 	"github.com/almaznur91/splitty/internal/dailyexpenses"
 	"github.com/almaznur91/splitty/internal/metrics"
 	"github.com/almaznur91/splitty/internal/oidc"
@@ -206,12 +207,17 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	var tokenCutoff time.Time
 	if v := strings.TrimSpace(cfg.TokenMinIssuedAt); v != "" {
 		parsed, err := time.Parse(time.RFC3339, v)
+
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("TOKEN_MIN_ISSUED_AT: %w", err)
 		}
 		tokenCutoff = parsed
 		log.Warn().Msgf("токены, выпущенные до %s, отвергаются: все, кто вошёл раньше, разлогинены", parsed)
 	}
+
+	// Рубильник дробного ввода ставится ДО первого расчёта долгов: от него
+	// зависит шаг, которым делятся доли и квантуются долги.
+	api.SetFractionalInput(cfg.FractionalInput)
 
 	restCfg := rest.Config{
 		Listen:          cfg.Listen,
