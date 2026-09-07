@@ -202,6 +202,8 @@ dependencies {
 
     implementation(libs.datastore.preferences)
     implementation(libs.billing.ktx)
+    // Просьба оценить приложение из самого приложения (Play In-App Review).
+    implementation(libs.play.review.ktx)
 
     // Вход через Google: системный выбор аккаунта (Credential Manager) +
     // провайдер Play Services под ним + разбор GoogleIdTokenCredential.

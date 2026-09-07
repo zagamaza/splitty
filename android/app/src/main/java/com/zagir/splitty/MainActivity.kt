@@ -15,10 +15,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.play.core.ktx.launchReview
+import com.google.android.play.core.ktx.requestReview
+import com.google.android.play.core.review.ReviewManagerFactory
 import androidx.compose.runtime.CompositionLocalProvider
 import com.zagir.splitty.core.auth.TelegramAuthBus
 import com.zagir.splitty.core.auth.TelegramWebAuth
+import com.zagir.splitty.core.review.ReviewPrompt
 import com.zagir.splitty.core.session.PendingJoinStore
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.AvatarStore
@@ -64,6 +71,9 @@ class MainActivity : ComponentActivity() {
     /** Переход по тапу на push-уведомление (исполняет MainScaffold). */
     @Inject lateinit var pushEventBus: PushEventBus
 
+    /** Просьба оценить приложение: считает ViewModel, показывает Activity. */
+    @Inject lateinit var reviewPrompt: ReviewPrompt
+
     /**
      * Скоуп приложения для записи диплинка: на `lifecycleScope` запись в
      * DataStore отменялась вместе с активити. Ровно этот путь и рвётся чаще
@@ -89,6 +99,7 @@ class MainActivity : ComponentActivity() {
             handleDeepLink(intent)
             handlePushTap(intent)
         }
+        observeReviewPrompt()
         setContent {
             val session by sessionStore.state.collectAsStateWithLifecycle()
             val darkTheme = when (session?.theme) {
@@ -99,6 +110,28 @@ class MainActivity : ComponentActivity() {
             SplittyTheme(darkTheme = darkTheme) {
                 CompositionLocalProvider(LocalAvatarStore provides avatarStore) {
                     AppRoot()
+                }
+            }
+        }
+    }
+
+    /**
+     * Показ системного листа оценки. Только пока Activity в резюме: лист
+     * поверх уходящего экрана Play не покажет, а квоту израсходует.
+     */
+    private fun observeReviewPrompt() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                reviewPrompt.isEarned.collect { isEarned ->
+                    if (!isEarned) return@collect
+                    reviewPrompt.markAsked()
+                    val manager = ReviewManagerFactory.create(this@MainActivity)
+                    // Play молчит и при исчерпанной квоте, и когда человек уже
+                    // оценил: отличить это от сбоя нельзя, поэтому сбой глотаем.
+                    runCatching {
+                        val info = manager.requestReview()
+                        manager.launchReview(this@MainActivity, info)
+                    }.onFailure { Log.w(TAG, "не удалось показать лист оценки", it) }
                 }
             }
         }

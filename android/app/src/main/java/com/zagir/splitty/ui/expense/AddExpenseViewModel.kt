@@ -4,6 +4,7 @@ import com.zagir.splitty.core.analytics.analyticsItemsBucket
 import com.zagir.splitty.core.analytics.analyticsParseReason
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import com.zagir.splitty.core.analytics.Analytics
+import com.zagir.splitty.core.review.ReviewPrompt
 import com.zagir.splitty.R
 import com.zagir.splitty.core.ui.UiText
 import androidx.lifecycle.SavedStateHandle
@@ -673,6 +674,7 @@ class AddExpenseViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val subscriptions: SubscriptionRepository,
     private val analytics: Analytics,
+    private val reviewPrompt: ReviewPrompt,
     networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
@@ -1445,6 +1447,7 @@ class AddExpenseViewModel @Inject constructor(
                         edited = editedAfterParse,
                     ),
                 )
+                reviewPrompt.note(ReviewPrompt.Moment.EXPENSE_ADDED)
             } catch (e: CancellationException) {
                 throw e // отмена — не ошибка
             } catch (e: ApiException) {

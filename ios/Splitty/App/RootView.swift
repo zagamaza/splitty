@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 
 /// Корневой экран: таб-бар для авторизованного пользователя, иначе логин.
@@ -6,6 +7,7 @@ import SwiftUI
 /// и после, и переживает переключение логин ↔ табы.
 struct RootView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.requestReview) private var requestReview
 
     /// Комната, в которую вступили по ссылке — открывается поверх табов.
     @State private var joinedRoom: JoinedRoom?
@@ -63,6 +65,17 @@ struct RootView: View {
         .onChange(of: session.isPurgePending) { _, isPending in
             if isPending {
                 Task { await session.finishPendingPurge() }
+            }
+        }
+        // Просьба оценить приложение. Пауза — не косметика: момент случается на
+        // листе (погашение, добавление расхода), и системный диалог, показанный
+        // поверх закрывающегося листа, не появится вовсе.
+        .onChange(of: ReviewPrompt.shared.isEarned) { _, isEarned in
+            guard isEarned else { return }
+            ReviewPrompt.shared.markAsked()
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                requestReview()
             }
         }
         .fullScreenCover(item: $joinedRoom) { room in

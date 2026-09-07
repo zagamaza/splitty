@@ -11,6 +11,7 @@ import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.network.NetworkMonitor
+import com.zagir.splitty.core.review.ReviewPrompt
 import com.zagir.splitty.core.network.ParseApi
 import com.zagir.splitty.core.network.SplittyApi
 import com.zagir.splitty.core.session.SessionStore
@@ -122,6 +123,7 @@ class AddExpenseCaptureRoutingTest {
         return AddExpenseViewModel(
             repository, session, outbox, syncer, SavedStateHandle(), subscriptions,
             testAnalytics(dir, SplittyJson, session, scope),
+            ReviewPrompt(dataStore, scope),
             NetworkMonitor(context),
         )
     }

@@ -354,6 +354,7 @@ struct SettleUpView: View {
                 clientOpId: idempotency.key(debtorId: debt.debtor.id, lenderId: debt.lender.id, sum: sum)
             )
             Analytics.shared.track(.settleUpDone)
+            ReviewPrompt.shared.note(.debtSettled)
             Haptics.success()
             // Единая инвалидация: списки и экран группы перезагрузятся по dataVersion.
             session.noteDataChanged()

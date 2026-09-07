@@ -1071,6 +1071,7 @@ final class AddExpenseViewModel {
             }
             didSave = true
             Analytics.shared.track(.expenseAdded(method: inputMethod, edited: editedAfterParse))
+            ReviewPrompt.shared.note(.expenseAdded)
             return true
         } catch let error as APIError {
             // Сервер недоступен или ответил 5xx: создание не теряем — кладём в
@@ -1084,6 +1085,7 @@ final class AddExpenseViewModel {
                 // Ушёл в очередь — для человека расход добавлен, и в воронке
                 // это тот же шаг: иначе офлайн выглядел бы обрывом.
                 Analytics.shared.track(.expenseAdded(method: inputMethod, edited: editedAfterParse))
+                ReviewPrompt.shared.note(.expenseAdded)
                 return true
             }
             alertMessage = humanErrorText(error)
