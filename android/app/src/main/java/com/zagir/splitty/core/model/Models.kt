@@ -3,6 +3,7 @@
 package com.zagir.splitty.core.model
 
 import com.zagir.splitty.core.money.MINOR_FACTOR
+import com.zagir.splitty.core.money.minorToUnitsRounded
 
 import androidx.annotation.StringRes
 import com.zagir.splitty.R
@@ -411,10 +412,18 @@ data class Operation(
      * >0 — одолжил, <0 — должен, 0 — расчёт, null — не участвует.
      * Донор: одолжил = [sum] − своя доля (если сам среди получателей).
      */
-    fun netPosition(userId: Long): Long? {
-        val myShare = recipientSum(userId)
+    fun netPosition(userId: Long): Long? = netPositionMinor(userId)?.let { minorToUnitsRounded(it) }
+
+    /**
+     * Та же позиция в МИНОРНЫХ единицах — точная.
+     *
+     * Разность округлений не равна округлению разности: у расхода 20,80 на
+     * двоих позиция донора выходила 21 − 10 = 11 вместо честных 10,40.
+     */
+    fun netPositionMinor(userId: Long): Long? {
+        val myShare = recipients.firstOrNull { it.user.id == userId }?.exactMinor
         return when {
-            donor.id == userId -> sum - (myShare ?: 0L)
+            donor.id == userId -> exactMinor - (myShare ?: 0L)
             myShare != null -> -myShare
             else -> null
         }
@@ -774,7 +783,14 @@ data class Statistics(
     val shareByMember: List<MemberSum> = emptyList(),
     /** Топ расходов по сумме, убывание. */
     val topOperations: List<TopOperation> = emptyList(),
-)
+    /** Те же итоги в МИНОРНЫХ единицах — точные; целые поля рядом округлены. */
+    val totalSpentMinor: Long? = null,
+    val monthSpentMinor: Long? = null,
+) {
+    /** Точные величины в копейках: записанные, иначе выведенные из целых. */
+    val exactTotalSpentMinor: Long get() = totalSpentMinor ?: (totalSpent * MINOR_FACTOR)
+    val exactMonthSpentMinor: Long get() = monthSpentMinor ?: (monthSpent * MINOR_FACTOR)
+}
 
 /** Ответ авторизации (/auth/code, /auth/dev). */
 @Serializable

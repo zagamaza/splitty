@@ -146,10 +146,10 @@ struct GroupTotalsView: View {
         return VStack(spacing: 16) {
             HStack(spacing: 16) {
                 statTile(title: "Всего потрачено", icon: "banknote") {
-                    MoneyText(stats.totalSpent, role: .neutral, size: 22, currency: stats.currency)
+                    MoneyText(stats.totalSpent, exactMinor: stats.exactTotalSpentMinor, role: .neutral, size: 22, currency: stats.currency)
                 }
                 statTile(title: "За \(Self.currentMonthName())", icon: "calendar") {
-                    MoneyText(stats.monthSpent, role: .neutral, size: 22, currency: stats.currency)
+                    MoneyText(stats.monthSpent, exactMinor: stats.exactMonthSpentMinor, role: .neutral, size: 22, currency: stats.currency)
                 }
             }
             HStack(spacing: 16) {

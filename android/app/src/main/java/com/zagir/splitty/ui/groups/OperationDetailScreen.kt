@@ -310,7 +310,7 @@ private fun OperationHeroCard(operation: Operation, currency: String) {
             }
         }
         Spacer(Modifier.height(14.dp))
-        MoneyText(operation.sum, role = MoneyRole.NEUTRAL, size = 40.sp, currency = currency)
+        MoneyText(operation.sum, exactMinor = operation.exactMinor, role = MoneyRole.NEUTRAL, size = 40.sp, currency = currency)
     }
 }
 
@@ -474,7 +474,7 @@ private fun DonorRow(operation: Operation, currency: String, meId: Long?) {
                 color = colors.inkSecondary,
             )
         }
-        MoneyText(operation.sum, role = MoneyRole.NEUTRAL, size = 15.sp, currency = currency)
+        MoneyText(operation.sum, exactMinor = operation.exactMinor, role = MoneyRole.NEUTRAL, size = 15.sp, currency = currency)
     }
 }
 
@@ -534,7 +534,7 @@ private fun RecipientRow(
                 color = colors.inkSecondary,
             )
         }
-        MoneyText(recipient.sum, role = role, size = 15.sp, currency = currency)
+        MoneyText(recipient.sum, exactMinor = recipient.exactMinor, role = role, size = 15.sp, currency = currency)
     }
 }
 

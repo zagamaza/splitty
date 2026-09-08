@@ -815,7 +815,9 @@ final class AddExpenseViewModel {
             // Локальная (неотправленная) запись outbox: prefill из payload.
             self.editEntry = editEntry
             descriptionText = payload.description
-            sumText = String(payload.sum)
+            // Из точной величины: округлённая потеряла бы копейки. У записей
+            // прежних сборок её нет, и тогда работает целое.
+            sumText = inputTextFromMinor(payload.sumMinor ?? payload.sum * minorFactor)
             payerId = payload.donorId
             if let sums = payload.recipientSums {
                 splitType = .byExactAmount

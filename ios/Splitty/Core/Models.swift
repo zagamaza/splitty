@@ -865,6 +865,11 @@ struct NotificationsFeed: Codable, Hashable {
 struct DailySum: Codable, Hashable {
     let date: String
     let sum: Int
+    /// Точная величина; `sum` — округлённая проекция.
+    var sumMinor: Int? = nil
+
+    /// Точная величина в копейках.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 extension DailySum {
@@ -886,14 +891,24 @@ extension DailySum {
 struct MonthlySum: Codable, Hashable {
     let month: String
     let sum: Int
+    /// Точная величина; `sum` — округлённая проекция.
+    var sumMinor: Int? = nil
+
+    /// Точная величина в копейках.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 /// Сумма участника («Кто платил» / «Чья доля»).
 struct MemberSum: Codable, Hashable, Identifiable {
     let user: User
     let sum: Int
+    /// Точная величина; `sum` — округлённая проекция.
+    var sumMinor: Int? = nil
 
     var id: Int { user.id }
+
+    /// Точная величина в копейках.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 /// Строка «Топ расходов».
@@ -901,8 +916,13 @@ struct TopOperation: Codable, Hashable, Identifiable {
     let id: String
     let description: String
     let sum: Int
+    /// Точная величина; `sum` — округлённая проекция.
+    var sumMinor: Int? = nil
     let donor: User
     let createdAt: Date
+
+    /// Точная величина в копейках.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 /// Статистика группы GET /rooms/{id}/statistics — данные дашборда «Итоги».
@@ -910,8 +930,11 @@ struct TopOperation: Codable, Hashable, Identifiable {
 struct Statistics: Codable, Hashable {
     let currency: String
     let totalSpent: Int
+    /// Те же суммы в МИНОРНЫХ единицах — точные; целые поля рядом округлены.
+    var totalSpentMinor: Int? = nil
     /// Потрачено за текущий календарный месяц.
     let monthSpent: Int
+    var monthSpentMinor: Int? = nil
     /// Траты по дням (дни без трат сервер может опускать — клиент дополняет нулями).
     let byDay: [DailySum]
     /// Траты по календарным месяцам: ровно 6 месяцев включая текущий,
@@ -925,11 +948,14 @@ struct Statistics: Codable, Hashable {
     let shareByMember: [MemberSum]
     /// Топ расходов по сумме, убывание.
     let topOperations: [TopOperation]
+    /// Точные величины в копейках: записанные, иначе выведенные из целых.
+    var exactTotalSpentMinor: Int { totalSpentMinor ?? totalSpent * minorFactor }
+    var exactMonthSpentMinor: Int { monthSpentMinor ?? monthSpent * minorFactor }
 }
 
 extension Statistics {
     private enum CodingKeys: String, CodingKey {
-        case currency, totalSpent, monthSpent, byDay, byMonth, operationCount
+        case currency, totalSpent, totalSpentMinor, monthSpent, monthSpentMinor, byDay, byMonth, operationCount
         case paidByMember, shareByMember, topOperations
     }
 
@@ -940,7 +966,9 @@ extension Statistics {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         currency = try container.decode(String.self, forKey: .currency)
         totalSpent = try container.decode(Int.self, forKey: .totalSpent)
+        totalSpentMinor = try container.decodeIfPresent(Int.self, forKey: .totalSpentMinor)
         monthSpent = try container.decode(Int.self, forKey: .monthSpent)
+        monthSpentMinor = try container.decodeIfPresent(Int.self, forKey: .monthSpentMinor)
         byDay = try container.decode([DailySum].self, forKey: .byDay)
         byMonth = try container.decodeIfPresent([MonthlySum].self, forKey: .byMonth) ?? []
         operationCount = try container.decodeIfPresent(Int.self, forKey: .operationCount) ?? 0

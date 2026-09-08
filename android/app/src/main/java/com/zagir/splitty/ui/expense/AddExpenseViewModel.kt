@@ -32,6 +32,7 @@ import com.zagir.splitty.core.model.personShares
 import com.zagir.splitty.core.model.shareList
 import com.zagir.splitty.core.money.MINOR_FACTOR
 import com.zagir.splitty.core.money.filterAmountInput
+import com.zagir.splitty.core.money.inputTextFromMinor
 import com.zagir.splitty.core.money.minorFromInput
 import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
@@ -916,7 +917,9 @@ class AddExpenseViewModel @Inject constructor(
             showsRoomPicker = false,
             meId = meId,
             description = payload.description,
-            sumText = payload.sum.toString(),
+            // Из точной величины по той же причине; у записей прежних сборок
+            // её нет, и тогда работает целое.
+            sumText = inputTextFromMinor(payload.sumMinor ?: (payload.sum * MINOR_FACTOR)),
             payerId = payload.donorId,
             recipientIds = editRecipientOrder.toSet(),
             splitType = payload.splitType,
@@ -942,7 +945,10 @@ class AddExpenseViewModel @Inject constructor(
             editRecipientOrder = operation.recipients.map { it.user.id }
             form = form.copy(
                 description = operation.description,
-                sumText = operation.sum.toString(),
+                // Из ТОЧНОЙ величины: округлённая записала бы 21 вместо 20,80
+                // при простом переименовании, и предохранитель сервера этого не
+                // ловит — сборка честно шлёт округлённую сумму как точную.
+                sumText = inputTextFromMinor(operation.exactMinor),
                 payerId = operation.donor.id,
                 recipientIds = editRecipientOrder.toSet(),
                 splitType = operation.splitType ?: SplitType.EQUALLY,

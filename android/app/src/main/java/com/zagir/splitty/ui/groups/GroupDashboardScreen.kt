@@ -364,6 +364,7 @@ private fun StatTiles(stats: Statistics) {
             ) {
                 MoneyText(
                     stats.totalSpent,
+                    exactMinor = stats.exactTotalSpentMinor,
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,
@@ -378,6 +379,7 @@ private fun StatTiles(stats: Statistics) {
             ) {
                 MoneyText(
                     stats.monthSpent,
+                    exactMinor = stats.exactMonthSpentMinor,
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,

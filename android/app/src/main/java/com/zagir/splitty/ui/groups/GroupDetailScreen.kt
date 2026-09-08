@@ -1369,7 +1369,7 @@ private fun DebtRow(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                MoneyText(debt.sum, role = role, size = 15.sp, currency = currency)
+                MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, currency = currency)
             }
         }
         if (involvesMe) {
