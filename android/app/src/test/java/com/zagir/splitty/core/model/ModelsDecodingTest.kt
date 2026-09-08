@@ -250,7 +250,7 @@ class ModelsDecodingTest {
         assertEquals("RUB", friend.rooms.first().currency)
         // totals — агрегированные: по убыванию |суммы|.
         assertEquals(
-            listOf(CurrencySum("USD", -1100), CurrencySum("RUB", 500)),
+            listOf(CurrencySum("USD", -1100, -110_000), CurrencySum("RUB", 500, 50_000)),
             friend.totals,
         )
     }
@@ -404,7 +404,10 @@ class ModelsDecodingTest {
     fun `OperationBody serializes exactly one split mode`() {
         val equally = SplittyJson.encodeToString(
             OperationBody.serializer(),
-            OperationBody.of("Ужин", 1200, 123, ExpenseSplit.Equally(listOf(123, 456))),
+            OperationBody.of(
+                description = "Ужин", sum = 1200, donorId = 123,
+                split = ExpenseSplit.Equally(listOf(123, 456)),
+            ),
         )
         assertTrue("recipientIds" in equally)
         assertFalse("recipientSums" in equally)
@@ -412,8 +415,8 @@ class ModelsDecodingTest {
         val exact = SplittyJson.encodeToString(
             OperationBody.serializer(),
             OperationBody.of(
-                "Отель", 1200, 123,
-                ExpenseSplit.ByExactAmount(
+                description = "Отель", sum = 1200, donorId = 123,
+                split = ExpenseSplit.ByExactAmount(
                     listOf(RecipientSum(123, 700), RecipientSum(456, 500))
                 ),
             ),

@@ -67,7 +67,7 @@ class GroupDashboardChartsTest {
         val share = listOf(member(1, 2000), member(2, 2000), member(3, 2000))
         val nets = memberNetBalances(paid, share)
         assertEquals(listOf(1L, 2L, 3L), nets.map { it.id })
-        assertEquals(listOf(2000L, -1000L, -1000L), nets.map { it.net })
+        assertEquals(listOf(200_000L, -100_000L, -100_000L), nets.map { it.netMinor })
         // Ничья по net (участники 2 и 3) — стабильный порядок по id.
         assertEquals("U2", nets[1].label)
     }
@@ -79,9 +79,9 @@ class GroupDashboardChartsTest {
         val share = listOf(member(1, 100, "Алмаз"), member(3, 700, "Алмаз"))
         val nets = memberNetBalances(paid, share)
         assertEquals(3, nets.size)
-        assertEquals(400, nets.first { it.id == 1L }.net)
-        assertEquals(300, nets.first { it.id == 2L }.net)
-        assertEquals(-700, nets.first { it.id == 3L }.net)
+        assertEquals(40_000, nets.first { it.id == 1L }.netMinor)
+        assertEquals(30_000, nets.first { it.id == 2L }.netMinor)
+        assertEquals(-70_000, nets.first { it.id == 3L }.netMinor)
         // Тёзки различимы: второй «Алмаз» по сортировке получает « (2)».
         assertEquals(
             listOf("Алмаз", "Алмаз (2)"),
@@ -104,9 +104,9 @@ class GroupDashboardChartsTest {
             )
         )
         assertEquals(7, totals.size)
-        assertEquals(140L, totals[0]) // пн
-        assertEquals(7L, totals[1]) // вт
-        assertEquals(300L, totals[6]) // вс
+        assertEquals(14_000L, totals[0]) // пн
+        assertEquals(700L, totals[1]) // вт
+        assertEquals(30_000L, totals[6]) // вс
         assertEquals(listOf(0L, 0L, 0L, 0L), totals.subList(2, 6)) // ср–сб пустые
     }
 
@@ -118,7 +118,7 @@ class GroupDashboardChartsTest {
 
     @Test
     fun `donut keeps six or fewer bars as is`() {
-        val bars = (1L..6L).map { MemberBar(id = it, label = "U$it", sum = 100 * it) }
+        val bars = (1L..6L).map { MemberBar(id = it, label = "U$it", sumMinor = 100 * it) }
         val (visible, othersSum) = foldDonutBars(bars)
         assertEquals(bars, visible)
         assertEquals(0L, othersSum)
@@ -127,10 +127,10 @@ class GroupDashboardChartsTest {
     @Test
     fun `donut folds more than six bars into top five plus others`() {
         // Уже по убыванию (как из preparedMemberBars): 800, 700, … 100.
-        val bars = (8 downTo 1).map { MemberBar(id = it.toLong(), label = "U$it", sum = it * 100L) }
+        val bars = (8 downTo 1).map { MemberBar(id = it.toLong(), label = "U$it", sumMinor = it * 100L) }
         val (visible, othersSum) = foldDonutBars(bars)
         assertEquals(5, visible.size)
-        assertEquals(listOf(800L, 700L, 600L, 500L, 400L), visible.map { it.sum })
+        assertEquals(listOf(800L, 700L, 600L, 500L, 400L), visible.map { it.sumMinor })
         assertEquals(300L + 200L + 100L, othersSum)
     }
 
@@ -148,5 +148,42 @@ class GroupDashboardChartsTest {
         assertEquals(48, percentOf(4500, 9400))
         assertEquals(100, percentOf(9400, 9400))
         assertEquals(0, percentOf(1, 0))
+    }
+
+    // MARK: Дробные величины
+
+    @Test
+    fun `net balances keep fractional values`() {
+        // Долг 0,25 на округлённых величинах читается нулём — человек в плюсе
+        // выглядел бы «в расчёте».
+        val paid = listOf(MemberSum(User(1L, null, "U1"), sum = 0, sumMinor = 25))
+        val share = listOf(MemberSum(User(2L, null, "U2"), sum = 0, sumMinor = 25))
+        val nets = memberNetBalances(paid, share)
+        assertEquals(listOf(25L, -25L), nets.map { it.netMinor })
+    }
+
+    @Test
+    fun `weekday totals sum exact values`() {
+        // Сумма точных, а не сумма округлений: два раза по 0,25 — это 0,50.
+        val totals = weekdayTotals(
+            listOf(
+                DailySum("2026-01-05", 0, 25),
+                DailySum("2026-01-12", 0, 25),
+            )
+        )
+        assertEquals(50L, totals[0])
+    }
+
+    @Test
+    fun `prepared member bars order by exact value`() {
+        val bars = preparedMemberBars(
+            listOf(
+                MemberSum(User(1L, null, "U1"), sum = 10, sumMinor = 1040),
+                MemberSum(User(2L, null, "U2"), sum = 10, sumMinor = 1041),
+            )
+        )
+        // Округлённые обе равны 10 — порядок решает точная величина.
+        assertEquals(listOf(2L, 1L), bars.map { it.id })
+        assertEquals(listOf(1041L, 1040L), bars.map { it.sumMinor })
     }
 }

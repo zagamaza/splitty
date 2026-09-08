@@ -114,9 +114,10 @@ final class MoneyTests: XCTestCase {
             CurrencySum(currency: "RUB", sum: 300),
         ])
         // USD |−1200| > RUB |800|: основная валюта — с наибольшим модулем.
+        // Итог несёт ТОЧНУЮ величину: сумма округлений не равна округлению суммы.
         XCTAssertEqual(totals, [
-            CurrencySum(currency: "USD", sum: -1200),
-            CurrencySum(currency: "RUB", sum: 800),
+            CurrencySum(currency: "USD", sum: -1200, sumMinor: -120_000),
+            CurrencySum(currency: "RUB", sum: 800, sumMinor: 80_000),
         ])
     }
 
@@ -126,7 +127,7 @@ final class MoneyTests: XCTestCase {
             CurrencySum(currency: "RUB", sum: -500),
             CurrencySum(currency: "EUR", sum: 10),
         ])
-        XCTAssertEqual(totals, [CurrencySum(currency: "EUR", sum: 10)])
+        XCTAssertEqual(totals, [CurrencySum(currency: "EUR", sum: 10, sumMinor: 1_000)])
     }
 
     func testAggregateEmptyInputIsEmpty() {
@@ -140,8 +141,8 @@ final class MoneyTests: XCTestCase {
             CurrencySum(currency: "EUR", sum: -100),
         ])
         XCTAssertEqual(totals, [
-            CurrencySum(currency: "EUR", sum: -100),
-            CurrencySum(currency: "USD", sum: 100),
+            CurrencySum(currency: "EUR", sum: -100, sumMinor: -10_000),
+            CurrencySum(currency: "USD", sum: 100, sumMinor: 10_000),
         ])
     }
 
@@ -155,7 +156,7 @@ final class MoneyTests: XCTestCase {
             ],
             rooms: []
         )
-        XCTAssertEqual(friend.totals, [CurrencySum(currency: "USD", sum: -70)])
+        XCTAssertEqual(friend.totals, [CurrencySum(currency: "USD", sum: -70, sumMinor: -7_000)])
     }
 
     // Цветовое правило денег живёт в MoneyText.Role (DesignSystem.swift) —

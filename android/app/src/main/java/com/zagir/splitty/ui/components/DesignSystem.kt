@@ -234,9 +234,11 @@ fun MoneyText(
         MoneyRole.POSITIVE -> colors.accent
         MoneyRole.NEGATIVE -> colors.negative
         MoneyRole.NEUTRAL -> colors.ink
+        // Знак берётся у ТОЧНОЙ величины: у округлённой долг 0,25 читается
+        // нулём, и честный плюс красился бы «в расчёте».
         MoneyRole.AUTO -> when {
-            amount > 0 -> colors.accent
-            amount < 0 -> colors.negative
+            (exactMinor ?: (amount * MINOR_FACTOR)) > 0 -> colors.accent
+            (exactMinor ?: (amount * MINOR_FACTOR)) < 0 -> colors.negative
             else -> colors.inkSecondary
         }
     }

@@ -23,36 +23,36 @@ final class AddExpenseDistributionTests: XCTestCase {
 
     func testRemainingToDistribute() {
         let model = makeModel(sum: "1000", recipientIds: [1, 2], amounts: [1: "700", 2: "200"])
-        XCTAssertEqual(model.distributedTotal, 900)
-        XCTAssertEqual(model.remainingToDistribute, 100)
+        XCTAssertEqual(model.distributedTotalMinor, 90000)
+        XCTAssertEqual(model.remainingToDistributeMinor, 10000)
         XCTAssertFalse(model.isDistributionBalanced)
         XCTAssertFalse(model.canSave)
     }
 
     func testExactDistributionEnablesSave() {
         let model = makeModel(sum: "1000", recipientIds: [1, 2], amounts: [1: "700", 2: "300"])
-        XCTAssertEqual(model.remainingToDistribute, 0)
+        XCTAssertEqual(model.remainingToDistributeMinor, 0)
         XCTAssertTrue(model.isDistributionBalanced)
         XCTAssertTrue(model.canSave)
     }
 
     func testOverDistributionIsNegativeAndBlocksSave() {
         let model = makeModel(sum: "1000", recipientIds: [1, 2], amounts: [1: "800", 2: "300"])
-        XCTAssertEqual(model.remainingToDistribute, -100)
+        XCTAssertEqual(model.remainingToDistributeMinor, -10000)
         XCTAssertFalse(model.canSave)
     }
 
     func testUnselectedMemberAmountsAreIgnored() {
         // Сумма снятого с выбора участника (id 3) не считается в Σ.
         let model = makeModel(sum: "1000", recipientIds: [1, 2], amounts: [1: "700", 2: "300", 3: "999"])
-        XCTAssertEqual(model.distributedTotal, 1000)
+        XCTAssertEqual(model.distributedTotalMinor, 100000)
         XCTAssertTrue(model.isDistributionBalanced)
     }
 
     func testEmptyAmountFieldCountsAsZero() {
         let model = makeModel(sum: "500", recipientIds: [1, 2], amounts: [1: "500"])
-        XCTAssertEqual(model.enteredAmount(of: 2), 0)
-        XCTAssertEqual(model.remainingToDistribute, 0)
+        XCTAssertEqual(model.enteredAmountMinor(of: 2), 0)
+        XCTAssertEqual(model.remainingToDistributeMinor, 0)
         XCTAssertTrue(model.isDistributionBalanced)
     }
 
@@ -64,7 +64,7 @@ final class AddExpenseDistributionTests: XCTestCase {
         XCTAssertTrue(model.canSave)
         XCTAssertEqual(
             model.exactRecipientSums(orderedIds: [1, 2]),
-            [RecipientSum(userId: 1, sum: 500)]
+            [RecipientSum(userId: 1, minor: 50000)]
         )
     }
 
@@ -77,9 +77,9 @@ final class AddExpenseDistributionTests: XCTestCase {
         XCTAssertEqual(
             model.exactRecipientSums(orderedIds: [3, 1, 2]),
             [
-                RecipientSum(userId: 3, sum: 300),
-                RecipientSum(userId: 1, sum: 100),
-                RecipientSum(userId: 2, sum: 200),
+                RecipientSum(userId: 3, minor: 30000),
+                RecipientSum(userId: 1, minor: 10000),
+                RecipientSum(userId: 2, minor: 20000),
             ]
         )
     }
@@ -106,6 +106,39 @@ final class AddExpenseDistributionTests: XCTestCase {
 
         model.amountTexts = [1: "1100"]
         XCTAssertEqual(model.distributionHint, "Перерасход: 100 ₽")
+    }
+
+    // MARK: Дробные доли
+
+    func testFractionalSharesBalanceAgainstFractionalSum() {
+        // 20,80 на двоих: целыми это не набирается вовсе — 10 + 11 не сходится
+        // ни с 20,80, ни с округлённым 21, и расход не сохранялся.
+        let model = makeModel(sum: "20,80", recipientIds: [1, 2], amounts: [1: "10,40", 2: "10,40"])
+        XCTAssertEqual(model.distributedTotalMinor, 2080)
+        XCTAssertEqual(model.remainingToDistributeMinor, 0)
+        XCTAssertTrue(model.isDistributionBalanced)
+        XCTAssertTrue(model.canSave)
+    }
+
+    func testWholeSharesDoNotBalanceFractionalSum() {
+        let model = makeModel(sum: "20,80", recipientIds: [1, 2], amounts: [1: "10", 2: "11"])
+        XCTAssertEqual(model.remainingToDistributeMinor, -20)
+        XCTAssertFalse(model.isDistributionBalanced)
+        XCTAssertFalse(model.canSave)
+    }
+
+    func testFractionalRecipientSumsCarryExactValue() {
+        let model = makeModel(sum: "20,80", recipientIds: [1, 2], amounts: [1: "10,40", 2: "10,40"])
+        let sums = model.exactRecipientSums(orderedIds: [1, 2])
+        XCTAssertEqual(sums.map(\.sumMinor), [1040, 1040])
+        // Целое поле — округление точного ровно по правилу сервера: иначе пара
+        // полей разошлась бы и запрос вернул 400.
+        XCTAssertEqual(sums.map(\.sum), [10, 10])
+    }
+
+    func testFractionalRemainderHint() {
+        let model = makeModel(sum: "20,80", recipientIds: [1, 2], amounts: [1: "10,40", 2: "10"])
+        XCTAssertEqual(model.distributionHint, "Осталось распределить: 0,40 ₽")
     }
 
     // MARK: Формы тела запроса (контракт v2)
@@ -141,5 +174,18 @@ final class AddExpenseDistributionTests: XCTestCase {
         XCTAssertEqual(sums[0]["sum"] as? Int, 700)
         XCTAssertEqual(sums[1]["userId"] as? Int, 20)
         XCTAssertEqual(sums[1]["sum"] as? Int, 300)
+    }
+
+    func testFractionalRecipientSumsSendMinorField() throws {
+        let json = try encodeBody(OperationBody(
+            description: "Ужин", sum: 21, sumMinor: 2080, donorId: 10,
+            split: .byExactAmount(recipientSums: [
+                RecipientSum(userId: 10, minor: 1040),
+                RecipientSum(userId: 20, minor: 1040),
+            ])
+        ))
+        let sums = try XCTUnwrap(json["recipientSums"] as? [[String: Any]])
+        XCTAssertEqual(sums[0]["sumMinor"] as? Int, 1040)
+        XCTAssertEqual(sums[0]["sum"] as? Int, 10)
     }
 }

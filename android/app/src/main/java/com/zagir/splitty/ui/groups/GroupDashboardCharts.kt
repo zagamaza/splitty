@@ -23,8 +23,12 @@ internal fun memberColorIndices(memberIds: Collection<Long>): Map<Long, Int> =
         .mapIndexed { index, id -> id to index }
         .toMap()
 
-/** Строка «Баланса участников»: подпись (уникальная) и net = paid − share. */
-internal data class MemberNetBar(val id: Long, val label: String, val net: Long)
+/**
+ * Строка «Баланса участников»: подпись (уникальная) и net = paid − share
+ * в МИНОРНЫХ единицах. На округлённых величинах нетто 0,25 читается нулём,
+ * и человек в плюсе выглядел бы «в расчёте».
+ */
+internal data class MemberNetBar(val id: Long, val label: String, val netMinor: Long)
 
 /**
  * Нетто-балансы участников: net = заплатил − его доля (>0 — вложил больше
@@ -40,11 +44,11 @@ internal fun memberNetBalances(
     val nets = HashMap<Long, Long>()
     for (member in paidByMember) {
         names.putIfAbsent(member.user.id, member.user.displayName)
-        nets[member.user.id] = (nets[member.user.id] ?: 0L) + member.sum
+        nets[member.user.id] = (nets[member.user.id] ?: 0L) + member.exactMinor
     }
     for (member in shareByMember) {
         names.putIfAbsent(member.user.id, member.user.displayName)
-        nets[member.user.id] = (nets[member.user.id] ?: 0L) - member.sum
+        nets[member.user.id] = (nets[member.user.id] ?: 0L) - member.exactMinor
     }
     val sorted = nets.entries.sortedWith(
         compareByDescending<Map.Entry<Long, Long>> { it.value }.thenBy { it.key }
@@ -54,19 +58,19 @@ internal fun memberNetBalances(
         val name = names[id] ?: id.toString()
         val count = (seen[name] ?: 0) + 1
         seen[name] = count
-        MemberNetBar(id = id, label = if (count > 1) "$name ($count)" else name, net = net)
+        MemberNetBar(id = id, label = if (count > 1) "$name ($count)" else name, netMinor = net)
     }
 }
 
 /**
- * Агрегация трат по дням недели: индекс 0 — понедельник … 6 — воскресенье.
- * Даты «2026-07-05»; нераспознанные строки пропускаются.
+ * Агрегация трат по дням недели в МИНОРНЫХ единицах: индекс 0 — понедельник
+ * … 6 — воскресенье. Даты «2026-07-05»; нераспознанные строки пропускаются.
  */
 internal fun weekdayTotals(byDay: List<DailySum>): List<Long> {
     val totals = LongArray(7)
     for (daily in byDay) {
         val date = runCatching { LocalDate.parse(daily.date) }.getOrNull() ?: continue
-        totals[date.dayOfWeek.value - 1] += daily.sum
+        totals[date.dayOfWeek.value - 1] += daily.exactMinor
     }
     return totals.toList()
 }
@@ -85,7 +89,7 @@ internal fun foldDonutBars(
     if (bars.size <= maxVisible) {
         bars to 0L
     } else {
-        bars.take(maxVisible - 1) to bars.drop(maxVisible - 1).sumOf { it.sum }
+        bars.take(maxVisible - 1) to bars.drop(maxVisible - 1).sumOf { it.sumMinor }
     }
 
 /** Средний чек: totalSpent / operationCount целочисленно; 0 без операций. */

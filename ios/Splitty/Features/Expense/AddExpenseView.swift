@@ -1760,7 +1760,7 @@ struct AddExpenseView: View {
                 .monospacedDigit()
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.trailing)
-                .keyboardType(.numberPad)
+                .keyboardType(model.fractional ? .decimalPad : .numberPad)
                 .frame(width: 90)
                 .focused($focusedField, equals: .amount(member.id))
             Text(currencySymbol(model.currency))
@@ -1770,11 +1770,12 @@ struct AddExpenseView: View {
         .padding(.vertical, 8)
     }
 
-    /// Биндинг текста доли участника: только цифры, максимум 9 знаков.
+    /// Биндинг текста доли участника: тот же фильтр, что и у поля суммы, —
+    /// в тусе с копейками разделитель проходит, в остальных нет.
     private func amountBinding(for userId: Int) -> Binding<String> {
         Binding(
             get: { model.amountTexts[userId] ?? "" },
-            set: { model.amountTexts[userId] = String($0.filter(\.isNumber).prefix(9)) }
+            set: { model.amountTexts[userId] = filterAmountInput($0, fractional: model.fractional) }
         )
     }
 
@@ -1785,11 +1786,11 @@ struct AddExpenseView: View {
             .monospacedDigit()
             .foregroundStyle(distributionStatusColor)
             .contentTransition(.numericText())
-            .animation(.spring(duration: 0.25), value: model.remainingToDistribute)
+            .animation(.spring(duration: 0.25), value: model.remainingToDistributeMinor)
     }
 
     private var distributionStatusColor: Color {
-        if model.remainingToDistribute < 0 {
+        if model.remainingToDistributeMinor < 0 {
             return .negative
         }
         if model.isDistributionBalanced {
@@ -1936,7 +1937,7 @@ private struct SplitPickerView: View {
         if model.recipientIds.isEmpty {
             return .negative
         }
-        if model.splitType == .byExactAmount, model.remainingToDistribute < 0 {
+        if model.splitType == .byExactAmount, model.remainingToDistributeMinor < 0 {
             return .negative
         }
         return .inkSecondary

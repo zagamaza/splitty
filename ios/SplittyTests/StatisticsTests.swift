@@ -183,7 +183,7 @@ final class StatisticsTests: XCTestCase {
         ])
         XCTAssertEqual(friend.rooms.map(\.currency), ["RUB", "USD"])
         // Основная валюта — наибольший |суммы|.
-        XCTAssertEqual(friend.totals.first, CurrencySum(currency: "USD", sum: -1200))
+        XCTAssertEqual(friend.totals.first, CurrencySum(currency: "USD", sum: -1200, sumMinor: -120_000))
     }
 
     func testDecodesCurrencyDirectory() throws {

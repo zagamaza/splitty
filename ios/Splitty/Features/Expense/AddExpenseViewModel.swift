@@ -191,25 +191,30 @@ final class AddExpenseViewModel {
 
     // MARK: Режим «По суммам»
 
-    /// Введённая доля участника (пустое/невалидное поле = 0).
-    func enteredAmount(of userId: Int) -> Int {
-        Int(amountTexts[userId] ?? "") ?? 0
+    /// Введённая доля участника в МИНОРНЫХ единицах (пустое/невалидное поле = 0).
+    ///
+    /// Считать доли целыми нельзя: расход 20,80 на двоих не набирается целыми
+    /// вовсе — 10 + 11 не сходится с 20,80, и сохранить его было невозможно.
+    func enteredAmountMinor(of userId: Int) -> Int {
+        minorFromInput(amountTexts[userId] ?? "") ?? 0
     }
 
     /// Σ введённых долей ВЫБРАННЫХ участников (суммы снятых с выбора не считаются).
-    var distributedTotal: Int {
-        recipientIds.reduce(0) { $0 + enteredAmount(of: $1) }
+    var distributedTotalMinor: Int {
+        recipientIds.reduce(0) { $0 + enteredAmountMinor(of: $1) }
     }
 
-    /// Остаток нераспределённой суммы; < 0 — перерасход.
-    var remainingToDistribute: Int {
-        (sum ?? 0) - distributedTotal
+    /// Остаток нераспределённой суммы в минорных единицах; < 0 — перерасход.
+    var remainingToDistributeMinor: Int {
+        (sumMinor ?? 0) - distributedTotalMinor
     }
 
     /// true — суммы участников сходятся с суммой расхода (Σ == sum, sum ≥ 1).
+    /// Сверка идёт по ТОЧНЫМ величинам — по округлённым 6,94 + 6,93 + 6,93
+    /// стали бы 7 + 7 + 7 и разошлись с 20,80 на ровном месте.
     var isDistributionBalanced: Bool {
-        guard let sum, sum >= 1 else { return false }
-        return distributedTotal == sum
+        guard let sumMinor, sumMinor >= 1 else { return false }
+        return distributedTotalMinor == sumMinor
     }
 
     /// Доступность «Сохранить»:
@@ -250,10 +255,10 @@ final class AddExpenseViewModel {
         if isDistributionBalanced {
             return String(localized: "Сумма распределена полностью")
         }
-        if remainingToDistribute < 0 {
-            return String(localized: "Перерасход: \(money(-remainingToDistribute, currency: currency))")
+        if remainingToDistributeMinor < 0 {
+            return String(localized: "Перерасход: \(money(minor: -remainingToDistributeMinor, currency: currency))")
         }
-        return String(localized: "Осталось распределить: \(money(remainingToDistribute, currency: currency))")
+        return String(localized: "Осталось распределить: \(money(minor: remainingToDistributeMinor, currency: currency))")
     }
 
     /// Доли получателей для `recipientSums` (контракт v2) в переданном
@@ -263,8 +268,8 @@ final class AddExpenseViewModel {
     /// пропуск нулей не меняет сумму долей — валидация сервера сходится.
     func exactRecipientSums(orderedIds: [Int]) -> [RecipientSum] {
         orderedIds.compactMap { id in
-            let amount = enteredAmount(of: id)
-            return amount >= 1 ? RecipientSum(userId: id, sum: amount) : nil
+            let minor = enteredAmountMinor(of: id)
+            return minor >= 1 ? RecipientSum(userId: id, minor: minor) : nil
         }
     }
 
@@ -808,7 +813,7 @@ final class AddExpenseViewModel {
             // Prefill долей из ХРАНИМЫХ сумм: для «По суммам» — точные, для
             // «Поровну» — канонические (стартовые значения при смене режима).
             amountTexts = Dictionary(
-                editOperation.recipients.map { ($0.user.id, String($0.sum)) },
+                editOperation.recipients.map { ($0.user.id, inputTextFromMinor($0.exactMinor)) },
                 uniquingKeysWith: { first, _ in first }
             )
         } else if let editEntry, let payload = editEntry.payload {
@@ -824,7 +829,7 @@ final class AddExpenseViewModel {
                 recipientIds = Set(sums.map(\.userId))
                 editRecipientOrder = sums.map(\.userId)
                 amountTexts = Dictionary(
-                    sums.map { ($0.userId, String($0.sum)) },
+                    sums.map { ($0.userId, inputTextFromMinor($0.exactMinor)) },
                     uniquingKeysWith: { first, _ in first }
                 )
             } else {

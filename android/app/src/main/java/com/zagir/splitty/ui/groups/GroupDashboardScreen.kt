@@ -76,7 +76,9 @@ import com.zagir.splitty.core.model.DailySum
 import com.zagir.splitty.core.model.MemberSum
 import com.zagir.splitty.core.model.MonthlySum
 import com.zagir.splitty.core.model.Statistics
+import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
 import com.zagir.splitty.ui.components.SectionHeader
@@ -236,7 +238,7 @@ internal fun GroupDashboardContent(
                         WhoPaidDonutCard(
                             bars = paid,
                             colorIndices = colorIndices,
-                            totalSpent = stats.totalSpent,
+                            totalSpentMinor = stats.exactTotalSpentMinor,
                             currency = stats.currency,
                         )
                     }
@@ -310,8 +312,8 @@ private fun DashboardEmptyState() {
 @Composable
 private fun MyTiles(stats: Statistics, meId: Long?) {
     meId ?: return
-    val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.sum ?: 0L
-    val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.sum ?: 0L
+    val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.exactMinor ?: 0L
+    val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.exactMinor ?: 0L
     if (paid == 0L && share == 0L) return
     val colors = Splitty.colors
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -322,7 +324,8 @@ private fun MyTiles(stats: Statistics, meId: Long?) {
             modifier = Modifier.weight(1f),
         ) {
             MoneyText(
-                paid,
+                minorToUnitsRounded(paid),
+                exactMinor = paid,
                 role = MoneyRole.NEUTRAL,
                 size = 28.sp,
                 currency = stats.currency,
@@ -336,7 +339,8 @@ private fun MyTiles(stats: Statistics, meId: Long?) {
             modifier = Modifier.weight(1f),
         ) {
             MoneyText(
-                share,
+                minorToUnitsRounded(share),
+                exactMinor = share,
                 role = MoneyRole.NEUTRAL,
                 size = 28.sp,
                 currency = stats.currency,
@@ -410,8 +414,10 @@ private fun StatTiles(stats: Statistics) {
                 iconTint = colors.accent,
                 modifier = Modifier.weight(1f),
             ) {
+                val average = averageCheck(stats.exactTotalSpentMinor, stats.operationCount)
                 MoneyText(
-                    averageCheck(stats.totalSpent, stats.operationCount),
+                    minorToUnitsRounded(average),
+                    exactMinor = average,
                     role = MoneyRole.NEUTRAL,
                     size = 28.sp,
                     currency = stats.currency,
@@ -480,8 +486,8 @@ private fun ChartAnnotationBadge(label: String, value: String) {
 
 // MARK: - «Траты по дням» (Canvas, 30 дней)
 
-/** Точка графика: день и сумма трат (дни без трат — нули). */
-internal data class DayPoint(val date: LocalDate, val sum: Long)
+/** Точка графика: день и точная сумма трат в минорных единицах (без трат — 0). */
+internal data class DayPoint(val date: LocalDate, val sumMinor: Long)
 
 /**
  * Ряд из ровно 30 дней (по сегодняшний): дни без трат = 0;
@@ -494,11 +500,11 @@ internal fun lastThirtyDays(
     val sums = HashMap<LocalDate, Long>()
     for (daily in byDay) {
         val date = runCatching { LocalDate.parse(daily.date) }.getOrNull() ?: continue
-        sums[date] = (sums[date] ?: 0L) + daily.sum
+        sums[date] = (sums[date] ?: 0L) + daily.exactMinor
     }
     return (29 downTo 0).map { offset ->
         val date = today.minusDays(offset.toLong())
-        DayPoint(date = date, sum = sums[date] ?: 0L)
+        DayPoint(date = date, sumMinor = sums[date] ?: 0L)
     }
 }
 
@@ -514,7 +520,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
     var selectedIndex by remember(byDay) { mutableStateOf<Int?>(null) }
     val textMeasurer = rememberTextMeasurer()
     val labelStyle = TextStyle(fontSize = 11.sp, color = colors.inkSecondary)
-    val allZero = points.all { it.sum == 0L }
+    val allZero = points.all { it.sumMinor == 0L }
 
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(stringResource(R.string.totals_by_day))
@@ -531,7 +537,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
                 val point = points[index]
                 ChartAnnotationBadge(
                     label = "${GroupsDateFmt.dayMonth(point.date)} —",
-                    value = money(point.sum, currency),
+                    value = moneyMinor(point.sumMinor, currency),
                 )
             }
         }
@@ -554,7 +560,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
             ) {
                 val labelArea = 18.dp.toPx()
                 val chartHeight = size.height - labelArea
-                val maxSum = max(points.maxOf { it.sum }, 1L)
+                val maxSum = max(points.maxOf { it.sumMinor }, 1L)
 
                 // Сетка тише данных: hairline-линии на 0, ⅓, ⅔ и полной высоте.
                 for (step in 0..3) {
@@ -570,8 +576,8 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
                 val slotWidth = size.width / points.size
                 val barWidth = slotWidth * 0.55f
                 points.forEachIndexed { index, point ->
-                    if (point.sum <= 0) return@forEachIndexed
-                    val barHeight = chartHeight * point.sum / maxSum
+                    if (point.sumMinor <= 0) return@forEachIndexed
+                    val barHeight = chartHeight * point.sumMinor / maxSum
                     drawRoundRect(
                         color = colors.chartAccent,
                         topLeft = Offset(
@@ -630,18 +636,18 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
 private fun WhoPaidDonutCard(
     bars: List<MemberBar>,
     colorIndices: Map<Long, Int>,
-    totalSpent: Long,
+    totalSpentMinor: Long,
     currency: String,
 ) {
     val colors = Splitty.colors
     val (visible, othersSum) = remember(bars) { foldDonutBars(bars) }
-    val total = max(bars.sumOf { it.sum }, 1L)
+    val total = max(bars.sumOf { it.sumMinor }, 1L)
     val othersLabel = stringResource(R.string.totals_others)
     // Сегменты доната и строки легенды — один список (подпись, сумма, цвет).
     val segments = remember(bars, colors) {
         buildList {
             visible.forEach { bar ->
-                add(Triple(bar.label, bar.sum, colors.memberColor(colorIndices[bar.id])))
+                add(Triple(bar.label, bar.sumMinor, colors.memberColor(colorIndices[bar.id])))
             }
             if (othersSum > 0) add(Triple(othersLabel, othersSum, colors.inkSecondary))
         }
@@ -684,7 +690,8 @@ private fun WhoPaidDonutCard(
                     }
                 }
                 MoneyText(
-                    totalSpent,
+                    minorToUnitsRounded(totalSpentMinor),
+                    exactMinor = totalSpentMinor,
                     role = MoneyRole.NEUTRAL,
                     size = 18.sp,
                     currency = currency,
@@ -715,7 +722,7 @@ private fun WhoPaidDonutCard(
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = "${money(sum, currency)} · ${percentOf(sum, total)} %",
+                        text = "${moneyMinor(sum, currency)} · ${percentOf(sum, total)} %",
                         fontSize = 12.sp,
                         color = colors.inkSecondary,
                         maxLines = 1,
@@ -729,8 +736,8 @@ private fun WhoPaidDonutCard(
 
 // MARK: - «Чья доля» (горизонтальные бары личных цветов)
 
-/** Строка графика: подпись участника (уникальная) и сумма. */
-internal data class MemberBar(val id: Long, val label: String, val sum: Long)
+/** Строка графика: подпись участника (уникальная) и точная сумма в минорных. */
+internal data class MemberBar(val id: Long, val label: String, val sumMinor: Long)
 
 /**
  * Готовит бары: убирает нули, сортирует по убыванию, делает подписи
@@ -738,8 +745,8 @@ internal data class MemberBar(val id: Long, val label: String, val sum: Long)
  */
 internal fun preparedMemberBars(members: List<MemberSum>): List<MemberBar> {
     val sorted = members
-        .filter { it.sum != 0L }
-        .sortedByDescending { it.sum }
+        .filter { it.exactMinor != 0L }
+        .sortedByDescending { it.exactMinor }
     val seen = mutableMapOf<String, Int>()
     return sorted.map { member ->
         val name = member.user.displayName
@@ -748,7 +755,7 @@ internal fun preparedMemberBars(members: List<MemberSum>): List<MemberBar> {
         MemberBar(
             id = member.user.id,
             label = if (count > 1) "$name ($count)" else name,
-            sum = member.sum,
+            sumMinor = member.exactMinor,
         )
     }
 }
@@ -767,7 +774,7 @@ private fun MemberBarsCard(
     colorIndices: Map<Long, Int>,
 ) {
     val colors = Splitty.colors
-    val maxSum = max(bars.maxOf { it.sum }, 1L)
+    val maxSum = max(bars.maxOf { it.sumMinor }, 1L)
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(title)
         Spacer(Modifier.height(12.dp))
@@ -796,7 +803,7 @@ private fun MemberBarsCard(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(
-                                    fraction = (bar.sum.toFloat() / maxSum).coerceIn(0.02f, 1f)
+                                    fraction = (bar.sumMinor.toFloat() / maxSum).coerceIn(0.02f, 1f)
                                 )
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(4.dp))
@@ -804,7 +811,7 @@ private fun MemberBarsCard(
                         )
                     }
                     Text(
-                        text = money(bar.sum, currency),
+                        text = moneyMinor(bar.sumMinor, currency),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = colors.inkSecondary,
@@ -828,7 +835,7 @@ private fun MemberBarsCard(
 @Composable
 private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
     val colors = Splitty.colors
-    val maxAbs = max(nets.maxOf { abs(it.net) }, 1)
+    val maxAbs = max(nets.maxOf { abs(it.netMinor) }, 1)
     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
         SectionHeader(stringResource(R.string.totals_member_balance))
         Spacer(Modifier.height(12.dp))
@@ -867,15 +874,15 @@ private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
                             end = Offset(center, size.height + 2.dp.toPx()),
                             strokeWidth = 1.dp.toPx(),
                         )
-                        if (bar.net != 0L) {
+                        if (bar.netMinor != 0L) {
                             val length = max(
-                                size.width / 2f * abs(bar.net) / maxAbs,
+                                size.width / 2f * abs(bar.netMinor) / maxAbs,
                                 2.dp.toPx(),
                             )
                             drawRoundRect(
-                                color = if (bar.net > 0) colors.chartAccent else colors.negative,
+                                color = if (bar.netMinor > 0) colors.chartAccent else colors.negative,
                                 topLeft = Offset(
-                                    x = if (bar.net > 0) center else center - length,
+                                    x = if (bar.netMinor > 0) center else center - length,
                                     y = 0f,
                                 ),
                                 size = Size(length, size.height),
@@ -888,7 +895,8 @@ private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
                         contentAlignment = Alignment.CenterEnd,
                     ) {
                         MoneyText(
-                            bar.net,
+                            minorToUnitsRounded(bar.netMinor),
+                            exactMinor = bar.netMinor,
                             role = MoneyRole.AUTO,
                             size = 12.sp,
                             weight = FontWeight.Medium,
@@ -977,7 +985,7 @@ private fun WeekdayCard(totals: List<Long>, currency: String) {
 
             // Direct-label максимума над самым высоким баром.
             val maxLayout = textMeasurer.measure(
-                AnnotatedString(money(maxSum, currency)),
+                AnnotatedString(moneyMinor(maxSum, currency)),
                 valueStyle,
             )
             val maxCenterX = slotWidth * maxIndex + slotWidth / 2f
@@ -1034,6 +1042,7 @@ private fun TopOperationsCard(stats: Statistics) {
                 }
                 MoneyText(
                     operation.sum,
+                    exactMinor = operation.exactMinor,
                     role = MoneyRole.NEUTRAL,
                     size = 15.sp,
                     currency = stats.currency,

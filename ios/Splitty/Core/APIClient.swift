@@ -227,11 +227,31 @@ enum ExpenseSplit {
     case byExactAmount(recipientSums: [RecipientSum])
 }
 
-/// Доля получателя в теле запроса `by_exact_amount` (целые рубли).
+/// Доля получателя в теле запроса `by_exact_amount`.
 /// Codable: переиспользуется в payload офлайн-outbox (см. `OutboxPayload`).
 struct RecipientSum: Codable, Hashable {
     let userId: Int
+    /// Округлённая проекция доли — её читают сборки сервера без копеек.
     let sum: Int
+    /// Точная доля в МИНОРНЫХ единицах. nil — доля целая, и слать точную
+    /// незачем; у записей outbox прежних сборок поля просто нет.
+    let sumMinor: Int?
+
+    init(userId: Int, sum: Int, sumMinor: Int? = nil) {
+        self.userId = userId
+        self.sum = sum
+        self.sumMinor = sumMinor
+    }
+
+    /// Из точной доли: целое поле — её округление, ровно как его считает
+    /// сервер. Иначе пара полей разошлась бы и запрос вернул 400.
+    init(userId: Int, minor: Int) {
+        self.init(userId: userId, sum: minorToUnitsRounded(minor), sumMinor: minor)
+    }
+
+    /// Точная доля: у записей прежних сборок её нет — там целое поле и есть
+    /// точное значение.
+    var exactMinor: Int { sumMinor ?? sum * minorFactor }
 }
 
 /// Тело POST/PUT операции: ровно ОДНО из полей `recipientIds`/`recipientSums`

@@ -1561,6 +1561,7 @@ private fun ByAmountsSection(form: AddExpenseForm, onAmountChange: (Long, String
                 meId = form.meId,
                 currency = form.currency,
                 text = form.amountTexts[member.id].orEmpty(),
+                fractional = form.fractional,
                 onTextChange = { onAmountChange(member.id, it) },
             )
             if (index != selected.lastIndex) {
@@ -1575,7 +1576,7 @@ private fun ByAmountsSection(form: AddExpenseForm, onAmountChange: (Long, String
         val statusColor = when {
             form.recipientIds.isEmpty() -> colors.inkSecondary
             form.isDistributionBalanced -> colors.accent
-            form.remainingToDistribute < 0 -> colors.negative
+            form.remainingToDistributeMinor < 0 -> colors.negative
             else -> colors.inkSecondary
         }
         Text(
@@ -1590,13 +1591,14 @@ private fun ByAmountsSection(form: AddExpenseForm, onAmountChange: (Long, String
     }
 }
 
-/** Строка участника с полем точной суммы (tnum, только цифры). */
+/** Строка участника с полем точной доли (tnum). */
 @Composable
 private fun AmountRow(
     member: User,
     meId: Long?,
     currency: String,
     text: String,
+    fractional: Boolean,
     onTextChange: (String) -> Unit,
 ) {
     val colors = Splitty.colors
@@ -1629,7 +1631,9 @@ private fun AmountRow(
             ),
             singleLine = true,
             cursorBrush = SolidColor(colors.accent),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = if (fractional) KeyboardType.Decimal else KeyboardType.Number,
+            ),
             decorationBox = { innerTextField ->
                 Box(contentAlignment = Alignment.CenterEnd) {
                     if (text.isEmpty()) {

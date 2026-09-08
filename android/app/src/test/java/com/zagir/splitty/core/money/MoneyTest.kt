@@ -141,8 +141,9 @@ class MoneyTest {
                 CurrencySum("RUB", 200),
             )
         )
+        // Итог несёт ТОЧНУЮ величину: сумма округлений не равна округлению суммы.
         assertEquals(
-            listOf(CurrencySum("RUB", 700), CurrencySum("USD", -100)),
+            listOf(CurrencySum("RUB", 700, 70_000), CurrencySum("USD", -100, -10_000)),
             result,
         )
     }
@@ -156,7 +157,7 @@ class MoneyTest {
                 CurrencySum("USD", 10),
             )
         )
-        assertEquals(listOf(CurrencySum("USD", 10)), result)
+        assertEquals(listOf(CurrencySum("USD", 10, 1_000)), result)
     }
 
     @Test
@@ -171,9 +172,9 @@ class MoneyTest {
         // RUB — наибольший |суммы|; EUR и USD равны по модулю → по коду.
         assertEquals(
             listOf(
-                CurrencySum("RUB", 5_000),
-                CurrencySum("EUR", 100),
-                CurrencySum("USD", -100),
+                CurrencySum("RUB", 5_000, 500_000),
+                CurrencySum("EUR", 100, 10_000),
+                CurrencySum("USD", -100, -10_000),
             ),
             result,
         )

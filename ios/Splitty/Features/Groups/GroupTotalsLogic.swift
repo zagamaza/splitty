@@ -29,9 +29,11 @@ enum MemberPalette {
 // MARK: - Данные графиков
 
 /// Нетто-баланс участника для «Баланса участников»: net = заплатил − его доля.
+/// Величина ТОЧНАЯ, в минорных единицах: на округлённых нетто 0,25 читается
+/// нулём, и человек в плюсе выглядел бы «в расчёте».
 struct MemberNet: Hashable, Identifiable {
     let user: User
-    let net: Int
+    let netMinor: Int
 
     var id: Int { user.id }
 }
@@ -41,7 +43,8 @@ struct MemberNet: Hashable, Identifiable {
 struct DonutSlice: Hashable, Identifiable {
     let userId: Int?
     let label: String
-    let sum: Int
+    /// Точная величина в минорных единицах.
+    let sumMinor: Int
 
     var id: Int { userId ?? .min }
 }
@@ -56,22 +59,23 @@ enum DashboardMath {
         var nets: [Int: Int] = [:]
         for member in paid {
             users[member.user.id] = member.user
-            nets[member.user.id, default: 0] += member.sum
+            nets[member.user.id, default: 0] += member.exactMinor
         }
         for member in share {
             users[member.user.id] = member.user
-            nets[member.user.id, default: 0] -= member.sum
+            nets[member.user.id, default: 0] -= member.exactMinor
         }
         return nets
-            .compactMap { id, net in users[id].map { MemberNet(user: $0, net: net) } }
+            .compactMap { id, net in users[id].map { MemberNet(user: $0, netMinor: net) } }
             .sorted {
-                if $0.net != $1.net { return $0.net > $1.net }
+                if $0.netMinor != $1.netMinor { return $0.netMinor > $1.netMinor }
                 return $0.user.id < $1.user.id
             }
     }
 
-    /// «По дням недели»: суммы `byDay` по дню недели, 7 значений,
-    /// индекс 0 — понедельник … 6 — воскресенье. Битые даты пропускаются.
+    /// «По дням недели»: суммы `byDay` по дню недели в МИНОРНЫХ единицах,
+    /// 7 значений, индекс 0 — понедельник … 6 — воскресенье.
+    /// Битые даты пропускаются.
     static func weekdayTotals(byDay: [DailySum]) -> [Int] {
         var totals = Array(repeating: 0, count: 7)
         let calendar = Calendar.current
@@ -79,7 +83,7 @@ enum DashboardMath {
             guard let day = daily.day else { continue }
             // Calendar.weekday: 1 = воскресенье … 7 = суббота → 0 = понедельник.
             let index = (calendar.component(.weekday, from: day) + 5) % 7
-            totals[index] += daily.sum
+            totals[index] += daily.exactMinor
         }
         return totals
     }
@@ -94,9 +98,9 @@ enum DashboardMath {
         maxSegments: Int = MemberPalette.colorCount
     ) -> [DonutSlice] {
         let sorted = paid
-            .filter { $0.sum > 0 }
+            .filter { $0.exactMinor > 0 }
             .sorted {
-                if $0.sum != $1.sum { return $0.sum > $1.sum }
+                if $0.exactMinor != $1.exactMinor { return $0.exactMinor > $1.exactMinor }
                 return $0.user.id < $1.user.id
             }
         let (top, rest) = sorted.count > maxSegments
@@ -111,14 +115,14 @@ enum DashboardMath {
             return DonutSlice(
                 userId: member.user.id,
                 label: count > 1 ? "\(name) (\(count))" : name,
-                sum: member.sum
+                sumMinor: member.exactMinor
             )
         }
         if !rest.isEmpty {
             slices.append(DonutSlice(
                 userId: nil,
                 label: String(localized: "Прочие"),
-                sum: rest.reduce(0) { $0 + $1.sum }
+                sumMinor: rest.reduce(0) { $0 + $1.exactMinor }
             ))
         }
         return slices

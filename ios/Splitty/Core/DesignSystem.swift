@@ -186,8 +186,10 @@ struct MoneyText: View {
         case .negative: return .negative
         case .neutral: return .ink
         case .auto:
-            if amount > 0 { return .accent }
-            if amount < 0 { return .negative }
+            // Знак берётся у ТОЧНОЙ величины: у округлённой долг 0,25 читается
+            // нулём, и честный плюс красился бы «в расчёте».
+            if exactMinor > 0 { return .accent }
+            if exactMinor < 0 { return .negative }
             return .inkSecondary
         }
     }

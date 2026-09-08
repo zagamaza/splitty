@@ -52,7 +52,7 @@ final class GroupTotalsLogicTests: XCTestCase {
         ]
         let nets = DashboardMath.netBalances(paid: paid, share: share)
         XCTAssertEqual(nets.map(\.user.id), [10, 20])
-        XCTAssertEqual(nets.map(\.net), [900, -900])
+        XCTAssertEqual(nets.map(\.netMinor), [90_000, -90_000])
     }
 
     func testNetBalancesIncludeMembersFromEitherListAndZeroNet() {
@@ -68,7 +68,7 @@ final class GroupTotalsLogicTests: XCTestCase {
         ]
         let nets = DashboardMath.netBalances(paid: paid, share: share)
         XCTAssertEqual(nets.map(\.user.id), [40, 10, 30])
-        XCTAssertEqual(nets.map(\.net), [300, 0, -300])
+        XCTAssertEqual(nets.map(\.netMinor), [30_000, 0, -30_000])
     }
 
     // MARK: Агрегация по дням недели
@@ -84,8 +84,8 @@ final class GroupTotalsLogicTests: XCTestCase {
         ]
         let totals = DashboardMath.weekdayTotals(byDay: byDay)
         XCTAssertEqual(totals.count, 7)
-        XCTAssertEqual(totals[0], 150) // пн
-        XCTAssertEqual(totals[6], 300) // вс
+        XCTAssertEqual(totals[0], 15_000) // пн
+        XCTAssertEqual(totals[6], 30_000) // вс
         XCTAssertEqual(totals[1...5].reduce(0, +), 0)
     }
 
@@ -96,7 +96,7 @@ final class GroupTotalsLogicTests: XCTestCase {
             + [MemberSum(user: user(9, "Ноль"), sum: 0)] // нулевые убираются
         let slices = DashboardMath.donutSlices(paid: paid)
         XCTAssertEqual(slices.count, 6)
-        XCTAssertEqual(slices.map(\.sum), [600, 500, 400, 300, 200, 100])
+        XCTAssertEqual(slices.map(\.sumMinor), [60_000, 50_000, 40_000, 30_000, 20_000, 10_000])
         XCTAssertTrue(slices.allSatisfy { $0.userId != nil })
     }
 
@@ -109,6 +109,37 @@ final class GroupTotalsLogicTests: XCTestCase {
         let others = try XCTUnwrap(slices.last)
         XCTAssertNil(others.userId)
         XCTAssertEqual(others.label, "Прочие")
-        XCTAssertEqual(others.sum, 300 + 200 + 100)
+        XCTAssertEqual(others.sumMinor, 30_000 + 20_000 + 10_000)
+    }
+
+    // MARK: Дробные величины
+
+    func testNetBalancesKeepFractionalValues() {
+        // Долг 0,25 на округлённых величинах читается нулём — человек в плюсе
+        // выглядел бы «в расчёте».
+        let paid = [MemberSum(user: user(10), sum: 0, sumMinor: 25)]
+        let share = [MemberSum(user: user(20), sum: 0, sumMinor: 25)]
+        let nets = DashboardMath.netBalances(paid: paid, share: share)
+        XCTAssertEqual(nets.map(\.netMinor), [25, -25])
+    }
+
+    func testDonutSlicesKeepFractionalPayments() {
+        let paid = [
+            MemberSum(user: user(10), sum: 10, sumMinor: 1040),
+            MemberSum(user: user(20), sum: 10, sumMinor: 1041),
+        ]
+        let slices = DashboardMath.donutSlices(paid: paid)
+        // Порядок по ТОЧНОЙ величине: округлённые обе равны 10.
+        XCTAssertEqual(slices.map(\.userId), [20, 10])
+        XCTAssertEqual(slices.map(\.sumMinor), [1041, 1040])
+    }
+
+    func testWeekdayTotalsSumExactValues() {
+        let byDay = [
+            DailySum(date: "2026-06-29", sum: 0, sumMinor: 25),
+            DailySum(date: "2026-07-06", sum: 0, sumMinor: 25),
+        ]
+        // Сумма точных, а не сумма округлений: два раза по 0,25 — это 0,50.
+        XCTAssertEqual(DashboardMath.weekdayTotals(byDay: byDay)[0], 50)
     }
 }

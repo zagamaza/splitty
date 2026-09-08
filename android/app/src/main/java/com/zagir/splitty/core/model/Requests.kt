@@ -1,5 +1,7 @@
 package com.zagir.splitty.core.model
 
+import com.zagir.splitty.core.money.MINOR_FACTOR
+import com.zagir.splitty.core.money.minorToUnitsRounded
 import kotlinx.serialization.Serializable
 
 // Тела запросов REST API (контракт v2). null-поля НЕ сериализуются
@@ -84,12 +86,31 @@ data class SetCurrencyBody(val currency: String)
 @Serializable
 data class SetFractionalBody(val fractional: Boolean)
 
-/** Доля получателя в теле запроса by_exact_amount (целые единицы валюты). */
+/**
+ * Доля получателя в теле запроса by_exact_amount.
+ *
+ * [sum] — округлённая проекция, её читают сборки сервера без копеек; [sumMinor]
+ * — точная величина. null у точной означает целую долю (и записи outbox прежних
+ * сборок, где поля просто нет).
+ */
 @Serializable
 data class RecipientSum(
     val userId: Long,
     val sum: Long,
-)
+    val sumMinor: Long? = null,
+) {
+    /** Точная доля: у записей прежних сборок точное значение — целое поле. */
+    val exactMinor: Long get() = sumMinor ?: sum * MINOR_FACTOR
+
+    companion object {
+        /**
+         * Из точной доли: целое поле — её округление ровно по правилу сервера.
+         * Иначе пара полей разошлась бы и запрос вернул 400.
+         */
+        fun ofMinor(userId: Long, minor: Long): RecipientSum =
+            RecipientSum(userId = userId, sum = minorToUnitsRounded(minor), sumMinor = minor)
+    }
+}
 
 /** Способ деления расхода в теле POST/PUT операции. */
 sealed interface ExpenseSplit {

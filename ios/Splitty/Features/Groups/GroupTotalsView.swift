@@ -109,7 +109,7 @@ struct GroupTotalsView: View {
                     PaidDonutCard(
                         slices: slices,
                         palette: palette,
-                        totalSpent: stats.totalSpent,
+                        totalSpentMinor: stats.exactTotalSpentMinor,
                         currency: stats.currency
                     )
                 }
@@ -142,7 +142,11 @@ struct GroupTotalsView: View {
     /// Иконки тонированы единым `accent`: категориальная палитра кодирует
     /// участников, декоративное использование её цветов ломало язык дата-виза.
     private func statTiles(_ stats: Statistics) -> some View {
-        let average = stats.operationCount > 0 ? stats.totalSpent / stats.operationCount : 0
+        // Средний чек — от ТОЧНОГО итога: у тусы с копейками деление
+        // округлённого промахивается на рубли при больших числах расходов.
+        let averageMinor = stats.operationCount > 0
+            ? stats.exactTotalSpentMinor / stats.operationCount
+            : 0
         return VStack(spacing: 16) {
             HStack(spacing: 16) {
                 statTile(title: "Всего потрачено", icon: "banknote") {
@@ -160,7 +164,10 @@ struct GroupTotalsView: View {
                         .foregroundStyle(Color.ink)
                 }
                 statTile(title: "Средний чек", icon: "chart.bar") {
-                    MoneyText(average, role: .neutral, size: 22, currency: stats.currency)
+                    MoneyText(
+                        minorToUnitsRounded(averageMinor), exactMinor: averageMinor,
+                        role: .neutral, size: 22, currency: stats.currency
+                    )
                 }
             }
         }
@@ -171,16 +178,22 @@ struct GroupTotalsView: View {
     @ViewBuilder
     private func myTiles(_ stats: Statistics) -> some View {
         if let meId = session.me?.id {
-            let paid = stats.paidByMember.first { $0.user.id == meId }?.sum ?? 0
-            let share = stats.shareByMember.first { $0.user.id == meId }?.sum ?? 0
+            let paid = stats.paidByMember.first { $0.user.id == meId }?.exactMinor ?? 0
+            let share = stats.shareByMember.first { $0.user.id == meId }?.exactMinor ?? 0
             if paid > 0 || share > 0 {
                 HStack(spacing: 16) {
                     // Без гендерной формы: «Я заплатил» врало для половины людей.
                     statTile(title: "Заплачено мной", icon: "person.crop.circle") {
-                        MoneyText(paid, role: .neutral, size: 22, currency: stats.currency)
+                        MoneyText(
+                            minorToUnitsRounded(paid), exactMinor: paid,
+                            role: .neutral, size: 22, currency: stats.currency
+                        )
                     }
                     statTile(title: "Потрачено на меня", icon: "chart.pie") {
-                        MoneyText(share, role: .neutral, size: 22, currency: stats.currency)
+                        MoneyText(
+                            minorToUnitsRounded(share), exactMinor: share,
+                            role: .neutral, size: 22, currency: stats.currency
+                        )
                     }
                 }
             }
@@ -255,7 +268,10 @@ struct GroupTotalsView: View {
                     .lineLimit(1)
             }
             Spacer(minLength: 8)
-            MoneyText(operation.sum, role: .neutral, size: 15, currency: currency)
+            MoneyText(
+                operation.sum, exactMinor: operation.exactMinor,
+                role: .neutral, size: 15, currency: currency
+            )
         }
         .padding(.vertical, 10)
     }
@@ -294,7 +310,8 @@ private func memberColor(_ userId: Int?, palette: [Int: Int]) -> Color {
 /// (общая для дневного и месячного графиков).
 private struct SelectionBadge: View {
     let label: String
-    let sum: Int
+    /// Точная сумма в минорных единицах.
+    let sumMinor: Int
     let currency: String
 
     var body: some View {
@@ -303,7 +320,7 @@ private struct SelectionBadge: View {
                 .foregroundStyle(Color.inkSecondary)
             Text(verbatim: "—")
                 .foregroundStyle(Color.inkSecondary)
-            Text(money(sum, currency: currency))
+            Text(money(minor: sumMinor, currency: currency))
                 .fontWeight(.semibold)
                 .monospacedDigit()
                 .foregroundStyle(Color.ink)
@@ -328,7 +345,11 @@ private struct DailySpendingCard: View {
     /// Точка графика: день (начало суток) и сумма трат.
     struct DayPoint: Identifiable {
         let date: Date
-        let sum: Int
+        /// Точная сумма дня в минорных единицах.
+        let sumMinor: Int
+        /// Значение для графика — в единицах валюты (ось подписывает их, а не
+        /// копейки).
+        var value: Double { Double(sumMinor) / Double(minorFactor) }
         var id: Date { date }
     }
 
@@ -350,14 +371,14 @@ private struct DailySpendingCard: View {
         var sums: [Date: Int] = [:]
         for daily in byDay {
             guard let day = daily.day else { continue }
-            sums[calendar.startOfDay(for: day), default: 0] += daily.sum
+            sums[calendar.startOfDay(for: day), default: 0] += daily.exactMinor
         }
         // От старых к новым: offset 29 (месяц назад) … 0 (сегодня).
         return (0..<30).reversed().compactMap { offset in
             guard let date = calendar.date(byAdding: .day, value: -offset, to: end) else {
                 return nil
             }
-            return DayPoint(date: date, sum: sums[date] ?? 0)
+            return DayPoint(date: date, sumMinor: sums[date] ?? 0)
         }
     }
 
@@ -386,7 +407,7 @@ private struct DailySpendingCard: View {
             ForEach(points) { point in
                 BarMark(
                     x: .value("Дата", point.date, unit: .day),
-                    y: .value("Сумма", point.sum),
+                    y: .value("Сумма", point.value),
                     width: .ratio(0.55)
                 )
                 .foregroundStyle(Color.chartAccent)
@@ -403,7 +424,7 @@ private struct DailySpendingCard: View {
                     ) {
                         SelectionBadge(
                             label: DateFmt.dayMonth(selected.date),
-                            sum: selected.sum,
+                            sumMinor: selected.sumMinor,
                             currency: currency
                         )
                     }
@@ -443,12 +464,12 @@ private struct DailySpendingCard: View {
 private struct PaidDonutCard: View {
     let slices: [DonutSlice]
     let palette: [Int: Int]
-    let totalSpent: Int
+    let totalSpentMinor: Int
     let currency: String
 
-    /// База процентов — сумма всех сегментов (все платежи).
-    private var total: Int {
-        max(slices.reduce(0) { $0 + $1.sum }, 1)
+    /// База процентов — сумма всех сегментов (все платежи), точная.
+    private var totalMinor: Int {
+        max(slices.reduce(0) { $0 + $1.sumMinor }, 1)
     }
 
     var body: some View {
@@ -468,7 +489,7 @@ private struct PaidDonutCard: View {
     private var chart: some View {
         Chart(slices) { slice in
             SectorMark(
-                angle: .value("Сумма", slice.sum),
+                angle: .value("Сумма", slice.sumMinor),
                 innerRadius: .ratio(0.62),
                 angularInset: 1.5
             )
@@ -483,7 +504,10 @@ private struct PaidDonutCard: View {
                         Text("всего")
                             .font(.system(size: 11, design: .rounded))
                             .foregroundStyle(Color.inkSecondary)
-                        MoneyText(totalSpent, role: .neutral, size: 16, currency: currency)
+                        MoneyText(
+                            minorToUnitsRounded(totalSpentMinor), exactMinor: totalSpentMinor,
+                            role: .neutral, size: 16, currency: currency
+                        )
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                     }
@@ -506,7 +530,7 @@ private struct PaidDonutCard: View {
                         .foregroundStyle(Color.ink)
                         .lineLimit(1)
                     Spacer(minLength: 8)
-                    Text(verbatim: "\(money(slice.sum, currency: currency)) · \(percent(slice))%")
+                    Text(verbatim: "\(money(minor: slice.sumMinor, currency: currency)) · \(percent(slice))%")
                         .scaledFont(size: 12, relativeTo: .footnote)
                         .monospacedDigit()
                         .foregroundStyle(Color.inkSecondary)
@@ -516,7 +540,7 @@ private struct PaidDonutCard: View {
     }
 
     private func percent(_ slice: DonutSlice) -> Int {
-        Int((Double(slice.sum) * 100 / Double(total)).rounded())
+        Int((Double(slice.sumMinor) * 100 / Double(totalMinor)).rounded())
     }
 }
 
@@ -530,7 +554,10 @@ private struct MemberBarsCard: View {
     struct Bar: Identifiable {
         let id: Int
         let label: String
-        let sum: Int
+        /// Точная сумма в минорных единицах.
+        let sumMinor: Int
+        /// Значение для графика — в единицах валюты.
+        var value: Double { Double(sumMinor) / Double(minorFactor) }
     }
 
     let title: String
@@ -547,8 +574,8 @@ private struct MemberBarsCard: View {
     /// nil — рисовать нечего (секция скрывается).
     static func prepared(_ members: [MemberSum]) -> [Bar]? {
         let sorted = members
-            .filter { $0.sum != 0 }
-            .sorted { $0.sum > $1.sum }
+            .filter { $0.exactMinor != 0 }
+            .sorted { $0.exactMinor > $1.exactMinor }
         guard !sorted.isEmpty else { return nil }
         var seen: [String: Int] = [:]
         return sorted.map { member in
@@ -558,7 +585,7 @@ private struct MemberBarsCard: View {
             return Bar(
                 id: member.user.id,
                 label: count > 1 ? "\(name) (\(count))" : name,
-                sum: member.sum
+                sumMinor: member.exactMinor
             )
         }
     }
@@ -579,7 +606,7 @@ private struct MemberBarsCard: View {
     private var chart: some View {
         Chart(bars) { bar in
             BarMark(
-                x: .value("Сумма", bar.sum),
+                x: .value("Сумма", bar.value),
                 y: .value("Участник", bar.label),
                 height: .fixed(16)
             )
@@ -590,7 +617,7 @@ private struct MemberBarsCard: View {
                 spacing: 6,
                 overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
             ) {
-                Text(money(bar.sum, currency: currency))
+                Text(money(minor: bar.sumMinor, currency: currency))
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
@@ -618,9 +645,9 @@ private struct MemberBarsCard: View {
     }
 
     /// Верх шкалы X: максимум + треть — место под подпись суммы у бара.
-    private var xUpperBound: Int {
-        let maxSum = bars.map(\.sum).max() ?? 1
-        return max(maxSum + maxSum / 3, 1)
+    private var xUpperBound: Double {
+        let maxValue = bars.map(\.value).max() ?? 1
+        return max(maxValue * 4 / 3, 1)
     }
 }
 
@@ -639,8 +666,8 @@ private struct MemberNetCard: View {
     private static let barHeight: CGFloat = 16
 
     /// Общая шкала всех строк: |net| в долях от maxNegative+maxPositive.
-    private var maxPositive: Int { max(nets.map(\.net).max() ?? 0, 0) }
-    private var maxNegative: Int { max(-(nets.map(\.net).min() ?? 0), 0) }
+    private var maxPositive: Int { max(nets.map(\.netMinor).max() ?? 0, 0) }
+    private var maxNegative: Int { max(-(nets.map(\.netMinor).min() ?? 0), 0) }
     private var span: Int { max(maxPositive + maxNegative, 1) }
 
     var body: some View {
@@ -667,8 +694,11 @@ private struct MemberNetCard: View {
                 // Имя зажато фиксированной шириной — даём ужаться, не обрезая.
                 .minimumScaleFactor(0.8)
                 .frame(width: 88, alignment: .leading)
-            divergingBar(net.net)
-            MoneyText(net.net, role: .auto, size: 12, currency: currency)
+            divergingBar(net.netMinor)
+            MoneyText(
+                minorToUnitsRounded(net.netMinor), exactMinor: net.netMinor,
+                role: .auto, size: 12, currency: currency
+            )
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(width: 84, alignment: .trailing)
@@ -723,7 +753,7 @@ private struct WeekdayCard: View {
         ]
     }
 
-    /// 7 сумм, индекс 0 — понедельник … 6 — воскресенье.
+    /// 7 точных сумм в минорных единицах, индекс 0 — понедельник … 6 — вс.
     let totals: [Int]
 
     private var maxSum: Int { totals.max() ?? 0 }
@@ -745,7 +775,7 @@ private struct WeekdayCard: View {
         Chart(Array(totals.enumerated()), id: \.offset) { index, sum in
             BarMark(
                 x: .value("День", Self.labels[index]),
-                y: .value("Сумма", sum),
+                y: .value("Сумма", Double(sum) / Double(minorFactor)),
                 width: .ratio(0.55)
             )
             // Максимум — полной непрозрачностью, остальные чуть тише.

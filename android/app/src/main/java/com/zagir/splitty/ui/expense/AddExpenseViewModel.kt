@@ -36,6 +36,7 @@ import com.zagir.splitty.core.money.inputTextFromMinor
 import com.zagir.splitty.core.money.minorFromInput
 import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
 import com.zagir.splitty.billing.PurchaseOutcome
@@ -519,20 +520,29 @@ data class AddExpenseForm(
     /** Выбранные участники в стабильном порядке списка участников группы. */
     val selectedMembers: List<User> get() = members.filter { it.id in recipientIds }
 
-    /** Введённая доля участника (пустое/невалидное поле = 0). */
-    fun enteredAmount(userId: Long): Long = amountTexts[userId]?.toLongOrNull() ?: 0L
+    /**
+     * Введённая доля участника в МИНОРНЫХ единицах (пустое/невалидное поле = 0).
+     *
+     * Целыми долями расход 20,80 на двоих не набирается вовсе: 10 + 11 не
+     * сходится ни с 20,80, ни с округлённым 21, и сохранить его было нельзя.
+     */
+    fun enteredAmountMinor(userId: Long): Long = minorFromInput(amountTexts[userId].orEmpty()) ?: 0L
 
     /** Σ введённых долей ВЫБРАННЫХ участников (снятые с выбора не считаются). */
-    val distributedTotal: Long get() = recipientIds.sumOf { enteredAmount(it) }
+    val distributedTotalMinor: Long get() = recipientIds.sumOf { enteredAmountMinor(it) }
 
-    /** Остаток нераспределённой суммы; < 0 — перерасход. */
-    val remainingToDistribute: Long get() = (sum ?: 0L) - distributedTotal
+    /** Остаток нераспределённой суммы в минорных единицах; < 0 — перерасход. */
+    val remainingToDistributeMinor: Long get() = (sumMinor ?: 0L) - distributedTotalMinor
 
-    /** true — суммы участников сходятся с суммой расхода (Σ == sum, sum >= 1). */
+    /**
+     * true — суммы участников сходятся с суммой расхода (Σ == sum, sum >= 1).
+     * Сверка по ТОЧНЫМ величинам: округлённые 6,94 + 6,93 + 6,93 стали бы
+     * 7 + 7 + 7 и разошлись с 20,80 на ровном месте.
+     */
     val isDistributionBalanced: Boolean
         get() {
-            val total = sum ?: return false
-            return total >= 1 && distributedTotal == total
+            val total = sumMinor ?: return false
+            return total >= 1 && distributedTotalMinor == total
         }
 
     // --- Позиции чека (itemized) ---
@@ -640,10 +650,10 @@ data class AddExpenseForm(
         get() = when {
             recipientIds.isEmpty() -> UiText.res(R.string.expense_hint_pick_member)
             isDistributionBalanced -> UiText.res(R.string.expense_distributed)
-            remainingToDistribute < 0 ->
-                UiText.res(R.string.expense_overspent, money(-remainingToDistribute, currency))
+            remainingToDistributeMinor < 0 ->
+                UiText.res(R.string.expense_overspent, moneyMinor(-remainingToDistributeMinor, currency))
             else ->
-                UiText.res(R.string.expense_remaining, money(remainingToDistribute, currency))
+                UiText.res(R.string.expense_remaining, moneyMinor(remainingToDistributeMinor, currency))
         }
 
     /**
@@ -924,7 +934,7 @@ class AddExpenseViewModel @Inject constructor(
             recipientIds = editRecipientOrder.toSet(),
             splitType = payload.splitType,
             amountTexts = payload.recipientSums
-                ?.associate { it.userId to it.sum.toString() }
+                ?.associate { it.userId to inputTextFromMinor(it.exactMinor) }
                 .orEmpty(),
             // Позиции чека редактируемой локальной записи — сразу источник правды.
             draftItems = payload.items.orEmpty(),
@@ -954,7 +964,9 @@ class AddExpenseViewModel @Inject constructor(
                 splitType = operation.splitType ?: SplitType.EQUALLY,
                 // Prefill долей из ХРАНИМЫХ сумм: для «По суммам» — точные,
                 // для «Поровну» — канонические (стартовые при смене режима).
-                amountTexts = operation.recipients.associate { it.user.id to it.sum.toString() },
+                amountTexts = operation.recipients.associate {
+                    it.user.id to inputTextFromMinor(it.exactMinor)
+                },
                 // Позиции чека itemized-операции — источник правды: правка идёт
                 // через интерактивный чек, items уходят в PUT (не затираются).
                 draftItems = operation.items.orEmpty(),
@@ -1051,7 +1063,9 @@ class AddExpenseViewModel @Inject constructor(
     }
 
     fun onAmountChange(userId: Long, raw: String) = updateForm {
-        it.copy(amountTexts = it.amountTexts + (userId to digitsOnly(raw)))
+        // Тот же фильтр, что и у поля суммы: в тусе с копейками разделитель
+        // проходит, в остальных нет.
+        it.copy(amountTexts = it.amountTexts + (userId to filterAmountInput(raw, it.fractional)))
     }
 
     fun dismissAlert() = updateForm { it.copy(alertMessage = null) }
@@ -1421,7 +1435,8 @@ class AddExpenseViewModel @Inject constructor(
             itemsToSend = null
             split = ExpenseSplit.ByExactAmount(
                 orderedIds.mapNotNull { id ->
-                    form.enteredAmount(id).takeIf { it >= 1 }?.let { RecipientSum(userId = id, sum = it) }
+                    form.enteredAmountMinor(id).takeIf { it >= 1 }
+                        ?.let { RecipientSum.ofMinor(userId = id, minor = it) }
                 }
             )
         } else {

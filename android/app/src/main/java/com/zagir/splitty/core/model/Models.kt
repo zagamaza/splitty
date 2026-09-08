@@ -731,7 +731,11 @@ data class AddMemberResponse(val status: InviteStatus)
 data class DailySum(
     val date: String,
     val sum: Long,
-)
+    /** Точная величина; [sum] — округлённая проекция. */
+    val sumMinor: Long? = null,
+) {
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /**
  * Траты одного календарного месяца; [month] — «2026-02» (yyyy-mm).
@@ -742,14 +746,22 @@ data class DailySum(
 data class MonthlySum(
     val month: String,
     val sum: Long,
-)
+    /** Точная величина; [sum] — округлённая проекция. */
+    val sumMinor: Long? = null,
+) {
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /** Сумма участника («Кто платил» / «Чья доля»). */
 @Serializable
 data class MemberSum(
     val user: User,
     val sum: Long,
-)
+    /** Точная величина; [sum] — округлённая проекция. */
+    val sumMinor: Long? = null,
+) {
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /** Строка «Топ расходов». */
 @Serializable
@@ -759,7 +771,11 @@ data class TopOperation(
     val sum: Long,
     val donor: User,
     val createdAt: Instant,
-)
+    /** Точная величина; [sum] — округлённая проекция. */
+    val sumMinor: Long? = null,
+) {
+    val exactMinor: Long get() = sumMinor ?: (sum * MINOR_FACTOR)
+}
 
 /**
  * Статистика группы GET /rooms/{id}/statistics — данные дашборда «Итоги».
