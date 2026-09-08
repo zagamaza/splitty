@@ -34,7 +34,11 @@ final class GroupsListViewModel {
     /// валют не складываются): без нулей, по убыванию |суммы| — первая
     /// валюта «основная». Пусто — все долги погашены.
     var totals: [CurrencySum] {
-        aggregateByCurrency(rooms.map { CurrencySum(currency: $0.currency, sum: $0.myBalance) })
+        // ⚠️ Точные величины: из округлённых баланс 0,25 пришёл бы нулём, и
+        // валюта пропала бы из сводки целиком.
+        aggregateByCurrency(rooms.map {
+            CurrencySum(currency: $0.currency, sum: $0.myBalance, sumMinor: $0.exactMyBalanceMinor)
+        })
     }
 
     /// Загрузка/обновление списка групп. Спиннер — только пока список пуст

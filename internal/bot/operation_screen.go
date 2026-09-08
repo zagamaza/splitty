@@ -391,6 +391,11 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		splitType = by_exact_amount
 	}
 
+	if fractionForbidden(room, sumMinor, recipientsWithSum) {
+		log.Warn().Msgf("дробная сумма %d в тусе без копеек — расход не создан", sumMinor)
+		return wrongFormatMessage(ctx, u, s.bs, u.ChatState.CallbackData.RoomId)
+	}
+
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
 		Description:       u.ChatState.CallbackData.ExternalData,
@@ -432,6 +437,42 @@ func (s AddDonorOperation) defineText(text string) string {
 	return strings.Join(words[1:], " ")
 }
 
+// wrongFormatMessage — «неверный формат» с кнопкой возврата в комнату: тем же
+// ответом мастер отвечает на неразобранный ввод.
+func wrongFormatMessage(ctx context.Context, u *api.Update, bs ButtonService, roomId string) api.TelegramMessage {
+	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
+	if _, err := bs.SaveAll(ctx, rb); err != nil {
+		log.Error().Err(err).Stack().Msg("save buttons failed")
+		return api.TelegramMessage{}
+	}
+	return api.TelegramMessage{
+		Chattable: []tgbotapi.Chattable{NewMessage(getChatID(u), I18n(u.User, "msg_wrong_format"),
+			[][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), rb.ID.Hex())}})},
+		Send: true,
+	}
+}
+
+// fractionForbidden — деньги расхода дробные там, где туса копеек не считает.
+//
+// Проверка стоит на ЗАПИСИ, а не только на разборе ввода: мастер бота
+// многошаговый, и между вводом суммы и созданием расхода рубильник или
+// настройка тусы успевают выключиться. Состояние с копейками при этом уже
+// сохранено, и без проверки здесь дробь записывалась бы после выключения.
+func fractionForbidden(room *api.Room, sumMinor int64, recipients []api.RecipientWithSum) bool {
+	if api.RoomFractional(room) {
+		return false
+	}
+	if sumMinor%api.MinorFactor != 0 {
+		return true
+	}
+	for i := range recipients {
+		if recipients[i].SumMinorOrLegacy()%api.MinorFactor != 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // defineSumMinor разбирает введённую сумму в МИНОРНЫЕ единицы: «20,50» и
 // «20.50» → 2050, «21» → 2100.
 //
@@ -450,6 +491,11 @@ func defineSumMinor(text string, fractionAllowed bool) (int64, error) {
 		return 0, errors.New("empty sum")
 	}
 	raw := strings.ReplaceAll(words[0], ",", ".")
+	// «-0,50» разбиралось как +0,50: Atoi("-0") возвращает ноль, и знак
+	// терялся вместе с проверкой «сумма не может быть отрицательной».
+	if strings.HasPrefix(raw, "-") {
+		return 0, errors.New("sum can not be les zero")
+	}
 	parts := strings.SplitN(raw, ".", 2)
 	units, err := strconv.Atoi(parts[0])
 	if err != nil {
@@ -605,6 +651,11 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		shareMinor := u.ChatState.CallbackData.SumMinor
 		if shareMinor == 0 {
 			shareMinor = int64(u.ChatState.CallbackData.Page) * api.MinorFactor
+		}
+		// Доля введена раньше: к моменту подтверждения признак мог погаснуть.
+		if !api.RoomFractional(room) && shareMinor%api.MinorFactor != 0 {
+			log.Warn().Msgf("дробная доля %d в тусе без копеек — не сохранена", shareMinor)
+			return wrongFormatMessage(ctx, u, s.bs, room.ID.Hex())
 		}
 		for i := range operation.RecipientsWithSum {
 			if operation.RecipientsWithSum[i].User.ID == UserId {
@@ -1386,6 +1437,13 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	// необратимы. Обратный порядок терял бы отредактированный расход целиком:
 	// старая версия удалена, новая осталась черновиком, в долгах нет ни той,
 	// ни другой.
+	// Черновик собирают минутами: между вводом сумм и подтверждением рубильник
+	// или настройка тусы успевают выключиться.
+	if fractionForbidden(room, opn.SumMinorOrLegacy(), opn.RecipientsWithSum) {
+		callback := createCallback(u, I18n(u.User, "msg_wrong_format"), true)
+		return api.TelegramMessage{CallbackConfig: callback, Send: true}
+	}
+
 	oldOperationId := opn.OldOperationId
 	opn.Status = active
 	opn.OldOperationId = nil

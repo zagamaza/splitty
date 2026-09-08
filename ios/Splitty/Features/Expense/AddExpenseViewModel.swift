@@ -808,7 +808,11 @@ final class AddExpenseViewModel {
             // Из ТОЧНОЙ величины: округлённая потеряла бы копейки, и простое
             // переименование расхода 20,80 записало бы 21.
             sumText = inputTextFromMinor(editOperation.exactMinor)
-            if editOperation.exactMinor % minorFactor != 0 {
+            // Точность поднимает и дробная ДОЛЯ: у расхода 100 с долями
+            // 50,50 + 49,50 итог целый, а поле доли фильтр превратил бы
+            // в «5050».
+            if editOperation.exactMinor % minorFactor != 0
+                || editOperation.recipients.contains(where: { $0.exactMinor % minorFactor != 0 }) {
                 editsFractionalAmount = true
                 fractional = true
             }
@@ -836,7 +840,8 @@ final class AddExpenseViewModel {
             // прежних сборок её нет, и тогда работает целое.
             let entryMinor = payload.sumMinor ?? payload.sum * minorFactor
             sumText = inputTextFromMinor(entryMinor)
-            if entryMinor % minorFactor != 0 {
+            if entryMinor % minorFactor != 0
+                || (payload.recipientSums ?? []).contains(where: { $0.exactMinor % minorFactor != 0 }) {
                 editsFractionalAmount = true
                 fractional = true
             }

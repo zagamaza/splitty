@@ -786,6 +786,40 @@ func validateOperationRequest(req *operationRequest, room *api.Room, fractionalA
 	return donor, withSum, splitByExactAmount, sumMinor, nil
 }
 
+// moneyIsFractional — есть ли копейки в присланных деньгах: в сумме или в любой
+// из долей.
+func moneyIsFractional(sumMinor int64, recipients []api.RecipientWithSum) bool {
+	if sumMinor%api.MinorFactor != 0 {
+		return true
+	}
+	for i := range recipients {
+		if recipients[i].SumMinorOrLegacy()%api.MinorFactor != 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// sameMoney — совпадают ли деньги правки с записанными: итог и доля каждого
+// участника. Состав участников тоже обязан совпадать: убрать человека из
+// расхода — значит изменить чью-то долю.
+func sameMoney(old *api.Operation, sumMinor int64, recipients []api.RecipientWithSum) bool {
+	if old.SumMinorOrLegacy() != sumMinor || len(old.RecipientsWithSum) != len(recipients) {
+		return false
+	}
+	was := make(map[int]int64, len(old.RecipientsWithSum))
+	for i := range old.RecipientsWithSum {
+		was[old.RecipientsWithSum[i].User.ID] = old.RecipientsWithSum[i].SumMinorOrLegacy()
+	}
+	for i := range recipients {
+		share, ok := was[recipients[i].User.ID]
+		if !ok || share != recipients[i].SumMinorOrLegacy() {
+			return false
+		}
+	}
+	return true
+}
+
 // operationIsFractional — записан ли расход с копейками: сама сумма или любая
 // из долей не кратна единице валюты.
 func operationIsFractional(op *api.Operation) bool {
@@ -1142,6 +1176,20 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 
 	// копия до мутации — по диффу old/new собираются уведомления участникам
 	oldOp := *operation
+
+	// Рубильник опущен: у уже дробного расхода правится ЧТО УГОДНО, кроме
+	// денег. Разрешение дроби выше нужно лишь для того, чтобы такой расход
+	// вообще открывался на правку; если бы им можно было ещё и МЕНЯТЬ суммы,
+	// выключение перестало бы останавливать появление новых дробных
+	// обязательств — 20,80 превращали бы в 30,90. Привести расход к целому
+	// при этом можно: целые деньги проверку проходят.
+	if !api.RoomFractional(room) &&
+		moneyIsFractional(newSumMinor, recipientsWithSum) &&
+		!sameMoney(&oldOp, newSumMinor, recipientsWithSum) {
+		writeError(w, http.StatusConflict, "conflict",
+			"копейки выключены — суммы этого расхода изменить нельзя")
+		return
+	}
 
 	// ⚠️ Сборка, не умеющая копеек, не должна их стирать. Она шлёт только
 	// округлённое sum, и правка описания у расхода 20,80 записала бы 21 —

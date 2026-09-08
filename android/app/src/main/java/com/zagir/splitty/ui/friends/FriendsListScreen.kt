@@ -172,7 +172,7 @@ private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness) {
         Spacer(Modifier.height(8.dp))
         MoneyTotalsText(totals = totals)
         Spacer(Modifier.height(8.dp))
-        val primary = totals.firstOrNull()?.sum ?: 0
+        val primary = totals.firstOrNull()?.exactMinor ?: 0
         Text(
             text = when {
                 primary > 0 -> stringResource(R.string.friends_you_are_owed)

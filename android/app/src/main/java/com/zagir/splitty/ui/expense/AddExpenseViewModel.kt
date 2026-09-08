@@ -930,7 +930,8 @@ class AddExpenseViewModel @Inject constructor(
             // Из точной величины по той же причине; у записей прежних сборок
             // её нет, и тогда работает целое.
             sumText = inputTextFromMinor(payload.sumMinor ?: (payload.sum * MINOR_FACTOR)),
-            fractional = (payload.sumMinor ?: (payload.sum * MINOR_FACTOR)) % MINOR_FACTOR != 0L,
+            fractional = (payload.sumMinor ?: (payload.sum * MINOR_FACTOR)) % MINOR_FACTOR != 0L ||
+                payload.recipientSums.orEmpty().any { it.exactMinor % MINOR_FACTOR != 0L },
             payerId = payload.donorId,
             recipientIds = editRecipientOrder.toSet(),
             splitType = payload.splitType,
@@ -960,7 +961,11 @@ class AddExpenseViewModel @Inject constructor(
                 // при простом переименовании, и предохранитель сервера этого не
                 // ловит — сборка честно шлёт округлённую сумму как точную.
                 sumText = inputTextFromMinor(operation.exactMinor),
-                fractional = operation.exactMinor % MINOR_FACTOR != 0L,
+                // Точность поднимает и дробная ДОЛЯ: у расхода 100 с долями
+                // 50,50 + 49,50 итог целый, а поле доли фильтр превратил бы
+                // в «5050».
+                fractional = operation.exactMinor % MINOR_FACTOR != 0L ||
+                    operation.recipients.any { it.exactMinor % MINOR_FACTOR != 0L },
                 payerId = operation.donor.id,
                 recipientIds = editRecipientOrder.toSet(),
                 splitType = operation.splitType ?: SplitType.EQUALLY,

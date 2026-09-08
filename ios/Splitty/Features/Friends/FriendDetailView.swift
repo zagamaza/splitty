@@ -137,7 +137,7 @@ struct FriendDetailView: View {
 
     /// Подпись — по знаку основной валюты (цвет — в самих суммах).
     private var totalCaption: String {
-        let primary = friend.totals.first?.sum ?? 0
+        let primary = friend.totals.first?.exactMinor ?? 0
         if primary > 0 {
             return String(localized: "Должен(на) вам")
         }

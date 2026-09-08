@@ -43,11 +43,14 @@ object Glossary {
      */
     @StringRes
     fun balanceCaption(totals: List<CurrencySum>, primary: CurrencySum): Int {
-        val hasPositive = totals.any { it.sum > 0 }
-        val hasNegative = totals.any { it.sum < 0 }
+        // Знак — у ТОЧНОЙ величины: 0,25 на округлённой читается нулём, и под
+        // ненулевой суммой стояло бы «все долги погашены», а разные знаки
+        // переставали бы называться взаимными.
+        val hasPositive = totals.any { it.exactMinor > 0 }
+        val hasNegative = totals.any { it.exactMinor < 0 }
         if (hasPositive && hasNegative) return R.string.glossary_mutual_debts
-        if (primary.sum > 0) return R.string.friends_owes_you_short
-        if (primary.sum < 0) return R.string.groups_row_owes
+        if (primary.exactMinor > 0) return R.string.friends_owes_you_short
+        if (primary.exactMinor < 0) return R.string.groups_row_owes
         return SETTLED
     }
 }

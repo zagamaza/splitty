@@ -151,7 +151,7 @@ struct FriendsListView: View {
 
     /// Подпись — по знаку основной валюты (цвет — в самих суммах).
     private var totalCaption: String {
-        let primary = model.totals.first?.sum ?? 0
+        let primary = model.totals.first?.exactMinor ?? 0
         if primary > 0 {
             return String(localized: "Вам должны")
         }
@@ -207,11 +207,11 @@ private struct FriendRow: View {
     /// (единая подпись «должен вам»/«вы должны» тут врала бы), иначе — по
     /// знаку основной валюты с обязательной нулевой веткой.
     private func caption(totals: [CurrencySum], primary: CurrencySum) -> String {
-        let hasPositive = totals.contains { $0.sum > 0 }
-        let hasNegative = totals.contains { $0.sum < 0 }
+        let hasPositive = totals.contains { $0.exactMinor > 0 }
+        let hasNegative = totals.contains { $0.exactMinor < 0 }
         if hasPositive && hasNegative { return String(localized: "взаимные долги") }
-        if primary.sum > 0 { return String(localized: "должен(на) вам") }
-        if primary.sum < 0 { return String(localized: "вы должны") }
+        if primary.exactMinor > 0 { return String(localized: "должен(на) вам") }
+        if primary.exactMinor < 0 { return String(localized: "вы должны") }
         return Glossary.settled
     }
 }

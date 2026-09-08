@@ -299,11 +299,19 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
         // Комнаты с неисчислимыми долгами не участвуют: их myBalance=0 —
         // заглушка, а не «в расчёте», и складывать её в итог нельзя.
         aggregateByCurrency(
+            // ⚠️ Точные величины: из округлённых баланс 0,25 пришёл бы нулём,
+            // и валюта пропала бы из сводки целиком.
             rooms.filterNot { it.debtsUnavailable }
-                .map { CurrencySum(currency = it.currency, sum = it.myBalance) }
+                .map {
+                    CurrencySum(
+                        currency = it.currency,
+                        sum = it.myBalance,
+                        sumMinor = it.exactMyBalanceMinor,
+                    )
+                }
         )
     }
-    val primarySign = totals.firstOrNull()?.sum ?: 0
+    val primarySign = totals.firstOrNull()?.exactMinor ?: 0
     val subtitle = when {
         primarySign > 0 -> stringResource(R.string.group_you_are_owed)
         primarySign < 0 -> stringResource(R.string.group_you_owe)

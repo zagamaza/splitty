@@ -69,3 +69,15 @@ func TestDefineSumMinorRejectsFractionWhenDisabled(t *testing.T) {
 		t.Errorf("дробная сумма при включённом признаке = %d, %v", got, err)
 	}
 }
+
+// Отрицательная сумма не сумма — включая «минус ноль».
+//
+// «-0,50» разбиралось как +0,50: Atoi("-0") возвращает ноль, знак терялся
+// вместе с проверкой на отрицательность.
+func TestDefineSumMinorRejectsNegative(t *testing.T) {
+	for _, in := range []string{"-0.50", "-0,50", "-1.50", "-0", "-21"} {
+		if got, err := defineSumMinor(in, true); err == nil {
+			t.Errorf("%q принято как %d", in, got)
+		}
+	}
+}

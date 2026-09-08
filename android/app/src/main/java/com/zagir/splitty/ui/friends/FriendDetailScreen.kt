@@ -268,7 +268,7 @@ private fun Header(friend: FriendBalance) {
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             val totals = friend.totals
-            val primary = totals.firstOrNull()?.sum ?: 0
+            val primary = totals.firstOrNull()?.exactMinor ?: 0
             SectionHeader(
                 // Единый settled-текст на всех экранах: «Все долги погашены».
                 text = when {

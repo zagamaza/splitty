@@ -248,4 +248,64 @@ func TestFractionalOperationStaysEditableAfterRollback(t *testing.T) {
 		testUser1.ID, testUser1.ID, testUser2.ID)
 	rec = doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations", token, body)
 	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	// И деньги того самого расхода изменить нельзя: иначе выключенный
+	// рубильник не останавливал бы появление новых дробных обязательств.
+	body = fmt.Sprintf(
+		`{"description":"Ужин","sumMinor":3090,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+
+	// Привести расход к ЦЕЛОМУ можно — это путь «починки вперёд» после отката.
+	body = fmt.Sprintf(
+		`{"description":"Ужин","sum":22,"sumMinor":2200,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("приведение дробного расхода к целому: %d, body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+// Дробные ДОЛИ при опущенном рубильнике тоже заморожены, даже когда итог целый.
+//
+// Расход 100 с долями 50,50 + 49,50 — итог целый, а обязательства дробные:
+// правка долей меняла бы их, минуя выключенный рубильник.
+func TestFractionalSharesFrozenAfterRollback(t *testing.T) {
+	room := fractionalRoom("USD", false)
+	total := int64(10000)
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 100, SumMinor: &total,
+		Donor: &testUser1, Status: statusActive, SplitType: splitByExactAmount,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: testUser1, SumMinor: ptr64(5050)},
+			{User: testUser2, SumMinor: ptr64(4950)},
+		},
+	}
+	ops := append(*room.Operations, op)
+	room.Operations = &ops
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	token := mustToken(t, s, testUser1.ID)
+
+	// Те же доли — переименование проходит.
+	body := fmt.Sprintf(
+		`{"description":"Ужин вдвоём","sum":100,"sumMinor":10000,"donorId":%d,`+
+			`"recipientSums":[{"userId":%d,"sumMinor":5050},{"userId":%d,"sumMinor":4950}]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec := doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("переименование расхода с дробными долями: %d, body: %s", rec.Code, rec.Body.String())
+	}
+
+	// Другие доли — отказ.
+	body = fmt.Sprintf(
+		`{"description":"Ужин вдвоём","sum":100,"sumMinor":10000,"donorId":%d,`+
+			`"recipientSums":[{"userId":%d,"sumMinor":6050},{"userId":%d,"sumMinor":3950}]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
 }

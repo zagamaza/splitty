@@ -242,7 +242,9 @@ struct GroupsListView: View {
     /// Подпись под hero-суммой — по знаку основной валюты
     /// (цветовое правило — в самой сумме).
     private var summarySubtitle: String {
-        let primary = model.totals.first?.sum ?? 0
+        // Знак — у точной величины: 0,25 на округлённой читается нулём, и под
+        // ненулевой суммой стояло бы «все долги погашены».
+        let primary = model.totals.first?.exactMinor ?? 0
         if primary > 0 {
             return String(localized: "Вам должны")
         }
