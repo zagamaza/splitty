@@ -378,6 +378,42 @@ func userLink(user *api.User) string {
 	return fmt.Sprintf("<a href=\"tg://user?id=%d\">%s</a>", chatId, name)
 }
 
+// moneySpaceMinor показывает ТОЧНУЮ сумму: дробная часть печатается, только
+// если она есть. 2080 → «20,80 $», 2100 → «21 $».
+//
+// Точность выводится из значения, а не из настройки тусы: в тусе без копеек
+// нецелых сумм не возникает, и показ там не меняется.
+func moneySpaceMinor(minor int64, currency string) string {
+	whole := moneySpace(api.FromMinor(minor-minor%api.MinorFactor), currency)
+	frac := minor % api.MinorFactor
+	if frac == 0 {
+		return whole
+	}
+	if frac < 0 {
+		frac = -frac
+	}
+	// Символ валюты уже приклеен к целой части — вставляем копейки перед ним.
+	cut := strings.LastIndex(whole, " ")
+	if cut < 0 {
+		return whole
+	}
+	return fmt.Sprintf("%s,%02d%s", whole[:cut], frac, whole[cut:])
+}
+
+// minorToInput печатает точную сумму так, как её набрал бы человек: «20.50»,
+// «21». Разделитель — точка: строка уходит в данные кнопки и обратно в парсер,
+// а не человеку на экран.
+func minorToInput(minor int64) string {
+	if minor%api.MinorFactor == 0 {
+		return strconv.FormatInt(minor/api.MinorFactor, 10)
+	}
+	frac := minor % api.MinorFactor
+	if frac < 0 {
+		frac = -frac
+	}
+	return fmt.Sprintf("%d.%02d", minor/api.MinorFactor, frac)
+}
+
 func moneySpace(sum int, currency string) string {
 	s := strconv.Itoa(sum)
 	re := regexp.MustCompile("(\\d+)(\\d{3})")

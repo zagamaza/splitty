@@ -218,6 +218,14 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	// Рубильник дробного ввода ставится ДО первого расчёта долгов: от него
 	// зависит шаг, которым делятся доли и квантуются долги.
 	api.SetFractionalInput(cfg.FractionalInput)
+	if v := strings.TrimSpace(cfg.FractionalEnabledAt); v != "" {
+		enabledAt, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("FRACTIONAL_ENABLED_AT: %w", err)
+		}
+		api.SetFractionalEnabledAt(enabledAt)
+		log.Warn().Msgf("копейки по умолчанию только у тус, заведённых после %s", enabledAt)
+	}
 
 	restCfg := rest.Config{
 		Listen:          cfg.Listen,

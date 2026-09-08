@@ -192,11 +192,11 @@ struct FriendDetailView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 // Glossary.balanceCaption: нулевая ветка обязательна,
                 // тернарник «>0 ? вам : вы» при нуле врал.
-                Text(Glossary.balanceCaption(room.balance))
+                Text(Glossary.balanceCaption(room.exactMinor))
                     .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
                 // Баланс комнаты — в валюте самой комнаты.
-                MoneyText(room.balance, size: 16, currency: room.currency)
+                MoneyText(room.balance, exactMinor: room.exactMinor, size: 16, currency: room.currency)
             }
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .semibold))

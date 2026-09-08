@@ -355,13 +355,13 @@ struct GroupDetailView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Color.inkSecondary)
             }
-        } else if room.myBalance > 0 {
+        } else if room.exactMyBalanceMinor > 0 {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Вам должны")
                     .sectionHeaderStyle()
                 MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 40, currency: room.currency)
             }
-        } else if room.myBalance < 0 {
+        } else if room.exactMyBalanceMinor < 0 {
             let creditors = model.debtsOwedBy(meId)
             VStack(alignment: .leading, spacing: 4) {
                 if creditors.count == 1, let debt = creditors.first {

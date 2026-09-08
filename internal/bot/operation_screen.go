@@ -417,24 +417,58 @@ func (s AddDonorOperation) defineText(text string) string {
 	return strings.Join(words[1:], " ")
 }
 
-func defineSum(text string) (int, error) {
+// defineSumMinor разбирает введённую сумму в МИНОРНЫЕ единицы: «20,50» и
+// «20.50» → 2050, «21» → 2100.
+//
+// Оба разделителя принимаются намеренно: запятую даёт русская клавиатура, точку
+// — цифровая, и человек не обязан гадать, какая правильная. Этим же парсером
+// проходит значение кнопки «вернуть всё»: она кладёт в текст ту же строку, что
+// набрал бы человек, и второй ветки разбора не нужно.
+func defineSumMinor(text string) (int64, error) {
 	words := strings.Fields(text)
-	sum, err := strconv.Atoi(words[0])
+	if len(words) == 0 {
+		return 0, errors.New("empty sum")
+	}
+	raw := strings.ReplaceAll(words[0], ",", ".")
+	parts := strings.SplitN(raw, ".", 2)
+	units, err := strconv.Atoi(parts[0])
 	if err != nil {
 		log.Error().Err(err).Msg("text to int not parsed")
 		return 0, err
 	}
-	if sum < 0 {
-		log.Error().Err(err).Msgf("sum can not be les zero %v", sum)
+	if units < 0 {
 		return 0, errors.New("sum can not be les zero")
 	}
-	// Потолок тот же, что и у REST. Без него огромное число доходило до
-	// перевода в минорные единицы, где переполняло int64 и превращалось в
-	// ноль — расход без денег.
-	if sum > api.MaxMoneyUnits {
-		log.Error().Msgf("sum is too large %v", sum)
+	if units > api.MaxMoneyUnits {
+		log.Error().Msgf("sum is too large %v", units)
 		return 0, errors.New("sum is too large")
 	}
+	minor := int64(units) * api.MinorFactor
+	if len(parts) == 2 {
+		frac := parts[1]
+		if len(frac) == 0 || len(frac) > 2 {
+			return 0, errors.New("bad fraction")
+		}
+		v, err := strconv.Atoi(frac)
+		if err != nil || v < 0 {
+			return 0, errors.New("bad fraction")
+		}
+		// «20.5» — это 50 копеек, а не 5.
+		if len(frac) == 1 {
+			v *= 10
+		}
+		minor += int64(v)
+	}
+	return minor, nil
+}
+
+// defineSum — та же сумма целыми единицами, для мест, где дробей не бывает.
+func defineSum(text string) (int, error) {
+	minor, err := defineSumMinor(text)
+	if err != nil {
+		return 0, err
+	}
+	sum := api.FromMinor(minor)
 	return sum, nil
 }
 
@@ -2090,7 +2124,9 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 		log.Error().Err(err).Msg("get user debts failed")
 		return
 	}
-	debtReturnedBtn := api.NewButton(debtReturned, &api.CallbackData{RoomId: roomId, UserId: lenderUserId, ExternalId: strconv.Itoa(debt.Sum)})
+	debtReturnedBtn := api.NewButton(debtReturned, &api.CallbackData{RoomId: roomId, UserId: lenderUserId, // В кнопку зашиваем ТОЧНУЮ величину: округлённая просила бы вернуть
+		// 21 при долге 20,50, и сервер отверг бы это как переплату.
+		ExternalId: strconv.FormatInt(debt.SumMinor, 10)})
 	setSumBtn := api.NewButton(setDebtSum, &api.CallbackData{RoomId: roomId, UserId: lenderUserId})
 	cancelBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
 	_, err = s.bs.SaveAll(ctx, debtReturnedBtn, setSumBtn, cancelBtn)
@@ -2100,7 +2136,7 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 	}
 
 	text := I18n(u.User, "scrn_debt_repayment")
-	text += I18n(u.User, "scrn_debt_returning", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+	text += I18n(u.User, "scrn_debt_returning", canonical(ctx, s.us).link(debt.Lender), moneySpaceMinor(debt.SumMinor, room.Currency), GetCurrencySymbol(room.Currency))
 
 	lender, err := s.us.FindById(ctx, debt.Lender.ID)
 	if err == nil && lender != nil && lender.BankDetails != "" {
@@ -2109,7 +2145,7 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 	text += I18n(u.User, "scrn_send_message_choose_user")
 
 	msg := createScreen(u, text, &[][]tgbotapi.InlineKeyboardButton{
-		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debt_sum_return", moneySpace(debt.Sum, room.Currency)), debtReturnedBtn.ID.Hex())},
+		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debt_sum_return", moneySpaceMinor(debt.SumMinor, room.Currency)), debtReturnedBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_debt_custom_sum_return"), setSumBtn.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex())}})
 	return api.TelegramMessage{Chattable: []tgbotapi.Chattable{msg},
@@ -2203,7 +2239,7 @@ func (s ChooseRecepientOperation) OnMessage(ctx context.Context, u *api.Update) 
 	}
 
 	text := I18n(u.User, "scrn_debt_repayment")
-	text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+	text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpaceMinor(debt.SumMinor, room.Currency), GetCurrencySymbol(room.Currency))
 
 	lender, err := s.us.FindById(ctx, debt.Lender.ID)
 	if err == nil && lender != nil && lender.BankDetails != "" {
@@ -2270,15 +2306,14 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 		return
 	}
 
-	sum, err := defineSum(u.Message.Text)
 	// Сравниваем по ТОЧНОЙ величине долга: округлённая проекция долга в 20,80
-	// равна 21, и погашение на 21 прошло бы, переплатив 20 копеек. Бот вводит
-	// только целые, поэтому переводим введённое в копейки.
-	sumMinor, fits := api.ToMinorChecked(sum)
-	if err != nil || !fits || sumMinor > debt.SumMinor {
+	// равна 21, и погашение на 21 прошло бы, переплатив 20 копеек.
+	sumMinor, err := defineSumMinor(u.Message.Text)
+	sum := api.FromMinor(sumMinor)
+	if err != nil || sumMinor > debt.SumMinor {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
-		text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpace(debt.Sum, room.Currency), GetCurrencySymbol(room.Currency))
+		text += I18n(u.User, "scrn_debt_returning_operation", canonical(ctx, s.us).link(debt.Lender), moneySpaceMinor(debt.SumMinor, room.Currency), GetCurrencySymbol(room.Currency))
 
 		lender, err := s.us.FindById(ctx, debt.Debtor.ID)
 		if err == nil && lender != nil && lender.BankDetails != "" {

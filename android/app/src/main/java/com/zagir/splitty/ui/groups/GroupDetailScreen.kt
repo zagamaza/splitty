@@ -649,13 +649,13 @@ private fun DebtHeroCard(
                 )
             }
 
-            room.myBalance > 0 -> {
+            room.exactMyBalanceMinor > 0 -> {
                 SectionHeader(stringResource(R.string.group_you_are_owed))
                 Spacer(Modifier.height(4.dp))
                 MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp, currency = room.currency)
             }
 
-            room.myBalance < 0 -> {
+            room.exactMyBalanceMinor < 0 -> {
                 // Один кредитор — называем его по имени, как в iOS.
                 val creditors = room.debts.filter { it.debtor.id == meId }
                 if (creditors.size == 1) {

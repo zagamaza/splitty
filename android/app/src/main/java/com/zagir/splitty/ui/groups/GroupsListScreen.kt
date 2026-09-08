@@ -403,7 +403,7 @@ private fun GroupCard(
                     fontSize = 13.sp,
                     color = colors.inkSecondary,
                 )
-            } else if (room.myBalance == 0L) {
+            } else if (room.exactMyBalanceMinor == 0L) {
                 Text(
                     text = stringResource(R.string.groups_row_settled),
                     fontSize = 14.sp,
@@ -416,7 +416,7 @@ private fun GroupCard(
                 ) {
                     Text(
                         text = stringResource(
-                            if (room.myBalance > 0) R.string.groups_row_owed else R.string.groups_row_owes
+                            if (room.exactMyBalanceMinor > 0) R.string.groups_row_owed else R.string.groups_row_owes
                         ),
                         fontSize = 11.sp,
                         color = colors.inkSecondary,

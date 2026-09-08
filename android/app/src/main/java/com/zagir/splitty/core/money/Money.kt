@@ -198,17 +198,20 @@ fun moneyRange(minSum: Long, maxSum: Long, currency: String): String {
  * для крупного показа), при равенстве — по коду валюты (стабильный порядок).
  */
 fun aggregateByCurrency(amounts: List<CurrencySum>): List<CurrencySum> {
+    // ⚠️ Копим ТОЧНЫЕ величины: сумма округлений не равна округлению суммы, и
+    // два баланса по 0,25 давали бы 0 вместо честных 0,50 — валюта пропадала бы
+    // из списка целиком.
     val totals = LinkedHashMap<String, Long>()
     for (amount in amounts) {
-        totals[amount.currency] = (totals[amount.currency] ?: 0L) + amount.sum
+        totals[amount.currency] = (totals[amount.currency] ?: 0L) + amount.exactMinor
     }
     return totals.entries
         .filter { it.value != 0L }
         // Сужения больше нет: суммы 64-битные на всём пути. Раньше здесь стояло
         // насыщение, потому что итог в рупиях не помещался в Int и «должен»
         // превращался в «должны вам»
-        .map { CurrencySum(currency = it.key, sum = it.value) }
-        .sortedWith(compareByDescending<CurrencySum> { abs(it.sum) }.thenBy { it.currency })
+        .map { CurrencySum(currency = it.key, sum = minorToUnitsRounded(it.value), sumMinor = it.value) }
+        .sortedWith(compareByDescending<CurrencySum> { abs(it.exactMinor) }.thenBy { it.currency })
 }
 
 /**

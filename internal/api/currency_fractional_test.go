@@ -1,5 +1,7 @@
 package api
 
+import "time"
+
 import "testing"
 
 // wantFractional — принятая таблица: считает ли НОВАЯ туса копейки и есть ли у
@@ -99,5 +101,36 @@ func TestServerFlagOverridesRoom(t *testing.T) {
 	}
 	if ShareStepFor(RoomFractional(&Room{Currency: "EUR"})) != MinorFactor {
 		t.Error("шаг деления не стал целым при выключенном признаке")
+	}
+}
+
+// Барьер выкатки: умолчание валюты действует только на тусы, заведённые ПОСЛЕ
+// подъёма рубильника.
+//
+// Иначе включение разом сделало бы дробными все долларовые и евровые тусы, а у
+// людей на руках осталась бы старая сборка, которая точный долг ни показать, ни
+// погасить не может. Настройку существующим тусам проставляют явно.
+func TestFractionalDefaultOnlyForNewRooms(t *testing.T) {
+	SetFractionalInput(true)
+	defer SetFractionalInput(false)
+	enabledAt := time.Date(2026, 9, 8, 0, 0, 0, 0, time.UTC)
+	SetFractionalEnabledAt(enabledAt)
+	defer SetFractionalEnabledAt(time.Time{})
+
+	old := &Room{Currency: "USD", CreateAt: enabledAt.Add(-time.Hour)}
+	if RoomFractional(old) {
+		t.Error("старая долларовая туса подхватила копейки сама — у людей осталась сборка, которая их не умеет")
+	}
+
+	fresh := &Room{Currency: "USD", CreateAt: enabledAt.Add(time.Hour)}
+	if !RoomFractional(fresh) {
+		t.Error("новая долларовая туса не получила копейки по умолчанию валюты")
+	}
+
+	// Явная настройка сильнее барьера — так их и включают существующим тусам.
+	yes := true
+	explicit := &Room{Currency: "USD", CreateAt: enabledAt.Add(-time.Hour), FractionalAmounts: &yes}
+	if !RoomFractional(explicit) {
+		t.Error("явно включённые копейки не сработали у старой тусы")
 	}
 }

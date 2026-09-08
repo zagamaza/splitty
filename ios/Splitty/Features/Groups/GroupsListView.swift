@@ -350,13 +350,13 @@ private struct GroupCardRow: View {
             Text(Glossary.debtsUnavailableShort)
                 .font(.system(size: 14))
                 .foregroundStyle(Color.inkSecondary)
-        } else if room.myBalance == 0 {
+        } else if room.exactMyBalanceMinor == 0 {
             Text(Glossary.settled)
                 .font(.system(size: 14))
                 .foregroundStyle(Color.inkSecondary)
         } else {
             VStack(alignment: .trailing, spacing: 2) {
-                Text(Glossary.balanceCaption(room.myBalance))
+                Text(Glossary.balanceCaption(room.exactMyBalanceMinor))
                     .font(.caption2)
                     .foregroundStyle(Color.inkSecondary)
                 MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 15, currency: room.currency)

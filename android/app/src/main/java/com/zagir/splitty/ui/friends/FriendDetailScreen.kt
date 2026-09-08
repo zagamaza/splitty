@@ -342,14 +342,14 @@ private fun RoomRow(room: FriendRoomBalance, onClick: () -> Unit) {
             Text(
                 // Через Glossary: тернарник «>0 ? вам : вы» на нулевом балансе
                 // показывал «вы должны» в полностью рассчитанной группе.
-                text = stringResource(Glossary.balanceCaption(room.balance)),
+                text = stringResource(Glossary.balanceCaption(room.exactMinor)),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = Splitty.colors.inkSecondary,
             )
             Spacer(Modifier.height(2.dp))
             // Баланс комнаты — в валюте самой комнаты.
-            MoneyText(room.balance, size = 16.sp, currency = room.currency)
+            MoneyText(room.balance, exactMinor = room.exactMinor, size = 16.sp, currency = room.currency)
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,

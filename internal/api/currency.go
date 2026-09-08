@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 )
 
 // DefaultCurrency валюта комнат, у которых валюта не выбрана
@@ -117,8 +118,27 @@ func RoomFractional(r *Room) bool {
 	if r != nil && r.FractionalAmounts != nil {
 		return *r.FractionalAmounts
 	}
+	// ⚠️ Умолчание валюты действует ТОЛЬКО на тусы, заведённые после подъёма
+	// рубильника. У существующих настройка проставляется явно один раз перед
+	// включением (см. FractionalBackfilledAt): иначе подъём рубильника разом
+	// сделал бы дробными все долларовые и евровые тусы, а у людей на руках
+	// осталась бы старая сборка, которая точный долг ни показать, ни погасить
+	// не может. Выкатка обязана быть управляемой, а не «одним щелчком на всех».
+	if r != nil && r.CreateAt.Before(fractionalEnabledAt.Load().(time.Time)) {
+		return false
+	}
 	return FractionalDefaultFor(RoomCurrency(r))
 }
+
+// fractionalEnabledAt — момент подъёма рубильника. Тусы, заведённые раньше,
+// умолчание валюты не подхватывают: их настройку проставляют явно.
+var fractionalEnabledAt atomic.Value
+
+func init() { fractionalEnabledAt.Store(time.Time{}) }
+
+// SetFractionalEnabledAt задаёт этот момент; нулевое время означает «умолчание
+// валюты действует для всех», то есть поведение до появления барьера.
+func SetFractionalEnabledAt(t time.Time) { fractionalEnabledAt.Store(t) }
 
 // fractionalInput — серверный признак дробного ввода (FRACTIONAL_INPUT).
 // Процесс-глобальный намеренно: это один рубильник на весь сервер, и таскать

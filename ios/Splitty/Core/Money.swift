@@ -198,16 +198,19 @@ func rublesRange(_ minSum: Int, _ maxSum: Int) -> String {
 /// Результат — без нулевых итогов, по убыванию |суммы| (первая — «основная»
 /// для крупного показа), при равенстве — по коду валюты (стабильный порядок).
 func aggregateByCurrency(_ amounts: [CurrencySum]) -> [CurrencySum] {
+    // ⚠️ Копим ТОЧНЫЕ величины: сумма округлений не равна округлению суммы, и
+    // два баланса по 0,25 давали бы 0 вместо честных 0,50 — валюта пропадала
+    // бы из списка целиком.
     var totals: [String: Int] = [:]
     for amount in amounts {
-        totals[amount.currency, default: 0] += amount.sum
+        totals[amount.currency, default: 0] += amount.exactMinor
     }
     return totals
         .filter { $0.value != 0 }
-        .map { CurrencySum(currency: $0.key, sum: $0.value) }
+        .map { CurrencySum(currency: $0.key, sum: minorToUnitsRounded($0.value), sumMinor: $0.value) }
         .sorted {
-            if abs($0.sum) != abs($1.sum) {
-                return abs($0.sum) > abs($1.sum)
+            if abs($0.exactMinor) != abs($1.exactMinor) {
+                return abs($0.exactMinor) > abs($1.exactMinor)
             }
             return $0.currency < $1.currency
         }
