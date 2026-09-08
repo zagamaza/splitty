@@ -1479,10 +1479,12 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 			moneyUnchanged = sameOperationMoney(&previous, &opn)
 		}
 		if !moneyUnchanged {
-			// Возвращаем прежнюю версию в долги и убираем черновик: иначе
-			// расход исчезает у всех участников.
-			s.restoreArchivedVersion(ctx, room, opn.OldOperationId)
-			if opn.OldOperationId != nil {
+			// Возвращаем прежнюю версию в долги и только ПОСЛЕ подтверждённого
+			// восстановления убираем черновик. Обратный порядок терял бы расход
+			// целиком: старая версия не вернулась, новая уже удалена.
+			// Не вышло — черновик остаётся, и подтвердить правку можно снова.
+			restoreErr := s.restoreArchivedVersion(ctx, room, opn.OldOperationId)
+			if opn.OldOperationId != nil && restoreErr == nil {
 				if _, err := s.os.DeleteOperation(ctx, room.ID.Hex(), opn.ID); err != nil {
 					log.Error().Err(err).Msg("cannot drop rejected draft")
 				}
@@ -1500,7 +1502,9 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 			// Черновик собирают минутами, и всё это время он никого не держит в
 			// комнате: получатель успевает выйти. Записать его в долг молча
 			// нельзя — комнату он уже не видит и убрать себя из расхода не сможет
-			s.restoreArchivedVersion(ctx, room, oldOperationId)
+			if err := s.restoreArchivedVersion(ctx, room, oldOperationId); err != nil {
+				log.Error().Err(err).Msg("participant left and previous version not restored")
+			}
 			callback := createCallback(u, I18n(u.User, "msg_operation_participant_left"), true)
 			return api.TelegramMessage{
 				CallbackConfig: callback,
@@ -1551,18 +1555,24 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 //
 // Сбой восстановления только логируем: сказать человеку тут нечего, а повторное
 // «Готово» упрётся в тот же отказ и попробует снова.
-func (s OperationAdded) restoreArchivedVersion(ctx context.Context, room *api.Room, oldOperationId *primitive.ObjectID) {
+// restoreArchivedVersion возвращает прежнюю версию расхода в долги и ГОВОРИТ,
+// получилось ли: вызывающий на этом решает, можно ли убирать черновик. Молчание
+// здесь стоило бы расхода целиком — не восстановив старую версию и удалив
+// новую, мы оставили бы участников без обеих.
+func (s OperationAdded) restoreArchivedVersion(ctx context.Context, room *api.Room, oldOperationId *primitive.ObjectID) error {
 	if oldOperationId == nil {
-		return
+		return nil
 	}
 	oldOp := findOperationByID(room, *oldOperationId)
 	if oldOp.ID.IsZero() {
-		return
+		return fmt.Errorf("прежняя версия %s не найдена", oldOperationId.Hex())
 	}
 	oldOp.Status = active
 	if err := s.os.UpdateOperation(ctx, &oldOp, room.ID.Hex()); err != nil {
 		log.Error().Err(err).Str("room", room.ID.Hex()).Msg("cannot restore archived operation")
+		return err
 	}
+	return nil
 }
 
 // notificationWhenCreateOperation рассылает уведомления о созданном в боте

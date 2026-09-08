@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
@@ -11,12 +12,16 @@ import (
 // Запись версий расхода: черновик правки и прежняя активная версия.
 type editRecordingOperationService struct {
 	OperationService
+	updateErr error
 	updated  []api.Operation
 	deleted  []primitive.ObjectID
 	activated *api.Operation
 }
 
 func (o *editRecordingOperationService) UpdateOperation(_ context.Context, op *api.Operation, _ string) error {
+	if o.updateErr != nil {
+		return o.updateErr
+	}
 	o.updated = append(o.updated, *op)
 	return nil
 }
@@ -125,6 +130,58 @@ func TestUnchangedMoneyEditPassesWhileFlagOff(t *testing.T) {
 	otherDonor.Donor = &api.User{ID: 2}
 	if sameOperationMoney(&old, &otherDonor) {
 		t.Error("смена плательщика прошла как неизменные деньги")
+	}
+}
+
+// Не удалось восстановить прежнюю версию — черновик НЕ удаляется.
+//
+// Иначе не вернувшаяся старая версия и удалённая новая оставляют участников
+// без обеих: расход исчезает, и повторить правку уже нечем.
+func TestFailedRestoreKeepsDraft(t *testing.T) {
+	members := []api.User{{ID: 1, DisplayName: "A"}, {ID: 2, DisplayName: "B"}}
+	oldID := primitive.NewObjectID()
+	draftID := primitive.NewObjectID()
+
+	oldMinor := int64(2080)
+	previous := api.Operation{
+		ID: oldID, Description: "Ужин", Sum: 21, SumMinor: &oldMinor,
+		Donor: &members[0], Status: archive, SplitType: equally,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: members[0], SumMinor: ptrMinor(1040)},
+			{User: members[1], SumMinor: ptrMinor(1040)},
+		},
+	}
+	draftMinor := int64(3090)
+	draftOp := api.Operation{
+		ID: draftID, Description: "Ужин", Sum: 31, SumMinor: &draftMinor,
+		Donor: &members[0], Status: draft, SplitType: equally,
+		OldOperationId: &oldID,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: members[0], SumMinor: ptrMinor(1545)},
+			{User: members[1], SumMinor: ptrMinor(1545)},
+		},
+	}
+
+	ops := []api.Operation{previous, draftOp}
+	room := &api.Room{
+		ID: primitive.NewObjectID(), Name: "Туса", Currency: "RUB",
+		Members: &members, Operations: &ops,
+	}
+
+	os := &editRecordingOperationService{updateErr: errors.New("база недоступна")}
+	screen := NewOperationAdded(noopChatStateService{}, noopButtonService{},
+		&recordingRoomService{room: room}, os,
+		stubBotUserService{users: map[int]*api.User{1: &members[0], 2: &members[1]}}, &Config{})
+
+	upd := canonicalUpdate(addedOperation, &api.CallbackData{
+		RoomId: room.ID.Hex(), OperationId: draftID,
+	})
+	upd.Button = &api.Button{Action: addedOperation, CallbackData: upd.Button.CallbackData}
+
+	screen.OnMessage(context.Background(), upd)
+
+	if len(os.deleted) != 0 {
+		t.Error("черновик удалён, хотя прежняя версия не вернулась — расход потерян")
 	}
 }
 
