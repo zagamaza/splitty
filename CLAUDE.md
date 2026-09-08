@@ -113,9 +113,12 @@ asc web review show --app 6787746052
 
 ## CLI `asc`
 
-Профиль для Splitty заведён (`asc auth login --name splitty`, ключ T6PMYHX4T7) и
-стоит по умолчанию. Перед работой по duahabit — `asc auth switch --name habitvibe`,
-иначе команды пойдут не в то приложение.
+Профиль для Splitty заведён (`asc auth login --name splitty`, ключ T6PMYHX4T7), но
+по умолчанию стоит **habitvibe**. Перед работой по Splitty —
+`asc auth switch --name splitty`, иначе команды пойдут не в то приложение и
+ответят «There is no resource of type 'apps' with id '6787746052'»: выглядит как
+пропавшее приложение или сломанный ключ, хотя дело только в профиле. Какой
+профиль активен, показывает `asc auth doctor`.
 
 Полезное: `asc validate --app 6787746052 --version 1.8 --platform IOS` — полный
 чеклист готовности, `asc status --app 6787746052` — состояние конвейера одной
