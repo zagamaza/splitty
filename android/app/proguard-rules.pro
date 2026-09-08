@@ -69,3 +69,9 @@
 # Понятные стек-трейсы в отчётах тестеров (маппинг остаётся в build/outputs).
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+# Play In-App Review (com.google.android.play:review-ktx) ссылается на аннотацию
+# из play-services, которой в сборке нет: она нужна только компилятору Google и
+# в рантайме не используется. Без этого правила R8 роняет РЕЛИЗНУЮ сборку, хотя
+# отладочная собирается — поймано ровно так, на выкладке.
+-dontwarn com.google.android.gms.common.annotation.NoNullnessRewrite
