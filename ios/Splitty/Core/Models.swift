@@ -385,15 +385,33 @@ extension Operation {
     /// >0 — одолжил, <0 — должен, 0 — расчёт, nil — не участвует.
     /// Донор: одолжил = `sum` − своя доля (если сам среди получателей).
     func netPosition(of userId: Int) -> Int? {
-        let myShare = recipientSum(of: userId)
+        netPositionMinor(of: userId).map { minorToUnitsRounded($0) }
+    }
+
+    /// Та же позиция в МИНОРНЫХ единицах — точная.
+    ///
+    /// Считать надо здесь, а округлять один раз в конце: разность округлений
+    /// не равна округлению разности, и у расхода 20,80 на двоих позиция донора
+    /// вышла бы 21 − 10 = 11 вместо честных 10,40.
+    func netPositionMinor(of userId: Int) -> Int? {
+        let myShare = recipients.first { $0.user.id == userId }?.exactMinor
         if donor.id == userId {
-            return sum - (myShare ?? 0)
+            return exactMinor - (myShare ?? 0)
         }
         if let myShare {
             return -myShare
         }
         return nil
     }
+}
+
+/// Округляет минорные единицы до целых — половина от нуля, как на сервере.
+func minorToUnitsRounded(_ minor: Int) -> Int {
+    let q = minor / minorFactor
+    let r = minor % minorFactor
+    if r >= (minorFactor + 1) / 2 { return q + 1 }
+    if -r >= (minorFactor + 1) / 2 { return q - 1 }
+    return q
 }
 
 /// Черновик расхода из AI-распознавания (`POST /rooms/{id}/operations/parse`).
@@ -630,8 +648,17 @@ struct RoomSummary: Codable, Identifiable, Hashable {
     var fractional: Bool = false
     /// Сумма всех расходов комнаты (без погашений).
     let totalSpent: Int
+    /// Та же сумма в МИНОРНЫХ единицах — точная. Показывать надо её: целое
+    /// поле выше округлено, и 20,80 в нём выглядит как 21.
+    var totalSpentMinor: Int? = nil
     /// >0 — мне должны, <0 — я должен, 0 — расчёт.
     let myBalance: Int
+    /// Точный баланс в минорных единицах.
+    var myBalanceMinor: Int? = nil
+
+    /// Точные величины в копейках: записанные, иначе выведенные из целых.
+    var exactTotalSpentMinor: Int { totalSpentMinor ?? totalSpent * minorFactor }
+    var exactMyBalanceMinor: Int { myBalanceMinor ?? myBalance * minorFactor }
     /// Долги группы неисчислимы (старые данные бота: доли не сходятся). Сервер
     /// шлёт `debtsUnavailable: true` с `myBalance=0` — без этого флага нулевой
     /// баланс читался бы как «все в расчёте», то есть ложное утверждение о деньгах.
@@ -662,7 +689,11 @@ extension RoomSummary {
         currency = try c.decode(String.self, forKey: .currency)
         fractional = try c.decodeIfPresent(Bool.self, forKey: .fractional) ?? false
         totalSpent = try c.decode(Int.self, forKey: .totalSpent)
+        // Точные величины опциональны: сервер прежней версии их не шлёт, и
+        // тогда работает проекция из целых.
+        totalSpentMinor = try c.decodeIfPresent(Int.self, forKey: .totalSpentMinor)
         myBalance = try c.decode(Int.self, forKey: .myBalance)
+        myBalanceMinor = try c.decodeIfPresent(Int.self, forKey: .myBalanceMinor)
         debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false
         // Ключа нет ни у прочитанной группы (omitempty), ни в списках, лежащих
         // в офлайн-кеше с прошлой версии приложения.
@@ -685,9 +716,19 @@ struct RoomDetail: Codable, Identifiable, Hashable {
     /// «нет» тут единственное честное значение.
     var fractional: Bool = false
     let totalSpent: Int
+    /// Те же суммы в МИНОРНЫХ единицах — точные. Показывать надо их: целые
+    /// поля рядом округлены, и 20,80 в них выглядит как 21.
+    var totalSpentMinor: Int? = nil
     /// Моя доля расходов.
     let mySpent: Int
+    var mySpentMinor: Int? = nil
     let myBalance: Int
+    var myBalanceMinor: Int? = nil
+
+    /// Точные величины в копейках: записанные, иначе выведенные из целых.
+    var exactTotalSpentMinor: Int { totalSpentMinor ?? totalSpent * minorFactor }
+    var exactMySpentMinor: Int { mySpentMinor ?? mySpent * minorFactor }
+    var exactMyBalanceMinor: Int { myBalanceMinor ?? myBalance * minorFactor }
     /// Все долги комнаты.
     let debts: [Debt]
     /// Все операции, новые первыми.
@@ -731,8 +772,11 @@ extension RoomDetail {
         currency = try c.decode(String.self, forKey: .currency)
         fractional = try c.decodeIfPresent(Bool.self, forKey: .fractional) ?? false
         totalSpent = try c.decode(Int.self, forKey: .totalSpent)
+        totalSpentMinor = try c.decodeIfPresent(Int.self, forKey: .totalSpentMinor)
         mySpent = try c.decode(Int.self, forKey: .mySpent)
+        mySpentMinor = try c.decodeIfPresent(Int.self, forKey: .mySpentMinor)
         myBalance = try c.decode(Int.self, forKey: .myBalance)
+        myBalanceMinor = try c.decodeIfPresent(Int.self, forKey: .myBalanceMinor)
         debts = try c.decode([Debt].self, forKey: .debts)
         operations = try c.decode([Operation].self, forKey: .operations)
         debtsUnavailable = try c.decodeIfPresent(Bool.self, forKey: .debtsUnavailable) ?? false

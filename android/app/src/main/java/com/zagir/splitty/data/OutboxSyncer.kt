@@ -136,6 +136,7 @@ class OutboxSyncer internal constructor(
                 roomId = entry.roomId,
                 description = p.description,
                 sum = p.sum,
+                sumMinor = p.sumMinor,
                 donorId = p.donorId,
                 split = p.toSplit(),
                 // items обязателен: без него сервер уходит в плоскую ветку

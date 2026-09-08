@@ -64,6 +64,12 @@ enum class OutboxStatus {
 data class OutboxPayload(
     val description: String,
     val sum: Long,
+    /**
+     * Точная сумма в МИНОРНЫХ единицах. Nullable c default — старые outbox.json
+     * на устройствах тестеров этого поля не содержат и обязаны читаться без
+     * потери очереди.
+     */
+    val sumMinor: Long? = null,
     val donorId: Long,
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
@@ -91,6 +97,7 @@ data class OutboxPayload(
         fun of(
             description: String,
             sum: Long,
+            sumMinor: Long? = null,
             donorId: Long,
             split: ExpenseSplit,
             items: List<OperationItem>? = null,
@@ -99,6 +106,7 @@ data class OutboxPayload(
                 is ExpenseSplit.Equally -> OutboxPayload(
                     description = description,
                     sum = sum,
+                    sumMinor = sumMinor,
                     donorId = donorId,
                     recipientIds = split.recipientIds,
                     items = items,
@@ -107,6 +115,7 @@ data class OutboxPayload(
                 is ExpenseSplit.ByExactAmount -> OutboxPayload(
                     description = description,
                     sum = sum,
+                    sumMinor = sumMinor,
                     donorId = donorId,
                     recipientSums = split.recipientSums,
                     items = items,

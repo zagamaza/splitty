@@ -34,6 +34,8 @@ final class AddExpenseViewModel {
     private(set) var members: [User] = []
     /// Валюта выбранной группы — в ней сумма расхода и подсказки деления.
     private(set) var currency: String = "RUB"
+    /// Туса считает копейки: тогда в поле суммы принимается дробное значение.
+    private(set) var fractional: Bool = false
 
     var descriptionText = ""
     var sumText = ""
@@ -165,9 +167,17 @@ final class AddExpenseViewModel {
         )
     }
 
-    /// Введённая сумма в рублях (только целые, ≥ 0).
+    /// Введённая сумма в МИНОРНЫХ единицах: «20,80» → 2080.
+    ///
+    /// Дробное значение принимается только в тусе с копейками; в остальных поле
+    /// разделитель не пропускает, и здесь всегда получаются целые сотни.
+    var sumMinor: Int? {
+        minorFromInput(sumText)
+    }
+
+    /// Введённая сумма в целых единицах — для тех мест, где дробей нет.
     var sum: Int? {
-        Int(sumText)
+        sumMinor.map { minorToUnitsRounded($0) }
     }
 
     var payer: User? {
@@ -782,7 +792,9 @@ final class AddExpenseViewModel {
             editOperationId = editOperation.id
             editOperationVersion = editOperation.version
             descriptionText = editOperation.description
-            sumText = String(editOperation.sum)
+            // Из ТОЧНОЙ величины: округлённая потеряла бы копейки, и простое
+            // переименование расхода 20,80 записало бы 21.
+            sumText = inputTextFromMinor(editOperation.exactMinor)
             payerId = editOperation.donor.id
             recipientIds = Set(editOperation.recipients.map(\.user.id))
             // Исходный порядок получателей: сервер раздаёт остаток equally-деления
@@ -836,10 +848,10 @@ final class AddExpenseViewModel {
             // ожидание сети ему нечего: всё нужное уже лежит в кеше.
             if let fixedRoomId {
                 let room = try await repo.room(id: fixedRoomId) { [weak self] cached in
-                    self?.applyRoom(id: cached.id, members: cached.members, currency: cached.currency)
+                    self?.applyRoom(id: cached.id, members: cached.members, currency: cached.currency, fractional: cached.fractional)
                     self?.state = .loaded
                 }.value
-                applyRoom(id: room.id, members: room.members, currency: room.currency)
+                applyRoom(id: room.id, members: room.members, currency: room.currency, fractional: room.fractional)
             } else {
                 rooms = try await repo.rooms(archived: false) { [weak self] cached in
                     self?.rooms = cached
@@ -892,7 +904,7 @@ final class AddExpenseViewModel {
         undoSnapshot = nil
         canUndoParse = false
         changedItemIndices = []
-        applyRoom(id: summary.id, members: summary.members, currency: summary.currency)
+        applyRoom(id: summary.id, members: summary.members, currency: summary.currency, fractional: summary.fractional)
     }
 
     func toggleRecipient(_ userId: Int) {
@@ -903,10 +915,11 @@ final class AddExpenseViewModel {
         }
     }
 
-    private func applyRoom(id: String, members: [User], currency: String) {
+    private func applyRoom(id: String, members: [User], currency: String, fractional: Bool = false) {
         selectedRoomId = id
         self.members = members
         self.currency = currency
+        self.fractional = fractional
         let memberIds = Set(members.map(\.id))
         recipientIds = recipientIds.intersection(memberIds)
         if recipientIds.isEmpty {
@@ -952,6 +965,9 @@ final class AddExpenseViewModel {
                 : String(localized: "Введите сумму (целое число рублей, не меньше 1)")
             return false
         }
+        // Точная сумма едет рядом с целой. У расхода по позициям чека дробей
+        // пока нет — их итог целый, — поэтому там точная выводится из целой.
+        let sumMinor = hasDraftItems ? sum * minorFactor : (self.sumMinor ?? sum * minorFactor)
         guard let payerId else {
             alertMessage = String(localized: "Выберите, кто заплатил")
             return false
@@ -1009,6 +1025,7 @@ final class AddExpenseViewModel {
                 payload: OutboxPayload(
                     description: description,
                     sum: sum,
+                    sumMinor: sumMinor,
                     donorId: payerId,
                     recipientIds: exactSums == nil ? ids : nil,
                     recipientSums: exactSums,
@@ -1022,6 +1039,7 @@ final class AddExpenseViewModel {
         let payload = OutboxPayload(
             description: description,
             sum: sum,
+            sumMinor: sumMinor,
             donorId: payerId,
             recipientIds: exactSums == nil ? ids : nil,
             recipientSums: exactSums,
@@ -1053,6 +1071,7 @@ final class AddExpenseViewModel {
                     operationId: editOperationId,
                     description: description,
                     sum: sum,
+                    sumMinor: sumMinor,
                     donorId: payerId,
                     split: split,
                     items: itemsToSend,
@@ -1063,6 +1082,7 @@ final class AddExpenseViewModel {
                     roomId: roomId,
                     description: description,
                     sum: sum,
+                    sumMinor: sumMinor,
                     donorId: payerId,
                     split: split,
                     items: itemsToSend,

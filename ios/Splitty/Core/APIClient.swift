@@ -241,6 +241,10 @@ struct RecipientSum: Codable, Hashable {
 struct OperationBody: Encodable {
     let description: String
     let sum: Int
+    /// Точная сумма в МИНОРНЫХ единицах. Сервер предпочитает её, а целое поле
+    /// выше оставляет для сборок, которые про копейки не знают. nil — сумма
+    /// целая, и слать точную незачем.
+    let sumMinor: Int?
     let donorId: Int
     let recipientIds: [Int]?
     let recipientSums: [RecipientSum]?
@@ -255,6 +259,7 @@ struct OperationBody: Encodable {
     init(
         description: String,
         sum: Int,
+        sumMinor: Int? = nil,
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]? = nil,
@@ -263,6 +268,7 @@ struct OperationBody: Encodable {
     ) {
         self.description = description
         self.sum = sum
+        self.sumMinor = sumMinor
         self.donorId = donorId
         self.items = items
         self.clientOpId = clientOpId
@@ -289,6 +295,7 @@ protocol OperationAPI {
         roomId: String,
         description: String,
         sum: Int,
+        sumMinor: Int?,
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]?,
@@ -300,6 +307,7 @@ protocol OperationAPI {
         operationId: String,
         description: String,
         sum: Int,
+        sumMinor: Int?,
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]?,
@@ -747,6 +755,7 @@ final class APIClient: OperationAPI {
         roomId: String,
         description: String,
         sum: Int,
+        sumMinor: Int? = nil,
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]? = nil,
@@ -757,6 +766,7 @@ final class APIClient: OperationAPI {
             body: OperationBody(
                 description: description,
                 sum: sum,
+                sumMinor: sumMinor,
                 donorId: donorId,
                 split: split,
                 items: items,
@@ -773,6 +783,7 @@ final class APIClient: OperationAPI {
         operationId: String,
         description: String,
         sum: Int,
+        sumMinor: Int? = nil,
         donorId: Int,
         split: ExpenseSplit,
         items: [OperationItem]? = nil,
@@ -783,6 +794,7 @@ final class APIClient: OperationAPI {
             body: OperationBody(
                 description: description,
                 sum: sum,
+                sumMinor: sumMinor,
                 donorId: donorId,
                 split: split,
                 items: items,

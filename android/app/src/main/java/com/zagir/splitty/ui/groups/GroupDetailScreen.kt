@@ -652,7 +652,7 @@ private fun DebtHeroCard(
             room.myBalance > 0 -> {
                 SectionHeader(stringResource(R.string.group_you_are_owed))
                 Spacer(Modifier.height(4.dp))
-                MoneyText(room.myBalance, size = 40.sp, currency = room.currency)
+                MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp, currency = room.currency)
             }
 
             room.myBalance < 0 -> {
@@ -672,7 +672,7 @@ private fun DebtHeroCard(
                 } else {
                     SectionHeader(stringResource(R.string.group_you_owe))
                     Spacer(Modifier.height(4.dp))
-                    MoneyText(room.myBalance, size = 40.sp, currency = room.currency)
+                    MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp, currency = room.currency)
                 }
             }
 

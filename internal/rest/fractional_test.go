@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"testing"
 
+	"fmt"
 	"github.com/almaznur91/splitty/internal/api"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // fractionalRoom — туса в заданной валюте с расходом 21 на двоих: доли 11 и 10.
@@ -163,5 +165,46 @@ func TestFractionalSettingRejectedWhileFlagOff(t *testing.T) {
 	}
 	if dto.Fractional {
 		t.Error("долларовая туса объявлена дробной при выключенном рубильнике")
+	}
+}
+
+// Сборка, не умеющая копеек, не должна их стирать.
+//
+// Она шлёт только округлённое sum, и правка описания у расхода 20,80 записала бы
+// 21: человек на другом телефоне увидел бы, что сумма изменилась сама.
+func TestLegacyEditCannotEraseFraction(t *testing.T) {
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
+	room := fractionalRoom("USD", true)
+	minor := int64(2080)
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 21, SumMinor: &minor,
+		Donor: &testUser1, Status: statusActive, SplitType: splitEqually,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: testUser1, SumMinor: ptr64(1040)},
+			{User: testUser2, SumMinor: ptr64(1040)},
+		},
+	}
+	ops := append(*room.Operations, op)
+	room.Operations = &ops
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	token := mustToken(t, s, testUser1.ID)
+
+	body := fmt.Sprintf(
+		`{"description":"Ужин с друзьями","sum":21,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec := doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+
+	// Новая сборка шлёт точную величину — правка проходит.
+	body = fmt.Sprintf(
+		`{"description":"Ужин с друзьями","sumMinor":2080,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("правка с точной суммой = %d, want 200, body: %s", rec.Code, rec.Body.String())
 	}
 }

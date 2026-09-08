@@ -359,7 +359,7 @@ private struct GroupCardRow: View {
                 Text(Glossary.balanceCaption(room.myBalance))
                     .font(.caption2)
                     .foregroundStyle(Color.inkSecondary)
-                MoneyText(room.myBalance, size: 15, currency: room.currency)
+                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 15, currency: room.currency)
             }
         }
     }

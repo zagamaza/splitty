@@ -158,7 +158,7 @@ private struct DebtRow: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.ink)
                         .lineLimit(2)
-                    MoneyText(debt.sum, role: sumRole, size: 15, currency: currency)
+                    MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, currency: currency)
                 }
             }
             .accessibilityElement(children: .combine)

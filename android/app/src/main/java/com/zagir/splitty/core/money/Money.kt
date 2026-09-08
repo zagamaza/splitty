@@ -135,6 +135,44 @@ fun minorFromInput(text: String): Long? {
     return units * MINOR_FACTOR + if (fraction.length == 1) value * 10 else value
 }
 
+/**
+ * Фильтр поля суммы: в тусе без копеек только цифры, в тусе с копейками — один
+ * разделитель и не больше двух знаков после него.
+ */
+fun filterAmountInput(raw: String, fractional: Boolean): String {
+    if (!fractional) return raw.filter { it.isDigit() }.take(9)
+    val out = StringBuilder()
+    var separatorSeen = false
+    var afterSeparator = 0
+    for (ch in raw) {
+        when {
+            ch.isDigit() -> {
+                if (separatorSeen) {
+                    if (afterSeparator == 2) continue
+                    afterSeparator++
+                }
+                out.append(ch)
+            }
+            (ch == ',' || ch == '.') && !separatorSeen && out.isNotEmpty() -> {
+                separatorSeen = true
+                out.append(ch)
+            }
+        }
+    }
+    return out.take(12).toString()
+}
+
+/** Округляет минорные единицы до целых — половина от нуля, как на сервере. */
+fun minorToUnitsRounded(minor: Long): Long {
+    val q = minor / MINOR_FACTOR
+    val r = minor % MINOR_FACTOR
+    return when {
+        r >= (MINOR_FACTOR + 1) / 2 -> q + 1
+        -r >= (MINOR_FACTOR + 1) / 2 -> q - 1
+        else -> q
+    }
+}
+
 /** Готовит сумму для поля ввода: `2080` → «20,80», `2100` → «21». */
 fun inputTextFromMinor(minor: Long): String {
     if (minor % MINOR_FACTOR == 0L) return (minor / MINOR_FACTOR).toString()

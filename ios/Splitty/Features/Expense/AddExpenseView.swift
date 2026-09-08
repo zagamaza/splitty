@@ -1615,11 +1615,13 @@ struct AddExpenseView: View {
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
                 .fixedSize()
-                .keyboardType(.numberPad)
+                .keyboardType(model.fractional ? .decimalPad : .numberPad)
                 .focused($focusedField, equals: .sum)
                 .onChange(of: text.wrappedValue) { _, newValue in
-                    // Только целые рубли, без лидирующих нулей-простыней.
-                    let filtered = String(newValue.filter(\.isNumber).prefix(9))
+                    // В тусе без копеек — только целые, без лидирующих
+                    // нулей-простыней. В тусе с копейками пропускаем ОДИН
+                    // разделитель и два знака после него.
+                    let filtered = filterAmountInput(newValue, fractional: model.fractional)
                     if filtered != newValue {
                         text.wrappedValue = filtered
                     }

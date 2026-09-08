@@ -517,8 +517,12 @@ data class RoomSummary(
     val fractional: Boolean = false,
     /** Сумма всех расходов комнаты (без погашений). */
     val totalSpent: Long,
+    /** Та же сумма в МИНОРНЫХ единицах — точная; [totalSpent] округлён. */
+    val totalSpentMinor: Long? = null,
     /** >0 — мне должны, <0 — я должен, 0 — расчёт. */
     val myBalance: Long,
+    /** Точный баланс в минорных единицах; [myBalance] округлён. */
+    val myBalanceMinor: Long? = null,
     /**
      * Долги комнаты неисчислимы (легаси-данные бота). Сервер шлёт флаг и в
      * списке комнат тоже; без него myBalance=0 читался как «все в расчёте» —
@@ -539,7 +543,12 @@ data class RoomSummary(
      * загружали, рисуем градиент по хэшу id комнаты.
      */
     val avatarFileId: String? = null,
-)
+) {
+
+    /** Точные величины в копейках: записанные, иначе выведенные из целых. */
+    val exactTotalSpentMinor: Long get() = totalSpentMinor ?: (totalSpent * MINOR_FACTOR)
+    val exactMyBalanceMinor: Long get() = myBalanceMinor ?: (myBalance * MINOR_FACTOR)
+}
 
 /** Ответ на загрузку фото группы: id нового файла, чтобы показать его сразу. */
 @Serializable
@@ -562,9 +571,13 @@ data class RoomDetail(
      */
     val fractional: Boolean = false,
     val totalSpent: Long,
+    /** Те же суммы в МИНОРНЫХ единицах — точные; целые поля рядом округлены. */
+    val totalSpentMinor: Long? = null,
     /** Моя доля расходов. */
     val mySpent: Int,
+    val mySpentMinor: Long? = null,
     val myBalance: Long,
+    val myBalanceMinor: Long? = null,
     /** Все долги комнаты. */
     val debts: List<Debt> = emptyList(),
     /** Все операции, новые первыми. */
@@ -599,7 +612,13 @@ data class RoomDetail(
      * отмечать нечем, счётчик доживёт до следующего открытия группы.
      */
     val seenThrough: Instant? = null,
-)
+) {
+
+    /** Точные величины в копейках: записанные, иначе выведенные из целых. */
+    val exactTotalSpentMinor: Long get() = totalSpentMinor ?: (totalSpent * MINOR_FACTOR)
+    val exactMyBalanceMinor: Long get() = myBalanceMinor ?: (myBalance * MINOR_FACTOR)
+    val exactMySpentMinor: Long get() = mySpentMinor ?: (mySpent * MINOR_FACTOR)
+}
 
 
 /**

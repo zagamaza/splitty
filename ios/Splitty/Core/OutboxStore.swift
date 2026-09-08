@@ -9,6 +9,9 @@ import Observation
 struct OutboxPayload: Codable, Equatable {
     var description: String
     var sum: Int
+    /// Точная сумма в МИНОРНЫХ единицах. Необязательное поле: записи, попавшие
+    /// в очередь прежней сборкой, его не содержат, и тогда работает целое.
+    var sumMinor: Int? = nil
     var donorId: Int
     var recipientIds: [Int]?
     var recipientSums: [RecipientSum]?
@@ -331,6 +334,7 @@ final class OutboxStore {
                 roomId: entry.roomId,
                 description: payload.description,
                 sum: payload.sum,
+                sumMinor: payload.sumMinor,
                 donorId: payload.donorId,
                 split: payload.split,
                 items: payload.items,
@@ -349,6 +353,7 @@ final class OutboxStore {
                 operationId: operationId,
                 description: payload.description,
                 sum: payload.sum,
+                sumMinor: payload.sumMinor,
                 donorId: payload.donorId,
                 split: payload.split,
                 items: payload.items,

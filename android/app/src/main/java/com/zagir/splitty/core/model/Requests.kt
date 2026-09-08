@@ -111,6 +111,11 @@ sealed interface ExpenseSplit {
 data class OperationBody(
     val description: String,
     val sum: Long,
+    /**
+     * Точная сумма в МИНОРНЫХ единицах. Сервер предпочитает её, а целое поле
+     * выше оставляет для сборок, которые про копейки не знают.
+     */
+    val sumMinor: Long? = null,
     val donorId: Long,
     val recipientIds: List<Long>? = null,
     val recipientSums: List<RecipientSum>? = null,
@@ -136,6 +141,7 @@ data class OperationBody(
         fun of(
             description: String,
             sum: Long,
+            sumMinor: Long? = null,
             donorId: Long,
             split: ExpenseSplit,
             items: List<OperationItem>? = null,
@@ -146,6 +152,7 @@ data class OperationBody(
                 is ExpenseSplit.Equally -> OperationBody(
                     description = description,
                     sum = sum,
+                    sumMinor = sumMinor,
                     donorId = donorId,
                     recipientIds = split.recipientIds,
                     items = items,
@@ -156,6 +163,7 @@ data class OperationBody(
                 is ExpenseSplit.ByExactAmount -> OperationBody(
                     description = description,
                     sum = sum,
+                    sumMinor = sumMinor,
                     donorId = donorId,
                     recipientSums = split.recipientSums,
                     items = items,

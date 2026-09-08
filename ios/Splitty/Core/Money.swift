@@ -137,6 +137,31 @@ func minorFromInput(_ text: String) -> Int? {
     return units * minorFactor + (fraction.count == 1 ? value * 10 : value)
 }
 
+/// Фильтр поля суммы: в тусе без копеек только цифры, в тусе с копейками —
+/// один разделитель и не больше двух знаков после него.
+///
+/// Третий знак после разделителя суммой не является, и молча его отбрасывать
+/// хуже, чем не дать набрать: человек увидит, что цифра не появляется.
+func filterAmountInput(_ text: String, fractional: Bool) -> String {
+    guard fractional else { return String(text.filter(\.isNumber).prefix(9)) }
+    var out = ""
+    var separatorSeen = false
+    var afterSeparator = 0
+    for ch in text {
+        if ch.isNumber {
+            if separatorSeen {
+                if afterSeparator == 2 { continue }
+                afterSeparator += 1
+            }
+            out.append(ch)
+        } else if (ch == "," || ch == ".") && !separatorSeen && !out.isEmpty {
+            separatorSeen = true
+            out.append(ch)
+        }
+    }
+    return String(out.prefix(12))
+}
+
 /// Готовит сумму для поля ввода: `2080` → `"20,80"`, `2100` → `"21"`.
 /// Разделитель — из локали, чтобы человек увидел привычный ему знак.
 func inputTextFromMinor(_ minor: Int) -> String {

@@ -131,7 +131,7 @@ struct OperationDetailView: View {
                         .foregroundStyle(Color.inkSecondary)
                 }
             }
-            MoneyText(operation.sum, role: .neutral, size: 40, currency: currency)
+            MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 40, currency: currency)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .surfaceCard(padding: 20)
@@ -203,7 +203,7 @@ struct OperationDetailView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 8)
-            MoneyText(operation.sum, role: .neutral, size: 15, currency: currency)
+            MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 15, currency: currency)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -221,7 +221,7 @@ struct OperationDetailView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 8)
-            MoneyText(recipient.sum, role: recipientRole(recipient.user), size: 15, currency: currency)
+            MoneyText(recipient.sum, exactMinor: recipient.exactMinor, role: recipientRole(recipient.user), size: 15, currency: currency)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

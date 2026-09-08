@@ -359,7 +359,7 @@ struct GroupDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Вам должны")
                     .sectionHeaderStyle()
-                MoneyText(room.myBalance, size: 40, currency: room.currency)
+                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 40, currency: room.currency)
             }
         } else if room.myBalance < 0 {
             let creditors = model.debtsOwedBy(meId)
@@ -370,11 +370,11 @@ struct GroupDetailView: View {
                     // Сумма — НЕТТО по группе, а не долг одному кредитору:
                     // «должен A 100, C должен мне 30» давало здесь 100, а в
                     // списке групп 70 — две разные цифры про одну комнату.
-                    MoneyText(room.myBalance, size: 40, currency: room.currency)
+                    MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 40, currency: room.currency)
                 } else {
                     Text("Вы должны")
                         .sectionHeaderStyle()
-                    MoneyText(room.myBalance, size: 40, currency: room.currency)
+                    MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 40, currency: room.currency)
                 }
             }
         } else {
@@ -723,16 +723,21 @@ private struct OperationRow: View {
         operation.netPosition(of: currentUserId)
     }
 
+    /// Точная позиция в копейках — по ней и показываем.
+    private var myNetMinor: Int? {
+        operation.netPositionMinor(of: currentUserId)
+    }
+
     @ViewBuilder
     private var trailing: some View {
         if operation.isDebtRepayment {
-            MoneyText(operation.sum, role: .neutral, size: 15, weight: .regular, currency: currency)
-        } else if let net = myNet, net != 0 {
+            MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 15, weight: .regular, currency: currency)
+        } else if let net = myNet, let netMinor = myNetMinor, netMinor != 0 {
             VStack(alignment: .trailing, spacing: 2) {
-                Text(net > 0 ? "вы одолжили" : "вы должны")
+                Text(netMinor > 0 ? "вы одолжили" : "вы должны")
                     .font(.caption2)
                     .foregroundStyle(Color.inkSecondary)
-                MoneyText(net, size: 15, currency: currency)
+                MoneyText(net, exactMinor: netMinor, size: 15, currency: currency)
             }
         } else if myNet != nil {
             Text(Glossary.settled)

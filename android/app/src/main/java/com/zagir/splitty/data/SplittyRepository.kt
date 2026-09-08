@@ -184,12 +184,13 @@ class SplittyRepository @Inject constructor(
         roomId: String,
         description: String,
         sum: Long,
+        sumMinor: Long? = null,
         donorId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>? = null,
         clientOpId: String? = null,
     ): Operation = call {
-        api.addOperation(roomId, OperationBody.of(description, sum, donorId, split, items, clientOpId))
+        api.addOperation(roomId, OperationBody.of(description, sum, sumMinor, donorId, split, items, clientOpId))
     }
 
     /**
@@ -206,6 +207,7 @@ class SplittyRepository @Inject constructor(
         operationId: String,
         description: String,
         sum: Long,
+        sumMinor: Long? = null,
         donorId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>? = null,
@@ -214,7 +216,7 @@ class SplittyRepository @Inject constructor(
         api.updateOperation(
             roomId,
             operationId,
-            OperationBody.of(description, sum, donorId, split, items, version = version),
+            OperationBody.of(description, sum, sumMinor, donorId, split, items, version = version),
         )
     }
 

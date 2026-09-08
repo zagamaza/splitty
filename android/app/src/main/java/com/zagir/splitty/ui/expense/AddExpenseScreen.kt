@@ -1320,7 +1320,7 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                     singleLine = true,
                     cursorBrush = SolidColor(colors.accent),
                     keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
+                        keyboardType = if (form.fractional) KeyboardType.Decimal else KeyboardType.Number,
                         imeAction = ImeAction.Done,
                     ),
                     keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),

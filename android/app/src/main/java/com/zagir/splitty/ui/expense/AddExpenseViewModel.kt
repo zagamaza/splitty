@@ -30,6 +30,10 @@ import com.zagir.splitty.core.model.isSurcharge
 import com.zagir.splitty.core.model.itemizedUserIds
 import com.zagir.splitty.core.model.personShares
 import com.zagir.splitty.core.model.shareList
+import com.zagir.splitty.core.money.MINOR_FACTOR
+import com.zagir.splitty.core.money.filterAmountInput
+import com.zagir.splitty.core.money.minorFromInput
+import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
 import android.app.Activity
 import com.android.billingclient.api.ProductDetails
@@ -500,9 +504,14 @@ data class AddExpenseForm(
     val alertMessage: UiText? = null,
     /** true — расход сохранён, экран пора закрывать (onDone). */
     val isSaved: Boolean = false,
+    /** Туса считает копейки: тогда в поле суммы принимается дробное значение. */
+    val fractional: Boolean = false,
 ) {
-    /** Введённая сумма расхода; null — поле пустое/невалидное. */
-    val sum: Long? get() = sumText.toLongOrNull()
+    /** Введённая сумма в МИНОРНЫХ единицах: «20,80» → 2080; null — не сумма. */
+    val sumMinor: Long? get() = minorFromInput(sumText)
+
+    /** Введённая сумма в целых единицах — для мест, где дробей нет. */
+    val sum: Long? get() = sumMinor?.let { minorToUnitsRounded(it) }
 
     val payer: User? get() = members.firstOrNull { it.id == payerId }
 
@@ -918,7 +927,7 @@ class AddExpenseViewModel @Inject constructor(
             draftItems = payload.items.orEmpty(),
             didRecognize = !payload.items.isNullOrEmpty(),
         )
-        return appliedRoom(form, room.id, room.members, room.currency)
+        return appliedRoom(form, room.id, room.members, room.currency, room.fractional)
     }
 
     /** Форма для фиксированной группы, с prefill из редактируемой операции. */
@@ -946,7 +955,7 @@ class AddExpenseViewModel @Inject constructor(
                 didRecognize = !operation.items.isNullOrEmpty(),
             )
         }
-        return appliedRoom(form, room.id, room.members, room.currency)
+        return appliedRoom(form, room.id, room.members, room.currency, room.fractional)
     }
 
     /** Выбор группы из чипов: делим на всех, платит текущий пользователь. */
@@ -988,6 +997,7 @@ class AddExpenseViewModel @Inject constructor(
         roomId: String,
         members: List<User>,
         currency: String,
+        fractional: Boolean = false,
     ): AddExpenseForm {
         val memberIds = members.map { it.id }.toSet()
         val recipients = form.recipientIds.intersect(memberIds).ifEmpty { memberIds }
@@ -1002,6 +1012,7 @@ class AddExpenseViewModel @Inject constructor(
             selectedRoomId = roomId,
             members = members,
             currency = currency,
+            fractional = fractional,
             recipientIds = recipients,
             amountTexts = form.amountTexts.filterKeys { it in memberIds },
             payerId = payerId,
@@ -1017,7 +1028,7 @@ class AddExpenseViewModel @Inject constructor(
      */
     fun onSumChange(raw: String) = updateForm {
         val reset = if (it.hasDraftItems) it.resettingItems() else it
-        reset.copy(sumText = digitsOnly(raw))
+        reset.copy(sumText = filterAmountInput(raw, it.fractional))
     }
 
     fun selectPayer(userId: Long) = updateForm { it.copy(payerId = userId) }
@@ -1368,6 +1379,9 @@ class AddExpenseViewModel @Inject constructor(
         // чеке без распознанной общей суммы form.sum пуст, а исправить его
         // руками негде — сохранение было тупиком.
         val sum = effectiveSum(form, itemSums)
+        // Точная сумма едет рядом с целой. У расхода по позициям чека дробей
+        // пока нет — их итог целый, — поэтому там точная выводится из целой.
+        val sumMinor = if (itemSums != null) sum?.times(MINOR_FACTOR) else form.sumMinor
         if (sum == null) {
             updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_sum)) }
             return
@@ -1419,14 +1433,14 @@ class AddExpenseViewModel @Inject constructor(
                     localId != null -> {
                         outboxStore.update(
                             localId,
-                            OutboxPayload.of(description, sum, payerId, split, items = itemsToSend),
+                            OutboxPayload.of(description, sum, sumMinor, payerId, split, items = itemsToSend),
                         )
                         outboxSyncer.syncNow()
                     }
 
                     operationId != null -> {
                         repository.updateOperation(
-                            roomId, operationId, description, sum, payerId, split,
+                            roomId, operationId, description, sum, sumMinor, payerId, split,
                             items = itemsToSend,
                             version = editOperationVersion,
                         )
@@ -1434,7 +1448,7 @@ class AddExpenseViewModel @Inject constructor(
                         sessionStore.confirm(UiText.res(R.string.toast_expense_saved))
                     }
 
-                    else -> createOperation(roomId, description, sum, payerId, split, itemsToSend)
+                    else -> createOperation(roomId, description, sum, sumMinor, payerId, split, itemsToSend)
                 }
                 updateForm { it.copy(isSaving = false, isSaved = true) }
                 analytics.track(
@@ -1482,18 +1496,19 @@ class AddExpenseViewModel @Inject constructor(
         roomId: String,
         description: String,
         sum: Long,
+        sumMinor: Long?,
         payerId: Long,
         split: ExpenseSplit,
         items: List<OperationItem>?,
     ) {
-        val payload = OutboxPayload.of(description, sum, payerId, split, items = items)
+        val payload = OutboxPayload.of(description, sum, sumMinor, payerId, split, items = items)
         // Ключ живёт, пока не меняется содержимое расхода: повтор после сбоя
         // обязан уйти с тем же, иначе сервер, записавший первую попытку, заведёт
         // второй такой же расход.
         val localId = createIdempotency.key(payload)
         if (isOnline.value) {
             try {
-                repository.addOperation(roomId, description, sum, payerId, split, items = items, clientOpId = localId)
+                repository.addOperation(roomId, description, sum, sumMinor, payerId, split, items = items, clientOpId = localId)
                 sessionStore.noteDataChanged()
                 sessionStore.confirm(UiText.res(R.string.toast_expense_saved))
                 return
