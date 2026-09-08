@@ -246,7 +246,13 @@ func (s AddSplitTypeDonorOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s AddSplitTypeDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	sumMinor, err := defineSumMinor(u.Message.Text)
+	// Дробь принимается только там, где туса считает копейки. Комнату читаем
+	// заранее: ошибка чтения — повод отказать в дроби, а не разрешить её.
+	fractionAllowed := false
+	if room, roomErr := s.rs.FindById(ctx, u.ChatState.CallbackData.RoomId); roomErr == nil {
+		fractionAllowed = api.RoomFractional(room)
+	}
+	sumMinor, err := defineSumMinor(u.Message.Text, fractionAllowed)
 	purchaseText := s.defineText(u.Message.Text)
 
 	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
@@ -433,7 +439,12 @@ func (s AddDonorOperation) defineText(text string) string {
 // — цифровая, и человек не обязан гадать, какая правильная. Этим же парсером
 // проходит значение кнопки «вернуть всё»: она кладёт в текст ту же строку, что
 // набрал бы человек, и второй ветки разбора не нужно.
-func defineSumMinor(text string) (int64, error) {
+//
+// fractionAllowed — параметр, а не умолчание, намеренно: запрет дробей обязан
+// накрывать ВСЕ входы, включая бота. REST-слой проверяет признак сам, а бот
+// пишет в базу напрямую, и без явного решения на каждом входе Telegram
+// принимал дробь при выключенном рубильнике.
+func defineSumMinor(text string, fractionAllowed bool) (int64, error) {
 	words := strings.Fields(text)
 	if len(words) == 0 {
 		return 0, errors.New("empty sum")
@@ -468,12 +479,16 @@ func defineSumMinor(text string) (int64, error) {
 		}
 		minor += int64(v)
 	}
+	if !fractionAllowed && minor%api.MinorFactor != 0 {
+		return 0, errors.New("fractional sums are disabled")
+	}
 	return minor, nil
 }
 
 // defineSum — та же сумма целыми единицами, для мест, где дробей не бывает.
 func defineSum(text string) (int, error) {
-	minor, err := defineSumMinor(text)
+	// Целая сумма: дробь здесь не нужна и не принимается.
+	minor, err := defineSumMinor(text, false)
 	if err != nil {
 		return 0, err
 	}
@@ -1165,7 +1180,7 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}
 	operation := findOperationByID(room, u.ChatState.CallbackData.OperationId)
 
-	shareMinor, err := defineSumMinor(u.Message.Text)
+	shareMinor, err := defineSumMinor(u.Message.Text, api.RoomFractional(room))
 	if err != nil {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
@@ -2154,9 +2169,14 @@ func (s WantReturnDebt) OnMessage(ctx context.Context, u *api.Update) (response 
 		log.Error().Err(err).Msg("get user debts failed")
 		return
 	}
-	debtReturnedBtn := api.NewButton(debtReturned, &api.CallbackData{RoomId: roomId, UserId: lenderUserId, // В кнопку зашиваем ТОЧНУЮ величину: округлённая просила бы вернуть
-		// 21 при долге 20,50, и сервер отверг бы это как переплату.
-		ExternalId: strconv.FormatInt(debt.SumMinor, 10)})
+	// В кнопку зашивается ТА ЖЕ строка, какую набрал бы человек: она уходит в
+	// Message.Text и разбирается общим парсером ввода. Сырые копейки («2050»)
+	// он читал как 2050 рублей — погашение отбивалось как переплата, и ломался
+	// даже целый долг (2100 → 2100,00 вместо 21).
+	debtReturnedBtn := api.NewButton(debtReturned, &api.CallbackData{
+		RoomId: roomId, UserId: lenderUserId,
+		ExternalId: minorToInput(debt.SumMinor),
+	})
 	setSumBtn := api.NewButton(setDebtSum, &api.CallbackData{RoomId: roomId, UserId: lenderUserId})
 	cancelBtn := api.NewButton(viewRoom, &api.CallbackData{RoomId: roomId})
 	_, err = s.bs.SaveAll(ctx, debtReturnedBtn, setSumBtn, cancelBtn)
@@ -2338,7 +2358,7 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 
 	// Сравниваем по ТОЧНОЙ величине долга: округлённая проекция долга в 20,80
 	// равна 21, и погашение на 21 прошло бы, переплатив 20 копеек.
-	sumMinor, err := defineSumMinor(u.Message.Text)
+	sumMinor, err := defineSumMinor(u.Message.Text, api.RoomFractional(room))
 	sum := api.FromMinor(sumMinor)
 	if err != nil || sumMinor > debt.SumMinor {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)

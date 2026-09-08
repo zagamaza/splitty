@@ -64,6 +64,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.ActivityItem
+import com.zagir.splitty.core.money.moneyMinor
+import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
 import com.zagir.splitty.ui.components.FailedState
 import com.zagir.splitty.ui.components.GradientAvatar
@@ -326,7 +328,7 @@ private fun ActivityTitle(item: ActivityItem, myUserId: Long?) {
         withStyle(bold) { append(op.donor.displayName) }
         if (op.isDebtRepayment) {
             val lender = op.recipients.firstOrNull()?.user
-            val sum = money(op.sum, item.roomCurrency)
+            val sum = moneyMinor(op.exactMinor, item.roomCurrency)
             if (lender != null && lender.id == myUserId) {
                 append(" $paidYou ")
             } else {
@@ -351,22 +353,24 @@ private fun ActivityTitle(item: ActivityItem, myUserId: Long?) {
 @Composable
 private fun ActivityPosition(item: ActivityItem, myUserId: Long?) {
     val op = item.operation
-    val (label, amount, role) = when {
+    // Суммы ТОЧНЫЕ: на округлённых доля 0,25 читается нулём, и лента говорила
+    // «в расчёте» там, где человек должен.
+    val (label, amountMinor, role) = when {
         myUserId == null ->
             Triple(stringResource(R.string.activity_not_involved), null, MoneyRole.NEUTRAL)
 
         op.isDebtRepayment -> when {
             op.donor.id == myUserId ->
-                Triple(stringResource(R.string.activity_you_paid), op.sum, MoneyRole.NEGATIVE)
+                Triple(stringResource(R.string.activity_you_paid), op.exactMinor, MoneyRole.NEGATIVE)
 
             op.recipients.any { it.user.id == myUserId } ->
-                Triple(stringResource(R.string.activity_you_received), op.sum, MoneyRole.POSITIVE)
+                Triple(stringResource(R.string.activity_you_received), op.exactMinor, MoneyRole.POSITIVE)
 
             else ->
                 Triple(stringResource(R.string.activity_not_involved), null, MoneyRole.NEUTRAL)
         }
 
-        else -> when (val net = op.netPosition(myUserId)) {
+        else -> when (val net = op.netPositionMinor(myUserId)) {
             null -> Triple(stringResource(R.string.activity_not_involved), null, MoneyRole.NEUTRAL)
             0L -> Triple(stringResource(R.string.activity_settled), null, MoneyRole.NEUTRAL)
             else -> if (net > 0) {
@@ -387,8 +391,14 @@ private fun ActivityPosition(item: ActivityItem, myUserId: Long?) {
             fontWeight = FontWeight.Medium,
             color = Splitty.colors.inkSecondary,
         )
-        if (amount != null) {
-            MoneyText(amount, role = role, size = 15.sp, currency = item.roomCurrency)
+        if (amountMinor != null) {
+            MoneyText(
+                minorToUnitsRounded(amountMinor),
+                exactMinor = amountMinor,
+                role = role,
+                size = 15.sp,
+                currency = item.roomCurrency,
+            )
         }
     }
 }

@@ -379,25 +379,25 @@ func userLink(user *api.User) string {
 }
 
 // moneySpaceMinor показывает ТОЧНУЮ сумму: дробная часть печатается, только
-// если она есть. 2080 → «20,80 $», 2100 → «21 $».
+// если она есть. 2080 → «20,80 ₽», 2100 → «21 ₽».
 //
-// Точность выводится из значения, а не из настройки тусы: в тусе без копеек
-// нецелых сумм не возникает, и показ там не меняется.
+// Собирается из частей, а не правкой готовой строки. Прежняя версия искала в
+// ней пробел перед символом валюты — а он узкий неразрывный, не ASCII: копейки
+// молча пропадали («20,80 ₽» превращалось в «20 ₽»), а у суммы с тысячами
+// дробь вставлялась в середину числа («1 234,50 ₽» → «1,50 234 ₽»).
 func moneySpaceMinor(minor int64, currency string) string {
-	whole := moneySpace(api.FromMinor(minor-minor%api.MinorFactor), currency)
-	frac := minor % api.MinorFactor
-	if frac == 0 {
-		return whole
+	negative := minor < 0
+	if negative {
+		minor = -minor
 	}
-	if frac < 0 {
-		frac = -frac
+	out := groupDigits(strconv.FormatInt(minor/api.MinorFactor, 10))
+	if frac := minor % api.MinorFactor; frac != 0 {
+		out += fmt.Sprintf(",%02d", frac)
 	}
-	// Символ валюты уже приклеен к целой части — вставляем копейки перед ним.
-	cut := strings.LastIndex(whole, " ")
-	if cut < 0 {
-		return whole
+	if negative {
+		out = "-" + out
 	}
-	return fmt.Sprintf("%s,%02d%s", whole[:cut], frac, whole[cut:])
+	return out + moneySymbolSpace + GetCurrencySymbol(currency)
 }
 
 // minorToInput печатает точную сумму так, как её набрал бы человек: «20.50»,
@@ -414,14 +414,23 @@ func minorToInput(minor int64) string {
 	return fmt.Sprintf("%d.%02d", minor/api.MinorFactor, frac)
 }
 
-func moneySpace(sum int, currency string) string {
-	s := strconv.Itoa(sum)
+// moneySymbolSpace — узкий неразрывный пробел (U+202F) между суммой и символом
+// валюты. Тысячи разделяются ОБЫЧНЫМ пробелом: так печатались все тексты бота
+// до сих пор, и менять их вид заодно с починкой копеек незачем.
+const moneySymbolSpace = "\u202f"
+
+// groupDigits разделяет тысячи пробелом: «1234500» → «1 234 500».
+func groupDigits(digits string) string {
 	re := regexp.MustCompile("(\\d+)(\\d{3})")
-	for n := ""; n != s; {
-		n = s
-		s = re.ReplaceAllString(s, "$1 $2")
+	for n := ""; n != digits; {
+		n = digits
+		digits = re.ReplaceAllString(digits, "$1 $2")
 	}
-	return s + " " + GetCurrencySymbol(currency)
+	return digits
+}
+
+func moneySpace(sum int, currency string) string {
+	return groupDigits(strconv.Itoa(sum)) + moneySymbolSpace + GetCurrencySymbol(currency)
 }
 
 func stringForAlign(s string, width int, spacesToEnd bool) string {

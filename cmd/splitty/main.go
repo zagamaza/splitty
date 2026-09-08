@@ -225,6 +225,13 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		}
 		api.SetFractionalEnabledAt(enabledAt)
 		log.Warn().Msgf("копейки по умолчанию только у тус, заведённых после %s", enabledAt)
+	} else if cfg.FractionalInput {
+		// Без барьера умолчание валюты накрывает ВСЕ тусы разом: каждая
+		// долларовая и евровая станет дробной в тот же миг, пока у людей на
+		// руках сборки, которые копеек не показывают. Это не то, что имеют в
+		// виду, поднимая рубильник, — поэтому отказ на старте, а не молчание.
+		return nil, nil, nil, fmt.Errorf(
+			"FRACTIONAL_INPUT=true требует FRACTIONAL_ENABLED_AT: без барьера копейки включатся сразу во всех тусах")
 	}
 
 	restCfg := rest.Config{

@@ -562,7 +562,11 @@ private struct LocalOperationRow: View {
                 statusBadge
             }
             Spacer(minLength: 8)
-            MoneyText(entry.payload?.sum ?? 0, role: .neutral, size: 15, currency: currency)
+            MoneyText(
+                entry.payload?.sum ?? 0,
+                exactMinor: entry.payload.map { $0.sumMinor ?? $0.sum * minorFactor } ?? 0,
+                role: .neutral, size: 15, currency: currency
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)

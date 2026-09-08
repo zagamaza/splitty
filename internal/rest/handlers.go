@@ -786,6 +786,23 @@ func validateOperationRequest(req *operationRequest, room *api.Room, fractionalA
 	return donor, withSum, splitByExactAmount, sumMinor, nil
 }
 
+// operationIsFractional — записан ли расход с копейками: сама сумма или любая
+// из долей не кратна единице валюты.
+func operationIsFractional(op *api.Operation) bool {
+	if op == nil {
+		return false
+	}
+	if op.SumMinorOrLegacy()%api.MinorFactor != 0 {
+		return true
+	}
+	for i := range op.RecipientsWithSum {
+		if op.RecipientsWithSum[i].SumMinorOrLegacy()%api.MinorFactor != 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // findMember возвращает участника комнаты по id или nil
 func findMember(room *api.Room, userId int) *api.User {
 	members := roomMembers(room)
@@ -1097,7 +1114,12 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 		items             []api.OperationItem
 		hErr2             *httpError
 	)
-	fractional := api.RoomFractional(room)
+	// Уже записанный дробный расход остаётся редактируемым, даже когда
+	// рубильник опущен. Иначе откат превращал бы такие расходы в неправимые:
+	// сумму не сохранить (дробь запрещена), а без неё сервер отвечает 409 —
+	// человек не мог бы даже переименовать расход. Новых дробей это не
+	// создаёт: признак поднимается только для того, что УЖЕ дробное.
+	fractional := api.RoomFractional(room) || operationIsFractional(operation)
 	if len(req.Items) > 0 {
 		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount

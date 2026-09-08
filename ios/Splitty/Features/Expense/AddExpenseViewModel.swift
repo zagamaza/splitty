@@ -35,6 +35,14 @@ final class AddExpenseViewModel {
     /// Валюта выбранной группы — в ней сумма расхода и подсказки деления.
     private(set) var currency: String = "RUB"
     /// Туса считает копейки: тогда в поле суммы принимается дробное значение.
+    /// Правится расход, у которого уже есть копейки: тогда форма принимает их
+    /// независимо от настройки тусы.
+    private var editsFractionalAmount = false
+
+    /// Форма принимает копейки. Поднимается настройкой тусы, а также при
+    /// правке УЖЕ дробного расхода: иначе фильтр поля превратил бы «20,80» в
+    /// «2080» на первом же нажатии и человек сохранил бы сумму в сто раз
+    /// больше. Сервер такую правку принимает по тому же правилу.
     private(set) var fractional: Bool = false
 
     var descriptionText = ""
@@ -800,6 +808,10 @@ final class AddExpenseViewModel {
             // Из ТОЧНОЙ величины: округлённая потеряла бы копейки, и простое
             // переименование расхода 20,80 записало бы 21.
             sumText = inputTextFromMinor(editOperation.exactMinor)
+            if editOperation.exactMinor % minorFactor != 0 {
+                editsFractionalAmount = true
+                fractional = true
+            }
             payerId = editOperation.donor.id
             recipientIds = Set(editOperation.recipients.map(\.user.id))
             // Исходный порядок получателей: сервер раздаёт остаток equally-деления
@@ -822,7 +834,12 @@ final class AddExpenseViewModel {
             descriptionText = payload.description
             // Из точной величины: округлённая потеряла бы копейки. У записей
             // прежних сборок её нет, и тогда работает целое.
-            sumText = inputTextFromMinor(payload.sumMinor ?? payload.sum * minorFactor)
+            let entryMinor = payload.sumMinor ?? payload.sum * minorFactor
+            sumText = inputTextFromMinor(entryMinor)
+            if entryMinor % minorFactor != 0 {
+                editsFractionalAmount = true
+                fractional = true
+            }
             payerId = payload.donorId
             if let sums = payload.recipientSums {
                 splitType = .byExactAmount
@@ -926,7 +943,9 @@ final class AddExpenseViewModel {
         selectedRoomId = id
         self.members = members
         self.currency = currency
-        self.fractional = fractional
+        // Признак тусы не ГАСИТ уже поднятый: правится дробный расход, и
+        // сбросить точность формы значит потерять копейки при первом нажатии.
+        self.fractional = fractional || editsFractionalAmount
         let memberIds = Set(members.map(\.id))
         recipientIds = recipientIds.intersection(memberIds)
         if recipientIds.isEmpty {

@@ -324,7 +324,12 @@ fun MoneyTotalsText(
     ) {
         val primary = totals.firstOrNull()
         if (primary != null) {
-            MoneyText(primary.sum, size = primarySize, currency = primary.currency)
+            MoneyText(
+                primary.sum,
+                exactMinor = primary.exactMinor,
+                size = primarySize,
+                currency = primary.currency,
+            )
         } else {
             MoneyText(0, size = primarySize)
         }
@@ -339,7 +344,12 @@ fun MoneyTotalsText(
                             color = Splitty.colors.inkSecondary,
                         )
                     }
-                    MoneyText(total.sum, size = secondarySize, currency = total.currency)
+                    MoneyText(
+                        total.sum,
+                        exactMinor = total.exactMinor,
+                        size = secondarySize,
+                        currency = total.currency,
+                    )
                 }
             }
         }

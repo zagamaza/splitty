@@ -221,7 +221,10 @@ struct MoneyTotalsText: View {
     var body: some View {
         VStack(alignment: alignment, spacing: 4) {
             if let primary = totals.first {
-                MoneyText(primary.sum, size: primarySize, currency: primary.currency)
+                MoneyText(
+                    primary.sum, exactMinor: primary.exactMinor,
+                    size: primarySize, currency: primary.currency
+                )
             } else {
                 MoneyText(0, size: primarySize)
             }
@@ -240,7 +243,10 @@ struct MoneyTotalsText: View {
                         .font(.system(size: secondarySize, weight: .semibold, design: .rounded))
                         .foregroundStyle(Color.inkSecondary)
                 }
-                MoneyText(total.sum, size: secondarySize, currency: total.currency)
+                MoneyText(
+                    total.sum, exactMinor: total.exactMinor,
+                    size: secondarySize, currency: total.currency
+                )
             }
         }
     }

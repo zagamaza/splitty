@@ -208,3 +208,44 @@ func TestLegacyEditCannotEraseFraction(t *testing.T) {
 		t.Fatalf("правка с точной суммой = %d, want 200, body: %s", rec.Code, rec.Body.String())
 	}
 }
+
+// Откат рубильника не превращает уже записанные дробные расходы в неправимые.
+//
+// Сумму такого расхода не сохранить (дробь запрещена признаком), а без неё
+// сервер отвечает 409 «обновите приложение» — человек не смог бы даже
+// переименовать расход. Признак поднимается для того, что УЖЕ дробное, и новых
+// дробей это не создаёт.
+func TestFractionalOperationStaysEditableAfterRollback(t *testing.T) {
+	// Рубильник ВЫКЛЮЧЕН: дробь записана раньше, до отката.
+	room := fractionalRoom("USD", false)
+	minor := int64(2080)
+	op := api.Operation{
+		ID: primitive.NewObjectID(), Description: "Ужин", Sum: 21, SumMinor: &minor,
+		Donor: &testUser1, Status: statusActive, SplitType: splitEqually,
+		RecipientsWithSum: []api.RecipientWithSum{
+			{User: testUser1, SumMinor: ptr64(1040)},
+			{User: testUser2, SumMinor: ptr64(1040)},
+		},
+	}
+	ops := append(*room.Operations, op)
+	room.Operations = &ops
+	repo := newFakeRoomRepo(room)
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
+	token := mustToken(t, s, testUser1.ID)
+
+	body := fmt.Sprintf(
+		`{"description":"Ужин с друзьями","sum":21,"sumMinor":2080,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec := doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("правка дробного расхода при выключенном рубильнике: %d, body: %s", rec.Code, rec.Body.String())
+	}
+
+	// А НОВУЮ дробь в той же тусе завести по-прежнему нельзя.
+	body = fmt.Sprintf(
+		`{"description":"Кофе","sumMinor":1050,"donorId":%d,"recipientIds":[%d,%d]}`,
+		testUser1.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations", token, body)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+}

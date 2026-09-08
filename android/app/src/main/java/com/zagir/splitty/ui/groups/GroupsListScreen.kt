@@ -421,7 +421,12 @@ private fun GroupCard(
                         fontSize = 11.sp,
                         color = colors.inkSecondary,
                     )
-                    MoneyText(room.myBalance, size = 15.sp, currency = room.currency)
+                    MoneyText(
+                        room.myBalance,
+                        exactMinor = room.exactMyBalanceMinor,
+                        size = 15.sp,
+                        currency = room.currency,
+                    )
                 }
             }
             ChevronIcon()

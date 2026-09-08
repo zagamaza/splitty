@@ -260,14 +260,19 @@ private struct ActivityRow: View {
             Text(info.label)
                 .scaledFont(size: 14, weight: .medium)
                 .foregroundStyle(Color.inkSecondary)
-            if let amount = info.amount {
-                MoneyText(amount, role: info.role, size: 15, currency: item.roomCurrency)
+            if let minor = info.amountMinor {
+                MoneyText(
+                    minorToUnitsRounded(minor), exactMinor: minor,
+                    role: info.role, size: 15, currency: item.roomCurrency
+                )
             }
         }
     }
 
-    /// Подпись позиции, сумма (nil — только серый текст без суммы) и её роль.
-    private var positionInfo: (label: String, amount: Int?, role: MoneyText.Role) {
+    /// Подпись позиции, ТОЧНАЯ сумма (nil — только серый текст без суммы) и её
+    /// роль. Точная, а не округлённая: на округлённой доля 0,25 читается нулём,
+    /// и лента говорила «в расчёте» там, где человек должен.
+    private var positionInfo: (label: String, amountMinor: Int?, role: MoneyText.Role) {
         let op = item.operation
         guard let myUserId else {
             return (String(localized: "Вы не участвуете"), nil, .neutral)
@@ -275,17 +280,17 @@ private struct ActivityRow: View {
 
         if op.isDebtRepayment {
             if op.donor.id == myUserId {
-                return (String(localized: "Вы заплатили"), op.sum, .negative)
+                return (String(localized: "Вы заплатили"), op.exactMinor, .negative)
             }
             if op.recipients.contains(where: { $0.user.id == myUserId }) {
-                return (String(localized: "Вы получили"), op.sum, .positive)
+                return (String(localized: "Вы получили"), op.exactMinor, .positive)
             }
             return (String(localized: "Вы не участвуете"), nil, .neutral)
         }
 
         // Расход: позиция — из ХРАНИМЫХ долей операции
         // (Operation.netPosition; при неравном делении доли не пересчитываются).
-        guard let net = op.netPosition(of: myUserId) else {
+        guard let net = op.netPositionMinor(of: myUserId) else {
             return (String(localized: "Вы не участвуете"), nil, .neutral)
         }
         if net > 0 {

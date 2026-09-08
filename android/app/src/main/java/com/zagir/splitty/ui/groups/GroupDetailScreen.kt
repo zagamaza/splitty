@@ -106,7 +106,10 @@ import com.zagir.splitty.core.model.Operation
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.operationsBlockingLeave
 import com.zagir.splitty.core.model.User
+import com.zagir.splitty.core.money.MINOR_FACTOR
+import com.zagir.splitty.core.money.minorToUnitsRounded
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.data.OutboxEntry
 import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.GradientAvatar
@@ -841,6 +844,7 @@ private fun LocalOperationRow(
         }
         MoneyText(
             entry.payload.sum,
+            exactMinor = entry.payload.sumMinor ?: (entry.payload.sum * MINOR_FACTOR),
             role = MoneyRole.NEUTRAL,
             size = 15.sp,
             weight = FontWeight.Normal,
@@ -1157,7 +1161,9 @@ private fun OperationRow(
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
-    val net = operation.netPosition(meId)
+    // Позиция ТОЧНАЯ: на округлённой доля 0,25 читается нулём, и строка
+    // говорила «в расчёте» там, где человек должен.
+    val netMinor = operation.netPositionMinor(meId)
 
     val title = if (operation.isDebtRepayment) {
         val recipientName = operation.recipients.firstOrNull()?.user?.displayName.orEmpty()
@@ -1178,12 +1184,12 @@ private fun OperationRow(
     val subtitle = if (operation.isDebtRepayment) {
         null
     } else if (operation.donor.id == meId) {
-        stringResource(R.string.group_op_you_paid_sum, money(operation.sum, currency))
+        stringResource(R.string.group_op_you_paid_sum, moneyMinor(operation.exactMinor, currency))
     } else {
         stringResource(
             R.string.group_op_paid_sum,
             operation.donor.displayName,
-            money(operation.sum, currency),
+            moneyMinor(operation.exactMinor, currency),
         )
     }
 
@@ -1252,27 +1258,33 @@ private fun OperationRow(
         when {
             operation.isDebtRepayment -> MoneyText(
                 operation.sum,
+                exactMinor = operation.exactMinor,
                 role = MoneyRole.NEUTRAL,
                 size = 15.sp,
                 weight = FontWeight.Normal,
                 currency = currency,
             )
 
-            net != null && net != 0L -> Column(
+            netMinor != null && netMinor != 0L -> Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = stringResource(
-                        if (net > 0) R.string.group_op_lent else R.string.group_op_owe
+                        if (netMinor > 0) R.string.group_op_lent else R.string.group_op_owe
                     ),
                     fontSize = 11.sp,
                     color = colors.inkSecondary,
                 )
-                MoneyText(net, size = 15.sp, currency = currency)
+                MoneyText(
+                    minorToUnitsRounded(netMinor),
+                    exactMinor = netMinor,
+                    size = 15.sp,
+                    currency = currency,
+                )
             }
 
-            net != null -> Text(
+            netMinor != null -> Text(
                 text = stringResource(R.string.group_op_settled),
                 fontSize = 12.sp,
                 color = colors.inkSecondary,
