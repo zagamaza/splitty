@@ -7,6 +7,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
@@ -71,7 +72,13 @@ class BillingService @Inject constructor(
 
     private val client: BillingClient = BillingClient.newBuilder(context)
         .setListener(purchasesListener)
-        .enablePendingPurchases()
+        // С восьмой версии библиотеки вызов обязателен и требует параметров.
+        // Объявляем обработку отложенных РАЗОВЫХ покупок: у нас продаются
+        // только подписки, у них отложенного состояния нет, но без этого вызова
+        // клиент платежей падает при сборке.
+        .enablePendingPurchases(
+            PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+        )
         .build()
 
     private suspend fun ensureConnected(): Boolean {
@@ -110,8 +117,11 @@ class BillingService @Inject constructor(
             client.queryProductDetailsAsync(params) { result, details ->
                 if (!cont.isActive) return@queryProductDetailsAsync
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                    // С восьмой версии колбэк отдаёт не список, а результат
+                    // запроса: список лежит внутри него.
                     // Порядок задаём сами: год первым, он выбран по умолчанию.
-                    cont.resume(details.sortedBy { PRODUCT_IDS.indexOf(it.productId) })
+                    val products = details.productDetailsList
+                    cont.resume(products.sortedBy { PRODUCT_IDS.indexOf(it.productId) })
                 } else {
                     cont.resume(emptyList())
                 }

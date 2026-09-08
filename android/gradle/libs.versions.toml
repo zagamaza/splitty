@@ -29,7 +29,7 @@ robolectric = "4.13"
 roborazzi = "1.44.0"
 # Play Billing 7: покупка подписки Splitor Plus. Подтверждение покупки делает
 # СЕРВЕР после проверки токена — клиент лишь дожидается успеха.
-billing = "7.1.1"
+billing = "8.0.0"
 play-review = "2.0.2"
 # Раздача релизных сборок тестерам (Task 14).
 firebaseAppDistribution = "5.1.1"
