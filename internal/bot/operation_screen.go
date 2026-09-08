@@ -437,6 +437,34 @@ func (s AddDonorOperation) defineText(text string) string {
 	return strings.Join(words[1:], " ")
 }
 
+// sameOperationMoney — совпадают ли деньги двух версий расхода: плательщик,
+// итог и доля каждого участника, включая их состав. Порт правила REST
+// (rest.sameMoney): при опущенном рубильнике у дробного расхода правится всё,
+// кроме денег.
+func sameOperationMoney(old, new *api.Operation) bool {
+	if old == nil || new == nil {
+		return false
+	}
+	if old.SumMinorOrLegacy() != new.SumMinorOrLegacy() ||
+		len(old.RecipientsWithSum) != len(new.RecipientsWithSum) {
+		return false
+	}
+	if old.Donor == nil || new.Donor == nil || old.Donor.ID != new.Donor.ID {
+		return false
+	}
+	was := make(map[int]int64, len(old.RecipientsWithSum))
+	for i := range old.RecipientsWithSum {
+		was[old.RecipientsWithSum[i].User.ID] = old.RecipientsWithSum[i].SumMinorOrLegacy()
+	}
+	for i := range new.RecipientsWithSum {
+		share, ok := was[new.RecipientsWithSum[i].User.ID]
+		if !ok || share != new.RecipientsWithSum[i].SumMinorOrLegacy() {
+			return false
+		}
+	}
+	return true
+}
+
 // wrongFormatMessage — «неверный формат» с кнопкой возврата в комнату: тем же
 // ответом мастер отвечает на неразобранный ввод.
 func wrongFormatMessage(ctx context.Context, u *api.Update, bs ButtonService, roomId string) api.TelegramMessage {
@@ -1439,9 +1467,29 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 	// ни другой.
 	// Черновик собирают минутами: между вводом сумм и подтверждением рубильник
 	// или настройка тусы успевают выключиться.
+	//
+	// Правка УЖЕ дробного расхода при этом должна проходить, если деньги не
+	// менялись, — то же правило, что в REST. Иначе отказ здесь оставлял бы
+	// расход разорванным: вход в редактор уже заархивировал прежнюю версию, и
+	// в долгах не осталось бы ни той, ни другой.
 	if fractionForbidden(room, opn.SumMinorOrLegacy(), opn.RecipientsWithSum) {
-		callback := createCallback(u, I18n(u.User, "msg_wrong_format"), true)
-		return api.TelegramMessage{CallbackConfig: callback, Send: true}
+		var moneyUnchanged bool
+		if opn.OldOperationId != nil {
+			previous := findOperationByID(room, *opn.OldOperationId)
+			moneyUnchanged = sameOperationMoney(&previous, &opn)
+		}
+		if !moneyUnchanged {
+			// Возвращаем прежнюю версию в долги и убираем черновик: иначе
+			// расход исчезает у всех участников.
+			s.restoreArchivedVersion(ctx, room, opn.OldOperationId)
+			if opn.OldOperationId != nil {
+				if _, err := s.os.DeleteOperation(ctx, room.ID.Hex(), opn.ID); err != nil {
+					log.Error().Err(err).Msg("cannot drop rejected draft")
+				}
+			}
+			callback := createCallback(u, I18n(u.User, "msg_wrong_format"), true)
+			return api.TelegramMessage{CallbackConfig: callback, Send: true}
+		}
 	}
 
 	oldOperationId := opn.OldOperationId

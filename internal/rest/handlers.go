@@ -800,11 +800,18 @@ func moneyIsFractional(sumMinor int64, recipients []api.RecipientWithSum) bool {
 	return false
 }
 
-// sameMoney — совпадают ли деньги правки с записанными: итог и доля каждого
-// участника. Состав участников тоже обязан совпадать: убрать человека из
-// расхода — значит изменить чью-то долю.
-func sameMoney(old *api.Operation, sumMinor int64, recipients []api.RecipientWithSum) bool {
+// sameMoney — совпадают ли деньги правки с записанными: плательщик, итог и доля
+// каждого участника. Состав участников тоже обязан совпадать: убрать человека
+// из расхода — значит изменить чью-то долю.
+//
+// Плательщик входит сюда наравне с суммами: у расхода 20,80 пополам смена
+// донора с A на B при тех же долях переворачивает позиции обоих — это другое
+// денежное обязательство, а не переименование.
+func sameMoney(old *api.Operation, donor *api.User, sumMinor int64, recipients []api.RecipientWithSum) bool {
 	if old.SumMinorOrLegacy() != sumMinor || len(old.RecipientsWithSum) != len(recipients) {
+		return false
+	}
+	if old.Donor == nil || donor == nil || old.Donor.ID != donor.ID {
 		return false
 	}
 	was := make(map[int]int64, len(old.RecipientsWithSum))
@@ -1185,7 +1192,7 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 	// при этом можно: целые деньги проверку проходят.
 	if !api.RoomFractional(room) &&
 		moneyIsFractional(newSumMinor, recipientsWithSum) &&
-		!sameMoney(&oldOp, newSumMinor, recipientsWithSum) {
+		!sameMoney(&oldOp, donor, newSumMinor, recipientsWithSum) {
 		writeError(w, http.StatusConflict, "conflict",
 			"копейки выключены — суммы этого расхода изменить нельзя")
 		return

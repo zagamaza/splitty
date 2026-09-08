@@ -300,6 +300,17 @@ func TestFractionalSharesFrozenAfterRollback(t *testing.T) {
 		t.Fatalf("переименование расхода с дробными долями: %d, body: %s", rec.Code, rec.Body.String())
 	}
 
+	// Смена плательщика при тех же долях — тоже отказ: у расхода 100 пополам
+	// перенос доноров переворачивает позиции обоих, это другое обязательство,
+	// а не переименование.
+	body = fmt.Sprintf(
+		`{"description":"Ужин вдвоём","sum":100,"sumMinor":10000,"donorId":%d,`+
+			`"recipientSums":[{"userId":%d,"sumMinor":5050},{"userId":%d,"sumMinor":4950}]}`,
+		testUser2.ID, testUser1.ID, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut,
+		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
+	assertErrorCode(t, rec, http.StatusConflict, "conflict")
+
 	// Другие доли — отказ.
 	body = fmt.Sprintf(
 		`{"description":"Ужин вдвоём","sum":100,"sumMinor":10000,"donorId":%d,`+
