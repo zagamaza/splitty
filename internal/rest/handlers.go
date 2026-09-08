@@ -1539,9 +1539,11 @@ func (s *Server) handleStatistics(w http.ResponseWriter, r *http.Request) {
 	now := s.now()
 	stats := statisticsDto{
 		Currency:       roomCurrencyCode(room),
-		TotalSpent:     roomTotalSpent(spends),
-		OperationCount: len(spends),
-		MonthSpent:     monthSpent(spends, now),
+		TotalSpent:      roomTotalSpent(spends),
+		TotalSpentMinor: roomTotalSpentMinor(spends),
+		OperationCount:  len(spends),
+		MonthSpent:      api.FromMinor(monthSpentMinor(spends, now)),
+		MonthSpentMinor: monthSpentMinor(spends, now),
 		ByDay:          spentByDay(spends, now),
 		ByMonth:        spentByMonth(spends, now),
 		PaidByMember:   paidByMember(spends),
@@ -1551,12 +1553,16 @@ func (s *Server) handleStatistics(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
-// monthSpent сумма расходов текущего календарного месяца (по create_at)
-func monthSpent(spends []api.Operation, now time.Time) int {
-	var total int
+// monthSpentMinor сумма расходов текущего календарного месяца (по create_at)
+// в минорных единицах.
+//
+// ⚠️ Копим ТОЧНЫЕ величины и округляем один раз: сумма округлений не равна
+// округлению суммы, и два расхода по 20,50 дали бы 42 вместо 41.
+func monthSpentMinor(spends []api.Operation, now time.Time) int64 {
+	var total int64
 	for i := range spends {
 		if spends[i].CreateAt.Year() == now.Year() && spends[i].CreateAt.Month() == now.Month() {
-			total += spends[i].Sum
+			total += spends[i].SumMinorOrLegacy()
 		}
 	}
 	return total
@@ -1567,17 +1573,17 @@ func monthSpent(spends []api.Operation, now time.Time) int {
 func spentByDay(spends []api.Operation, now time.Time) []dailySumDto {
 	from := now.AddDate(0, 0, -(byDayWindowDays - 1)).Format("2006-01-02")
 	to := now.Format("2006-01-02")
-	byDate := map[string]int{}
+	byDate := map[string]int64{}
 	for i := range spends {
 		date := spends[i].CreateAt.Format("2006-01-02")
 		if date < from || date > to {
 			continue
 		}
-		byDate[date] += spends[i].Sum
+		byDate[date] += spends[i].SumMinorOrLegacy()
 	}
 	days := make([]dailySumDto, 0, len(byDate))
 	for date, sum := range byDate {
-		days = append(days, dailySumDto{Date: date, Sum: sum})
+		days = append(days, dailySumDto{Date: date, Sum: api.FromMinor(sum), SumMinor: sum})
 	}
 	sort.Slice(days, func(i, j int) bool { return days[i].Date < days[j].Date })
 	return days
@@ -1587,9 +1593,9 @@ func spentByDay(spends []api.Operation, now time.Time) []dailySumDto {
 // месяцев (включая текущий): месяцы без трат присутствуют с нулевой суммой,
 // месяц — "yyyy-mm", по возрастанию
 func spentByMonth(spends []api.Operation, now time.Time) []monthlySumDto {
-	sums := map[string]int{}
+	sums := map[string]int64{}
 	for i := range spends {
-		sums[spends[i].CreateAt.Format("2006-01")] += spends[i].Sum
+		sums[spends[i].CreateAt.Format("2006-01")] += spends[i].SumMinorOrLegacy()
 	}
 	// якорь — первое число текущего месяца: AddDate по месяцам от него
 	// не переполняется на коротких месяцах
@@ -1597,20 +1603,20 @@ func spentByMonth(spends []api.Operation, now time.Time) []monthlySumDto {
 	months := make([]monthlySumDto, 0, byMonthWindowMonths)
 	for i := -(byMonthWindowMonths - 1); i <= 0; i++ {
 		month := first.AddDate(0, i, 0).Format("2006-01")
-		months = append(months, monthlySumDto{Month: month, Sum: sums[month]})
+		months = append(months, monthlySumDto{Month: month, Sum: api.FromMinor(sums[month]), SumMinor: sums[month]})
 	}
 	return months
 }
 
 // paidByMember кто сколько заплатил (доноры расходов), по убыванию суммы
 func paidByMember(spends []api.Operation) []memberSumDto {
-	sums := map[int]int{}
+	sums := map[int]int64{}
 	users := map[int]*api.User{}
 	for i := range spends {
 		if spends[i].Donor == nil {
 			continue
 		}
-		sums[spends[i].Donor.ID] += spends[i].Sum
+		sums[spends[i].Donor.ID] += spends[i].SumMinorOrLegacy()
 		users[spends[i].Donor.ID] = spends[i].Donor
 	}
 	return sortedMemberSums(sums, users)
@@ -1619,13 +1625,13 @@ func paidByMember(spends []api.Operation) []memberSumDto {
 // shareByMember чья доля потребления (получатели расходов с каноническими
 // целыми долями), по убыванию суммы
 func shareByMember(spends []api.Operation) []memberSumDto {
-	sums := map[int]int{}
+	sums := map[int]int64{}
 	users := map[int]*api.User{}
 	for i := range spends {
 		o := &spends[i]
 		for j := range o.RecipientsWithSum {
 			u := &o.RecipientsWithSum[j].User
-			sums[u.ID] += recipientShare(o, j)
+			sums[u.ID] += o.RecipientsWithSum[j].SumMinorOrLegacy()
 			users[u.ID] = u
 		}
 	}
@@ -1634,14 +1640,16 @@ func shareByMember(spends []api.Operation) []memberSumDto {
 
 // sortedMemberSums суммы участников по убыванию (при равенстве — по id
 // для детерминированного порядка)
-func sortedMemberSums(sums map[int]int, users map[int]*api.User) []memberSumDto {
+func sortedMemberSums(sums map[int]int64, users map[int]*api.User) []memberSumDto {
 	result := make([]memberSumDto, 0, len(sums))
 	for id, sum := range sums {
-		result = append(result, memberSumDto{User: toUserDto(users[id]), Sum: sum})
+		result = append(result, memberSumDto{User: toUserDto(users[id]), Sum: api.FromMinor(sum), SumMinor: sum})
 	}
+	// Порядок по ТОЧНОЙ величине: по округлённой два участника с 20,50 и 20,80
+	// выглядели бы равными и вставали в произвольном порядке.
 	sort.Slice(result, func(i, j int) bool {
-		if result[i].Sum != result[j].Sum {
-			return result[i].Sum > result[j].Sum
+		if result[i].SumMinor != result[j].SumMinor {
+			return result[i].SumMinor > result[j].SumMinor
 		}
 		return result[i].User.ID < result[j].User.ID
 	})
@@ -1653,9 +1661,12 @@ func sortedMemberSums(sums map[int]int, users map[int]*api.User) []memberSumDto 
 func topOperations(spends []api.Operation) []topOperationDto {
 	sorted := make([]api.Operation, len(spends))
 	copy(sorted, spends)
+	// Порядок по ТОЧНОЙ величине: по округлённой расходы 20,50 и 20,80
+	// выглядели бы равными и вставали в произвольном порядке.
 	sort.SliceStable(sorted, func(i, j int) bool {
-		if sorted[i].Sum != sorted[j].Sum {
-			return sorted[i].Sum > sorted[j].Sum
+		li, lj := sorted[i].SumMinorOrLegacy(), sorted[j].SumMinorOrLegacy()
+		if li != lj {
+			return li > lj
 		}
 		return sorted[i].CreateAt.After(sorted[j].CreateAt)
 	})
@@ -1668,6 +1679,7 @@ func topOperations(spends []api.Operation) []topOperationDto {
 			ID:          sorted[i].ID.Hex(),
 			Description: sorted[i].Description,
 			Sum:         sorted[i].Sum,
+			SumMinor:    sorted[i].SumMinorOrLegacy(),
 			Donor:       toUserDto(sorted[i].Donor),
 			CreatedAt:   sorted[i].CreateAt,
 		})

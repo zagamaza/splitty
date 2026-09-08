@@ -275,25 +275,33 @@ type currencyInfoDto struct {
 type dailySumDto struct {
 	Date string `json:"date"`
 	Sum  int    `json:"sum"`
+	// SumMinor — точная величина; Sum — округлённая проекция.
+	SumMinor int64 `json:"sumMinor"`
 }
 
 // monthlySumDto траты одного календарного месяца (month — "yyyy-mm")
 type monthlySumDto struct {
 	Month string `json:"month"`
 	Sum   int    `json:"sum"`
+	// SumMinor — точная величина; Sum — округлённая проекция.
+	SumMinor int64 `json:"sumMinor"`
 }
 
 // memberSumDto сумма по участнику комнаты
 type memberSumDto struct {
 	User userDto `json:"user"`
 	Sum  int     `json:"sum"`
+	// SumMinor — точная величина; Sum — округлённая проекция.
+	SumMinor int64 `json:"sumMinor"`
 }
 
 // topOperationDto строка топа операций по сумме
 type topOperationDto struct {
 	ID          string    `json:"id"`
 	Description string    `json:"description"`
-	Sum         int       `json:"sum"`
+	Sum int `json:"sum"`
+	// SumMinor — точная величина; Sum — округлённая проекция.
+	SumMinor    int64     `json:"sumMinor"`
 	Donor       userDto   `json:"donor"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
@@ -301,10 +309,13 @@ type topOperationDto struct {
 // statisticsDto расширенная статистика комнаты для дашборда:
 // только active-расходы (погашения исключены), деньги — целые рубли
 type statisticsDto struct {
-	Currency       string            `json:"currency"`
-	TotalSpent     int               `json:"totalSpent"`
-	OperationCount int               `json:"operationCount"`
-	MonthSpent     int               `json:"monthSpent"`
+	Currency   string `json:"currency"`
+	TotalSpent int    `json:"totalSpent"`
+	// *Minor — точные величины; целые поля рядом — округлённые проекции.
+	TotalSpentMinor int64             `json:"totalSpentMinor"`
+	OperationCount  int               `json:"operationCount"`
+	MonthSpent      int               `json:"monthSpent"`
+	MonthSpentMinor int64             `json:"monthSpentMinor"`
 	ByDay          []dailySumDto     `json:"byDay"`
 	ByMonth        []monthlySumDto   `json:"byMonth"`
 	PaidByMember   []memberSumDto    `json:"paidByMember"`

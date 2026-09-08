@@ -827,12 +827,12 @@ func TestStatisticsDashboard(t *testing.T) {
 
 	// byMonth: ровно 6 месяцев включая текущий, нулевые присутствуют, по возрастанию
 	wantByMonth := []monthlySumDto{
-		{Month: "2026-02", Sum: 0},
-		{Month: "2026-03", Sum: 0},
-		{Month: "2026-04", Sum: 0},
-		{Month: "2026-05", Sum: 4000},
-		{Month: "2026-06", Sum: 0},
-		{Month: "2026-07", Sum: 5550},
+		{Month: "2026-02", Sum: 0, SumMinor: 0},
+		{Month: "2026-03", Sum: 0, SumMinor: 0},
+		{Month: "2026-04", Sum: 0, SumMinor: 0},
+		{Month: "2026-05", Sum: 4000, SumMinor: 400000},
+		{Month: "2026-06", Sum: 0, SumMinor: 0},
+		{Month: "2026-07", Sum: 5550, SumMinor: 555000},
 	}
 	if len(stats.ByMonth) != len(wantByMonth) {
 		t.Fatalf("byMonth = %+v, want %+v", stats.ByMonth, wantByMonth)
@@ -845,11 +845,11 @@ func TestStatisticsDashboard(t *testing.T) {
 
 	// byDay: только последние 30 дней, только дни с тратами, ISO-даты, по возрастанию
 	wantByDay := []dailySumDto{
-		{Date: "2026-07-09", Sum: 50},
-		{Date: "2026-07-10", Sum: 100},
-		{Date: "2026-07-13", Sum: 1000},
-		{Date: "2026-07-14", Sum: 800},
-		{Date: "2026-07-15", Sum: 3600},
+		{Date: "2026-07-09", Sum: 50, SumMinor: 5000},
+		{Date: "2026-07-10", Sum: 100, SumMinor: 10000},
+		{Date: "2026-07-13", Sum: 1000, SumMinor: 100000},
+		{Date: "2026-07-14", Sum: 800, SumMinor: 80000},
+		{Date: "2026-07-15", Sum: 3600, SumMinor: 360000},
 	}
 	if len(stats.ByDay) != len(wantByDay) {
 		t.Fatalf("byDay = %+v, want %+v", stats.ByDay, wantByDay)
@@ -967,12 +967,12 @@ func TestStatisticsByMonth(t *testing.T) {
 
 	// ноябрь и январь вне окна; март/июнь нулевые, но присутствуют; ascending
 	wantByMonth := []monthlySumDto{
-		{Month: "2026-02", Sum: 200},
-		{Month: "2026-03", Sum: 0},
-		{Month: "2026-04", Sum: 300},
-		{Month: "2026-05", Sum: 400},
-		{Month: "2026-06", Sum: 0},
-		{Month: "2026-07", Sum: 100},
+		{Month: "2026-02", Sum: 200, SumMinor: 20000},
+		{Month: "2026-03", Sum: 0, SumMinor: 0},
+		{Month: "2026-04", Sum: 300, SumMinor: 30000},
+		{Month: "2026-05", Sum: 400, SumMinor: 40000},
+		{Month: "2026-06", Sum: 0, SumMinor: 0},
+		{Month: "2026-07", Sum: 100, SumMinor: 10000},
 	}
 	if len(stats.ByMonth) != len(wantByMonth) {
 		t.Fatalf("byMonth = %+v, want %+v", stats.ByMonth, wantByMonth)

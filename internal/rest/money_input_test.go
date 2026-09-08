@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/almaznur91/splitty/internal/api"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 func TestResolveAmount(t *testing.T) {
@@ -413,5 +415,52 @@ func TestTotalsStayHonestWhenAmountDoesNotFitMinor(t *testing.T) {
 
 	if got := roomTotalSpent(ops); got != 2_000_000_000 {
 		t.Errorf("итог = %d, want 2000000000 — траты комнаты пропали", got)
+	}
+}
+
+// Статистика складывает ТОЧНЫЕ величины и округляет один раз.
+//
+// Два расхода по 20,50 — это 41, а не 42. По округлённым проекциям разъезжались
+// бы и итог, и ряды графиков, и доли участников, и порядок в топе.
+func TestStatisticsSumsExactAmounts(t *testing.T) {
+	now := time.Now().UTC()
+	donor := api.User{ID: testUser1.ID}
+	other := api.User{ID: testUser2.ID}
+	mk := func(minor int64) api.Operation {
+		return api.Operation{
+			ID: primitive.NewObjectID(), Sum: api.FromMinor(minor), SumMinor: ptr64(minor),
+			Donor: &donor, Status: statusActive, CreateAt: now,
+			RecipientsWithSum: []api.RecipientWithSum{
+				{User: donor, SumMinor: ptr64(minor / 2)},
+				{User: other, SumMinor: ptr64(minor - minor/2)},
+			},
+		}
+	}
+	spends := []api.Operation{mk(2050), mk(2050)}
+
+	if got := roomTotalSpentMinor(spends); got != 4100 {
+		t.Errorf("точный итог = %d, want 4100", got)
+	}
+	if got := monthSpentMinor(spends, now); got != 4100 {
+		t.Errorf("итог месяца = %d, want 4100", got)
+	}
+	days := spentByDay(spends, now)
+	if len(days) != 1 || days[0].SumMinor != 4100 || days[0].Sum != 41 {
+		t.Errorf("ряд по дням = %+v, want один день 4100 копеек и 41 целыми", days)
+	}
+	paid := paidByMember(spends)
+	if len(paid) != 1 || paid[0].SumMinor != 4100 {
+		t.Errorf("заплатил = %+v, want 4100 копеек", paid)
+	}
+	share := shareByMember(spends)
+	if len(share) != 2 {
+		t.Fatalf("долей = %d, want 2", len(share))
+	}
+	var total int64
+	for _, m := range share {
+		total += m.SumMinor
+	}
+	if total != 4100 {
+		t.Errorf("сумма долей = %d, want 4100", total)
 	}
 }
