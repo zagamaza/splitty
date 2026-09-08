@@ -327,6 +327,15 @@ func isUserBalanceValid(userBalance map[int]int64) bool {
 	return sum == 0
 }
 
+// negChecked меняет знак, сообщая о невозможности: у math.MinInt64
+// противоположного значения в int64 нет, и unary minus вернул бы его же.
+func negChecked(v int64) (int64, bool) {
+	if v == math.MinInt64 {
+		return 0, false
+	}
+	return -v, true
+}
+
 // addChecked складывает минорные единицы, сообщая о переполнении вместо тихого
 // заворота по кругу.
 func addChecked(a, b int64) (int64, bool) {
@@ -374,7 +383,7 @@ func settleBalances(usrBl []*UserBalance, step int64) []api.Debt {
 		// платить некому: отрицательного баланса не осталось вовсе — без этой
 		// проверки repayment спарил бы кредитора с самим собой. Прежний порог в
 		// рубль скрывал float-шум долей; на точных минорных единицах шума нет.
-		if -usrBl[len(usrBl)-1].balance < step {
+		if negated, ok := negChecked(usrBl[len(usrBl)-1].balance); !ok || negated < step {
 			break
 		}
 		debt := repayment(usrBl[0], usrBl[len(usrBl)-1], step)
@@ -404,7 +413,11 @@ func calculateUserBalance(ops []api.Operation) (map[int]int64, error) {
 		}
 		for _, recipient := range op.RecipientsWithSum {
 			id := recipient.User.ID
-			if balance[id], overflow = addChecked(balance[id], -recipient.SumMinorOrLegacy()); overflow {
+			share, ok := negChecked(recipient.SumMinorOrLegacy())
+			if !ok {
+				return nil, errors.New("cannot calculate debts: money value out of range")
+			}
+			if balance[id], overflow = addChecked(balance[id], share); overflow {
 				return nil, errors.New("cannot calculate debts: money value out of range")
 			}
 		}
@@ -417,7 +430,15 @@ func calculateUserBalance(ops []api.Operation) (map[int]int64, error) {
 }
 
 func repayment(lender *UserBalance, debtor *UserBalance, step int64) api.Debt {
-	sum := min(lender.balance, -debtor.balance)
+	// Смена знака ДО сложения: у math.MinInt64 противоположного значения нет, и
+	// unary minus вернул бы его же, обойдя проверку переполнения ниже. Такой
+	// баланс приходит только из испорченного документа, но денежное ядро не
+	// должно на нём считать.
+	owed, ok := negChecked(debtor.balance)
+	if !ok {
+		return api.Debt{Lender: &lender.user, Debtor: &debtor.user}
+	}
+	sum := min(lender.balance, owed)
 
 	// ⚠️ Долг обязан быть КРАТЕН шагу тусы. В рублёвой тусе долг 50,50 отдать
 	// нечем: бот и старые сборки шлют целое 51 — больше долга, а новые шлют
