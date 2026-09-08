@@ -221,6 +221,12 @@ type CallbackData struct {
 	ExternalData string             `json:"externalData" bson:"external_data,omitempty"`
 	OperationId  primitive.ObjectID `json:"operationId" bson:"operation_id,omitempty"`
 	Page         int                `json:"page" bson:"page,omitempty"`
+	// SumMinor — сумма шага мастера в МИНОРНЫХ единицах. Отдельное поле, а не
+	// перегруженный Page: тот же Page служит номером страницы в списках, и
+	// хранить в нём то копейки, то страницу значит завести ошибку, которую
+	// компилятор не поймает. Ноль — состояние сохранено прежней сборкой,
+	// и точную величину берут из Page (целые единицы).
+	SumMinor     int64              `json:"sumMinor" bson:"sum_minor,omitempty"`
 	Expand       bool               `json:"collapse" bson:"collapse,omitempty"`
 }
 

@@ -48,15 +48,15 @@ func (bot *AllRoomInline) OnMessage(ctx context.Context, u *api.Update) (respons
 
 	var results []interface{}
 	for _, room := range *rooms {
-		debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSum(ctx, userId, room.ID.Hex())
+		debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSumMinor(ctx, userId, room.ID.Hex())
 		if err != nil {
 			return
 		}
 		var debtText string
 		if debtorSum != 0 {
-			debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum, room.Currency))
+			debtText = I18n(u.User, "msg_you_debt", moneySpaceMinor(debtorSum, room.Currency))
 		} else if lenderSum != 0 {
-			debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum, room.Currency))
+			debtText = I18n(u.User, "msg_lend_you", moneySpaceMinor(lenderSum, room.Currency))
 		} else {
 			debtText = I18n(u.User, "msg_you_not_debt")
 		}

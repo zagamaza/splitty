@@ -475,7 +475,9 @@ type UserBalance struct {
 	balance int64
 }
 
-func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (int, error) {
+// GetAllCostsSumMinor возвращает траты комнаты в МИНОРНЫХ единицах: округлять
+// итог рано — у тусы с копейками бот печатал бы не то, что показывает приложение.
+func (s *StatisticService) GetAllCostsSumMinor(ctx context.Context, roomId string) (int64, error) {
 	room, err := s.RoomService.FindById(ctx, roomId)
 	if err != nil {
 		return 0, err
@@ -486,10 +488,11 @@ func (s *StatisticService) GetAllCostsSum(ctx context.Context, roomId string) (i
 			totalSpendSum += v.SumMinorOrLegacy()
 		}
 	}
-	return api.FromMinor(totalSpendSum), nil
+	return totalSpendSum, nil
 }
 
-func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, roomId string) (int, error) {
+// GetUserCostsSumMinor — доля пользователя в тратах комнаты, минорные единицы.
+func (s *StatisticService) GetUserCostsSumMinor(ctx context.Context, userId int, roomId string) (int64, error) {
 	room, err := s.RoomService.FindById(ctx, roomId)
 	if err != nil {
 		return 0, err
@@ -504,10 +507,11 @@ func (s *StatisticService) GetUserCostsSum(ctx context.Context, userId int, room
 			}
 		}
 	}
-	return api.FromMinor(totalUserSpendSum), nil
+	return totalUserSpendSum, nil
 }
 
-func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (int, error) {
+// GetAllDebtsSumMinor — сумма всех долгов комнаты, минорные единицы.
+func (s *StatisticService) GetAllDebtsSumMinor(ctx context.Context, roomId string) (int64, error) {
 	debts, err := s.GetAllDebts(ctx, roomId)
 	if err != nil {
 		return 0, err
@@ -516,10 +520,12 @@ func (s *StatisticService) GetAllDebtsSum(ctx context.Context, roomId string) (i
 	for _, v := range debts {
 		allDebtsSum += v.SumMinor
 	}
-	return api.FromMinor(allDebtsSum), nil
+	return allDebtsSum, nil
 }
 
-func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error) {
+// GetUserDebtAndLendSumMinor — сколько пользователь должен и сколько должны ему,
+// минорные единицы.
+func (s *StatisticService) GetUserDebtAndLendSumMinor(ctx context.Context, userId int, roomId string) (debt int64, lent int64, e error) {
 	debts, err := s.GetUserInvolvedDebts(ctx, userId, roomId)
 	if err != nil {
 		return 0, 0, err
@@ -534,7 +540,7 @@ func (s *StatisticService) GetUserDebtAndLendSum(ctx context.Context, userId int
 			lenderSum += v.SumMinor
 		}
 	}
-	return api.FromMinor(debtorSum), api.FromMinor(lenderSum), nil
+	return debtorSum, lenderSum, nil
 }
 
 func containsUserId(users []api.RecipientWithSum, id int) bool {

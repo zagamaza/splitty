@@ -111,7 +111,7 @@ func TestDebtsAcrossRoomsAreAggregated(t *testing.T) {
 	if got.Groups != 2 {
 		t.Errorf("групп %d, ожидалось 2", got.Groups)
 	}
-	if len(got.Totals) != 1 || got.Totals[0].Sum != 600 {
+	if len(got.Totals) != 1 || got.Totals[0].SumMinor != 60_000 {
 		t.Errorf("сумма собрана неверно: %+v", got.Totals)
 	}
 	// Деплинк ведёт в комнату с самым крупным долгом; здесь суммы равны, но
@@ -135,8 +135,8 @@ func TestCurrenciesAreNotMixed(t *testing.T) {
 		t.Fatalf("валют %d, ожидалось 2: %+v", len(got.Totals), got.Totals)
 	}
 	for _, total := range got.Totals {
-		if total.Sum != 300 {
-			t.Errorf("валюта %s: сумма %d", total.Currency, total.Sum)
+		if total.SumMinor != 30_000 {
+			t.Errorf("валюта %s: сумма %d", total.Currency, total.SumMinor)
 		}
 	}
 }
@@ -144,13 +144,13 @@ func TestCurrenciesAreNotMixed(t *testing.T) {
 // Отпечаток не зависит от порядка комнат, но меняется вместе с суммой: на нём
 // держится различение эпизодов долга.
 func TestFingerprintIsStableAndSensitive(t *testing.T) {
-	a := roomDebt{roomId: "r1", currency: "RUB", sum: 100}
-	b := roomDebt{roomId: "r2", currency: "RUB", sum: 200}
+	a := roomDebt{roomId: "r1", currency: "RUB", sumMinor: 10_000}
+	b := roomDebt{roomId: "r2", currency: "RUB", sumMinor: 20_000}
 
 	if fingerprint([]roomDebt{a, b}) != fingerprint([]roomDebt{b, a}) {
 		t.Error("отпечаток зависит от порядка комнат — серия сбрасывалась бы на ровном месте")
 	}
-	changed := roomDebt{roomId: "r2", currency: "RUB", sum: 250}
+	changed := roomDebt{roomId: "r2", currency: "RUB", sumMinor: 25_000}
 	if fingerprint([]roomDebt{a, b}) == fingerprint([]roomDebt{a, changed}) {
 		t.Error("отпечаток не заметил смены суммы — про новый долг молчали бы")
 	}

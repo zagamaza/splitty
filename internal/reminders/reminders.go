@@ -15,10 +15,12 @@ import (
 	"github.com/almaznur91/splitty/internal/service"
 )
 
-// CurrencyTotal — сколько человек должен в одной валюте.
+// CurrencyTotal — сколько человек должен в одной валюте, в МИНОРНЫХ единицах.
+// Округлять рано: в тусе с копейками пуш обещал бы вернуть не ту сумму,
+// которая показана в приложении.
 type CurrencyTotal struct {
 	Currency string
-	Sum      int
+	SumMinor int64
 }
 
 // Target — один человек и всё, что нужно, чтобы собрать ему пуш.
@@ -60,7 +62,8 @@ type roomDebt struct {
 	roomId   string
 	roomName string
 	currency string
-	sum      int
+	// sumMinor — точная величина долга в минорных единицах.
+	sumMinor int64
 }
 
 // Add скармливает коллектору очередную порцию комнат.
@@ -103,10 +106,11 @@ func (c *Collector) addRoom(room *api.Room) {
 	// значит однажды прислать человеку «верните 3 ₽», и это ровно то, за что
 	// приложения выключают. Порог считается в единицах комнаты и потому не
 	// требует выдуманных значений для каждой валюты
-	noise := len(ops)
+	// Порог — в минорных единицах комнаты.
+	noise := int64(len(ops)) * api.MinorFactor
 
 	for _, d := range debts {
-		if d.Debtor == nil || d.Sum <= noise {
+		if d.Debtor == nil || d.SumMinor <= noise {
 			continue
 		}
 		// Архив у каждого свой: человек убрал группу из своего списка — значит
@@ -118,7 +122,7 @@ func (c *Collector) addRoom(room *api.Room) {
 			roomId:   room.ID.Hex(),
 			roomName: room.Name,
 			currency: currency,
-			sum:      d.Sum,
+			sumMinor: d.SumMinor,
 		})
 	}
 }
@@ -136,24 +140,24 @@ func (c *Collector) Targets() []Target {
 }
 
 func targetOf(userId int, debts []roomDebt) Target {
-	byCurrency := map[string]int{}
+	byCurrency := map[string]int64{}
 	rooms := map[string]bool{}
 	var biggest roomDebt
 	for _, d := range debts {
-		byCurrency[d.currency] += d.sum
+		byCurrency[d.currency] += d.sumMinor
 		rooms[d.roomId] = true
-		if d.sum > biggest.sum {
+		if d.sumMinor > biggest.sumMinor {
 			biggest = d
 		}
 	}
 
 	totals := make([]CurrencyTotal, 0, len(byCurrency))
 	for currency, sum := range byCurrency {
-		totals = append(totals, CurrencyTotal{Currency: currency, Sum: sum})
+		totals = append(totals, CurrencyTotal{Currency: currency, SumMinor: sum})
 	}
 	sort.Slice(totals, func(i, j int) bool {
-		if totals[i].Sum != totals[j].Sum {
-			return totals[i].Sum > totals[j].Sum
+		if totals[i].SumMinor != totals[j].SumMinor {
+			return totals[i].SumMinor > totals[j].SumMinor
 		}
 		return totals[i].Currency < totals[j].Currency
 	})
@@ -172,7 +176,7 @@ func targetOf(userId int, debts []roomDebt) Target {
 func fingerprint(debts []roomDebt) string {
 	parts := make([]string, 0, len(debts))
 	for _, d := range debts {
-		parts = append(parts, fmt.Sprintf("%s:%s:%d", d.roomId, d.currency, d.sum))
+		parts = append(parts, fmt.Sprintf("%s:%s:%d", d.roomId, d.currency, d.sumMinor))
 	}
 	sort.Strings(parts)
 	sum := sha1.Sum([]byte(fmt.Sprint(parts)))

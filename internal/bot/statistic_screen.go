@@ -10,11 +10,13 @@ import (
 	"html"
 )
 
+// StatisticService отдаёт суммы в МИНОРНЫХ единицах: округление — дело показа,
+// и делать его раньше значит печатать в боте не то, что видно в приложении.
 type StatisticService interface {
-	GetUserDebtAndLendSum(ctx context.Context, userId int, roomId string) (debt int, lent int, e error)
-	GetUserCostsSum(ctx context.Context, userId int, roomId string) (int, error)
-	GetAllCostsSum(ctx context.Context, roomId string) (int, error)
-	GetAllDebtsSum(ctx context.Context, roomId string) (int, error)
+	GetUserDebtAndLendSumMinor(ctx context.Context, userId int, roomId string) (debt int64, lent int64, e error)
+	GetUserCostsSumMinor(ctx context.Context, userId int, roomId string) (int64, error)
+	GetAllCostsSumMinor(ctx context.Context, roomId string) (int64, error)
+	GetAllDebtsSumMinor(ctx context.Context, roomId string) (int64, error)
 }
 
 // Statistic screen w
@@ -53,29 +55,29 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 		return
 	}
 
-	totalSpendSum, err := bot.ss.GetAllCostsSum(ctx, roomId)
+	totalSpendSum, err := bot.ss.GetAllCostsSumMinor(ctx, roomId)
 	if err != nil {
 		return
 	}
-	totalUserSpendSum, err := bot.ss.GetUserCostsSum(ctx, u.User.ID, roomId)
+	totalUserSpendSum, err := bot.ss.GetUserCostsSumMinor(ctx, u.User.ID, roomId)
 	if err != nil {
 		return
 	}
-	totalDebtSum, err := bot.ss.GetAllDebtsSum(ctx, roomId)
+	totalDebtSum, err := bot.ss.GetAllDebtsSumMinor(ctx, roomId)
 	if err != nil {
-		log.Error().Err(err).Stack().Msgf("GetAllDebtsSum, userId:%s", roomId)
+		log.Error().Err(err).Stack().Msgf("GetAllDebtsSumMinor, userId:%s", roomId)
 		return
 	}
 
-	debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSum(ctx, u.User.ID, room.ID.Hex())
+	debtorSum, lenderSum, err := bot.ss.GetUserDebtAndLendSumMinor(ctx, u.User.ID, room.ID.Hex())
 	if err != nil {
 		return
 	}
 	var debtText string
 	if debtorSum != 0 {
-		debtText = I18n(u.User, "msg_you_debt", moneySpace(debtorSum, room.Currency))
+		debtText = I18n(u.User, "msg_you_debt", moneySpaceMinor(debtorSum, room.Currency))
 	} else if lenderSum != 0 {
-		debtText = I18n(u.User, "msg_lend_you", moneySpace(lenderSum, room.Currency))
+		debtText = I18n(u.User, "msg_lend_you", moneySpaceMinor(lenderSum, room.Currency))
 	} else {
 		debtText = I18n(u.User, "msg_you_not_debt")
 	}
@@ -89,10 +91,10 @@ func (bot *Statistic) OnMessage(ctx context.Context, u *api.Update) (response ap
 	}
 
 	text := fmt.Sprintf(I18n(u.User, "scrn_statistic", html.EscapeString(room.Name)) + "\n\n\n")
-	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpace(totalSpendSum, room.Currency)) + "\n\n")
-	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpace(totalUserSpendSum, room.Currency)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_common_spend", moneySpaceMinor(totalSpendSum, room.Currency)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_you_spend", moneySpaceMinor(totalUserSpendSum, room.Currency)) + "\n\n")
 	text += debtText + "\n\n"
-	text += fmt.Sprintf(I18n(u.User, "msg_common_debt", moneySpace(totalDebtSum, room.Currency)) + "\n\n")
+	text += fmt.Sprintf(I18n(u.User, "msg_common_debt", moneySpaceMinor(totalDebtSum, room.Currency)) + "\n\n")
 	keyboard := [][]tgbotapi.InlineKeyboardButton{
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_paid_debt"), debtOperationsB.ID.Hex())},
 		{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_back"), startB.ID.Hex())},
@@ -180,7 +182,7 @@ func (bot ViewAllDebtOperations) OnMessage(ctx context.Context, u *api.Update) (
 		if len(op.RecipientsWithSum) == 0 {
 			continue
 		}
-		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", cu.link(op.Donor), moneySpace(op.Sum, room.Currency), cu.link(&(op.RecipientsWithSum)[0].User)+"\n\n")
+		text += fmt.Sprintf("%s  <b>%s</b> ➡ ️%s", cu.link(op.Donor), moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), cu.link(&(op.RecipientsWithSum)[0].User)+"\n\n")
 	}
 
 	var navRow []tgbotapi.InlineKeyboardButton

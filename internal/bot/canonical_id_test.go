@@ -208,18 +208,18 @@ func TestStatisticUsesCanonicalUserID(t *testing.T) {
 
 type recordingStatisticService struct{ askedUserIDs []int }
 
-func (s *recordingStatisticService) GetAllCostsSum(context.Context, string) (int, error) {
+func (s *recordingStatisticService) GetAllCostsSumMinor(context.Context, string) (int64, error) {
 	return 0, nil
 }
-func (s *recordingStatisticService) GetAllDebtsSum(context.Context, string) (int, error) {
+func (s *recordingStatisticService) GetAllDebtsSumMinor(context.Context, string) (int64, error) {
 	return 0, nil
 }
-func (s *recordingStatisticService) GetUserCostsSum(_ context.Context, userId int, _ string) (int, error) {
+func (s *recordingStatisticService) GetUserCostsSumMinor(_ context.Context, userId int, _ string) (int64, error) {
 	s.askedUserIDs = append(s.askedUserIDs, userId)
 	return 0, nil
 }
 
-func (s *recordingStatisticService) GetUserDebtAndLendSum(_ context.Context, userId int, _ string) (int, int, error) {
+func (s *recordingStatisticService) GetUserDebtAndLendSumMinor(_ context.Context, userId int, _ string) (int64, int64, error) {
 	s.askedUserIDs = append(s.askedUserIDs, userId)
 	return 0, 0, nil
 }

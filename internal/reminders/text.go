@@ -54,7 +54,7 @@ func amountText(totals []CurrencyTotal) string {
 	}
 	parts := make([]string, 0, len(shown))
 	for _, t := range shown {
-		parts = append(parts, api.MoneyWithSymbol(t.Sum, t.Currency))
+		parts = append(parts, api.MoneyWithSymbolMinor(t.SumMinor, t.Currency))
 	}
 	return strings.Join(parts, " + ")
 }

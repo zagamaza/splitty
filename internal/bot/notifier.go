@@ -189,7 +189,7 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		if chatId, ok := cu.chatID(op.Donor); ok {
 			messages = append(messages, NewMessage(chatId,
 				I18n(op.Donor, "scrn_notification_payer_changed",
-					cu.link(op.Donor), cu.link(&author), desc, moneySpace(op.Sum, room.Currency), roomName),
+					cu.link(op.Donor), cu.link(&author), desc, moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), roomName),
 				keyboardFor(op.Donor)))
 		}
 	}
@@ -197,13 +197,13 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		recipient := r.User
 		if slices.Contains(op.NotificationSent, recipient.ID) ||
 			recipient.ID == author.ID ||
-			r.Sum == 0 {
+			r.SumMinorOrLegacy() == 0 {
 			continue
 		}
 		op.NotificationSent = append(op.NotificationSent, recipient.ID)
 		n.pushToUser(ctx, recipient.ID, api.NotifyOperations, room.Name,
 			pushtext.ExpenseAdded, opPushData(room, op),
-			author.DisplayName, op.Description, moneySpace(int(r.Sum), room.Currency))
+			author.DisplayName, op.Description, moneySpaceMinor(r.SumMinorOrLegacy(), room.Currency))
 		if !n.allowsTelegram(cu, &recipient, api.NotifyOperations) {
 			continue
 		}
@@ -213,8 +213,8 @@ func (n *Notifier) NotifyOperationCreated(ctx context.Context, room api.Room, op
 		}
 		messages = append(messages, NewMessage(chatId,
 			I18n(&recipient, "scrn_notification_operation_added",
-				cu.link(&recipient), cu.link(&author), desc, moneySpace(op.Sum, room.Currency),
-				roomName, moneySpace(int(r.Sum), room.Currency)),
+				cu.link(&recipient), cu.link(&author), desc, moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency),
+				roomName, moneySpaceMinor(r.SumMinorOrLegacy(), room.Currency)),
 			keyboardFor(&recipient)))
 	}
 	if len(op.NotificationSent) == sentBefore {
@@ -300,13 +300,13 @@ func (n *Notifier) pushOperationUpdated(ctx context.Context, room api.Room, oldO
 	}
 	for _, added := range diff.RecipientsAdded {
 		send(added.User.ID, api.NotifyOperations, pushtext.RecipientAdded,
-			author.DisplayName, newOp.Description, moneySpace(int(added.Sum), room.Currency))
+			author.DisplayName, newOp.Description, moneySpaceMinor(added.SumMinorOrLegacy(), room.Currency))
 	}
 	for _, change := range diff.RecipientsShareChanged {
 		send(change.User.ID, api.NotifyOperations, pushtext.ShareChanged,
 			author.DisplayName, newOp.Description,
-			moneySpace(api.FromMinor(change.OldSumMinor), room.Currency),
-			moneySpace(api.FromMinor(change.NewSumMinor), room.Currency))
+			moneySpaceMinor(change.OldSumMinor, room.Currency),
+			moneySpaceMinor(change.NewSumMinor, room.Currency))
 	}
 	for _, removed := range diff.RecipientsRemoved {
 		send(removed.User.ID, api.NotifyOperations, pushtext.RecipientRemoved,
@@ -360,7 +360,7 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 	n.pushToUser(ctx, lender.ID, api.NotifyDebts, room.Name,
 		pushtext.DebtRepaid,
 		map[string]string{"channel": "debts", "roomId": room.ID.Hex(), "type": "debt"},
-		op.Donor.DisplayName, moneySpace(op.Sum, room.Currency))
+		op.Donor.DisplayName, moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency))
 
 	cu := canonical(ctx, n.uf)
 	if !n.allowsTelegram(cu, &lender, api.NotifyDebts) {
@@ -381,7 +381,7 @@ func (n *Notifier) NotifyRepaymentCreated(ctx context.Context, room api.Room, op
 	}
 	n.send([]tgbotapi.Chattable{NewMessage(chatId,
 		I18n(&lender, "scrn_debt_returned_recepient",
-			html.EscapeString(lender.DisplayName), moneySpace(op.Sum, room.Currency), cu.link(op.Donor)),
+			html.EscapeString(lender.DisplayName), moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), cu.link(op.Donor)),
 		keyboard)})
 }
 

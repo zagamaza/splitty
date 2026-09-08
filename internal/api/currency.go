@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -67,6 +68,30 @@ func MoneyWithSymbol(sum int, currency string) string {
 		return "-" + grouped.String() + " " + info.Symbol
 	}
 	return grouped.String() + " " + info.Symbol
+}
+
+// MoneyWithSymbolMinor форматирует ТОЧНУЮ сумму в минорных единицах: 208000,
+// "RUB" → "2 080 ₽", 2080 → "20,80 ₽". Дробная часть печатается, только когда
+// она есть: у рублёвой поездки «1 200,00 ₽» — визуальный шум.
+//
+// Разделитель — запятая: тексты пушей собираются на сервере и уходят как есть,
+// локали получателя здесь нет.
+func MoneyWithSymbolMinor(minor int64, currency string) string {
+	whole := MoneyWithSymbol(FromMinor(minor-minor%MinorFactor), currency)
+	rest := minor % MinorFactor
+	if rest == 0 {
+		return whole
+	}
+	if rest < 0 {
+		rest = -rest
+	}
+	info, ok := Currencies[currency]
+	if !ok {
+		info = Currencies[DefaultCurrency]
+	}
+	// Символ валюты стоит после суммы — дробную часть вставляем перед ним.
+	return strings.TrimSuffix(whole, " "+info.Symbol) +
+		fmt.Sprintf(",%02d", rest) + " " + info.Symbol
 }
 
 // FractionalDefaultFor — считает ли НОВАЯ туса в этой валюте копейки.

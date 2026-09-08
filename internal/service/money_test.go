@@ -204,7 +204,7 @@ func TestRepaymentSettlesDebt(t *testing.T) {
 	assert.Equal(t, 30, findMoneyDebt(debts, moneyUserB.ID, moneyUserA.ID), "частичный возврат учитывается ровно один раз")
 }
 
-// GetUserCostsSum: float-доли бота суммируются без потери рубля на погрешности,
+// GetUserCostsSumMinor: float-доли бота суммируются без потери рубля на погрешности,
 // погашения в расходы не входят
 func TestGetUserCostsSumFloatNoise(t *testing.T) {
 	var ops []api.Operation
@@ -220,9 +220,9 @@ func TestGetUserCostsSumFloatNoise(t *testing.T) {
 	// Доля B — сумма ЕГО долей в расходах: шесть раз по 4 (13 целым шагом на
 	// троих даёт 5+4+4). Прежний ответ 26 брался из старых дробных долей
 	// (13/3 = 4,333…) и с карточкой расхода не сходился.
-	got, err := ss.GetUserCostsSum(context.Background(), moneyUserB.ID, room.ID.Hex())
+	got, err := ss.GetUserCostsSumMinor(context.Background(), moneyUserB.ID, room.ID.Hex())
 	assert.NoError(t, err)
-	assert.Equal(t, 24, got)
+	assert.Equal(t, int64(2400), got)
 }
 
 // Долг в тусе без копеек ОБЯЗАН быть кратен рублю — иначе его не погасить.

@@ -246,7 +246,7 @@ func (s AddSplitTypeDonorOperation) HasReact(u *api.Update) bool {
 
 // OnMessage returns one entry
 func (s AddSplitTypeDonorOperation) OnMessage(ctx context.Context, u *api.Update) (response api.TelegramMessage) {
-	sum, err := defineSum(u.Message.Text)
+	sumMinor, err := defineSumMinor(u.Message.Text)
 	purchaseText := s.defineText(u.Message.Text)
 
 	rb := api.NewButton(viewRoom, &api.CallbackData{RoomId: u.ChatState.CallbackData.RoomId})
@@ -265,7 +265,10 @@ func (s AddSplitTypeDonorOperation) OnMessage(ctx context.Context, u *api.Update
 	}
 	s.css.CleanChatState(ctx, u.ChatState)
 	u.ChatState.CallbackData.ExternalData = purchaseText
-	u.ChatState.CallbackData.Page = sum
+	// Обе проекции: точную читает эта сборка, целую — состояние, которое
+	// прочтёт откатившийся экземпляр.
+	u.ChatState.CallbackData.Page = api.FromMinor(sumMinor)
+	u.ChatState.CallbackData.SumMinor = sumMinor
 	err = s.css.Save(ctx, &api.ChatState{UserId: u.User.ID, Action: addedOperation, CallbackData: u.ChatState.CallbackData})
 	if err != nil {
 		log.Error().Err(err).Msg("create chat state failed")
@@ -347,10 +350,16 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 		return
 	}
 
-	sumMinor, fits := api.ToMinorChecked(u.ChatState.CallbackData.Page)
-	if !fits {
-		log.Error().Msgf("сумма расхода не помещается в копейки: %d", u.ChatState.CallbackData.Page)
-		return
+	// Точная сумма — из состояния; ноль означает состояние прежней сборки,
+	// и тогда единственное, что есть, — целые единицы в Page.
+	sumMinor := u.ChatState.CallbackData.SumMinor
+	if sumMinor == 0 {
+		var fits bool
+		sumMinor, fits = api.ToMinorChecked(u.ChatState.CallbackData.Page)
+		if !fits {
+			log.Error().Msgf("сумма расхода не помещается в копейки: %d", u.ChatState.CallbackData.Page)
+			return
+		}
 	}
 
 	recipientsWithSum := make([]api.RecipientWithSum, 0)
@@ -379,7 +388,7 @@ func (s AddDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respon
 	operation := &api.Operation{
 		ID:                primitive.NewObjectID(),
 		Description:       u.ChatState.CallbackData.ExternalData,
-		Sum:               u.ChatState.CallbackData.Page,
+		Sum:               api.FromMinor(sumMinor),
 		SumMinor:          &sumMinor,
 		Donor:             u.User,
 		RecipientsWithSum: recipientsWithSum,
@@ -575,12 +584,18 @@ func (s EditDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 	}
 
 	if hasButtonAction(u, chooseDonorOperation) {
-		operation.RecipientsWithSum = s.addOrDeleteRecipient(operation, room, UserId, operation.Sum)
+		operation.RecipientsWithSum = s.addOrDeleteRecipient(operation, room, UserId, operation.SumMinorOrLegacy())
 	} else if hasAction(u, saveSumDonorOperation) {
-		sum := u.ChatState.CallbackData.Page
+		// Доля из состояния — точная; ноль означает состояние прежней сборки.
+		shareMinor := u.ChatState.CallbackData.SumMinor
+		if shareMinor == 0 {
+			shareMinor = int64(u.ChatState.CallbackData.Page) * api.MinorFactor
+		}
 		for i := range operation.RecipientsWithSum {
 			if operation.RecipientsWithSum[i].User.ID == UserId {
-				operation.RecipientsWithSum[i].Sum = float64(sum)
+				minor := shareMinor
+				operation.RecipientsWithSum[i].Sum = float64(minor) / float64(api.MinorFactor)
+				operation.RecipientsWithSum[i].SumMinor = &minor
 			}
 		}
 	}
@@ -639,7 +654,7 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 					break
 				}
 			}
-			priceBtn := fmt.Sprintf("💵 %s", moneySpace(int(recipientWithSum.Sum), room.Currency))
+			priceBtn := fmt.Sprintf("💵 %s", moneySpaceMinor(recipientWithSum.SumMinorOrLegacy(), room.Currency))
 
 			setSumBtn := &api.Button{
 				ID:           primitive.NewObjectID(),
@@ -692,13 +707,15 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 		return nil, true
 	}
 
-	unallocatedSum := float64(operation.Sum)
+	// В МИНОРНЫХ: на float остаток «0,004» показывался нулём, а сумма долей
+	// расходилась с расходом на копейку.
+	unallocatedSum := operation.SumMinorOrLegacy()
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= recipientWithSum.Sum
+		unallocatedSum -= recipientWithSum.SumMinorOrLegacy()
 	}
 
 	slivce := []string{
-		" " + moneySpace(operation.Sum, room.Currency),
+		" " + moneySpaceMinor(operation.SumMinorOrLegacy(), room.Currency),
 		" " + html.EscapeString(operation.Description),
 		" ",
 		"  " + I18n(u.User, "scrn_payer", html.EscapeString(operation.Donor.DisplayName)),
@@ -720,10 +737,10 @@ func showOperation(ctx context.Context, u *api.Update, room api.Room, operation 
 			if operation.SplitType == equally {
 				return ""
 			}
-			if RoundToTwoDecimalPlaces(unallocatedSum) > 0 {
-				return fmt.Sprintf("⚠️ Осталось распределить %s", moneySpace(int(unallocatedSum), room.Currency))
+			if unallocatedSum > 0 {
+				return fmt.Sprintf("⚠️ Осталось распределить %s", moneySpaceMinor(unallocatedSum, room.Currency))
 			} else if unallocatedSum < 0 {
-				return fmt.Sprintf("🔴 Избыток: %s", moneySpace(int(-unallocatedSum), room.Currency))
+				return fmt.Sprintf("🔴 Избыток: %s", moneySpaceMinor(-unallocatedSum, room.Currency))
 			} else {
 				return "Все средства распределены 💪"
 			}
@@ -760,7 +777,7 @@ func (s EditDonorOperation) addOrDeleteRecipient(
 	operation api.Operation,
 	room *api.Room,
 	userId int,
-	totalSum int,
+	totalSumMinor int64,
 ) []api.RecipientWithSum {
 	members := room.Members
 	recipients := operation.RecipientsWithSum
@@ -778,11 +795,17 @@ func (s EditDonorOperation) addOrDeleteRecipient(
 		}
 	}
 
-	// Пересчитываем долю для каждого участника:
+	// Пересчитываем долю для каждого участника ТЕМ ЖЕ шагом, что и приложение.
+	// Раньше здесь стояло float64(totalSum)/n — те самые 33,333… без копеечного
+	// поля: правка получателей из бота переписывала доли расхода дробями,
+	// которые не складываются обратно в сумму.
 	if len(recipients) > 0 && operation.SplitType == equally {
-		share := float64(totalSum) / float64(len(recipients))
+		step := api.ShareStepFor(api.RoomFractional(room))
 		for i := range recipients {
-			recipients[i].Sum = share
+			share := api.ShareOfMinorStep(totalSumMinor, len(recipients), i, step)
+			minor := share
+			recipients[i].Sum = float64(share) / float64(api.MinorFactor)
+			recipients[i].SumMinor = &minor
 		}
 	}
 
@@ -880,9 +903,11 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	tgButtons := [][]tgbotapi.InlineKeyboardButton{{
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
 	}}
-	unallocatedSum := float64(operation.Sum)
+	// В МИНОРНЫХ: на float остаток «0,004» показывался нулём, а сумма долей
+	// расходилась с расходом на копейку.
+	unallocatedSum := operation.SumMinorOrLegacy()
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= recipientWithSum.Sum
+		unallocatedSum -= recipientWithSum.SumMinorOrLegacy()
 	}
 
 	tb := sdk.NewTableBuilder('-', " | ")
@@ -902,13 +927,13 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 	})
 	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
-			return moneySpace(int(operation.RecipientsWithSum[i].Sum), room.Currency)
+			return moneySpaceMinor(operation.RecipientsWithSum[i].SumMinorOrLegacy(), room.Currency)
 		} else if i == len(operation.RecipientsWithSum) {
-			total := 0
+			var total int64
 			for _, recipient := range operation.RecipientsWithSum {
-				total += int(recipient.Sum)
+				total += recipient.SumMinorOrLegacy()
 			}
-			return moneySpace(total, room.Currency)
+			return moneySpaceMinor(total, room.Currency)
 		}
 		return ""
 	})
@@ -924,7 +949,7 @@ func (h EditDonorAmountHandler) OnMessage(ctx context.Context, u *api.Update) (r
 %s`,
 		html.EscapeString(recipient.DisplayName),
 		html.EscapeString(operation.Description),
-		moneySpace(operation.Sum, room.Currency),
+		moneySpaceMinor(operation.SumMinorOrLegacy(), room.Currency),
 		tb.Build(),
 	)
 
@@ -1140,7 +1165,7 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}
 	operation := findOperationByID(room, u.ChatState.CallbackData.OperationId)
 
-	sum, err := defineSum(u.Message.Text)
+	shareMinor, err := defineSumMinor(u.Message.Text)
 	if err != nil {
 		log.Error().Err(err).Msgf("not parsed %v", u.Message.Text)
 		text := I18n(u.User, "msg_wrong_format")
@@ -1158,12 +1183,15 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}
 	for i := range operation.RecipientsWithSum {
 		if operation.RecipientsWithSum[i].User.ID == u.ChatState.CallbackData.UserId {
-			operation.RecipientsWithSum[i].Sum = float64(sum)
+			minor := shareMinor
+			operation.RecipientsWithSum[i].Sum = float64(minor) / float64(api.MinorFactor)
+			operation.RecipientsWithSum[i].SumMinor = &minor
 		}
 	}
 
 	s.css.CleanChatState(ctx, u.ChatState)
-	u.ChatState.CallbackData.Page = sum
+	u.ChatState.CallbackData.Page = api.FromMinor(shareMinor)
+	u.ChatState.CallbackData.SumMinor = shareMinor
 	cs := &api.ChatState{UserId: u.User.ID,
 		CallbackData: u.ChatState.CallbackData,
 		Action:       saveSumDonorOperation,
@@ -1197,9 +1225,11 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	}, {
 		tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_cancel"), cancelBtn.ID.Hex()),
 	}}
-	unallocatedSum := float64(operation.Sum)
+	// В МИНОРНЫХ: на float остаток «0,004» показывался нулём, а сумма долей
+	// расходилась с расходом на копейку.
+	unallocatedSum := operation.SumMinorOrLegacy()
 	for _, recipientWithSum := range operation.RecipientsWithSum {
-		unallocatedSum -= recipientWithSum.Sum
+		unallocatedSum -= recipientWithSum.SumMinorOrLegacy()
 	}
 
 	tb := sdk.NewTableBuilder('-', " | ")
@@ -1219,13 +1249,13 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 	})
 	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
-			return moneySpace(int(operation.RecipientsWithSum[i].Sum), room.Currency)
+			return moneySpaceMinor(operation.RecipientsWithSum[i].SumMinorOrLegacy(), room.Currency)
 		} else if i == len(operation.RecipientsWithSum) {
-			total := 0
+			var total int64
 			for _, recipient := range operation.RecipientsWithSum {
-				total += int(recipient.Sum)
+				total += recipient.SumMinorOrLegacy()
 			}
-			return moneySpace(total, room.Currency)
+			return moneySpaceMinor(total, room.Currency)
 		}
 		return ""
 	})
@@ -1243,13 +1273,13 @@ func (s AddedDonorAmountOperation) OnMessage(ctx context.Context, u *api.Update)
 %s
     `,
 		html.EscapeString(recipient.DisplayName),
-		moneySpace(operation.Sum, room.Currency),
-		moneySpace(sum, room.Currency),
+		moneySpaceMinor(operation.SumMinorOrLegacy(), room.Currency),
+		moneySpaceMinor(shareMinor, room.Currency),
 		func() string {
-			if RoundToTwoDecimalPlaces(unallocatedSum) > 0 {
-				return fmt.Sprintf("⚠️ Осталось распределить: %s", moneySpace(int(unallocatedSum), room.Currency))
-			} else if RoundToTwoDecimalPlaces(unallocatedSum) < 0 {
-				return fmt.Sprintf("🔴Избыток: %s", moneySpace(int(-unallocatedSum), room.Currency))
+			if unallocatedSum > 0 {
+				return fmt.Sprintf("⚠️ Осталось распределить: %s", moneySpaceMinor(unallocatedSum, room.Currency))
+			} else if unallocatedSum < 0 {
+				return fmt.Sprintf("🔴Избыток: %s", moneySpaceMinor(-unallocatedSum, room.Currency))
 			} else {
 				return "Все средства распределены 💪"
 			}
@@ -1310,16 +1340,16 @@ func (s OperationAdded) OnMessage(ctx context.Context, u *api.Update) (response 
 		}
 	}
 
-	unallocatedSum := float64(opn.Sum)
+	unallocatedSum := opn.SumMinorOrLegacy()
 	for _, recipientWithSum := range opn.RecipientsWithSum {
-		unallocatedSum -= recipientWithSum.Sum
+		unallocatedSum -= recipientWithSum.SumMinorOrLegacy()
 	}
-	if RoundToTwoDecimalPlaces(unallocatedSum) != 0.00 {
+	if unallocatedSum != 0 {
 		var text = "⚠️Ошибка при добавление операции:\n\n"
 		if unallocatedSum > 0 {
-			text += fmt.Sprintf("🔴Не распределено: %s", moneySpace(int(unallocatedSum), room.Currency))
+			text += fmt.Sprintf("🔴Не распределено: %s", moneySpaceMinor(unallocatedSum, room.Currency))
 		} else if unallocatedSum < 0 {
-			text += fmt.Sprintf("🔴Избыток распределения: %s", moneySpace(int(-unallocatedSum), room.Currency))
+			text += fmt.Sprintf("🔴Избыток распределения: %s", moneySpaceMinor(-unallocatedSum, room.Currency))
 		}
 
 		callback := createCallback(u, text, true)
@@ -1436,7 +1466,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 				{tgbotapi.NewInlineKeyboardButtonData(I18n(opn.Donor, "btn_to_start"), backB.ID.Hex())},
 			}
 			msg := NewMessage(chatId,
-				I18n(opn.Donor, "scrn_notification_payer_changed", cu.link(opn.Donor), userLink(u.User), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name)),
+				I18n(opn.Donor, "scrn_notification_payer_changed", cu.link(opn.Donor), userLink(u.User), html.EscapeString(opn.Description), moneySpaceMinor(opn.SumMinorOrLegacy(), room.Currency), html.EscapeString(room.Name)),
 				keyboard)
 			messages = append(messages, msg)
 			opn.NotificationSent = append(opn.NotificationSent, opn.Donor.ID)
@@ -1459,7 +1489,7 @@ func (s OperationAdded) notificationWhenCreateOperation(ctx context.Context, u *
 					break
 				}
 			}
-			msg := NewMessage(chatId, I18n(&recipientsWithSum.User, "scrn_notification_operation_added", cu.link(&recipientsWithSum.User), userLink(u.User), html.EscapeString(opn.Description), moneySpace(opn.Sum, room.Currency), html.EscapeString(room.Name), moneySpace(int(recipientWithSum.Sum), room.Currency)),
+			msg := NewMessage(chatId, I18n(&recipientsWithSum.User, "scrn_notification_operation_added", cu.link(&recipientsWithSum.User), userLink(u.User), html.EscapeString(opn.Description), moneySpaceMinor(opn.SumMinorOrLegacy(), room.Currency), html.EscapeString(room.Name), moneySpaceMinor(recipientWithSum.SumMinorOrLegacy(), room.Currency)),
 				[][]tgbotapi.InlineKeyboardButton{
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_view_operation"), rb.ID.Hex())},
 					{tgbotapi.NewInlineKeyboardButtonData(I18n(&recipientsWithSum.User, "btn_to_start"), backB.ID.Hex())},
@@ -1614,7 +1644,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 				continue
 			}
 			msg := NewMessage(chatId,
-				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", cu.link(&rAdded.User), cu.link(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName, moneySpace(int(rAdded.Sum), room.Currency)), keyboard)
+				I18n(&rAdded.User, "scrn_notification_operation_recipient_added", cu.link(&rAdded.User), cu.link(editor), newDesc, moneySpaceMinor(newOp.SumMinorOrLegacy(), room.Currency), roomName, moneySpaceMinor(rAdded.SumMinorOrLegacy(), room.Currency)), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1630,7 +1660,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 				continue
 			}
 			msg := NewMessage(chatId,
-				I18n(&change.User, "scrn_notification_operation_share_changed", cu.link(&change.User), newDesc, cu.link(editor), moneySpace(newOp.Sum, room.Currency), roomName, fmt.Sprintf("%s -> %s", moneySpace(api.FromMinor(change.OldSumMinor), room.Currency), moneySpace(api.FromMinor(change.NewSumMinor), room.Currency))), keyboard)
+				I18n(&change.User, "scrn_notification_operation_share_changed", cu.link(&change.User), newDesc, cu.link(editor), moneySpaceMinor(newOp.SumMinorOrLegacy(), room.Currency), roomName, fmt.Sprintf("%s -> %s", moneySpaceMinor(change.OldSumMinor, room.Currency), moneySpaceMinor(change.NewSumMinor, room.Currency))), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1646,7 +1676,7 @@ func buildUpdateOperationMessages(cu *canonicalUsers, editor *api.User, langUser
 				continue
 			}
 			msg := NewMessage(chatId,
-				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", cu.link(&rRemoved.User), cu.link(editor), newDesc, moneySpace(newOp.Sum, room.Currency), roomName), keyboard)
+				I18n(&rRemoved.User, "scrn_notification_operation_recipient_removed", cu.link(&rRemoved.User), cu.link(editor), newDesc, moneySpaceMinor(newOp.SumMinorOrLegacy(), room.Currency), roomName), keyboard)
 			messages = append(messages, msg)
 		}
 	}
@@ -1763,7 +1793,7 @@ func (s ViewDonorOperation) OnMessage(ctx context.Context, u *api.Update) (respo
 		log.Error().Err(err).Msg("create btn failed")
 		return
 	}
-	text := I18n(u.User, "scrn_operation_on_sum", html.EscapeString(operation.Description), moneySpace(operation.Sum, room.Currency))
+	text := I18n(u.User, "scrn_operation_on_sum", html.EscapeString(operation.Description), moneySpaceMinor(operation.SumMinorOrLegacy(), room.Currency))
 	text += I18n(u.User, "scrn_user_paid", canonical(ctx, s.us).link(operation.Donor))
 
 	text += tableWithPayments(operation, room)
@@ -1806,7 +1836,7 @@ func tableWithPayments(operation api.Operation, room *api.Room) string {
 	})
 	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
 		if i < len(operation.RecipientsWithSum) {
-			return moneySpace(int(operation.RecipientsWithSum[i].Sum), room.Currency)
+			return moneySpaceMinor(operation.RecipientsWithSum[i].SumMinorOrLegacy(), room.Currency)
 		}
 		return ""
 	})
@@ -2363,13 +2393,13 @@ func (s AddRecepientOperation) OnMessage(ctx context.Context, u *api.Update) (re
 	}()
 
 	keyboard := [][]tgbotapi.InlineKeyboardButton{{tgbotapi.NewInlineKeyboardButtonData(I18n(u.User, "btn_done"), rb.ID.Hex())}}
-	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpace(sum, room.Currency)), &keyboard)
+	forDonorMsg := createScreen(u, I18n(u.User, "scrn_debt_returned_lender", userLink(recipient), moneySpaceMinor(sumMinor, room.Currency)), &keyboard)
 	var forRecipientMsg tgbotapi.Chattable
 	// recipient и donor уже канонические (s.us.FindById и u.User), поэтому chat id
 	// берётся напрямую; нет привязки к telegram — сообщение не собираем
 	if chatId, ok := telegramChatID(recipient); ok && recipient.AllowsTelegram(api.NotifyDebts) {
 		// NewMessage шлёт с ParseMode=HTML — то же экранирование, что в notifier.go
-		forRecipientMsg = NewMessage(chatId, I18n(u.User, "scrn_debt_returned_recepient", html.EscapeString(recipient.DisplayName), moneySpace(sum, room.Currency), userLink(donor)), keyboard)
+		forRecipientMsg = NewMessage(chatId, I18n(u.User, "scrn_debt_returned_recepient", html.EscapeString(recipient.DisplayName), moneySpaceMinor(sumMinor, room.Currency), userLink(donor)), keyboard)
 	}
 
 	return api.TelegramMessage{
@@ -2435,7 +2465,7 @@ func (bot ViewAllOperations) OnMessage(ctx context.Context, u *api.Update) (resp
 				return "📝"
 			}(),
 			stringForAlign(op.Description, 11, true),
-			stringForAlign("💰"+moneySpace(op.Sum, room.Currency), 8, false),
+			stringForAlign("💰"+moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), 8, false),
 			stringForAlign("👤"+shortName(op.Donor), 8, false))
 		toSave = append(toSave, opB)
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
@@ -2534,7 +2564,7 @@ func (bot ViewMyOperations) OnMessage(ctx context.Context, u *api.Update) (respo
 				return "📝"
 			}(),
 			stringForAlign(op.Description, 8, true),
-			stringForAlign("💰"+moneySpace(op.Sum, room.Currency), 8, false),
+			stringForAlign("💰"+moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), 8, false),
 			stringForAlign("👤"+shortName(op.Donor), 10, false))
 		toSave = append(toSave, opB)
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})
@@ -2626,7 +2656,7 @@ func (bot ViewOperationsWithMe) OnMessage(ctx context.Context, u *api.Update) (r
 		opB := api.NewButton(donorOperation, &api.CallbackData{RoomId: roomId, Page: page, OperationId: op.ID})
 		text := fmt.Sprintf("🛒%s %s %s",
 			stringForAlign(op.Description, 11, true),
-			stringForAlign("💰"+moneySpace(op.Sum, room.Currency), 10, false),
+			stringForAlign("💰"+moneySpaceMinor(op.SumMinorOrLegacy(), room.Currency), 10, false),
 			stringForAlign("👤"+shortName(op.Donor), 8, false))
 		toSave = append(toSave, opB)
 		keyboard = append(keyboard, []tgbotapi.InlineKeyboardButton{tgbotapi.NewInlineKeyboardButtonData(text, opB.ID.Hex())})

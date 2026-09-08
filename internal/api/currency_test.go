@@ -51,3 +51,27 @@ func TestLocalizedMarketsHaveTheirCurrency(t *testing.T) {
 		t.Errorf("MoneyWithSymbol(-1200, KRW) = %q", got)
 	}
 }
+
+// MoneyWithSymbolMinor печатает дробь ТОЛЬКО когда она есть.
+//
+// Тексты пушей и напоминаний собираются здесь, и округление в них означало бы,
+// что человеку обещают вернуть не ту сумму, которую он видит в приложении.
+func TestMoneyWithSymbolMinor(t *testing.T) {
+	cases := []struct {
+		minor    int64
+		currency string
+		want     string
+	}{
+		{208000, "RUB", "2 080 ₽"},
+		{2080, "RUB", "20,80 ₽"},
+		{2008, "RUB", "20,08 ₽"},
+		{25, "USD", "0,25 $"},
+		{-2080, "RUB", "-20,80 ₽"},
+		{410000, "JPY", "4 100 ¥"},
+	}
+	for _, c := range cases {
+		if got := MoneyWithSymbolMinor(c.minor, c.currency); got != c.want {
+			t.Errorf("MoneyWithSymbolMinor(%d, %s) = %q, want %q", c.minor, c.currency, got, c.want)
+		}
+	}
+}
