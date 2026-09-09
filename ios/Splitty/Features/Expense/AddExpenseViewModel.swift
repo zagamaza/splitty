@@ -473,8 +473,11 @@ final class AddExpenseViewModel {
         if !draft.description.isEmpty {
             descriptionText = draft.description
         }
-        if draft.sum >= 1 {
-            sumText = String(draft.sum)
+        if draft.exactMinor >= 1 {
+            // Из ТОЧНОЙ величины: округлённая теряла бы копейки у плоской
+            // диктовки «ужин 20,80» — форма показывала 21, и сохранение честно
+            // отправляло 2100.
+            sumText = inputTextFromMinor(draft.exactMinor)
         }
         if let donorId = draft.donorId, members.contains(where: { $0.id == donorId }) {
             payerId = donorId
@@ -574,12 +577,7 @@ final class AddExpenseViewModel {
             if generation == parseGeneration { isParsing = false }
         }
 
-        // Текущий черновик передаётся для голосовой правки: сервер применяет
-        // только дельту, не пересобирая уже проставленные доли/имена. Пустую
-        // форму отправляем без черновика (распознавание с нуля).
-        let currentDraft: ParseDraft? = (hasDraftItems || !descriptionText.isEmpty || (sum ?? 0) > 0)
-            ? ParseDraft(description: descriptionText, sum: sum ?? 0, donorId: payerId, items: draftItems)
-            : nil
+        let currentDraft = currentParseDraft
         inputMethod = audio != nil ? "voice" : (image != nil ? "receipt" : inputMethod)
         parseKind = audio != nil ? "voice" : "receipt"
         Analytics.shared.track(.parseStarted(kind: parseKind))
@@ -788,6 +786,23 @@ final class AddExpenseViewModel {
             guard let minor = shares[id], minor >= 1 else { return nil }
             return RecipientSum(userId: id, minor: minor)
         }
+    }
+
+    /// Текущий черновик для голосовой правки: сервер применяет только дельту,
+    /// не пересобирая уже проставленные доли и имена. nil — форма пуста, и это
+    /// распознавание с нуля.
+    ///
+    /// Сумма уходит парой: без точного поля следующий круг правки возвращался
+    /// бы с округлённой, и копейки терялись бы на нём.
+    var currentParseDraft: ParseDraft? {
+        guard hasDraftItems || !descriptionText.isEmpty || (sum ?? 0) > 0 else { return nil }
+        return ParseDraft(
+            description: descriptionText,
+            sum: sum ?? 0,
+            sumMinor: sumMinor,
+            donorId: payerId,
+            items: draftItems
+        )
     }
 
     /// Первичная настройка и загрузка данных (вызывается один раз из .task).

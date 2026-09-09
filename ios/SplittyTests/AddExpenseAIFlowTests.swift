@@ -35,6 +35,40 @@ final class AddExpenseAIFlowTests: XCTestCase {
         XCTAssertEqual(model.parseQuestions, ["Кто платил?"])
     }
 
+    /// Плоская диктовка «ужин 20,80» не теряет копейки.
+    ///
+    /// Сервер отвечает парой {sum: 21, sumMinor: 2080}. Клиент читал только
+    /// округлённое поле, показывал 21, и сохранение честно отправляло 2100 —
+    /// 80 копеек исчезали молча, ровно в том пути, ради которого точная сумма
+    /// черновика и заводилась.
+    func testFlatParseKeepsCents() throws {
+        let model = AddExpenseViewModel()
+        let json = #"{"draft":{"description":"Ужин","sum":21,"sumMinor":2080},"questions":[]}"#
+        let response = try JSONDecoder().decode(ParseResponse.self, from: Data(json.utf8))
+
+        XCTAssertEqual(response.draft.exactMinor, 2080, "точное поле не разобралось")
+
+        model.apply(parse: response)
+        XCTAssertEqual(model.sumText, "20,80", "форма заполнена округлённой суммой")
+        XCTAssertEqual(model.sumMinor, 2080)
+
+        // Следующий круг правки уходит с той же точной суммой: иначе копейки
+        // терялись бы на нём.
+        let next = try XCTUnwrap(model.currentParseDraft)
+        XCTAssertEqual(next.sumMinor, 2080)
+        XCTAssertEqual(next.sum, 21)
+    }
+
+    /// Ответ прежней версии сервера точного поля не несёт — работает целое.
+    func testFlatParseWithoutMinorFieldStaysWhole() throws {
+        let model = AddExpenseViewModel()
+        let json = #"{"draft":{"description":"Такси","sum":300},"questions":[]}"#
+        let response = try JSONDecoder().decode(ParseResponse.self, from: Data(json.utf8))
+
+        model.apply(parse: response)
+        XCTAssertEqual(model.sumText, "300")
+    }
+
     // MARK: Выбор экрана по исходу распознавания
     // (какой вид покажет форма: композер / чек / плоский AI-результат)
 

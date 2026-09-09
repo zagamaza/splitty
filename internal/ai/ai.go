@@ -100,7 +100,16 @@ func (d *Draft) UnmarshalJSON(data []byte) error {
 	if !ok {
 		return fmt.Errorf("сумма черновика %q не число", raw)
 	}
-	d.SetSumMinor(minor)
+	d.Sum = api.FromMinor(minor)
+	// Явно присланное точное поле НЕ затирается целым: клиент шлёт черновик на
+	// правку парой {sum: 21, sumMinor: 2080}, и SetSumMinor по целому сбрасывал
+	// её в ноль копеек — 80 копеек терялись на первом же круге правки.
+	// Точное поле переписывает только ДРОБНОЕ целое: тогда именно оно и есть
+	// свежая величина от модели.
+	if minor%api.MinorFactor != 0 {
+		value := minor
+		d.SumMinor = &value
+	}
 	return nil
 }
 

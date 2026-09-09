@@ -42,7 +42,11 @@ func TestNumberColumnStillGroupsPlainNumbers(t *testing.T) {
 		}
 		return ""
 	})
-	if out := tb.Build(); !strings.Contains(out, "</code> <code>") {
-		t.Errorf("разрядные пробелы пропали:\n%s", out)
+	// Ожидание точное, а не «где-то есть тег»: слабая проверка проходила бы и
+	// при лишней вставке, ради которой всё и чинилось.
+	out := tb.Build()
+	const want = "1</code> <code>234</code> <code>567.00"
+	if !strings.Contains(out, want) {
+		t.Errorf("разрядные пробелы расставлены не так:\n got: %s\nwant подстроку: %s", out, want)
 	}
 }

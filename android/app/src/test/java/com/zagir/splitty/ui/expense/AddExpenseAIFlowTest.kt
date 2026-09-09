@@ -14,6 +14,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import com.zagir.splitty.core.model.SplittyJson
+import com.zagir.splitty.core.money.MoneyFormat
+import java.util.Locale
 
 /**
  * AI-поток формы расхода — порт iOS `AddExpenseAIFlowTests` на чистые функции
@@ -41,13 +44,54 @@ class AddExpenseAIFlowTest {
 
     // MARK: applyingParse
 
+    /**
+     * Плоская диктовка «ужин 20,80» не теряет копейки. Порт iOS
+     * `testFlatParseKeepsCents`.
+     *
+     * Сервер отвечает парой {sum: 21, sumMinor: 2080}. Клиент читал только
+     * округлённое поле, показывал 21, и сохранение честно отправляло 2100 —
+     * 80 копеек исчезали молча, ровно в том пути, ради которого точная сумма
+     * черновика и заводилась.
+     */
+    @Test
+    fun `flat parse keeps cents`() {
+        // Разделитель в поле ввода — из локали, поэтому её фиксируем: иначе
+        // тест проверял бы настройки машины, а не код.
+        MoneyFormat.localeOverride = Locale("ru", "RU")
+        try {
+        val json = """{"draft":{"description":"Ужин","sum":21,"sumMinor":2080},"questions":[]}"""
+        val response = SplittyJson.decodeFromString<ParseResponse>(json)
+        assertEquals(2080L, response.draft.exactMinor, "точное поле не разобралось")
+
+        val next = form().applyingParse(response)
+        assertEquals("20,80", next.sumText, "форма заполнена округлённой суммой")
+        assertEquals(2080L, next.sumMinor)
+
+        // Следующий круг правки уходит с той же точной суммой.
+        val draft = next.currentParseDraft()!!
+        assertEquals(2080L, draft.sumMinor)
+        assertEquals(21L, draft.sum)
+        } finally {
+            MoneyFormat.localeOverride = null
+        }
+    }
+
+    /** Ответ прежней версии сервера точного поля не несёт — работает целое. */
+    @Test
+    fun `flat parse without minor field stays whole`() {
+        val json = """{"draft":{"description":"Такси","sum":300},"questions":[]}"""
+        val next = form().applyingParse(SplittyJson.decodeFromString<ParseResponse>(json))
+        assertEquals("300", next.sumText)
+    }
+
+
     @Test
     fun `apply parse fills form and syncs recipients`() {
         val items = listOf(
             OperationItem(name = "Пицца", price = 1200, shares = listOf(ItemShare(1L), ItemShare(2L))),
         )
         val next = form().applyingParse(
-            ParseResponse(ParseDraft("Ужин", 1200, 1L, items), questions = listOf("Кто платил?")),
+            ParseResponse(ParseDraft(description = "Ужин", sum = 1200, donorId = 1L, items = items), questions = listOf("Кто платил?")),
         )
         assertEquals("Ужин", next.description)
         assertEquals("1200", next.sumText)
@@ -61,7 +105,7 @@ class AddExpenseAIFlowTest {
 
     @Test
     fun `flat result marked recognized not empty`() {
-        val next = form().applyingParse(ParseResponse(ParseDraft("Такси", 400, null, null)))
+        val next = form().applyingParse(ParseResponse(ParseDraft(description = "Такси", sum = 400, donorId = null, items = null)))
         assertFalse(next.hasDraftItems)
         assertTrue(next.didRecognize)
         assertFalse(next.isEmptyForm)
@@ -70,7 +114,7 @@ class AddExpenseAIFlowTest {
     @Test
     fun `empty result keeps composer without alert when question present`() {
         val next = form().applyingParse(
-            ParseResponse(ParseDraft("", 0, null, null), questions = listOf("не удалось распознать")),
+            ParseResponse(ParseDraft(description = "", sum = 0, donorId = null, items = null), questions = listOf("не удалось распознать")),
         )
         assertFalse(next.didRecognize)
         assertTrue(next.isEmptyForm)
@@ -80,7 +124,7 @@ class AddExpenseAIFlowTest {
 
     @Test
     fun `empty result without questions shows alert`() {
-        val next = form().applyingParse(ParseResponse(ParseDraft("", 0, null, null)))
+        val next = form().applyingParse(ParseResponse(ParseDraft(description = "", sum = 0, donorId = null, items = null)))
         assertFalse(next.didRecognize)
         assertTrue(next.isEmptyForm)
         assertTrue(next.alertMessage != null)
@@ -92,12 +136,12 @@ class AddExpenseAIFlowTest {
     fun `correction marks changed items and allows undo`() {
         val pizza = OperationItem(name = "Пицца", price = 1200, shares = listOf(ItemShare(1L), ItemShare(2L)))
         val beer = OperationItem(name = "Пиво", price = 600, shares = listOf(ItemShare(1L), ItemShare(2L)))
-        val first = form().applyingParse(ParseResponse(ParseDraft("Ужин", 1800, 1L, listOf(pizza, beer))))
+        val first = form().applyingParse(ParseResponse(ParseDraft(description = "Ужин", sum = 1800, donorId = 1L, items = listOf(pizza, beer))))
         assertFalse(first.canUndoParse)
         assertTrue(first.changedItemIndices.isEmpty())
 
         val beerFixed = OperationItem(name = "Пиво", price = 600, shares = listOf(ItemShare(2L)))
-        val corrected = first.applyingParse(ParseResponse(ParseDraft("Ужин", 1800, 1L, listOf(pizza, beerFixed))))
+        val corrected = first.applyingParse(ParseResponse(ParseDraft(description = "Ужин", sum = 1800, donorId = 1L, items = listOf(pizza, beerFixed))))
         assertEquals(setOf(1), corrected.changedItemIndices)
         assertTrue(corrected.canUndoParse)
 

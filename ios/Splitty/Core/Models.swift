@@ -444,7 +444,11 @@ func minorToUnitsRounded(_ minor: Int) -> Int {
 /// Клиент шлёт текущий черновик на голосовую правку, сервер возвращает новый.
 struct ParseDraft: Codable, Hashable {
     let description: String
+    /// Округлённая проекция суммы; точная — в `sumMinor`.
     let sum: Int
+    /// Точная сумма черновика в минорных единицах; nil — сумма целая или
+    /// ответ прежней версии сервера.
+    var sumMinor: Int?
     /// Кто платил; nil — модель не определила донора.
     let donorId: Int?
     /// Позиции чека; item с непустым `unknown` требует сопоставления перед сохранением.
@@ -456,9 +460,21 @@ struct ParseDraft: Codable, Hashable {
     /// Есть ли нераспознанные имена хотя бы в одной позиции (блокирует сохранение).
     var hasUnknown: Bool { itemList.contains(where: \.hasUnknown) }
 
-    init(description: String, sum: Int, donorId: Int? = nil, items: [OperationItem]? = nil) {
+    /// Точная сумма черновика в копейках: записанная, иначе выведенная из
+    /// целой. Плоская диктовка «ужин 20,80» идёт мимо позиций, и без этого
+    /// поля форма заполнялась бы округлённым 21.
+    var exactMinor: Int { sumMinor ?? saturatingMinor(sum) }
+
+    init(
+        description: String,
+        sum: Int,
+        sumMinor: Int? = nil,
+        donorId: Int? = nil,
+        items: [OperationItem]? = nil
+    ) {
         self.description = description
         self.sum = sum
+        self.sumMinor = sumMinor
         self.donorId = donorId
         self.items = items
     }

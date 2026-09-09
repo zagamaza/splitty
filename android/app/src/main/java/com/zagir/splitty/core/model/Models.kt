@@ -457,12 +457,25 @@ data class Operation(
 @Serializable
 data class ParseDraft(
     val description: String,
+    /** Округлённая проекция суммы; точная — в [sumMinor]. */
     val sum: Long,
+    /**
+     * Точная сумма черновика в минорных единицах; null — сумма целая или ответ
+     * прежней версии сервера.
+     */
+    val sumMinor: Long? = null,
     /** Кто платил; null — модель не определила донора. */
     val donorId: Long? = null,
     /** Позиции чека; item с непустым `unknown` требует сопоставления перед сохранением. */
     val items: List<OperationItem>? = null,
 ) {
+    /**
+     * Точная сумма черновика в копейках: записанная, иначе выведенная из целой.
+     * Плоская диктовка «ужин 20,80» идёт мимо позиций, и без этого поля форма
+     * заполнялась бы округлённым 21.
+     */
+    val exactMinor: Long get() = sumMinor ?: saturatingMinor(sum)
+
     /** Позиции без опциональности. */
     val itemList: List<OperationItem> get() = items ?: emptyList()
 

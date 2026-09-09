@@ -222,3 +222,39 @@ func TestItemShareAmountDecoding(t *testing.T) {
 		t.Error("нечисловая доля принята")
 	}
 }
+
+// Черновик, пришедший на правку с парой полей, не теряет копейки.
+//
+// Клиент шлёт текущий черновик обратно как {sum: 21, sumMinor: 2080}. Разбор по
+// целому полю сбрасывал точное в ноль копеек, и 80 копеек исчезали на первом же
+// круге голосовой правки.
+func TestDraftSumRoundTripKeepsMinor(t *testing.T) {
+	var draft Draft
+	if err := json.Unmarshal([]byte(`{"description":"Ужин","sum":21,"sumMinor":2080,"items":[]}`), &draft); err != nil {
+		t.Fatalf("разбор упал: %v", err)
+	}
+	if draft.SumMinorOrLegacy() != 2080 {
+		t.Errorf("точная сумма = %d, want 2080 — потеряна на round-trip", draft.SumMinorOrLegacy())
+	}
+	if draft.Sum != 21 {
+		t.Errorf("округлённая проекция = %d, want 21", draft.Sum)
+	}
+
+	// Дробное целое поле от модели — источник правды, точное поле пересобирается.
+	var fromModel Draft
+	if err := json.Unmarshal([]byte(`{"description":"Ужин","sum":20.8,"items":[]}`), &fromModel); err != nil {
+		t.Fatalf("разбор дробной суммы упал: %v", err)
+	}
+	if fromModel.SumMinorOrLegacy() != 2080 || fromModel.Sum != 21 {
+		t.Errorf("сумма от модели = %d/%d, want 2080/21", fromModel.SumMinorOrLegacy(), fromModel.Sum)
+	}
+
+	// Целая сумма точного поля не заводит: оно не несёт ничего сверх целого.
+	var whole Draft
+	if err := json.Unmarshal([]byte(`{"description":"Такси","sum":300,"items":[]}`), &whole); err != nil {
+		t.Fatalf("разбор целой суммы упал: %v", err)
+	}
+	if whole.SumMinor != nil {
+		t.Errorf("у целой суммы точное поле = %v, want nil", whole.SumMinor)
+	}
+}

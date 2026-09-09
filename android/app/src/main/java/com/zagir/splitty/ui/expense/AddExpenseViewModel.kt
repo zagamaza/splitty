@@ -174,7 +174,9 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
     val nextItems = if (wasCorrection && items.isEmpty()) oldItems else items
     var next = copy(
         description = draft.description.ifBlank { description },
-        sumText = if (draft.sum >= 1) draft.sum.toString() else sumText,
+        // Из ТОЧНОЙ величины: округлённая теряла бы копейки у плоской диктовки
+        // «ужин 20,80» — форма показывала 21, и сохранение честно слало 2100.
+        sumText = if (draft.exactMinor >= 1) inputTextFromMinor(draft.exactMinor) else sumText,
         payerId = recognizedPayer ?: payerId,
         draftItems = nextItems,
         parseQuestions = questions,
@@ -205,6 +207,9 @@ internal fun AddExpenseForm.currentParseDraft(): ParseDraft? {
         ParseDraft(
             description = description,
             sum = sum ?: 0,
+            // Пара полей и обратно: иначе следующий круг правки приходил бы с
+            // округлённой суммой, и копейки терялись на нём.
+            sumMinor = sumMinor,
             donorId = payerId,
             items = draftItems.ifEmpty { null },
         )
