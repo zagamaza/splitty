@@ -57,6 +57,10 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 		if len(items) >= maxDraftItems {
 			break
 		}
+		// Границы держатся по ТОЧНОЙ величине: раньше проверялось только целое
+		// поле, и отрицательное или запредельное минорное доезжало до UI, а
+		// сохранение отбивалось 400 без объяснимой причины.
+		it = clampItemMoney(it)
 		if it.Price < 0 {
 			it.Price = 0
 		}
@@ -66,6 +70,7 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 		// derivedShares
 		if it.Price > maxItemPrice {
 			it.Price = maxItemPrice
+			it.PriceMinor = nil
 		}
 		// та же причина, что и у цены: write-path отбивает длинное название 400,
 		// а UI успевал показать черновик — пользователь видел необъяснимую ошибку
@@ -136,12 +141,12 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 		}
 	}
 	if !hasRegular && len(items) > 0 {
-		sum := 0
+		var sum int64
 		for _, it := range items {
-			sum += it.Price
+			sum += itemPriceMinor(it)
 		}
-		if d.Sum < sum {
-			d.Sum = sum
+		if d.SumMinorOrLegacy() < sum {
+			d.SetSumMinor(sum)
 		}
 		items = nil
 	}
@@ -151,14 +156,16 @@ func sanitizeDraft(d ai.Draft, members []api.User) ai.Draft {
 	// модель. Но позиции БЕЗ цен допустимы («услышал блюда и людей, цену — нет»):
 	// пересчёт по ним дал бы 0 и стёр сумму, названную вслух («пицца и салат,
 	// всего 1200»). Поэтому сумму позиций берём, только если она положительная.
-	itemsSum := 0
+	// Складываем ТОЧНЫЕ цены: две позиции по 20,80 давали в контракте 42 при
+	// фактическом итоге 41,60 — черновик обещал клиенту не то, что сохранится.
+	var itemsSum int64
 	for _, it := range items {
-		itemsSum += it.Price
+		itemsSum += itemPriceMinor(it)
 	}
 	if itemsSum > 0 {
-		d.Sum = itemsSum
-	} else if d.Sum < 0 || d.Sum > maxItemsTotal {
-		d.Sum = 0
+		d.SetSumMinor(itemsSum)
+	} else if minor := d.SumMinorOrLegacy(); minor < 0 || minor > int64(maxItemsTotal)*api.MinorFactor {
+		d.SetSumMinor(0)
 	}
 
 	d.Description = truncateRunes(d.Description, maxDescriptionRunes)
@@ -178,4 +185,52 @@ func hasUnknown(d ai.Draft) bool {
 		}
 	}
 	return false
+}
+
+// itemPriceMinor — точная цена позиции черновика.
+func itemPriceMinor(it ai.DraftItem) int64 {
+	if it.PriceMinor != nil {
+		return *it.PriceMinor
+	}
+	return int64(it.Price) * api.MinorFactor
+}
+
+// clampItemMoney держит границы денег позиции по ТОЧНЫМ величинам.
+//
+// Проверять одно целое поле мало: модель (или подделанный черновик на правку)
+// может прислать отрицательное или запредельное минорное, а целое рядом —
+// приличное. Такой черновик UI показывал, а сохранение отбивало 400 без
+// объяснимой для человека причины.
+func clampItemMoney(it ai.DraftItem) ai.DraftItem {
+	if it.PriceMinor != nil {
+		switch {
+		case *it.PriceMinor < 0:
+			it.PriceMinor = nil
+			it.Price = 0
+		case *it.PriceMinor > int64(maxItemPrice)*api.MinorFactor:
+			it.PriceMinor = nil
+			it.Price = maxItemPrice
+		default:
+			it.Price = api.FromMinor(*it.PriceMinor)
+		}
+	}
+	for i := range it.Shares {
+		amount := it.Shares[i].AmountMinor
+		if amount == nil {
+			continue
+		}
+		switch {
+		case *amount < 0:
+			it.Shares[i].AmountMinor = nil
+			it.Shares[i].Amount = nil
+		case *amount > int64(maxShareAmount)*api.MinorFactor:
+			it.Shares[i].AmountMinor = nil
+			capped := maxShareAmount
+			it.Shares[i].Amount = &capped
+		default:
+			rounded := api.FromMinor(*amount)
+			it.Shares[i].Amount = &rounded
+		}
+	}
+	return it
 }

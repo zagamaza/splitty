@@ -51,10 +51,18 @@ func itemLabel(it api.OperationItem) string {
 	return name
 }
 
+// hasFixedShare — у доли задана фиксированная сумма. Ноль тут осмыслен
+// («этот человек за позицию не платит»), поэтому проверяется наличие поля, а
+// не величина.
+func hasFixedShare(sh api.ItemShare) bool {
+	_, has := sh.AmountMinorOrLegacy()
+	return has
+}
+
 // itemParticipants описывает, кто участвует в позиции: список имён участников
 // (с фиксом или весом, если заданы) для обычных позиций; для надбавки —
 // правило деления (пропорционально/поровну).
-func itemParticipants(it api.OperationItem, members *[]api.User) string {
+func itemParticipants(it api.OperationItem, members *[]api.User, currency string) string {
 	if it.Kind == api.ItemKindSurcharge {
 		if it.Split == api.SplitEqually {
 			return "поровну"
@@ -65,8 +73,11 @@ func itemParticipants(it api.OperationItem, members *[]api.User) string {
 	for _, sh := range it.Shares {
 		name := memberName(members, sh.UserId)
 		switch {
-		case sh.Amount != nil:
-			name = fmt.Sprintf("%s (%d)", name, *sh.Amount)
+		// Фикс-доля печатается ТОЧНОЙ: округлённая показывала бы 10 там, где
+		// записано 10,40, и чек в боте расходился бы с приложением.
+		case hasFixedShare(sh):
+			amount, _ := sh.AmountMinorOrLegacy()
+			name = fmt.Sprintf("%s (%s)", name, moneySpaceMinor(amount, currency))
 		case sh.Weight > 1:
 			name = fmt.Sprintf("%s ×%d", name, sh.Weight)
 		}
@@ -85,9 +96,11 @@ func renderOperationItems(op api.Operation, room *api.Room) string {
 	}
 
 	items := op.Items
-	total := 0
+	// Итог складывается из ТОЧНЫХ цен и печатается точным: две позиции по 20,80
+	// давали 42 вместо сохранённых 41,60.
+	var total int64
 	for _, it := range items {
-		total += it.Price
+		total += it.PriceMinorOrLegacy()
 	}
 
 	tb := sdk.NewTableBuilder('-', " | ")
@@ -104,10 +117,10 @@ func renderOperationItems(op api.Operation, room *api.Room) string {
 	})
 	tb.AddColumn(sdk.Right, sdk.NumberWithTinySpaces, func(i int) string {
 		if i < len(items) {
-			return moneySpace(items[i].Price, room.Currency)
+			return moneySpaceMinor(items[i].PriceMinorOrLegacy(), room.Currency)
 		}
 		if i == len(items) {
-			return moneySpace(total, room.Currency)
+			return moneySpaceMinor(total, room.Currency)
 		}
 		return ""
 	})
@@ -118,7 +131,7 @@ func renderOperationItems(op api.Operation, room *api.Room) string {
 	sb.WriteString(tb.Build())
 	sb.WriteString("\n👥 Кто участвует:\n")
 	for _, it := range items {
-		sb.WriteString(fmt.Sprintf("• %s: %s\n", itemLabel(it), itemParticipants(it, room.Members)))
+		sb.WriteString(fmt.Sprintf("• %s: %s\n", itemLabel(it), itemParticipants(it, room.Members, room.Currency)))
 	}
 	return sb.String()
 }

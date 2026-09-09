@@ -339,6 +339,11 @@ func formatNumberWithTinySpaces(rows []string, alignment Alignment) []string {
 
 	// Сначала формируем число в виде "#,##0.00"
 	preFormatted := make([]string, len(rows))
+	// grouped[i] — ячейку отформатировали ЗДЕСЬ, и запятые в ней наши,
+	// разрядные. Готовую строку («20,80 ₽») трогать нельзя: её запятая
+	// десятичная, и замена превращала сумму в «20</code> <code>80 ₽» —
+	// на экране это «20 80 ₽».
+	grouped := make([]bool, len(rows))
 	for i, row := range rows {
 		numStr := strings.TrimSpace(row)
 		if numStr == "" {
@@ -353,11 +358,15 @@ func formatNumberWithTinySpaces(rows []string, alignment Alignment) []string {
 			continue
 		}
 		preFormatted[i] = formatMoney(val)
+		grouped[i] = true
 	}
 
 	// Считаем максимально возможное количество запятых (групп 3 разрядов)
 	maxCommas := 0
-	for _, pf := range preFormatted {
+	for i, pf := range preFormatted {
+		if !grouped[i] {
+			continue
+		}
 		count := strings.Count(pf, ",")
 		if count > maxCommas {
 			maxCommas = count
@@ -366,7 +375,7 @@ func formatNumberWithTinySpaces(rows []string, alignment Alignment) []string {
 
 	// Заменяем запятые и учитываем выравнивание
 	for i, pf := range preFormatted {
-		if pf == "" {
+		if pf == "" || !grouped[i] {
 			continue
 		}
 		commas := strings.Count(pf, ",")

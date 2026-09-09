@@ -48,10 +48,60 @@ type DraftItem struct {
 // клиентом. Клиент присылает текущий Draft на правку, сервер возвращает
 // обновлённый.
 type Draft struct {
-	Description string      `json:"description"`
+	Description string `json:"description"`
+	// Sum — округлённая проекция; SumMinor — точная величина. Пара нужна и
+	// здесь: плоская диктовка «ужин 20,80» идёт мимо позиций, и без точного
+	// поля черновик не мог бы её представить вовсе.
 	Sum         int         `json:"sum"`
+	SumMinor    *int64      `json:"sumMinor,omitempty"`
 	DonorId     *int        `json:"donorId,omitempty"`
 	Items       []DraftItem `json:"items,omitempty"`
+}
+
+// SumMinorOrLegacy — точная сумма черновика: записанная, иначе выведенная из
+// целой.
+func (d Draft) SumMinorOrLegacy() int64 {
+	if d.SumMinor != nil {
+		return *d.SumMinor
+	}
+	return int64(d.Sum) * api.MinorFactor
+}
+
+// SetSumMinor ставит сумму парой: точную и её округлённую проекцию. Точное поле
+// живёт, только когда копейки есть — иначе оно не несёт ничего сверх целого.
+func (d *Draft) SetSumMinor(minor int64) {
+	d.Sum = api.FromMinor(minor)
+	if minor%api.MinorFactor != 0 {
+		value := minor
+		d.SumMinor = &value
+		return
+	}
+	d.SumMinor = nil
+}
+
+// UnmarshalJSON разбирает черновик, читая сумму ТОЧНО — по той же причине и тем
+// же правилом, что цену позиции.
+func (d *Draft) UnmarshalJSON(data []byte) error {
+	type plain Draft
+	var shadow struct {
+		plain
+		Sum json.RawMessage `json:"sum"`
+	}
+	if err := json.Unmarshal(data, &shadow); err != nil {
+		return err
+	}
+	*d = Draft(shadow.plain)
+
+	raw := strings.Trim(strings.TrimSpace(string(shadow.Sum)), `"`)
+	if raw == "" || raw == "null" {
+		return nil
+	}
+	minor, ok := api.MinorFromDecimalString(raw)
+	if !ok {
+		return fmt.Errorf("сумма черновика %q не число", raw)
+	}
+	d.SetSumMinor(minor)
+	return nil
 }
 
 // ParseInput вход распознавания: любая комбинация медиа (фото чека + голос +
@@ -98,6 +148,41 @@ type ParseResult struct {
 // контекст берётся из ParseInput.
 type Parser interface {
 	Parse(ctx context.Context, in ParseInput) (ParseResult, error)
+}
+
+// UnmarshalJSON разбирает долю позиции, читая фиксированную сумму ТОЧНО.
+//
+// Схема ответа в тусе с копейками разрешает дробное amount, а поле целое:
+// обычный разбор падал на «10.5» — и весь /parse отвечал 502, теряя всё, что
+// человек надиктовал. Правило то же, что у цены: величина читается по строке,
+// целое поле рядом остаётся округлённой проекцией.
+func (s *ItemShare) UnmarshalJSON(data []byte) error {
+	type plain ItemShare
+	var shadow struct {
+		plain
+		Amount json.RawMessage `json:"amount"`
+	}
+	if err := json.Unmarshal(data, &shadow); err != nil {
+		return err
+	}
+	*s = ItemShare(shadow.plain)
+
+	raw := strings.Trim(strings.TrimSpace(string(shadow.Amount)), `"`)
+	if raw == "" || raw == "null" {
+		return nil
+	}
+	minor, ok := api.MinorFromDecimalString(raw)
+	if !ok {
+		return fmt.Errorf("фиксированная доля %q не число", raw)
+	}
+	rounded := api.FromMinor(minor)
+	s.Amount = &rounded
+	// Точное поле ставится, только когда копейки есть: у целой доли оно не
+	// несёт ничего сверх целого, а лишнее поле пришлось бы сверять на входе.
+	if minor%api.MinorFactor != 0 {
+		s.AmountMinor = &minor
+	}
+	return nil
 }
 
 // UnmarshalJSON разбирает позицию черновика, читая цену ТОЧНО.

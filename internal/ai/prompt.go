@@ -114,7 +114,7 @@ func draftSchema(fractional bool) map[string]any {
 		"type": "object",
 		"properties": map[string]any{
 			"description": map[string]any{"type": "string"},
-			"sum":         map[string]any{"type": "integer"},
+			"sum":         map[string]any{"type": priceType},
 			"donorId":     map[string]any{"type": "integer", "nullable": true},
 			"items":       map[string]any{"type": "array", "items": item},
 		},

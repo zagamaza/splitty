@@ -65,48 +65,42 @@ func (i *IntegrationService) StartPostScheduler() {
 	//тут настраиваются пользователи
 	userIds := i.config.Users
 
-	var users []api.User
-	for _, uId := range userIds {
-		user, err := i.UserService.FindById(context.Background(), uId)
-		if err != nil {
-			log.Error().Err(err).Msg("Ошибка при получении пользователя")
-			return
-		}
-		users = append(users, *user)
-	}
-
-	// Комнаты держим целиком, а не одни идентификаторы: в конверт уходят имя и
-	// валюта, а у операции их нет — они известны только родительской комнате.
-	rooms := make(map[primitive.ObjectID]api.Room)
-	for _, user := range users {
-		userRooms, err := i.RoomService.FindRoomsByUserId(context.Background(), user.ID)
-		if err != nil {
-			log.Error().Err(err).Msg("Ошибка при получении комнат")
-			return
-		}
-		for _, room := range *userRooms {
-			rooms[room.ID] = room
-		}
-	}
 
 	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
 		defer safe.Recover("планировщик выгрузки расходов")
 		for range ticker.C {
+			// Комнаты перечитываются КАЖДЫЙ цикл, а не один раз на старте: в
+			// конверт уходят имя и валюта, а они меняются. Снимок со старта
+			// врал бы получателю до перезапуска, и новые тусы не появлялись бы
+			// в выгрузке вовсе.
+			rooms, err := i.exportRooms(context.Background(), userIds)
+			if err != nil {
+				log.Error().Err(err).Msg("Ошибка при получении комнат")
+				continue
+			}
+
 			envelope := exportEnvelope{Version: exportVersion, GeneratedAt: time.Now().UTC()}
+			failed := false
 			for _, room := range rooms {
 				ops, err := i.OperationService.GetAllOperations(context.Background(), room.ID.Hex())
 				if err != nil {
 					log.Error().Err(err).Msg("Ошибка при получении операций")
-					return
+					failed = true
+					break
 				}
 				envelope.Expenses = append(envelope.Expenses, exportExpenses(room, *ops)...)
+			}
+			// Пропускаем ЦИКЛ, а не выходим из планировщика: прежний return
+			// убивал выгрузку навсегда из-за одной временной ошибки чтения.
+			if failed {
+				continue
 			}
 
 			jsonData, err := json.Marshal(envelope)
 			if err != nil {
 				log.Error().Err(err).Msg("Ошибка при сериализации данных")
-				return
+				continue
 			}
 			sendPostRequest(i.config.Url, jsonData)
 		}
@@ -116,4 +110,25 @@ func (i *IntegrationService) StartPostScheduler() {
 type Config struct {
 	Url   string
 	Users []int
+}
+
+// exportRooms собирает комнаты выгружаемых пользователей в свежем виде.
+// Дубли схлопываются: одна туса может быть у нескольких из них.
+func (i *IntegrationService) exportRooms(ctx context.Context, userIds []int) ([]api.Room, error) {
+	seen := make(map[primitive.ObjectID]bool)
+	out := make([]api.Room, 0)
+	for _, userId := range userIds {
+		rooms, err := i.RoomService.FindRoomsByUserId(ctx, userId)
+		if err != nil {
+			return nil, err
+		}
+		for _, room := range *rooms {
+			if seen[room.ID] {
+				continue
+			}
+			seen[room.ID] = true
+			out = append(out, room)
+		}
+	}
+	return out, nil
 }

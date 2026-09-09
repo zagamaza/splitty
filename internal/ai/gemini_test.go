@@ -186,3 +186,39 @@ func TestDraftItemPriceDecoding(t *testing.T) {
 }
 
 func ptrInt64(v int64) *int64 { return &v }
+
+// Дробная фикс-доля из ответа модели читается ТОЧНО.
+//
+// Схема в тусе с копейками разрешает дробное amount, а поле целое: обычный
+// разбор падал на «10.5», и весь /parse отвечал 502 — терялось всё, что
+// человек надиктовал.
+func TestItemShareAmountDecoding(t *testing.T) {
+	var item DraftItem
+	raw := `{"name":"Вино","price":20.8,"kind":"item","shares":[` +
+		`{"userId":1,"weight":1,"amount":10.5},{"userId":2,"weight":1,"amount":3}]}`
+	if err := json.Unmarshal([]byte(raw), &item); err != nil {
+		t.Fatalf("разбор упал: %v", err)
+	}
+	if len(item.Shares) != 2 {
+		t.Fatalf("долей %d, want 2", len(item.Shares))
+	}
+	if item.Shares[0].AmountMinor == nil || *item.Shares[0].AmountMinor != 1050 {
+		t.Errorf("точная доля = %v, want 1050", item.Shares[0].AmountMinor)
+	}
+	if item.Shares[0].Amount == nil || *item.Shares[0].Amount != 11 {
+		t.Errorf("округлённая проекция = %v, want 11", item.Shares[0].Amount)
+	}
+	// Целая доля точного поля не получает: оно не несёт ничего сверх целого.
+	if item.Shares[1].AmountMinor != nil {
+		t.Errorf("у целой доли точное поле = %v, want nil", item.Shares[1].AmountMinor)
+	}
+	if item.Shares[1].Amount == nil || *item.Shares[1].Amount != 3 {
+		t.Errorf("целая доля = %v, want 3", item.Shares[1].Amount)
+	}
+
+	// Не число — ошибка разбора, а не молчаливый ноль.
+	var bad DraftItem
+	if err := json.Unmarshal([]byte(`{"name":"Вино","price":1,"kind":"item","shares":[{"userId":1,"amount":"много"}]}`), &bad); err == nil {
+		t.Error("нечисловая доля принята")
+	}
+}

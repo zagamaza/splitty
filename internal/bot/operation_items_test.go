@@ -68,7 +68,7 @@ func TestItemParticipants(t *testing.T) {
 			{UserId: 3, Weight: 2},
 		},
 	}
-	if got := itemParticipants(weighted, members); got != "Лёха ×5, Аня ×3, Маша ×2" {
+	if got := itemParticipants(weighted, members, "RUB"); got != "Лёха ×5, Аня ×3, Маша ×2" {
 		t.Fatalf("weighted participants = %q", got)
 	}
 
@@ -79,21 +79,21 @@ func TestItemParticipants(t *testing.T) {
 			{UserId: 1, Weight: 1},
 		},
 	}
-	if got := itemParticipants(fixed, members); got != "Маша (500), Аня" {
+	if got := itemParticipants(fixed, members, "RUB"); got != "Маша (500 ₽), Аня" {
 		t.Fatalf("fixed participants = %q", got)
 	}
 
 	unknown := api.OperationItem{Kind: api.ItemKindItem, Shares: []api.ItemShare{{UserId: 99, Weight: 1}}}
-	if got := itemParticipants(unknown, members); got != "?" {
+	if got := itemParticipants(unknown, members, "RUB"); got != "?" {
 		t.Fatalf("unknown participant = %q", got)
 	}
 
 	surchargeProp := api.OperationItem{Kind: api.ItemKindSurcharge, Split: api.SplitProportional}
-	if got := itemParticipants(surchargeProp, members); got != "пропорционально" {
+	if got := itemParticipants(surchargeProp, members, "RUB"); got != "пропорционально" {
 		t.Fatalf("surcharge proportional = %q", got)
 	}
 	surchargeEq := api.OperationItem{Kind: api.ItemKindSurcharge, Split: api.SplitEqually}
-	if got := itemParticipants(surchargeEq, members); got != "поровну" {
+	if got := itemParticipants(surchargeEq, members, "RUB"); got != "поровну" {
 		t.Fatalf("surcharge equally = %q", got)
 	}
 }
@@ -179,5 +179,51 @@ func TestUserLink_EscapesDisplayName(t *testing.T) {
 	}
 	if !strings.Contains(got, `<a href="tg://user?id=42">`) {
 		t.Fatalf("ссылка сломана: %s", got)
+	}
+}
+
+// Чек в боте печатается ТОЧНЫМИ величинами.
+//
+// Позиции печатались округлёнными: 20,80 показывалось как 21, две такие давали
+// итог 42 вместо сохранённых 41,60, а фикс 10,40 — как 10. Человек видел в боте
+// одни числа, в приложении другие, и расхождение выглядело ошибкой расчёта.
+func TestRenderOperationItemsPrintsExactMoney(t *testing.T) {
+	// Узкий неразрывный пробел — тот же, что ставит форматтер сумм.
+	const nbsp = "\u202f"
+	minor := func(v int64) *int64 { return &v }
+
+	room := testRoom()
+	room.Currency = "USD"
+	op := api.Operation{
+		Status: active,
+		Items: []api.OperationItem{
+			{
+				Name: "Кофе", Kind: api.ItemKindItem, Qty: 1,
+				Price: 21, PriceMinor: minor(2080),
+				Shares: []api.ItemShare{
+					{UserId: 1, Amount: intPtr(10), AmountMinor: minor(1040)},
+					{UserId: 2, Weight: 1},
+				},
+			},
+			{
+				Name: "Десерт", Kind: api.ItemKindItem, Qty: 1,
+				Price: 21, PriceMinor: minor(2080),
+				Shares: []api.ItemShare{{UserId: 2, Weight: 1}},
+			},
+		},
+	}
+
+	text := renderOperationItems(op, room)
+	for _, want := range []string{
+		"20,80" + nbsp + "$", // цена позиции
+		"41,60" + nbsp + "$", // итог: сумма точных, а не округлённых
+		"10,40" + nbsp + "$", // фикс-доля участника
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("в чеке нет %q:\n%s", want, text)
+		}
+	}
+	if strings.Contains(text, "42"+nbsp+"$") {
+		t.Errorf("итог округлился до 42 — сложены округлённые цены:\n%s", text)
 	}
 }
