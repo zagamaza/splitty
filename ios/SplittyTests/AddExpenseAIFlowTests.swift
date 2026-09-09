@@ -470,3 +470,71 @@ final class AddExpenseAIFlowTests: XCTestCase {
         XCTAssertEqual(model.itemizedTotal, 132_000)
     }
 }
+
+// MARK: - Чек с копейками уходит верной парой величин
+
+extension AddExpenseAIFlowTests {
+    /// Расход по чеку на 20,80 отправляется как {sum: 21, sumMinor: 2080}.
+    ///
+    /// Итог позиций давно минорный, а пара строилась как `sumMinor = sum × 100`
+    /// — уходило 2080/208000, сумма в сто раз больше. Онлайн это прятал сервер
+    /// (он выводит итог из позиций заново), но в очередь, в показ
+    /// неотправленного и в ключ идемпотентности попадало враньё.
+    func testItemizedReceiptSendsCorrectMoneyPair() throws {
+        let model = AddExpenseViewModel()
+        model.draftItems = [
+            OperationItem(name: "Кофе", price: 10, priceMinor: 1040, qty: 1, shares: [
+                ItemShare(userId: 1, weight: 1),
+            ]),
+            OperationItem(name: "Десерт", price: 10, priceMinor: 1040, qty: 1, shares: [
+                ItemShare(userId: 2, weight: 1),
+            ]),
+        ]
+
+        let money = try XCTUnwrap(model.outgoingMoney)
+        XCTAssertEqual(money.sumMinor, 2080, "точная сумма чека потеряна")
+        XCTAssertEqual(money.sum, 21, "целое поле — округлённая проекция точного")
+
+        // Тело запроса и запись очереди: проверяем то, что реально уедет.
+        let sums = model.itemizedRecipientSums(orderedFrom: [1, 2])
+        let body = OperationBody(
+            description: "Ужин", sum: money.sum, sumMinor: money.sumMinor, donorId: 1,
+            split: .byExactAmount(recipientSums: try XCTUnwrap(sums))
+        )
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(body)) as? [String: Any]
+        )
+        XCTAssertEqual(json["sum"] as? Int, 21)
+        XCTAssertEqual(json["sumMinor"] as? Int, 2080)
+        let encodedSums = try XCTUnwrap(json["recipientSums"] as? [[String: Any]])
+        XCTAssertEqual(encodedSums.map { $0["sumMinor"] as? Int }, [1040, 1040])
+        XCTAssertEqual(encodedSums.map { $0["sum"] as? Int }, [10, 10])
+
+        // Очередь показывает ту же сумму, что и карточка расхода.
+        let payload = OutboxPayload(
+            description: "Ужин", sum: money.sum, sumMinor: money.sumMinor,
+            donorId: 1, recipientIds: nil, recipientSums: sums, items: model.draftItems
+        )
+        XCTAssertEqual(payload.sumMinor, 2080)
+        XCTAssertEqual(inputTextFromMinor(payload.sumMinor ?? 0), "20,80")
+    }
+
+    /// Правка позиции меняет сумму следующего черновика: модели уходит текущий
+    /// итог, а не тот, что был при разборе.
+    func testParseDraftFollowsEditedItems() throws {
+        let model = AddExpenseViewModel()
+        model.sumText = "41,60" // итог прошлого разбора
+        model.draftItems = [
+            OperationItem(name: "Кофе", price: 26, priceMinor: 2560, qty: 1, shares: [
+                ItemShare(userId: 1, weight: 1),
+            ]),
+            OperationItem(name: "Десерт", price: 10, priceMinor: 1040, qty: 1, shares: [
+                ItemShare(userId: 2, weight: 1),
+            ]),
+        ]
+
+        let draft = try XCTUnwrap(model.currentParseDraft)
+        XCTAssertEqual(draft.sumMinor, 3600, "модели ушёл итог от прошлого разбора")
+        XCTAssertEqual(draft.sum, 36)
+    }
+}

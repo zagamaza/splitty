@@ -17,6 +17,9 @@ import kotlin.test.assertTrue
 import com.zagir.splitty.core.model.SplittyJson
 import com.zagir.splitty.core.money.MoneyFormat
 import java.util.Locale
+import com.zagir.splitty.core.model.ExpenseSplit
+import com.zagir.splitty.core.model.OperationBody
+import com.zagir.splitty.core.money.minorToUnitsRounded
 
 /**
  * AI-поток формы расхода — порт iOS `AddExpenseAIFlowTests` на чистые функции
@@ -237,10 +240,15 @@ class AddExpenseAIFlowTest {
         val next = form(
             listOf(OperationItem(name = "Пицца", price = 1200, shares = listOf(ItemShare(1L), ItemShare(2L)))),
         ).copy(sumText = "1000") // сумма от прошлого разбора, позиция подорожала
-        val sums = listOf(RecipientSum(1L, 600), RecipientSum(2L, 600))
+        val sums = listOf(RecipientSum.ofMinor(1L, 60_000), RecipientSum.ofMinor(2L, 60_000))
 
-        assertEquals(1200, effectiveSum(next, sums))
-        assertEquals(sums.sumOf { it.sum }, effectiveSum(next, sums), "sum разошёлся с Σ долей → 400")
+        // Величины МИНОРНЫЕ: 1200 единиц валюты — это 120 000.
+        assertEquals(120_000, effectiveSumMinor(next, sums))
+        assertEquals(
+            sums.sumOf { it.exactMinor },
+            effectiveSumMinor(next, sums),
+            "sum разошёлся с Σ долей → 400",
+        )
     }
 
     @Test
@@ -253,14 +261,17 @@ class AddExpenseAIFlowTest {
         ).copy(sumText = "")
         assertNull(next.sum)
 
-        assertEquals(800, effectiveSum(next, listOf(RecipientSum(1L, 400), RecipientSum(2L, 400))))
+        assertEquals(
+            80_000,
+            effectiveSumMinor(next, listOf(RecipientSum.ofMinor(1L, 40_000), RecipientSum.ofMinor(2L, 40_000))),
+        )
     }
 
     @Test
     fun `flat expense still uses the sum field`() {
-        assertEquals(500, effectiveSum(form().copy(sumText = "500"), null))
-        assertNull(effectiveSum(form().copy(sumText = ""), null))
-        assertNull(effectiveSum(form().copy(sumText = "0"), null))
+        assertEquals(50_000, effectiveSumMinor(form().copy(sumText = "500"), null))
+        assertNull(effectiveSumMinor(form().copy(sumText = ""), null))
+        assertNull(effectiveSumMinor(form().copy(sumText = "0"), null))
     }
 
     @Test
@@ -345,5 +356,76 @@ class AddExpenseAIFlowTest {
             ),
             next.missingInfoHints,
         )
+    }
+
+    // MARK: Чек с копейками уходит верной парой величин
+
+    /**
+     * Расход по чеку на 20,80 отправляется как {sum: 21, sumMinor: 2080}.
+     * Порт iOS `testItemizedReceiptSendsCorrectMoneyPair`.
+     *
+     * Доли чека давно минорные, а пара строилась сложением их целых полей с
+     * последующим умножением на сто — уходило 2080/208000. Онлайн это прятал
+     * сервер (он выводит итог из позиций заново), но в очередь, в показ
+     * неотправленного и в ключ идемпотентности попадало враньё.
+     */
+    @Test
+    fun `itemized receipt sends correct money pair`() {
+        val next = form(
+            listOf(
+                OperationItem(
+                    name = "Кофе", price = 10, priceMinor = 1040,
+                    shares = listOf(ItemShare(1L)),
+                ),
+                OperationItem(
+                    name = "Десерт", price = 10, priceMinor = 1040,
+                    shares = listOf(ItemShare(2L)),
+                ),
+            ),
+        )
+        val sums = itemizedRecipientSums(next, listOf(1L, 2L))!!
+        assertEquals(listOf(1040L, 1040L), sums.map { it.exactMinor }, "доли чека потеряли копейки")
+        assertEquals(listOf(10L, 10L), sums.map { it.sum }, "целое поле доли — округлённая проекция")
+
+        val sumMinor = effectiveSumMinor(next, sums)!!
+        assertEquals(2080L, sumMinor, "точная сумма чека потеряна")
+        assertEquals(21L, minorToUnitsRounded(sumMinor), "целое поле — округлённая проекция точного")
+
+        // Тело запроса: проверяем то, что реально уедет на сервер.
+        val body = OperationBody.of(
+            description = "Ужин",
+            sum = minorToUnitsRounded(sumMinor),
+            sumMinor = sumMinor,
+            donorId = 1L,
+            split = ExpenseSplit.ByExactAmount(sums),
+        )
+        val wire = SplittyJson.encodeToString(OperationBody.serializer(), body)
+        assertTrue("\"sum\":21" in wire, "в теле не 21: $wire")
+        assertTrue("\"sumMinor\":2080" in wire, "в теле нет точной суммы: $wire")
+        assertTrue("\"sumMinor\":1040" in wire, "в теле нет точных долей: $wire")
+    }
+
+    /**
+     * Правка позиции меняет сумму следующего черновика: модели уходит текущий
+     * итог, а не тот, что был при разборе.
+     */
+    @Test
+    fun `parse draft follows edited items`() {
+        val next = form(
+            listOf(
+                OperationItem(
+                    name = "Кофе", price = 26, priceMinor = 2560,
+                    shares = listOf(ItemShare(1L)),
+                ),
+                OperationItem(
+                    name = "Десерт", price = 10, priceMinor = 1040,
+                    shares = listOf(ItemShare(2L)),
+                ),
+            ),
+        ).copy(sumText = "41,60") // итог прошлого разбора
+
+        val draft = next.currentParseDraft()!!
+        assertEquals(3600L, draft.sumMinor, "модели ушёл итог от прошлого разбора")
+        assertEquals(36L, draft.sum)
     }
 }

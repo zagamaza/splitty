@@ -109,8 +109,26 @@ internal fun stopsAtReview(isEmptyForm: Boolean, hasOtherCapture: Boolean): Bool
  * снимается тупик «чек распознан, общей суммы нет»: sumText пуст, а исправить
  * его негде. null — сохранять нечего. Чистая функция — под JVM-тест.
  */
-internal fun effectiveSum(form: AddExpenseForm, itemSums: List<RecipientSum>?): Long? =
-    (itemSums?.sumOf { it.sum } ?: form.sum)?.takeIf { it >= 1L }
+internal fun effectiveSumMinor(form: AddExpenseForm, itemSums: List<RecipientSum>?): Long? =
+    (itemSums?.sumOf { it.exactMinor } ?: form.sumMinor)
+        ?.takeIf { minorToUnitsRounded(it) >= 1L }
+
+/**
+ * Производные по позициям recipientSums в стабильном порядке [orderedIds]
+ * (недостающие из позиций добавляются следом); null — позиций нет или они
+ * невалидны. Порт iOS `itemizedRecipientSums`.
+ */
+internal fun itemizedRecipientSums(form: AddExpenseForm, orderedIds: List<Long>): List<RecipientSum>? {
+    if (!form.hasDraftItems) return null
+    val shares = form.itemizedShares ?: return null
+    val itemIds = form.itemizedUserIds
+    val ordered = orderedIds.filter { it in itemIds } + itemIds.filter { it !in orderedIds }
+    return ordered.mapNotNull { id ->
+        // Доли чека — ТОЧНЫЕ: класть минорную величину в целое поле значило
+        // бы отправить долю в сто раз больше.
+        shares[id]?.takeIf { it >= 1 }?.let { RecipientSum.ofMinor(userId = id, minor = it) }
+    }
+}
 
 /**
  * Снапшот формы до последней голосовой правки/«Поровну на всех» — для отмены
@@ -204,12 +222,21 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
 internal fun AddExpenseForm.currentParseDraft(): ParseDraft? {
     val hasContent = draftItems.isNotEmpty() || description.isNotBlank() || (sum ?: 0) > 0
     return if (hasContent) {
+        // У чека сумма — ПРОИЗВОДНАЯ от позиций, а не поле формы: sumText в
+        // этом режиме read-only и не пересчитывается при правке строки. Модели
+        // уходил бы итог от прошлого разбора при новых ценах, хотя промпт
+        // объявляет весь черновик истиной.
+        //
+        // Пара полей и обратно: иначе следующий круг правки приходил бы с
+        // округлённой суммой, и копейки терялись на нём.
+        // Если позиции ещё не складываются (цена не названа, доли не
+        // расставлены), берём поле формы: черновик всё равно должен нести то,
+        // что человек видит, а не ноль.
+        val exactMinor = (if (hasDraftItems) itemizedTotal else null) ?: sumMinor
         ParseDraft(
             description = description,
-            sum = sum ?: 0,
-            // Пара полей и обратно: иначе следующий круг правки приходил бы с
-            // округлённой суммой, и копейки терялись на нём.
-            sumMinor = sumMinor,
+            sum = exactMinor?.let { minorToUnitsRounded(it) } ?: 0,
+            sumMinor = exactMinor,
             donorId = payerId,
             items = draftItems.ifEmpty { null },
         )
@@ -1415,14 +1442,17 @@ class AddExpenseViewModel @Inject constructor(
         // получили 400 «сумма долей должна равняться сумме операции». Плюс при
         // чеке без распознанной общей суммы form.sum пуст, а исправить его
         // руками негде — сохранение было тупиком.
-        val sum = effectiveSum(form, itemSums)
-        // Точная сумма едет рядом с целой. У расхода по позициям чека дробей
-        // пока нет — их итог целый, — поэтому там точная выводится из целой.
-        val sumMinor = if (itemSums != null) sum?.times(MINOR_FACTOR) else form.sumMinor
-        if (sum == null) {
+        // Пара строится ОТ ТОЧНОЙ величины: доли чека давно минорные, и
+        // прежний путь (сложить их как целые, потом умножить на сто) отправлял
+        // 2080/208000 — сумму в сто раз больше. Онлайн это прятал сервер, он
+        // выводит итог из позиций заново, но в очередь, в показ неотправленного
+        // и в ключ идемпотентности уходило враньё.
+        val sumMinor = effectiveSumMinor(form, itemSums)
+        if (sumMinor == null) {
             updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_sum)) }
             return
         }
+        val sum = minorToUnitsRounded(sumMinor)
         val payerId = form.payerId
         if (payerId == null) {
             updateForm { it.copy(alertMessage = UiText.res(R.string.expense_alert_need_payer)) }
@@ -1508,20 +1538,6 @@ class AddExpenseViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Производные по позициям recipientSums в стабильном порядке [orderedIds]
-     * (недостающие из позиций добавляются следом); null — позиций нет или они
-     * невалидны. Порт iOS `itemizedRecipientSums`.
-     */
-    internal fun itemizedRecipientSums(form: AddExpenseForm, orderedIds: List<Long>): List<RecipientSum>? {
-        if (!form.hasDraftItems) return null
-        val shares = form.itemizedShares ?: return null
-        val itemIds = form.itemizedUserIds
-        val ordered = orderedIds.filter { it in itemIds } + itemIds.filter { it !in orderedIds }
-        return ordered.mapNotNull { id ->
-            shares[id]?.takeIf { it >= 1 }?.let { RecipientSum(userId = id, sum = it) }
-        }
-    }
 
     /**
      * Создание: офлайн — сразу в outbox; онлайн — POST с clientOpId, а при

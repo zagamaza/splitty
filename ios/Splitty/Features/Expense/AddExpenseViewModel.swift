@@ -778,7 +778,7 @@ final class AddExpenseViewModel {
     /// Производные по позициям `recipientSums` в стабильном порядке `ids`
     /// (недостающие из позиций добавляются следом); nil — позиций нет или они
     /// невалидны. Сервер плоские поля игнорирует, но `OperationBody` их несёт.
-    private func itemizedRecipientSums(orderedFrom ids: [Int]) -> [RecipientSum]? {
+    func itemizedRecipientSums(orderedFrom ids: [Int]) -> [RecipientSum]? {
         guard hasDraftItems, let shares = itemizedShares else { return nil }
         let itemIds = itemizedUserIds
         let ordered = ids.filter { itemIds.contains($0) } + itemIds.filter { !ids.contains($0) }
@@ -786,6 +786,24 @@ final class AddExpenseViewModel {
             guard let minor = shares[id], minor >= 1 else { return nil }
             return RecipientSum(userId: id, minor: minor)
         }
+    }
+
+    /// Деньги расхода для отправки: точная величина и её округлённая проекция.
+    /// nil — суммы нет или она меньше единицы валюты.
+    ///
+    /// Пара строится ОТ ТОЧНОЙ величины, а не от целой: у itemized-чека итог
+    /// давно минорный, и прежнее `sumMinor = sum * minorFactor` отправляло
+    /// 2080/208000 — сумму в сто раз больше. Онлайн это прятал сервер (он
+    /// выводит итог из позиций заново), но в очередь, в показ неотправленного и
+    /// в ключ идемпотентности уходило враньё.
+    ///
+    /// У чека величина производная от позиций: `sumText` там read-only и не
+    /// пересчитывается при правке строки.
+    var outgoingMoney: (sum: Int, sumMinor: Int)? {
+        guard let minor = hasDraftItems ? itemizedTotal : sumMinor else { return nil }
+        let rounded = minorToUnitsRounded(minor)
+        guard rounded >= 1 else { return nil }
+        return (sum: rounded, sumMinor: minor)
     }
 
     /// Текущий черновик для голосовой правки: сервер применяет только дельту,
@@ -796,10 +814,18 @@ final class AddExpenseViewModel {
     /// бы с округлённой, и копейки терялись бы на нём.
     var currentParseDraft: ParseDraft? {
         guard hasDraftItems || !descriptionText.isEmpty || (sum ?? 0) > 0 else { return nil }
+        // У чека сумма — ПРОИЗВОДНАЯ от позиций, а не поле формы: `sumText` в
+        // этом режиме read-only и не пересчитывается при правке строки. Модели
+        // уходил бы итог от прошлого разбора при новых ценах, хотя промпт
+        // объявляет весь черновик истиной.
+        // Если позиции ещё не складываются (цена не названа, доли не
+        // расставлены), берём поле формы: черновик всё равно должен нести то,
+        // что человек видит, а не ноль.
+        let exactMinor = (hasDraftItems ? itemizedTotal : nil) ?? sumMinor
         return ParseDraft(
             description: descriptionText,
-            sum: sum ?? 0,
-            sumMinor: sumMinor,
+            sum: exactMinor.map { minorToUnitsRounded($0) } ?? 0,
+            sumMinor: exactMinor,
             donorId: payerId,
             items: draftItems
         )
@@ -1008,15 +1034,13 @@ final class AddExpenseViewModel {
         // строк (правка 600→900 оставляла в теле запроса старый итог), а у
         // ответа модели без верхнеуровневой суммы его вообще нет — при живой
         // кнопке «Сохранить» пользователь получал «Введите сумму» без поля суммы.
-        guard let sum = hasDraftItems ? itemizedTotal : sum, sum >= 1 else {
+        guard let money = outgoingMoney else {
             alertMessage = hasDraftItems
                 ? String(localized: "Проверьте позиции чека — итог не считается")
                 : String(localized: "Введите сумму (целое число рублей, не меньше 1)")
             return false
         }
-        // Точная сумма едет рядом с целой. У расхода по позициям чека дробей
-        // пока нет — их итог целый, — поэтому там точная выводится из целой.
-        let sumMinor = hasDraftItems ? sum * minorFactor : (self.sumMinor ?? sum * minorFactor)
+        let (sum, sumMinor) = (money.sum, money.sumMinor)
         guard let payerId else {
             alertMessage = String(localized: "Выберите, кто заплатил")
             return false
