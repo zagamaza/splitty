@@ -1596,3 +1596,122 @@ func TestCreateRoomDefaultsToNoFraction(t *testing.T) {
 		t.Error("сохранённая туса считает копейки")
 	}
 }
+
+// Валюта выбирается при создании тусы: тем же справочником, что и смена.
+//
+// Пустое поле обязано вести себя как раньше — установленные сборки его не
+// шлют, и туса у них должна заводиться рублёвой, а не отказом.
+func TestCreateRoomCurrency(t *testing.T) {
+	cases := []struct {
+		name     string
+		body     string
+		wantCode int
+		wantCur  string
+	}{
+		{"без валюты — рубль", `{"name":"Стамбул"}`, http.StatusCreated, "RUB"},
+		{"с валютой — она", `{"name":"Бали","currency":"USD"}`, http.StatusCreated, "USD"},
+		{"строчными — та же валюта", `{"name":"Бали","currency":"usd"}`, http.StatusCreated, "USD"},
+		{"неизвестный код — отказ", `{"name":"Бали","currency":"XYZ"}`, http.StatusBadRequest, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newFakeRoomRepo()
+			s := newTestServer(Config{}, newFakeUserRepo(testUser1), repo)
+
+			rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms",
+				mustToken(t, s, testUser1.ID), tc.body)
+			if rec.Code != tc.wantCode {
+				t.Fatalf("status = %d, want %d, body: %s", rec.Code, tc.wantCode, rec.Body.String())
+			}
+			if tc.wantCode != http.StatusCreated {
+				return
+			}
+			var detail roomDetailDto
+			if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+				t.Fatalf("cannot parse room %q: %v", rec.Body.String(), err)
+			}
+			if detail.Currency != tc.wantCur {
+				t.Errorf("валюта в ответе = %q, want %q", detail.Currency, tc.wantCur)
+			}
+			stored, err := repo.FindById(context.Background(), detail.ID)
+			if err != nil {
+				t.Fatalf("FindById: %v", err)
+			}
+			if got := api.RoomCurrency(stored); got != tc.wantCur {
+				t.Errorf("валюта в документе = %q, want %q", got, tc.wantCur)
+			}
+		})
+	}
+}
+
+// Шкала новой тусы выводится из умолчания ВЫБРАННОЙ валюты — тем же правилом,
+// что и везде, без отдельного поля в запросе и без второго запроса «создали и
+// сразу переключили».
+func TestCreateRoomFractionalFollowsCurrency(t *testing.T) {
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+	api.SetFractionalEnabledAt(time.Now().Add(-time.Hour))
+	defer api.SetFractionalEnabledAt(time.Time{})
+
+	repo := newFakeRoomRepo()
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1), repo)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms",
+		mustToken(t, s, testUser1.ID), `{"name":"Бали","currency":"USD"}`)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+	}
+	var detail roomDetailDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+		t.Fatalf("cannot parse room %q: %v", rec.Body.String(), err)
+	}
+	if !detail.Fractional {
+		t.Error("долларовая туса заведена без копеек, хотя умолчание доллара — с ними")
+	}
+}
+
+// Переименование тусы: те же правила имени, что при создании.
+//
+// Разными их держать нельзя — имя уходит в пуши, заголовки экранов и кнопку
+// приглашения, и то, чего нельзя завести, нельзя получить и переименованием.
+func TestUpdateRoomName(t *testing.T) {
+	room := api.Room{
+		ID: primitive.NewObjectID(), Name: "Стамбул",
+		Members: &[]api.User{testUser1}, Operations: &[]api.Operation{},
+	}
+	repo := newFakeRoomRepo(&room)
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), repo)
+	url := "/api/v1/rooms/" + room.ID.Hex() + "/name"
+	token := mustToken(t, s, testUser1.ID)
+
+	rec := doRequest(t, s, http.MethodPut, url, token, `{"name":"  Поездка в Стамбул  "}`)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204, body: %s", rec.Code, rec.Body.String())
+	}
+	stored, err := repo.FindById(context.Background(), room.ID.Hex())
+	if err != nil {
+		t.Fatalf("FindById: %v", err)
+	}
+	if stored.Name != "Поездка в Стамбул" {
+		t.Errorf("имя = %q, want %q (пробелы по краям обрезаются)", stored.Name, "Поездка в Стамбул")
+	}
+
+	// Пустое имя и одни пробелы — отказ, как при создании.
+	for _, body := range []string{`{"name":""}`, `{"name":"   "}`} {
+		rec = doRequest(t, s, http.MethodPut, url, token, body)
+		assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+	}
+
+	// Длиннее ста символов — отказ.
+	rec = doRequest(t, s, http.MethodPut, url, token,
+		`{"name":"`+strings.Repeat("я", 101)+`"}`)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+
+	// Чужая туса не переименовывается: доступ тот же, что у остальных правок.
+	other := mustToken(t, s, testUser2.ID)
+	rec = doRequest(t, s, http.MethodPut, url, other, `{"name":"Чужое"}`)
+	if rec.Code != http.StatusNotFound && rec.Code != http.StatusForbidden {
+		t.Errorf("посторонний переименовал тусу: %d", rec.Code)
+	}
+}

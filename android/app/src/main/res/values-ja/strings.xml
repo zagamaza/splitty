@@ -191,6 +191,7 @@
     <string name="groups_create_title">新しいグループ</string>
     <string name="groups_create_placeholder">名称</string>
     <string name="groups_create_hint">例：「イスタンブール旅行」「シェアハウス」。</string>
+    <string name="groups_create_currency_hint">通貨は後からグループ設定で変更できます。すでに記録された金額は再計算されません。</string>
     <string name="groups_create_button">作成</string>
     <string name="groups_join_title">参加する</string>
     <string name="groups_join_placeholder">リンクまたはコード</string>
@@ -238,6 +239,7 @@
     <string name="group_avatar_replace">写真を変更</string>
     <string name="group_avatar_remove">削除</string>
     <string name="group_settings_members">メンバー</string>
+    <string name="group_settings_name">名前</string>
     <string name="group_settings_member_you">%1$s（あなた）</string>
     <string name="group_settings_currency">通貨</string>
     <string name="group_settings_currency_footer">グループの通貨で、支出・貸し借り・合計のすべての金額が表示されます。</string>

@@ -44,6 +44,9 @@ struct GroupSettingsView: View {
     @State private var avatarItem: PhotosPickerItem?
     @State private var avatarFileId: String?
     @State private var isAvatarSaving = false
+    /// Название группы: локальная копия, чтобы поле правилось до сохранения.
+    @State private var name: String
+    @State private var isSavingName = false
 
     /// `embedded: true` — вкладка бара тусы (без своего NavigationStack
     /// и кнопки «Готово»); false — прежний самостоятельный sheet.
@@ -60,6 +63,7 @@ struct GroupSettingsView: View {
         _selectedCurrency = State(initialValue: room.currency)
         _fractional = State(initialValue: room.fractional)
         _avatarFileId = State(initialValue: room.avatarFileId)
+        _name = State(initialValue: room.name)
     }
 
     var body: some View {
@@ -84,6 +88,7 @@ struct GroupSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 avatarSection
+                nameSection
                 membersSection
                 currencySection
                 centsSection
@@ -155,6 +160,61 @@ struct GroupSettingsView: View {
     /// Фото группы. Крупная ава + два действия: заменить и убрать. Загрузка
     /// идёт через тот же `ReceiptCapture`, что и снимок чека, — сжатие до
     /// 1024 px уже написано там, второе такое же заводить незачем.
+    /// Секция «Название»: поле и кнопка сохранения рядом. Кнопка появляется
+    /// только когда имя изменилось — иначе она всё время маячит без дела.
+    ///
+    /// Имя уходит наружу: в пуши, заголовки экранов и кнопку приглашения, — и
+    /// правила у него те же, что при создании (сервер их и проверяет).
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Название")
+                .sectionHeaderStyle()
+                .padding(.leading, 4)
+            HStack(spacing: 12) {
+                TextField("Название", text: $name)
+                    .scaledFont(size: 17)
+                    .foregroundStyle(Color.ink)
+                    .submitLabel(.done)
+                    .disabled(isSavingName)
+                    .onSubmit { Task { await saveName() } }
+                    .accessibilityIdentifier("groupNameField")
+                if isSavingName {
+                    ProgressView()
+                } else if canSaveName {
+                    Button("Сохранить") { Task { await saveName() } }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.accentText)
+                        .accessibilityIdentifier("groupNameSave")
+                }
+            }
+            .surfaceCard()
+        }
+    }
+
+    /// Имя изменилось и годится: пустое и одни пробелы сервер отвергнет, и
+    /// показывать кнопку под них незачем.
+    private var canSaveName: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != room.name
+    }
+
+    private func saveName() async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canSaveName, !isSavingName else { return }
+        isSavingName = true
+        defer { isSavingName = false }
+        do {
+            try await session.api.renameRoom(roomId: room.id, name: trimmed)
+            name = trimmed
+            Analytics.shared.track(.roomSettingsChanged(what: "name"))
+            session.noteDataChanged()
+            Haptics.success()
+            onChange()
+        } catch {
+            alertMessage = humanErrorText(error)
+        }
+    }
+
     private var avatarSection: some View {
         VStack(spacing: 12) {
             GroupAvatarView(roomId: room.id, name: room.name, size: 84, avatarFileId: avatarFileId)

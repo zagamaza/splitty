@@ -30,6 +30,7 @@ import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomAvatarResponse
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
+import com.zagir.splitty.core.model.RenameRoomBody
 import com.zagir.splitty.core.model.SetCurrencyBody
 import com.zagir.splitty.core.model.SetFractionalBody
 import com.zagir.splitty.core.model.SetPasswordBody
@@ -217,6 +218,12 @@ interface SplittyApi {
 
     @POST("api/v1/rooms/{roomId}/unarchive")
     suspend fun unarchiveRoom(@Path("roomId") roomId: String)
+
+    @PUT("api/v1/rooms/{roomId}/name")
+    suspend fun renameRoom(
+        @Path("roomId") roomId: String,
+        @Body body: RenameRoomBody,
+    )
 
     @PUT("api/v1/rooms/{roomId}/currency")
     suspend fun setRoomCurrency(

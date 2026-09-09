@@ -185,6 +185,7 @@
     <string name="groups_create_title">Neue Gruppe</string>
     <string name="groups_create_placeholder">Name</string>
     <string name="groups_create_hint">Zum Beispiel: „Reise nach Istanbul“ oder „WG“.</string>
+    <string name="groups_create_currency_hint">Die Währung lässt sich später in den Gruppeneinstellungen ändern: bereits erfasste Beträge werden nicht umgerechnet.</string>
     <string name="groups_create_button">Erstellen</string>
     <string name="groups_join_title">Beitreten</string>
     <string name="groups_join_placeholder">Link oder Code</string>
@@ -242,6 +243,7 @@
     <string name="group_avatar_replace">Foto ersetzen</string>
     <string name="group_avatar_remove">Entfernen</string>
     <string name="group_settings_members">Mitglieder</string>
+    <string name="group_settings_name">Name</string>
     <string name="group_settings_member_you">%1$s (du)</string>
     <string name="group_settings_currency">Währung</string>
     <string name="group_settings_currency_footer">Alle Beträge der Gruppe werden in ihrer Währung angezeigt: Ausgaben, Schulden und Auswertungen.</string>

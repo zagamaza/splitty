@@ -32,7 +32,14 @@ var Events = map[string]Event{
 	"onboarding_step":      {Params: map[string][]string{"step": {"group", "dictate", "who_paid", "transfers"}}},
 	"onboarding_completed": {},
 	"onboarding_skipped":   {},
-	"room_created":         {},
+	// picked — человек сменил подставленную валюту руками. Без него не
+	// ответить, нужен ли выбор на экране создания вообще.
+	"room_created": {Params: map[string][]string{
+		// Код валюты строчными: значения параметров в контракте — строчные
+		// токены, и разбор документа других не принимает.
+		"currency": {"rub", "usd", "eur", "jpy", "cny", "krw", "brl", "idr", "kzt", "uzs"},
+		"picked":   {"true", "false"},
+	}},
 	"room_joined":          {Params: map[string][]string{"via": {"link", "code", "invite"}}},
 	"room_join_failed":     {Params: map[string][]string{"reason": {"not_found", "deleted", "forbidden", "network"}}},
 	"expense_added":        {Params: map[string][]string{"method": {"manual", "voice", "receipt"}, "edited": {"true", "false"}}},

@@ -129,8 +129,11 @@ class GroupDetailViewModel @Inject constructor(
 
     private val _savingCurrency = MutableStateFlow<String?>(null)
 
+    private val _isRenaming = MutableStateFlow(false)
+
     /** Код валюты, PUT которой сейчас в полёте (спиннер у строки пикера). */
     val savingCurrency: StateFlow<String?> = _savingCurrency.asStateFlow()
+    val isRenaming: StateFlow<Boolean> = _isRenaming.asStateFlow()
 
     private val _selectedCurrencyOverride = MutableStateFlow<String?>(null)
 
@@ -199,6 +202,29 @@ class GroupDetailViewModel @Inject constructor(
     }
 
     /** PUT /rooms/{id}/currency: меняет валюту группы + единая инвалидация. */
+    /**
+     * Переименование тусы. Имя уходит наружу — в пуши, заголовки и кнопку
+     * приглашения, — правила проверяет сервер, те же, что при создании.
+     */
+    fun renameRoom(name: String) {
+        val id = roomIdFlow.value ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || _isRenaming.value) return
+        viewModelScope.launch {
+            _isRenaming.value = true
+            try {
+                repository.renameRoom(id, trimmed)
+                analytics.track(AnalyticsEvent.RoomSettingsChanged("name"))
+                // Единая инвалидация: заголовок и списки перечитают имя.
+                sessionStore.noteDataChanged()
+            } catch (e: ApiException) {
+                _alertMessage.value = humanErrorText(e)
+            } finally {
+                _isRenaming.value = false
+            }
+        }
+    }
+
     fun setCurrency(code: String) {
         val id = roomIdFlow.value ?: return
         val current = _selectedCurrencyOverride.value

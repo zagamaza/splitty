@@ -1122,6 +1122,15 @@ func (f *fakeRoomRepo) UpdateCurrency(_ context.Context, roomId string, currency
 	return nil
 }
 
+func (f *fakeRoomRepo) UpdateName(_ context.Context, roomId string, name string) error {
+	room, ok := f.rooms[roomId]
+	if !ok {
+		return mongo.ErrNoDocuments
+	}
+	room.Name = name
+	return nil
+}
+
 // SetRoomFractional — обычная настройка: записи не трогаются.
 func (f *fakeRoomRepo) SetRoomFractional(_ context.Context, roomId string, on bool) (*api.Room, error) {
 	room, ok := f.rooms[roomId]

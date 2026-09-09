@@ -514,6 +514,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/v1/rooms/{roomId}/archive", s.auth(s.handleArchiveRoom))
 	mux.Handle("POST /api/v1/rooms/{roomId}/unarchive", s.auth(s.handleUnarchiveRoom))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/currency", s.auth(s.handleUpdateCurrency))
+	mux.Handle("PUT /api/v1/rooms/{roomId}/name", s.auth(s.handleUpdateRoomName))
 	mux.Handle("PUT /api/v1/rooms/{roomId}/fractional", s.auth(s.handleUpdateFractional))
 	mux.Handle("GET /api/v1/currencies", s.auth(s.handleCurrencies))
 

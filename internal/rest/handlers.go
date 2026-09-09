@@ -365,6 +365,14 @@ func (s *Server) handleListRooms(w http.ResponseWriter, r *http.Request) {
 
 type createRoomRequest struct {
 	Name string `json:"name"`
+	// Currency — валюта тусы, выбранная на экране создания. Пустая строка —
+	// прежнее поведение (рубль): установленные сборки поля не шлют, и туса у
+	// них должна заводиться ровно как раньше.
+	//
+	// Шкала (копейки) отдельным полем НЕ передаётся: у тусы, заведённой с
+	// валютой, она выводится из умолчания этой валюты тем же правилом, что и
+	// везде, — и меняется потом тумблером в настройках.
+	Currency string `json:"currency"`
 }
 
 // handleCreateRoom POST /api/v1/rooms
@@ -386,6 +394,14 @@ func (s *Server) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Код проверяется тем же справочником, что и смена валюты: неизвестный —
+	// отказ, а не молчаливый рубль. Пустой оставляет прежнее поведение.
+	currency := strings.ToUpper(strings.TrimSpace(req.Currency))
+	if currency != "" && !api.IsSupportedCurrency(currency) {
+		writeError(w, http.StatusBadRequest, "validation", "неподдерживаемый код валюты")
+		return
+	}
+
 	user, hErr := s.currentUser(ctx)
 	if hErr != nil {
 		hErr.write(w)
@@ -394,6 +410,7 @@ func (s *Server) handleCreateRoom(w http.ResponseWriter, r *http.Request) {
 
 	room, err := s.roomSrv.CreateRoom(ctx, &api.Room{
 		Name:       name,
+		Currency:   currency,
 		Members:    &[]api.User{*user},
 		Operations: &[]api.Operation{},
 		CreateAt:   time.Now(),
@@ -530,6 +547,48 @@ func (s *Server) handleUpdateCurrency(w http.ResponseWriter, r *http.Request) {
 		// шкалы, — человеку понятно, что делать.
 		log.Error().Err(err).Msgf("cannot update currency for room %s", roomId)
 		writeError(w, http.StatusInternalServerError, "internal", "не удалось обновить валюту")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type updateRoomNameRequest struct {
+	Name string `json:"name"`
+}
+
+// handleUpdateRoomName PUT /api/v1/rooms/{roomId}/name
+//
+// Правила имени те же, что при создании: обрезка пробелов, непустое, не длиннее
+// ста символов. Разными их держать нельзя — имя уходит в пуши, заголовки и
+// кнопку приглашения, и то, чего нельзя завести, нельзя получить и
+// переименованием.
+func (s *Server) handleUpdateRoomName(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	roomId := r.PathValue("roomId")
+
+	if _, hErr := s.roomForMember(ctx, roomId, userIdFromCtx(ctx)); hErr != nil {
+		hErr.write(w)
+		return
+	}
+
+	var req updateRoomNameRequest
+	if hErr := decodeJSON(r, &req); hErr != nil {
+		hErr.write(w)
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "validation", "название комнаты не может быть пустым")
+		return
+	}
+	if utf8.RuneCountInString(name) > maxRoomNameLen {
+		writeError(w, http.StatusBadRequest, "validation", "название комнаты не должно превышать 100 символов")
+		return
+	}
+
+	if err := s.roomRepo.UpdateName(ctx, roomId, name); err != nil {
+		log.Error().Err(err).Msgf("cannot rename room %s", roomId)
+		writeError(w, http.StatusInternalServerError, "internal", "не удалось переименовать комнату")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

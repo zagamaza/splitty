@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.RoomSummary
+import com.zagir.splitty.core.model.CurrencyInfo
+import com.zagir.splitty.core.money.DEFAULT_CURRENCY
 import com.zagir.splitty.core.network.ApiException
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.data.OutboxStore
@@ -47,6 +49,10 @@ class GroupsListViewModel @Inject constructor(
 
     /** Экран открыт. Зовётся из composable один раз на вход. */
     fun trackScreen() = analytics.track(AnalyticsEvent.ScreenView("groups"))
+
+    /** Справочник валют для выбора на экране создания; пусто — не загрузился. */
+    private val _currencies = MutableStateFlow<List<CurrencyInfo>>(emptyList())
+    val currencies: StateFlow<List<CurrencyInfo>> = _currencies.asStateFlow()
 
     private val _rooms = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
 
@@ -177,14 +183,46 @@ class GroupsListViewModel @Inject constructor(
     /** Шаги онбординга: экран отдаёт их колбэком, чтобы не тянуть Hilt в снимки. */
     fun trackOnboarding(event: AnalyticsEvent) = analytics.track(event)
 
-    /** POST /rooms; успех — dataVersion bump (список обновится сам) и [onSuccess]. */
-    fun createGroup(name: String, onSuccess: () -> Unit) {
+    /**
+     * Справочник валют для экрана создания. Ошибку не показываем: валюта там
+     * необязательна, и без справочника туса заводится прежним умолчанием.
+     */
+    fun loadCurrencies() {
+        if (_currencies.value.isNotEmpty()) return
+        viewModelScope.launch {
+            try {
+                _currencies.value = repository.currencies().value
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: ApiException) {
+                // Экран остаётся прежним, с одним полем.
+            }
+        }
+    }
+
+    /**
+     * POST /rooms; успех — dataVersion bump (список обновится сам) и [onSuccess].
+     *
+     * [currency] уходит, только если человек её видел: иначе умолчание ставит
+     * сервер. [picked] — сменил ли он подставленную валюту руками.
+     */
+    fun createGroup(
+        name: String,
+        currency: String? = null,
+        picked: Boolean = false,
+        onSuccess: () -> Unit,
+    ) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         mutate(onSuccess = {
-            analytics.track(AnalyticsEvent.RoomCreated)
+            analytics.track(
+                AnalyticsEvent.RoomCreated(
+                    currency = (currency ?: DEFAULT_CURRENCY).lowercase(),
+                    picked = picked,
+                )
+            )
             onSuccess()
-        }) { repository.createRoom(trimmed) }
+        }) { repository.createRoom(trimmed, currency) }
     }
 
     /** POST /rooms/{id}/join по коду или ссылке-приглашению. */

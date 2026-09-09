@@ -60,7 +60,7 @@
 | `onboarding_step` | пролистан экран приветствия | `step`: `group` / `dictate` / `who_paid` / `transfers` |
 | `onboarding_completed` | нажата «Создать группу» на последнем экране | — |
 | `onboarding_skipped` | приветствие закрыто, не дойдя до конца | — |
-| `room_created` | туса создана | — |
+| `room_created` | туса создана | `currency`: `rub` / `usd` / `eur` / `jpy` / `cny` / `krw` / `brl` / `idr` / `kzt` / `uzs`; `picked`: `true` / `false` |
 | `room_joined` | вход в тусу удался | `via`: `link` / `code` / `invite` |
 | `room_join_failed` | войти в тусу не удалось | `reason`: `not_found` / `deleted` / `forbidden` / `network` |
 | `expense_added` | расход добавлен | `method`: `manual` / `voice` / `receipt`; `edited`: `true` / `false` |

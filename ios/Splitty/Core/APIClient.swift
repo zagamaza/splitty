@@ -711,11 +711,15 @@ final class APIClient: OperationAPI {
         )
     }
 
-    func createRoom(name: String) async throws -> RoomDetail {
+    /// Создание тусы. `currency` — код из справочника; nil не сериализуется, и
+    /// сервер ставит своё умолчание, как для сборок, которые про валюту при
+    /// создании не знают.
+    func createRoom(name: String, currency: String? = nil) async throws -> RoomDetail {
         struct Body: Encodable {
             let name: String
+            let currency: String?
         }
-        return try await request("POST", "/api/v1/rooms", body: Body(name: name))
+        return try await request("POST", "/api/v1/rooms", body: Body(name: name, currency: currency))
     }
 
     func room(id: String) async throws -> RoomDetail {
@@ -739,6 +743,15 @@ final class APIClient: OperationAPI {
     /// Справочник валют для пикера настроек группы.
     func currencies() async throws -> [CurrencyInfo] {
         try await request("GET", "/api/v1/currencies")
+    }
+
+    /// Переименование комнаты: PUT /rooms/{id}/name, ответ 204 без тела.
+    /// Правила имени проверяет сервер — те же, что при создании.
+    func renameRoom(roomId: String, name: String) async throws {
+        struct Body: Encodable {
+            let name: String
+        }
+        try await send("PUT", "/api/v1/rooms/\(roomId)/name", body: Body(name: name))
     }
 
     /// Смена валюты комнаты: PUT /rooms/{id}/currency, ответ 204 без тела.

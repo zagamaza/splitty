@@ -185,6 +185,7 @@
     <string name="groups_create_title">Nouveau groupe</string>
     <string name="groups_create_placeholder">Nom</string>
     <string name="groups_create_hint">Par exemple : « Voyage à Istanbul » ou « Coloc ».</string>
+    <string name="groups_create_currency_hint">Vous pouvez changer la devise plus tard dans les réglages du groupe : les montants déjà enregistrés ne sont pas recalculés.</string>
     <string name="groups_create_button">Créer</string>
     <string name="groups_join_title">Rejoindre</string>
     <string name="groups_join_placeholder">Lien ou code</string>
@@ -242,6 +243,7 @@
     <string name="group_avatar_replace">Changer la photo</string>
     <string name="group_avatar_remove">Retirer</string>
     <string name="group_settings_members">Membres</string>
+    <string name="group_settings_name">Nom</string>
     <string name="group_settings_member_you">%1$s (vous)</string>
     <string name="group_settings_currency">Devise</string>
     <string name="group_settings_currency_footer">Tous les montants du groupe sont affichés dans sa devise : dépenses, dettes et bilans.</string>

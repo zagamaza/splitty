@@ -18,7 +18,7 @@ enum AnalyticsEvent {
     case onboardingStep(step: String)
     case onboardingCompleted
     case onboardingSkipped
-    case roomCreated
+    case roomCreated(currency: String, picked: Bool)
     case roomJoined(via: String)
     case roomJoinFailed(reason: String)
     case expenseAdded(method: String, edited: Bool)
@@ -113,9 +113,11 @@ enum AnalyticsEvent {
         case let .purchaseStarted(product): return ["product": product]
         case let .purchaseCompleted(product): return ["product": product]
         case let .purchaseFailed(reason): return ["reason": reason]
+        case let .roomCreated(currency, picked):
+            return ["currency": currency, "picked": picked ? "true" : "false"]
         case .loginShown,
              .onboardingStarted, .onboardingCompleted, .onboardingSkipped,
-             .roomCreated, .settleUpOpened, .settleUpDone:
+             .settleUpOpened, .settleUpDone:
             return [:]
         case let .inviteSent(channel): return ["channel": channel]
         case let .screenView(screen): return ["screen": screen]

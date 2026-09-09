@@ -31,6 +31,7 @@ import com.zagir.splitty.core.model.RegisterBody
 import com.zagir.splitty.core.model.RepaymentBody
 import com.zagir.splitty.core.model.RoomDetail
 import com.zagir.splitty.core.model.RoomSummary
+import com.zagir.splitty.core.model.RenameRoomBody
 import com.zagir.splitty.core.model.SetCurrencyBody
 import com.zagir.splitty.core.model.SetFractionalBody
 import com.zagir.splitty.core.model.SetPasswordBody
@@ -147,7 +148,8 @@ class SplittyRepository @Inject constructor(
             api.rooms(archived)
         }
 
-    suspend fun createRoom(name: String): RoomDetail = call { api.createRoom(CreateRoomBody(name)) }
+    suspend fun createRoom(name: String, currency: String? = null): RoomDetail =
+        call { api.createRoom(CreateRoomBody(name, currency)) }
 
     suspend fun room(roomId: String): Fetched<RoomDetail> =
         cached(ApiCache.Keys.room(roomId), RoomDetail.serializer()) { api.room(roomId) }
@@ -157,6 +159,9 @@ class SplittyRepository @Inject constructor(
     suspend fun archiveRoom(roomId: String) = call { api.archiveRoom(roomId) }
 
     suspend fun unarchiveRoom(roomId: String) = call { api.unarchiveRoom(roomId) }
+
+    suspend fun renameRoom(roomId: String, name: String) =
+        call { api.renameRoom(roomId, RenameRoomBody(name)) }
 
     suspend fun setRoomCurrency(roomId: String, currency: String) =
         call { api.setRoomCurrency(roomId, SetCurrencyBody(currency)) }

@@ -191,6 +191,7 @@
     <string name="groups_create_title">新建群组</string>
     <string name="groups_create_placeholder">名称</string>
     <string name="groups_create_hint">例如：「伊斯坦布尔旅行」或「合租房」。</string>
+    <string name="groups_create_currency_hint">货币之后可以在群组设置中更改：已记录的金额不会重新换算。</string>
     <string name="groups_create_button">创建</string>
     <string name="groups_join_title">加入</string>
     <string name="groups_join_placeholder">链接或邀请码</string>
@@ -238,6 +239,7 @@
     <string name="group_avatar_replace">更换照片</string>
     <string name="group_avatar_remove">移除</string>
     <string name="group_settings_members">成员</string>
+    <string name="group_settings_name">名称</string>
     <string name="group_settings_member_you">%1$s（你）</string>
     <string name="group_settings_currency">货币</string>
     <string name="group_settings_currency_footer">群组的所有金额都以其货币显示：支出、欠款和合计。</string>

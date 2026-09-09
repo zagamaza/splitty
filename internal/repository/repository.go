@@ -128,6 +128,7 @@ type RoomRepository interface {
 	UnFinishedAddOperation(ctx context.Context, userId int, roomId string) error
 	PaidOfDebts(ctx context.Context, userIds []int, roomId string) error
 	UpdateCurrency(ctx context.Context, roomId string, currency string) error
+	UpdateName(ctx context.Context, roomId string, name string) error
 	// SetRoomFractional включает и выключает копейки в тусе. Обычная настройка:
 	// записи не трогаются, деньги всегда хранятся в копейках.
 	// ErrFractionNotSupported — у валюты тусы нет дробной части
@@ -1189,6 +1190,19 @@ func (rr MongoRoomRepository) UpdateCurrency(ctx context.Context, roomId string,
 	}
 	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
 	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: update}})
+	return err
+}
+
+// UpdateName переименовывает тусу. Имя уходит наружу — в пуши, в заголовки
+// экранов и в кнопку приглашения, — поэтому чистит и ограничивает его
+// вызывающий, ровно теми же правилами, что и при создании.
+func (rr MongoRoomRepository) UpdateName(ctx context.Context, roomId string, name string) error {
+	hex, err := primitive.ObjectIDFromHex(roomId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{{Key: "_id", Value: bson.D{{Key: "$eq", Value: hex}}}}
+	_, err = rr.col.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: bson.M{"name": name}}})
 	return err
 }
 

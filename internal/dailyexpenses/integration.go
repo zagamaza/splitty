@@ -75,16 +75,17 @@ func (i *IntegrationService) StartPostScheduler() {
 		users = append(users, *user)
 	}
 
-	roomIds := make(map[primitive.ObjectID]primitive.ObjectID)
+	// Комнаты держим целиком, а не одни идентификаторы: в конверт уходят имя и
+	// валюта, а у операции их нет — они известны только родительской комнате.
+	rooms := make(map[primitive.ObjectID]api.Room)
 	for _, user := range users {
-		rooms, err := i.RoomService.FindRoomsByUserId(context.Background(), user.ID)
+		userRooms, err := i.RoomService.FindRoomsByUserId(context.Background(), user.ID)
 		if err != nil {
 			log.Error().Err(err).Msg("Ошибка при получении комнат")
 			return
 		}
-		for _, room := range *rooms {
-			id := room.ID
-			roomIds[id] = id
+		for _, room := range *userRooms {
+			rooms[room.ID] = room
 		}
 	}
 
@@ -92,18 +93,17 @@ func (i *IntegrationService) StartPostScheduler() {
 	go func() {
 		defer safe.Recover("планировщик выгрузки расходов")
 		for range ticker.C {
-			var operations []api.Operation
-			for _, rId := range roomIds {
-				ops, err := i.OperationService.GetAllOperations(context.Background(), rId.Hex())
+			envelope := exportEnvelope{Version: exportVersion, GeneratedAt: time.Now().UTC()}
+			for _, room := range rooms {
+				ops, err := i.OperationService.GetAllOperations(context.Background(), room.ID.Hex())
 				if err != nil {
 					log.Error().Err(err).Msg("Ошибка при получении операций")
 					return
 				}
-				operations = append(operations, *ops...)
+				envelope.Expenses = append(envelope.Expenses, exportExpenses(room, *ops)...)
 			}
 
-			// Сериализация структуры в JSON
-			jsonData, err := json.Marshal(operations)
+			jsonData, err := json.Marshal(envelope)
 			if err != nil {
 				log.Error().Err(err).Msg("Ошибка при сериализации данных")
 				return

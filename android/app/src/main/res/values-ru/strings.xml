@@ -234,6 +234,7 @@
     <string name="groups_create_title">Новая группа</string>
     <string name="groups_create_placeholder">Название</string>
     <string name="groups_create_hint">Например: «Поездка в Стамбул» или «Квартира».</string>
+    <string name="groups_create_currency_hint">Валюту можно поменять и потом, в настройках группы: записанные суммы смена не пересчитывает.</string>
     <string name="groups_create_button">Создать</string>
     <string name="groups_join_title">Присоединиться</string>
     <string name="groups_join_placeholder">Ссылка или код</string>
@@ -297,6 +298,7 @@
     <string name="group_avatar_replace">Заменить фото</string>
     <string name="group_avatar_remove">Убрать</string>
     <string name="group_settings_members">Участники</string>
+    <string name="group_settings_name">Название</string>
     <string name="group_settings_member_you">%1$s (вы)</string>
     <string name="group_settings_currency">Валюта</string>
     <string name="group_settings_currency_footer">В валюте группы показываются все её суммы: расходы, долги и итоги.</string>

@@ -121,6 +121,9 @@ import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 
 /**
  * Экран группы: hero-карточка долга, чипы «Погасить долг»/«Балансы»/«Итоги»,
@@ -1397,6 +1400,50 @@ private fun DebtRow(
  * ужимается тем же кодом, что и снимок чека (`decodeDownscaledReceipt`):
  * второе сжатие с теми же числами заводить незачем.
  */
+/**
+ * Секция «Название»: поле и кнопка сохранения рядом. Кнопка появляется только
+ * когда имя изменилось — иначе она всё время маячит без дела. Порт iOS
+ * `GroupSettingsView.nameSection`.
+ */
+@Composable
+private fun GroupNameSection(room: RoomDetail, viewModel: GroupDetailViewModel) {
+    val isRenaming by viewModel.isRenaming.collectAsStateWithLifecycle()
+    var name by rememberSaveable(room.id) { mutableStateOf(room.name) }
+    val trimmed = name.trim()
+    val canSave = trimmed.isNotEmpty() && trimmed != room.name && !isRenaming
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader(
+            stringResource(R.string.group_settings_name),
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            GroupsTextField(
+                value = name,
+                onValueChange = { name = it },
+                placeholder = stringResource(R.string.group_settings_name),
+                modifier = Modifier.weight(1f),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (canSave) viewModel.renameRoom(name) }),
+            )
+            if (isRenaming) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+            } else if (canSave) {
+                TextButton(onClick = { viewModel.renameRoom(name) }) {
+                    Text(
+                        text = stringResource(R.string.common_save),
+                        fontWeight = FontWeight.SemiBold,
+                        color = Splitty.colors.accent,
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun GroupAvatarSection(room: RoomDetail, viewModel: GroupDetailViewModel) {
     val colors = Splitty.colors
@@ -1587,6 +1634,8 @@ private fun GroupSettingsTab(
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
             GroupAvatarSection(room = room, viewModel = viewModel)
+
+            GroupNameSection(room = room, viewModel = viewModel)
 
             // Участники
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

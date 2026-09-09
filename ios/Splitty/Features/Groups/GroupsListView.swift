@@ -102,7 +102,9 @@ struct GroupsListView: View {
                 }
                 .sheet(isPresented: $isCreatePresented) {
                     // Список обновится через session.dataVersion (bump внутри).
-                    CreateGroupView { _ in }
+                    // Валюта первой тусы в списке — подсказка для следующей:
+                    // поездки чаще заводят подряд в одной валюте.
+                    CreateGroupView(recentCurrency: model.rooms.first?.currency) { _ in }
                 }
                 .sheet(isPresented: $isJoinPresented) {
                     JoinGroupView {}

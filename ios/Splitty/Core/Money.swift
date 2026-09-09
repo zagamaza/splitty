@@ -239,3 +239,32 @@ func shares(sum: Int, count: Int) -> [Int] {
     return (0..<count).map { $0 < remainder ? base + 1 : base }
 }
 
+
+// MARK: - Валюта новой тусы
+
+/// Валюта, с которой заводится туса, когда другой не выбрано. Совпадает с
+/// `api.DefaultCurrency` на сервере — исторический дефолт бота.
+let defaultCurrencyCode = "RUB"
+
+/// Какую валюту подставить на экране создания тусы.
+///
+/// Порядок: валюта последней тусы человека → валюта региона телефона →
+/// `RUB`. Валюта — не вопрос, а подтверждение: чаще всего следующая туса
+/// заводится в той же валюте, что и предыдущая, а у первой лучший ориентир —
+/// регион.
+///
+/// Регион может дать валюту, которой нет в справочнике (у нас их десять): такое
+/// значение молча пропускается, а не показывается пустой строкой.
+func suggestedRoomCurrency(
+    recent: String?,
+    region: String? = Locale.current.currency?.identifier,
+    available: [String]
+) -> String {
+    let supported = Set(available)
+    for candidate in [recent, region] {
+        if let code = candidate?.uppercased(), supported.contains(code) {
+            return code
+        }
+    }
+    return supported.contains(defaultCurrencyCode) ? defaultCurrencyCode : (available.first ?? defaultCurrencyCode)
+}

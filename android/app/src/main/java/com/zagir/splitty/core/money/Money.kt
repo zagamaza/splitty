@@ -233,3 +233,30 @@ fun shares(sum: Long, count: Int): List<Long> {
     if (remainder < 0) return List(count) { index -> if (index < -remainder) base - 1 else base }
     return List(count) { index -> if (index < remainder) base + 1 else base }
 }
+
+/**
+ * Валюта, с которой заводится туса, когда другой не выбрано. Совпадает с
+ * `api.DefaultCurrency` на сервере — исторический дефолт бота.
+ */
+const val DEFAULT_CURRENCY = "RUB"
+
+/**
+ * Какую валюту подставить на экране создания тусы.
+ *
+ * Порядок: валюта последней тусы человека → валюта региона телефона →
+ * [DEFAULT_CURRENCY]. Валюта — не вопрос, а подтверждение: следующая туса чаще
+ * всего заводится в той же валюте, что и предыдущая, а у первой лучший
+ * ориентир — регион.
+ *
+ * Регион может дать валюту, которой нет в справочнике: такое значение молча
+ * пропускается, а не показывается пустой строкой. Порт iOS
+ * `suggestedRoomCurrency`.
+ */
+fun suggestedRoomCurrency(recent: String?, region: String?, available: List<String>): String {
+    val supported = available.toSet()
+    for (candidate in listOf(recent, region)) {
+        val code = candidate?.uppercase()
+        if (code != null && code in supported) return code
+    }
+    return if (DEFAULT_CURRENCY in supported) DEFAULT_CURRENCY else available.firstOrNull() ?: DEFAULT_CURRENCY
+}

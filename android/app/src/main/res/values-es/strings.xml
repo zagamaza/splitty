@@ -185,6 +185,7 @@
     <string name="groups_create_title">Grupo nuevo</string>
     <string name="groups_create_placeholder">Nombre</string>
     <string name="groups_create_hint">Por ejemplo: «Viaje a Estambul» o «Casa».</string>
+    <string name="groups_create_currency_hint">Puede cambiar la moneda más tarde en los ajustes del grupo: los importes ya registrados no se recalculan.</string>
     <string name="groups_create_button">Crear</string>
     <string name="groups_join_title">Unirse</string>
     <string name="groups_join_placeholder">Enlace o código</string>
@@ -242,6 +243,7 @@
     <string name="group_avatar_replace">Cambiar foto</string>
     <string name="group_avatar_remove">Quitar</string>
     <string name="group_settings_members">Miembros</string>
+    <string name="group_settings_name">Nombre</string>
     <string name="group_settings_member_you">%1$s (tú)</string>
     <string name="group_settings_currency">Moneda</string>
     <string name="group_settings_currency_footer">Todos los importes del grupo se muestran en su moneda: gastos, deudas y totales.</string>

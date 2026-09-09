@@ -74,13 +74,24 @@ data class UpdateMeBody(
     val notificationOn: Boolean? = null,
 )
 
-/** POST /rooms. */
+/**
+ * POST /rooms. [currency] — валюта, выбранная на экране создания; null не
+ * сериализуется, и сервер ставит своё умолчание — ровно как для сборок,
+ * которые про валюту при создании не знают.
+ */
 @Serializable
-data class CreateRoomBody(val name: String)
+data class CreateRoomBody(val name: String, val currency: String? = null)
 
 /** PUT /rooms/{id}/currency. */
 @Serializable
 data class SetCurrencyBody(val currency: String)
+
+/**
+ * PUT /rooms/{id}/name. Правила имени проверяет сервер — те же, что при
+ * создании: обрезка пробелов, непустое, не длиннее ста символов.
+ */
+@Serializable
+data class RenameRoomBody(val name: String)
 
 /** Считает ли группа копейки. Записанные суммы от этого не меняются. */
 @Serializable

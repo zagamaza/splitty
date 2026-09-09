@@ -6453,6 +6453,136 @@
         }
       }
     },
+    "Валюта группы": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Währung der Gruppe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group currency"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moneda del grupo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devise du groupe"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Валюта группы"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グループの通貨"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "群组货币"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그룹 통화"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moeda do grupo"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valuta del gruppo"
+          }
+        }
+      }
+    },
+    "Валюту можно поменять и потом, в настройках группы: записанные суммы смена не пересчитывает.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Währung lässt sich später in den Gruppeneinstellungen ändern: bereits erfasste Beträge werden nicht umgerechnet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change the currency later in group settings: amounts already recorded are not recalculated."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puede cambiar la moneda más tarde en los ajustes del grupo: los importes ya registrados no se recalculan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez changer la devise plus tard dans les réglages du groupe : les montants déjà enregistrés ne sont pas recalculés."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Валюту можно поменять и потом, в настройках группы: записанные суммы смена не пересчитывает."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通貨は後からグループ設定で変更できます。すでに記録された金額は再計算されません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "货币之后可以在群组设置中更改：已记录的金额不会重新换算。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화는 나중에 그룹 설정에서 변경할 수 있습니다. 이미 기록된 금액은 다시 계산되지 않습니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você pode alterar a moeda depois, nas configurações do grupo: os valores já registrados não são recalculados."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Può cambiare la valuta più tardi nelle impostazioni del gruppo: gli importi già registrati non vengono ricalcolati."
+          }
+        }
+      }
+    },
     "Вам вернули долг": {
       "extractionState": "manual",
       "localizations": {

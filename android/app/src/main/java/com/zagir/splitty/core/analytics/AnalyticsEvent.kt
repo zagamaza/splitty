@@ -22,7 +22,12 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, String> = 
     class OnboardingStep(step: String) : AnalyticsEvent("onboarding_step", mapOf("step" to step))
     data object OnboardingCompleted : AnalyticsEvent("onboarding_completed")
     data object OnboardingSkipped : AnalyticsEvent("onboarding_skipped")
-    data object RoomCreated : AnalyticsEvent("room_created")
+    /**
+     * picked — человек сменил подставленную валюту руками. Без него не
+     * ответить, нужен ли выбор на экране создания вообще.
+     */
+    class RoomCreated(currency: String, picked: Boolean) :
+        AnalyticsEvent("room_created", mapOf("currency" to currency, "picked" to picked.toString()))
     class RoomJoined(via: String) : AnalyticsEvent("room_joined", mapOf("via" to via))
     class RoomJoinFailed(reason: String) : AnalyticsEvent("room_join_failed", mapOf("reason" to reason))
     class ExpenseAdded(method: String, edited: Boolean) :

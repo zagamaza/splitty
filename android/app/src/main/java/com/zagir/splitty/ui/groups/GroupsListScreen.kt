@@ -90,6 +90,11 @@ import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.main.badgeLabel
 import com.zagir.splitty.ui.theme.Splitty
 import com.zagir.splitty.ui.onboarding.WelcomeScreen
+import androidx.compose.material.icons.outlined.UnfoldMore
+import com.zagir.splitty.core.model.CurrencyInfo
+import com.zagir.splitty.core.money.suggestedRoomCurrency
+import java.util.Currency
+import java.util.Locale
 
 /**
  * Вкладка «Группы»: hero-карточка общего баланса, карточки групп, тихая
@@ -662,9 +667,36 @@ private fun ArchivedGroupCard(
 @Composable
 private fun CreateGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Unit) {
     val isMutating by viewModel.isMutating.collectAsStateWithLifecycle()
+    val currencies by viewModel.currencies.collectAsStateWithLifecycle()
+    val rooms by viewModel.rooms.collectAsStateWithLifecycle()
     var name by rememberSaveable { mutableStateOf("") }
+    // null — справочник ещё не пришёл: валюту, которой человек не видел, не
+    // отправляем, и туса заводится прежним умолчанием сервера.
+    var selected by rememberSaveable { mutableStateOf<String?>(null) }
+    var picked by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { viewModel.loadCurrencies() }
+    LaunchedEffect(currencies) {
+        if (selected == null && currencies.isNotEmpty()) {
+            selected = suggestedRoomCurrency(
+                recent = (rooms as? UiState.Content)?.value?.firstOrNull()?.currency,
+                region = runCatching { Currency.getInstance(Locale.getDefault()).currencyCode }.getOrNull(),
+                available = currencies.map { it.code },
+            )
+        }
+    }
+
     val canSubmit = name.trim().isNotEmpty() && !isMutating
-    val submit = { if (canSubmit) viewModel.createGroup(name, onSuccess = onDismiss) }
+    val submit = {
+        if (canSubmit) {
+            viewModel.createGroup(
+                name = name,
+                currency = selected.takeIf { currencies.isNotEmpty() },
+                picked = picked,
+                onSuccess = onDismiss,
+            )
+        }
+    }
 
     GroupFormSheet(
         title = stringResource(R.string.groups_create_title),
@@ -684,12 +716,92 @@ private fun CreateGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Un
             color = Splitty.colors.inkSecondary,
             modifier = Modifier.padding(horizontal = 4.dp),
         )
+        val current = selected
+        if (current != null && currencies.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            CreateCurrencyRow(
+                currencies = currencies,
+                selected = current,
+                enabled = !isMutating,
+                onSelect = { code ->
+                    if (code != selected) picked = true
+                    selected = code
+                },
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.groups_create_currency_hint),
+                fontSize = 13.sp,
+                color = Splitty.colors.inkSecondary,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
         Spacer(Modifier.height(16.dp))
         PrimaryPillButton(
             text = stringResource(R.string.groups_create_button),
             onClick = submit,
             enabled = canSubmit,
         )
+    }
+}
+
+/**
+ * Строка «Валюта» с выпадающим списком: один экран, а не мастер — создание тусы
+ * воронка, и лишний шаг тут только теряет людей.
+ */
+@Composable
+private fun CreateCurrencyRow(
+    currencies: List<CurrencyInfo>,
+    selected: String,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+) {
+    val colors = Splitty.colors
+    var expanded by remember { mutableStateOf(false) }
+    val label = currencies.firstOrNull { it.code == selected }
+        ?.let { "${it.flag} ${it.code}" }
+        ?: selected
+
+    Box {
+        SurfaceCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled) { expanded = true },
+            padding = 14.dp,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.group_settings_currency),
+                    fontSize = 17.sp,
+                    color = colors.ink,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = label,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.inkSecondary,
+                )
+                Spacer(Modifier.width(6.dp))
+                Icon(
+                    imageVector = Icons.Outlined.UnfoldMore,
+                    contentDescription = null,
+                    tint = colors.inkSecondary,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            currencies.forEach { currency ->
+                DropdownMenuItem(
+                    text = { Text("${currency.flag} ${currency.code} · ${currency.symbol}") },
+                    onClick = {
+                        onSelect(currency.code)
+                        expanded = false
+                    },
+                )
+            }
+        }
     }
 }
 
