@@ -1,8 +1,5 @@
-Post-audit fixes.
+Currency at creation, renaming, and exact receipts.
 
-• A deleted expense is no longer lost for good, and simultaneous edits no longer overwrite each other
-• Leaving a group explains which expenses hold you back and shows them in one tap
-• You can see when data comes from cache — on groups, friends and activity
-• Amounts and dates follow your language and region; receipt screens are translated
-• An expense from the offline queue is no longer duplicated on retry
-• Small text contrast raised to a readable level
+• Pick the currency right when you create a group — no need to change it in settings afterwards
+• Rename a group whenever you like: group settings → name
+• Receipts split down to the cent: items, extra charges and shares are all exact
