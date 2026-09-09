@@ -282,15 +282,19 @@ class OperationItemsTest {
     // --- Фикстуры ---
 
     private fun share(userId: Long, weight: Int) = ItemShare(userId = userId, weight = weight)
-    private fun shareAmount(userId: Long, amount: Long) = ItemShare(userId = userId, amount = amount)
+    // Величины в фикстурах — МИНОРНЫЕ: деление позиций считается в копейках, и
+    // смешивать их здесь с целыми значило бы сравнивать рубли с копейками.
+    private fun shareAmount(userId: Long, amount: Long) =
+        ItemShare(userId = userId, amountMinor = amount)
 
     private fun item(name: String, price: Long, vararg shares: ItemShare, qty: Int = 1) =
-        OperationItem(name = name, price = price, qty = qty, shares = shares.toList())
+        OperationItem(name = name, price = 0, priceMinor = price, qty = qty, shares = shares.toList())
 
     private fun surcharge(name: String, price: Long, split: String, percent: Int? = null) =
         OperationItem(
             name = name,
-            price = price,
+            price = 0,
+            priceMinor = price,
             shares = null,
             kind = OperationItem.KIND_SURCHARGE,
             split = split,

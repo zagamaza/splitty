@@ -2,7 +2,14 @@
 // черновик. Провайдер скрыт за интерфейсом Parser — текущая реализация Gemini.
 package ai
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/almaznur91/splitty/internal/api"
+)
 
 // Participant участник комнаты в виде, пригодном для матчинга имён моделью.
 type Participant struct {
@@ -59,6 +66,10 @@ type ParseInput struct {
 
 	Participants []Participant
 	Currency     string
+	// Fractional — туса считает копейки. Тогда модель называет цены как в
+	// жизни («20.80»), и они разбираются точно, без float64. Иначе схема
+	// требует целых, как раньше.
+	Fractional bool
 	// Lang — язык интерфейса клиента (BCP-47 в написании App Store: ja,
 	// zh-Hans, ko, pt-BR, it, ru, en, de, fr, es). Пусто — прежнее поведение.
 	//
@@ -87,4 +98,40 @@ type ParseResult struct {
 // контекст берётся из ParseInput.
 type Parser interface {
 	Parse(ctx context.Context, in ParseInput) (ParseResult, error)
+}
+
+// UnmarshalJSON разбирает позицию черновика, читая цену ТОЧНО.
+//
+// Модель в тусе с копейками возвращает «20.8», а поле Price целое: обычный
+// разбор на нём падает, а разбор через float64 даёт 2079.9999… и теряет
+// копейку. Поэтому цена читается сырым числом-строкой и переводится в
+// минорные единицы по строке (api.MinorFromDecimalString), а целое поле рядом
+// остаётся округлённой проекцией — тем же правилом, что и у остальных сумм.
+func (i *DraftItem) UnmarshalJSON(data []byte) error {
+	// Псевдоним разрывает рекурсию: у него нет этого метода.
+	type plain DraftItem
+	var shadow struct {
+		plain
+		Price json.RawMessage `json:"price"`
+	}
+	if err := json.Unmarshal(data, &shadow); err != nil {
+		return err
+	}
+	*i = DraftItem(shadow.plain)
+
+	raw := strings.Trim(strings.TrimSpace(string(shadow.Price)), `"`)
+	if raw == "" || raw == "null" {
+		return nil
+	}
+	minor, ok := api.MinorFromDecimalString(raw)
+	if !ok {
+		return fmt.Errorf("цена позиции %q не число", raw)
+	}
+	i.Price = api.FromMinor(minor)
+	// Точное поле ставим, только когда копейки есть: у целой цены оно не несёт
+	// ничего сверх целого, а лишнее поле пришлось бы сверять на каждом входе.
+	if minor%api.MinorFactor != 0 {
+		i.PriceMinor = &minor
+	}
+	return nil
 }

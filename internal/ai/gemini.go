@@ -125,7 +125,7 @@ func (c *GeminiClient) buildRequest(in ParseInput) ([]byte, error) {
 		Contents: []geminiContent{{Parts: parts}},
 		GenerationConfig: map[string]any{
 			"responseMimeType": "application/json",
-			"responseSchema":   draftSchema(),
+			"responseSchema":   draftSchema(in.Fractional),
 			"temperature":      0,
 		},
 	}

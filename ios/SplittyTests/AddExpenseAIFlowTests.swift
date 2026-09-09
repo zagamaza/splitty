@@ -265,7 +265,9 @@ final class AddExpenseAIFlowTests: XCTestCase {
         model.sumText = "999"
 
         XCTAssertTrue(model.hasDraftItems)
-        XCTAssertEqual(model.itemizedTotal, 1000)
+        // Итог чека — в МИНОРНЫХ единицах: позиция без копеечного поля
+        // считается легаси-формой, и её цена выводится из целой.
+        XCTAssertEqual(model.itemizedTotal, 100_000)
         XCTAssertTrue(model.canSave)
     }
 
@@ -350,11 +352,12 @@ final class AddExpenseAIFlowTests: XCTestCase {
 
         let shares = try XCTUnwrap(model.personShares)
         XCTAssertEqual(shares.map(\.userId), [1, 2])
-        XCTAssertEqual(shares[0].total, 550)
-        XCTAssertEqual(shares[0].surchargePart, 50)
-        XCTAssertEqual(shares[1].total, 770)
-        XCTAssertEqual(shares[1].surchargePart, 70)
-        // Σ итогов == итог чека до рубля.
+        // Величины минорные: 550 и 770 единиц валюты — это 55 000 и 77 000.
+        XCTAssertEqual(shares[0].total, 55_000)
+        XCTAssertEqual(shares[0].surchargePart, 5_000)
+        XCTAssertEqual(shares[1].total, 77_000)
+        XCTAssertEqual(shares[1].surchargePart, 7_000)
+        // Σ итогов == итог чека до копейки.
         XCTAssertEqual(shares.reduce(0) { $0 + $1.total }, model.itemizedTotal)
     }
 
@@ -387,15 +390,15 @@ final class AddExpenseAIFlowTests: XCTestCase {
                 split: OperationItem.splitProportional, percent: 10
             ),
         ]
-        // Пропорционально: 100 против 20.
+        // Пропорционально: 100 против 20 единиц валюты — в минорных ×100.
         var shares = try XCTUnwrap(model.personShares)
-        XCTAssertEqual(shares.map(\.surchargePart), [100, 20])
+        XCTAssertEqual(shares.map(\.surchargePart), [10_000, 2_000])
 
         model.toggleSurchargeRule(at: 2)
         XCTAssertEqual(model.draftItems?[2].split, OperationItem.splitEqually)
-        // Поровну: по 60.
+        // Поровну: по 60 единиц валюты.
         shares = try XCTUnwrap(model.personShares)
-        XCTAssertEqual(shares.map(\.surchargePart), [60, 60])
+        XCTAssertEqual(shares.map(\.surchargePart), [6_000, 6_000])
 
         // Обратно — снова пропорционально.
         model.toggleSurchargeRule(at: 2)
@@ -427,8 +430,9 @@ final class AddExpenseAIFlowTests: XCTestCase {
                 split: OperationItem.splitProportional, percent: 10
             ),
         ]
-        XCTAssertEqual(model.itemizedSubtotal, 1200)
-        XCTAssertEqual(model.itemizedSurcharges, 120)
-        XCTAssertEqual(model.itemizedTotal, 1320)
+        // Подытог, сборы и итог — в МИНОРНЫХ единицах.
+        XCTAssertEqual(model.itemizedSubtotal, 120_000)
+        XCTAssertEqual(model.itemizedSurcharges, 12_000)
+        XCTAssertEqual(model.itemizedTotal, 132_000)
     }
 }

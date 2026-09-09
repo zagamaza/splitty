@@ -328,22 +328,26 @@ func TestBotEqualSplitProjectionSumsToTotal(t *testing.T) {
 // терялось бы по дороге.
 func TestItemMinorFieldsAreValidated(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		item    string
-		flagOn  bool
-		wantErr bool
+		name      string
+		item      string
+		flagOn    bool
+		wantErr   bool
+		wantMinor int64
 	}{
-		{"оба поля сходятся", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, false},
-		{"поля не сходятся", `{"name":"Кофе","price":100,"priceMinor":20000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
-		{"минорное без старого", `{"name":"Кофе","priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
-		{"дробная цена при выключенном признаке", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true},
-		{"дробная цена при включённом признаке — тоже отказ, позиции считаются целыми", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
-		// Именно этот случай проходил раньше: проекция 10050 при шкале 2 равна
-		// 101, пара «сходилась», а арифметика считала по 101 и расходилась с
-		// сохранённым 10050 на полтинник.
-		{"проекция сходится, а единицы разные", `{"name":"Кофе","price":101,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true},
-		{"целая дробь при включённом признаке проходит", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, false},
-		{"дробная фикс-доля", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1,"amount":50,"amountMinor":5050}]}`, false, true},
+		{"оба поля сходятся", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, false, 10000},
+		{"поля не сходятся", `{"name":"Кофе","price":100,"priceMinor":20000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true, 0},
+		{"минорное без старого", `{"name":"Кофе","priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true, 0},
+		{"дробная цена при выключенном признаке", `{"name":"Кофе","price":101,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, false, true, 0},
+		// Дробная позиция при поднятом признаке — теперь законна: чек в тусе с
+		// копейками считается до копейки, а не округляется до единицы.
+		{"дробная цена при включённом признаке", `{"name":"Кофе","price":101,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, false, 10050},
+		// Целое обязано быть ПРОЕКЦИЕЙ минорного: 10050 округляется до 101, и
+		// присланная сотня означала бы, что клиент считает не то, что записывает.
+		{"целое не проекция минорного", `{"name":"Кофе","price":100,"priceMinor":10050,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, true, 0},
+		{"целая цена при включённом признаке проходит", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1}]}`, true, false, 10000},
+		{"дробная фикс-доля при выключенном признаке", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":1,"amount":51,"amountMinor":5050}]}`, false, true, 0},
+		// Фикс-доля с копейками: остаток цены уходит второму участнику.
+		{"дробная фикс-доля при включённом признаке", `{"name":"Кофе","price":100,"priceMinor":10000,"qty":1,"kind":"item","shares":[{"userId":1,"weight":0,"amount":51,"amountMinor":5050},{"userId":2,"weight":1}]}`, true, false, 10000},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			room := fractionalRoom("USD", true)
@@ -368,8 +372,9 @@ func TestItemMinorFieldsAreValidated(t *testing.T) {
 				t.Fatal("позиции не вернулись")
 			}
 			// Минорное поле обязано доехать до документа и вернуться в ответе
-			if op.Items[0].PriceMinor == nil || *op.Items[0].PriceMinor != 10000 {
-				t.Errorf("priceMinor = %v, want 10000 — минорное поле потерялось", op.Items[0].PriceMinor)
+			if op.Items[0].PriceMinor == nil || *op.Items[0].PriceMinor != tc.wantMinor {
+				t.Errorf("priceMinor = %v, want %d — минорное поле потерялось",
+					op.Items[0].PriceMinor, tc.wantMinor)
 			}
 		})
 	}

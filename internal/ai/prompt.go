@@ -14,7 +14,7 @@ func buildPrompt(in ParseInput) string {
 
 Правила:
 - ВСЕГДА раскладывай расход на позиции (items), если названо хоть одно блюдо/товар — даже если позиция одна. Если цена позиции НЕ названа и её нет на фото — всё равно создай позицию с участниками, но поставь price=0 (цена не определена) и задай уточняющий вопрос в questions («Сколько стоила пицца?»). Цены НЕ выдумывай. Пустые items — только если не названо ни одной позиции (тогда sum — общая сумма, если прозвучала) или вообще ничего не понял (объясни в questions, что переспросить).
-- price каждой позиции — ИТОГОВАЯ стоимость строки в целых единицах валюты (уже с учётом количества). qty — только для отображения, в делении не участвует.
+- price каждой позиции — ИТОГОВАЯ стоимость строки (уже с учётом количества). qty — только для отображения, в делении не участвует.
 - Доли участников в shares: weight — относительная доля (1 у всех = поровну; «съел вдвое больше» = weight 2). amount — фиксированная сумма участника (если названа явно, например «с Маши 500»); при заданном amount weight игнорируется.
 - Сервисный сбор, чаевые, комиссию, доставку помечай kind="surcharge" (обычные позиции — kind="item"). surcharge — это надбавка ПОВЕРХ заказа; сама услуга (такси, билеты, прокат, отель) — обычная позиция item с участниками. У surcharge не заполняй shares. Сумму сбора всегда клади в price (если назван процент — посчитай сумму сам). split="proportional" для процентных сборов (делится по съеденному), split="equally" для фиксированных вроде доставки. percent заполняй только для показа.
 - Матчинг имён: сопоставляй произнесённые имена участникам по displayName, username и aliases. Если имя не удаётся однозначно сопоставить (или подходит несколько участников) — НЕ угадывай, положи это имя строкой в unknown соответствующей позиции.
@@ -60,6 +60,14 @@ func buildPrompt(in ParseInput) string {
 	if in.Currency != "" {
 		b.WriteString("\n\nВалюта: " + in.Currency)
 	}
+	// Про дробные цены модели надо сказать прямо: без этого она округляет
+	// «20.80» до 21 сама, и чек расходится с расходом на копейки.
+	//
+	// Дописывается ТОЛЬКО в тусе с копейками: в остальных промпт обязан
+	// остаться прежним — целые цены и так требует схема ответа.
+	if in.Fractional {
+		b.WriteString("\n\nЦены пиши как в жизни, с копейками, если они есть: 20.80, 7.5, 12. Не округляй до целого — в этой группе копейки считаются. Не более двух знаков после точки.")
+	}
 
 	if in.Draft != nil {
 		raw, _ := json.Marshal(in.Draft)
@@ -72,13 +80,19 @@ func buildPrompt(in ParseInput) string {
 
 // draftSchema — responseSchema для Gemini (подмножество OpenAPI). Держим в
 // синхроне с типами Draft/DraftItem/ItemShare.
-func draftSchema() map[string]any {
+func draftSchema(fractional bool) map[string]any {
+	// Тип цены: в тусе с копейками — число (модель вернёт 20.8), иначе целое.
+	// Разбирается оно всё равно строкой, без float64 (см. DraftItem.UnmarshalJSON).
+	priceType := "integer"
+	if fractional {
+		priceType = "number"
+	}
 	share := map[string]any{
 		"type": "object",
 		"properties": map[string]any{
 			"userId": map[string]any{"type": "integer"},
 			"weight": map[string]any{"type": "integer"},
-			"amount": map[string]any{"type": "integer", "nullable": true},
+			"amount": map[string]any{"type": priceType, "nullable": true},
 		},
 		"required": []string{"userId", "weight"},
 	}
@@ -86,7 +100,7 @@ func draftSchema() map[string]any {
 		"type": "object",
 		"properties": map[string]any{
 			"name":    map[string]any{"type": "string"},
-			"price":   map[string]any{"type": "integer"},
+			"price":   map[string]any{"type": priceType},
 			"qty":     map[string]any{"type": "integer"},
 			"shares":  map[string]any{"type": "array", "items": share},
 			"kind":    map[string]any{"type": "string", "enum": []string{"item", "surcharge"}},

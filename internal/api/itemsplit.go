@@ -29,12 +29,17 @@ type weightShare struct {
 	weight int
 }
 
-// splitByWeight делит amount (целые единицы) между участниками пропорционально
-// весам. Базовая доля — floor(amount*weight/totalWeight); остаток от округления
-// раздаётся по одному тем, у кого базовая доля больше (при равенстве —
-// меньший userId). Сумма долей всегда равна amount. Требует totalWeight > 0.
-func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
-	out := make(map[int]int, len(ws))
+// splitByWeight делит amount (МИНОРНЫЕ единицы) между участниками
+// пропорционально весам. Базовая доля — floor(amount*weight/totalWeight);
+// остаток от округления раздаётся по одному тем, у кого базовая доля больше
+// (при равенстве — меньший userId). Сумма долей всегда равна amount. Требует
+// totalWeight > 0.
+//
+// Единица здесь — минорная, а не целая: чек в тусе с копейками делится до
+// копейки, и остаток раздаётся копейками, а не рублями. Сам алгоритм от
+// единицы не зависит — меняется только то, что в неё кладут.
+func splitByWeight(amount int64, ws []weightShare) (map[int]int64, error) {
+	out := make(map[int]int64, len(ws))
 	// защита от переполнения/зацикливания: отрицательные величины недопустимы
 	if amount < 0 {
 		return nil, ErrOverflow
@@ -73,13 +78,13 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 	if totalW <= 0 {
 		return out, nil
 	}
-	given := 0
+	var given int64
 	for _, w := range ws {
 		// amount*w.weight не должно переполнить int64
-		if w.weight != 0 && amount > math.MaxInt/w.weight {
+		if w.weight != 0 && amount > math.MaxInt64/int64(w.weight) {
 			return nil, ErrOverflow
 		}
-		v := amount * w.weight / totalW
+		v := amount * int64(w.weight) / int64(totalW)
 		// += , а не = : один и тот же участник может встретиться в shares дважды
 		out[w.id] += v
 		given += v
@@ -87,7 +92,7 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 	rem := amount - given
 	// при корректных входах остаток дробей строго меньше числа участников;
 	// иначе это признак переполнения/бага — не раздаём его в цикле, а сигналим
-	if rem < 0 || rem > len(ws) {
+	if rem < 0 || rem > int64(len(ws)) {
 		return nil, ErrOverflow
 	}
 	if rem == 0 {
@@ -101,33 +106,33 @@ func splitByWeight(amount int, ws []weightShare) (map[int]int, error) {
 		}
 		return order[i].id < order[j].id
 	})
-	for i := 0; i < rem; i++ {
-		out[order[i%len(order)].id]++
+	for i := int64(0); i < rem; i++ {
+		out[order[int(i)%len(order)].id]++
 	}
 	return out, nil
 }
 
-// SplitItem делит цену позиции между её участниками: сначала снимаются
-// фиксированные Amount, остаток делится по Weight (splitByWeight). Возвращает
-// карту userId→сумма; сумма всегда равна price.
-func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
+// SplitItem делит цену позиции (МИНОРНЫЕ единицы) между её участниками:
+// сначала снимаются фиксированные доли, остаток делится по Weight
+// (splitByWeight). Возвращает карту userId→сумма; сумма всегда равна price.
+func SplitItem(price int64, shares []ItemShare) (map[int]int64, error) {
 	if price < 0 {
 		return nil, ErrOverflow
 	}
-	out := make(map[int]int, len(shares))
-	fixed := 0
+	out := make(map[int]int64, len(shares))
+	var fixed int64
 	var weighted []weightShare
 	for _, s := range shares {
-		if s.Amount != nil {
-			if *s.Amount < 0 {
+		if amount, has := s.AmountMinorOrLegacy(); has {
+			if amount < 0 {
 				return nil, ErrNegativeAmount
 			}
 			// аддитивное переполнение суммы фиксов
-			if fixed > math.MaxInt-*s.Amount {
+			if fixed > math.MaxInt64-amount {
 				return nil, ErrOverflow
 			}
-			out[s.UserId] += *s.Amount
-			fixed += *s.Amount
+			out[s.UserId] += amount
+			fixed += amount
 			continue
 		}
 		if s.Weight > 0 {
@@ -153,7 +158,7 @@ func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
 	}
 	// страховка контракта: сумма долей обязана равняться цене (ловит любой
 	// незамеченный дефект деления до того, как суммы уйдут в операцию)
-	got := 0
+	var got int64
 	for _, v := range out {
 		got += v
 	}
@@ -166,7 +171,7 @@ func SplitItem(price int, shares []ItemShare) (map[int]int, error) {
 // SplitSurcharge делит надбавку (сбор/чаевые/доставку) по базовым долям людей.
 // proportional → вес участника равен его базовой доле; equally → всем поровну.
 // base — суммы, выведенные из обычных позиций (кто сколько съел).
-func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int {
+func SplitSurcharge(price int64, rule SplitRule, base map[int]int64) map[int]int64 {
 	ids := make([]int, 0, len(base))
 	for id := range base {
 		ids = append(ids, id)
@@ -174,7 +179,7 @@ func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int {
 	sort.Ints(ids)
 
 	ws := make([]weightShare, 0, len(ids))
-	totalBase := 0
+	var totalBase int64
 	for _, id := range ids {
 		totalBase += base[id]
 	}
@@ -183,7 +188,9 @@ func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int {
 		// пропорционально работает только если у базы есть положительный вес;
 		// иначе (все нули) откатываемся к делению поровну, чтобы сбор не потерялся
 		if rule == SplitProportional && totalBase > 0 {
-			w = base[id]
+			// Вес — базовая доля в минорных: она же и ограничена валидацией,
+			// поэтому в int влезает.
+			w = int(base[id])
 		}
 		ws = append(ws, weightShare{id: id, weight: w})
 	}
@@ -197,24 +204,24 @@ func SplitSurcharge(price int, rule SplitRule, base map[int]int) map[int]int {
 // итог. Обычные позиции считаются первыми (образуют базу), затем на эту базу
 // накладываются надбавки. Возвращает ошибку, если любая позиция невалидна или
 // нарушен инвариант «сумма долей == итог».
-func DeriveShares(items []OperationItem) (map[int]int, int, error) {
-	base := make(map[int]int)
-	total := 0
+func DeriveShares(items []OperationItem) (map[int]int64, int64, error) {
+	base := make(map[int]int64)
+	var total int64
 	for _, it := range items {
 		if it.Kind == ItemKindSurcharge {
 			continue
 		}
-		d, err := SplitItem(it.Price, it.Shares)
+		d, err := SplitItem(it.PriceMinorOrLegacy(), it.Shares)
 		if err != nil {
 			return nil, 0, err
 		}
 		for id, v := range d {
 			base[id] += v
 		}
-		total += it.Price
+		total += it.PriceMinorOrLegacy()
 	}
 
-	out := make(map[int]int, len(base))
+	out := make(map[int]int64, len(base))
 	for id, v := range base {
 		out[id] = v
 	}
@@ -222,16 +229,16 @@ func DeriveShares(items []OperationItem) (map[int]int, int, error) {
 		if it.Kind != ItemKindSurcharge {
 			continue
 		}
-		if it.Price <= 0 {
+		if it.PriceMinorOrLegacy() <= 0 {
 			return nil, 0, ErrSurchargePrice
 		}
-		for id, v := range SplitSurcharge(it.Price, it.Split, base) {
+		for id, v := range SplitSurcharge(it.PriceMinorOrLegacy(), it.Split, base) {
 			out[id] += v
 		}
-		total += it.Price
+		total += it.PriceMinorOrLegacy()
 	}
 
-	sum := 0
+	var sum int64
 	for _, v := range out {
 		sum += v
 	}

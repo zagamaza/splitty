@@ -260,3 +260,29 @@ fun suggestedRoomCurrency(recent: String?, region: String?, available: List<Stri
     }
     return if (DEFAULT_CURRENCY in supported) DEFAULT_CURRENCY else available.firstOrNull() ?: DEFAULT_CURRENCY
 }
+
+/**
+ * Переводит целые единицы в минорные БЕЗ молчаливого переполнения.
+ *
+ * Long в Kotlin на переполнении заворачивается: битая величина из ответа
+ * сервера или старого кеша превратилась бы в отрицательную сумму, и деление
+ * позиций посчитало бы по ней. Здесь она становится предельной — такую
+ * величину арифметика долей всё равно отбракует. Порт iOS `saturatingMinor`.
+ */
+fun saturatingMinor(units: Long): Long = when {
+    units > Long.MAX_VALUE / MINOR_FACTOR -> Long.MAX_VALUE
+    units < Long.MIN_VALUE / MINOR_FACTOR -> Long.MIN_VALUE
+    else -> units * MINOR_FACTOR
+}
+
+/**
+ * Диапазон ТОЧНЫХ сумм: `moneyRangeMinor(3333, 3334, "RUB")` → «33,33–33,34 ₽».
+ * Нижняя граница печатается без символа валюты — он один, у верхней.
+ * Порт iOS `moneyRangeMinor`.
+ */
+fun moneyRangeMinor(minMinor: Long, maxMinor: Long, currency: String): String {
+    val upper = moneyMinor(maxMinor, currency)
+    val symbol = currencySymbol(currency)
+    val lower = moneyMinor(minMinor, currency).replace(symbol, "").trim()
+    return "$lower–$upper"
+}

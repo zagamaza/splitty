@@ -185,7 +185,9 @@ func toApiItems(items []ai.DraftItem) []api.OperationItem {
 // плоские доли. Сервер — единственный источник доверия: RecipientsWithSum и Sum
 // считаются из Items, клиентские плоские поля игнорируются. Нельзя сохранить
 // черновик с нераспознанными именами (Unknown) — сперва их разрешает пользователь.
-func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, []api.RecipientWithSum, []api.OperationItem, int, *httpError) {
+// Итог и доли возвращаются в МИНОРНЫХ единицах: чек в тусе с копейками делится
+// до копейки, и округлять его на выходе значило бы разойтись с суммой позиций.
+func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, []api.RecipientWithSum, []api.OperationItem, int64, *httpError) {
 	req.Description = strings.TrimSpace(req.Description)
 	if req.Description == "" {
 		return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "описание не может быть пустым"}
@@ -254,23 +256,27 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 		}
 	}
 
-	// границы величин — защита от переполнения при взвешенном делении (DoS)
-	priceSum := 0
+	// границы величин — защита от переполнения при взвешенном делении (DoS).
+	// Пределы заданы в единицах валюты, а сравниваются с минорными: иначе
+	// потолок чека в тусе с копейками оказался бы в сто раз ниже.
+	var priceSum int64
 	for _, it := range apiItems {
-		// price ≥ 1: черновик допускает price=0 («цена не определена»),
+		price := it.PriceMinorOrLegacy()
+		// цена ≥ 1 минорной: черновик допускает price=0 («цена не определена»),
 		// но сохранять получек нельзя — клиент блокирует, сервер перепроверяет
-		if it.Price < 1 || it.Price > maxItemPrice {
+		if price < 1 || price > int64(maxItemPrice)*api.MinorFactor {
 			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "у каждой позиции должна быть цена"}
 		}
-		priceSum += it.Price
-		if priceSum > maxItemsTotal {
+		priceSum += price
+		if priceSum > int64(maxItemsTotal)*api.MinorFactor {
 			return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "суммарная стоимость позиций слишком велика"}
 		}
 		for _, sh := range it.Shares {
 			if sh.Weight < 0 || sh.Weight > maxShareWeight {
 				return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "вес доли вне допустимого диапазона"}
 			}
-			if sh.Amount != nil && (*sh.Amount < 0 || *sh.Amount > maxShareAmount) {
+			if amount, has := sh.AmountMinorOrLegacy(); has &&
+				(amount < 0 || amount > int64(maxShareAmount)*api.MinorFactor) {
 				return nil, nil, nil, 0, &httpError{http.StatusBadRequest, "validation", "фиксированная сумма доли вне допустимого диапазона"}
 			}
 		}
@@ -303,7 +309,12 @@ func validateItemizedRequest(req *operationRequest, room *api.Room) (*api.User, 
 				continue
 			}
 			member := findMember(room, s.UserId)
-			withSum = append(withSum, api.RecipientWithSum{User: *member, Sum: float64(shares[s.UserId])})
+			minor := shares[s.UserId]
+			withSum = append(withSum, api.RecipientWithSum{
+				User:     *member,
+				Sum:      float64(minor) / float64(api.MinorFactor),
+				SumMinor: &minor,
+			})
 		}
 	}
 

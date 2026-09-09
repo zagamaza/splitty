@@ -329,3 +329,32 @@ func TestStorageIsAlwaysKopecks(t *testing.T) {
 		}
 	}
 }
+
+// Точный разбор десятичной записи: через float64 «20.8» превращается в
+// 2079.9999… и усекается до 2079 — ошибка в копейку, которая всплывает не там,
+// где возникла.
+func TestMinorFromDecimalString(t *testing.T) {
+	ok := map[string]int64{
+		"20.8":   2080,
+		"20.80":  2080,
+		"20,80":  2080,
+		"21":     2100,
+		"0.05":   5,
+		"0":      0,
+		" 12.34": 1234,
+		"-20.80": -2080,
+	}
+	for in, want := range ok {
+		got, valid := MinorFromDecimalString(in)
+		if !valid || got != want {
+			t.Errorf("MinorFromDecimalString(%q) = %d, %v; want %d, true", in, got, valid, want)
+		}
+	}
+
+	bad := []string{"", "abc", "20.805", "20.", ".5", "2e3", "20..8", "1000000001"}
+	for _, in := range bad {
+		if got, valid := MinorFromDecimalString(in); valid {
+			t.Errorf("MinorFromDecimalString(%q) = %d, true; want отказ", in, got)
+		}
+	}
+}

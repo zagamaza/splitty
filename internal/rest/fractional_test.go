@@ -320,3 +320,64 @@ func TestFractionalSharesFrozenAfterRollback(t *testing.T) {
 		"/api/v1/rooms/"+room.ID.Hex()+"/operations/"+op.ID.Hex(), token, body)
 	assertErrorCode(t, rec, http.StatusConflict, "conflict")
 }
+
+// Чек в тусе с копейками делится ДО КОПЕЙКИ.
+//
+// Раньше позиции считались целыми единицами независимо от признака: расход из
+// чека на 20,80 записывался как 21, и карточка расходилась с самим чеком.
+func TestFractionalReceiptSplitsToCents(t *testing.T) {
+	api.SetFractionalInput(true)
+	defer api.SetFractionalInput(false)
+
+	room := fractionalRoom("USD", true)
+	s := newTestServer(Config{FractionalInput: true}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+	token := mustToken(t, s, testUser1.ID)
+
+	// Кофе 10,40 и десерт 10,40 — по одному на каждого; итог 20,80.
+	body := fmt.Sprintf(`{"description":"Ужин","donorId":%d,"items":[
+		{"name":"Кофе","price":10,"priceMinor":1040,"qty":1,"kind":"item","shares":[{"userId":%d,"weight":1}]},
+		{"name":"Десерт","price":10,"priceMinor":1040,"qty":1,"kind":"item","shares":[{"userId":%d,"weight":1}]}
+	]}`, testUser1.ID, testUser1.ID, testUser2.ID)
+
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations", token, body)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201, body: %s", rec.Code, rec.Body.String())
+	}
+	var op operationDto
+	if err := json.Unmarshal(rec.Body.Bytes(), &op); err != nil {
+		t.Fatalf("cannot parse operation %q: %v", rec.Body.String(), err)
+	}
+	if op.SumMinor == nil || *op.SumMinor != 2080 {
+		t.Fatalf("итог = %v, want 2080 — чек округлился до единицы", op.SumMinor)
+	}
+	if op.Sum != 21 {
+		t.Errorf("округлённая проекция = %d, want 21", op.Sum)
+	}
+	var total int64
+	for _, r := range op.Recipients {
+		if r.SumMinor == nil {
+			t.Fatalf("доля %d без копеек", r.User.ID)
+		}
+		if *r.SumMinor != 1040 {
+			t.Errorf("доля %d = %d, want 1040", r.User.ID, *r.SumMinor)
+		}
+		total += *r.SumMinor
+	}
+	if total != 2080 {
+		t.Errorf("сумма долей = %d, want 2080", total)
+	}
+}
+
+// В тусе БЕЗ копеек дробный чек по-прежнему отвергается — рубильник накрывает
+// и этот вход.
+func TestFractionalReceiptRejectedInWholeRoom(t *testing.T) {
+	room := fractionalRoom("RUB", false)
+	s := newTestServer(Config{}, newFakeUserRepo(testUser1, testUser2), newFakeRoomRepo(room))
+
+	body := fmt.Sprintf(`{"description":"Ужин","donorId":%d,"items":[
+		{"name":"Кофе","price":10,"priceMinor":1040,"qty":1,"kind":"item","shares":[{"userId":%d,"weight":1}]}
+	]}`, testUser1.ID, testUser1.ID)
+	rec := doRequest(t, s, http.MethodPost, "/api/v1/rooms/"+room.ID.Hex()+"/operations",
+		mustToken(t, s, testUser1.ID), body)
+	assertErrorCode(t, rec, http.StatusBadRequest, "validation")
+}

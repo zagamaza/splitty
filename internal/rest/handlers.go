@@ -1088,15 +1088,11 @@ func (s *Server) handleCreateOperation(w http.ResponseWriter, r *http.Request) {
 	)
 	fractional := api.RoomFractional(room)
 	if len(req.Items) > 0 {
-		// Позиции чека пока считаются целыми единицами (Задача 7): дробную
-		// цену на этом входе отвергает resolveItemsScale
-		donor, recipientsWithSum, items, sum, hErr2 = validateItemizedRequest(&req, room)
+		// Итог чека выводится из позиций в минорных единицах; целое поле рядом
+		// — его округлённая проекция, как и у остальных сумм.
+		donor, recipientsWithSum, items, sumMinor, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
-		var okRange bool
-		sumMinor, okRange = api.ToMinorChecked(sum)
-		if hErr2 == nil && !okRange {
-			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
-		}
+		sum = api.FromMinor(sumMinor)
 		if hErr2 == nil {
 			hErr2 = validateItemMoney(&req, fractional)
 		}
@@ -1221,13 +1217,9 @@ func (s *Server) handleUpdateOperation(w http.ResponseWriter, r *http.Request) {
 	// создаёт: признак поднимается только для того, что УЖЕ дробное.
 	fractional := api.RoomFractional(room) || operationIsFractional(operation)
 	if len(req.Items) > 0 {
-		donor, recipientsWithSum, items, newSum, hErr2 = validateItemizedRequest(&req, room)
+		donor, recipientsWithSum, items, newSumMinor, hErr2 = validateItemizedRequest(&req, room)
 		splitType = splitByExactAmount
-		var okRange bool
-		newSumMinor, okRange = api.ToMinorChecked(newSum)
-		if hErr2 == nil && !okRange {
-			hErr2 = &httpError{http.StatusBadRequest, "validation", "сумма вне допустимого диапазона"}
-		}
+		newSum = api.FromMinor(newSumMinor)
 		if hErr2 == nil {
 			hErr2 = validateItemMoney(&req, fractional)
 		}

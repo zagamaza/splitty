@@ -3,6 +3,7 @@
 package com.zagir.splitty.core.model
 
 import com.zagir.splitty.core.money.MINOR_FACTOR
+import com.zagir.splitty.core.money.saturatingMinor
 import com.zagir.splitty.core.money.minorToUnitsRounded
 
 import androidx.annotation.StringRes
@@ -284,9 +285,19 @@ data class ItemShare(
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault(EncodeDefault.Mode.ALWAYS)
     val weight: Int = 1,
-    /** Фиксированная сумма участника (целые единицы валюты); null — доля по весу. */
+    /** Фиксированная сумма участника, округлённая; null — доля по весу. */
     val amount: Long? = null,
-)
+    /**
+     * Та же доля в МИНОРНЫХ единицах — точная. null означает «поля нет»:
+     * у фикс-доли ноль осмыслен («этот человек за позицию не платит»), и
+     * отличить его от отсутствия больше нечем.
+     */
+    val amountMinor: Long? = null,
+) {
+    /** Точная фикс-доля в копейках; null — фиксированной доли нет вовсе. */
+    val exactAmountMinor: Long?
+        get() = amountMinor ?: amount?.let { saturatingMinor(it) }
+}
 
 /**
  * Позиция чека itemized-операции: что заказали, почём и как делится. Единый
@@ -297,8 +308,13 @@ data class ItemShare(
 data class OperationItem(
     /** Название позиции («Пицца», «Сервисный сбор»). */
     val name: String,
-    /** ВСЕГДА суммарная стоимость строки (целые единицы, уже с учётом [qty]). */
+    /** ВСЕГДА суммарная стоимость строки, округлённая (уже с учётом [qty]). */
     val price: Long,
+    /**
+     * Та же стоимость в МИНОРНЫХ единицах — точная; null у позиций, записанных
+     * до появления копеек, и у целых цен.
+     */
+    val priceMinor: Long? = null,
     /**
      * Количество — только для показа («×10»); в делении НЕ участвует.
      *
@@ -331,6 +347,9 @@ data class OperationItem(
      */
     val unknown: List<String>? = null,
 ) {
+    /** Точная цена позиции в копейках: записанная, иначе выведенная из целой. */
+    val exactMinor: Long get() = priceMinor ?: saturatingMinor(price)
+
     companion object {
         const val KIND_ITEM = "item"
         const val KIND_SURCHARGE = "surcharge"

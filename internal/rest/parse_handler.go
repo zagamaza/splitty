@@ -82,6 +82,9 @@ func (s *Server) handleParseOperation(w http.ResponseWriter, r *http.Request) {
 
 	in.Participants = s.buildParticipants(ctx, room)
 	in.Currency = roomCurrencyCode(room)
+	// Признак тусы — модели: без него она округляет «20.80» до 21 сама, и чек
+	// расходится с расходом на копейки.
+	in.Fractional = api.RoomFractional(room)
 	in.RequesterId = userId
 
 	res, err := s.aiParser.Parse(ctx, in)

@@ -1569,12 +1569,16 @@ struct AddExpenseView: View {
     /// подпись объясняет, откуда она и где её править.
     private var derivedTotal: some View {
         VStack(spacing: 4) {
-            MoneyText(
-                model.itemizedTotal ?? (model.itemizedSubtotal + model.itemizedSurcharges),
-                role: .neutral,
-                size: 40,
-                currency: model.currency
-            )
+            {
+                let minor = model.itemizedTotal ?? (model.itemizedSubtotal + model.itemizedSurcharges)
+                return MoneyText(
+                    minorToUnitsRounded(minor),
+                    exactMinor: minor,
+                    role: .neutral,
+                    size: 40,
+                    currency: model.currency
+                )
+            }()
             Text(model.hasPricelessItems ? "не все цены указаны" : "по позициям чека")
                 .scaledFont(size: 12, relativeTo: .footnote)
                 .foregroundStyle(model.hasPricelessItems ? Color.negative : Color.inkSecondary)
@@ -2476,16 +2480,18 @@ struct ItemSheetView: View {
         self.itemId = item?.id
         self.isSurcharge = item?.isSurcharge ?? false
         _name = State(initialValue: item?.name ?? "")
-        _priceText = State(initialValue: item.map { String($0.price) } ?? "")
+        _priceText = State(initialValue: item.map { inputTextFromMinor($0.exactMinor) } ?? "")
         let shares = item?.shareList ?? []
         _participating = State(initialValue: Set(shares.map(\.userId)))
-        _byAmount = State(initialValue: shares.contains { $0.amount != nil })
+        _byAmount = State(initialValue: shares.contains { $0.exactAmountMinor != nil })
         var w: [Int: Int] = [:]
         var a: [Int: String] = [:]
         for share in shares {
             w[share.userId] = share.weight
-            if let amount = share.amount {
-                a[share.userId] = String(amount)
+            // Из ТОЧНОЙ фикс-доли: округлённая потеряла бы копейки при первой
+            // же правке позиции.
+            if let minor = share.exactAmountMinor {
+                a[share.userId] = inputTextFromMinor(minor)
             }
         }
         _weights = State(initialValue: w)
@@ -2576,12 +2582,14 @@ struct ItemSheetView: View {
         case over(Int)
     }
 
-    /// Введённая цена позиции (0 — пусто/невалидно).
-    private var price: Int { Int(priceText) ?? 0 }
+    /// Введённая цена позиции в МИНОРНЫХ единицах (0 — пусто/невалидно).
+    /// Чек в тусе с копейками делится до копейки, и цена в целых разошлась бы
+    /// с тем, что сохранит сервер.
+    private var price: Int { minorFromInput(priceText) ?? 0 }
 
-    /// Фикс участника из поля «Суммами»; nil — «авто» (пустое/нулевое поле).
+    /// Фикс участника из поля «Суммами» в минорных; nil — «авто».
     private func fixedAmount(_ id: Int) -> Int? {
-        guard byAmount, let v = Int(amounts[id] ?? ""), v > 0 else { return nil }
+        guard byAmount, let v = minorFromInput(amounts[id] ?? ""), v > 0 else { return nil }
         return v
     }
 
@@ -2605,7 +2613,10 @@ struct ItemSheetView: View {
         if fixed > price { return .over(fixed - price) }
         let hasAuto = participating.contains { fixedAmount($0) == nil }
         if !hasAuto, fixed < price { return .under(price - fixed) }
-        let item = OperationItem(name: "·", price: price, shares: currentShares)
+        // Превью строится из ТОЧНОЙ цены: price здесь уже минорный.
+        let item = OperationItem(
+            name: "·", price: minorToUnitsRounded(price), priceMinor: price, shares: currentShares
+        )
         guard let shares = [item].derivedShares()?.shares else { return .under(price - fixed) }
         return .ok(shares)
     }
@@ -2637,10 +2648,10 @@ struct ItemSheetView: View {
                 Text("Выберите хотя бы одного участника")
                     .foregroundStyle(Color.negative)
             case .under(let rest):
-                Text("Осталось распределить: \(money(rest, currency: model.currency))")
+                Text("Осталось распределить: \(money(minor: rest, currency: model.currency))")
                     .foregroundStyle(Color.negative)
             case .over(let extra):
-                Text("Перерасход: \(money(extra, currency: model.currency))")
+                Text("Перерасход: \(money(minor: extra, currency: model.currency))")
                     .foregroundStyle(Color.negative)
             }
         }
@@ -2754,11 +2765,11 @@ struct ItemSheetView: View {
         if byAmount {
             guard fixedAmount(userId) == nil else { return nil }
             guard let amount = liveAmount(userId) else { return String(localized: "авто") }
-            return String(localized: "авто · \(money(amount, currency: model.currency))")
+            return String(localized: "авто · \(money(minor: amount, currency: model.currency))")
         }
         let weight = max(1, weights[userId] ?? 1)
         guard let amount = liveAmount(userId) else { return "×\(weight)" }
-        return "×\(weight) · \(money(amount, currency: model.currency))"
+        return "×\(weight) · \(money(minor: amount, currency: model.currency))"
     }
 
     /// Ровно ОДИН контрол на строку: степпер веса («Долями») ИЛИ поле суммы
@@ -2787,14 +2798,14 @@ struct ItemSheetView: View {
     private var priceBinding: Binding<String> {
         Binding(
             get: { priceText },
-            set: { priceText = String($0.filter(\.isNumber).prefix(9)) }
+            set: { priceText = filterAmountInput($0, fractional: model.fractional) }
         )
     }
 
     private func amountBinding(_ id: Int) -> Binding<String> {
         Binding(
             get: { amounts[id] ?? "" },
-            set: { amounts[id] = String($0.filter(\.isNumber).prefix(9)) }
+            set: { amounts[id] = filterAmountInput($0, fractional: model.fractional) }
         )
     }
 
@@ -2818,7 +2829,7 @@ struct ItemSheetView: View {
     /// Пересобирает позицию из состояния шита и пишет обратно в черновик.
     private func commit() {
         guard let original = originalItem, let itemId else { return }
-        let price = Int(priceText) ?? original.price
+        let priceMinor = minorFromInput(priceText) ?? original.exactMinor
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         var newShares: [ItemShare]? = nil
         if !isSurcharge {
@@ -2826,8 +2837,11 @@ struct ItemSheetView: View {
                 .filter { participating.contains($0.id) }
                 .map { member -> ItemShare in
                     let id = member.id
-                    if byAmount, let amount = Int(amounts[id] ?? ""), amount > 0 {
-                        return ItemShare(userId: id, weight: 1, amount: amount)
+                    if byAmount, let minor = minorFromInput(amounts[id] ?? ""), minor > 0 {
+                        return ItemShare(
+                            userId: id, weight: 1,
+                            amount: minorToUnitsRounded(minor), amountMinor: minor
+                        )
                     }
                     // Пустое поле = «авто» (по весу); в режиме долей — заданный вес.
                     return ItemShare(userId: id, weight: byAmount ? 1 : max(1, weights[id] ?? 1))
@@ -2835,7 +2849,10 @@ struct ItemSheetView: View {
         }
         model.replaceItem(id: itemId, with: OperationItem(
             name: trimmedName.isEmpty ? original.name : trimmedName,
-            price: price,
+            // Целое поле — округлённая проекция точного: сервер сверяет пару
+            // именно так и отвергает расхождение.
+            price: minorToUnitsRounded(priceMinor),
+            priceMinor: priceMinor,
             qty: original.qty,
             shares: newShares,
             kind: original.kind,

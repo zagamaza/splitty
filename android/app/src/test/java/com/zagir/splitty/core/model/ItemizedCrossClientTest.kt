@@ -76,8 +76,10 @@ class ItemizedCrossClientTest {
         val derived = operation.items!!.derivedShares()
         assertNotNull(derived, "фикстура сервера обязана считаться клиентом")
 
-        assertEquals(operation.sum, derived.total)
-        val serverShares = operation.recipients.associate { it.user.id to it.sum }
+        // Превью считается в МИНОРНЫХ единицах, а плоские поля ответа —
+        // округлённые: сверяем с точными величинами операции и её долей.
+        assertEquals(operation.exactMinor, derived.total)
+        val serverShares = operation.recipients.associate { it.user.id to it.exactMinor }
         assertEquals(serverShares, derived.shares)
     }
 

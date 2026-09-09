@@ -268,3 +268,27 @@ func suggestedRoomCurrency(
     }
     return supported.contains(defaultCurrencyCode) ? defaultCurrencyCode : (available.first ?? defaultCurrencyCode)
 }
+
+/// Диапазон ТОЧНЫХ сумм: `moneyRangeMinor(3333, 3334, currency: "RUB")` →
+/// «33,33–33,34 ₽». Нижняя граница печатается без символа валюты — он один,
+/// у верхней.
+func moneyRangeMinor(_ minMinor: Int, _ maxMinor: Int, currency: String) -> String {
+    let upper = money(minor: maxMinor, currency: currency)
+    let symbol = currencySymbol(currency)
+    let lower = money(minor: minMinor, currency: currency)
+        .replacingOccurrences(of: symbol, with: "")
+        .trimmingCharacters(in: .whitespaces)
+    return "\(lower)–\(upper)"
+}
+
+/// Переводит целые единицы в минорные БЕЗ падения на переполнении.
+///
+/// Swift на переполнении не заворачивается, а роняет процесс: битая величина из
+/// ответа сервера или старого кеша убивала бы приложение прямо в геттере. Здесь
+/// она превращается в предельную — деление позиций такую всё равно отбракует
+/// собственными проверками.
+func saturatingMinor(_ units: Int) -> Int {
+    let (value, overflow) = units.multipliedReportingOverflow(by: minorFactor)
+    if overflow { return units > 0 ? Int.max : Int.min }
+    return value
+}

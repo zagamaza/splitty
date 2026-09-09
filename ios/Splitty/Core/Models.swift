@@ -223,14 +223,27 @@ struct ItemShare: Codable, Hashable, Identifiable {
     let userId: Int
     /// Относительный вес доли (1 = поровну). Сервер игнорирует, если задан `amount`.
     let weight: Int
-    /// Фиксированная сумма участника в целых рублях; nil — доля считается по весу.
+    /// Фиксированная сумма участника, округлённая; nil — доля считается по весу.
     let amount: Int?
+    /// Та же доля в МИНОРНЫХ единицах — точная. nil означает «поля нет»:
+    /// у фикс-доли ноль осмыслен («этот человек за позицию не платит»), и
+    /// отличить его от отсутствия больше нечем.
+    var amountMinor: Int?
 
     var id: Int { userId }
 
-    init(userId: Int, weight: Int = 1, amount: Int? = nil) {
+    /// Точная фикс-доля в копейках; nil — фиксированной доли нет вовсе.
+    /// Перевод насыщающий по той же причине, что и у цены позиции.
+    var exactAmountMinor: Int? {
+        if let amountMinor { return amountMinor }
+        guard let amount else { return nil }
+        return saturatingMinor(amount)
+    }
+
+    init(userId: Int, weight: Int = 1, amount: Int? = nil, amountMinor: Int? = nil) {
         self.userId = userId
         self.weight = weight
+        self.amountMinor = amountMinor
         self.amount = amount
     }
 }
@@ -246,8 +259,11 @@ struct OperationItem: Codable, Hashable, Identifiable {
     let id = UUID()
     /// Название позиции («Пицца», «Сервисный сбор»).
     let name: String
-    /// ВСЕГДА суммарная стоимость строки в целых рублях (уже с учётом количества).
+    /// ВСЕГДА суммарная стоимость строки, округлённая (уже с учётом количества).
     let price: Int
+    /// Та же стоимость в МИНОРНЫХ единицах — точная; nil у позиций, записанных
+    /// до появления копеек, и у целых цен.
+    var priceMinor: Int?
     /// Количество — только для отображения («×10»); в делении НЕ участвует.
     let qty: Int
     /// Доли участников; nil/пусто у надбавок (делятся по базе, а не по своим долям).
@@ -272,9 +288,18 @@ struct OperationItem: Codable, Hashable, Identifiable {
     /// (сервер вернёт 400), пользователь должен сопоставить имена участникам.
     var hasUnknown: Bool { !(unknown ?? []).isEmpty }
 
+    /// Точная цена позиции в копейках: записанная, иначе выведенная из целой.
+    ///
+    /// Перевод из целых НАСЫЩАЮЩИЙ: Swift на переполнении не заворачивается, а
+    /// падает, и битая величина из ответа или кеша роняла бы приложение прямо
+    /// в геттере. Насыщенное значение всё равно отбракует деление позиций —
+    /// его собственные проверки на переполнение вернут nil.
+    var exactMinor: Int { priceMinor ?? saturatingMinor(price) }
+
     init(
         name: String,
         price: Int,
+        priceMinor: Int? = nil,
         qty: Int = 1,
         shares: [ItemShare]? = nil,
         kind: String = OperationItem.kindItem,
@@ -284,6 +309,7 @@ struct OperationItem: Codable, Hashable, Identifiable {
     ) {
         self.name = name
         self.price = price
+        self.priceMinor = priceMinor
         self.qty = qty
         self.shares = shares
         self.kind = kind
@@ -296,11 +322,11 @@ struct OperationItem: Codable, Hashable, Identifiable {
     /// иначе одинаковые позиции из ответа и из черновика считались бы разными
     /// (подсветка диффа, тесты) и id уезжал бы на сервер.
     private enum CodingKeys: String, CodingKey {
-        case name, price, qty, shares, kind, split, percent, unknown
+        case name, price, priceMinor, qty, shares, kind, split, percent, unknown
     }
 
     static func == (lhs: OperationItem, rhs: OperationItem) -> Bool {
-        lhs.name == rhs.name && lhs.price == rhs.price && lhs.qty == rhs.qty
+        lhs.name == rhs.name && lhs.exactMinor == rhs.exactMinor && lhs.qty == rhs.qty
             && lhs.shares == rhs.shares && lhs.kind == rhs.kind && lhs.split == rhs.split
             && lhs.percent == rhs.percent && lhs.unknown == rhs.unknown
     }
@@ -462,23 +488,25 @@ extension Array where Element == OperationItem {
     /// Возвращает (userId→сумма, итог) или nil, если позиции невалидны
     /// (перебор фиксов, неразделённый остаток, надбавка без цены).
     /// Нужно для превью в UI, чтобы клиент показывал ровно те суммы, что сохранит сервер.
+    /// Величины — в МИНОРНЫХ единицах: чек в тусе с копейками делится до
+    /// копейки, и превью обязано показывать ровно то, что сохранит сервер.
     func derivedShares() -> (shares: [Int: Int], total: Int)? {
         var base: [Int: Int] = [:]
         var total = 0
         for item in self where !item.isSurcharge {
-            guard let split = splitItem(item.price, item.shareList) else { return nil }
+            guard let split = splitItem(item.exactMinor, item.shareList) else { return nil }
             for (id, value) in split { base[id, default: 0] += value }
-            total += item.price
+            total += item.exactMinor
         }
 
         var out = base
         for item in self where item.isSurcharge {
-            if item.price <= 0 { return nil }
-            guard let surcharge = splitSurcharge(item.price, item.split, base) else { return nil }
+            if item.exactMinor <= 0 { return nil }
+            guard let surcharge = splitSurcharge(item.exactMinor, item.split, base) else { return nil }
             for (id, value) in surcharge {
                 out[id, default: 0] += value
             }
-            total += item.price
+            total += item.exactMinor
         }
 
         guard out.values.reduce(0, +) == total else { return nil }
@@ -550,7 +578,9 @@ private func splitItem(_ price: Int, _ shares: [ItemShare]) -> [Int: Int]? {
     var fixed = 0
     var weighted: [(id: Int, weight: Int)] = []
     for share in shares {
-        if let amount = share.amount {
+        // Фикс-доля — ТОЧНАЯ: цена делится в копейках, и смешивать её здесь с
+        // целыми значило бы сравнивать рубли с копейками.
+        if let amount = share.exactAmountMinor {
             if amount < 0 { return nil }
             out[share.userId, default: 0] += amount
             fixed += amount

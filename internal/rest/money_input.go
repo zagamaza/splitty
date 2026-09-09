@@ -77,20 +77,18 @@ func maxAmountMinor() int64 {
 
 // validateItemMoney проверяет деньги позиций чека.
 //
-// ⚠️ Позиции пока считаются ЦЕЛЫМИ единицами: перевод их арифметики в минорные
-// — Задача 7. Поэтому минорное поле здесь принимается только ВМЕСТЕ со старым
-// и только если они сходятся. Молча проигнорировать присланное минорное, как
-// было раньше, нельзя: контракт выглядел бы рабочим, а точное значение
-// терялось бы по дороге.
-func validateItemMoney(req *operationRequest, _ bool) *httpError {
-	factor := int64(api.MinorFactor)
+// Пара полей у каждой величины та же, что и везде: старое целое и точное
+// минорное. Расходятся — отказ; дробное при опущенном признаке — отказ.
+// Требовать точного `целое × 100` нельзя: у дробной цены 20,80 такого равенства
+// нет никогда, а проекция (округление минорного) сходится.
+func validateItemMoney(req *operationRequest, fractionalAllowed bool) *httpError {
 	reject := func(msg string) *httpError {
 		return &httpError{http.StatusBadRequest, "validation", msg}
 	}
 
 	for _, item := range req.Items {
 		if item.PriceMinor != nil {
-			if err := checkItemAmount("price", item.Price, *item.PriceMinor, factor, reject); err != nil {
+			if err := checkItemAmount("price", item.Price, *item.PriceMinor, fractionalAllowed, reject); err != nil {
 				return err
 			}
 		}
@@ -101,7 +99,7 @@ func validateItemMoney(req *operationRequest, _ bool) *httpError {
 			if sh.Amount == nil {
 				return reject("доля позиции требует поля amount вместе с amountMinor")
 			}
-			if err := checkItemAmount("amount", *sh.Amount, *sh.AmountMinor, factor, reject); err != nil {
+			if err := checkItemAmount("amount", *sh.Amount, *sh.AmountMinor, fractionalAllowed, reject); err != nil {
 				return err
 			}
 		}
@@ -111,26 +109,20 @@ func validateItemMoney(req *operationRequest, _ bool) *httpError {
 
 // checkItemAmount сверяет пару полей у позиции чека.
 //
-// ⚠️ Требование СТРОГОЕ: минорное обязано быть ровно старым, умноженным на
-// шкалу. Проекции тут мало — она сходится и у несовместимых единиц: при шкале 2
-// пара price=101, priceMinor=10050 «сходится», потому что 100,50 округляется до
-// 101, но арифметика позиций считает по 101, а в документе остаётся 10050, и
-// позиции расходятся с итогом на полтинник.
-//
-// ⚠️ Дробное минорное отвергается НЕЗАВИСИМО от признака дробного ввода.
-// Позиции чека считаются целыми единицами до Задачи 7, и принимать дробь,
-// которую арифметика всё равно не умеет, нельзя даже с включённым признаком.
+// ⚠️ Целое обязано быть ПРОЕКЦИЕЙ минорного — тем же округлением, каким его
+// считает сервер. Прежнее правило требовало точного произведения и потому
+// закрывало дробные позиции наглухо.
 //
 // ⚠️ Нулевое старое значение здесь ЗАКОННО и отсутствием не считается.
 // У фиксированной доли ноль осмыслен («этот человек за позицию не платит») и
 // разрешён контрактом (`parse_sanitize.go` отвергает только отрицательные), а
 // присутствие поля доказано указателем у вызывающего. Ноль у цены позиции
 // отвергает `validateItemizedRequest`, и дублировать его здесь незачем.
-func checkItemAmount(field string, legacy int, minor, factor int64, reject func(string) *httpError) *httpError {
-	if minor%factor != 0 {
-		return reject("дробные суммы в позициях чека пока недоступны")
+func checkItemAmount(field string, legacy int, minor int64, fractionalAllowed bool, reject func(string) *httpError) *httpError {
+	if !fractionalAllowed && minor%api.MinorFactor != 0 {
+		return reject("дробные суммы пока недоступны")
 	}
-	if int64(legacy)*factor != minor {
+	if legacy != api.FromMinor(minor) {
 		return reject("поля " + field + " и " + field + "Minor позиции не сходятся")
 	}
 	return nil

@@ -42,8 +42,10 @@ class ReceiptHintTest {
         split: String? = null,
         unknown: List<String>? = null,
     ) = OperationItem(
+        // Величины фикстур — МИНОРНЫЕ: подсказки чека считаются в копейках.
         name = name,
-        price = price,
+        price = 0,
+        priceMinor = price,
         qty = qty,
         shares = shares,
         kind = kind,
@@ -51,7 +53,8 @@ class ReceiptHintTest {
         unknown = unknown,
     )
 
-    private fun share(id: Long, weight: Int = 1, amount: Long? = null) = ItemShare(id, weight, amount)
+    private fun share(id: Long, weight: Int = 1, amount: Long? = null) =
+        ItemShare(userId = id, weight = weight, amountMinor = amount)
 
     @Test fun singleShare_wholeItem() {
         assertEquals(ShareHint.Whole, shareHint(item(price = 500, shares = listOf(share(1)))))
@@ -111,7 +114,9 @@ class ReceiptHintTest {
     }
 
     @Test fun perPersonText_exactAndRange() {
-        assertEquals("50 ₽", perPersonText(100, 2, "RUB"))
-        assertEquals("33–34 ₽", perPersonText(100, 3, "RUB"))
+        // Цена — в МИНОРНЫХ единицах: 10 000 копеек это 100 ₽.
+        assertEquals("50 ₽", perPersonText(10_000, 2, "RUB"))
+        // Делится до копейки: 100 ₽ на троих — 33,33 и 33,34, а не 33 и 34.
+        assertEquals("33,33–33,34 ₽", perPersonText(10_000, 3, "RUB"))
     }
 }

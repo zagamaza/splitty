@@ -3,6 +3,8 @@ package api
 import (
 	"errors"
 	"math"
+	"strconv"
+	"strings"
 )
 
 // Деньги хранятся ВСЕГДА в копейках — одинаково для всех валют и всех тус.
@@ -340,4 +342,55 @@ func ReconcileMoney(o *Operation) {
 		}
 	}
 	FillMoney(o)
+}
+
+// MinorFromDecimalString разбирает десятичную запись суммы в минорные единицы
+// БЕЗ float64: «20.8» → 2080, «20.80» → 2080, «21» → 2100.
+//
+// Через float64 нельзя: 20.8 в двоичной дроби не представима, и умножение на
+// сто даёт 2079.9999…, а усечение — 2079. Ошибка в копейку, которая всплывает
+// не там, где возникла. Поэтому разбор идёт по строке.
+//
+// Второе значение false — это не сумма: пустая строка, буквы, больше двух
+// знаков после точки, экспонента, разделитель без дробной части.
+func MinorFromDecimalString(s string) (int64, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, false
+	}
+	negative := strings.HasPrefix(s, "-")
+	s = strings.TrimPrefix(strings.TrimPrefix(s, "-"), "+")
+	// Запятая с русской клавиатуры и точка с цифровой значат одно и то же.
+	s = strings.ReplaceAll(s, ",", ".")
+
+	whole, frac, hasFrac := strings.Cut(s, ".")
+	if whole == "" || strings.ContainsAny(s, "eE") {
+		return 0, false
+	}
+	units, err := strconv.ParseInt(whole, 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	if units > MaxMoneyUnits {
+		return 0, false
+	}
+	minor := units * MinorFactor
+	if hasFrac {
+		if frac == "" || len(frac) > 2 {
+			return 0, false
+		}
+		cents, err := strconv.ParseInt(frac, 10, 64)
+		if err != nil || cents < 0 {
+			return 0, false
+		}
+		// «20.8» — это 80 копеек, а не 8.
+		if len(frac) == 1 {
+			cents *= 10
+		}
+		minor += cents
+	}
+	if negative {
+		minor = -minor
+	}
+	return minor, true
 }

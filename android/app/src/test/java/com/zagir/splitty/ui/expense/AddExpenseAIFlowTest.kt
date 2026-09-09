@@ -179,7 +179,9 @@ class AddExpenseAIFlowTest {
         val next = form(
             listOf(OperationItem(name = "Пицца", price = 1000, shares = listOf(ItemShare(1L), ItemShare(2L)))),
         ).copy(sumText = "999")
-        assertEquals(1000, next.itemizedTotal)
+        // Итог МИНОРНЫЙ: позиция без копеечного поля — легаси-форма, её цена
+        // выводится из целой.
+        assertEquals(100_000, next.itemizedTotal)
         assertTrue(next.canSave)
     }
 
@@ -243,10 +245,11 @@ class AddExpenseAIFlowTest {
                 surcharge(120, OperationItem.SPLIT_PROPORTIONAL),
             ),
         )
-        assertEquals(listOf(100L, 20L), next.personShares!!.map { it.surchargePart })
+        // Части сбора — в минорных: 100 и 20 единиц валюты.
+        assertEquals(listOf(10_000L, 2_000L), next.personShares!!.map { it.surchargePart })
         next = next.togglingSurchargeRule(2)
         assertEquals(OperationItem.SPLIT_EQUALLY, next.draftItems[2].split)
-        assertEquals(listOf(60L, 60L), next.personShares!!.map { it.surchargePart })
+        assertEquals(listOf(6_000L, 6_000L), next.personShares!!.map { it.surchargePart })
     }
 
     @Test
@@ -257,9 +260,9 @@ class AddExpenseAIFlowTest {
                 surcharge(120, OperationItem.SPLIT_PROPORTIONAL),
             ),
         )
-        assertEquals(1200, next.itemizedSubtotal)
-        assertEquals(120, next.itemizedSurcharges)
-        assertEquals(1320, next.itemizedTotal)
+        assertEquals(120_000, next.itemizedSubtotal)
+        assertEquals(12_000, next.itemizedSurcharges)
+        assertEquals(132_000, next.itemizedTotal)
     }
 
     // MARK: add / delete

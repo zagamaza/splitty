@@ -157,8 +157,10 @@ final class ItemDraftTests: XCTestCase {
         ]
 
         let result = try XCTUnwrap(items.derivedShares())
-        XCTAssertEqual(result.total, 5170)
-        XCTAssertEqual(result.shares, [1: 1980, 2: 2090, 3: 1100])
+        // Величины МИНОРНЫЕ: позиции без копеечного поля — легаси-форма, их
+        // цена выводится из целой.
+        XCTAssertEqual(result.total, 517_000)
+        XCTAssertEqual(result.shares, [1: 198_000, 2: 209_000, 3: 110_000])
         XCTAssertEqual(result.shares.values.reduce(0, +), result.total)
     }
 
@@ -173,8 +175,10 @@ final class ItemDraftTests: XCTestCase {
             ]),
         ]
         let result = try XCTUnwrap(items.derivedShares())
-        XCTAssertEqual(result.shares, [1: 34, 2: 33, 3: 33])
-        XCTAssertEqual(result.total, 100)
+        // Делится до копейки: 100 на троих — это 33,34 / 33,33 / 33,33, а не
+        // 34 / 33 / 33, как при делении целыми.
+        XCTAssertEqual(result.shares, [1: 3334, 2: 3333, 3: 3333])
+        XCTAssertEqual(result.total, 10_000)
     }
 
     /// Микс фикс + вес: снимается фикс, остаток делится по весам.
@@ -187,7 +191,7 @@ final class ItemDraftTests: XCTestCase {
             ]),
         ]
         let result = try XCTUnwrap(items.derivedShares())
-        XCTAssertEqual(result.shares, [1: 1250, 2: 1250, 3: 500])
+        XCTAssertEqual(result.shares, [1: 125_000, 2: 125_000, 3: 50_000])
     }
 
     /// Перебор фиксов над ценой позиции → превью невалидно (nil).
@@ -372,7 +376,7 @@ final class ItemDraftTests: XCTestCase {
             ),
         ]
         let result = try XCTUnwrap(items.derivedShares())
-        XCTAssertEqual(result.total, 11)
+        XCTAssertEqual(result.total, 1100)
         XCTAssertEqual(result.shares[1], 0, "нулевой участник заплатил надбавку")
     }
 

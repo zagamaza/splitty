@@ -344,12 +344,14 @@ internal fun AddExpenseForm.collapsingToEqualSplit(): AddExpenseForm {
     // расход сохранялся с чужим итогом. Считаем итог по позициям напрямую
     // (тот же фикс, что в iOS AddExpenseViewModel.collapseToEqualSplit).
     val total = draftItems.derivedShares()?.total
-        ?: draftItems.sumOf { it.price }
+        ?: draftItems.sumOf { it.exactMinor }
     return copy(
         undoSnapshot = snapshot,
         canUndoParse = true,
         changedItemIndices = emptySet(),
-        sumText = total.toString(),
+        // Итог чека МИНОРНЫЙ: без перевода поле суммы показывало бы 100000
+        // вместо 1000.
+        sumText = inputTextFromMinor(total),
         draftItems = emptyList(),
         recipientIds = members.map { it.id }.toSet(),
         splitType = SplitType.EQUALLY,
@@ -558,7 +560,7 @@ data class AddExpenseForm(
      * Сборы учитываются наравне с позициями: нулевой сбор так же валит derivedShares,
      * и без чипа «цена?» блокировка сохранения оставалась необъяснённой.
      */
-    val hasPricelessItems: Boolean get() = draftItems.any { it.price < 1 }
+    val hasPricelessItems: Boolean get() = draftItems.any { it.exactMinor < 1 }
 
     /** Первое нераспознанное имя — для подсказки «выберите, кто такой …». */
     val firstUnknownName: String? get() = draftItems.firstNotNullOfOrNull { it.unknown?.firstOrNull() }
@@ -573,10 +575,10 @@ data class AddExpenseForm(
     val itemizedTotal: Long? get() = draftItems.derivedShares()?.total
 
     /** Подытог обычных позиций (без надбавок). */
-    val itemizedSubtotal: Long get() = draftItems.filter { !it.isSurcharge }.sumOf { it.price }
+    val itemizedSubtotal: Long get() = draftItems.filter { !it.isSurcharge }.sumOf { it.exactMinor }
 
     /** Сумма всех надбавок (сборов/чаевых/доставки). */
-    val itemizedSurcharges: Long get() = draftItems.filter { it.isSurcharge }.sumOf { it.price }
+    val itemizedSurcharges: Long get() = draftItems.filter { it.isSurcharge }.sumOf { it.exactMinor }
 
     /** Разбивка «С кого сколько» по позициям; null — позиций нет или они невалидны. */
     val personShares: List<PersonShare>? get() = draftItems.personShares()
@@ -601,7 +603,7 @@ data class AddExpenseForm(
                 }
             }
             for (item in draftItems) {
-                if (item.isSurcharge || item.price >= 1) continue
+                if (item.isSurcharge || item.exactMinor >= 1) continue
                 // Безымянная позиция спрашивается отдельной строкой, а не
                 // подстановкой слова «позиция»: подставлять было бы нечего в
                 // ресурс, а пустое имя в covered глушит все вопросы сервера —

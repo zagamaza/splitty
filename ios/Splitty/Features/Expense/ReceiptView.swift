@@ -30,10 +30,10 @@ struct ReceiptView: View {
     private var surcharges: [(index: Int, item: OperationItem)] {
         indexed.filter { $0.item.isSurcharge }
     }
-    private var subtotal: Int { itemsOnly.reduce(0) { $0 + $1.item.price } }
-    private var surchargeTotal: Int { surcharges.reduce(0) { $0 + $1.item.price } }
+    private var subtotal: Int { itemsOnly.reduce(0) { $0 + $1.item.exactMinor } }
+    private var surchargeTotal: Int { surcharges.reduce(0) { $0 + $1.item.exactMinor } }
     /// Есть позиции без цены — итог чека неполный (рисуем «Итого ≥»).
-    private var hasPriceless: Bool { itemsOnly.contains { $0.item.price < 1 } }
+    private var hasPriceless: Bool { itemsOnly.contains { $0.item.exactMinor < 1 } }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,7 +100,7 @@ struct ReceiptView: View {
                         .foregroundStyle(Color.inkSecondary)
                 }
                 Spacer(minLength: 8)
-                if item.price < 1 {
+                if item.exactMinor < 1 {
                     // Цена не определена (модель услышала блюдо, но не цену):
                     // метка ведёт в шит позиции — там поле цены.
                     Text("цена?")
@@ -117,7 +117,7 @@ struct ReceiptView: View {
                         )
                         .modifier(SoftPulse(active: onEditItem != nil))
                 } else {
-                    Text(money(item.price, currency: currency))
+                    Text(money(minor: item.exactMinor, currency: currency))
                         .font(.system(size: 15, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Color.ink)
                 }
@@ -154,13 +154,13 @@ struct ReceiptView: View {
         let even = isEven(item)
         // С бейджами (веса/фиксы) аватарки не внахлёст — иначе бейдж
         // перекрывается соседней аватаркой и вес не читается.
-        let hasBadges = !even || item.shareList.contains { $0.amount != nil }
+        let hasBadges = !even || item.shareList.contains { $0.exactAmountMinor != nil }
         return HStack(spacing: 6) {
             HStack(spacing: hasBadges ? 3 : -7) {
                 ForEach(Array(item.shareList.enumerated()), id: \.offset) { _, share in
                     ZStack(alignment: .bottomTrailing) {
                         avatar(share.userId)
-                        if share.amount != nil {
+                        if share.exactAmountMinor != nil {
                             badge(accent: true) {
                                 Image(systemName: "lock.fill").font(.system(size: 7, weight: .bold))
                             }
@@ -246,7 +246,7 @@ struct ReceiptView: View {
                         .foregroundStyle(Color.ink.opacity(0.6))
                 }
                 Spacer(minLength: 8)
-                Text(money(item.price, currency: currency))
+                Text(money(minor: item.exactMinor, currency: currency))
                     .font(.system(size: 15, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.ink)
             }
@@ -293,6 +293,7 @@ struct ReceiptView: View {
 
     // MARK: footer
 
+    /// `amount` — в МИНОРНЫХ единицах: чек считается до копейки.
     private func footerLine(_ title: LocalizedStringKey, _ amount: Int, emphasis: Emphasis) -> some View {
         HStack {
             Text(title)
@@ -301,7 +302,7 @@ struct ReceiptView: View {
                 .textCase(emphasis == .total ? .uppercase : nil)
                 .foregroundStyle(emphasis == .total ? Color.ink : Color.inkSecondary)
             Spacer()
-            Text(money(amount, currency: currency))
+            Text(money(minor: amount, currency: currency))
                 .font(.system(size: emphasis == .total ? 19 : 14,
                               weight: emphasis == .total ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(Color.ink)
@@ -324,7 +325,7 @@ struct ReceiptView: View {
     // MARK: helpers
 
     private func isEven(_ item: OperationItem) -> Bool {
-        let ws = item.shareList.filter { $0.amount == nil }.map(\.weight)
+        let ws = item.shareList.filter { $0.exactAmountMinor == nil }.map(\.weight)
         guard let f = ws.first else { return true }
         return !ws.contains { $0 != f }
     }
@@ -332,29 +333,29 @@ struct ReceiptView: View {
     private func shareHint(_ item: OperationItem) -> String {
         if item.hasUnknown { return String(localized: "кто это — выберите") }
         let n = item.shareList.count
-        if item.price < 1 { return n > 0 ? String(localized: "укажите цену") : "" }
+        if item.exactMinor < 1 { return n > 0 ? String(localized: "укажите цену") : "" }
         if n == 0 { return "" }
         if n == 1 { return String(localized: "целиком") }
-        if item.shareList.contains(where: { $0.amount != nil }) {
-            let fixed = item.shareList.reduce(0) { $0 + ($1.amount ?? 0) }
-            let weighted = item.shareList.filter { $0.amount == nil }.count
-            if weighted > 0 { return String(localized: "\(money(fixed, currency: currency)) фиксом · остальное поровну") }
+        if item.shareList.contains(where: { $0.exactAmountMinor != nil }) {
+            let fixed = item.shareList.reduce(0) { $0 + ($1.exactAmountMinor ?? 0) }
+            let weighted = item.shareList.filter { $0.exactAmountMinor == nil }.count
+            if weighted > 0 { return String(localized: "\(money(minor: fixed, currency: currency)) фиксом · остальное поровну") }
             return String(localized: "точные суммы")
         }
         if isEven(item) {
-            return String(localized: "по \(perPersonText(item.price, parts: n)) × \(n)")
+            return String(localized: "по \(perPersonText(item.exactMinor, parts: n)) × \(n)")
         }
         let units = item.shareList.reduce(0) { $0 + $1.weight }
-        return String(localized: "\(units) шт · \(perPersonText(item.price, parts: units)) за шт")
+        return String(localized: "\(units) шт · \(perPersonText(item.exactMinor, parts: units)) за шт")
     }
 
     /// «По сколько с носа»: при неделящейся нацело цене — честный диапазон
     /// «33–34 ₽» (раньше «по 33 ₽ × 3» не сходилось с итогом строки 100 ₽).
-    private func perPersonText(_ price: Int, parts: Int) -> String {
+    private func perPersonText(_ priceMinor: Int, parts: Int) -> String {
         let n = max(1, parts)
-        let base = price / n
-        guard price % n != 0 else { return money(base, currency: currency) }
-        return "\(base)–\(money(base + 1, currency: currency))"
+        let base = priceMinor / n
+        guard priceMinor % n != 0 else { return money(minor: base, currency: currency) }
+        return moneyRangeMinor(base, base + 1, currency: currency)
     }
 }
 
@@ -456,9 +457,12 @@ struct PersonBreakdownCard: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 3) {
-                MoneyText(share.total, role: .neutral, size: 15, currency: currency)
+                MoneyText(
+                    minorToUnitsRounded(share.total), exactMinor: share.total,
+                    role: .neutral, size: 15, currency: currency
+                )
                 if share.surchargePart > 0 {
-                    Text("+\(money(share.surchargePart, currency: currency)) сбор")
+                    Text("+\(money(minor: share.surchargePart, currency: currency)) сбор")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Color.inkSecondary)
                 }

@@ -326,7 +326,7 @@ final class AddExpenseViewModel {
     /// модель услышала блюдо и участников, но не цену. Сохранение заблокировано,
     /// чек помечает такие позиции «цена?».
     var hasPricelessItems: Bool {
-        draftItemList.contains { !$0.isSurcharge && $0.price < 1 }
+        draftItemList.contains { !$0.isSurcharge && $0.exactMinor < 1 }
     }
 
     /// Первое нераспознанное имя — для подсказки «выберите, кто такой …».
@@ -367,18 +367,19 @@ final class AddExpenseViewModel {
     }
 
     /// Итог чека: подытог позиций + сборы (то, что сохранит сервер); nil при невалидных позициях.
+    /// Итог чека в МИНОРНЫХ единицах; nil — позиции невалидны.
     var itemizedTotal: Int? {
         draftItemList.derivedShares()?.total
     }
 
-    /// Подытог обычных позиций (без надбавок).
+    /// Подытог обычных позиций (без надбавок), в МИНОРНЫХ единицах.
     var itemizedSubtotal: Int {
-        draftItemList.filter { !$0.isSurcharge }.reduce(0) { $0 + $1.price }
+        draftItemList.filter { !$0.isSurcharge }.reduce(0) { $0 + $1.exactMinor }
     }
 
-    /// Сумма всех надбавок (сборов/чаевых/доставки).
+    /// Сумма всех надбавок (сборов/чаевых/доставки), в минорных единицах.
     var itemizedSurcharges: Int {
-        draftItemList.filter { $0.isSurcharge }.reduce(0) { $0 + $1.price }
+        draftItemList.filter { $0.isSurcharge }.reduce(0) { $0 + $1.exactMinor }
     }
 
     /// Разбивка «С кого сколько» по позициям в стабильном порядке появления
@@ -405,6 +406,7 @@ final class AddExpenseViewModel {
         items[index] = OperationItem(
             name: item.name,
             price: item.price,
+            priceMinor: item.priceMinor,
             qty: item.qty,
             shares: nil,
             kind: item.kind,
@@ -449,7 +451,7 @@ final class AddExpenseViewModel {
         // Сумму переносим ВСЕГДА: при невалидных позициях itemizedTotal == nil,
         // и старое `if let` оставляло в поле сумму от прежнего разбора —
         // плоский расход сохранялся с чужим итогом. Fallback — подытог + сборы.
-        sumText = String(itemizedTotal ?? (itemizedSubtotal + itemizedSurcharges))
+        sumText = inputTextFromMinor(itemizedTotal ?? (itemizedSubtotal + itemizedSurcharges))
         draftItems = nil
         // Как в resetItems: без позиций деление снова каноническое «поровну»,
         // иначе остаётся режим «По суммам» с долями от чека.
@@ -644,7 +646,7 @@ final class AddExpenseViewModel {
                 covered.append(name.lowercased())
             }
         }
-        for item in draftItemList where !item.isSurcharge && item.price < 1 {
+        for item in draftItemList where !item.isSurcharge && item.exactMinor < 1 {
             let name = item.name.isEmpty ? String(localized: "позиция") : item.name
             hints.append(String(localized: "Сколько стоит «\(name)»?"))
             covered.append(name.lowercased())
@@ -749,6 +751,7 @@ final class AddExpenseViewModel {
         items[itemIndex] = OperationItem(
             name: item.name,
             price: item.price,
+            priceMinor: item.priceMinor,
             qty: item.qty,
             shares: item.isSurcharge ? nil : shares,
             kind: item.kind,
@@ -782,8 +785,8 @@ final class AddExpenseViewModel {
         let itemIds = itemizedUserIds
         let ordered = ids.filter { itemIds.contains($0) } + itemIds.filter { !ids.contains($0) }
         return ordered.compactMap { id in
-            guard let sum = shares[id], sum >= 1 else { return nil }
-            return RecipientSum(userId: id, sum: sum)
+            guard let minor = shares[id], minor >= 1 else { return nil }
+            return RecipientSum(userId: id, minor: minor)
         }
     }
 

@@ -54,18 +54,18 @@ fun List<OperationItem>.derivedShares(): DerivedShares? {
     var total = 0L
     for (item in this) {
         if (item.isSurcharge) continue
-        val split = splitItem(item.price, item.shareList) ?: return null
+        val split = splitItem(item.exactMinor, item.shareList) ?: return null
         for ((id, value) in split) base[id] = (base[id] ?: 0L) + value
-        total += item.price
+        total += item.exactMinor
     }
 
     val out = LinkedHashMap<Long, Long>(base)
     for (item in this) {
         if (!item.isSurcharge) continue
-        if (item.price <= 0) return null
-        val surcharge = splitSurcharge(item.price, item.split, base) ?: return null
+        if (item.exactMinor <= 0) return null
+        val surcharge = splitSurcharge(item.exactMinor, item.split, base) ?: return null
         for ((id, value) in surcharge) out[id] = (out[id] ?: 0L) + value
-        total += item.price
+        total += item.exactMinor
     }
 
     var sum = 0L
@@ -173,7 +173,7 @@ internal fun splitItem(price: Long, shares: List<ItemShare>): Map<Long, Long>? {
     var fixed = 0L
     val weighted = ArrayList<WeightShare>()
     for (share in shares) {
-        val amount = share.amount
+        val amount = share.exactAmountMinor
         if (amount != null) {
             if (amount < 0) return null
             if (fixed > Long.MAX_VALUE - amount) return null // аддитивное переполнение суммы фиксов

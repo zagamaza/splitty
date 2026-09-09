@@ -67,6 +67,10 @@ import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.components.rememberHaptics
 import com.zagir.splitty.ui.theme.Splitty
+import com.zagir.splitty.core.money.inputTextFromMinor
+import com.zagir.splitty.core.money.minorFromInput
+import com.zagir.splitty.core.money.moneyMinor
+import com.zagir.splitty.core.money.minorToUnitsRounded
 
 // Шит правки позиции чека — порт ios/.../AddExpenseView.swift → ItemSheetView.
 // «Долями» (веса-степперы) или «Суммами» (поля точных сумм); живой пересчёт
@@ -89,7 +93,8 @@ sealed interface ItemSplitStatus {
 
 /** Фикс участника из режима «Суммами»; null — «авто» (пустое/нулевое поле). */
 private fun fixedAmountOf(byAmount: Boolean, amounts: Map<Long, String>, id: Long): Long? =
-    if (byAmount) amounts[id]?.toLongOrNull()?.takeIf { it > 0 } else null
+    // Фикс — в МИНОРНЫХ единицах: позиция делится до копейки.
+    if (byAmount) amounts[id]?.let { minorFromInput(it) }?.takeIf { it > 0 } else null
 
 /** Доли из состояния шита — ровно та же сборка, что в commit. */
 internal fun itemSheetShares(
@@ -108,7 +113,13 @@ internal fun itemSheetShares(
 }.map { id ->
     val fixed = fixedAmountOf(byAmount, amounts, id)
     if (fixed != null) {
-        ItemShare(userId = id, weight = 1, amount = fixed)
+        // Целое поле — округлённая проекция точного: сервер сверяет пару так.
+        ItemShare(
+            userId = id,
+            weight = 1,
+            amount = minorToUnitsRounded(fixed),
+            amountMinor = fixed,
+        )
     } else {
         ItemShare(userId = id, weight = if (byAmount) 1 else maxOf(1, weights[id] ?: 1))
     }
@@ -119,6 +130,7 @@ internal fun itemSheetShares(
  * нет цены/участников, перебор/недобор фиксов или сошедшееся деление с картой сумм.
  */
 internal fun computeItemSplitStatus(
+    /** Цена позиции в МИНОРНЫХ единицах. */
     price: Long,
     members: List<User>,
     participating: Set<Long>,
@@ -134,7 +146,8 @@ internal fun computeItemSplitStatus(
     if (!hasAuto && fixed < price) return ItemSplitStatus.Under(price - fixed)
     val item = OperationItem(
         name = "·",
-        price = price,
+        price = minorToUnitsRounded(price),
+        priceMinor = price,
         shares = itemSheetShares(members, participating, byAmount, weights, amounts),
     )
     val shares = listOf(item).derivedShares()?.shares ?: return ItemSplitStatus.Under(price - fixed)
@@ -203,9 +216,13 @@ fun ItemSheetBody(
     // выводила его из композиции. Без ключа commit() писал имя, цену и деление
     // предыдущей позиции поверх другой строки чека.
     var name by remember(item) { mutableStateOf(item.name) }
-    var priceText by remember(item) { mutableStateOf(if (item.price > 0) item.price.toString() else "") }
+    // Поле цены — из ТОЧНОЙ величины: округлённая потеряла бы копейки при
+    // первой же правке названия позиции.
+    var priceText by remember(item) {
+        mutableStateOf(if (item.exactMinor > 0) inputTextFromMinor(item.exactMinor) else "")
+    }
     // false — «Долями» (веса-степперы), true — «Суммами» (поля сумм).
-    var byAmount by remember(item) { mutableStateOf(item.shareList.any { it.amount != null }) }
+    var byAmount by remember(item) { mutableStateOf(item.shareList.any { it.exactAmountMinor != null }) }
     val participating = remember(item) {
         mutableStateMapOf<Long, Boolean>().apply {
             item.shareList.forEach { put(it.userId, true) }
@@ -216,13 +233,14 @@ fun ItemSheetBody(
     }
     val amounts = remember(item) {
         mutableStateMapOf<Long, String>().apply {
-            item.shareList.forEach { s -> s.amount?.let { put(s.userId, it.toString()) } }
+            item.shareList.forEach { s -> s.exactAmountMinor?.let { put(s.userId, inputTextFromMinor(it)) } }
         }
     }
     var confirmDelete by remember(item) { mutableStateOf(false) }
 
     val participatingSet = participating.filterValues { it }.keys
-    val price = priceText.toLongOrNull() ?: 0L
+    // Цена и фиксы — в минорных единицах.
+    val price = minorFromInput(priceText) ?: 0L
     val status = computeItemSplitStatus(
         price = price,
         members = members,
@@ -234,7 +252,7 @@ fun ItemSheetBody(
     val isCommittable = if (isSurcharge) price >= 1 else status is ItemSplitStatus.Ok
 
     fun commit() {
-        val finalPrice = priceText.toLongOrNull() ?: item.price
+        val finalPriceMinor = minorFromInput(priceText) ?: item.exactMinor
         val trimmedName = name.trim()
         val newShares = if (isSurcharge) {
             null
@@ -244,7 +262,10 @@ fun ItemSheetBody(
         onCommit(
             item.copy(
                 name = trimmedName.ifEmpty { item.name },
-                price = finalPrice,
+                // Целое поле — округлённая проекция точного: сервер сверяет
+                // пару именно так и отвергает расхождение.
+                price = minorToUnitsRounded(finalPriceMinor),
+                priceMinor = finalPriceMinor,
                 shares = newShares,
             )
         )
@@ -561,13 +582,13 @@ private fun rowCaption(
         return if (liveAmount == null) {
             stringResource(R.string.item_sheet_auto)
         } else {
-            stringResource(R.string.item_sheet_auto_with_sum, money(liveAmount, currency))
+            stringResource(R.string.item_sheet_auto_with_sum, moneyMinor(liveAmount, currency))
         }
     }
     return if (liveAmount == null) {
         stringResource(R.string.item_sheet_weight_caption, weight)
     } else {
-        stringResource(R.string.item_sheet_weight_with_sum, weight, money(liveAmount, currency))
+        stringResource(R.string.item_sheet_weight_with_sum, weight, moneyMinor(liveAmount, currency))
     }
 }
 
@@ -657,8 +678,10 @@ private fun SplitStatusLine(status: ItemSplitStatus, currency: String) {
         is ItemSplitStatus.Ok -> stringResource(R.string.item_sheet_split_ok) to colors.accent
         ItemSplitStatus.NoPrice -> stringResource(R.string.item_sheet_split_no_price) to colors.inkSecondary
         ItemSplitStatus.NoParticipants -> stringResource(R.string.item_sheet_split_no_participants) to colors.negative
-        is ItemSplitStatus.Under -> stringResource(R.string.item_sheet_split_under, money(status.rest, currency)) to colors.negative
-        is ItemSplitStatus.Over -> stringResource(R.string.item_sheet_split_over, money(status.extra, currency)) to colors.negative
+        is ItemSplitStatus.Under ->
+            stringResource(R.string.item_sheet_split_under, moneyMinor(status.rest, currency)) to colors.negative
+        is ItemSplitStatus.Over ->
+            stringResource(R.string.item_sheet_split_over, moneyMinor(status.extra, currency)) to colors.negative
     }
     Text(
         text = text,

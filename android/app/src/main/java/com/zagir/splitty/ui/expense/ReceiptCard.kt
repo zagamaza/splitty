@@ -59,6 +59,8 @@ import com.zagir.splitty.ui.components.rememberReduceMotion
 import com.zagir.splitty.ui.theme.Splitty
 import kotlin.math.max
 import kotlin.math.roundToInt
+import com.zagir.splitty.core.money.moneyMinor
+import com.zagir.splitty.core.money.moneyRangeMinor
 
 // Чек-карточка — порт ios/Splitty/Features/Expense/ReceiptView.swift.
 // Перфорированные края (Canvas), пунктирные разделители строк, шапка
@@ -91,9 +93,9 @@ fun ReceiptCard(
     val indexed = items.mapIndexed { index, item -> index to item }
     val itemsOnly = indexed.filter { !it.second.isSurcharge }
     val surcharges = indexed.filter { it.second.isSurcharge }
-    val subtotal = itemsOnly.sumOf { it.second.price }
-    val surchargeTotal = surcharges.sumOf { it.second.price }
-    val hasPriceless = itemsOnly.any { it.second.price < 1 }
+    val subtotal = itemsOnly.sumOf { it.second.exactMinor }
+    val surchargeTotal = surcharges.sumOf { it.second.exactMinor }
+    val hasPriceless = itemsOnly.any { it.second.exactMinor < 1 }
 
     Column(
         modifier = modifier
@@ -222,7 +224,7 @@ private fun ItemRow(
             }
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            if (item.price < 1) {
+            if (item.exactMinor < 1) {
                 // Цена не определена (модель услышала блюдо, но не цену): метка ведёт
                 // в шит позиции. В интерактиве мягко пульсирует, чтобы глаз нашёл ответ.
                 DashedCapsuleChip(
@@ -231,7 +233,7 @@ private fun ItemRow(
                 )
             } else {
                 Text(
-                    text = money(item.price, currency),
+                    text = moneyMinor(item.exactMinor, currency),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
@@ -264,14 +266,14 @@ private fun AvatarStack(
     val even = isEven(item)
     // С бейджами (веса/фиксы) аватарки не внахлёст — иначе бейдж перекрывается
     // соседней аватаркой и вес не читается.
-    val hasBadges = !even || item.shareList.any { it.amount != null }
+    val hasBadges = !even || item.shareList.any { it.exactAmountMinor != null }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Row(horizontalArrangement = Arrangement.spacedBy(if (hasBadges) 3.dp else (-7).dp)) {
             item.shareList.forEach { share ->
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Avatar(share.userId, members)
                     when {
-                        share.amount != null -> Badge(accent = true) {
+                        share.exactAmountMinor != null -> Badge(accent = true) {
                             Icon(
                                 imageVector = Icons.Filled.Lock,
                                 contentDescription = null,
@@ -384,7 +386,7 @@ private fun SurchargeRow(
             }
             Spacer(Modifier.weight(1f))
             Text(
-                text = money(item.price, currency),
+                text = moneyMinor(item.exactMinor, currency),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 fontFamily = FontFamily.Monospace,
@@ -458,7 +460,8 @@ private fun FooterLine(title: String, amount: Long, currency: String, total: Boo
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = money(amount, currency),
+            // Величина МИНОРНАЯ: подытог и итог чека считаются до копейки.
+            text = moneyMinor(amount, currency),
             fontSize = if (total) 19.sp else 14.sp,
             fontWeight = if (total) FontWeight.Bold else FontWeight.SemiBold,
             fontFamily = FontFamily.Monospace,
@@ -591,7 +594,7 @@ private fun Modifier.dashedCapsuleBorder(color: Color): Modifier =
 
 /** true — все весовые доли равны (нет фикс-сумм с разным весом): аватарки без бейджей. */
 internal fun isEven(item: OperationItem): Boolean {
-    val ws = item.shareList.filter { it.amount == null }.map { it.weight }
+    val ws = item.shareList.filter { it.exactAmountMinor == null }.map { it.weight }
     val f = ws.firstOrNull() ?: return true
     return ws.none { it != f }
 }
@@ -626,16 +629,16 @@ sealed interface ShareHint {
 internal fun shareHint(item: OperationItem): ShareHint {
     if (item.hasUnknown) return ShareHint.Unknown
     val n = item.shareList.size
-    if (item.price < 1) return if (n > 0) ShareHint.NoPrice else ShareHint.None
+    if (item.exactMinor < 1) return if (n > 0) ShareHint.NoPrice else ShareHint.None
     if (n == 0) return ShareHint.None
     if (n == 1) return ShareHint.Whole
-    if (item.shareList.any { it.amount != null }) {
-        val fixed = item.shareList.sumOf { it.amount ?: 0 }
-        val weighted = item.shareList.count { it.amount == null }
+    if (item.shareList.any { it.exactAmountMinor != null }) {
+        val fixed = item.shareList.sumOf { it.exactAmountMinor ?: 0 }
+        val weighted = item.shareList.count { it.exactAmountMinor == null }
         return if (weighted > 0) ShareHint.FixedThenEven(fixed) else ShareHint.ExactAmounts
     }
-    if (isEven(item)) return ShareHint.PerPerson(item.price, n)
-    return ShareHint.PerUnit(item.price, item.shareList.sumOf { it.weight })
+    if (isEven(item)) return ShareHint.PerPerson(item.exactMinor, n)
+    return ShareHint.PerUnit(item.exactMinor, item.shareList.sumOf { it.weight })
 }
 
 /** Текст подсказки на языке приложения. */
@@ -646,7 +649,7 @@ internal fun shareHintText(hint: ShareHint, currency: String): String = when (hi
     ShareHint.NoPrice -> stringResource(R.string.receipt_hint_no_price)
     ShareHint.Whole -> stringResource(R.string.receipt_hint_whole)
     is ShareHint.FixedThenEven ->
-        stringResource(R.string.receipt_hint_fixed_then_even, money(hint.fixed, currency))
+        stringResource(R.string.receipt_hint_fixed_then_even, moneyMinor(hint.fixed, currency))
     ShareHint.ExactAmounts -> stringResource(R.string.receipt_hint_exact)
     is ShareHint.PerPerson ->
         stringResource(
@@ -666,8 +669,13 @@ internal fun shareHintText(hint: ShareHint, currency: String): String = when (hi
  * «По сколько с носа»: при неделящейся нацело цене — честный диапазон «33–34 ₽»
  * (иначе «по 33 ₽ × 3» не сходится с итогом строки 100 ₽). Зеркало iOS.
  */
-internal fun perPersonText(price: Long, parts: Int, currency: String): String {
+/** `priceMinor` — цена позиции в МИНОРНЫХ единицах: чек делится до копейки. */
+internal fun perPersonText(priceMinor: Long, parts: Int, currency: String): String {
     val n = max(1, parts)
-    val base = price / n
-    return if (price % n == 0L) money(base, currency) else moneyRange(base, base + 1, currency)
+    val base = priceMinor / n
+    return if (priceMinor % n == 0L) {
+        moneyMinor(base, currency)
+    } else {
+        moneyRangeMinor(base, base + 1, currency)
+    }
 }

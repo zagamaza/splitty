@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"encoding/json"
 	"context"
 	"fmt"
 	"io"
@@ -143,3 +144,45 @@ func TestGemini_AudioInlineBase64(t *testing.T) {
 		t.Fatalf("тело не содержит responseSchema")
 	}
 }
+
+// Цена из ответа модели читается ТОЧНО.
+//
+// Модель в тусе с копейками возвращает «20.8»; обычный разбор на целом поле
+// падает, а через float64 получается 2079.9999… и теряется копейка.
+func TestDraftItemPriceDecoding(t *testing.T) {
+	cases := []struct {
+		raw       string
+		wantPrice int
+		wantMinor *int64
+	}{
+		{`{"name":"Кофе","price":20.8,"kind":"item","shares":[]}`, 21, ptrInt64(2080)},
+		{`{"name":"Кофе","price":20.80,"kind":"item","shares":[]}`, 21, ptrInt64(2080)},
+		{`{"name":"Кофе","price":12,"kind":"item","shares":[]}`, 12, nil},
+		{`{"name":"Кофе","price":0,"kind":"item","shares":[]}`, 0, nil},
+		// Строкой модель тоже иногда отвечает — читаем и это.
+		{`{"name":"Кофе","price":"7.5","kind":"item","shares":[]}`, 8, ptrInt64(750)},
+	}
+	for _, tc := range cases {
+		var item DraftItem
+		if err := json.Unmarshal([]byte(tc.raw), &item); err != nil {
+			t.Fatalf("разбор %s: %v", tc.raw, err)
+		}
+		if item.Price != tc.wantPrice {
+			t.Errorf("%s: целое = %d, want %d", tc.raw, item.Price, tc.wantPrice)
+		}
+		switch {
+		case tc.wantMinor == nil && item.PriceMinor != nil:
+			t.Errorf("%s: точное поле у целой цены = %d, want nil", tc.raw, *item.PriceMinor)
+		case tc.wantMinor != nil && (item.PriceMinor == nil || *item.PriceMinor != *tc.wantMinor):
+			t.Errorf("%s: точное поле = %v, want %d", tc.raw, item.PriceMinor, *tc.wantMinor)
+		}
+	}
+
+	// Не число — ошибка разбора, а не молчаливый ноль.
+	var item DraftItem
+	if err := json.Unmarshal([]byte(`{"name":"Кофе","price":"дорого","kind":"item","shares":[]}`), &item); err == nil {
+		t.Error("нечисловая цена принята")
+	}
+}
+
+func ptrInt64(v int64) *int64 { return &v }
