@@ -276,4 +276,50 @@ class AnalyticsBacklogTest {
         // MockWebServer не закроется и тест упадёт на разборке, а не на сути.
         delay(1_000)
     }
+
+    /**
+     * Вход B не увозит события A — ни под чьим токеном.
+     *
+     * Окно узкое, но настоящее: `ownerUserId` двигает OfflineDataCleaner, и в
+     * последовательности «A вышел → B вошёл» владелец какое-то время ещё A, а
+     * сессия уже B. Обычный flush взял бы владельца A из поля, а токен B из
+     * перехватчика — и события A записались бы на B. Поэтому у trackSignedIn
+     * владелец и токен оба явные.
+     */
+    @Test
+    fun signedInDoesNotStealPreviousOwnerEvents() = runBlocking {
+        server.enqueue(ok())
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        val analytics = analytics()
+        analytics.onOwnerChanged(1)
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        awaitQueueSize(1)
+
+        // Смена аккаунта БЕЗ onOwnerChanged: ровно то отставание, которое даёт
+        // cleaner, пока не дошла его очередная эмиссия.
+        session.logout()
+        session.signIn("token-B", Me(id = 2, displayName = "Б"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-B" } }
+
+        analytics.trackSignedIn(
+            AnalyticsEvent.LoginCompleted(method = "password"),
+            userId = 2,
+            token = "token-B",
+        )
+
+        val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+        val names = SplittyJson.parseToJsonElement(request.body.readUtf8())
+            .jsonObject["events"]!!.jsonArray
+            .map { it.jsonObject["name"]!!.jsonPrimitive.content }
+        assertEquals("Bearer token-B", request.getHeader("Authorization"))
+        assertEquals(
+            listOf("login_completed"),
+            names,
+            "события прошлого человека уехали под токеном нового",
+        )
+
+        // Запись A осталась на месте и дождётся своего владельца.
+        assertEquals(1, queue.snapshot().count { it.ownerUserId == 1L })
+    }
 }

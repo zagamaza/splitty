@@ -161,6 +161,7 @@ class LoginViewModel @Inject constructor(
                 analytics.trackSignedIn(
                     AnalyticsEvent.LoginCompleted(method = "google"),
                     userId = response.user.id,
+                    token = response.token,
                 )
             } catch (e: CancellationException) {
                 // Обязательно ДО общего catch (e: Exception): CancellationException
@@ -227,6 +228,7 @@ class LoginViewModel @Inject constructor(
                 analytics.trackSignedIn(
                     AnalyticsEvent.LoginCompleted(method = "telegram"),
                     userId = response.user.id,
+                    token = response.token,
                 )
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
@@ -279,6 +281,7 @@ class LoginViewModel @Inject constructor(
                 analytics.trackSignedIn(
                     AnalyticsEvent.LoginCompleted(method = "password"),
                     userId = response.user.id,
+                    token = response.token,
                 )
                 _state.update { it.copy(password = "") }
             } catch (e: CancellationException) {

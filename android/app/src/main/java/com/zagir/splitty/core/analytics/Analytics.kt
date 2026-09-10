@@ -197,21 +197,28 @@ class Analytics @Inject constructor(
     /**
      * Событие входа: владелец известен ЯВНО, из ответа сервера.
      *
-     * Обычный [track] здесь не годится дважды. Во-первых, он берёт владельца из
-     * `session.state`, а тот наполняется отдельным collect'ом DataStore и на
-     * момент вызова — сразу после signIn — может ещё молчать; событие молча
-     * возвращалось ни с чем. Во-вторых, зовут его из viewModelScope экрана
-     * входа, который успешный вход сносит, и корутина отменялась вместе с ним.
+     * Обычный [track] здесь не годится: он берёт владельца из `session.state`,
+     * а тот наполняется отдельным collect'ом DataStore и на момент вызова —
+     * сразу после signIn — может ещё молчать; событие молча возвращалось ни с
+     * чем. Плюс отмена: в соседнем catch этого же экрана записано наблюдение,
+     * что успешный вход сносит экран вместе с его scope (из-за чего штатная
+     * отмена когда-то показывалась алертом). Запись в своём scope снимает и
+     * это.
      *
      * В базе это выглядело так: login_started — 70 событий, login_completed —
      * 8. Последняя ступень воронки была не «плохой», а несуществующей.
      */
-    fun trackSignedIn(event: AnalyticsEvent, userId: Long) {
+    fun trackSignedIn(event: AnalyticsEvent, userId: Long, token: String) {
         if (!ENABLED) return
         val record = record(event, userId)
         scope.launch {
             queue.append(record)
-            flush()
+            // Владелец И токен — оба явные, оба от ЭТОГО входа. Обычный [flush]
+            // берёт владельца из ownerUserId (его двигает OfflineDataCleaner) и
+            // токен из перехватчика. В окне «A вышел → B вошёл» владелец может
+            // ещё быть A, а сессия уже B — и записи A уехали бы под токеном B,
+            // то есть события одного человека записались бы на другого.
+            flushOwned(userId, "Bearer " + token)
         }
     }
 
@@ -346,11 +353,24 @@ class Analytics @Inject constructor(
     suspend fun flush() {
         if (!ENABLED) return
         val owner = ownerUserId ?: session.currentUserId() ?: return
+        // Токен null — обычный путь: его ставит перехватчик, и здесь владелец
+        // взят из того же состояния, что и токен.
+        flushOwned(owner, authorization = null)
+    }
+
+    /**
+     * Одна пачка КОНКРЕТНОГО владельца.
+     *
+     * [authorization] null — заголовок ставит перехватчик. Явное значение нужно
+     * там, где владелец и токен известны точнее, чем текущее состояние сессии:
+     * иначе записи одного человека уезжают под токеном другого.
+     */
+    private suspend fun flushOwned(owner: Long, authorization: String?) {
         flushMutex.withLock {
             val batch = queue.take(BATCH_SIZE, owner)
             if (batch.isEmpty()) return@withLock
             try {
-                val result = api.postEvents(EventsBody(batch.map { EventBody(it) }), null)
+                val result = api.postEvents(EventsBody(batch.map { EventBody(it) }), authorization)
                 // 2xx с отказами внутри — не успех. Раньше результат не читался
                 // вовсе, и отбракованное имя события выглядело доставленным.
                 if (result.rejected > 0) {
