@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import retrofit2.HttpException
 
 private const val TAG = "Analytics"
@@ -151,6 +152,19 @@ class Analytics @Inject constructor(
         scope.launch { flush() }
     }
 
+    /**
+     * Приложение вернулось на передний план — досылаем хвост прошлого сеанса.
+     *
+     * Без этого после перезапуска накопленное ждало бы первого тика таймера, а
+     * короткий сеанс столько может и не прожить. Здесь, а не внутри
+     * [onOwnerChanged]: тот зовётся из collect'а OfflineDataCleaner, и отправка
+     * оттуда лезет в тот же файл очереди одновременно с его чисткой.
+     */
+    fun onForegrounded() {
+        if (!ENABLED) return
+        scope.launch { flush() }
+    }
+
     /** Новая сессия на холодном старте. */
     fun startSession() {
         sessionId = UUID.randomUUID().toString()
@@ -180,6 +194,27 @@ class Analytics @Inject constructor(
         }
     }
 
+    /**
+     * Событие входа: владелец известен ЯВНО, из ответа сервера.
+     *
+     * Обычный [track] здесь не годится дважды. Во-первых, он берёт владельца из
+     * `session.state`, а тот наполняется отдельным collect'ом DataStore и на
+     * момент вызова — сразу после signIn — может ещё молчать; событие молча
+     * возвращалось ни с чем. Во-вторых, зовут его из viewModelScope экрана
+     * входа, который успешный вход сносит, и корутина отменялась вместе с ним.
+     *
+     * В базе это выглядело так: login_started — 70 событий, login_completed —
+     * 8. Последняя ступень воронки была не «плохой», а несуществующей.
+     */
+    fun trackSignedIn(event: AnalyticsEvent, userId: Long) {
+        if (!ENABLED) return
+        val record = record(event, userId)
+        scope.launch {
+            queue.append(record)
+            flush()
+        }
+    }
+
     fun track(event: AnalyticsEvent) {
         if (!ENABLED) return
         val owner = ownerUserId ?: session.currentUserId() ?: return
@@ -203,22 +238,25 @@ class Analytics @Inject constructor(
      *
      * Не доехало — значит потеряно: у последнего вздоха ретраить негде.
      */
-    fun trackTerminal(event: AnalyticsEvent) {
-        if (!ENABLED) return
+    fun trackTerminal(event: AnalyticsEvent): Job? {
+        if (!ENABLED) return null
         // Токен и владелец — ОДНИМ снимком состояния. Два независимых чтения
         // могли бы разъехаться (человек вышел между ними), а заголовок берём
         // явный: перехватчик подставил бы токен, актуальный на момент
         // отправки, то есть уже чужой.
-        val snapshot = session.state.value ?: return
-        val token = snapshot.token ?: return
+        val snapshot = session.state.value ?: return null
+        val token = snapshot.token ?: return null
         // Владелец — из ТОГО ЖЕ снимка, что и токен. Поле ownerUserId живёт
         // своей жизнью (его двигает onOwnerChanged) и может отстать, а
         // разъехавшаяся пара «токен одного, номер другого» — ровно то, от чего
         // здесь и защищаемся.
-        val owner = snapshot.me?.id ?: return
+        val owner = snapshot.me?.id ?: return null
         val record = record(event, owner)
         val authorization = "Bearer " + token
-        scope.launch {
+        // Запуск в СВОЁМ scope, а не в вызывающем: экран профиля исчезает сразу
+        // за выходом, и отправка, привязанная к его жизни, отменялась бы на
+        // полпути.
+        return scope.launch {
             // Сначала хвост очереди, потом сам выход: очередь исчезнет через
             // мгновение, и это последняя возможность её отправить.
             drainBacklog(owner, authorization)
@@ -230,6 +268,24 @@ class Analytics @Inject constructor(
                 Log.d(TAG, "терминальное событие не ушло", e)
             }
         }
+    }
+
+    /**
+     * То же, но с ожиданием: вызывающий обязан дождаться, прежде чем ронять
+     * сессию.
+     *
+     * Без ожидания отправка гонялась с чисткой и обычно ей проигрывала:
+     * `logout()` запускал `sessionStore.logout()` независимо, `OfflineDataCleaner`
+     * успевал вызвать keepOwned(null) раньше, чем drain доходил до первого
+     * take, и хвост очереди исчезал ровно так же, как до всей этой правки.
+     *
+     * Ожидание ограничено [TERMINAL_WAIT_MS]: выход не имеет права зависнуть
+     * из-за медленной сети. Не успели — уходим без хвоста, это честнее, чем
+     * держать человека в приложении, из которого он попросился выйти.
+     */
+    suspend fun trackTerminalAndAwait(event: AnalyticsEvent) {
+        val job = trackTerminal(event) ?: return
+        withTimeoutOrNull(TERMINAL_WAIT_MS) { job.join() }
     }
 
     /**
@@ -249,7 +305,11 @@ class Analytics @Inject constructor(
                 val batch = queue.take(BATCH_SIZE, owner)
                 if (batch.isEmpty()) return@withLock
                 try {
-                    api.postEvents(EventsBody(batch.map { EventBody(it) }), authorization)
+                    val result =
+                        api.postEvents(EventsBody(batch.map { EventBody(it) }), authorization)
+                    if (result.rejected > 0) {
+                        Log.w(TAG, "на выходе отбраковано событий: ${result.rejected} из ${batch.size}")
+                    }
                     queue.remove(batch.map { it.id }.toSet())
                 } catch (e: CancellationException) {
                     throw e
@@ -327,10 +387,20 @@ class Analytics @Inject constructor(
         const val FLUSH_INTERVAL_MS = 30_000L
 
         /**
-         * Сколько пачек досылаем на выходе. Ограничение есть, потому что
-         * человек ждёт: очередь может хранить до CAPACITY записей, и упереться
-         * в них на последнем вздохе значило бы держать выход открытым.
+         * Сколько пачек досылаем на выходе.
+         *
+         * Ограничение реальное: выхода теперь ЖДУТ (см. [trackTerminalAndAwait]),
+         * и упереться в полную очередь на CAPACITY записей значило бы держать
+         * человека в приложении, из которого он попросился выйти. Десять пачек
+         * покрывают 200 записей — сеанс, после которого выходят, столько не
+         * набирает.
          */
         const val MAX_DRAIN_BATCHES = 10
+
+        /**
+         * Сколько ждём отправки на выходе. Верхняя граница именно ожидания, а
+         * не работы: не успели — уходим без хвоста.
+         */
+        const val TERMINAL_WAIT_MS = 3_000L
     }
 }

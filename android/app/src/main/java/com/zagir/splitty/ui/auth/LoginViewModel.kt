@@ -158,7 +158,10 @@ class LoginViewModel @Inject constructor(
                 }
                 val response = repository.loginWithGoogle(idToken)
                 sessionStore.signIn(response.token, response.user)
-                analytics.track(AnalyticsEvent.LoginCompleted(method = "google"))
+                analytics.trackSignedIn(
+                    AnalyticsEvent.LoginCompleted(method = "google"),
+                    userId = response.user.id,
+                )
             } catch (e: CancellationException) {
                 // Обязательно ДО общего catch (e: Exception): CancellationException
                 // наследует IllegalStateException и попадала в него, превращая
@@ -221,7 +224,10 @@ class LoginViewModel @Inject constructor(
                 sessionStore.signIn(response.token, response.user)
                 // Раньше этого события тут не было вовсе: последняя ступень
                 // воронки теряла всех, кто вошёл через Telegram.
-                analytics.track(AnalyticsEvent.LoginCompleted(method = "telegram"))
+                analytics.trackSignedIn(
+                    AnalyticsEvent.LoginCompleted(method = "telegram"),
+                    userId = response.user.id,
+                )
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
             } catch (e: ApiException) {
@@ -270,7 +276,10 @@ class LoginViewModel @Inject constructor(
                     repository.loginWithPassword(email, password)
                 }
                 sessionStore.signIn(response.token, response.user)
-                analytics.track(AnalyticsEvent.LoginCompleted(method = "password"))
+                analytics.trackSignedIn(
+                    AnalyticsEvent.LoginCompleted(method = "password"),
+                    userId = response.user.id,
+                )
                 _state.update { it.copy(password = "") }
             } catch (e: CancellationException) {
                 throw e // см. комментарий в loginWithGoogle
