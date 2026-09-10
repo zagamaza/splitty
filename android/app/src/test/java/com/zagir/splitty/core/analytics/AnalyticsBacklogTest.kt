@@ -17,6 +17,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -321,5 +322,64 @@ class AnalyticsBacklogTest {
 
         // Запись A осталась на месте и дождётся своего владельца.
         assertEquals(1, queue.snapshot().count { it.ownerUserId == 1L })
+    }
+
+    /**
+     * Обычный flush в том же окне тоже не увозит чужое.
+     *
+     * trackSignedIn был лишь одним из путей: очередь отправляют ещё таймер,
+     * уход в фон, возврат и порог пачки. Пока владелец брался из отдельного
+     * поля, а токен — из перехватчика, любой из этих поводов увозил записи A
+     * под токеном B.
+     */
+    @Test
+    fun ordinaryFlushDoesNotSendPreviousOwnerEvents() = runBlocking {
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        val analytics = analytics()
+        analytics.onOwnerChanged(1)
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        awaitQueueSize(1)
+
+        // Владелец остаётся A (onOwnerChanged не зовём), сессия уже B.
+        session.logout()
+        session.signIn("token-B", Me(id = 2, displayName = "Б"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-B" } }
+
+        analytics.flush()
+
+        assertNull(
+            server.takeRequest(500, TimeUnit.MILLISECONDS),
+            "очередь прошлого человека уехала под токеном нового",
+        )
+        assertEquals(1, queue.snapshot().count { it.ownerUserId == 1L })
+    }
+
+    /**
+     * И запись нового события в том же окне достаётся тому, кто на экране.
+     *
+     * Иначе событие пользователя B ложилось с владельцем A, а следующая сверка
+     * владельцев удаляла его как чужое: инструментовка выглядела работающей и
+     * молчала.
+     */
+    @Test
+    fun trackAttributesEventToCurrentSession() = runBlocking {
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        val analytics = analytics()
+        analytics.onOwnerChanged(1)
+
+        session.logout()
+        session.signIn("token-B", Me(id = 2, displayName = "Б"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-B" } }
+
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        awaitQueueSize(1)
+
+        assertEquals(
+            listOf(2L),
+            queue.snapshot().map { it.ownerUserId },
+            "событие экрана нового человека записано на прошлого владельца",
+        )
     }
 }

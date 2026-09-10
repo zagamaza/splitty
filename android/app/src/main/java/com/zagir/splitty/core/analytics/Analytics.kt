@@ -90,6 +90,14 @@ class Analytics @Inject constructor(
     @Volatile
     private var lastActivity: Long = System.currentTimeMillis()
 
+    /**
+     * Кто владеет очередью — по версии OfflineDataCleaner.
+     *
+     * Служит ТОЛЬКО учёту смены аккаунта: завести или погасить таймер и решить,
+     * чьи записи оставить. Адресовать им события нельзя: поле двигает отдельная
+     * эмиссия чистильщика и оно отстаёт от сессии. Владельца события и токен
+     * отправки берут одним снимком `session.state`.
+     */
     @Volatile
     private var ownerUserId: Long? = null
 
@@ -224,7 +232,12 @@ class Analytics @Inject constructor(
 
     fun track(event: AnalyticsEvent) {
         if (!ENABLED) return
-        val owner = ownerUserId ?: session.currentUserId() ?: return
+        // Владелец — из состояния сессии, а не из ownerUserId. То поле двигает
+        // OfflineDataCleaner своей эмиссией и в окне «A вышел → B вошёл» оно
+        // отстаёт: событие ЭКРАНА, который уже смотрит B, записывалось на A —
+        // а потом reconciliation стирал его как чужое. Событие пропадало,
+        // выглядя записанным.
+        val owner = session.state.value?.me?.id ?: return
         val record = record(event, owner)
         scope.launch {
             queue.append(record)
@@ -349,13 +362,22 @@ class Analytics @Inject constructor(
         )
     }
 
-    /** Отправляет накопленное. Ошибка — не повод чистить очередь. */
+    /**
+     * Отправляет накопленное. Ошибка — не повод чистить очередь.
+     *
+     * Владелец и токен берутся ОДНИМ снимком сессии. Раньше владелец приходил
+     * из `ownerUserId` — отдельного поля, которое двигает OfflineDataCleaner, —
+     * а токен подставлял перехватчик из SessionStore. Это два независимых
+     * источника, и в окне «A вышел → B вошёл» они расходятся: очередь A уезжала
+     * под токеном B по любому поводу — таймеру, уходу в фон, возврату, порогу.
+     * Один снимок закрывает это для всех путей разом.
+     */
     suspend fun flush() {
         if (!ENABLED) return
-        val owner = ownerUserId ?: session.currentUserId() ?: return
-        // Токен null — обычный путь: его ставит перехватчик, и здесь владелец
-        // взят из того же состояния, что и токен.
-        flushOwned(owner, authorization = null)
+        val snapshot = session.state.value ?: return
+        val owner = snapshot.me?.id ?: return
+        val token = snapshot.token ?: return
+        flushOwned(owner, "Bearer " + token)
     }
 
     /**
