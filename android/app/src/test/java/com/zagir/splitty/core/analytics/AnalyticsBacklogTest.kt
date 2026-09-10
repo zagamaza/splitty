@@ -334,6 +334,10 @@ class AnalyticsBacklogTest {
      */
     @Test
     fun ordinaryFlushDoesNotSendPreviousOwnerEvents() = runBlocking {
+        // Ответ заготовлен намеренно, хотя запроса быть не должно: если правка
+        // сломается, нарушение упрётся в готовый ответ, а не в сетевой таймаут,
+        // и тест покажет причину сразу.
+        server.enqueue(ok())
         session.signIn("token-A", Me(id = 1, displayName = "А"))
         withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
         val analytics = analytics()
