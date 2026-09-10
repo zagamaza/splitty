@@ -1,5 +1,3 @@
-Currency at creation, renaming, and exact receipts.
+The welcome screen no longer pops back over your group list once you've dismissed it.
 
-• Pick the currency right when you create a group — no need to change it in settings afterwards
-• Rename a group whenever you like: group settings → name
-• Receipts split down to the cent: items, extra charges and shares are all exact
+The rest is under the hood: the app stopped losing the usage diagnostics it sends us. Nothing changes on screen, but it helps us see where you get stuck.

@@ -28,8 +28,8 @@ android {
         targetSdk = 36
         // Публикация с уже занятым номером отклоняется как дубль — поднимаем
         // ЗАРАНЕЕ, а не в момент выкладки
-        versionCode = 19
-        versionName = "1.9"
+        versionCode = 20
+        versionName = "1.10"
 
         // Караоке-транскрипт в оверлее записи (Task 13) — «лестница»: платформенный
         // SpeechRecognizer (API 33+) → Vosk-модель on-demand → без караоке.
