@@ -85,7 +85,17 @@ class OfflineDataCleaner @Inject constructor(
                 val userId = session.me?.id
                 // Владелец очереди событий меняется здесь же: этот цикл —
                 // единственное место, где смена аккаунта видна целиком.
-                analytics.onOwnerChanged(if (hasToken) userId else null)
+                //
+                // Протухание — НЕ выход, и очередь событий его переживает, как
+                // и очередь неотправленных расходов ниже. Раньше строка стояла
+                // выше развилки и стирала события безусловно: 401 уносил их
+                // молча, хотя расходы того же человека тут же берегли.
+                val expiredSession =
+                    sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
+                analytics.onOwnerChanged(
+                    userId = if (hasToken) userId else null,
+                    keepQueue = !hasToken && expiredSession,
+                )
                 // Сменился владелец учётных данных — данные прошлого стираем даже
                 // без промежуточного «токена нет». null (профиль не прочитался)
                 // сменой НЕ считается: это тот же transient-сбой, а не другой вход.
@@ -108,7 +118,10 @@ class OfflineDataCleaner @Inject constructor(
                     // владельца null-ом нельзя — см. ниже), поэтому «A вышел →
                     // гость B открыл ссылку → B вошёл» выглядело сменой
                     // аккаунта, и приглашение самого B удалялось.
-                    val expired = sessionStore.lastSessionEndReason.value == SessionEndReason.EXPIRED
+                    // Тот же снимок причины, что и у очереди событий выше:
+                    // два независимых чтения могли бы разъехаться и развести
+                    // политику для событий и для расходов.
+                    val expired = expiredSession
                     val keepPendingJoin = switchedAccount || expired
                     // Очередь неотправленных расходов переживает ПРОТУХАНИЕ
                     // сессии: человек добавил расходы офлайн, 90-дневный токен

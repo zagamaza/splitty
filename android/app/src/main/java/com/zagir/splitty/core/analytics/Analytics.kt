@@ -13,6 +13,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -89,15 +92,63 @@ class Analytics @Inject constructor(
     @Volatile
     private var ownerUserId: Long? = null
 
+    /** Периодический досыл; живёт, пока есть владелец. */
+    @Volatile
+    private var timer: Job? = null
+
     /**
      * Смена владельца: события прошлого человека выбрасываем, а не
      * переклеиваем на нового.
+     *
+     * [keepQueue] — исключение ровно для протухшей сессии. Человек вернётся
+     * ТЕМ ЖЕ аккаунтом, записи лежат с его номером и доедут после
+     * переавторизации. Без исключения 401 стирал очередь молча — при том что
+     * соседняя очередь неотправленных расходов ту же ситуацию переживает
+     * намеренно (см. OfflineDataCleaner). Две противоположные политики на один
+     * сценарий — это и была дыра.
      */
-    fun onOwnerChanged(userId: Long?) {
+    fun onOwnerChanged(userId: Long?, keepQueue: Boolean = false) {
         if (ownerUserId == userId) return
         ownerUserId = userId
         sessionId = UUID.randomUUID().toString()
+        if (userId == null) stopTimer() else startTimer()
+        if (keepQueue) return
         scope.launch { queue.keepOwned(userId) }
+    }
+
+    /**
+     * Досыл по времени.
+     *
+     * Без него единственным поводом отправки был порог [BATCH_SIZE]: человек,
+     * сделавший за сеанс десяток шагов, не отправлял НИЧЕГО — записи лежали на
+     * диске до двадцатого события, то есть у большинства навсегда. iOS так
+     * умеет с самого начала (flushInterval), android — нет; это расхождение и
+     * съело воронку.
+     */
+    private fun startTimer() {
+        if (timer?.isActive == true) return
+        timer = scope.launch {
+            while (isActive) {
+                delay(FLUSH_INTERVAL_MS)
+                flush()
+            }
+        }
+    }
+
+    private fun stopTimer() {
+        timer?.cancel()
+        timer = null
+    }
+
+    /**
+     * Приложение ушло в фон — отправляем, не дожидаясь порога и тика таймера.
+     *
+     * Момент важный: дальше процесс может не проснуться вовсе, а на диске
+     * останется хвост, который никто не досылает.
+     */
+    fun onBackgrounded() {
+        if (!ENABLED) return
+        scope.launch { flush() }
     }
 
     /** Новая сессия на холодном старте. */
@@ -166,13 +217,48 @@ class Analytics @Inject constructor(
         // здесь и защищаемся.
         val owner = snapshot.me?.id ?: return
         val record = record(event, owner)
+        val authorization = "Bearer " + token
         scope.launch {
+            // Сначала хвост очереди, потом сам выход: очередь исчезнет через
+            // мгновение, и это последняя возможность её отправить.
+            drainBacklog(owner, authorization)
             try {
-                api.postEvents(EventsBody(listOf(EventBody(record))), "Bearer " + token)
+                api.postEvents(EventsBody(listOf(EventBody(record))), authorization)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.d(TAG, "терминальное событие не ушло", e)
+            }
+        }
+    }
+
+    /**
+     * Досылает накопленное ПЕРЕД тем, как очередь станет чужой.
+     *
+     * Выход — единственный момент, когда записи гарантированно исчезают: сразу
+     * после него OfflineDataCleaner зовёт keepOwned(null). Всё, что не дотянуло
+     * до [BATCH_SIZE], уезжало в никуда, и в базе у человека оставался ровно
+     * один logout — так это и выглядело на живых аккаунтах.
+     *
+     * Токен передаётся явно: к моменту отправки сессия уже пуста, и
+     * перехватчик подставил бы пустоту.
+     */
+    private suspend fun drainBacklog(owner: Long, authorization: String) {
+        flushMutex.withLock {
+            repeat(MAX_DRAIN_BATCHES) {
+                val batch = queue.take(BATCH_SIZE, owner)
+                if (batch.isEmpty()) return@withLock
+                try {
+                    api.postEvents(EventsBody(batch.map { EventBody(it) }), authorization)
+                    queue.remove(batch.map { it.id }.toSet())
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // Повторять негде: очередь вот-вот станет чужой. Молчим так
+                    // же, как молчит сам logout.
+                    Log.d(TAG, "хвост очереди перед выходом не ушёл", e)
+                    return@withLock
+                }
             }
         }
     }
@@ -204,7 +290,12 @@ class Analytics @Inject constructor(
             val batch = queue.take(BATCH_SIZE, owner)
             if (batch.isEmpty()) return@withLock
             try {
-                api.postEvents(EventsBody(batch.map { EventBody(it) }), null)
+                val result = api.postEvents(EventsBody(batch.map { EventBody(it) }), null)
+                // 2xx с отказами внутри — не успех. Раньше результат не читался
+                // вовсе, и отбракованное имя события выглядело доставленным.
+                if (result.rejected > 0) {
+                    Log.w(TAG, "сервер отбраковал событий: ${result.rejected} из ${batch.size}")
+                }
                 queue.remove(batch.map { it.id }.toSet())
             } catch (e: CancellationException) {
                 throw e
@@ -231,5 +322,15 @@ class Analytics @Inject constructor(
         const val ENABLED = true
         const val BATCH_SIZE = 20
         const val SESSION_IDLE_LIMIT_MS = 30 * 60 * 1000L
+
+        /** Тот же интервал, что у iOS: расхождение здесь уже стоило воронки. */
+        const val FLUSH_INTERVAL_MS = 30_000L
+
+        /**
+         * Сколько пачек досылаем на выходе. Ограничение есть, потому что
+         * человек ждёт: очередь может хранить до CAPACITY записей, и упереться
+         * в них на последнем вздохе значило бы держать выход открытым.
+         */
+        const val MAX_DRAIN_BATCHES = 10
     }
 }

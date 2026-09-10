@@ -8,8 +8,22 @@ package com.zagir.splitty.ui.onboarding
  * — список групп пуст: у того, кто уже в группах, объяснять нечего;
  * — нет диплинка: человек пришёл по ссылке приглашения в конкретную группу,
  *   и показать ему вместо неё рассказ о продукте — значит потерять переход.
+ *
+ * [alreadyHandled] — четвёртое условие и единственное, которое сильнее всех
+ * остальных: человек уже закрыл приветствие в этом сеансе. Проверяется ПЕРВЫМ
+ * и намеренно не смотрит на [hasSeen]: тот читается с диска, а запись туда идёт
+ * асинхронно. Пока запись в пути, список комнат успевает перечитаться, [hasSeen]
+ * отдаёт ещё старое «не видел», и приветствие всплывает поверх списка заново —
+ * человеку по разу на каждое обновление, а в аналитику по onboarding_started на
+ * каждое всплытие.
  */
-fun shouldShowWelcome(hasSeen: Boolean, groupCount: Int, hasPendingDeeplink: Boolean): Boolean {
+fun shouldShowWelcome(
+    hasSeen: Boolean,
+    groupCount: Int,
+    hasPendingDeeplink: Boolean,
+    alreadyHandled: Boolean = false,
+): Boolean {
+    if (alreadyHandled) return false
     if (hasSeen) return false
     if (groupCount != 0) return false
     return !hasPendingDeeplink

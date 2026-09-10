@@ -165,6 +165,17 @@ class MainActivity : ComponentActivity() {
         startedOnce = true
     }
 
+    /**
+     * Уход в фон — повод отправить накопленное.
+     *
+     * Дальше процесс может не проснуться, и хвост очереди пролежал бы на диске
+     * до двадцатого события, то есть у большинства — навсегда.
+     */
+    override fun onStop() {
+        super.onStop()
+        analytics.onBackgrounded()
+    }
+
     /** Первый onStart идёт сразу за холодным стартом — его уже посчитали. */
     private var startedOnce = false
 

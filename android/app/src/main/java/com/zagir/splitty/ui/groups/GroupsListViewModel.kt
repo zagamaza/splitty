@@ -80,20 +80,40 @@ class GroupsListViewModel @Inject constructor(
     private val _openCreateGroup = MutableStateFlow(false)
     val openCreateGroup: StateFlow<Boolean> = _openCreateGroup.asStateFlow()
 
+    /**
+     * Приветствие уже закрыто в этом сеансе — синхронная защёлка.
+     *
+     * Персистентный флаг пишется асинхронно, а список комнат перечитывается
+     * часто, и [evaluateWelcome] успевал прочитать ещё старое «не видел» и
+     * вернуть приветствие обратно. Человек видел его снова поверх списка,
+     * а в аналитике onboarding_started стрелял по разу на каждое всплытие.
+     *
+     * Защёлка монотонна: обратно её не переводит ничто, кроме смены владельца
+     * ([resetWelcomeLatch]). Ждать записи на диск для этого нельзя — она и есть
+     * то самое опаздывающее звено.
+     */
+    @Volatile
+    private var welcomeHandled = false
+
     private suspend fun evaluateWelcome(rooms: List<RoomSummary>) {
+        if (welcomeHandled) return
         val userId = sessionStore.state.value?.me?.id ?: return
         val seen = sessionStore.welcomeSeen(userId).first()
+        // Ещё одна проверка: пока читали флаг, человек мог закрыть приветствие.
+        if (welcomeHandled) return
         _showWelcome.value = shouldShowWelcome(
             hasSeen = seen,
             groupCount = rooms.size,
             // Диплинк на Android уводит с этого экрана сам (MainScaffold
             // навигирует в комнату), поэтому здесь его учитывать нечем.
             hasPendingDeeplink = false,
+            alreadyHandled = welcomeHandled,
         )
     }
 
     /** Пропуск — это тоже ответ «не показывай больше». */
     fun dismissWelcome(createGroup: Boolean) {
+        welcomeHandled = true
         _showWelcome.value = false
         _openCreateGroup.value = createGroup
         viewModelScope.launch {

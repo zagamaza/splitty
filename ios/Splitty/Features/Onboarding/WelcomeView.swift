@@ -22,6 +22,15 @@ struct WelcomeView: View {
 
     @State private var page = 0
 
+    /// Событие «начал онбординг» уже отправлено за этот показ.
+    ///
+    /// `.onAppear` считает ПОЯВЛЕНИЯ view, а не начало прохождения: он
+    /// срабатывает и на возврате, и на перерисовке, и один человек давал
+    /// несколько onboarding_started подряд — шаг воронки переставал быть
+    /// счётным. Флаг живёт вместе с показом: новый `fullScreenCover` создаёт
+    /// view заново, и новое прохождение считается честно.
+    @State private var didTrackStart = false
+
     private static let pageCount = 4
 
     var body: some View {
@@ -65,7 +74,11 @@ struct WelcomeView: View {
             .accessibilityIdentifier("welcomePrimary")
         }
         .background(Color.bg)
-        .onAppear { Analytics.shared.track(.onboardingStarted) }
+        .onAppear {
+            guard !didTrackStart else { return }
+            didTrackStart = true
+            Analytics.shared.track(.onboardingStarted)
+        }
         .onChange(of: page) { _, current in
             guard let step = WelcomeStep(rawValue: current) else { return }
             Analytics.shared.track(.onboardingStep(step: step.analyticsName))

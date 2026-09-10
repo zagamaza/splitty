@@ -29,4 +29,37 @@ class WelcomeGateTest {
     fun `deeplink wins`() {
         assertFalse(shouldShowWelcome(hasSeen = false, groupCount = 0, hasPendingDeeplink = true))
     }
+
+    /**
+     * Закрыл — значит закрыл, даже если диск об этом ещё не знает.
+     *
+     * Ровно этот случай и ломал онбординг: `markWelcomeSeen` пишется
+     * асинхронно, а список комнат перечитывается часто. Пока запись в пути,
+     * `hasSeen` честно отдаёт `false`, и без защёлки приветствие возвращалось
+     * поверх списка — а в аналитике появлялся ещё один onboarding_started.
+     */
+    @Test
+    fun `handled wins over stale hasSeen`() {
+        assertFalse(
+            shouldShowWelcome(
+                hasSeen = false,
+                groupCount = 0,
+                hasPendingDeeplink = false,
+                alreadyHandled = true,
+            ),
+        )
+    }
+
+    /** Защёлка не подменяет остальные условия: без неё правило прежнее. */
+    @Test
+    fun `not handled keeps previous rule`() {
+        assertTrue(
+            shouldShowWelcome(
+                hasSeen = false,
+                groupCount = 0,
+                hasPendingDeeplink = false,
+                alreadyHandled = false,
+            ),
+        )
+    }
 }
