@@ -106,6 +106,18 @@ class Analytics @Inject constructor(
     private var timer: Job? = null
 
     /**
+     * Для кого выпущена текущая сессия.
+     *
+     * Отдельно от [ownerUserId] намеренно. Сессию надо сменить в момент входа,
+     * а [ownerUserId] двигает более поздняя эмиссия чистильщика; привязав
+     * ротацию к нему, пришлось бы двигать его из [trackSignedIn] — и тогда
+     * ранний выход [onOwnerChanged] погасил бы таймер досыла и чистку очереди.
+     * То есть починка сессий молча сломала бы отправку.
+     */
+    @Volatile
+    private var sessionOwnerId: Long? = null
+
+    /**
      * Смена владельца: события прошлого человека выбрасываем, а не
      * переклеиваем на нового.
      *
@@ -119,10 +131,21 @@ class Analytics @Inject constructor(
     fun onOwnerChanged(userId: Long?, keepQueue: Boolean = false) {
         if (ownerUserId == userId) return
         ownerUserId = userId
-        sessionId = UUID.randomUUID().toString()
+        // Ротация не безусловна: на входе её уже сделал trackSignedIn, и
+        // повторённая здесь она развела бы login_completed и первые экраны по
+        // разным сессиям. Таймер и чистка очереди выполняются всегда — эта
+        // эмиссия единственная, кто их двигает.
+        rotateSessionFor(userId)
         if (userId == null) stopTimer() else startTimer()
         if (keepQueue) return
         scope.launch { queue.keepOwned(userId) }
+    }
+
+    /** Новая сессия при смене того, кому она принадлежит; см. [sessionOwnerId]. */
+    private fun rotateSessionFor(userId: Long?) {
+        if (sessionOwnerId == userId) return
+        sessionOwnerId = userId
+        sessionId = UUID.randomUUID().toString()
     }
 
     /**
@@ -218,6 +241,13 @@ class Analytics @Inject constructor(
      */
     fun trackSignedIn(event: AnalyticsEvent, userId: Long, token: String) {
         if (!ENABLED) return
+        // Сессия меняется ЗДЕСЬ и синхронно, до записи события. Всё, что до
+        // входа — login_shown, login_started, онбординг, auth_completed, —
+        // осталось в прежней, обезличенной сессии; login_completed попадает в
+        // новую. Совпади они, обезличенный поток склеился бы с именным по
+        // ключу: одна запись с device_id, другая с номером человека, а поле
+        // session — общее. Ровно это и запрещено в handlePostAnonymousEvents.
+        rotateSessionFor(userId)
         val record = record(event, userId)
         scope.launch {
             queue.append(record)

@@ -35,6 +35,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
@@ -384,6 +385,103 @@ class AnalyticsBacklogTest {
             listOf(2L),
             queue.snapshot().map { it.ownerUserId },
             "событие экрана нового человека записано на прошлого владельца",
+        )
+    }
+
+    /** Поля session из тела запроса — к любому из двух маршрутов. */
+    private fun sessionsOf(request: RecordedRequest): List<String> =
+        SplittyJson.parseToJsonElement(request.body.readUtf8())
+            .jsonObject["events"]!!.jsonArray
+            .map { it.jsonObject["session"]!!.jsonPrimitive.content }
+
+    /**
+     * Вход начинает новую сессию — и это единственное, что разделяет два потока.
+     *
+     * До входа события уходят обезличенно: с device_id и без номера человека.
+     * После входа — с номером и без устройства. Связывать их сервер
+     * отказывается намеренно, но совпади у них поле session — и связывать не
+     * придётся: обезличенная запись и именная сойдутся по ключу сами.
+     */
+    @Test
+    fun signInStartsNewSessionForNamedStream() = runBlocking {
+        server.enqueue(ok())
+        server.enqueue(ok())
+        val analytics = analytics()
+
+        analytics.trackAnonymous(AnalyticsEvent.LoginStarted("google"))
+        val anonymous = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        analytics.trackSignedIn(AnalyticsEvent.LoginCompleted("google"), userId = 1, token = "token-A")
+        val named = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+
+        assertTrue(
+            sessionsOf(anonymous).single() != sessionsOf(named).single(),
+            "login_started и login_completed уехали в одной сессии — " +
+                "обезличенный поток склеивается с именным по ключу",
+        )
+    }
+
+    /**
+     * Вход сменил сессию — но не забрал у onOwnerChanged его работу.
+     *
+     * Соблазнительная реализация «пометить владельца прямо на входе» гасит
+     * ранний выход onOwnerChanged, а с ним таймер досыла и чистку очереди.
+     * Снаружи это выглядит как починенные сессии при переставшей работать
+     * отправке.
+     */
+    @Test
+    fun signInKeepsPurgeOfForeignRecords() = runBlocking {
+        server.enqueue(ok())
+        val analytics = analytics()
+
+        // Чужая запись в очереди: её оставил прошлый человек.
+        session.signIn("token-B", Me(id = 2, displayName = "Б"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-B" } }
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        awaitQueueSize(1)
+
+        session.logout()
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        analytics.trackSignedIn(AnalyticsEvent.LoginCompleted("google"), userId = 1, token = "token-A")
+        analytics.onOwnerChanged(1)
+
+        withTimeout(IO_WAIT_MS) {
+            while (queue.snapshot().any { it.ownerUserId == 2L }) delay(10)
+        }
+        assertTrue(
+            queue.snapshot().none { it.ownerUserId == 2L },
+            "записи прошлого человека остались — onOwnerChanged обесточен входом",
+        )
+    }
+
+    /**
+     * Ротация на вход ровно одна.
+     *
+     * onOwnerChanged приезжает отдельной эмиссией чистильщика уже ПОСЛЕ входа.
+     * Ротируй он второй раз — login_completed остался бы в одной сессии, а
+     * первые экраны человека уехали бы в другую, и сеанс распался бы надвое.
+     */
+    @Test
+    fun signInRotatesSessionOnce() = runBlocking {
+        server.enqueue(ok())
+        val analytics = analytics()
+
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        analytics.trackSignedIn(AnalyticsEvent.LoginCompleted("google"), userId = 1, token = "token-A")
+        val named = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+
+        analytics.onOwnerChanged(1)
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        awaitQueueSize(1)
+
+        assertEquals(
+            sessionsOf(named).single(),
+            queue.snapshot().single().session,
+            "первый экран после входа уехал в другую сессию — ротация случилась дважды",
         )
     }
 }

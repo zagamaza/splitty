@@ -168,6 +168,36 @@ final class AnalyticsTests: XCTestCase {
         XCTAssertEqual(event["name"] as? String, "logout")
     }
 
+    /// Смена владельца начинает новую сессию — и на этом держится граница
+    /// между обезличенным и именным потоками.
+    ///
+    /// До входа события уходят с `device` и без номера человека, после — с
+    /// номером и без устройства. Связывать их сервер отказывается намеренно,
+    /// но совпади у них поле `session` — и связывать не придётся: записи
+    /// сойдутся по ключу сами. Здесь проверяется именно то, что ротация
+    /// случается в `configure`, то есть ДО `track(.loginCompleted)` в
+    /// `adoptSession`.
+    @MainActor
+    func testConfigureStartsNewSessionOnOwnerChange() {
+        let queue = AnalyticsQueue(fileURL: fileURL)
+        let analytics = Analytics(queue: queue)
+
+        analytics.configure(api: nil, userId: 1)
+        analytics.track(.screenView(screen: "groups"))
+        let before = queue.records.last?.session
+
+        analytics.configure(api: nil, userId: 2)
+        analytics.track(.screenView(screen: "groups"))
+        let after = queue.records.last?.session
+
+        XCTAssertNotNil(before)
+        XCTAssertNotNil(after)
+        XCTAssertNotEqual(
+            before, after,
+            "сессия не сменилась вместе с владельцем — два потока склеятся по ключу"
+        )
+    }
+
     /// Имена и параметры совпадают с контрактом: событие — проводной договор с
     /// сервером, и «почти то же имя» означает потерянный шаг воронки.
     func testEventNamesMatchContract() {
