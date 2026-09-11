@@ -1,0 +1,13 @@
+{
+  "appId": "6787746052",
+  "version": "1.14",
+  "buildId": "93ff4bb7-bcdb-4fb9-8945-1d2101eaee89",
+  "metadataDir": "metadata/version/1.14",
+  "platform": "IOS",
+  "versionId": "a9b4ac9e-0ed2-485e-b689-a128dead02e0",
+  "mode": "stage",
+  "completed": {
+    "ensure_version": true
+  },
+  "updatedAt": "2026-09-11T14:49:05Z"
+}
