@@ -154,6 +154,10 @@ struct RootView: View {
             do {
                 _ = try await session.api.joinRoom(id: roomId)
                 Analytics.shared.track(.roomJoined(via: "link"))
+                // Первая туса — первый повод для уведомлений: до неё пушам неоткуда
+                // взяться. Спрашиваем здесь, а не на запуске, где вопрос выскакивал
+                // поверх первого кадра.
+                PushManager.shared.requestAuthorizationWhenEarned()
                 // Вступили — намерение исполнено. Чистим до показа комнаты,
                 // иначе следующий триггер (`.task` при возврате на корень)
                 // отправил бы второй такой же запрос.

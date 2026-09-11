@@ -68,15 +68,32 @@ final class PushManager: NSObject, PushTokenBinding {
 
     // MARK: Конфигурация (из AppDelegate.didFinishLaunching)
 
-    /// Настраивает Firebase, делегатов и запрашивает разрешение + APNs-токен.
-    /// Идемпотентно относительно повторного вызова FirebaseApp.configure не будет —
-    /// зовётся один раз из AppDelegate.
+    /// Настраивает Firebase и делегатов. Разрешения НЕ спрашивает.
+    ///
+    /// Зовётся один раз из AppDelegate. Раньше отсюда же уходил
+    /// `requestAuthorization()`, и системный лист про уведомления выскакивал
+    /// поверх первого кадра — до того, как человек увидел хоть один экран.
+    /// Просить в этот момент нечего: уведомлять его пока не о чем, а «нет»,
+    /// сказанное вслепую, живёт до переустановки.
     func configure() {
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
+    }
+
+    /// Спросить разрешение — когда уведомлять уже есть о чём.
+    ///
+    /// Зовётся после первой тусы: до неё пушам неоткуда взяться, а после
+    /// каждая чужая трата и каждый долг — ровно то, ради чего их включают.
+    /// Отметка переживает перезапуск: система и так покажет лист один раз, но
+    /// и наш вызов не должен повторяться на каждой следующей тусе.
+    func requestAuthorizationWhenEarned() {
+        guard !UserDefaults.standard.bool(forKey: Self.authorizationAskedKey) else { return }
+        UserDefaults.standard.set(true, forKey: Self.authorizationAskedKey)
         requestAuthorization()
     }
+
+    private static let authorizationAskedKey = "splitty.push.authorizationAsked"
 
     /// Привязать сессию (зовёт `SplittyApp` при появлении окна). Если FCM-токен
     /// уже получен, а пользователь авторизован — регистрируем немедленно

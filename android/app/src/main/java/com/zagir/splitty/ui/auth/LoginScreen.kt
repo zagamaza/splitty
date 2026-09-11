@@ -265,12 +265,19 @@ internal fun ValueProps() {
         modifier = Modifier.fillMaxWidth().widthIn(max = 380.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        // Пункт остался один. Приветствие переехало ПЕРЕД входом, и «общий
-        // счёт» с «платите один раз» оно объясняет четырьмя страницами с
-        // арифметикой — подробнее, чем строка списка; повторять их здесь
-        // значит обещать одно и то же дважды. А страх «оно спишет деньги?»
-        // приветствие не снимает, и ответ на него обязан стоять там, где
-        // человека просят войти.
+        // Приветствие теперь стоит перед входом, но пункты остаются: его можно
+        // пропустить с любой страницы, и пропустивший приходит сюда, не узнав
+        // о продукте ничего.
+        ValueProp(
+            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+            title = stringResource(R.string.login_prop_split_title),
+            body = stringResource(R.string.login_prop_split_body),
+        )
+        ValueProp(
+            icon = Icons.Filled.Merge,
+            title = stringResource(R.string.login_prop_once_title),
+            body = stringResource(R.string.login_prop_once_body),
+        )
         ValueProp(
             icon = Icons.AutoMirrored.Filled.ArrowForward,
             title = stringResource(R.string.login_prop_money_title),

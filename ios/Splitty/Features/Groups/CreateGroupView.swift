@@ -177,6 +177,10 @@ struct CreateGroupView: View {
                 currency: (chosen ?? defaultCurrencyCode).lowercased(),
                 picked: didPickCurrency
             ))
+            // Первая туса — первый повод для уведомлений: до неё пушам неоткуда
+            // взяться. Спрашиваем здесь, а не на запуске, где системный лист
+            // выскакивал поверх первого кадра, до единого объяснения.
+            PushManager.shared.requestAuthorizationWhenEarned()
             // Единая инвалидация: список групп перезагрузится по dataVersion.
             session.noteDataChanged()
             Haptics.success()

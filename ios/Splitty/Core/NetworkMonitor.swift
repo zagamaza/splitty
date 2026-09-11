@@ -13,8 +13,23 @@ final class NetworkMonitor {
     private(set) var isOnline = true
 
     private let monitor = NWPathMonitor()
+    private var isStarted = false
 
-    init() {
+    /// Начать слежение.
+    ///
+    /// Отдельно от `init`, и это не про стиль. `NWPathMonitor` смотрит ВСЕ
+    /// интерфейсы, включая локальные, и система считает это обращением к
+    /// локальной сети — со своим системным запросом. Пока монитор стартовал в
+    /// конструкторе сессии, запрос выскакивал на первом кадре: человек ещё не
+    /// видел ни одного экрана, а у него уже спрашивают про домашнюю сеть.
+    ///
+    /// Спрашивать там не за что: офлайн-баннер и офлайн-ветки живут только под
+    /// входом — у гостя нет ни кеша, ни очереди расходов. Поэтому слежение
+    /// начинается вместе с сессией, а до неё `isOnline` отдаёт `true`: не зная
+    /// ничего, мигать баннером хуже, чем молчать.
+    func start() {
+        guard !isStarted else { return }
+        isStarted = true
         monitor.pathUpdateHandler = { [weak self] path in
             let online = path.status == .satisfied
             Task { @MainActor [weak self] in
@@ -26,6 +41,6 @@ final class NetworkMonitor {
     }
 
     deinit {
-        monitor.cancel()
+        if isStarted { monitor.cancel() }
     }
 }

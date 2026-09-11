@@ -119,6 +119,10 @@ struct JoinGroupView: View {
         do {
             _ = try await session.api.joinRoom(id: roomId)
             Analytics.shared.track(.roomJoined(via: "code"))
+            // Первая туса — первый повод для уведомлений: до неё пушам неоткуда
+            // взяться. Спрашиваем здесь, а не на запуске, где вопрос выскакивал
+            // поверх первого кадра.
+            PushManager.shared.requestAuthorizationWhenEarned()
             // Единая инвалидация: список групп перезагрузится по dataVersion.
             session.noteDataChanged()
             Haptics.success()

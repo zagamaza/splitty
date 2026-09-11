@@ -23,10 +23,8 @@ import org.robolectric.annotation.Config
  * — она описывает любое приложение категории. Её сменили три пункта: что я
  * записываю, что это даёт, переводит ли приложение деньги.
  *
- * Теперь пункт снова один, и это не откат. Приветствие переехало ПЕРЕД входом
- * и объясняет первые два вопроса четырьмя страницами с арифметикой —
- * подробнее, чем строка списка. А «оно спишет деньги?» приветствие не
- * снимает, и ответ обязан стоять там, где человека просят войти.
+ * Переезд приветствия ВПЕРЁД их не отменяет: приветствие пропускаемо с любой
+ * страницы, и пропустивший приходит сюда, не узнав о продукте ничего.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -38,13 +36,15 @@ class LoginValuePropsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun `login screen does not repeat what the intro already said`() {
+    fun `login screen explains the product in three points`() {
         composeRule.setContent { SplittyTheme { ValueProps() } }
 
-        composeRule.onNodeWithText(context.getString(R.string.login_prop_money_title))
-            .assertIsDisplayed()
-        listOf(R.string.login_prop_split_title, R.string.login_prop_once_title).forEach { res ->
-            composeRule.onNodeWithText(context.getString(res)).assertDoesNotExist()
+        listOf(
+            R.string.login_prop_split_title,
+            R.string.login_prop_once_title,
+            R.string.login_prop_money_title,
+        ).forEach { res ->
+            composeRule.onNodeWithText(context.getString(res)).assertIsDisplayed()
         }
     }
 
@@ -63,7 +63,7 @@ class LoginValuePropsTest {
             }
         }
 
-        composeRule.onNodeWithText(context.getString(R.string.login_prop_money_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.login_prop_once_title)).assertIsDisplayed()
     }
 
     /** Самый частый страх — «оно спишет деньги?». Ответ обязан быть до входа. */

@@ -409,11 +409,18 @@ class AnalyticsBacklogTest {
         )
     }
 
-    /** Поля session из тела запроса — к любому из двух маршрутов. */
-    private fun sessionsOf(request: RecordedRequest): List<String> =
+    /**
+     * Поле session у события с этим именем — из тела запроса.
+     *
+     * По имени, а не «единственное событие в пачке»: отправка идёт своей
+     * корутиной, и под нагрузкой в один запрос успевает попасть соседнее
+     * событие. Тест про сессии от количества событий в пачке не зависит.
+     */
+    private fun sessionOf(request: RecordedRequest, name: String): String =
         SplittyJson.parseToJsonElement(request.body.readUtf8())
             .jsonObject["events"]!!.jsonArray
-            .map { it.jsonObject["session"]!!.jsonPrimitive.content }
+            .single { it.jsonObject["name"]!!.jsonPrimitive.content == name }
+            .jsonObject["session"]!!.jsonPrimitive.content
 
     /**
      * Вход начинает новую сессию — и это единственное, что разделяет два потока.
@@ -439,7 +446,7 @@ class AnalyticsBacklogTest {
         val named = takeNamed()
 
         assertTrue(
-            sessionsOf(anonymous).single() != sessionsOf(named).single(),
+            sessionOf(anonymous, "login_started") != sessionOf(named, "login_completed"),
             "login_started и login_completed уехали в одной сессии — " +
                 "обезличенный поток склеивается с именным по ключу",
         )
@@ -503,7 +510,7 @@ class AnalyticsBacklogTest {
         awaitQueueSize(1)
 
         assertEquals(
-            sessionsOf(named).single(),
+            sessionOf(named, "login_completed"),
             queue.snapshot().single().session,
             "первый экран после входа уехал в другую сессию — ротация случилась дважды",
         )
