@@ -624,6 +624,7 @@
     <string name="welcome_skip">Überspringen</string>
     <string name="welcome_next">Weiter</string>
     <string name="welcome_create">Gruppe erstellen</string>
+    <string name="welcome_start">Loslegen</string>
     <string name="welcome_1_title">Eine Gruppe ist eine gemeinsame Rechnung</string>
     <string name="welcome_1_body">Eine Reise, eine WG oder ein Abendessen. Einer zahlt, alle teilen.</string>
     <string name="welcome_bill_tray">Gruppenrechnung</string>

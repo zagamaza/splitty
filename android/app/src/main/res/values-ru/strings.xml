@@ -661,6 +661,7 @@
     <string name="welcome_skip">Пропустить</string>
     <string name="welcome_next">Далее</string>
     <string name="welcome_create">Создать группу</string>
+    <string name="welcome_start">Начать</string>
     <string name="welcome_1_title">Группа — это общий счёт</string>
     <string name="welcome_1_body">Поездка, съёмная квартира или один ужин. Платит кто-то один, а расход делят все.</string>
     <string name="welcome_bill_tray">Общий счёт группы</string>

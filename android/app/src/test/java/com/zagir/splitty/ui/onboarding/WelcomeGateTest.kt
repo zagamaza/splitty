@@ -8,58 +8,39 @@ import kotlin.test.assertTrue
 class WelcomeGateTest {
 
     @Test
-    fun `shown to a new account without groups`() {
-        assertTrue(shouldShowWelcome(hasSeen = false, groupCount = 0, hasPendingDeeplink = false))
+    fun `shown to a fresh install`() {
+        assertTrue(shouldShowIntro(hasSeen = false, hasPendingDeeplink = false))
     }
 
-    /** Второй запуск: человек уже всё это читал. */
+    /** Второй запуск: эта установка всё это уже читала. */
     @Test
     fun `not shown twice`() {
-        assertFalse(shouldShowWelcome(hasSeen = true, groupCount = 0, hasPendingDeeplink = false))
-    }
-
-    /** У кого есть группы — объяснять нечего. */
-    @Test
-    fun `not shown when groups exist`() {
-        assertFalse(shouldShowWelcome(hasSeen = false, groupCount = 2, hasPendingDeeplink = false))
-    }
-
-    /** Пришёл по ссылке приглашения — ведём в группу, а не в рассказ о продукте. */
-    @Test
-    fun `deeplink wins`() {
-        assertFalse(shouldShowWelcome(hasSeen = false, groupCount = 0, hasPendingDeeplink = true))
+        assertFalse(shouldShowIntro(hasSeen = true, hasPendingDeeplink = false))
     }
 
     /**
-     * Закрыл — значит закрыл, даже если диск об этом ещё не знает.
+     * Пришёл по ссылке приглашения — ведём в тусу, а не в рассказ о продукте.
      *
-     * Ровно этот случай и ломал онбординг: `markWelcomeSeen` пишется
-     * асинхронно, а список комнат перечитывается часто. Пока запись в пути,
-     * `hasSeen` честно отдаёт `false`, и без защёлки приветствие возвращалось
-     * поверх списка — а в аналитике появлялся ещё один onboarding_started.
+     * Показать приглашённому четыре страницы вместо тусы, в которую его
+     * позвали, значит потерять переход.
      */
     @Test
-    fun `handled wins over stale hasSeen`() {
-        assertFalse(
-            shouldShowWelcome(
-                hasSeen = false,
-                groupCount = 0,
-                hasPendingDeeplink = false,
-                alreadyHandled = true,
-            ),
-        )
+    fun `deeplink wins`() {
+        assertFalse(shouldShowIntro(hasSeen = false, hasPendingDeeplink = true))
     }
 
-    /** Защёлка не подменяет остальные условия: без неё правило прежнее. */
+    /**
+     * Намерение побеждает и тогда, когда приветствие уже на экране.
+     *
+     * Решение не защёлкивается: гейт — чистая функция от текущего состояния, и
+     * появившееся намерение закрывает приветствие само. Свежий тап по ссылке
+     * пишется на диск асинхронно, и на холодном старте первый кадр рисуется
+     * раньше ответа DataStore — поэтому у намерения есть ещё и синхронный
+     * источник, `PendingJoinStore.arrivedInProcess`.
+     */
     @Test
-    fun `not handled keeps previous rule`() {
-        assertTrue(
-            shouldShowWelcome(
-                hasSeen = false,
-                groupCount = 0,
-                hasPendingDeeplink = false,
-                alreadyHandled = false,
-            ),
-        )
+    fun `deeplink arriving later closes intro`() {
+        assertTrue(shouldShowIntro(hasSeen = false, hasPendingDeeplink = false))
+        assertFalse(shouldShowIntro(hasSeen = false, hasPendingDeeplink = true))
     }
 }

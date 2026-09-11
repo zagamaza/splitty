@@ -567,17 +567,17 @@ shouldShowIntro(hasSeen: Bool, hasPendingDeeplink: Bool) -> Bool
 - Modify: `android/app/src/test/java/com/zagir/splitty/ui/onboarding/WelcomeScreenTest.kt` (существует)
 - Modify: `android/app/src/test/java/com/zagir/splitty/ui/onboarding/WelcomeRenderTest.kt` (существует)
 
-- [ ] `shouldShowIntro(hasSeen, hasPendingDeeplink)`; `alreadyHandled` и `welcomeHandled` удаляются
-- [ ] флаг «видел» — `Bool` в **синхронном SharedPreferences** (как `InstallDeviceId`), а не в DataStore: это снимает гонку `WelcomeGate.kt:12-18`
-- [ ] флаг ставится также при любом успешном входе — в `SessionStore.signIn`, а не во `LoginViewModel`, иначе три способа входа разъедутся
-- [ ] **миграция** — в том же потоке DataStore, который даёт `session` (тогда `session == null` покрывает и её): флаг ставится, если `KEY_WELCOME_SEEN` непусто **или есть сохранённая сессия**
-- [ ] `hasPendingDeeplink` получает **настоящий** источник (сегодня захардкожен `false`): `pendingJoinStore.pending` через `stateIn` с отдельным начальным значением
-- [ ] свежий тап по ссылке кладётся **также в память**, синхронно, по образцу `PushEventBus`
-- [ ] ветвь интро перед `else -> LoginScreen()`, ветвь «ещё не прочитано» сохраняется
-- [ ] `WelcomeScreen` из `GroupsListScreen` и `_showWelcome` из `GroupsListViewModel` удалены; снимок `GroupsEmptyStateSnapshotTest` переснят, если тексты поехали
-- [ ] `LaunchedEffect(Unit) { onEvent(OnboardingStarted) }` перепроверить: до входа это другой жизненный цикл
-- [ ] события онбординга уходят через `trackAnonymous`
-- [ ] тесты, симметричные iOS, включая обе гонки
+- [x] `shouldShowIntro(hasSeen, hasPendingDeeplink)`; `alreadyHandled` и `welcomeHandled` удаляются
+- [x] флаг «видел» — `Bool` в **синхронном SharedPreferences** (как `InstallDeviceId`), а не в DataStore: это снимает гонку `WelcomeGate.kt:12-18`
+- [x] флаг ставится также при любом успешном входе — в `SessionStore.signIn`, а не во `LoginViewModel`, иначе три способа входа разъедутся
+- [x] **миграция** — в том же потоке DataStore, который даёт `session` (тогда `session == null` покрывает и её): флаг ставится, если `KEY_WELCOME_SEEN` непусто **или есть сохранённая сессия**
+- [x] `hasPendingDeeplink` получает **настоящий** источник (сегодня захардкожен `false`): `pendingJoinStore.pending` через `stateIn` с отдельным начальным значением
+- [x] свежий тап по ссылке кладётся **также в память**, синхронно, по образцу `PushEventBus`
+- [x] ветвь интро перед `else -> LoginScreen()`, ветвь «ещё не прочитано» сохраняется
+- [x] `WelcomeScreen` из `GroupsListScreen` и `_showWelcome` из `GroupsListViewModel` удалены; снимок `GroupsEmptyStateSnapshotTest` переснят, если тексты поехали
+- [x] `LaunchedEffect(Unit) { onEvent(OnboardingStarted) }` перепроверить: до входа это другой жизненный цикл
+- [x] события онбординга уходят через `trackAnonymous`
+- [x] тесты, симметричные iOS, включая обе гонки
 
 ### Задача 5: На экране входа остаётся один пункт
 

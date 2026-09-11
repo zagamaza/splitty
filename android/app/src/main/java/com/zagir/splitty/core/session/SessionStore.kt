@@ -387,21 +387,22 @@ class SessionStore @Inject constructor(
     }
 
     /**
-     * Видел ли этот аккаунт разовое приветствие.
+     * Непусто ли ПРЕЖНЕЕ хранилище отметки о приветствии.
      *
-     * Храним НАБОР номеров аккаунтов, а не один флаг на устройство: вход другим
-     * человеком на том же телефоне обязан показать приветствие снова — иначе
-     * новый пользователь молча теряет единственное объяснение продукта.
+     * Отметка переехала на установку и в синхронный SharedPreferences
+     * (`SharedPrefsIntroSeen`): приветствие идёт до входа, и аккаунта в этот
+     * момент не существует. Здесь остался только источник для миграции —
+     * набор номеров аккаунтов, которые приветствие закрывали.
+     *
+     * Поток, а не разовое чтение, намеренно: миграция обязана ехать ТЕМ ЖЕ
+     * чтением DataStore, что и сессия. Тогда состояние «ещё не знаю» у них
+     * общее, и отдельного третьего источника неизвестности в корне не
+     * появляется.
+     *
+     * Писать сюда больше нечему: новые отметки уходят в SharedPreferences.
      */
-    fun welcomeSeen(userId: Long): Flow<Boolean> =
-        dataStore.data.map { prefs -> prefs[KEY_WELCOME_SEEN]?.contains(userId.toString()) == true }
-
-    /** Пропуск — это ответ «не показывай больше», поэтому зовётся и из «Пропустить». */
-    suspend fun markWelcomeSeen(userId: Long) {
-        dataStore.edit { prefs ->
-            prefs[KEY_WELCOME_SEEN] = (prefs[KEY_WELCOME_SEEN] ?: emptySet()) + userId.toString()
-        }
-    }
+    val legacyWelcomeSeen: Flow<Boolean> =
+        dataStore.data.map { prefs -> prefs[KEY_WELCOME_SEEN]?.isNotEmpty() == true }
 
     /** Сменить адрес сервера (персистится; действует на все последующие запросы). */
     suspend fun setBaseUrl(url: String) {

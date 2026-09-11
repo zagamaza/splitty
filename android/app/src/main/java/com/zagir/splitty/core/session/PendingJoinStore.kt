@@ -9,6 +9,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -72,6 +75,30 @@ class PendingJoinStore @Inject constructor(
         }
         .distinctUntilChanged()
 
+    private val _arrivedInProcess = MutableStateFlow(false)
+
+    /**
+     * Ссылку тапнули в ЭТОМ процессе — видно синхронно, первому же кадру.
+     *
+     * [pending] для этого не годится: запись на диск асинхронна
+     * (`MainActivity` кладёт её в appScope), чтение тоже, и между тапом и
+     * ответом диска корень успевает отрисоваться не раз. Раньше это было
+     * неважно — приветствие жило под входом, и к моменту, когда оно решало
+     * показаться, намерение давно лежало на месте. Теперь приветствие стоит
+     * ПЕРЕД входом, то есть ровно там, куда попадает приглашённый на холодном
+     * старте: без синхронной отметки он увидел бы рассказ о продукте вместо
+     * тусы, в которую его позвали.
+     *
+     * Тот же приём, что у [com.zagir.splitty.push.PushEventBus] и по той же
+     * причине: жест случается раньше, чем собран корневой экран.
+     */
+    val arrivedInProcess: StateFlow<Boolean> = _arrivedInProcess.asStateFlow()
+
+    /** Ссылка тапнута — зовётся синхронно, до записи на диск. */
+    fun noteArrived() {
+        _arrivedInProcess.value = true
+    }
+
     /**
      * Запомнить намерение (пришла ссылка). [ownerId] — id вошедшего сейчас
      * пользователя; null, если ссылку открыл гость.
@@ -98,6 +125,7 @@ class PendingJoinStore @Inject constructor(
      * (см. `AppRoot.joinPending`).
      */
     suspend fun clear() {
+        _arrivedInProcess.value = false
         dataStore.edit { prefs ->
             prefs.remove(KEY_PENDING_JOIN)
             prefs.remove(KEY_PENDING_JOIN_OWNER)

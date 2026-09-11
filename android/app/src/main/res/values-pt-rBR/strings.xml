@@ -557,6 +557,7 @@
     <string name="welcome_skip">Pular</string>
     <string name="welcome_next">Avançar</string>
     <string name="welcome_create">Criar um grupo</string>
+    <string name="welcome_start">Começar</string>
     <string name="welcome_1_title">Um grupo é uma conta compartilhada</string>
     <string name="welcome_1_body">Uma viagem, um apartamento ou um único jantar. Uma pessoa paga e todos dividem o custo.</string>
     <string name="welcome_bill_tray">Conta do grupo</string>

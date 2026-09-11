@@ -557,6 +557,7 @@
     <string name="welcome_skip">スキップ</string>
     <string name="welcome_next">次へ</string>
     <string name="welcome_create">グループを作成</string>
+    <string name="welcome_start">はじめる</string>
     <string name="welcome_1_title">グループは共同の会計です</string>
     <string name="welcome_1_body">旅行、賃貸の部屋、1回の食事。誰か1人が支払い、費用は全員で分けます。</string>
     <string name="welcome_bill_tray">グループの会計</string>

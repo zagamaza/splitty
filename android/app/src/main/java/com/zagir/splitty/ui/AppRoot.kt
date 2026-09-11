@@ -27,6 +27,9 @@ import com.zagir.splitty.push.PushRoute
 import com.zagir.splitty.ui.auth.LoginScreen
 import com.zagir.splitty.ui.groups.GroupsAlertDialog
 import com.zagir.splitty.ui.main.MainScaffold
+import com.zagir.splitty.ui.onboarding.IntroSeenSource
+import com.zagir.splitty.ui.onboarding.WelcomeScreen
+import com.zagir.splitty.ui.onboarding.shouldShowIntro
 import com.zagir.splitty.ui.components.humanErrorText
 import com.zagir.splitty.ui.theme.Splitty
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -57,6 +60,7 @@ class AppRootViewModel @Inject constructor(
     private val repository: SplittyRepository,
     private val pushEventBus: PushEventBus,
     private val analytics: Analytics,
+    private val introSeen: IntroSeenSource,
 ) : ViewModel() {
     val session: StateFlow<Session?> = sessionStore.state
 
@@ -88,6 +92,68 @@ class AppRootViewModel @Inject constructor(
     /** Тап исполнен — намерение забываем, иначе оно переиграется. */
     fun onPushRouteHandled() {
         pushEventBus.consumeRoute()
+    }
+
+    /**
+     * Приветствие закрыто в этом сеансе.
+     *
+     * Отметка [IntroSeenSource] синхронна — в этом её смысл, — но синхронная
+     * запись никого не будит. Поток нужен, чтобы [showIntro] пересчитался сразу
+     * после нажатия, а не на следующей случайной эмиссии DataStore.
+     */
+    private val introDismissed = MutableStateFlow(false)
+
+    /**
+     * Показывать ли приветствие; null — ещё не знаем.
+     *
+     * Третье состояние не педантизм, а то же правило, по которому `session ==
+     * null` рисует пустой фон: пока DataStore читается, ответа нет, и любой из
+     * двух других вариантов был бы угадыванием. Получается оно само — `combine`
+     * молчит, пока не эмитнёт каждый источник, а начальное значение `stateIn`
+     * и есть «не знаю».
+     *
+     * Миграция отметки живёт ЗДЕСЬ, в том же чтении DataStore, что и сессия:
+     * иначе у неё было бы собственное «ещё не знаю», третье по счёту. Условий
+     * два, и второе важнее первого. Прежнее хранилище наполнялось только при
+     * закрытии показанного приветствия, а показывалось оно лишь тому, у кого
+     * нет ни одной тусы; у ветерана, заведшего тусу раньше, чем приветствие
+     * появилось, оно пустое — и единственный признак «эта установка уже была
+     * вошедшей» это сама сессия.
+     *
+     * Оттуда же правило «вход означает видел»: отметка ставится на каждой
+     * авторизованной эмиссии, а не только при первом входе. Это закрывает
+     * пришедшего по ссылке — он входит МИМО приветствия и без отметки получил
+     * бы его после первого же разлогина.
+     */
+    val showIntro: StateFlow<Boolean?> = combine(
+        sessionStore.state,
+        sessionStore.legacyWelcomeSeen,
+        pendingJoinStore.pending,
+        pendingJoinStore.arrivedInProcess,
+        introDismissed,
+    ) { session, legacySeen, pending, arrived, dismissed ->
+        if (session == null) return@combine null
+        if (!introSeen.hasSeen() && (legacySeen || session.isAuthenticated)) {
+            introSeen.markSeen()
+        }
+        if (session.isAuthenticated) return@combine false
+        shouldShowIntro(
+            hasSeen = introSeen.hasSeen() || dismissed,
+            // Диск мог ещё не ответить: синхронная отметка о тапе в этом
+            // процессе закрывает окно между жестом и записью.
+            hasPendingDeeplink = pending != null || arrived,
+        )
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Приветствие закрыто — и «Начать», и «Пропустить» ведут на вход. */
+    fun onIntroFinished() {
+        introSeen.markSeen()
+        introDismissed.value = true
+    }
+
+    /** Шаг приветствия — обезличенным маршрутом: аккаунта ещё нет. */
+    fun onIntroEvent(event: AnalyticsEvent) {
+        analytics.trackAnonymous(event)
     }
 
     private val _joinError = MutableStateFlow<UiText?>(null)
@@ -329,20 +395,24 @@ internal fun joinLinkErrorText(e: ApiException): UiText = when {
 }
 
 /**
- * Корень приложения: DataStore ещё читается → пустой фон (без мигания
- * логина), нет токена → LoginScreen, есть → MainScaffold.
+ * Корень приложения. Четыре ветви, и первая из них — «ещё не знаю»:
+ * DataStore читается → пустой фон (без мигания логина), есть токен →
+ * MainScaffold, приветствие не видели → приветствие, иначе → LoginScreen.
  * Аналог iOS RootView.
  */
 @Composable
 fun AppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
     val session by viewModel.session.collectAsStateWithLifecycle()
+    val showIntro by viewModel.showIntro.collectAsStateWithLifecycle()
     val openRoomId by viewModel.openRoomId.collectAsStateWithLifecycle()
     val pushRoute by viewModel.pushRoute.collectAsStateWithLifecycle()
     val joinError by viewModel.joinError.collectAsStateWithLifecycle()
     Surface(modifier = Modifier.fillMaxSize(), color = Splitty.colors.bg) {
         Box(Modifier.fillMaxSize()) {
             when {
-                session == null -> Box(
+                // Оба источника ещё молчат: сессия и решение про приветствие
+                // читаются одним и тем же DataStore.
+                session == null || showIntro == null -> Box(
                     Modifier
                         .fillMaxSize()
                         .background(Splitty.colors.bg)
@@ -355,6 +425,11 @@ fun AppRoot(viewModel: AppRootViewModel = hiltViewModel()) {
                     onRoomOpened = viewModel::onRoomOpened,
                     pushRoute = pushRoute,
                     onPushRouteHandled = viewModel::onPushRouteHandled,
+                )
+
+                showIntro == true -> WelcomeScreen(
+                    onFinish = viewModel::onIntroFinished,
+                    onEvent = viewModel::onIntroEvent,
                 )
 
                 else -> LoginScreen()

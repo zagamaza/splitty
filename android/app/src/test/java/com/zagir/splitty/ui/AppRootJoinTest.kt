@@ -25,6 +25,7 @@ import com.zagir.splitty.data.OfflineDataCleaner
 import com.zagir.splitty.data.OutboxStore
 import com.zagir.splitty.data.SplittyRepository
 import com.zagir.splitty.push.PushEventBus
+import com.zagir.splitty.ui.onboarding.IntroSeenSource
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
@@ -152,7 +153,20 @@ class AppRootJoinTest {
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
-                AppRootViewModel(session, pendingJoin, repository, PushEventBus(), analytics()) as T
+                AppRootViewModel(
+                    session,
+                    pendingJoin,
+                    repository,
+                    PushEventBus(),
+                    analytics(),
+                    // Отметка в памяти: настоящая живёт в SharedPreferences, а
+                    // здесь важна только её роль в гейте приветствия.
+                    object : IntroSeenSource {
+                        private var seen = false
+                        override fun hasSeen() = seen
+                        override fun markSeen() { seen = true }
+                    },
+                ) as T
         }
         return ViewModelProvider(vmStore, factory)[AppRootViewModel::class.java]
     }

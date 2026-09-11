@@ -557,6 +557,7 @@
     <string name="welcome_skip">跳过</string>
     <string name="welcome_next">下一步</string>
     <string name="welcome_create">创建群组</string>
+    <string name="welcome_start">开始使用</string>
     <string name="welcome_1_title">群组就是一份共同账单</string>
     <string name="welcome_1_body">旅行、租房或一顿晚餐。一个人付款，所有人分摊。</string>
     <string name="welcome_bill_tray">群组账单</string>

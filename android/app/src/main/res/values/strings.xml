@@ -640,6 +640,7 @@
     <string name="welcome_skip">Skip</string>
     <string name="welcome_next">Next</string>
     <string name="welcome_create">Create a group</string>
+    <string name="welcome_start">Get started</string>
     <string name="welcome_1_title">A group is one shared bill</string>
     <string name="welcome_1_body">A trip, a flat or a single dinner. One person pays, everyone shares the cost.</string>
     <string name="welcome_bill_tray">Group bill</string>

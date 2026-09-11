@@ -557,6 +557,7 @@
     <string name="welcome_skip">건너뛰기</string>
     <string name="welcome_next">다음</string>
     <string name="welcome_create">그룹 만들기</string>
+    <string name="welcome_start">시작하기</string>
     <string name="welcome_1_title">그룹은 하나의 공동 계산서입니다</string>
     <string name="welcome_1_body">여행, 임대한 집, 한 번의 저녁. 한 사람이 결제하고 비용은 모두가 나눕니다.</string>
     <string name="welcome_bill_tray">그룹 계산서</string>

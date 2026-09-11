@@ -19,6 +19,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import com.zagir.splitty.core.analytics.DeviceIdSource
+import com.zagir.splitty.ui.onboarding.IntroSeenSource
+import com.zagir.splitty.ui.onboarding.SharedPrefsIntroSeen
 import com.zagir.splitty.core.analytics.InstallDeviceId
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
@@ -106,4 +108,10 @@ object AppModule {
     @Singleton
     fun provideAnalyticsQueue(@ApplicationContext context: Context, json: Json): AnalyticsQueue =
         AnalyticsQueue(File(context.filesDir, "analytics.json"), json)
+
+    /** Отметка «эта установка видела приветствие» — синхронная, см. класс. */
+    @Provides
+    @Singleton
+    fun provideIntroSeenSource(@ApplicationContext context: Context): IntroSeenSource =
+        SharedPrefsIntroSeen(context)
 }

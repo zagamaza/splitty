@@ -40,12 +40,33 @@ class WelcomeScreenTest {
      * иначе приветствие превращается в ловушку.
      */
     @Test
-    fun `skip closes without creating a group`() {
-        var finished: Boolean? = null
-        composeRule.setContent { SplittyTheme { WelcomeScreen(onFinish = { finished = it }) } }
+    fun `skip closes the intro`() {
+        var finished = 0
+        composeRule.setContent { SplittyTheme { WelcomeScreen(onFinish = { finished++ }) } }
 
         composeRule.onNodeWithTag("welcome_skip").performClick()
 
-        assertEquals(false, finished, "«Пропустить» не закрыл приветствие или увёл в создание группы")
+        assertEquals(1, finished, "«Пропустить» не закрыл приветствие")
+    }
+
+    /**
+     * Пропуск — это ответ «не показывай больше», а не «покажи потом»: в
+     * событиях он обязан отличаться от дочитанного до конца, иначе шаг воронки
+     * перестаёт быть счётным.
+     */
+    @Test
+    fun `skip reports onboarding_skipped`() {
+        val names = mutableListOf<String>()
+        composeRule.setContent {
+            SplittyTheme { WelcomeScreen(onFinish = {}, onEvent = { names += it.name }) }
+        }
+
+        composeRule.onNodeWithTag("welcome_skip").performClick()
+
+        assertEquals(
+            listOf("onboarding_started", "onboarding_step", "onboarding_skipped"),
+            names,
+            "события приветствия разошлись с контрактом",
+        )
     }
 }

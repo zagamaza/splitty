@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.zagir.splitty.ui.onboarding.shouldShowWelcome
 import kotlinx.coroutines.flow.first
 
 /**
@@ -67,63 +66,6 @@ class GroupsListViewModel @Inject constructor(
      */
     private val _freshness = MutableStateFlow(DataFreshness())
     val freshness: StateFlow<DataFreshness> = _freshness.asStateFlow()
-
-    /**
-     * Показывать ли разовое приветствие. Решение живёт здесь, потому что только
-     * этот экран знает, пуст ли список групп, — а без пустого списка приветствие
-     * не показывается (см. [shouldShowWelcome]).
-     */
-    private val _showWelcome = MutableStateFlow(false)
-    val showWelcome: StateFlow<Boolean> = _showWelcome.asStateFlow()
-
-    /** Открыть создание группы: последний шаг приветствия ведёт сюда. */
-    private val _openCreateGroup = MutableStateFlow(false)
-    val openCreateGroup: StateFlow<Boolean> = _openCreateGroup.asStateFlow()
-
-    /**
-     * Приветствие уже закрыто в этом сеансе — синхронная защёлка.
-     *
-     * Персистентный флаг пишется асинхронно, а список комнат перечитывается
-     * часто, и [evaluateWelcome] успевал прочитать ещё старое «не видел» и
-     * вернуть приветствие обратно. Человек видел его снова поверх списка,
-     * а в аналитике onboarding_started стрелял по разу на каждое всплытие.
-     *
-     * Защёлка монотонна и живёт ровно столько, сколько сама вью-модель: другой
-     * человек входит с новой, и приветствие ему покажется как положено. Ждать
-     * записи на диск нельзя — она и есть то самое опаздывающее звено.
-     */
-    @Volatile
-    private var welcomeHandled = false
-
-    private suspend fun evaluateWelcome(rooms: List<RoomSummary>) {
-        if (welcomeHandled) return
-        val userId = sessionStore.state.value?.me?.id ?: return
-        val seen = sessionStore.welcomeSeen(userId).first()
-        // Ещё одна проверка: пока читали флаг, человек мог закрыть приветствие.
-        if (welcomeHandled) return
-        _showWelcome.value = shouldShowWelcome(
-            hasSeen = seen,
-            groupCount = rooms.size,
-            // Диплинк на Android уводит с этого экрана сам (MainScaffold
-            // навигирует в комнату), поэтому здесь его учитывать нечем.
-            hasPendingDeeplink = false,
-            alreadyHandled = welcomeHandled,
-        )
-    }
-
-    /** Пропуск — это тоже ответ «не показывай больше». */
-    fun dismissWelcome(createGroup: Boolean) {
-        welcomeHandled = true
-        _showWelcome.value = false
-        _openCreateGroup.value = createGroup
-        viewModelScope.launch {
-            sessionStore.state.value?.me?.id?.let { sessionStore.markWelcomeSeen(it) }
-        }
-    }
-
-    fun consumeCreateGroup() {
-        _openCreateGroup.value = false
-    }
 
     private val _archived = MutableStateFlow<UiState<List<RoomSummary>>>(UiState.Loading)
 
@@ -199,9 +141,6 @@ class GroupsListViewModel @Inject constructor(
     fun dismissAlert() {
         _alertMessage.value = null
     }
-
-    /** Шаги онбординга: экран отдаёт их колбэком, чтобы не тянуть Hilt в снимки. */
-    fun trackOnboarding(event: AnalyticsEvent) = analytics.track(event)
 
     /**
      * Справочник валют для экрана создания. Ошибку не показываем: валюта там
@@ -304,7 +243,6 @@ class GroupsListViewModel @Inject constructor(
         try {
             val fetched = repository.rooms(archived = false)
             _rooms.value = UiState.Content(fetched.value)
-            evaluateWelcome(fetched.value)
             // Список пуст — проверяем архив: заархивировав ПОСЛЕДНЮЮ группу,
             // человек терял единственный вход в архив, и достать её обратно
             // было нельзя. Строка «Архив» рисуется по этому списку

@@ -557,6 +557,7 @@
     <string name="welcome_skip">Salta</string>
     <string name="welcome_next">Avanti</string>
     <string name="welcome_create">Crea un gruppo</string>
+    <string name="welcome_start">Inizia</string>
     <string name="welcome_1_title">Un gruppo è un conto in comune</string>
     <string name="welcome_1_body">Un viaggio, un appartamento o una sola cena. Paga una persona e la spesa la dividono tutti.</string>
     <string name="welcome_bill_tray">Conto del gruppo</string>

@@ -624,6 +624,7 @@
     <string name="welcome_skip">Passer</string>
     <string name="welcome_next">Suivant</string>
     <string name="welcome_create">Créer un groupe</string>
+    <string name="welcome_start">Commencer</string>
     <string name="welcome_1_title">Un groupe, c\'est une note commune</string>
     <string name="welcome_1_body">Un voyage, un appart ou un dîner. Une personne paie, tout le monde partage.</string>
     <string name="welcome_bill_tray">Note du groupe</string>

@@ -72,7 +72,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Разовое приветствие после первого входа. Порт iOS `WelcomeView`.
+ * Разовое приветствие ДО входа. Порт iOS `WelcomeView`.
+ *
+ * Стоит перед экраном входа, а не после: регистрация была первым, что видел
+ * человек, то есть кассу он проходил раньше витрины. Последний шаг ведёт на
+ * вход, и «Начать» отличается от «Пропустить» только тем, дочитал ли человек.
  *
  * Четыре экрана, и порядок не декоративный: что такое группа → как вносить
  * расход → кто сколько заплатил → сколько раз платить вам. Без третьего экрана
@@ -86,7 +90,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun WelcomeScreen(
-    onFinish: (createGroup: Boolean) -> Unit,
+    onFinish: () -> Unit,
     /**
      * Куда сообщать о шагах. Колбэком, а не через Hilt: экран рендерится в
      * снимках Roborazzi, и зависимость от графа заставила бы их переснимать.
@@ -121,7 +125,7 @@ fun WelcomeScreen(
             TextButton(
                 onClick = {
                     onEvent(AnalyticsEvent.OnboardingSkipped)
-                    onFinish(false)
+                    onFinish()
                 },
                 modifier = Modifier.testTag("welcome_skip"),
             ) {
@@ -145,11 +149,11 @@ fun WelcomeScreen(
 
         val isLast = pagerState.currentPage == pages - 1
         PrimaryPillButton(
-            text = stringResource(if (isLast) R.string.welcome_create else R.string.welcome_next),
+            text = stringResource(if (isLast) R.string.welcome_start else R.string.welcome_next),
             onClick = {
                 if (isLast) {
                     onEvent(AnalyticsEvent.OnboardingCompleted)
-                    onFinish(true)
+                    onFinish()
                 } else {
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 }
