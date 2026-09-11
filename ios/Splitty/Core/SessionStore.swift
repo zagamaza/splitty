@@ -302,6 +302,15 @@ final class SessionStore {
     /// на экране группы — кешированные комнаты есть, а `me` нет.
     @MainActor
     private func adoptSession(_ response: AuthResponse) {
+        // СТРОГО до adoptOwner: тот зовёт Analytics.configure, а он меняет
+        // сессию. Событие обязано уехать в ПРЕЖНЕЙ, обезличенной — той же, что
+        // login_shown и весь онбординг. Совпади его session с session у
+        // login_completed, обезличенный поток склеился бы с именным по ключу:
+        // одна запись с device_id, другая с номером человека, поле общее.
+        //
+        // Здесь, а не в пяти методах входа по отдельности: они все сходятся
+        // сюда, и любой новый способ входа получит событие даром.
+        Analytics.shared.trackAnonymous(.authCompleted, api: api)
         token = response.token
         me = response.user
         // Вход означает «видел»: человек, пришедший по ссылке приглашения,

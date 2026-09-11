@@ -14,6 +14,15 @@ enum AnalyticsEvent {
     case loginStarted(method: String)
     case loginFailed(method: String, reason: String)
     case loginCompleted(method: String)
+
+    /// Обезличенный двойник `loginCompleted`: «эта установка дошла до входа».
+    ///
+    /// Нужен потому, что приветствие идёт ДО входа: `onboarding_*` лежат с
+    /// device_id, а `login_completed` — с номером человека, и связывать их
+    /// сервер отказывается. Без этого события воронка обрывается на границе
+    /// двух потоков. Уходит СТРОГО до ротации сессии — иначе поля `session` у
+    /// двойников совпадут, и потоки склеятся по ключу сами.
+    case authCompleted
     case onboardingStarted
     case onboardingStep(step: String)
     case onboardingCompleted
@@ -58,6 +67,7 @@ enum AnalyticsEvent {
         case .loginStarted: return "login_started"
         case .loginFailed: return "login_failed"
         case .loginCompleted: return "login_completed"
+        case .authCompleted: return "auth_completed"
         case .onboardingStarted: return "onboarding_started"
         case .onboardingStep: return "onboarding_step"
         case .onboardingCompleted: return "onboarding_completed"
@@ -115,7 +125,7 @@ enum AnalyticsEvent {
         case let .purchaseFailed(reason): return ["reason": reason]
         case let .roomCreated(currency, picked):
             return ["currency": currency, "picked": picked ? "true" : "false"]
-        case .loginShown,
+        case .loginShown, .authCompleted,
              .onboardingStarted, .onboardingCompleted, .onboardingSkipped,
              .settleUpOpened, .settleUpDone:
             return [:]
@@ -297,10 +307,17 @@ final class Analytics {
 
     /// Подключает клиента API и владельца очереди.
     ///
-    /// Нет сессии — не пишем вовсе: приём на сервере закрыт авторизацией, а
-    /// копить события «до входа» значило бы решать, кому они достанутся, когда
-    /// человек войдёт. Приветствие на обоих клиентах пост-логинное, так что
-    /// теряется практически только `app_open` холодного старта.
+    /// Именной поток пишется только при живой сессии: приём на сервере закрыт
+    /// авторизацией, а копить события «до входа» в именной очереди значило бы
+    /// решать, кому они достанутся, когда человек войдёт.
+    ///
+    /// Всё, что до входа, идёт обезличенным маршрутом (`trackAnonymous`):
+    /// холодный `app_open`, экран входа и — с тех пор, как приветствие
+    /// переехало вперёд, — весь онбординг.
+    ///
+    /// Смена владельца здесь же меняет и сессию, и это ДО `track(.loginCompleted)`
+    /// в `adoptSession`: обезличенный двойник входа (`auth_completed`) обязан
+    /// остаться в прежней сессии, иначе два потока склеятся по общему ключу.
     func configure(api: APIClient?, userId: Int?) {
         if ownerUserId != userId {
             // Аккаунт на устройстве сменился: события прошлого человека

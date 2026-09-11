@@ -100,6 +100,25 @@ class AnalyticsBacklogTest {
 
     private fun ok() = MockResponse().setBody("""{"accepted":1,"duplicates":0,"rejected":0}""")
 
+    /**
+     * Следующий запрос к ИМЕННОМУ маршруту.
+     *
+     * Вход теперь шлёт рядом обезличенного двойника (`auth_completed`), и
+     * ждать «первый попавшийся запрос» стало нельзя: половина тестов начала бы
+     * проверять чужое тело. Фильтруем по маршруту, а не по порядку.
+     */
+    private suspend fun takeNamed(): RecordedRequest = takeRequestTo(anonymous = false)
+
+    /** Следующий запрос к ОБЕЗЛИЧЕННОМУ маршруту. */
+    private suspend fun takeAnonymous(): RecordedRequest = takeRequestTo(anonymous = true)
+
+    private suspend fun takeRequestTo(anonymous: Boolean): RecordedRequest {
+        while (true) {
+            val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+            if ((request.path?.endsWith("/events/anonymous") == true) == anonymous) return request
+        }
+    }
+
     /** Ждёт, пока очередь на диске догонит ожидаемый размер. */
     private suspend fun awaitQueueSize(expected: Int) {
         withTimeout(IO_WAIT_MS) {
@@ -291,6 +310,8 @@ class AnalyticsBacklogTest {
     @Test
     fun signedInDoesNotStealPreviousOwnerEvents() = runBlocking {
         server.enqueue(ok())
+        // Второй — обезличенному двойнику входа (auth_completed).
+        server.enqueue(ok())
         session.signIn("token-A", Me(id = 1, displayName = "А"))
         withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
         val analytics = analytics()
@@ -310,7 +331,7 @@ class AnalyticsBacklogTest {
             token = "token-B",
         )
 
-        val request = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+        val request = takeNamed()
         val names = SplittyJson.parseToJsonElement(request.body.readUtf8())
             .jsonObject["events"]!!.jsonArray
             .map { it.jsonObject["name"]!!.jsonPrimitive.content }
@@ -406,15 +427,16 @@ class AnalyticsBacklogTest {
     fun signInStartsNewSessionForNamedStream() = runBlocking {
         server.enqueue(ok())
         server.enqueue(ok())
+        server.enqueue(ok())
         val analytics = analytics()
 
         analytics.trackAnonymous(AnalyticsEvent.LoginStarted("google"))
-        val anonymous = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+        val anonymous = takeAnonymous()
 
         session.signIn("token-A", Me(id = 1, displayName = "А"))
         withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
         analytics.trackSignedIn(AnalyticsEvent.LoginCompleted("google"), userId = 1, token = "token-A")
-        val named = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+        val named = takeNamed()
 
         assertTrue(
             sessionsOf(anonymous).single() != sessionsOf(named).single(),
@@ -433,6 +455,7 @@ class AnalyticsBacklogTest {
      */
     @Test
     fun signInKeepsPurgeOfForeignRecords() = runBlocking {
+        server.enqueue(ok())
         server.enqueue(ok())
         val analytics = analytics()
 
@@ -467,12 +490,13 @@ class AnalyticsBacklogTest {
     @Test
     fun signInRotatesSessionOnce() = runBlocking {
         server.enqueue(ok())
+        server.enqueue(ok())
         val analytics = analytics()
 
         session.signIn("token-A", Me(id = 1, displayName = "А"))
         withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
         analytics.trackSignedIn(AnalyticsEvent.LoginCompleted("google"), userId = 1, token = "token-A")
-        val named = withTimeout(IO_WAIT_MS) { server.takeRequest(5, TimeUnit.SECONDS) }!!
+        val named = takeNamed()
 
         analytics.onOwnerChanged(1)
         analytics.track(AnalyticsEvent.ScreenView("groups"))

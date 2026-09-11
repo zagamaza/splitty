@@ -19,9 +19,14 @@ import org.robolectric.annotation.Config
 /**
  * Что обещает экран входа.
  *
- * Раньше это была одна строка «Делите расходы с друзьями» — она описывает
- * любое приложение категории. Три пункта отвечают на реальные вопросы: что я
- * записываю, что это даёт и переводит ли приложение деньги.
+ * История в две ступени. Сначала была одна строка «Делите расходы с друзьями»
+ * — она описывает любое приложение категории. Её сменили три пункта: что я
+ * записываю, что это даёт, переводит ли приложение деньги.
+ *
+ * Теперь пункт снова один, и это не откат. Приветствие переехало ПЕРЕД входом
+ * и объясняет первые два вопроса четырьмя страницами с арифметикой —
+ * подробнее, чем строка списка. А «оно спишет деньги?» приветствие не
+ * снимает, и ответ обязан стоять там, где человека просят войти.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -33,15 +38,13 @@ class LoginValuePropsTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun `login screen explains the product in three points`() {
+    fun `login screen does not repeat what the intro already said`() {
         composeRule.setContent { SplittyTheme { ValueProps() } }
 
-        listOf(
-            R.string.login_prop_split_title,
-            R.string.login_prop_once_title,
-            R.string.login_prop_money_title,
-        ).forEach { res ->
-            composeRule.onNodeWithText(context.getString(res)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.login_prop_money_title))
+            .assertIsDisplayed()
+        listOf(R.string.login_prop_split_title, R.string.login_prop_once_title).forEach { res ->
+            composeRule.onNodeWithText(context.getString(res)).assertDoesNotExist()
         }
     }
 
@@ -60,7 +63,7 @@ class LoginValuePropsTest {
             }
         }
 
-        composeRule.onNodeWithText(context.getString(R.string.login_prop_once_title)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.login_prop_money_title)).assertIsDisplayed()
     }
 
     /** Самый частый страх — «оно спишет деньги?». Ответ обязан быть до входа. */

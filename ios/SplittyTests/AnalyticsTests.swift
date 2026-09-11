@@ -198,6 +198,52 @@ final class AnalyticsTests: XCTestCase {
         )
     }
 
+    /// Двойник входа остаётся в ПРЕЖНЕЙ сессии, а именное событие — в новой.
+    ///
+    /// Порядок здесь повторяет `adoptSession`: сначала обезличенный
+    /// `auth_completed`, затем `configure` (он же ротирует сессию), и только
+    /// потом `login_completed`. Совпади у них поле `session`, обезличенный
+    /// поток склеился бы с именным по ключу — одна запись с `device`, другая с
+    /// номером человека, — и отказ сервера их связывать перестал бы что-либо
+    /// значить.
+    @MainActor
+    func testAuthCompletedStaysInThePreviousSession() async throws {
+        StubURLProtocol.lastBody = nil
+        StubURLProtocol.handler = { _ in
+            (200, Data(#"{"accepted":1,"duplicates":0,"rejected":0}"#.utf8))
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [StubURLProtocol.self]
+        let client = APIClient(
+            baseURL: URL(string: "https://api.example.test"),
+            token: nil,
+            urlSession: URLSession(configuration: configuration)
+        )
+        let queue = AnalyticsQueue(fileURL: fileURL)
+        let analytics = Analytics(queue: queue)
+
+        analytics.trackAnonymous(.authCompleted, api: client)
+        var anonymousBody: Data?
+        for _ in 0..<100 {
+            if let captured = StubURLProtocol.lastBody { anonymousBody = captured; break }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        let raw = try XCTUnwrap(anonymousBody, "обезличенный двойник входа не ушёл")
+        let json = try JSONSerialization.jsonObject(with: raw) as? [String: Any]
+        let events = try XCTUnwrap(json?["events"] as? [[String: Any]])
+        let anonymousSession = try XCTUnwrap(events.first?["session"] as? String)
+        XCTAssertEqual(events.first?["name"] as? String, "auth_completed")
+
+        analytics.configure(api: client, userId: 1)
+        analytics.track(.loginCompleted(method: "google"))
+        let namedSession = try XCTUnwrap(queue.records.last?.session)
+
+        XCTAssertNotEqual(
+            anonymousSession, namedSession,
+            "auth_completed и login_completed уехали в одной сессии — потоки склеятся по ключу"
+        )
+    }
+
     /// Имена и параметры совпадают с контрактом: событие — проводной договор с
     /// сервером, и «почти то же имя» означает потерянный шаг воронки.
     func testEventNamesMatchContract() {

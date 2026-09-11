@@ -433,6 +433,14 @@ final class UnreadBadgeRefreshTests: XCTestCase {
         }
         try await session.loginWithPassword(email: "anya@splitty.test", password: "Passw0rd!")
         XCTAssertTrue(session.isAuthenticated)
+        // Вход шлёт рядом обезличенный auth_completed, и уходит он своей
+        // задачей. Без ожидания он приземляется ПОСЛЕ проверяемого запроса и
+        // перетирает StubURLProtocol.lastRequest — тест падал бы на чужом пути.
+        for _ in 0..<100 {
+            if StubURLProtocol.lastRequest?.url?.path == "/api/v1/events/anonymous" { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        StubURLProtocol.lastRequest = nil
         return session
     }
 

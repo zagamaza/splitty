@@ -18,6 +18,17 @@ sealed class AnalyticsEvent(val name: String, val params: Map<String, String> = 
     class LoginFailed(method: String, reason: String) :
         AnalyticsEvent("login_failed", mapOf("method" to method, "reason" to reason))
     class LoginCompleted(method: String) : AnalyticsEvent("login_completed", mapOf("method" to method))
+
+    /**
+     * Обезличенный двойник [LoginCompleted]: «эта установка дошла до входа».
+     *
+     * Нужен потому, что приветствие идёт ДО входа: onboarding_* лежат с
+     * device_id, а login_completed — с номером человека, и связывать их сервер
+     * отказывается. Без этого события воронка обрывается на границе двух
+     * потоков. Уходит СТРОГО до ротации сессии — иначе поля session у
+     * двойников совпадут, и потоки склеятся по ключу сами.
+     */
+    data object AuthCompleted : AnalyticsEvent("auth_completed")
     data object OnboardingStarted : AnalyticsEvent("onboarding_started")
     class OnboardingStep(step: String) : AnalyticsEvent("onboarding_step", mapOf("step" to step))
     data object OnboardingCompleted : AnalyticsEvent("onboarding_completed")
