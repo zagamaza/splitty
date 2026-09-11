@@ -21,18 +21,52 @@ struct RootView: View {
         let id: String
     }
 
+    /// Показывать ли приветствие вместо экрана входа.
+    ///
+    /// Вычисляемое, а не `@State`: решение НЕ защёлкивается. Персистентное
+    /// намерение читается синхронно в `PendingJoin.init` и к первому кадру уже
+    /// на месте, но СВЕЖИЙ тап по universal link приходит в `.onOpenURL` и
+    /// `.onContinueUserActivity` — то есть после первой отрисовки. Защёлкнутое
+    /// решение оставило бы приглашённого внутри рассказа о продукте вместо
+    /// тусы, в которую его позвали.
+    ///
+    /// Закрытие приветствия появившимся намерением при этом НЕ считается
+    /// «пропустил»: `onboarding_skipped` шлёт только кнопка «Пропустить», а
+    /// здесь `WelcomeView` просто уходит с экрана.
+    private var showsIntro: Bool {
+        shouldShowIntro(
+            hasSeen: session.hasSeenIntro,
+            hasPendingDeeplink: PendingJoin.shared.roomId != nil
+        )
+    }
+
     var body: some View {
         // Мягкий кроссфейд логин ↔ табы: без него смена корня резала кадр.
+        //
+        // Ветки три, а не четыре, как на android: там первой стоит «ещё не
+        // прочитали» — DataStore асинхронен, и без неё корень мигал бы логином
+        // вошедшему человеку. Здесь и токен (Keychain), и намерение
+        // (`PendingJoin.init`) читаются синхронно до первого кадра, так что
+        // состояния «не знаю» не существует.
         Group {
             if session.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
+            } else if showsIntro {
+                WelcomeView(
+                    onFinish: { session.markIntroSeen() },
+                    // Обезличенным маршрутом: аккаунта ещё нет, и слать эти
+                    // события именным просто некому.
+                    onEvent: { Analytics.shared.trackAnonymous($0, api: session.api) }
+                )
+                .transition(.opacity)
             } else {
                 LoginView()
                     .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.3), value: session.isAuthenticated)
+        .animation(.easeInOut(duration: 0.3), value: showsIntro)
         .overlay {
             if isJoining {
                 joiningOverlay

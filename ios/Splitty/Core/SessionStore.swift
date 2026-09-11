@@ -47,7 +47,10 @@ final class SessionStore {
     private static let tokenKey = "splitty.apiToken"
     private static let userIdKey = "splitty.userId"
     private static let purgePendingKey = "splitty.purgePending"
+    /// Прежнее хранилище отметки — набор номеров аккаунтов. Читается только
+    /// миграцией в `loadIntroSeen`; писать в него больше нечему.
     private static let welcomeSeenKey = "splitty.welcomeSeenAccounts"
+    private static let introSeenKey = "splitty.introSeen"
 
     /// Профиль текущего пользователя (nil до первого refreshMe/login).
     var me: Me?
@@ -147,6 +150,16 @@ final class SessionStore {
     private var isPurgeRetryInFlight = false
 
     var isAuthenticated: Bool { token != nil }
+
+    /// Видела ли эта установка приветствие.
+    ///
+    /// Хранимое свойство, а не вычисляемое из `UserDefaults`: приветствие живёт
+    /// в корне, а `UserDefaults.set` не пересобирает вью — корень остался бы на
+    /// приветствии после того, как человек его закрыл. Отметка ставится в
+    /// `markIntroSeen`, перенос прежней — в `loadIntroSeen`.
+    private(set) var hasSeenIntro: Bool {
+        didSet { UserDefaults.standard.set(hasSeenIntro, forKey: Self.introSeenKey) }
+    }
 
     /// id владельца локальных данных (кеш + outbox), переживает перезапуск:
     /// профиль на холодном старте ещё не загружен, а имя namespace кеша нужно
@@ -270,11 +283,16 @@ final class SessionStore {
         baseURLString = ProcessInfo.processInfo.environment["SPLITTY_BASE_URL"]
             ?? UserDefaults.standard.string(forKey: Self.baseURLKey)
             ?? Self.defaultBaseURL
-        token = KeychainStore.read(key: Self.tokenKey)
+        let savedToken = KeychainStore.read(key: Self.tokenKey)
+        token = savedToken
         ownerUserId = UserDefaults.standard.object(forKey: Self.userIdKey) as? Int
         // Незавершённая чистка переживает перезапуск: без этого «человек убил
         // приложение вместо повтора» навсегда оставлял его PII в базе.
         isPurgePending = UserDefaults.standard.bool(forKey: Self.purgePendingKey)
+        // Строго после чтения токена: у ветерана прежней отметки может не быть
+        // вовсе, и тогда единственный признак «эта установка уже была
+        // вошедшей» — сам токен.
+        hasSeenIntro = Self.loadIntroSeen(hasSession: savedToken != nil)
     }
 
     /// Общий хвост всех способов входа: токен, профиль в памяти, владелец
@@ -286,6 +304,10 @@ final class SessionStore {
     private func adoptSession(_ response: AuthResponse) {
         token = response.token
         me = response.user
+        // Вход означает «видел»: человек, пришедший по ссылке приглашения,
+        // входит МИМО приветствия (интро подавлено намерением), и без этой
+        // строки после разлогина он получил бы его как новичок.
+        markIntroSeen()
         adoptOwner(response.user.id)
         // Строго ПОСЛЕ adoptOwner: ключ кеша префиксован владельцем.
         let repo = repo
@@ -614,25 +636,34 @@ final class SessionStore {
     }
     // MARK: Приветствие
 
-    /// Видел ли этот аккаунт разовое приветствие.
+    /// Отметить приветствие показанным.
     ///
-    /// Ключ по НОМЕРУ аккаунта, а не на устройство: вход другим человеком на том
-    /// же телефоне обязан показать приветствие снова — иначе новый пользователь
-    /// молча теряет единственное объяснение продукта.
-    func hasSeenWelcome(userId: Int) -> Bool {
-        seenWelcomeIds().contains(String(userId))
+    /// Зовётся и по «Пропустить» — пропуск это ответ «не показывай больше», а
+    /// не «покажи в следующий раз», — и на любом успешном входе, из
+    /// `adoptSession`.
+    func markIntroSeen() {
+        guard !hasSeenIntro else { return }
+        hasSeenIntro = true
     }
 
-    /// Отметить приветствие показанным. Вызывается и по «Пропустить»: пропуск —
-    /// это ответ «не показывай больше», а не «покажи в следующий раз».
-    func markWelcomeSeen(userId: Int) {
-        var ids = seenWelcomeIds()
-        ids.insert(String(userId))
-        UserDefaults.standard.set(Array(ids), forKey: Self.welcomeSeenKey)
+    /// Видела ли ЭТА УСТАНОВКА приветствие — с переносом прежней отметки.
+    ///
+    /// Условий два, и второе важнее первого. Прежнее хранилище
+    /// (`welcomeSeenAccounts`) наполнялось ТОЛЬКО при закрытии показанного
+    /// приветствия, а показывалось оно лишь тому, у кого нет ни одной тусы.
+    /// Значит у основной массы ветеранов — тех, кто завёл тусу раньше, чем
+    /// приветствие появилось, — оно пустое, и переносить оттуда нечего. Пока
+    /// человек авторизован, это незаметно: его забирает ветка «есть сессия».
+    /// Стоит токену протухнуть — и он получил бы рассказ «что такое группа»
+    /// как новичок.
+    ///
+    /// Поэтому второе условие — наличие сохранённой сессии: установка уже была
+    /// вошедшей, а вход и означает «видел».
+    private static func loadIntroSeen(hasSession: Bool) -> Bool {
+        if UserDefaults.standard.bool(forKey: introSeenKey) { return true }
+        let legacy = UserDefaults.standard.stringArray(forKey: welcomeSeenKey) ?? []
+        guard !legacy.isEmpty || hasSession else { return false }
+        UserDefaults.standard.set(true, forKey: introSeenKey)
+        return true
     }
-
-    private func seenWelcomeIds() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: Self.welcomeSeenKey) ?? [])
-    }
-
 }

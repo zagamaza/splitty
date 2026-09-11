@@ -33,6 +33,13 @@ extension XCTestCase {
         email: String = XCTestCase.seedEmail,
         password: String = XCTestCase.seedPassword
     ) {
+        // Приветствие стоит ПЕРЕД входом, и на чистой установке первым
+        // показывается оно. Без этого шага ссылки входа на экране нет, признак
+        // «уже залогинены» срабатывает ложно, и тест падает много позже — на
+        // отсутствующем таб-баре, с диагнозом «нет сессии».
+        let skipIntro = app.buttons["welcomeSkip"]
+        if skipIntro.waitForExistence(timeout: 5) { skipIntro.tap() }
+
         let disclosure = app.buttons["emailLoginDisclosure"]
         guard disclosure.waitForExistence(timeout: 5) else { return } // уже залогинены
         disclosure.tap()

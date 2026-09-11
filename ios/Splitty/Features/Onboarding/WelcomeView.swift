@@ -1,6 +1,10 @@
 import SwiftUI
 
-/// Разовое приветствие после первого входа.
+/// Разовое приветствие ДО входа.
+///
+/// Стоит перед экраном входа, а не после: регистрация была первым, что видел
+/// человек, то есть кассу он проходил раньше витрины. Последний шаг ведёт на
+/// вход.
 ///
 /// Четыре экрана, и порядок в них не декоративный: сначала что такое группа,
 /// потом как вносить расход, потом кто сколько заплатил — и только после этого
@@ -15,10 +19,18 @@ import SwiftUI
 /// активной (`isActive`), и повторяется. Статичная картинка на онбординге
 /// читается как заглушка, а не как рассказ.
 struct WelcomeView: View {
-    /// Закрыть приветствие. `createGroup` — последний шаг ведёт в создание
-    /// группы: приветствие, которое заканчивается пустым экраном, ничего не
-    /// изменило.
-    let onFinish: (_ createGroup: Bool) -> Void
+    /// Приветствие закрыто — и «Начать», и «Пропустить» ведут в одно место, на
+    /// экран входа. Отметку «видел» ставит вызывающий.
+    let onFinish: () -> Void
+
+    /// Куда сообщать о шагах.
+    ///
+    /// Колбэком, а не прямым обращением к `Analytics.shared`: приветствие идёт
+    /// ДО входа, и события обязаны уходить обезличенным маршрутом, которому
+    /// нужен клиент API. Тащить его в сам экран значило бы отобрать у него
+    /// возможность рендериться без графа зависимостей — а на этом держатся
+    /// `WelcomeRenderTests`.
+    var onEvent: (AnalyticsEvent) -> Void = { _ in }
 
     @State private var page = 0
 
@@ -38,8 +50,8 @@ struct WelcomeView: View {
             HStack {
                 Spacer()
                 Button("Пропустить") {
-                    Analytics.shared.track(.onboardingSkipped)
-                    onFinish(false)
+                    onEvent(.onboardingSkipped)
+                    onFinish()
                 }
                     .scaledFont(size: 16, weight: .medium)
                     .foregroundStyle(Color.inkSecondary)
@@ -60,10 +72,12 @@ struct WelcomeView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 16)
 
-            Button(page == Self.pageCount - 1 ? "Создать группу" : "Далее") {
+            // Последний шаг ведёт на вход, а не в создание тусы: приветствие
+            // теперь стоит ПЕРЕД входом, и создавать ещё нечего и некому.
+            Button(page == Self.pageCount - 1 ? "Начать" : "Далее") {
                 if page == Self.pageCount - 1 {
-                    Analytics.shared.track(.onboardingCompleted)
-                    onFinish(true)
+                    onEvent(.onboardingCompleted)
+                    onFinish()
                 } else {
                     withAnimation(.easeInOut(duration: 0.25)) { page += 1 }
                 }
@@ -77,11 +91,11 @@ struct WelcomeView: View {
         .onAppear {
             guard !didTrackStart else { return }
             didTrackStart = true
-            Analytics.shared.track(.onboardingStarted)
+            onEvent(.onboardingStarted)
         }
         .onChange(of: page) { _, current in
             guard let step = WelcomeStep(rawValue: current) else { return }
-            Analytics.shared.track(.onboardingStep(step: step.analyticsName))
+            onEvent(.onboardingStep(step: step.analyticsName))
         }
     }
 }
