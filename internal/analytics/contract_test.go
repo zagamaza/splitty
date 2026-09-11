@@ -69,6 +69,67 @@ func TestContractNamesAreUnique(t *testing.T) {
 	}
 }
 
+// contractAnonymous разбирает список «Принимается без токена»: строки вида
+// - `имя`
+//
+// Список, а не таблица, намеренно: TestContractNamesAreUnique ищет строки
+// `| имя |` по всему файлу, и вторая таблица с теми же именами уронила бы его.
+func contractAnonymous(t *testing.T) map[string]bool {
+	t.Helper()
+	raw, err := os.ReadFile(contractPath(t))
+	if err != nil {
+		t.Fatalf("не прочитал контракт: %v", err)
+	}
+
+	item := regexp.MustCompile("^-\\s+`([a-z0-9_]+)`\\s*$")
+	names := map[string]bool{}
+	inSection := false
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.HasPrefix(line, "### Принимается без токена") {
+			inSection = true
+			continue
+		}
+		if inSection && strings.HasPrefix(line, "#") {
+			break
+		}
+		if !inSection {
+			continue
+		}
+		if m := item.FindStringSubmatch(line); m != nil {
+			names[m[1]] = true
+		}
+	}
+	if len(names) == 0 {
+		t.Fatal("в контракте не нашлось списка анонимных событий — разбор сломан")
+	}
+	return names
+}
+
+// Анонимность — часть контракта, а не деталь реализации.
+//
+// Расхождение здесь не роняет ничего и потому опаснее обычного: имя, забытое в
+// Anonymous, отбивается маршрутом молча, и шаг воронки до входа просто не
+// существует. Видно это будет по нулю в отчёте через месяц — то есть тогда,
+// когда данные уже не собрать.
+func TestAnonymousMatchesContract(t *testing.T) {
+	doc := contractAnonymous(t)
+	known := contractRows(t)
+
+	for name := range doc {
+		if _, ok := known[name]; !ok {
+			t.Errorf("событие %q помечено анонимным, но не описано в таблице событий", name)
+		}
+		if !Anonymous[name] {
+			t.Errorf("событие %q помечено анонимным в документе, но не в коде", name)
+		}
+	}
+	for name := range Anonymous {
+		if !doc[name] {
+			t.Errorf("событие %q анонимно в коде, но не помечено в документе", name)
+		}
+	}
+}
+
 // snake_case и разумная длина. Правило не косметическое: имена уезжают в ключи
 // агрегатов, и разнобой в регистре разведёт одно действие на два события.
 func TestContractNamesAreSnakeCase(t *testing.T) {
