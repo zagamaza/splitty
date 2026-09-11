@@ -27,7 +27,15 @@ var Events = map[string]Event{
 		"method": {"google", "apple", "telegram", "password", "code"},
 		"reason": {"cancelled", "network", "provider", "invalid", "server"},
 	}},
-	"login_completed":      {Params: map[string][]string{"method": {"telegram", "google", "apple", "password", "code", "dev"}}},
+	"login_completed": {Params: map[string][]string{"method": {"telegram", "google", "apple", "password", "code", "dev"}}},
+	// auth_completed — обезличенный двойник login_completed: «установка дошла
+	// до входа». Нужен потому, что приветствие теперь ДО входа, и без него
+	// воронка онбординга обрывалась бы на границе двух потоков: onboarding_*
+	// лежат с device_id, login_completed — с номером человека, а связывать их
+	// сервер не будет (см. handlePostAnonymousEvents).
+	//
+	// Складывать его с login_completed нельзя: это один факт в двух потоках.
+	"auth_completed":       {},
 	"onboarding_started":   {},
 	"onboarding_step":      {Params: map[string][]string{"step": {"group", "dictate", "who_paid", "transfers"}}},
 	"onboarding_completed": {},
@@ -141,17 +149,27 @@ func contains(values []string, value string) bool {
 
 // Anonymous — события, которые принимаются БЕЗ токена.
 //
-// Всё, что до входа: человек ставит приложение, видит экран входа и уходит.
-// Знаменателя у login_completed иначе не существует, и непонятно, теряем мы
-// людей на экране входа или они не доходят до него вовсе.
+// Всё, что до входа: человек ставит приложение, видит приветствие, доходит до
+// экрана входа — или уходит раньше. Знаменателя у login_completed иначе не
+// существует, и непонятно, теряем мы людей на экране входа или они не доходят
+// до него вовсе.
+//
+// onboarding_* здесь потому, что приветствие показывается ДО входа: пока
+// человек листает его страницы, аккаунта ещё нет, и слать их именным маршрутом
+// просто некому.
 //
 // Набор закрытый и маленький намеренно: маршрут открыт всему интернету, и
 // каждое лишнее имя в нём — это то, чем можно засорить коллекцию бесплатно.
 var Anonymous = map[string]bool{
-	"app_open":      true,
-	"login_shown":   true,
-	"login_started": true,
-	"login_failed":  true,
+	"app_open":             true,
+	"login_shown":          true,
+	"login_started":        true,
+	"login_failed":         true,
+	"onboarding_started":   true,
+	"onboarding_step":      true,
+	"onboarding_completed": true,
+	"onboarding_skipped":   true,
+	"auth_completed":       true,
 }
 
 // IsAnonymous — можно ли прислать событие с этим именем без токена.

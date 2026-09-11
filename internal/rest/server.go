@@ -473,7 +473,8 @@ func (s *Server) Handler() http.Handler {
 	// нам в базу. Верх воронки закрывают числа App Store, а не этот поток.
 	mux.Handle("POST /api/v1/events", s.auth(s.handlePostEvents))
 	// Без авторизации намеренно: всё, что происходит до входа, иначе не
-	// измерить. Набор имён там закрыт четырьмя (analytics.Anonymous).
+	// измерить — а с приветствием перед входом это ещё и весь онбординг.
+	// Набор имён закрыт списком analytics.Anonymous.
 	mux.HandleFunc("POST /api/v1/events/anonymous", s.handlePostAnonymousEvents)
 
 	mux.Handle("GET /api/v1/me", s.auth(s.handleGetMe))

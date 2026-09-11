@@ -259,6 +259,38 @@ func TestAnonymousEventsAcceptOnlyPreLoginNames(t *testing.T) {
 	}
 }
 
+// Онбординг теперь ДО входа, значит его шаги обязаны проходить обезличенным
+// маршрутом — и по тем же правилам, что все остальные: имя из списка, значение
+// из закрытого множества.
+//
+// Тест стоит отдельно от TestAnonymousEventsAcceptOnlyPreLoginNames: там
+// проверяется отсечка чужих имён, здесь — что шаг воронки, ради которого всё
+// затевалось, действительно доезжает. Забытое имя в Anonymous ничего не роняет,
+// оно молча кладёт событие в rejected.
+func TestAnonymousEventsAcceptOnboardingSteps(t *testing.T) {
+	s, store := newEventsServer(t)
+
+	code, got := postAnonymous(t, s, `{"device":"dev-1","events":[
+		`+anonEvent("onboarding_started", "o-1", "")+`,
+		`+anonEvent("onboarding_step", "o-2", `{"step":"who_paid"}`)+`,
+		`+anonEvent("onboarding_step", "o-3", `{"step":"телепортация"}`)+`,
+		`+anonEvent("onboarding_completed", "o-4", "")+`,
+		`+anonEvent("auth_completed", "o-5", "")+`
+	]}`)
+	if code != http.StatusOK {
+		t.Fatalf("status %d", code)
+	}
+	if got.Accepted != 4 || got.Rejected != 1 {
+		t.Fatalf("принято %d, отвергнуто %d — ожидал 4 и 1", got.Accepted, got.Rejected)
+	}
+	for _, e := range store.events {
+		if e.UserID != 0 || e.DeviceID != "dev-1" {
+			t.Errorf("%s лёг с user_id=%d device=%q — обезличенный поток обязан быть обезличенным",
+				e.Name, e.UserID, e.DeviceID)
+		}
+	}
+}
+
 // Причина неудачи входа — из закрытого множества, как и везде.
 func TestAnonymousEventsValidateLoginFailure(t *testing.T) {
 	s, _ := newEventsServer(t)
