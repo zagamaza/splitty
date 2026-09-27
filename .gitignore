@@ -27,3 +27,6 @@ ios/asc/__pycache__/
 # держим только оформленные (screenshots-framed*), их и заливают в магазины.
 metadata/screenshots/
 metadata/screenshots-android/
+
+# Локальные чекпоинты asc release stage — артефакт машины, не репозитория.
+.asc/
