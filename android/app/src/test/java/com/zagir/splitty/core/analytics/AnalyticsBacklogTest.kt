@@ -507,11 +507,15 @@ class AnalyticsBacklogTest {
 
         analytics.onOwnerChanged(1)
         analytics.track(AnalyticsEvent.ScreenView("groups"))
-        awaitQueueSize(1)
+        // По имени, а не «единственная запись»: под нагрузкой login_completed ещё
+        // лежит в очереди, когда туда ложится экран, и очередь не из одной записи.
+        withTimeout(IO_WAIT_MS) {
+            while (queue.snapshot().none { it.name == "screen_view" }) delay(10)
+        }
 
         assertEquals(
             sessionOf(named, "login_completed"),
-            queue.snapshot().single().session,
+            queue.snapshot().single { it.name == "screen_view" }.session,
             "первый экран после входа уехал в другую сессию — ротация случилась дважды",
         )
     }

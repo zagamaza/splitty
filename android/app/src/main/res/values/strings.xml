@@ -428,7 +428,7 @@
     <string name="expense_add_item">Add item</string>
     <string name="expense_split_override_title">Currently split by items</string>
     <string name="expense_split_override_action">Split equally</string>
-    <string name="expense_split_override_hint">“Equally” drops the receipt items and splits the amount evenly between all members. You can bring them back with “Undo”</string>
+    <string name="expense_split_override_hint">“Split equally” removes the receipt items and splits the total equally among everyone. You can undo right after — with the banner at the top</string>
     <string name="expense_unknown_hint">Choose who “%1$s” is: tap the red marker on the receipt</string>
     <string name="expense_priceless_hint">Add a price — tap the item marked “price?”</string>
     <string name="expense_delete_local_title">Delete operation?</string>
@@ -782,4 +782,10 @@
     <string name="group_settings_cents">Cents</string>
     <string name="group_cents_toggle">Count cents</string>
     <string name="group_settings_cents_footer">You will be able to enter amounts with cents, and expenses will be split down to the cent. Nothing already recorded changes.</string>
+    <string name="expense_edit_amounts">Edit amounts per person</string>
+    <string name="expense_edit_amounts_hint">Amounts include fees. Receipt items will be removed.</string>
+    <string name="expense_edit_amounts_rounded">This group uses whole amounts, so shares will be rounded; the total stays the same.</string>
+    <string name="expense_edit_amounts_unavailable_items">First finish the items above — who shares them and what they cost</string>
+    <string name="expense_edit_amounts_unavailable_cents">The total has cents but this group uses whole amounts — adjust shares in the items</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Shares in the items don\'t add up — fix the items</string>
 </resources>

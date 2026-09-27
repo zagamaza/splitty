@@ -141,6 +141,28 @@ data class UndoSnapshot(
     val description: String = "",
     val sumText: String = "",
     val payerId: Long? = null,
+    // Деление — тоже часть снимка: «Поровну на всех» и «Изменить суммы
+    // участников» переводят форму в плоский режим с другими получателями и
+    // суммами, и отмена без них возвращала позиции, оставляя деление от
+    // отменённого шага.
+    val splitType: SplitType = SplitType.EQUALLY,
+    val recipientIds: Set<Long> = emptySet(),
+    val amountTexts: Map<Long, String> = emptyMap(),
+    val fractional: Boolean = false,
+    val parseQuestions: List<String> = emptyList(),
+)
+
+/** Снимок формы для «Отменить» — всегда целиком, см. [UndoSnapshot]. */
+internal fun AddExpenseForm.snapshot(): UndoSnapshot = UndoSnapshot(
+    draftItems = draftItems,
+    description = description,
+    sumText = sumText,
+    payerId = payerId,
+    splitType = splitType,
+    recipientIds = recipientIds,
+    amountTexts = amountTexts,
+    fractional = fractional,
+    parseQuestions = parseQuestions,
 )
 
 /**
@@ -171,7 +193,7 @@ internal fun AddExpenseForm.applyingParse(response: ParseResponse): AddExpenseFo
     val recognizedPayer = draft.donorId?.takeIf { it in memberIds }
     val wasCorrection = didRecognize || hasDraftItems
     val oldItems = draftItems
-    val oldSnapshot = UndoSnapshot(draftItems, description, sumText, payerId)
+    val oldSnapshot = snapshot()
 
     // Распознанный плательщик — тоже результат: правка «платил Саша» возвращает
     // черновик, где заполнен только donorId. Без этого условия она считалась
@@ -352,7 +374,7 @@ internal fun AddExpenseForm.resettingItems(): AddExpenseForm {
     if (!hasDraftItems) return this
     val recipients = recipientIds.ifEmpty { members.map { it.id }.toSet() }
     return copy(
-        undoSnapshot = UndoSnapshot(draftItems, description, sumText, payerId),
+        undoSnapshot = snapshot(),
         canUndoParse = true,
         changedItemIndices = emptySet(),
         draftItems = emptyList(),
@@ -369,7 +391,7 @@ internal fun AddExpenseForm.resettingItems(): AddExpenseForm {
  */
 internal fun AddExpenseForm.collapsingToEqualSplit(): AddExpenseForm {
     if (!hasDraftItems) return this
-    val snapshot = UndoSnapshot(draftItems, description, sumText, payerId)
+    val snapshot = snapshot()
     // derivedShares() возвращает null ровно там, откуда сюда и приходят: доли не
     // сходятся (переполнены фиксы, надбавка с нулевой ценой). Прежний fallback на
     // sumText оставлял в поле сумму ПРОШЛОГО разбора и делил её поровну на всех —
@@ -398,11 +420,110 @@ internal fun AddExpenseForm.undoingParse(): AddExpenseForm {
         description = snapshot.description,
         sumText = snapshot.sumText,
         payerId = snapshot.payerId,
+        splitType = snapshot.splitType,
+        recipientIds = snapshot.recipientIds,
+        amountTexts = snapshot.amountTexts,
+        fractional = snapshot.fractional,
+        parseQuestions = snapshot.parseQuestions,
         undoSnapshot = null,
         canUndoParse = false,
         changedItemIndices = emptySet(),
+    )
+}
+
+/**
+ * Суммы участников, в которые свернётся чек по «Изменить суммы участников»;
+ * null — сворачивать нельзя. Порт iOS `manualSharesPreview`.
+ *
+ * Нельзя при нераспознанном имени или позиции без цены — потеря позиций
+ * разблокировала бы сохранение неверного расхода — и при невалидных позициях
+ * (перебор фиксированных долей): тогда `derivedShares()` не отвечает.
+ *
+ * Шаг — у формы, а не у тусы: [AddExpenseForm.fractional] поднимается и
+ * настройкой тусы, и правкой уже дробной операции, ровно как это разрешает
+ * сервер. В целом режиме доли приводятся к целым наибольшим остатком, а итог
+ * обязан делиться на единицу валюты — иначе «целые доли с прежним итогом»
+ * невозможны, а незаметно менять сумму расхода нельзя.
+ */
+internal fun AddExpenseForm.manualSharesPreview(): ManualSharesPreview? {
+    if (!hasDraftItems || hasUnknownItems || hasPricelessItems) return null
+    val derived = draftItems.derivedShares() ?: return null
+    if (derived.total <= 0L) return null
+    val order = itemizedUserIds + derived.shares.keys.filter { it !in itemizedUserIds }.sorted()
+    val exact = order.mapNotNull { id -> derived.shares[id]?.let { id to it } }
+    val step = if (fractional) 1L else MINOR_FACTOR
+    if (derived.total % step != 0L) return null
+    val distributed = distributeShares(exact, step)
+    val wasRounded = exact.zip(distributed).any { (a, b) -> a.second != b.second }
+    // Нулевые после округления не отправляем: 1 ₽ на троих — это один
+    // получатель на 1 ₽, а не трое, двое из которых должны ноль.
+    val rounded = distributed.filter { it.second >= 1L }
+    if (rounded.isEmpty()) return null
+    return ManualSharesPreview(rounded, derived.total, wasRounded)
+}
+
+/**
+ * Почему «Изменить суммы участников» сейчас недоступна (ресурс строки); null —
+ * доступна либо чека нет. Кнопка не прячется, а показывается неактивной с
+ * причиной: иначе человек опять не знает, где правятся итоговые доли. Порт iOS.
+ */
+internal fun AddExpenseForm.manualSharesUnavailableReason(): Int? {
+    if (!hasDraftItems || manualSharesPreview() != null) return null
+    if (hasUnknownItems || hasPricelessItems) return R.string.expense_edit_amounts_unavailable_items
+    val total = draftItems.derivedShares()?.total
+    if (total != null && total > 0L && !fractional && total % MINOR_FACTOR != 0L) {
+        return R.string.expense_edit_amounts_unavailable_cents
+    }
+    return R.string.expense_edit_amounts_unavailable_invalid
+}
+
+/** Результат сворачивания: доли в порядке появления в чеке, итог и был ли округлён. */
+data class ManualSharesPreview(
+    val shares: List<Pair<Long, Long>>,
+    val total: Long,
+    /** Доли пришлось привести к целым — об этом говорим прямо: долги изменились. */
+    val wasRounded: Boolean,
+)
+
+/**
+ * Приводит доли к шагу, сохраняя их сумму: пол к шагу у каждого, остаток
+ * раздаётся по единице тем, у кого больше отброшено (ничья — в порядке
+ * появления). При шаге 1 доли не меняются. Порт iOS `distribute`.
+ */
+internal fun distributeShares(shares: List<Pair<Long, Long>>, step: Long): List<Pair<Long, Long>> {
+    val total = shares.sumOf { it.second }
+    val result = shares.map { (id, minor) -> id to minor / step * step }.toMutableList()
+    var left = (total - result.sumOf { it.second }) / step
+    val byRemainder = shares.indices.sortedWith(
+        compareByDescending<Int> { shares[it].second % step }.thenBy { it },
+    )
+    for (index in byRemainder) {
+        if (left <= 0L) break
+        result[index] = result[index].first to result[index].second + step
+        left--
+    }
+    return result
+}
+
+/**
+ * «Изменить суммы участников»: чек сворачивается в плоский расход ПО СУММАМ, и
+ * у каждого остаётся ровно то, что насчитали позиции (со сборами). Прежний
+ * единственный выход из чека — «Поровну на всех» — выбрасывал это
+ * распределение. Отменяемо тем же баннером. Порт iOS `convertItemsToManualShares`.
+ */
+internal fun AddExpenseForm.convertingToManualShares(): AddExpenseForm {
+    val preview = manualSharesPreview() ?: return this
+    return copy(
+        undoSnapshot = snapshot(),
+        canUndoParse = true,
+        changedItemIndices = emptySet(),
+        sumText = inputTextFromMinor(preview.total),
+        splitType = SplitType.BY_EXACT_AMOUNT,
+        recipientIds = preview.shares.map { it.first }.toSet(),
+        amountTexts = preview.shares.associate { (id, minor) -> id to inputTextFromMinor(minor) },
+        draftItems = emptyList(),
         parseQuestions = emptyList(),
-    ).syncingRecipientsFromItems()
+    )
 }
 
 /**
@@ -1037,10 +1158,20 @@ class AddExpenseViewModel @Inject constructor(
                         undoSnapshot = null,
                         canUndoParse = false,
                         changedItemIndices = emptySet(),
+                        // Точность — свойство выбранной группы. При создании её
+                        // надо сбросить ДО применения: appliedRoom признак только
+                        // поднимает, и копейки дробной группы утекали бы в целую.
+                        // Правка уже дробного расхода держит точность отдельно.
+                        fractional = if (form.isEditing) form.fractional else false,
                     ),
                     summary.id,
                     summary.members,
                     summary.currency,
+                    // Раньше признак сюда не передавался вовсе: из общего экрана
+                    // любая группа открывалась целой. С кнопкой «Изменить суммы
+                    // участников» это стало менять долги — 100 на троих в группе с
+                    // копейками округлялось бы до 34/33/33.
+                    summary.fractional,
                 )
                 if (applied.toastMessage == SELECT_GROUP_TOAST) applied.copy(toastMessage = null) else applied
             }
@@ -1146,6 +1277,9 @@ class AddExpenseViewModel @Inject constructor(
 
     /** «Поровну на всех»: сброс позиций (обратимо баннером «Отменить»). */
     fun collapseToEqualSplit() = updateForm { it.collapsingToEqualSplit() }
+
+    /** «Изменить суммы участников» — см. [convertingToManualShares]. */
+    fun convertToManualShares() = updateForm { it.convertingToManualShares() }
 
     /** Откат последней голосовой правки/«Поровну» к снапшоту. */
     fun undoParse() = updateForm { it.undoingParse() }
@@ -1659,7 +1793,9 @@ class AddExpenseViewModel @Inject constructor(
             return if (sameRoom) snapshot.applyTo(base) else base
         }
         val summary = base.rooms.firstOrNull { it.id == snapshot.selectedRoomId } ?: return base
-        val withRoom = appliedRoom(base, summary.id, summary.members, summary.currency)
+        // С признаком группы: без него после смерти процесса дробные суммы
+        // черновика восстанавливались бы под целым фильтром ввода.
+        val withRoom = appliedRoom(base, summary.id, summary.members, summary.currency, summary.fractional)
         return snapshot.applyTo(withRoom)
     }
 

@@ -362,7 +362,7 @@
     <string name="expense_add_item">添加项目</string>
     <string name="expense_split_override_title">当前按项目分摊</string>
     <string name="expense_split_override_action">平均分摊</string>
-    <string name="expense_split_override_hint">选择「平摊」会舍弃小票上的项目，把总额在所有成员之间平均分配。可用「撤销」恢复</string>
+    <string name="expense_split_override_hint">“平均分”会删除小票条目，并将总额平均分给所有人。之后可立即通过顶部横幅撤销</string>
     <string name="expense_unknown_hint">选择「%1$s」是谁：点按小票上的红色标记</string>
     <string name="expense_priceless_hint">请填写价格 — 点按标有「价格？」的项目</string>
     <string name="expense_delete_local_title">要删除该操作吗？</string>
@@ -699,4 +699,10 @@
     <string name="group_settings_cents">小数显示</string>
     <string name="group_cents_toggle">使用小数</string>
     <string name="group_settings_cents_footer">您将可以输入带小数的金额，支出也会精确到小数分摊。已记录的内容不会改变。</string>
+    <string name="expense_edit_amounts">修改每人金额</string>
+    <string name="expense_edit_amounts_hint">金额已含附加费。小票条目将被删除。</string>
+    <string name="expense_edit_amounts_rounded">此群组按整数金额计算，份额将被取整，总额不变。</string>
+    <string name="expense_edit_amounts_unavailable_items">请先完善上面的条目：由谁分摊、价格多少</string>
+    <string name="expense_edit_amounts_unavailable_cents">总额含零头，但此群组按整数计算——请在条目中调整份额</string>
+    <string name="expense_edit_amounts_unavailable_invalid">条目中的份额对不上——请修改条目</string>
 </resources>

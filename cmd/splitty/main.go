@@ -525,15 +525,24 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 	}
 
 	// AI-парсинг расхода включается только при заданном ключе; иначе /parse → 503
-	if cfg.GeminiApiKey != "" {
+	if cfg.AiFakeParser && !cfg.ApiDevAuth {
+		log.Fatal().Msg("AI_FAKE_PARSER разрешён только вместе с API_DEV_AUTH")
+	}
+	if cfg.GeminiApiKey != "" || cfg.AiFakeParser {
 		aiUsageRepo := repository.NewAiUsageRepository(db)
 		if err := aiUsageRepo.EnsureIndexes(ctx); err != nil {
 			log.Warn().Err(err).Msg("cannot create ai_usage TTL index")
 		}
-		parser := ai.NewGemini(cfg.GeminiApiKey, cfg.GeminiModel)
+		var parser ai.Parser
+		if cfg.AiFakeParser {
+			parser = ai.FakeParser{}
+			log.Warn().Msg("AI expense parsing: ПОДСТАВНОЙ разбор для UI-прогонов")
+		} else {
+			parser = ai.NewGemini(cfg.GeminiApiKey, cfg.GeminiModel)
+			log.Info().Msg("AI expense parsing enabled (Gemini)")
+		}
 		limiter := service.NewRateLimiter(aiUsageRepo, cfg.AiParseRatePerMin)
 		server.SetAI(parser, limiter, cfg.AiMaxBodyBytes)
-		log.Info().Msg("AI expense parsing enabled (Gemini)")
 	} else {
 		log.Info().Msg("AI expense parsing disabled (GEMINI_API_KEY empty)")
 	}

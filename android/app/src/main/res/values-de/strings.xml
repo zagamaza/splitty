@@ -382,7 +382,7 @@
     <string name="expense_add_item">Position hinzufügen</string>
     <string name="expense_split_override_title">Wird gerade nach Positionen geteilt</string>
     <string name="expense_split_override_action">Gleichmäßig auf alle</string>
-    <string name="expense_split_override_hint">„Gleichmäßig“ verwirft die Belegpositionen und teilt den Betrag gleichmäßig auf alle Mitglieder auf. Mit „Rückgängig“ holst du sie zurück</string>
+    <string name="expense_split_override_hint">„Gleichmäßig“ entfernt die Belegpositionen und teilt die Summe gleichmäßig auf. Direkt danach lässt es sich über das Banner oben rückgängig machen</string>
     <string name="expense_unknown_hint">Wähle, wer „%1$s“ ist: tippe auf die rote Markierung im Beleg</string>
     <string name="expense_priceless_hint">Gib einen Preis an — tippe auf die Position mit „Preis?“</string>
     <string name="expense_delete_local_title">Vorgang löschen?</string>
@@ -762,4 +762,10 @@
     <string name="group_settings_cents">Cent-Beträge</string>
     <string name="group_cents_toggle">Cent berücksichtigen</string>
     <string name="group_settings_cents_footer">Sie können Beträge dann mit Cent eingeben, und Ausgaben werden centgenau geteilt. Bereits Erfasstes bleibt unverändert.</string>
+    <string name="expense_edit_amounts">Beträge pro Person ändern</string>
+    <string name="expense_edit_amounts_hint">Beträge enthalten Gebühren. Die Belegpositionen werden entfernt.</string>
+    <string name="expense_edit_amounts_rounded">Diese Gruppe rechnet in ganzen Beträgen: Anteile werden gerundet, die Summe bleibt gleich.</string>
+    <string name="expense_edit_amounts_unavailable_items">Vervollständigen Sie zuerst die Positionen oben — wer sie teilt und was sie kosten</string>
+    <string name="expense_edit_amounts_unavailable_cents">Die Summe hat Cent-Beträge, die Gruppe rechnet aber in ganzen — passen Sie die Anteile in den Positionen an</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Die Anteile in den Positionen gehen nicht auf — korrigieren Sie die Positionen</string>
 </resources>

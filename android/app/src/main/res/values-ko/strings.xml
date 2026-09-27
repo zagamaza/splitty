@@ -362,7 +362,7 @@
     <string name="expense_add_item">항목 추가</string>
     <string name="expense_split_override_title">현재 항목별로 나누고 있습니다</string>
     <string name="expense_split_override_action">균등하게 나누기</string>
-    <string name="expense_split_override_hint">「균등」을 선택하면 영수증 항목이 삭제되고 총액이 모든 참여자에게 균등하게 분배됩니다. 「실행 취소」로 되돌릴 수 있습니다</string>
+    <string name="expense_split_override_hint">‘똑같이’는 영수증 항목을 지우고 합계를 모두에게 똑같이 나눕니다. 바로 직후에 상단 배너로 되돌릴 수 있습니다</string>
     <string name="expense_unknown_hint">「%1$s」이(가) 누구인지 선택해 주십시오. 영수증의 빨간 표시를 누르십시오</string>
     <string name="expense_priceless_hint">가격을 입력해 주십시오. 「가격?」이라고 표시된 항목을 누르십시오</string>
     <string name="expense_delete_local_title">작업을 삭제하시겠습니까?</string>
@@ -699,4 +699,10 @@
     <string name="group_settings_cents">소수점 표시</string>
     <string name="group_cents_toggle">소수점 사용</string>
     <string name="group_settings_cents_footer">금액을 소수점까지 입력할 수 있고 지출도 소수점 단위로 나뉩니다. 이미 기록된 내용은 바뀌지 않습니다.</string>
+    <string name="expense_edit_amounts">사람별 금액 수정</string>
+    <string name="expense_edit_amounts_hint">금액에 수수료가 포함됩니다. 영수증 항목은 삭제됩니다.</string>
+    <string name="expense_edit_amounts_rounded">이 그룹은 정수 금액만 사용하므로 몫이 반올림됩니다. 합계는 그대로입니다.</string>
+    <string name="expense_edit_amounts_unavailable_items">먼저 위 항목을 채워 주세요. 누가 나누는지, 얼마인지</string>
+    <string name="expense_edit_amounts_unavailable_cents">합계에 소수점이 있지만 이 그룹은 정수만 사용합니다. 항목에서 몫을 조정하세요</string>
+    <string name="expense_edit_amounts_unavailable_invalid">항목의 몫이 맞지 않습니다. 항목을 고쳐 주세요</string>
 </resources>

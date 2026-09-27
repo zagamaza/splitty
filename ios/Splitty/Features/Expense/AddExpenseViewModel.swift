@@ -70,8 +70,34 @@ final class AddExpenseViewModel {
     private(set) var changedItemIndices: Set<Int> = []
     /// true — доступна отмена последней голосовой правки (`undoParse`).
     private(set) var canUndoParse = false
-    /// Снапшот формы до последней голосовой правки.
-    private var undoSnapshot: (items: [OperationItem]?, description: String, sum: String, payer: Int?)?
+    /// Снимок формы для «Отменить».
+    ///
+    /// Целиком, а не «позиции + описание + сумма + плательщик»: отменяемые
+    /// действия меняют и деление — «Поровну на всех» и «Изменить суммы
+    /// участников» переводят форму в плоский режим с другими получателями и
+    /// суммами. Снимок без них возвращал позиции, оставляя деление от
+    /// отменённого шага.
+    private struct FormSnapshot {
+        let items: [OperationItem]?
+        let description: String
+        let sum: String
+        let payer: Int?
+        let splitType: SplitType
+        let recipientIds: Set<Int>
+        let amountTexts: [Int: String]
+        let fractional: Bool
+        let parseQuestions: [String]
+    }
+
+    private var undoSnapshot: FormSnapshot?
+
+    private func makeSnapshot() -> FormSnapshot {
+        FormSnapshot(
+            items: draftItems, description: descriptionText, sum: sumText, payer: payerId,
+            splitType: splitType, recipientIds: recipientIds, amountTexts: amountTexts,
+            fractional: fractional, parseQuestions: parseQuestions
+        )
+    }
     /// Короткое подтверждение действия («Саня — это Александр. Запомнил»);
     /// UI показывает тостом и гасит сам.
     var toastMessage: String?
@@ -422,8 +448,20 @@ final class AddExpenseViewModel {
     func deleteItem(at index: Int) {
         guard var items = draftItems, items.indices.contains(index) else { return }
         items.remove(at: index)
-        draftItems = items.isEmpty ? nil : items
         changedItemIndices = []
+        guard !items.isEmpty else {
+            // Последняя позиция ушла — форма обязана стать плоской и ПУСТОЙ по
+            // сумме. Раньше в поле оставался распознанный итог чека, деление —
+            // от позиций, и удалённый чек сохранялся плоским расходом на всю
+            // сумму. Android (deletingItem) это уже делал.
+            draftItems = nil
+            sumText = ""
+            splitType = .equally
+            amountTexts = [:]
+            recipientIds = Set(members.map(\.id))
+            return
+        }
+        draftItems = items
         syncRecipientsFromItems()
     }
 
@@ -444,8 +482,7 @@ final class AddExpenseViewModel {
     /// баннер «Отменить» мог вернуть всё как было (тот же механизм undoParse).
     func collapseToEqualSplit() {
         guard hasDraftItems else { return }
-        undoSnapshot = (items: draftItems, description: descriptionText,
-                        sum: sumText, payer: payerId)
+        undoSnapshot = makeSnapshot()
         canUndoParse = true
         changedItemIndices = []
         // Сумму переносим ВСЕГДА: при невалидных позициях itemizedTotal == nil,
@@ -466,8 +503,7 @@ final class AddExpenseViewModel {
     func apply(parse response: ParseResponse) {
         let wasCorrection = didRecognize || hasDraftItems
         let oldItems = draftItems
-        let oldSnapshot = (items: draftItems, description: descriptionText,
-                           sum: sumText, payer: payerId)
+        let oldSnapshot = makeSnapshot()
 
         let draft = response.draft
         if !draft.description.isEmpty {
@@ -676,11 +712,14 @@ final class AddExpenseViewModel {
         descriptionText = snapshot.description
         sumText = snapshot.sum
         payerId = snapshot.payer
+        splitType = snapshot.splitType
+        recipientIds = snapshot.recipientIds
+        amountTexts = snapshot.amountTexts
+        fractional = snapshot.fractional
+        parseQuestions = snapshot.parseQuestions
         undoSnapshot = nil
         canUndoParse = false
         changedItemIndices = []
-        parseQuestions = []
-        syncRecipientsFromItems()
     }
 
     /// Гасит подсветку изменённых позиций (по таймеру из вью).
@@ -693,6 +732,103 @@ final class AddExpenseViewModel {
     func dismissUndo() {
         canUndoParse = false
         undoSnapshot = nil
+    }
+
+    /// Суммы участников, в которые свернётся чек по «Изменить суммы
+    /// участников»; nil — сворачивать нельзя.
+    ///
+    /// Нельзя, когда чек не довёл дело до конца: есть нераспознанное имя или
+    /// позиция без цены — иначе потеря позиций разблокировала бы сохранение
+    /// неверного расхода. И когда позиции невалидны (перебор фиксированных
+    /// долей): тогда `derivedShares()` не отвечает.
+    ///
+    /// Шаг — у формы, а не у тусы: `fractional` поднимается и настройкой тусы,
+    /// и правкой уже дробной операции, ровно как это разрешает сервер. В целом
+    /// режиме доли приводятся к целым наибольшим остатком, а итог обязан
+    /// делиться на единицу валюты: иначе «целые доли с прежним итогом»
+    /// невозможны математически, а незаметно менять сумму расхода нельзя —
+    /// тогда кнопки нет, правка остаётся через позиции.
+    var manualSharesPreview: ManualSharesPreview? {
+        guard hasDraftItems, !hasUnknownItems, !hasPricelessItems,
+              let derived = draftItemList.derivedShares(), derived.total > 0 else { return nil }
+        let order = itemizedUserIds
+            + derived.shares.keys.filter { !itemizedUserIds.contains($0) }.sorted()
+        let exact = order.compactMap { id in derived.shares[id].map { (userId: id, minor: $0) } }
+        let step = fractional ? 1 : minorFactor
+        guard derived.total % step == 0 else { return nil }
+        let distributed = Self.distribute(exact, step: step)
+        let wasRounded = zip(exact, distributed).contains { $0.minor != $1.minor }
+        // Нулевые после округления не отправляем: 1 ₽ на троих — это один
+        // получатель на 1 ₽, а не трое, двое из которых должны ноль.
+        let rounded = distributed.filter { $0.minor >= 1 }
+        guard !rounded.isEmpty else { return nil }
+        return ManualSharesPreview(shares: rounded, total: derived.total, wasRounded: wasRounded)
+    }
+
+    /// Почему «Изменить суммы участников» сейчас недоступна; nil — доступна
+    /// либо чека нет.
+    ///
+    /// Кнопка не прячется, а показывается неактивной с причиной: иначе человек
+    /// опять не знает, где вообще правятся итоговые доли, — ровно то, на что
+    /// жаловались.
+    var manualSharesUnavailableReason: String? {
+        guard hasDraftItems, manualSharesPreview == nil else { return nil }
+        if hasUnknownItems || hasPricelessItems {
+            return String(localized: "Сначала уточните позиции выше — кто их делит и сколько они стоят")
+        }
+        if let total = draftItemList.derivedShares()?.total, total > 0, !fractional, total % minorFactor != 0 {
+            return String(localized: "В итоге есть копейки, а группа считает целыми — поправьте доли в позициях")
+        }
+        return String(localized: "Доли в позициях не сходятся — поправьте позиции")
+    }
+
+    struct ManualSharesPreview: Equatable {
+        struct Share: Equatable { let userId: Int; let minor: Int }
+        let shares: [Share]
+        let total: Int
+        /// Доли пришлось привести к целым: об этом говорим человеку прямо —
+        /// долги изменились, пусть и в пределах единицы валюты на каждого.
+        let wasRounded: Bool
+    }
+
+    /// Приводит доли к шагу, сохраняя их сумму: пол к шагу у каждого, остаток
+    /// раздаётся по одной единице тем, у кого больше отброшено (ничья — в
+    /// порядке появления в чеке). При шаге 1 доли не меняются.
+    static func distribute(_ shares: [(userId: Int, minor: Int)], step: Int)
+        -> [ManualSharesPreview.Share] {
+        let total = shares.reduce(0) { $0 + $1.minor }
+        var result = shares.map { ManualSharesPreview.Share(userId: $0.userId, minor: $0.minor / step * step) }
+        var left = (total - result.reduce(0) { $0 + $1.minor }) / step
+        let byRemainder = shares.indices.sorted {
+            let a = shares[$0].minor % step, b = shares[$1].minor % step
+            return a != b ? a > b : $0 < $1
+        }
+        for index in byRemainder where left > 0 {
+            result[index] = .init(userId: result[index].userId, minor: result[index].minor + step)
+            left -= 1
+        }
+        return result
+    }
+
+    /// «Изменить суммы участников»: чек сворачивается в плоский расход ПО
+    /// СУММАМ, и у каждого остаётся ровно то, что насчитали позиции (со
+    /// сборами). Прежний единственный выход из чека — «Поровну на всех» —
+    /// выбрасывал это распределение, и подправить одного человека было уже не
+    /// от чего. Отменяемо тем же баннером.
+    func convertItemsToManualShares() {
+        guard let preview = manualSharesPreview else { return }
+        undoSnapshot = makeSnapshot()
+        canUndoParse = true
+        changedItemIndices = []
+        sumText = inputTextFromMinor(preview.total)
+        splitType = .byExactAmount
+        recipientIds = Set(preview.shares.map(\.userId))
+        amountTexts = Dictionary(
+            preview.shares.map { ($0.userId, inputTextFromMinor($0.minor)) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        draftItems = nil
+        parseQuestions = []
     }
 
     /// Сброс распознанного чека (чип «Поровну на всех» или ручная правка суммы/долей):

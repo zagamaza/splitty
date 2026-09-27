@@ -37,6 +37,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -793,6 +794,7 @@ private fun ExpenseFormContent(
                     onAddItem = onAddItem,
                     onToggleSurchargeRule = viewModel::toggleSurchargeRule,
                     onCollapseToEqual = viewModel::collapseToEqualSplit,
+                    onEditAmounts = viewModel::convertToManualShares,
                     onHighlightsShown = viewModel::clearChangeHighlights,
                 )
             } else {
@@ -854,6 +856,7 @@ internal fun ReceiptModeSection(
     onAddItem: () -> Unit,
     onToggleSurchargeRule: (Int) -> Unit,
     onCollapseToEqual: () -> Unit,
+    onEditAmounts: () -> Unit,
     onHighlightsShown: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -869,6 +872,7 @@ internal fun ReceiptModeSection(
             onAddItem = onAddItem,
             onToggleSurchargeRule = onToggleSurchargeRule,
             onCollapseToEqual = onCollapseToEqual,
+            onEditAmounts = onEditAmounts,
             onHighlightsShown = onHighlightsShown,
         )
     }
@@ -887,6 +891,7 @@ private fun ReceiptSection(
     onAddItem: () -> Unit,
     onToggleSurchargeRule: (Int) -> Unit,
     onCollapseToEqual: () -> Unit,
+    onEditAmounts: () -> Unit,
     onHighlightsShown: () -> Unit,
 ) {
     val colors = Splitty.colors
@@ -927,6 +932,16 @@ private fun ReceiptSection(
                     meId = form.meId,
                 )
             }
+        }
+        val manualPreview = form.manualSharesPreview()
+        val manualUnavailable = form.manualSharesUnavailableReason()
+        if (manualPreview != null || manualUnavailable != null) {
+            ManualSharesButton(
+                enabled = manualPreview != null,
+                wasRounded = manualPreview?.wasRounded == true,
+                unavailableReason = manualUnavailable,
+                onClick = onEditAmounts,
+            )
         }
         // AI мог пропустить блюдо — путь добавить руками, не передиктовывая.
         Row(
@@ -1087,6 +1102,68 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
                 contentDescription = stringResource(R.string.expense_recognized_add_photo),
                 tint = colors.accent,
                 modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+/**
+ * «Изменить суммы участников» — под разбивкой «С кого сколько». Порт iOS.
+ *
+ * Раньше в режиме чека карточки деления не было вовсе, а единственный выход —
+ * «Поровну на всех» — выбрасывал распределение по позициям. Подписи говорят то,
+ * что иначе стало бы сюрпризом: позиции исчезнут, а в целой тусе доли
+ * приведутся к целым — это меняет долги. Про округление говорим, только если
+ * оно действительно что-то поменяло.
+ */
+@Composable
+private fun ManualSharesButton(
+    enabled: Boolean,
+    wasRounded: Boolean,
+    unavailableReason: Int?,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(vertical = 6.dp)
+                .testTag("edit_participant_amounts"),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Tune,
+                contentDescription = null,
+                tint = if (enabled) colors.accent else colors.inkSecondary,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.expense_edit_amounts),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (enabled) colors.accentText else colors.inkSecondary,
+            )
+        }
+        Text(
+            text = stringResource(unavailableReason ?: R.string.expense_edit_amounts_hint),
+            fontSize = 12.sp,
+            color = colors.inkSecondary,
+            textAlign = TextAlign.Center,
+        )
+        if (wasRounded) {
+            Text(
+                text = stringResource(R.string.expense_edit_amounts_rounded),
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+                textAlign = TextAlign.Center,
             )
         }
     }

@@ -382,7 +382,7 @@
     <string name="expense_add_item">Añadir línea</string>
     <string name="expense_split_override_title">Ahora se divide por líneas</string>
     <string name="expense_split_override_action">A partes iguales</string>
-    <string name="expense_split_override_hint">«A partes iguales» descarta las líneas del recibo y reparte el importe entre todos los miembros. Puedes recuperarlas con «Deshacer»</string>
+    <string name="expense_split_override_hint">«A partes iguales» quita las líneas del recibo y divide el total por igual. Puedes deshacerlo justo después, con el aviso de arriba</string>
     <string name="expense_unknown_hint">Elige quién es «%1$s»: toca la marca roja del recibo</string>
     <string name="expense_priceless_hint">Añade un precio: toca la línea marcada con «¿precio?»</string>
     <string name="expense_delete_local_title">¿Eliminar la operación?</string>
@@ -762,4 +762,10 @@
     <string name="group_settings_cents">Céntimos</string>
     <string name="group_cents_toggle">Contar céntimos</string>
     <string name="group_settings_cents_footer">Podrá introducir importes con céntimos, y los gastos se dividirán al céntimo. Lo ya registrado no cambia.</string>
+    <string name="expense_edit_amounts">Editar importes por persona</string>
+    <string name="expense_edit_amounts_hint">Los importes incluyen cargos. Las líneas del recibo se eliminarán.</string>
+    <string name="expense_edit_amounts_rounded">Este grupo usa importes enteros: las partes se redondearán y el total no cambia.</string>
+    <string name="expense_edit_amounts_unavailable_items">Primero completa las líneas de arriba: quién las comparte y cuánto cuestan</string>
+    <string name="expense_edit_amounts_unavailable_cents">El total tiene céntimos, pero este grupo usa importes enteros: ajusta las partes en las líneas</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Las partes de las líneas no cuadran: corrige las líneas</string>
 </resources>

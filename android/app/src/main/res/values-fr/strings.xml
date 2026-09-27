@@ -382,7 +382,7 @@
     <string name="expense_add_item">Ajouter une ligne</string>
     <string name="expense_split_override_title">Actuellement réparti par lignes</string>
     <string name="expense_split_override_action">À parts égales</string>
-    <string name="expense_split_override_hint">« À parts égales » abandonne les lignes du ticket et répartit le montant entre tous les membres. Vous pouvez revenir en arrière avec « Annuler »</string>
+    <string name="expense_split_override_hint">« À parts égales » supprime les lignes du ticket et partage le total à égalité. Vous pouvez annuler juste après, avec le bandeau en haut</string>
     <string name="expense_unknown_hint">Choisissez qui est « %1$s » : touchez le repère rouge sur le ticket</string>
     <string name="expense_priceless_hint">Indiquez un prix — touchez la ligne marquée « prix ? »</string>
     <string name="expense_delete_local_title">Supprimer l\'opération ?</string>
@@ -762,4 +762,10 @@
     <string name="group_settings_cents">Centimes</string>
     <string name="group_cents_toggle">Compter les centimes</string>
     <string name="group_settings_cents_footer">Vous pourrez saisir des montants avec les centimes, et les dépenses seront partagées au centime près. Ce qui est déjà enregistré ne change pas.</string>
+    <string name="expense_edit_amounts">Modifier les montants par personne</string>
+    <string name="expense_edit_amounts_hint">Les montants incluent les frais. Les lignes du ticket seront supprimées.</string>
+    <string name="expense_edit_amounts_rounded">Ce groupe utilise des montants entiers : les parts seront arrondies, le total reste le même.</string>
+    <string name="expense_edit_amounts_unavailable_items">Complétez d\'abord les lignes ci-dessus : qui les partage et combien elles coûtent</string>
+    <string name="expense_edit_amounts_unavailable_cents">Le total a des centimes, mais ce groupe utilise des montants entiers : ajustez les parts dans les lignes</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Les parts des lignes ne tombent pas juste : corrigez les lignes</string>
 </resources>

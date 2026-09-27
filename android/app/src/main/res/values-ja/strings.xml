@@ -362,7 +362,7 @@
     <string name="expense_add_item">品目を追加</string>
     <string name="expense_split_override_title">現在は品目ごとに分割しています</string>
     <string name="expense_split_override_action">均等に分ける</string>
-    <string name="expense_split_override_hint">「均等」を選ぶとレシートの品目は破棄され、合計が全員で均等に分割されます。「取り消す」で元に戻せます</string>
+    <string name="expense_split_override_hint">「均等に」はレシートの項目を削除し、合計を全員で均等に分けます。直後なら上部のバナーから取り消せます</string>
     <string name="expense_unknown_hint">「%1$s」が誰かを選んでください。レシートの赤い印をタップします</string>
     <string name="expense_priceless_hint">価格を入力してください。「価格？」と表示された品目をタップします</string>
     <string name="expense_delete_local_title">操作を削除しますか？</string>
@@ -699,4 +699,10 @@
     <string name="group_settings_cents">小数表示</string>
     <string name="group_cents_toggle">小数を使う</string>
     <string name="group_settings_cents_footer">金額を小数で入力でき、支出も小数単位で分割されます。すでに記録された内容は変わりません。</string>
+    <string name="expense_edit_amounts">一人ずつの金額を変更</string>
+    <string name="expense_edit_amounts_hint">金額には手数料が含まれます。レシートの項目は削除されます。</string>
+    <string name="expense_edit_amounts_rounded">このグループは整数の金額で計算するため、各自の額は丸められます。合計は変わりません。</string>
+    <string name="expense_edit_amounts_unavailable_items">まず上の項目を確定してください。誰が分けるか、いくらかを</string>
+    <string name="expense_edit_amounts_unavailable_cents">合計に端数がありますが、このグループは整数で計算します。項目内の配分を調整してください</string>
+    <string name="expense_edit_amounts_unavailable_invalid">項目の配分が合いません。項目を修正してください</string>
 </resources>

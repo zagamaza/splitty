@@ -443,7 +443,7 @@
     <string name="expense_add_item">Добавить позицию</string>
     <string name="expense_split_override_title">Сейчас делится по позициям</string>
     <string name="expense_split_override_action">Поровну на всех</string>
-    <string name="expense_split_override_hint">«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»</string>
+    <string name="expense_split_override_hint">«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Отменить можно сразу после — баннером сверху</string>
     <string name="expense_unknown_hint">Выберите, кто это — «%1$s»: коснитесь красной метки в чеке</string>
     <string name="expense_priceless_hint">Укажите цену — коснитесь позиции с меткой «цена?»</string>
     <string name="expense_delete_local_title">Удалить операцию?</string>
@@ -799,4 +799,10 @@
     <string name="group_settings_cents">Копейки</string>
     <string name="group_cents_toggle">Считать копейки</string>
     <string name="group_settings_cents_footer">Суммы можно будет вводить с копейками, и расходы разделятся до копейки. Уже записанное не изменится.</string>
+    <string name="expense_edit_amounts">Изменить суммы участников</string>
+    <string name="expense_edit_amounts_hint">Суммы включают сборы. Позиции чека будут удалены.</string>
+    <string name="expense_edit_amounts_rounded">В этой группе суммы округлятся до целых; итог сохранится.</string>
+    <string name="expense_edit_amounts_unavailable_items">Сначала уточните позиции выше — кто их делит и сколько они стоят</string>
+    <string name="expense_edit_amounts_unavailable_cents">В итоге есть копейки, а группа считает целыми — поправьте доли в позициях</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Доли в позициях не сходятся — поправьте позиции</string>
 </resources>

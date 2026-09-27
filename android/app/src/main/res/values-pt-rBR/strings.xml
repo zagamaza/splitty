@@ -362,7 +362,7 @@
     <string name="expense_add_item">Adicionar item</string>
     <string name="expense_split_override_title">Agora está dividido por itens</string>
     <string name="expense_split_override_action">Dividir igualmente</string>
-    <string name="expense_split_override_hint">“Igualmente” descarta os itens do recibo e divide o valor por igual entre todos. Você pode voltar atrás em “Desfazer”</string>
+    <string name="expense_split_override_hint">“Dividir igualmente” remove os itens do recibo e divide o total igualmente. Dá para desfazer logo em seguida, pelo aviso no topo</string>
     <string name="expense_unknown_hint">Escolha quem é “%1$s”: toque na marca vermelha do recibo</string>
     <string name="expense_priceless_hint">Informe o preço — toque no item marcado com “preço?”</string>
     <string name="expense_delete_local_title">Excluir a operação?</string>
@@ -703,4 +703,10 @@
     <string name="group_settings_cents">Centavos</string>
     <string name="group_cents_toggle">Contar centavos</string>
     <string name="group_settings_cents_footer">Você poderá inserir valores com centavos, e as despesas serão divididas até o centavo. O que já foi registrado não muda.</string>
+    <string name="expense_edit_amounts">Editar valores por pessoa</string>
+    <string name="expense_edit_amounts_hint">Os valores incluem taxas. Os itens do recibo serão removidos.</string>
+    <string name="expense_edit_amounts_rounded">Este grupo usa valores inteiros: as partes serão arredondadas e o total continua o mesmo.</string>
+    <string name="expense_edit_amounts_unavailable_items">Primeiro complete os itens acima: quem divide e quanto custam</string>
+    <string name="expense_edit_amounts_unavailable_cents">O total tem centavos, mas este grupo usa valores inteiros — ajuste as partes nos itens</string>
+    <string name="expense_edit_amounts_unavailable_invalid">As partes dos itens não fecham — corrija os itens</string>
 </resources>

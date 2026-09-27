@@ -4324,67 +4324,67 @@
         }
       }
     },
-    "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»": {
+    "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Отменить можно сразу после — баннером сверху": {
       "extractionState": "manual",
       "localizations": {
-        "de": {
+        "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "„Gleichmäßig“ verwirft die Belegpositionen und teilt den Betrag gleichmäßig auf alle Mitglieder auf. Mit „Rückgängig“ holst du sie zurück"
+            "value": "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Отменить можно сразу после — баннером сверху"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "“Equally” drops the receipt items and splits the amount evenly between all members. You can bring them back with “Undo”"
+            "value": "“Split equally” removes the receipt items and splits the total equally among everyone. You can undo right after — with the banner at the top"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "«A partes iguales» descarta las líneas del recibo y reparte el importe entre todos los miembros. Puedes recuperarlas con «Deshacer»"
+            "value": "«A partes iguales» quita las líneas del recibo y divide el total por igual. Puedes deshacerlo justo después, con el aviso de arriba"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Gleichmäßig“ entfernt die Belegpositionen und teilt die Summe gleichmäßig auf. Direkt danach lässt es sich über das Banner oben rückgängig machen"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "« À parts égales » abandonne les lignes du ticket et répartit le montant entre tous les membres. Vous pouvez revenir en arrière avec « Annuler »"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「均等」を選ぶとレシートの品目は破棄され、合計が全員で均等に分割されます。「取り消す」で元に戻せます"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择「平摊」会舍弃小票上的项目，把总额在所有成员之间平均分配。可用「撤销」恢复"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「균등」을 선택하면 영수증 항목이 삭제되고 총액이 모든 참여자에게 균등하게 분배됩니다. 「실행 취소」로 되돌릴 수 있습니다"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“Igualmente” descarta os itens do recibo e divide o valor por igual entre todos. Você pode voltar atrás em “Desfazer”"
+            "value": "« À parts égales » supprime les lignes du ticket et partage le total à égalité. Vous pouvez annuler juste après, avec le bandeau en haut"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "“In parti uguali” elimina le voci dello scontrino e divide l’importo tra tutti i partecipanti. Puoi tornare indietro con “Annulla”"
+            "value": "«In parti uguali» rimuove le voci dello scontrino e divide il totale in parti uguali. Puoi annullare subito dopo, dal banner in alto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「均等に」はレシートの項目を削除し、合計を全員で均等に分けます。直後なら上部のバナーから取り消せます"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“平均分”会删除小票条目，并将总额平均分给所有人。之后可立即通过顶部横幅撤销"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘똑같이’는 영수증 항목을 지우고 합계를 모두에게 똑같이 나눕니다. 바로 직후에 상단 배너로 되돌릴 수 있습니다"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Dividir igualmente” remove os itens do recibo e divide o total igualmente. Dá para desfazer logo em seguida, pelo aviso no topo"
           }
         }
       }
@@ -6193,6 +6193,71 @@
         }
       }
     },
+    "В итоге есть копейки, а группа считает целыми — поправьте доли в позициях": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В итоге есть копейки, а группа считает целыми — поправьте доли в позициях"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The total has cents but this group uses whole amounts — adjust shares in the items"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El total tiene céntimos, pero este grupo usa importes enteros: ajusta las partes en las líneas"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Summe hat Cent-Beträge, die Gruppe rechnet aber in ganzen — passen Sie die Anteile in den Positionen an"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le total a des centimes, mais ce groupe utilise des montants entiers : ajustez les parts dans les lignes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il totale ha dei centesimi, ma questo gruppo usa importi interi: correggi le quote nelle voci"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合計に端数がありますが、このグループは整数で計算します。項目内の配分を調整してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总额含零头，但此群组按整数计算——请在条目中调整份额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계에 소수점이 있지만 이 그룹은 정수만 사용합니다. 항목에서 몫을 조정하세요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O total tem centavos, mas este grupo usa valores inteiros — ajuste as partes nos itens"
+          }
+        }
+      }
+    },
     "В какой группе погасить?": {
       "extractionState": "manual",
       "localizations": {
@@ -6319,6 +6384,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Questo gruppo ha accumulato troppe spese. Creane uno nuovo: il vecchio resta consultabile"
+          }
+        }
+      }
+    },
+    "В этой группе суммы округлятся до целых; итог сохранится.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В этой группе суммы округлятся до целых; итог сохранится."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This group uses whole amounts, so shares will be rounded; the total stays the same."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este grupo usa importes enteros: las partes se redondearán y el total no cambia."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Gruppe rechnet in ganzen Beträgen: Anteile werden gerundet, die Summe bleibt gleich."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce groupe utilise des montants entiers : les parts seront arrondies, le total reste le même."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo gruppo usa importi interi: le quote saranno arrotondate, il totale resta invariato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このグループは整数の金額で計算するため、各自の額は丸められます。合計は変わりません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此群组按整数金额计算，份额将被取整，总额不变。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그룹은 정수 금액만 사용하므로 몫이 반올림됩니다. 합계는 그대로입니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este grupo usa valores inteiros: as partes serão arredondadas e o total continua o mesmo."
           }
         }
       }
@@ -13798,6 +13928,71 @@
         }
       }
     },
+    "Доли в позициях не сходятся — поправьте позиции": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доли в позициях не сходятся — поправьте позиции"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shares in the items don't add up — fix the items"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las partes de las líneas no cuadran: corrige las líneas"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anteile in den Positionen gehen nicht auf — korrigieren Sie die Positionen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les parts des lignes ne tombent pas juste : corrigez les lignes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le quote nelle voci non tornano: correggi le voci"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "項目の配分が合いません。項目を修正してください"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条目中的份额对不上——请修改条目"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목의 몫이 맞지 않습니다. 항목을 고쳐 주세요"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As partes dos itens não fecham — corrija os itens"
+          }
+        }
+      }
+    },
     "Долями": {
       "extractionState": "manual",
       "localizations": {
@@ -16183,6 +16378,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modifica spesa"
+          }
+        }
+      }
+    },
+    "Изменить суммы участников": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Изменить суммы участников"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit amounts per person"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar importes por persona"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beträge pro Person ändern"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier les montants par personne"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifica importi per persona"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一人ずつの金額を変更"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改每人金额"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람별 금액 수정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar valores por pessoa"
           }
         }
       }
@@ -33900,6 +34160,71 @@
         }
       }
     },
+    "Сначала уточните позиции выше — кто их делит и сколько они стоят": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сначала уточните позиции выше — кто их делит и сколько они стоят"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First finish the items above — who shares them and what they cost"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero completa las líneas de arriba: quién las comparte y cuánto cuestan"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vervollständigen Sie zuerst die Positionen oben — wer sie teilt und was sie kosten"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Complétez d'abord les lignes ci-dessus : qui les partage et combien elles coûtent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima completa le voci qui sopra: chi le divide e quanto costano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まず上の項目を確定してください。誰が分けるか、いくらかを"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先完善上面的条目：由谁分摊、价格多少"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 위 항목을 채워 주세요. 누가 나누는지, 얼마인지"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primeiro complete os itens acima: quem divide e quanto custam"
+          }
+        }
+      }
+    },
     "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания": {
       "extractionState": "manual",
       "localizations": {
@@ -35131,6 +35456,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "Per importi"
+          }
+        }
+      }
+    },
+    "Суммы включают сборы. Позиции чека будут удалены.": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Суммы включают сборы. Позиции чека будут удалены."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amounts include fees. Receipt items will be removed."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los importes incluyen cargos. Las líneas del recibo se eliminarán."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beträge enthalten Gebühren. Die Belegpositionen werden entfernt."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les montants incluent les frais. Les lignes du ticket seront supprimées."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli importi includono i costi. Le voci dello scontrino verranno rimosse."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金額には手数料が含まれます。レシートの項目は削除されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金额已含附加费。小票条目将被删除。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액에 수수료가 포함됩니다. 영수증 항목은 삭제됩니다."
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os valores incluem taxas. Os itens do recibo serão removidos."
           }
         }
       }

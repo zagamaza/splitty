@@ -91,7 +91,7 @@ class AddExpenseCaptureRoutingTest {
         dir.deleteRecursively()
     }
 
-    private fun viewModel(): AddExpenseViewModel {
+    private fun viewModel(savedState: SavedStateHandle = SavedStateHandle()): AddExpenseViewModel {
         val context: Context = ApplicationProvider.getApplicationContext()
         val json = SplittyJson
         val retrofit = Retrofit.Builder()
@@ -121,7 +121,7 @@ class AddExpenseCaptureRoutingTest {
             testAnalytics(dir, SplittyJson, session, scope),
         )
         return AddExpenseViewModel(
-            repository, session, outbox, syncer, SavedStateHandle(), subscriptions,
+            repository, session, outbox, syncer, savedState, subscriptions,
             testAnalytics(dir, SplittyJson, session, scope),
             ReviewPrompt(dataStore, scope),
             NetworkMonitor(context),
@@ -142,6 +142,50 @@ class AddExpenseCaptureRoutingTest {
 
     private fun form(vm: AddExpenseViewModel): AddExpenseForm =
         (vm.state.value as UiState.Content).value
+
+    /**
+     * Выбор группы из общего экрана приносит её точность — и не протаскивает
+     * копейки из прежней. Проверяется настоящий `selectRoom`, а не форма с
+     * руками поднятым `fractional`: именно так прежний пропуск и выжил.
+     *
+     * Раньше признак сюда не передавался вовсе, и любая группа открывалась
+     * целой. С «Изменить суммы участников» это стало менять долги: 100 на троих
+     * в группе с копейками округлялось до 34/33/33.
+     */
+    @Test
+    fun `picking a group from the general screen carries its precision`() = runBlocking {
+        server.enqueue(MockResponse().setBody(ROOMS_JSON))
+        val vm = viewModel()
+        vm.start(null, null)
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
+        val rooms = form(vm).rooms
+
+        vm.selectRoom(rooms.first { it.id == "cents" })
+        assertTrue(form(vm).fractional, "группа с копейками открылась целой")
+
+        vm.selectRoom(rooms.first { it.id == "whole" })
+        assertFalse(form(vm).fractional, "копейки прежней группы утекли в целую")
+    }
+
+    /**
+     * После смерти процесса черновик восстанавливается в группу С ЕЁ точностью.
+     * Без признака дробные суммы черновика попадали под целый фильтр ввода, и
+     * первое же нажатие превращало «20,80» в «2080».
+     */
+    @Test
+    fun `restored draft keeps its groups precision`() = runBlocking {
+        server.enqueue(MockResponse().setBody(ROOMS_JSON))
+        val draft = ExpenseDraftSnapshot(selectedRoomId = "cents", description = "Ужин", sumText = "20,80")
+        val vm = viewModel(
+            SavedStateHandle(mapOf("expense_draft" to SplittyJson.encodeToString(ExpenseDraftSnapshot.serializer(), draft))),
+        )
+        vm.start(null, null)
+        withTimeout(IO_WAIT_MS) { vm.state.first { it is UiState.Content } }
+
+        assertEquals("cents", form(vm).selectedRoomId)
+        assertTrue(form(vm).fractional, "черновик вернулся в группу с копейками, но форма целая")
+        assertEquals("20,80", form(vm).sumText)
+    }
 
     @Test
     fun `first receipt into an empty form waits on the review screen`() = runBlocking {
@@ -206,6 +250,19 @@ class AddExpenseCaptureRoutingTest {
     }
 
     private companion object {
+        val ROOMS_JSON = """
+            [
+              {"id": "cents", "name": "С копейками", "createdAt": "2026-07-05T12:00:00Z",
+               "members": [{"id": 1, "displayName": "Аня"}, {"id": 2, "displayName": "Боря"}],
+               "memberCount": 2, "currency": "RUB", "fractional": true,
+               "totalSpent": 0, "myBalance": 0},
+              {"id": "whole", "name": "Целая", "createdAt": "2026-07-05T12:00:00Z",
+               "members": [{"id": 1, "displayName": "Аня"}, {"id": 2, "displayName": "Боря"}],
+               "memberCount": 2, "currency": "RUB", "fractional": false,
+               "totalSpent": 0, "myBalance": 0}
+            ]
+        """.trimIndent()
+
         val ROOM_JSON = """
             {
               "id": "65af", "name": "Ужин", "createdAt": "2026-07-05T12:00:00Z",

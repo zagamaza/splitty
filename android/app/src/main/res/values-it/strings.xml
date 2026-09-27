@@ -362,7 +362,7 @@
     <string name="expense_add_item">Aggiungi voce</string>
     <string name="expense_split_override_title">Ora è diviso per voci</string>
     <string name="expense_split_override_action">Dividi in parti uguali</string>
-    <string name="expense_split_override_hint">“In parti uguali” elimina le voci dello scontrino e divide l’importo tra tutti i partecipanti. Puoi tornare indietro con “Annulla”</string>
+    <string name="expense_split_override_hint">«In parti uguali» rimuove le voci dello scontrino e divide il totale in parti uguali. Puoi annullare subito dopo, dal banner in alto</string>
     <string name="expense_unknown_hint">Scegli chi è “%1$s”: tocca il segno rosso sullo scontrino</string>
     <string name="expense_priceless_hint">Indica il prezzo: tocca la voce con l’etichetta “prezzo?”</string>
     <string name="expense_delete_local_title">Vuoi eliminare l’operazione?</string>
@@ -703,4 +703,10 @@
     <string name="group_settings_cents">Centesimi</string>
     <string name="group_cents_toggle">Contare i centesimi</string>
     <string name="group_settings_cents_footer">Potrà inserire importi con i centesimi e le spese saranno divise al centesimo. Quanto già registrato non cambia.</string>
+    <string name="expense_edit_amounts">Modifica importi per persona</string>
+    <string name="expense_edit_amounts_hint">Gli importi includono i costi. Le voci dello scontrino verranno rimosse.</string>
+    <string name="expense_edit_amounts_rounded">Questo gruppo usa importi interi: le quote saranno arrotondate, il totale resta invariato.</string>
+    <string name="expense_edit_amounts_unavailable_items">Prima completa le voci qui sopra: chi le divide e quanto costano</string>
+    <string name="expense_edit_amounts_unavailable_cents">Il totale ha dei centesimi, ma questo gruppo usa importi interi: correggi le quote nelle voci</string>
+    <string name="expense_edit_amounts_unavailable_invalid">Le quote nelle voci non tornano: correggi le voci</string>
 </resources>

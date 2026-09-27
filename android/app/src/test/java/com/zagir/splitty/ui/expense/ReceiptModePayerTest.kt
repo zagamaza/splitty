@@ -60,6 +60,7 @@ class ReceiptModePayerTest {
                     onAddItem = {},
                     onToggleSurchargeRule = {},
                     onCollapseToEqual = {},
+                    onEditAmounts = {},
                     onHighlightsShown = {},
                 )
             }

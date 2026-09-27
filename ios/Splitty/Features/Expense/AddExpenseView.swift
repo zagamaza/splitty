@@ -1187,6 +1187,17 @@ struct AddExpenseView: View {
     /// иначе запись стартует после «отпустили» и остаётся включённой навсегда.
     private func startRecordingIfNeeded() {
         guard !recorder.isRecording, !model.isParsing else { return }
+        #if DEBUG
+        // Сквозной UI-прогон: у симулятора нет микрофона, и без этого хода до
+        // разбора тест не добирался вообще. Фраза уходит текстом тем же
+        // запросом, что и надиктовка. Только Debug и только по переменной
+        // запуска — в релизной сборке этого кода нет.
+        if let phrase = ProcessInfo.processInfo.environment["SPLITTY_FAKE_DICTATION"] {
+            focusedField = nil
+            model.startParse(api: session.api, text: phrase)
+            return
+        }
+        #endif
         Analytics.shared.track(.captureStarted(kind: "voice"))
         Task {
             if !micGranted {
@@ -1395,9 +1406,54 @@ struct AddExpenseView: View {
                     meId: session.me?.id
                 )
             }
+            if model.manualSharesPreview != nil || model.manualSharesUnavailableReason != nil {
+                manualSharesButton(model.manualSharesPreview, unavailableReason: model.manualSharesUnavailableReason)
+            }
             // AI мог пропустить блюдо — путь добавить руками, не передиктовывая.
             addItemLink
             splitOverrideCard
+        }
+    }
+
+    /// «Изменить суммы участников» — прямо под разбивкой «С кого сколько».
+    ///
+    /// Раньше в режиме чека карточки деления не было вовсе, а единственный
+    /// выход — «Поровну на всех» — выбрасывал распределение, которое насчитали
+    /// позиции. Кнопка сворачивает чек в плоский расход по суммам: у каждого
+    /// ровно его доля, дальше она правится в обычной карточке.
+    ///
+    /// Подписи говорят то, что иначе стало бы сюрпризом: позиции исчезнут, а в
+    /// целой тусе доли приведутся к целым — это меняет долги, пусть и в пределах
+    /// единицы валюты на человека. Про округление говорим, только если оно
+    /// действительно что-то поменяло.
+    private func manualSharesButton(
+        _ preview: AddExpenseViewModel.ManualSharesPreview?,
+        unavailableReason: String?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                Haptics.tap()
+                withAnimation(.spring(duration: 0.25)) { model.convertItemsToManualShares() }
+            } label: {
+                Label("Изменить суммы участников", systemImage: "slider.horizontal.3")
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
+                    .foregroundStyle(preview == nil ? Color.inkSecondary : Color.accentText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+            .disabled(preview == nil)
+            .accessibilityIdentifier("editParticipantAmounts")
+            Text(unavailableReason ?? String(localized: "Суммы включают сборы. Позиции чека будут удалены."))
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+            if preview?.wasRounded == true {
+                Text("В этой группе суммы округлятся до целых; итог сохранится.")
+                    .scaledFont(size: 12, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
         }
     }
 
@@ -1481,7 +1537,7 @@ struct AddExpenseView: View {
                 }
                 .buttonStyle(.softChip(isSelected: false))
             }
-            Text("«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Вернуть можно кнопкой «Отменить»")
+            Text("«Поровну» отбросит позиции чека и поделит сумму на всех участников поровну. Отменить можно сразу после — баннером сверху")
                 .scaledFont(size: 12, relativeTo: .footnote)
                 .foregroundStyle(Color.inkSecondary)
         }
@@ -1767,6 +1823,7 @@ struct AddExpenseView: View {
                 .keyboardType(model.fractional ? .decimalPad : .numberPad)
                 .frame(width: 90)
                 .focused($focusedField, equals: .amount(member.id))
+                .accessibilityIdentifier("amountField.\(member.id)")
             Text(currencySymbol(model.currency))
                 .scaledFont(size: 15)
                 .foregroundStyle(Color.inkSecondary)
