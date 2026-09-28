@@ -19,6 +19,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import com.zagir.splitty.core.analytics.DeviceIdSource
+import com.zagir.splitty.core.analytics.RobotDeviceSource
+import com.zagir.splitty.core.analytics.TestLabRobotDevice
 import com.zagir.splitty.ui.onboarding.IntroSeenSource
 import com.zagir.splitty.ui.onboarding.SharedPrefsIntroSeen
 import com.zagir.splitty.core.analytics.InstallDeviceId
@@ -108,6 +110,12 @@ object AppModule {
     @Singleton
     fun provideAnalyticsQueue(@ApplicationContext context: Context, json: Json): AnalyticsQueue =
         AnalyticsQueue(File(context.filesDir, "analytics.json"), json)
+
+    /** Тестовое устройство Google (pre-launch report) — с него аналитику не шлём. */
+    @Provides
+    @Singleton
+    fun provideRobotDeviceSource(@ApplicationContext context: Context): RobotDeviceSource =
+        TestLabRobotDevice(context)
 
     /** Отметка «эта установка видела приветствие» — синхронная, см. класс. */
     @Provides

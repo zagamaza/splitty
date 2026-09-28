@@ -95,8 +95,8 @@ class AnalyticsBacklogTest {
         dir.deleteRecursively()
     }
 
-    private fun analytics() =
-        Analytics(queue, api, session, scope, DeviceIdSource { "test-device" })
+    private fun analytics(robot: Boolean = false) =
+        Analytics(queue, api, session, scope, DeviceIdSource { "test-device" }, RobotDeviceSource { robot })
 
     private fun ok() = MockResponse().setBody("""{"accepted":1,"duplicates":0,"rejected":0}""")
 
@@ -518,5 +518,28 @@ class AnalyticsBacklogTest {
             queue.snapshot().single { it.name == "screen_view" }.session,
             "первый экран после входа уехал в другую сессию — ротация случилась дважды",
         )
+    }
+
+    /**
+     * С тестового устройства Google не уходит ничего.
+     *
+     * Play гоняет каждую сборку роботом: запуск, стирание данных, снова запуск.
+     * Каждый раз — новая установка и обезличенный app_open; к 28.09.2026 это
+     * почти 8 тысяч «устройств» при нуле живых Android-пользователей.
+     */
+    @Test
+    fun robotDeviceSendsNothing() = runBlocking {
+        server.enqueue(ok())
+        val analytics = analytics(robot = true)
+
+        analytics.trackAnonymous(AnalyticsEvent.AppOpen(cold = true))
+        session.signIn("token-A", Me(id = 1, displayName = "А"))
+        withTimeout(IO_WAIT_MS) { session.state.first { it?.token == "token-A" } }
+        analytics.onOwnerChanged(1)
+        analytics.track(AnalyticsEvent.ScreenView("groups"))
+        delay(300)
+
+        assertEquals(0, server.requestCount, "робот прислал события")
+        assertTrue(queue.snapshot().isEmpty(), "робот положил события в очередь")
     }
 }

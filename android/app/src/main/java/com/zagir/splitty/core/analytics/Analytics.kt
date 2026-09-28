@@ -84,7 +84,14 @@ class Analytics @Inject constructor(
     private val session: SessionStore,
     @ApplicationScope private val scope: CoroutineScope,
     private val deviceId: DeviceIdSource,
+    private val robot: RobotDeviceSource = RobotDeviceSource { false },
 ) {
+    /**
+     * Сбор включён и это не робот Google. Признак читается один раз: он про
+     * устройство и за время жизни процесса не меняется.
+     */
+    private val enabled: Boolean by lazy { ENABLED && !robot.isRobot() }
+
     private val flushMutex = Mutex()
 
     @Volatile
@@ -182,7 +189,7 @@ class Analytics @Inject constructor(
      * останется хвост, который никто не досылает.
      */
     fun onBackgrounded() {
-        if (!ENABLED) return
+        if (!enabled) return
         scope.launch { flush() }
     }
 
@@ -195,7 +202,7 @@ class Analytics @Inject constructor(
      * оттуда лезет в тот же файл очереди одновременно с его чисткой.
      */
     fun onForegrounded() {
-        if (!ENABLED) return
+        if (!enabled) return
         scope.launch { flush() }
     }
 
@@ -215,7 +222,7 @@ class Analytics @Inject constructor(
      * этот поток ни с кем не связывается.
      */
     fun trackAnonymous(event: AnalyticsEvent) {
-        if (!ENABLED) return
+        if (!enabled) return
         val record = record(event, owner = 0L)
         scope.launch {
             try {
@@ -243,7 +250,7 @@ class Analytics @Inject constructor(
      * 8. Последняя ступень воронки была не «плохой», а несуществующей.
      */
     fun trackSignedIn(event: AnalyticsEvent, userId: Long, token: String) {
-        if (!ENABLED) return
+        if (!enabled) return
         // Сессия меняется ЗДЕСЬ и синхронно, до записи события. Всё, что до
         // входа — login_shown, login_started, онбординг, auth_completed, —
         // осталось в прежней, обезличенной сессии; login_completed попадает в
@@ -268,7 +275,7 @@ class Analytics @Inject constructor(
     }
 
     fun track(event: AnalyticsEvent) {
-        if (!ENABLED) return
+        if (!enabled) return
         // Владелец — из состояния сессии, а не из ownerUserId. То поле двигает
         // OfflineDataCleaner своей эмиссией и в окне «A вышел → B вошёл» оно
         // отстаёт: событие ЭКРАНА, который уже смотрит B, записывалось на A —
@@ -296,7 +303,7 @@ class Analytics @Inject constructor(
      * Не доехало — значит потеряно: у последнего вздоха ретраить негде.
      */
     fun trackTerminal(event: AnalyticsEvent): Job? {
-        if (!ENABLED) return null
+        if (!enabled) return null
         // Токен и владелец — ОДНИМ снимком состояния. Два независимых чтения
         // могли бы разъехаться (человек вышел между ними), а заголовок берём
         // явный: перехватчик подставил бы токен, актуальный на момент
@@ -410,7 +417,7 @@ class Analytics @Inject constructor(
      * Один снимок закрывает это для всех путей разом.
      */
     suspend fun flush() {
-        if (!ENABLED) return
+        if (!enabled) return
         val snapshot = session.state.value ?: return
         val owner = snapshot.me?.id ?: return
         val token = snapshot.token ?: return
