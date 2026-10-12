@@ -1,5 +1,7 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.ReceiptPaperEnd
+import com.zagir.splitty.ui.components.onReceiptPaper
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.zagir.splitty.ui.components.ReceiptPaper
 import com.zagir.splitty.ui.components.PerforatedEdgeShape
@@ -455,7 +457,7 @@ private fun InviteBottomSheet(
                     Icon(
                         imageVector = if (copied) Icons.Filled.Check else Icons.Outlined.ContentCopy,
                         contentDescription = null,
-                        tint = colors.accent,
+                        tint = colors.ink,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -486,9 +488,7 @@ internal fun InviteBanner(onClick: () -> Unit) {
 
 // MARK: - Контент
 
-/** Строка ленты на общей бумаге документа: фон бумаги и поля по бокам. */
-private fun Modifier.onPaper(paper: Color): Modifier =
-    this.fillMaxWidth().background(paper).padding(horizontal = 22.dp)
+private fun Modifier.onPaper(paper: Color): Modifier = onReceiptPaper(paper, horizontal = 22.dp)
 
 /**
  * Лента тусы — один документ на бумаге: шапка, сводка остатка, позиции по
@@ -643,22 +643,9 @@ private fun GroupDetailContent(
                     }
                 }
             }
-            item(key = "tail") { PaperTail(paper) }
+            item(key = "tail") { ReceiptPaperEnd(28.dp) }
         }
     }
-}
-
-/** Низ листа: поле бумаги и перфорированный край. */
-@Composable
-private fun PaperTail(paper: Color) {
-    val shape = remember { PerforatedEdgeShape() }
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(28.dp)
-            .clip(shape)
-            .background(paper)
-    )
 }
 
 /** Шапка документа: реквизит (дата · участники), имя тусы, штамп архива. */
@@ -1369,7 +1356,7 @@ private fun GroupNameSection(room: RoomDetail, viewModel: GroupDetailViewModel) 
                     Text(
                         text = stringResource(R.string.common_save),
                         fontWeight = FontWeight.SemiBold,
-                        color = Splitty.colors.accent,
+                        color = Splitty.colors.ink,
                     )
                 }
             }
@@ -1424,9 +1411,9 @@ private fun GroupAvatarSection(room: RoomDetail, viewModel: GroupDetailViewModel
                     ),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = colors.accentText,
+                    color = colors.ink,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(50))
+                        .clip(RoundedCornerShape(3.dp))
                         .clickable(enabled = !isSaving) {
                             picker.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -1442,7 +1429,7 @@ private fun GroupAvatarSection(room: RoomDetail, viewModel: GroupDetailViewModel
                         fontWeight = FontWeight.Medium,
                         color = colors.inkSecondary,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(50))
+                            .clip(RoundedCornerShape(3.dp))
                             .clickable(enabled = !isSaving) { viewModel.removeAvatar() }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                             .testTag("group_avatar_remove"),
@@ -1582,7 +1569,7 @@ private fun GroupSettingsTab(
                     Spacer(Modifier.weight(1f))
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(50))
+                            .clip(RoundedCornerShape(3.dp))
                             .clickable(onClick = onInviteFriends)
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -1591,14 +1578,14 @@ private fun GroupSettingsTab(
                         Icon(
                             imageVector = Icons.Outlined.PersonAddAlt,
                             contentDescription = null,
-                            tint = colors.accent,
+                            tint = colors.ink,
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
                             text = stringResource(R.string.group_settings_members_invite),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = colors.accentText,
+                            color = colors.ink,
                         )
                     }
                 }
@@ -1666,7 +1653,7 @@ private fun GroupSettingsTab(
                             contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator(
-                                color = colors.accent,
+                                color = colors.ink,
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp,
                             )
@@ -1739,7 +1726,7 @@ private fun GroupSettingsTab(
                             )
                             if (isSavingFractional) {
                                 CircularProgressIndicator(
-                                    color = colors.accent,
+                                    color = colors.ink,
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
                                 )
@@ -2009,7 +1996,7 @@ internal fun InviteFriendsSheetBody(
                             Icon(
                                 imageVector = Icons.Filled.Check,
                                 contentDescription = null,
-                                tint = colors.accent,
+                                tint = colors.ink,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -2102,7 +2089,7 @@ private fun CurrencyRow(
         Spacer(Modifier.weight(1f))
         if (isSaving) {
             CircularProgressIndicator(
-                color = colors.accent,
+                color = colors.ink,
                 modifier = Modifier.size(18.dp),
                 strokeWidth = 2.dp,
             )
@@ -2110,7 +2097,7 @@ private fun CurrencyRow(
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(20.dp),
             )
         }

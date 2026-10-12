@@ -110,7 +110,7 @@ fun NotificationSettingsScreen(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = colors.accent)
+                CircularProgressIndicator(color = colors.ink)
             }
         }
     }

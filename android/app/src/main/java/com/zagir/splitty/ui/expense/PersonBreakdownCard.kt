@@ -132,7 +132,7 @@ private fun ShareBar(fraction: Float) {
         )
         val w = max(size.width * fraction.coerceIn(0f, 1f), 4f)
         drawRoundRect(
-            color = colors.accent,
+            color = colors.ink,
             topLeft = Offset(0f, 0f),
             size = Size(w, h),
             cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2f, h / 2f),
@@ -160,7 +160,7 @@ private fun BalancedLine() {
             Icon(
                 imageVector = Icons.Filled.Check,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(11.dp),
             )
             Spacer(Modifier.width(6.dp))
@@ -168,7 +168,7 @@ private fun BalancedLine() {
                 text = stringResource(R.string.breakdown_allocated),
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accentText,
+                color = colors.ink,
             )
         }
     }

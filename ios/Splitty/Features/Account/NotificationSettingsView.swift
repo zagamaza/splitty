@@ -28,8 +28,8 @@ struct NotificationSettingsView: View {
                     Button("Повторить") {
                         Task { await load() }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accent)
+                    .buttonStyle(.primaryPill)
+                    .frame(maxWidth: 260)
                 }
             } else {
                 ProgressView()
@@ -165,7 +165,7 @@ struct NotificationSettingsView: View {
                 .scaledFont(size: 16)
                 .foregroundStyle(Color.ink)
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
         // Пока профиль не пришёл, состояние тумблера неизвестно — не даём
         // его трогать (и не утверждаем, что уведомления включены).
         .disabled(isSaving || masterOn == nil)
@@ -194,7 +194,7 @@ struct NotificationSettingsView: View {
                         .scaledFont(size: 16)
                         .foregroundStyle(Color.ink)
                 }
-                .tint(Color.accent)
+                .tint(Color.ink)
                 // Пока PATCH в полёте — не даём переключать: быстрые тапы
                 // порождали гонку запросов с непредсказуемым итогом.
                 .disabled(isSaving)
@@ -210,7 +210,7 @@ struct NotificationSettingsView: View {
                         .scaledFont(size: 16)
                         .foregroundStyle(Color.ink)
                 }
-                .tint(Color.accent)
+                .tint(Color.ink)
                 .disabled(isSaving)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)

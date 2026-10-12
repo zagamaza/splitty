@@ -275,7 +275,7 @@ private fun OperationHeroCard(operation: Operation, currency: String) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(3.dp))
                     .background(
                         if (operation.isDebtRepayment) colors.accent.copy(alpha = 0.14f)
                         else colors.ink.copy(alpha = 0.06f)
@@ -560,14 +560,14 @@ private fun OperationActionsCard(
                 Icon(
                     imageVector = Icons.Outlined.Edit,
                     contentDescription = null,
-                    tint = colors.accent,
+                    tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = stringResource(R.string.op_edit),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = colors.accentText,
+                    color = colors.ink,
                 )
             }
             HairlineDivider(startIndent = 16.dp)
@@ -664,7 +664,7 @@ private fun AttachmentPreviewDialog(
                     },
                     actions = {
                         TextButton(onClick = onDismiss) {
-                            Text(stringResource(R.string.common_done), color = colors.accent)
+                            Text(stringResource(R.string.common_done), color = colors.ink)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -681,7 +681,7 @@ private fun AttachmentPreviewDialog(
                 contentAlignment = Alignment.Center,
             ) {
                 when (val p = preview) {
-                    AttachmentPreview.Loading -> CircularProgressIndicator(color = colors.accent)
+                    AttachmentPreview.Loading -> CircularProgressIndicator(color = colors.ink)
 
                     is AttachmentPreview.Photo -> ZoomableImage(
                         bitmap = p.bitmap,

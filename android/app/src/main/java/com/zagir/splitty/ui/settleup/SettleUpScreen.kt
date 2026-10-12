@@ -160,7 +160,7 @@ fun SettleUpScreen(
                 modifier = contentModifier,
                 contentAlignment = Alignment.Center,
             ) {
-                CircularProgressIndicator(color = colors.accent)
+                CircularProgressIndicator(color = colors.ink)
             }
 
             is UiState.Error -> LoadErrorPane(
@@ -302,7 +302,7 @@ private fun NoDebtsPane(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Filled.CheckCircle,
             contentDescription = null,
-            tint = colors.accent,
+            tint = colors.ink,
             modifier = Modifier.size(44.dp),
         )
         Spacer(Modifier.height(12.dp))

@@ -203,7 +203,7 @@ internal fun GroupDashboardContent(
             modifier = modifier.padding(vertical = 56.dp),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = Splitty.colors.accent)
+            CircularProgressIndicator(color = Splitty.colors.ink)
         }
 
         is UiState.Error -> Box(modifier = modifier, contentAlignment = Alignment.Center) {

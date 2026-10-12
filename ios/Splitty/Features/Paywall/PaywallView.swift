@@ -99,7 +99,7 @@ struct PaywallView: View {
             Text("Splitor Plus")
                 .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                 .tracking(1.2)
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
 
             Text(isOutOfQuota
                  ? String(localized: "Распознавания на сегодня кончились")
@@ -136,7 +136,7 @@ struct PaywallView: View {
             HStack(spacing: 8) {
                 Image(systemName: "mic.fill")
                     .scaledFont(size: 13)
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.ink)
                 Text("«Ужин 3200, делим на четверых»")
                     .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                     .foregroundStyle(Color.ink)
@@ -161,14 +161,14 @@ struct PaywallView: View {
                 Spacer()
                 Text("по 800 ₽")
                     .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .monospacedDigit()
             }
         }
         .padding(14)
-        .background(Color.receiptPaper, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.receiptPaper, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .strokeBorder(Color.hairline, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
@@ -193,7 +193,7 @@ struct PaywallView: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             Image(systemName: icon)
                 .scaledFont(size: 14)
-                .foregroundStyle(Color.accent)
+                .foregroundStyle(Color.ink)
                 .frame(width: 20)
             Text(text)
                 .scaledFont(size: 15, relativeTo: .subheadline)
@@ -381,7 +381,7 @@ private struct PlanRow: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(Color.accent, in: Capsule())
+                                .background(Color.accent, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                         }
                     }
                     if let perMonth {
@@ -400,9 +400,9 @@ private struct PlanRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.surface, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .strokeBorder(isSelected ? Color.accent : Color.hairline, lineWidth: isSelected ? 2 : 1)
             }
         }

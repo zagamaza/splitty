@@ -55,6 +55,6 @@ fun Modifier.nudgeHighlight(trigger: Int): Modifier {
         .border(
             width = 2.dp,
             color = accent.copy(alpha = borderAlpha.value),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(3.dp),
         )
 }

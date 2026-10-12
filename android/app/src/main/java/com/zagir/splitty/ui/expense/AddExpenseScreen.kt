@@ -451,7 +451,7 @@ fun AddExpenseScreen(
                         .padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator(color = colors.accent)
+                    CircularProgressIndicator(color = colors.ink)
                 }
 
                 is UiState.Error -> LoadErrorPane(
@@ -969,7 +969,7 @@ private fun ReceiptSection(
             Icon(
                 imageVector = Icons.Filled.AddCircle,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
@@ -977,7 +977,7 @@ private fun ReceiptSection(
                 text = stringResource(R.string.expense_add_item),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accentText,
+                color = colors.ink,
             )
         }
         SplitOverrideCard(onCollapse = onCollapseToEqual)
@@ -1042,7 +1042,7 @@ private fun CorrectionBanner(hasItems: Boolean, onUndo: () -> Unit) {
         Icon(
             imageVector = Icons.Filled.AutoAwesome,
             contentDescription = null,
-            tint = colors.accent,
+            tint = colors.ink,
             modifier = Modifier.size(18.dp),
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -1081,7 +1081,7 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
         Icon(
             imageVector = if (fromPhoto) Icons.Filled.ReceiptLong else Icons.Filled.GraphicEq,
             contentDescription = null,
-            tint = colors.accent,
+            tint = colors.ink,
             modifier = Modifier.size(18.dp),
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -1114,7 +1114,7 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.PhotoCamera,
                 contentDescription = stringResource(R.string.expense_recognized_add_photo),
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -1532,7 +1532,7 @@ private fun PayerRow(form: AddExpenseForm, onSelect: (Long) -> Unit) {
                                 Icon(
                                     imageVector = Icons.Filled.Check,
                                     contentDescription = null,
-                                    tint = colors.accent,
+                                    tint = colors.ink,
                                 )
                             }
                         },
@@ -1807,7 +1807,7 @@ private fun ScanActionChip(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.accent,
+            tint = colors.ink,
             modifier = Modifier.size(18.dp),
         )
         Text(text = text, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.ink)
@@ -1830,7 +1830,7 @@ private fun ParseRetryBanner(message: String, onRetry: () -> Unit, onDismiss: ()
                 color = colors.inkSecondary,
             )
             TextButton(onClick = onRetry) {
-                Text(stringResource(R.string.expense_parse_retry), color = colors.accent)
+                Text(stringResource(R.string.expense_parse_retry), color = colors.ink)
             }
             Icon(
                 imageVector = Icons.Filled.Close,
@@ -2029,7 +2029,7 @@ private fun CircleIconButton(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = colors.accent,
+            tint = colors.ink,
             modifier = Modifier.size(19.dp),
         )
     }
@@ -2102,7 +2102,7 @@ private fun ComposerMicBar(
                 text = stringResource(R.string.plus_mic_remaining, remaining),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accentText,
+                color = colors.ink,
                 modifier = Modifier.clickable(onClick = onRemainingTap),
             )
         } else {
@@ -2235,7 +2235,7 @@ private fun RecordedReviewOverlay(
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = null,
-                    tint = colors.accent,
+                    tint = colors.ink,
                     modifier = Modifier.size(20.dp),
                 )
                 Text(

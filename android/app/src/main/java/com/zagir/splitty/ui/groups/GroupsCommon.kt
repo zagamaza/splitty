@@ -219,7 +219,7 @@ internal fun memberCountText(count: Int): String =
 @Composable
 internal fun GroupsLoading(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Splitty.colors.accent)
+        CircularProgressIndicator(color = Splitty.colors.ink)
     }
 }
 
@@ -352,7 +352,7 @@ internal fun GroupsTextField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val colors = Splitty.colors
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(3.dp)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,

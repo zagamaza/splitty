@@ -374,7 +374,7 @@ private fun HairlineDivider() {
 @Composable
 private fun LoadingView() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Splitty.colors.accent)
+        CircularProgressIndicator(color = Splitty.colors.ink)
     }
 }
 

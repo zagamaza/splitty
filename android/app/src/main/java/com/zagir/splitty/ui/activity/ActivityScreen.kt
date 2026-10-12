@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.activity
 
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptPaperEnd
+import com.zagir.splitty.ui.components.ReceiptPaperStart
+import com.zagir.splitty.ui.components.onReceiptPaper
 import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -213,7 +217,6 @@ private fun ActivityFeed(
             modifier = Modifier.fillMaxSize(),
             // Запас снизу — под центральную кнопку «+» таб-бара.
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // У ленты нет сводки, к которой крепится подпись, — поэтому
             // отдельной строкой сверху: старые события молча выглядят как
@@ -225,6 +228,7 @@ private fun ActivityFeed(
             }
             items(invites, key = { "invite-" + it.roomId }) { card ->
                 InviteCardView(
+                    modifier = Modifier.padding(bottom = 12.dp),
                     card = card,
                     onAction = { action -> onInviteAction(card, action) },
                     onOpen = { onOpenRoom(card.roomId) },
@@ -239,54 +243,57 @@ private fun ActivityFeed(
                     )
                 }
             } else {
-                itemsIndexed(items, key = { _, item -> item.operation.id }) { _, item ->
-                    ActivityRow(
-                        item = item,
-                        myUserId = myUserId,
-                        onClick = { onOpenRoom(item.roomId) },
-                    )
+                // Журнал — строки одного листа, а не стопка карточек.
+                if (items.isNotEmpty()) item(key = "paper-start") { ReceiptPaperStart() }
+                itemsIndexed(items, key = { _, item -> item.operation.id }) { index, item ->
+                    Column(Modifier.onReceiptPaper(Splitty.colors.surface)) {
+                        if (index > 0) ReceiptDivider()
+                        ActivityRow(
+                            item = item,
+                            myUserId = myUserId,
+                            onClick = { onOpenRoom(item.roomId) },
+                        )
+                    }
                 }
                 if (isLoadingMore) {
                     item {
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .onReceiptPaper(Splitty.colors.surface)
                                 .padding(vertical = 12.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(28.dp),
-                                color = Splitty.colors.accent,
+                                color = Splitty.colors.ink,
                             )
                         }
                     }
                 }
+                if (items.isNotEmpty()) item(key = "paper-end") { ReceiptPaperEnd() }
             }
         }
     }
 }
 
 /**
- * Карточная строка ленты: аватар донора, титул с жирными именами,
+ * Строка журнала на листе: аватар донора, титул с жирными именами,
  * ваша позиция (MoneyText в валюте комнаты) и относительное время.
  */
 @Composable
 private fun ActivityRow(item: ActivityItem, myUserId: Long?, onClick: () -> Unit) {
-    SurfaceCard(
-        modifier = Modifier.fillMaxWidth(),
-        padding = 0.dp,
-    ) {
+    run {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable(onClick = onClick)
-                // Карточка — один элемент для TalkBack (заголовок+позиция+время).
+                // Строка — один элемент для TalkBack (заголовок+позиция+время).
                 .semantics(mergeDescendants = true) {}
-                .padding(16.dp),
+                .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GradientAvatar(user = item.operation.donor, size = 44.dp)
+            GradientAvatar(user = item.operation.donor, size = 34.dp)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -406,7 +413,7 @@ private fun ActivityPosition(item: ActivityItem, myUserId: Long?) {
 @Composable
 private fun ActivityLoadingView() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Splitty.colors.accent)
+        CircularProgressIndicator(color = Splitty.colors.ink)
     }
 }
 
@@ -464,14 +471,15 @@ private fun InviteCardView(
     card: InviteCard,
     onAction: (InviteAction) -> Unit,
     onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = Splitty.colors
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.surface)
-            .border(1.5.dp, colors.accent.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .border(1.5.dp, colors.stamp, RoundedCornerShape(3.dp))
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -479,7 +487,7 @@ private fun InviteCardView(
             Icon(
                 imageVector = Icons.Outlined.PersonAddAlt,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(20.dp),
             )
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {

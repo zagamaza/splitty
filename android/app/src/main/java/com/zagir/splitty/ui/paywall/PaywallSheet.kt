@@ -116,7 +116,7 @@ fun PaywallSheet(
             when {
                 isLoadingProducts && products.isEmpty() ->
                     Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) {
-                        CircularProgressIndicator(color = colors.accent)
+                        CircularProgressIndicator(color = colors.ink)
                     }
                 products.isEmpty() ->
                     Text(
@@ -156,7 +156,7 @@ fun PaywallSheet(
                 },
                 enabled = selected != null && !isPurchasing,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                shape = RoundedCornerShape(27.dp),
+                shape = RoundedCornerShape(3.dp),
                 modifier = Modifier.fillMaxWidth().height(54.dp),
             ) {
                 if (isPurchasing) {
@@ -227,7 +227,7 @@ private fun Headline(outOfQuota: Boolean, quota: AiQuota?) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.plus_title),
-            color = colors.accentText,
+            color = colors.ink,
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
         )
@@ -284,7 +284,7 @@ private fun BenefitRow(icon: ImageVector, text: Int) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Icon(icon, contentDescription = null, tint = colors.accent, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(20.dp))
         Text(stringResource(text), color = colors.ink, fontSize = 15.sp)
     }
 }
@@ -296,9 +296,9 @@ private fun HeroCard() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.receiptPaper)
-            .border(1.dp, colors.hairline, RoundedCornerShape(16.dp))
+            .border(1.dp, colors.hairline, RoundedCornerShape(3.dp))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -309,7 +309,7 @@ private fun HeroCard() {
             Icon(
                 Icons.Filled.Mic,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(16.dp),
             )
             Text(
@@ -344,7 +344,7 @@ private fun HeroCard() {
             )
             Text(
                 stringResource(R.string.plus_hero_each),
-                color = colors.accentText,
+                color = colors.ink,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -370,9 +370,9 @@ private fun PlanRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.surface)
-            .border(border, RoundedCornerShape(14.dp))
+            .border(border, RoundedCornerShape(3.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -404,7 +404,7 @@ private fun PlanRow(
                 if (discount != null) {
                     Box(
                         Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(3.dp))
                             .background(colors.accent)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {

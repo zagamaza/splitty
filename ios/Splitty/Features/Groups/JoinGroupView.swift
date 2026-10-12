@@ -51,7 +51,7 @@ struct JoinGroupView: View {
                                 Label("Вставить", systemImage: "doc.on.clipboard")
                                     .labelStyle(.titleAndIcon)
                                     .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Color.accentText)
+                                    .foregroundStyle(Color.ink)
                             }
                             .fixedSize()
                         }

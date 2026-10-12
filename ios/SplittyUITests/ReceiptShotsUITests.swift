@@ -66,4 +66,48 @@ final class ReceiptShotsUITests: XCTestCase {
             shot("04-add")
         }
     }
+
+    func testOtherScreens() throws {
+        loginIfNeeded(app)
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+
+        app.tabBars.buttons["Друзья"].tap()
+        shot("10-friends")
+        let friend = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Алмаз'")).firstMatch
+        if friend.waitForExistence(timeout: 5) {
+            friend.tap()
+            shot("11-friend")
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+
+        app.tabBars.buttons["Уведомления"].tap()
+        shot("12-activity")
+
+        app.tabBars.buttons["Профиль"].tap()
+        shot("13-profile")
+        app.swipeUp()
+        shot("13-profile-scrolled")
+
+        app.tabBars.buttons["Группы"].tap()
+        let room = app.staticTexts["Поездка в Стамбул"]
+        XCTAssertTrue(room.waitForExistence(timeout: 10))
+        room.tap()
+        let op = app.staticTexts["Отель на три ночи"]
+        if op.waitForExistence(timeout: 5) {
+            op.tap()
+            shot("09-operation")
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+        app.navigationBars.buttons.firstMatch.tap()
+
+        let plus = app.buttons["Создать группу или присоединиться по коду"]
+        if plus.waitForExistence(timeout: 5) {
+            plus.tap()
+            let create = app.buttons["Создать группу"]
+            if create.waitForExistence(timeout: 3) {
+                create.tap()
+                shot("14-create-group")
+            }
+        }
+    }
 }

@@ -125,8 +125,8 @@ struct ActivityView: View {
             Button("Повторить") {
                 Task { await model.load(repo: session.repo) }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accent)
+            .buttonStyle(.primaryPill)
+            .frame(maxWidth: 260)
         }
     }
 
@@ -134,12 +134,13 @@ struct ActivityView: View {
     /// (.task на строке — LazyVStack создаёт строки по мере прокрутки).
     private var feed: some View {
         ScrollView {
+            // Лента не имеет сводки, к которой крепится подпись, — поэтому
+            // отдельной строкой сверху: старые события молча выглядят как
+            // «ничего нового»
+            CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
             LazyVStack(spacing: 12) {
-                // Лента не имеет сводки, к которой крепится подпись, — поэтому
-                // отдельной строкой сверху: старые события молча выглядят как
-                // «ничего нового»
-                CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(model.invites) { card in
                     InviteCardView(card: card) { action in
                         if inviteActionNeedsConfirm(action) {
@@ -155,21 +156,28 @@ struct ActivityView: View {
                         }
                     }
                 }
-                ForEach(model.items) { item in
-                    NavigationLink {
-                        GroupDetailView(roomId: item.roomId)
-                    } label: {
-                        ActivityRow(item: item, myUserId: session.me?.id)
+                // Журнал — строки одного листа, а не стопка карточек.
+                if !model.items.isEmpty {
+                    LazyVStack(spacing: 0) {
+                        ForEach(model.items) { item in
+                            if item.id != model.items.first?.id { ReceiptDivider() }
+                            NavigationLink {
+                                GroupDetailView(roomId: item.roomId)
+                            } label: {
+                                ActivityRow(item: item, myUserId: session.me?.id)
+                            }
+                            .buttonStyle(.plain)
+                            .task {
+                                await model.loadMoreIfNeeded(repo: session.repo, current: item)
+                            }
+                        }
+                        if model.isLoadingMore {
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .task {
-                        await model.loadMoreIfNeeded(repo: session.repo, current: item)
-                    }
-                }
-                if model.isLoadingMore {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                    .receiptPaper(padding: 18)
                 }
             }
             .padding(.horizontal, 16)
@@ -193,7 +201,7 @@ struct ActivityView: View {
     }
 }
 
-/// Карточная строка ленты: градиентный аватар автора, текст события
+/// Строка журнала на листе: инициалы автора, текст события
 /// с жирными именами, ваша позиция с MoneyText и относительное время.
 private struct ActivityRow: View {
     let item: ActivityItem
@@ -201,7 +209,7 @@ private struct ActivityRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            UserAvatarView(user: item.operation.donor, size: 44)
+            UserAvatarView(user: item.operation.donor, size: 34)
             VStack(alignment: .leading, spacing: 6) {
                 title
                     .scaledFont(size: 15)
@@ -219,8 +227,9 @@ private struct ActivityRow: View {
                 .foregroundStyle(Color.inkSecondary)
                 .padding(.top, 4)
         }
-        .surfaceCard()
-        // VoiceOver читает карточку одним элементом, а не по кускам.
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+        // VoiceOver читает строку одним элементом, а не по кускам.
         .accessibilityElement(children: .combine)
     }
 
@@ -349,7 +358,7 @@ private struct InviteCardView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "person.2.badge.plus.fill")
                     .font(.system(size: 20))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.ink)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
                         .scaledFont(size: 15)
@@ -365,10 +374,10 @@ private struct InviteCardView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.accent.opacity(0.5), lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .strokeBorder(Color.stamp, lineWidth: 1.5)
         }
     }
 

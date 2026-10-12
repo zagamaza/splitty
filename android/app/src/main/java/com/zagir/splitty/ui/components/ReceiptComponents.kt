@@ -148,6 +148,32 @@ fun ReceiptPaper(
     )
 }
 
+/**
+ * Строка длинного ленивого списка на общем листе: фон бумаги и поля по бокам.
+ * Лист собирается из строк — LazyColumn не умеет фон на весь контент, — а
+ * низ закрывает [ReceiptPaperEnd].
+ */
+fun Modifier.onReceiptPaper(paper: Color, horizontal: Dp = 18.dp): Modifier =
+    this.fillMaxWidth().background(paper).padding(horizontal = horizontal)
+
+/** Верх листа из строк: поле бумаги. */
+@Composable
+fun ReceiptPaperStart(height: Dp = 12.dp) {
+    Box(Modifier.fillMaxWidth().height(height).background(Splitty.colors.surface))
+}
+
+/** Низ листа из строк: поле бумаги и перфорированный край. */
+@Composable
+fun ReceiptPaperEnd(height: Dp = 26.dp) {
+    val paper = Splitty.colors.surface
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(height)
+            .drawBehind { drawOutline(PerforatedEdgeShape().createOutline(size, layoutDirection, this), paper) }
+    )
+}
+
 /** Форма корешка: прямоугольник с полукруглыми вырезами в нижних углах. */
 class ReceiptStubShape(private val notch: Dp = 7.dp) : Shape {
     override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {

@@ -252,7 +252,7 @@ struct AccountView: View {
                         if subscriptions.isPlus {
                             Text("Активна")
                                 .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                                .foregroundStyle(Color.accentText)
+                                .foregroundStyle(Color.ink)
                         }
                         Image(systemName: "chevron.right")
                             .scaledFont(size: 13, weight: .semibold)
@@ -272,7 +272,7 @@ struct AccountView: View {
                         HStack {
                             Text("Управлять подпиской")
                                 .scaledFont(size: 16)
-                                .foregroundStyle(Color.accentText)
+                                .foregroundStyle(Color.ink)
                             Spacer()
                             Image(systemName: "arrow.up.forward")
                                 .scaledFont(size: 13, weight: .semibold)
@@ -575,7 +575,7 @@ struct AccountView: View {
         }
         .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
         .frame(width: 170, height: 38)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
         .disabled(isIdentityBusy)
     }
 
@@ -639,7 +639,7 @@ struct AccountView: View {
                 HStack {
                     Label("Выйти на всех устройствах", systemImage: "iphone.and.arrow.forward")
                         .scaledFont(size: 15, weight: .medium)
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                     Spacer(minLength: 0)
                     if isRevoking { ProgressView() }
                 }
@@ -696,7 +696,7 @@ struct AccountView: View {
                 HStack {
                     Label("Сообщить о проблеме", systemImage: "ladybug")
                         .scaledFont(size: 15, weight: .medium)
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 13, weight: .semibold))
@@ -728,7 +728,7 @@ struct AccountView: View {
                 HStack {
                     Label("Политика конфиденциальности", systemImage: "hand.raised")
                         .scaledFont(size: 15, weight: .medium)
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right.square")
                         .font(.system(size: 13, weight: .semibold))

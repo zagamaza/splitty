@@ -70,29 +70,33 @@ struct FriendsListView: View {
             Button("Повторить") {
                 Task { await model.load(repo: session.repo) }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accent)
+            .buttonStyle(.primaryPill)
+            .frame(maxWidth: 260)
         }
     }
 
     /// Лента: hero-карточка общего баланса + карточные строки друзей на Color.bg.
     private var friendsList: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 if !model.friends.isEmpty {
                     totalHeader
-                        .padding(.bottom, 4)
-                    ForEach(model.friends) { friend in
-                        NavigationLink {
-                            FriendDetailView(friend: friend)
-                        } label: {
-                            FriendRow(friend: friend)
+                    // Люди — строки одного листа, а не стопка карточек.
+                    LazyVStack(spacing: 0) {
+                        ForEach(model.friends) { friend in
+                            if friend.id != model.friends.first?.id { ReceiptDivider() }
+                            NavigationLink {
+                                FriendDetailView(friend: friend)
+                            } label: {
+                                FriendRow(friend: friend)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
+                    .receiptPaper(padding: 18)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             .padding(.vertical, 8)
         }
         .refreshable {
@@ -111,8 +115,8 @@ struct FriendsListView: View {
                     Button("Создать группу") {
                         isCreateGroupPresented = true
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accent)
+                    .buttonStyle(.primaryPill)
+                    .frame(maxWidth: 260)
                 }
             }
         }
@@ -133,20 +137,21 @@ struct FriendsListView: View {
         }
     }
 
-    /// Hero-карточка «Общий баланс»: нетто по всем друзьям. Разные валюты
-    /// не складываются: основная крупно, остальные — вторичной строкой.
+    /// Сводка «Общий баланс» реквизитом на столе: нетто по всем друзьям.
+    /// Разные валюты не складываются: основная крупно, остальные — мельче.
     private var totalHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Общий баланс")
-                .sectionHeaderStyle()
-            MoneyTotalsText(totals: model.totals)
-            Text(totalCaption)
-                .scaledFont(size: 15, weight: .medium)
-                .foregroundStyle(Color.inkSecondary)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Общий баланс").receiptLabel()
+            HStack(alignment: .firstTextBaseline) {
+                Text(totalCaption)
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                MoneyTotalsText(totals: model.totals, primarySize: 22, alignment: .trailing)
+            }
             CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard(padding: 20)
     }
 
     /// Подпись — по знаку основной валюты (цвет — в самих суммах).
@@ -162,21 +167,22 @@ struct FriendsListView: View {
     }
 }
 
-/// Карточная строка друга: градиентный аватар, имя, справа нетто-баланс.
+/// Строка друга на листе: инициалы, имя, справа нетто-баланс.
 private struct FriendRow: View {
     let friend: FriendBalance
 
     var body: some View {
-        HStack(spacing: 14) {
-            UserAvatarView(user: friend.user, size: 48)
+        HStack(spacing: 12) {
+            UserAvatarView(user: friend.user, size: 36)
             Text(friend.user.displayName)
-                .scaledFont(size: 17, weight: .semibold)
+                .scaledFont(size: 16, weight: .medium)
                 .foregroundStyle(Color.ink)
                 .lineLimit(1)
             Spacer(minLength: 8)
             trailing
         }
-        .surfaceCard()
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 
     /// Нетто с другом: подпись по основной валюте, суммы по валютам

@@ -1,5 +1,11 @@
 package com.zagir.splitty.ui.friends
 
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.zagir.splitty.ui.components.ReceiptLabel
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptPaperEnd
+import com.zagir.splitty.ui.components.ReceiptPaperStart
+import com.zagir.splitty.ui.components.onReceiptPaper
 import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,8 +142,7 @@ private fun FriendsList(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             // Запас снизу — под центральную кнопку «+» таб-бара.
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 48.dp),
         ) {
             if (friends.isEmpty()) {
                 item {
@@ -150,9 +155,15 @@ private fun FriendsList(
                 }
             } else {
                 item { TotalHeader(totals, freshness) }
-                items(friends, key = { it.user.id }) { friend ->
-                    FriendRow(friend = friend, onClick = { onOpenFriend(friend) })
+                // Люди — строки одного листа, а не стопка карточек.
+                item(key = "paper-start") { ReceiptPaperStart() }
+                itemsIndexed(friends, key = { _, it -> it.user.id }) { index, friend ->
+                    Column(Modifier.onReceiptPaper(Splitty.colors.surface)) {
+                        if (index > 0) ReceiptDivider()
+                        FriendRow(friend = friend, onClick = { onOpenFriend(friend) })
+                    }
                 }
+                item(key = "paper-end") { ReceiptPaperEnd() }
             }
         }
     }
@@ -164,25 +175,25 @@ private fun FriendsList(
  */
 @Composable
 private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness) {
-    SurfaceCard(
-        modifier = Modifier.fillMaxWidth(),
-        padding = 20.dp,
-    ) {
-        SectionHeader(stringResource(R.string.friends_total_balance))
-        Spacer(Modifier.height(8.dp))
-        MoneyTotalsText(totals = totals)
-        Spacer(Modifier.height(8.dp))
+    // Реквизит на столе, без карточки: словами — кто кому, справа сумма.
+    Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+        ReceiptLabel(stringResource(R.string.friends_total_balance))
+        Spacer(Modifier.height(6.dp))
         val primary = totals.firstOrNull()?.exactMinor ?: 0
-        Text(
-            text = when {
-                primary > 0 -> stringResource(R.string.friends_you_are_owed)
-                primary < 0 -> stringResource(R.string.friends_you_owe)
-                else -> stringResource(R.string.friends_all_settled)
-            },
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = Splitty.colors.inkSecondary,
-        )
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = when {
+                    primary > 0 -> stringResource(R.string.friends_you_are_owed)
+                    primary < 0 -> stringResource(R.string.friends_you_owe)
+                    else -> stringResource(R.string.friends_all_settled)
+                },
+                modifier = Modifier.weight(1f),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Splitty.colors.ink,
+            )
+            MoneyTotalsText(totals = totals, primarySize = 22.sp, horizontalAlignment = Alignment.End)
+        }
         if (freshness.fromCache) {
             Spacer(Modifier.height(6.dp))
             CacheNote(freshness = freshness, tag = "friends_cache_note")
@@ -190,33 +201,28 @@ private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness) {
     }
 }
 
-/** Карточная строка друга: градиентный аватар 48dp, имя, справа нетто-баланс. */
+/** Строка друга на листе: инициалы, имя, справа нетто-баланс. */
 @Composable
 private fun FriendRow(friend: FriendBalance, onClick: () -> Unit) {
-    SurfaceCard(
-        modifier = Modifier.fillMaxWidth(),
-        padding = 0.dp,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GradientAvatar(user = friend.user, size = 48.dp)
-            Text(
-                text = friend.user.displayName,
-                modifier = Modifier.weight(1f),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Splitty.colors.ink,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            FriendRowTrailing(totals = friend.totals)
-        }
+        GradientAvatar(user = friend.user, size = 36.dp)
+        Text(
+            text = friend.user.displayName,
+            modifier = Modifier.weight(1f),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = Splitty.colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        FriendRowTrailing(totals = friend.totals)
     }
 }
 
@@ -259,7 +265,7 @@ private fun FriendRowTrailing(totals: List<CurrencySum>) {
 @Composable
 private fun FriendsLoadingView() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(color = Splitty.colors.accent)
+        CircularProgressIndicator(color = Splitty.colors.ink)
     }
 }
 

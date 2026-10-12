@@ -69,7 +69,7 @@ struct ChangePasswordSheet: View {
                     isResetConfirmPresented = true
                 }
                 .scaledFont(size: 15, weight: .medium)
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
                 .disabled(isSaving)
             }
 
@@ -167,10 +167,10 @@ private struct PasswordFieldStyle: ViewModifier {
             .padding(.vertical, 12)
             .background(
                 Color.surface,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                in: RoundedRectangle(cornerRadius: 3, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .strokeBorder(Color.hairline, lineWidth: 1)
             }
     }

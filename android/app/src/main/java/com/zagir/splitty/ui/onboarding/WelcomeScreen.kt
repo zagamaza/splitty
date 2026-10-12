@@ -821,7 +821,7 @@ private fun WhoPaidArt(isActive: Boolean) {
             what = stringResource(R.string.welcome_for_dinner),
             sum = stringResource(R.string.demo_sum_600),
             share = stringResource(R.string.welcome_each_200),
-            color = colors.accent,
+            color = colors.ink,
             visible = shown > 0,
         )
         Spacer(Modifier.height(12.dp))

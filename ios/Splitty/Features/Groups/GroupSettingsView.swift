@@ -183,7 +183,7 @@ struct GroupSettingsView: View {
                 } else if canSaveName {
                     Button("Сохранить") { Task { await saveName() } }
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                         .accessibilityIdentifier("groupNameSave")
                 }
             }
@@ -229,7 +229,7 @@ struct GroupSettingsView: View {
                 PhotosPicker(selection: $avatarItem, matching: .images) {
                     Label(avatarFileId == nil ? "Добавить фото" : "Заменить фото", systemImage: "photo")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                 }
                 .disabled(isAvatarSaving)
                 .accessibilityIdentifier("groupAvatarPick")
@@ -304,7 +304,7 @@ struct GroupSettingsView: View {
                     // назывались одинаково, а вели в разные места
                     Label("Добавить", systemImage: "person.badge.plus")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                 }
             }
             .padding(.horizontal, 4)
@@ -385,7 +385,7 @@ struct GroupSettingsView: View {
             if !blockingOperations.isEmpty, let onShowBlocking {
                 Button("Показать эти расходы", action: onShowBlocking)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .padding(.horizontal, 4)
             }
         }
@@ -507,7 +507,7 @@ struct GroupSettingsView: View {
                 } else if selectedCurrency == currency.code {
                     Image(systemName: "checkmark")
                         .fontWeight(.semibold)
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.ink)
                 }
             }
             .padding(.horizontal, 16)
@@ -594,7 +594,7 @@ struct GroupSettingsView: View {
                 HStack {
                     if room.isArchived {
                         Label("Разархивировать", systemImage: "tray.and.arrow.up")
-                            .foregroundStyle(Color.accent)
+                            .foregroundStyle(Color.ink)
                     } else {
                         // Обычный ink, не «опасный» красный: действие обратимо
                         // и скрывает группу только у самого пользователя.

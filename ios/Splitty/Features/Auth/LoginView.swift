@@ -386,7 +386,7 @@ struct LoginView: View {
             } label: {
                 Text(isRegistering ? "Уже есть аккаунт? Войти" : "Нет аккаунта? Зарегистрироваться")
                     .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
             }
             .frame(maxWidth: .infinity)
             .disabled(isLoggingIn)
@@ -454,7 +454,7 @@ struct LoginView: View {
                 .ignoresSafeArea()
             ProgressView()
                 .controlSize(.large)
-                .tint(Color.accent)
+                .tint(Color.ink)
         }
     }
 

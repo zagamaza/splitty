@@ -244,7 +244,7 @@ struct AddExpenseView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundStyle(Color.accent)
+                        .foregroundStyle(Color.ink)
                     Text(reviewIsPhoto ? "Чек снят" : "Записано")
                         .scaledFont(size: 20, weight: .bold)
                         .foregroundStyle(.white)
@@ -333,7 +333,7 @@ struct AddExpenseView: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                 Text(text)
                     .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(Color.bg)
@@ -645,7 +645,7 @@ struct AddExpenseView: View {
         HStack(spacing: 10) {
             Image(systemName: model.lastParseSource == .photo ? "doc.text.viewfinder" : "waveform")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
             VStack(alignment: .leading, spacing: 2) {
                 Text(recognizedTitle)
                     .scaledFont(size: 14, weight: .semibold)
@@ -664,7 +664,7 @@ struct AddExpenseView: View {
             } label: {
                 Image(systemName: "camera.fill")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .frame(width: 38, height: 38)
                     .background(Color.accent.opacity(0.12), in: Circle())
             }
@@ -712,7 +712,7 @@ struct AddExpenseView: View {
         } label: {
             Label("Заполнить голосом", systemImage: "waveform")
                 .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
@@ -858,7 +858,7 @@ struct AddExpenseView: View {
                 // неверно, и человек видит это ровно тогда, когда лимит кончается.
                 Text("Осталось \(remaining) распознаваний")
                     .scaledFont(size: 12, weight: .semibold, relativeTo: .footnote)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
             }
             .buttonStyle(.plain)
         } else {
@@ -883,7 +883,7 @@ struct AddExpenseView: View {
                 Circle().strokeBorder(Color.accent.opacity(0.4), lineWidth: 1.5)
                 Image(systemName: "camera.fill")
                     .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.ink)
             }
             .frame(width: 54, height: 54)
             .contentShape(Circle())
@@ -1435,7 +1435,7 @@ struct AddExpenseView: View {
             } label: {
                 Label("Изменить суммы участников", systemImage: "slider.horizontal.3")
                     .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                    .foregroundStyle(preview == nil ? Color.inkSecondary : Color.accentText)
+                    .foregroundStyle(preview == nil ? Color.inkSecondary : Color.ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
@@ -1465,7 +1465,7 @@ struct AddExpenseView: View {
         } label: {
             Label("Добавить позицию", systemImage: "plus.circle.fill")
                 .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
         }
@@ -1480,7 +1480,7 @@ struct AddExpenseView: View {
         HStack(spacing: 10) {
             Image(systemName: "wand.and.stars")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Правка применена")
                     .scaledFont(size: 14, weight: .semibold)
@@ -1496,7 +1496,7 @@ struct AddExpenseView: View {
             } label: {
                 Text("Отменить")
                     .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
@@ -1901,7 +1901,7 @@ private struct PayerPickerView: View {
                         if member.id == model.payerId {
                             Image(systemName: "checkmark")
                                 .fontWeight(.semibold)
-                                .foregroundStyle(Color.accent)
+                                .foregroundStyle(Color.ink)
                         }
                     }
                 }
@@ -2338,7 +2338,7 @@ struct RecordingOverlay: View {
                 .scaledFont(size: 11, weight: .bold, relativeTo: .footnote)
                 .tracking(1.2)
                 .textCase(.uppercase)
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.ink)
             ForEach(hints, id: \.self) { hint in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Circle().fill(Color.accent).frame(width: 5, height: 5)
@@ -2439,8 +2439,6 @@ struct RecordingOverlay: View {
             }
             .frame(width: size, height: size)
             .opacity(isPreparing ? 0.75 : 1)
-            .shadow(color: (isCancelling ? Color.negative : Color.accent).opacity(0.5),
-                    radius: 20, y: 8)
             .animation(.spring(duration: 0.22), value: isCancelling)
         }
         // Pop «нажалось»: в покое кружок сжат (как кнопка под пальцем),
@@ -2691,7 +2689,7 @@ struct ItemSheetView: View {
             switch splitStatus {
             case .ok:
                 Label("Сумма распределена полностью", systemImage: "checkmark")
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.ink)
             case .noPrice:
                 Text("Укажите цену позиции")
                     .foregroundStyle(Color.inkSecondary)

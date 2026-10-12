@@ -779,14 +779,14 @@ private fun JoinGroupSheet(viewModel: GroupsListViewModel, onDismiss: () -> Unit
                 Icon(
                     imageVector = Icons.Outlined.ContentPaste,
                     contentDescription = null,
-                    tint = colors.accent,
+                    tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.groups_join_paste),
                     fontSize = 15.sp,
-                    color = colors.accentText,
+                    color = colors.ink,
                 )
             }
         }

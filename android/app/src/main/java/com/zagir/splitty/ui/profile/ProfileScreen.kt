@@ -1115,7 +1115,7 @@ private fun PasswordDialog(
                         ),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Splitty.colors.accentText,
+                        color = Splitty.colors.ink,
                     )
                 }
                 PasswordField(
@@ -1203,14 +1203,14 @@ private fun ReportProblemSection() {
                 Icon(
                     imageVector = Icons.Outlined.BugReport,
                     contentDescription = null,
-                    tint = colors.accentText,
+                    tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = stringResource(R.string.profile_report_problem),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = colors.accentText,
+                    color = colors.ink,
                 )
                 Spacer(Modifier.weight(1f))
                 Icon(
@@ -1251,14 +1251,14 @@ private fun PolicyLinkSection(baseUrl: String) {
             Icon(
                 imageVector = Icons.Outlined.Shield,
                 contentDescription = null,
-                tint = colors.accentText,
+                tint = colors.ink,
                 modifier = Modifier.size(18.dp),
             )
             Text(
                 text = stringResource(R.string.profile_privacy_policy),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = colors.accentText,
+                color = colors.ink,
             )
             Spacer(Modifier.weight(1f))
             Icon(
@@ -1288,14 +1288,14 @@ private fun RevokeSessionsSection(onClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.Outlined.PhonelinkErase,
                     contentDescription = null,
-                    tint = colors.accentText,
+                    tint = colors.ink,
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
                     text = stringResource(R.string.profile_revoke_action),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
-                    color = colors.accentText,
+                    color = colors.ink,
                 )
             }
         }

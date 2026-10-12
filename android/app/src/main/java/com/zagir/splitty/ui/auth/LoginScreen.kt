@@ -424,7 +424,7 @@ private fun EmailLoginForm(
             ),
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
-            color = Splitty.colors.accent,
+            color = Splitty.colors.ink,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
@@ -600,6 +600,6 @@ private fun LoadingOverlay() {
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
     ) {
-        CircularProgressIndicator(color = Splitty.colors.accent)
+        CircularProgressIndicator(color = Splitty.colors.ink)
     }
 }
