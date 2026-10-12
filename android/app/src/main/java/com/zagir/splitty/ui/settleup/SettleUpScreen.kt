@@ -1,5 +1,11 @@
 package com.zagir.splitty.ui.settleup
 
+import androidx.compose.ui.semantics.semantics
+import com.zagir.splitty.ui.components.StatusStamp
+import com.zagir.splitty.ui.components.ReceiptStub
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptPaper
+import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -114,8 +120,9 @@ fun SettleUpScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.settleup_title),
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     )
                 },
                 navigationIcon = {
@@ -124,7 +131,7 @@ fun SettleUpScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = stringResource(R.string.settleup_back_to_list),
-                                tint = colors.accent,
+                                tint = colors.ink,
                             )
                         }
                     }
@@ -134,7 +141,7 @@ fun SettleUpScreen(
                         Text(
                             text = stringResource(R.string.common_cancel),
                             fontSize = 17.sp,
-                            color = colors.accentText,
+                            color = colors.ink,
                         )
                     }
                 },
@@ -219,10 +226,7 @@ private fun DebtListStep(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SectionHeader(
-            text = stringResource(R.string.settleup_your_debts),
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
+        ReceiptLabel(stringResource(R.string.settleup_your_debts))
         form.debts.forEach { debt ->
             DebtRow(
                 debt = debt,
@@ -234,7 +238,7 @@ private fun DebtListStep(
     }
 }
 
-/** Карточка долга: аватары «должник → кредитор», подпись и сумма, шеврон. */
+/** Корешок долга: «А → Б» словами и сумма; тап — к записи платежа. */
 @Composable
 private fun DebtRow(
     debt: Debt,
@@ -243,52 +247,33 @@ private fun DebtRow(
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
-    // Без ripple: клип карточки применяется внутри SurfaceCard, и прямоугольная
-    // подсветка вылезала бы за скруглённые углы (паттерн SoftChip).
-    val interactionSource = remember { MutableInteractionSource() }
-    SurfaceCard(
+    ReceiptStub(
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick,
-            ),
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {},
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            GradientAvatar(user = debt.debtor, size = 40.dp)
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = colors.inkSecondary,
-                modifier = Modifier.size(16.dp),
-            )
-            GradientAvatar(user = debt.lender, size = 40.dp)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = debtTitle(debt, meId),
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = colors.ink,
                     maxLines = 2,
                 )
-                MoneyText(
-                    amount = debt.sum,
-                    exactMinor = debt.exactMinor,
-                    role = if (debt.debtor.id == meId) MoneyRole.NEGATIVE else MoneyRole.POSITIVE,
-                    currency = currency,
+                Text(
+                    text = debt.debtor.displayName + " → " + debt.lender.displayName,
+                    fontSize = 12.sp,
+                    color = colors.inkSecondary,
                 )
             }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = colors.inkSecondary,
+            MoneyText(
+                amount = debt.sum,
+                exactMinor = debt.exactMinor,
+                role = if (debt.debtor.id == meId) MoneyRole.NEGATIVE else MoneyRole.POSITIVE,
+                size = 16.sp,
+                weight = FontWeight.Bold,
+                currency = currency,
             )
         }
     }
@@ -354,8 +339,15 @@ private fun PaymentStep(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        PaymentHeaderCard(debt = debt, meId = form.meId)
-        PaymentSumCard(form = form, debt = debt, onSumChange = viewModel::onSumChange)
+        // Запись платежа — лист чека: кто кому словами, сумма крупно (правится),
+        // сколько останется по этому долгу.
+        ReceiptPaper {
+            PaymentHeaderCard(debt = debt, meId = form.meId)
+            ReceiptDivider(Modifier.padding(vertical = 18.dp))
+            PaymentSumCard(form = form, debt = debt, onSumChange = viewModel::onSumChange)
+            ReceiptDivider(Modifier.padding(vertical = 18.dp))
+            PaymentRemainder(form = form, debt = debt)
+        }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Офлайн — CTA заблокирован с подписью-причиной (а не алерт по тапу).
             PrimaryPillButton(
@@ -380,46 +372,68 @@ private fun PaymentStep(
                 text = stringResource(R.string.settleup_records_only),
                 fontSize = 13.sp,
                 color = Splitty.colors.inkSecondary,
-                textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
     }
 }
 
-/** Карточка-шапка: аватар должника → аватар кредитора, «Алмаз платит вам». */
+/**
+ * Сколько останется по ЭТОМУ долгу после записи. Считается из введённой суммы
+ * и самого долга, а не обещается: при частичном платеже здесь честный остаток,
+ * и только полная сумма даёт штамп «долг будет закрыт» (паритет iOS).
+ */
+@Composable
+private fun PaymentRemainder(form: SettleUpForm, debt: Debt) {
+    val colors = Splitty.colors
+    val entered = (form.sumMinor ?: 0L).coerceIn(0L, debt.exactMinor)
+    val left = debt.exactMinor - entered
+    Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.receipt_left_on_debt),
+            modifier = Modifier.weight(1f),
+            fontSize = 14.sp,
+            color = colors.ink,
+        )
+        Text(
+            text = moneyMinor(left, form.currency),
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            color = colors.ink,
+        )
+    }
+    if (form.isSumValid && left == 0L) {
+        Box(Modifier.fillMaxWidth().padding(top = 14.dp), contentAlignment = Alignment.Center) {
+            StatusStamp(stringResource(R.string.receipt_debt_will_close).uppercase())
+        }
+    }
+}
+
+/** Шапка листа: что произошло словами и «должник → кредитор». */
 @Composable
 private fun PaymentHeaderCard(debt: Debt, meId: Long?) {
     val colors = Splitty.colors
-    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-            ) {
-                GradientAvatar(user = debt.debtor, size = 64.dp)
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(24.dp),
-                )
-                GradientAvatar(user = debt.lender, size = 64.dp)
-            }
-            Text(
-                text = paymentTitle(debt, meId),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.ink,
-                textAlign = TextAlign.Center,
-            )
-        }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ReceiptLabel(stringResource(R.string.settleup_title))
+        Text(
+            text = paymentTitle(debt, meId),
+            fontSize = 24.sp,
+            lineHeight = 28.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.6).sp,
+            color = colors.ink,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = debt.debtor.displayName + " → " + debt.lender.displayName,
+            fontSize = 14.sp,
+            color = colors.inkSecondary,
+        )
     }
 }
 
@@ -445,7 +459,7 @@ private fun PaymentSumCard(
     onSumChange: (String) -> Unit,
 ) {
     val colors = Splitty.colors
-    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -465,18 +479,18 @@ private fun PaymentSumCard(
                 BasicTextField(
                     value = form.sumText,
                     onValueChange = onSumChange,
-                    modifier = Modifier
-                        .widthIn(min = 48.dp)
-                        .width(IntrinsicSize.Min),
+                    // Ширина — по содержимому: IntrinsicSize.Min недооценивал
+                    // крупный кегль, и сумма обрезалась справа.
+                    modifier = Modifier.widthIn(min = 48.dp, max = 280.dp),
                     textStyle = TextStyle(
                         color = colors.ink,
-                        fontSize = 42.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 52.sp,
+                        fontWeight = FontWeight.ExtraBold,
                         fontFeatureSettings = "tnum",
                         textAlign = TextAlign.Center,
                     ),
                     singleLine = true,
-                    cursorBrush = SolidColor(colors.accent),
+                    cursorBrush = SolidColor(colors.ink),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = if (form.fractional) KeyboardType.Decimal else KeyboardType.Number,
                     ),
@@ -485,8 +499,8 @@ private fun PaymentSumCard(
                             if (form.sumText.isEmpty()) {
                                 Text(
                                     text = "0",
-                                    fontSize = 42.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 52.sp,
+                                    fontWeight = FontWeight.ExtraBold,
                                     color = colors.inkSecondary,
                                     style = TextStyle(fontFeatureSettings = "tnum"),
                                 )
@@ -498,9 +512,9 @@ private fun PaymentSumCard(
             }
             Box(
                 modifier = Modifier
-                    .width(160.dp)
-                    .height(1.dp)
-                    .background(colors.hairline, RoundedCornerShape(1.dp)),
+                    .width(180.dp)
+                    .height(2.dp)
+                    .background(colors.ruleStrong),
             )
             val isOverDebt = (form.sumMinor ?: 0) > debt.exactMinor
             Text(

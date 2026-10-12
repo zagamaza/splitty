@@ -202,10 +202,15 @@ struct GroupDetailView: View {
         }
     }
 
+    /// «3 участника» — формы задаёт String Catalog.
+    private func membersText(_ count: Int) -> String {
+        String(localized: "\(count) участников")
+    }
+
     /// Шапка документа: реквизит (дата · участники), имя тусы, штамп архива.
     private func documentHeader(room: RoomDetail) -> some View {
         VStack(spacing: 8) {
-            Text(verbatim: "\(DateFmt.dayMonth(room.createdAt)) · \(String(localized: "\(room.members.count) участников"))")
+            Text(verbatim: "\(DateFmt.dayMonth(room.createdAt)) · \(membersText(room.members.count))")
                 .receiptLabel()
             Text(room.name)
                 .scaledFont(size: 26, weight: .heavy, relativeTo: .title)

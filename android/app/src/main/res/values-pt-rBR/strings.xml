@@ -710,4 +710,13 @@
     <string name="expense_edit_amounts_unavailable_cents">O total tem centavos, mas este grupo usa valores inteiros — ajuste as partes nos itens</string>
     <string name="expense_edit_amounts_unavailable_invalid">As partes dos itens não fecham — corrija os itens</string>
     <string name="brand_receipt_label">Conta compartilhada</string>
+    <string name="receipt_your_share">Sua parte</string>
+    <string name="receipt_your_balance">Seu saldo</string>
+    <string name="receipt_settle_up">Acertar contas ↗</string>
+    <string name="receipt_all_balances">Todos os saldos</string>
+    <string name="receipt_items">Itens</string>
+    <string name="receipt_has_attachments">Com anexos</string>
+    <string name="receipt_draft_note">Rascunho — ainda não adicionado ao grupo</string>
+    <string name="receipt_left_on_debt">Restará desta dívida</string>
+    <string name="receipt_debt_will_close">A dívida será quitada</string>
 </resources>

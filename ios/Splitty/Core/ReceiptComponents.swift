@@ -333,21 +333,3 @@ struct ReceiptTab: View {
             .contentShape(Rectangle())
     }
 }
-
-#Preview("Чек") {
-    ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: "Позиция / кто платил").receiptLabel()
-            ReceiptLine(title: "Дом на выходные", caption: "10 окт. · Маша") {
-                MoneyText(12000, role: .neutral, size: 15, weight: .medium)
-            }
-            ReceiptDivider()
-            ReceiptTotal(label: "Всего") { MoneyText(19200, role: .neutral, size: 34, weight: .bold) }
-            StatusStamp(text: "ВЫ В РАСЧЁТЕ")
-            Button("Все балансы") {}.buttonStyle(.textLink)
-        }
-        .receiptPaper()
-        .padding(20)
-    }
-    .background(Color.bg)
-}

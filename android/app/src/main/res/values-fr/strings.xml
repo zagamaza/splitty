@@ -769,4 +769,13 @@
     <string name="expense_edit_amounts_unavailable_cents">Le total a des centimes, mais ce groupe utilise des montants entiers : ajustez les parts dans les lignes</string>
     <string name="expense_edit_amounts_unavailable_invalid">Les parts des lignes ne tombent pas juste : corrigez les lignes</string>
     <string name="brand_receipt_label">Addition commune</string>
+    <string name="receipt_your_share">Votre part</string>
+    <string name="receipt_your_balance">Votre solde</string>
+    <string name="receipt_settle_up">Régler ↗</string>
+    <string name="receipt_all_balances">Tous les soldes</string>
+    <string name="receipt_items">Lignes</string>
+    <string name="receipt_has_attachments">Avec pièces jointes</string>
+    <string name="receipt_draft_note">Brouillon — pas encore ajouté au groupe</string>
+    <string name="receipt_left_on_debt">Restera sur cette dette</string>
+    <string name="receipt_debt_will_close">La dette sera soldée</string>
 </resources>

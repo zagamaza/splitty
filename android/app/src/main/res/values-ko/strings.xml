@@ -706,4 +706,13 @@
     <string name="expense_edit_amounts_unavailable_cents">합계에 소수점이 있지만 이 그룹은 정수만 사용합니다. 항목에서 몫을 조정하세요</string>
     <string name="expense_edit_amounts_unavailable_invalid">항목의 몫이 맞지 않습니다. 항목을 고쳐 주세요</string>
     <string name="brand_receipt_label">공동 계산서</string>
+    <string name="receipt_your_share">내 몫</string>
+    <string name="receipt_your_balance">내 잔액</string>
+    <string name="receipt_settle_up">정산하기 ↗</string>
+    <string name="receipt_all_balances">전체 잔액</string>
+    <string name="receipt_items">항목</string>
+    <string name="receipt_has_attachments">첨부 파일 있음</string>
+    <string name="receipt_draft_note">초안 — 아직 그룹에 추가되지 않음</string>
+    <string name="receipt_left_on_debt">이 빚의 남은 금액</string>
+    <string name="receipt_debt_will_close">빚이 정산됩니다</string>
 </resources>

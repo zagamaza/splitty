@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.onboarding
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.heightIn
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.ReceiptTotal
@@ -128,6 +129,7 @@ fun WelcomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.bg)
+            .safeDrawingPadding()
             .padding(bottom = 20.dp),
     ) {
         Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp)) {

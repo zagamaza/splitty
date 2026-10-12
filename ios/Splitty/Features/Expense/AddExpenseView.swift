@@ -341,7 +341,7 @@ struct AddExpenseView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 13)
-            .background(Color.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Color.ink, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
             .shadow(color: Color.black.opacity(0.25), radius: 16, y: 6)
             .padding(.horizontal, 20)
             // На композере нижняя панель выше (микрофон 96pt + подпись) —
@@ -505,7 +505,7 @@ struct AddExpenseView: View {
                     Text("Разрешите доступ в Настройках, чтобы диктовать расход голосом")
                 }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
     }
 
     /// Удаление локальной записи outbox (форма правки неотправленного расхода).
@@ -672,7 +672,7 @@ struct AddExpenseView: View {
             .accessibilityLabel("Добавить фото чека")
         }
         .padding(14)
-        .background(Color.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
     /// Уточняющие вопросы модели («Сколько стоила пицца?») — видимы в любом
@@ -699,12 +699,9 @@ struct AddExpenseView: View {
             focusedField = .description
         } label: {
             Text("Ввести вручную")
-                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundStyle(Color.inkSecondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.textLink(size: 15))
     }
 
     /// Обратный путь из ручного режима к AI-композеру (пока форма пуста).
@@ -823,15 +820,13 @@ struct AddExpenseView: View {
                     .strokeBorder(Color.accent.opacity(0.22), lineWidth: 1.5)
                     .frame(width: 96, height: 96)
                 Circle()
-                    .fill(LinearGradient(colors: [Color.accent, Color.accentPressed],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(Color.accent)
                     .frame(width: 82, height: 82)
                     .overlay {
                         Image(systemName: "mic.fill")
                             .font(.system(size: 30, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                    .shadow(color: Color.accent.opacity(0.4), radius: 14, x: 0, y: 8)
             }
             .opacity(aiDisabled ? 0.45 : 1)
             // Squash при касании — отклик стартует НА кнопке, ещё до того,
@@ -986,33 +981,25 @@ struct AddExpenseView: View {
     /// чек». Сам микрофон — в нижней панели, в зоне большого пальца
     /// (`composerMicBar`). Кнопки требуют сети — офлайн заблокированы.
     private var composerCard: some View {
-        VStack(spacing: 16) {
-            VStack(spacing: 6) {
-                HStack(spacing: 8) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.accentText)
-                    Text("Надиктуйте расход")
-                        .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(Color.ink)
-                }
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Надиктуйте расход")
+                    .scaledFont(size: 30, weight: .heavy, relativeTo: .title)
+                    .kerning(-1)
+                    .foregroundStyle(Color.ink)
+                    .accessibilityAddTraits(.isHeader)
                 Text("Зажмите микрофон внизу и скажите,\nкто что взял и сколько это стоило")
-                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundStyle(Color.inkSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.top, 4)
 
             HStack(spacing: 12) {
-                Rectangle().fill(Color.hairline).frame(height: 1)
-                Text("или")
-                    .scaledFont(size: 11, weight: .semibold, relativeTo: .footnote)
-                    .foregroundStyle(Color.inkSecondary)
-                    .textCase(.uppercase)
-                Rectangle().fill(Color.hairline).frame(height: 1)
+                ReceiptDivider()
+                Text("или").receiptLabel()
+                ReceiptDivider()
             }
-            .padding(.top, 2)
+            .padding(.vertical, 2)
 
             Button {
                 // Кнопка живая и при aiDisabled: тап объясняет причину
@@ -1023,13 +1010,16 @@ struct AddExpenseView: View {
                     isPhotoSourceDialogPresented = true
                 }
             } label: {
-                Label("Сфотографировать чек", systemImage: "camera.fill")
+                Label("Сфотографировать чек", systemImage: "camera")
                     .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.accent.opacity(0.12), in: Capsule())
-                    .contentShape(Capsule())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .strokeBorder(Color.ink, lineWidth: 1)
+                    )
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .opacity(aiDisabled ? 0.45 : 1)
@@ -1037,11 +1027,11 @@ struct AddExpenseView: View {
             if let reason = aiDisabledReason {
                 Text(reason)
                     .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
-                    .foregroundStyle(Color.negative.opacity(0.9))
+                    .foregroundStyle(Color.negativeText)
             }
         }
-        .frame(maxWidth: .infinity)
-        .surfaceCard()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 8)
     }
 
     /// AI-действия недоступны: не выбрана группа, нет сети (распознавание —
@@ -1374,6 +1364,14 @@ struct AddExpenseView: View {
                     model.clearChangeHighlights()
                 }
             }
+            // Разобранный чек ещё не в группе: до «Сохранить» он ничего не
+            // меняет в балансах, и это сказано прямо под ним.
+            if !model.isEditing {
+                Text("Черновик — в группу ещё не записан")
+                    .receiptLabel(size: 10)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
             if model.hasUnknownItems, let name = model.firstUnknownName {
                 Label("Выберите, кто это — «\(name)»: коснитесь красной метки в чеке",
                       systemImage: "exclamationmark.triangle.fill")
@@ -1501,12 +1499,12 @@ struct AddExpenseView: View {
                     .foregroundStyle(Color.accentText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background(Color.accent.opacity(0.12), in: Capsule())
+                    .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
             }
             .buttonStyle(.plain)
         }
         .padding(14)
-        .background(Color.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .transition(.opacity.combined(with: .move(edge: .top)))
         .task(id: model.changedItemIndices) {
             try? await Task.sleep(for: .seconds(6))
@@ -1645,7 +1643,7 @@ struct AddExpenseView: View {
 
     private func descriptionField(text: Binding<String>) -> some View {
         HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(Color.ink.opacity(0.06))
                 .frame(width: 44, height: 44)
                 .overlay {
@@ -1920,7 +1918,7 @@ private struct PayerPickerView: View {
                 }
             }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
         // Высота шторки: при >4 участников — 4,5 строки, чтобы пятая
         // выглядывала наполовину и было видно, что список скроллится.
         .presentationDetents(
@@ -1984,7 +1982,7 @@ private struct SplitPickerView: View {
                     .background(.bar)
             }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
         // Высота шторки: при >4 участников — 4,5 строки, чтобы пятая
         // выглядывала наполовину и было видно, что список скроллится.
         .presentationDetents(
@@ -2018,7 +2016,7 @@ private struct NudgeHighlight: ViewModifier {
                 view
                     .offset(x: reduceMotion ? 0 : phase)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
                             .strokeBorder(Color.accent, lineWidth: 2)
                             .opacity(phase == 0 ? 0 : 1)
                     }
@@ -2204,15 +2202,13 @@ struct RecordingOverlay: View {
             ZStack {
                 ring(size: size)
                 Circle()
-                    .fill(LinearGradient(colors: [Color.accent, Color.accentPressed],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(Color.accent)
                     .frame(width: size, height: size)
                     .overlay {
                         Image(systemName: "stop.fill")
                             .font(.system(size: size * 0.33, weight: .semibold))
                             .foregroundStyle(.white)
                     }
-                    .shadow(color: Color.accent.opacity(0.5), radius: 20, y: 8)
             }
             .contentShape(Circle())
         }
@@ -2357,9 +2353,9 @@ struct RecordingOverlay: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
         .frame(maxWidth: 320, alignment: .leading)
-        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
         )
         .transition(.opacity)
@@ -2424,13 +2420,11 @@ struct RecordingOverlay: View {
                     .transition(.opacity)
             }
             ZStack {
-                // Два слоя градиента с кроссфейдом — плавный уход в красный.
+                // Два слоя с кроссфейдом — плавный уход в красный.
                 Circle()
-                    .fill(LinearGradient(colors: [Color.accent, Color.accentPressed],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(Color.accent)
                 Circle()
-                    .fill(LinearGradient(colors: [Color.negative, Color.negative.opacity(0.8)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .fill(Color.negative)
                     .opacity(isCancelling ? 1 : 0)
                 ZStack {
                     Image(systemName: "mic.fill")
@@ -2622,7 +2616,7 @@ struct ItemSheetView: View {
                 Text("Строка исчезнет из чека, итог пересчитается")
             }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
     }
 
     // MARK: Живой расчёт деления
@@ -2959,7 +2953,7 @@ private struct UnknownPickerView: View {
                 }
             }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
     }
 }
 

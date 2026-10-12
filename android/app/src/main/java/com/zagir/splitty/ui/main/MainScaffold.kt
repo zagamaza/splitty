@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -353,7 +352,7 @@ fun MainScaffold(
                 NavigationBar(containerColor = colors.bg, tonalElevation = 0.dp) {
                     LeftTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
                     Box(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically),
                         contentAlignment = Alignment.Center,
                     ) {
                         AddExpenseButton(

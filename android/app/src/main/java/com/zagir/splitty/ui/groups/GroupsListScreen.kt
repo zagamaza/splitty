@@ -854,8 +854,9 @@ internal fun GroupsAddMenu(onCreate: () -> Unit, onJoinByCode: () -> Unit) {
     Box {
         OutlinedIconButton(
             onClick = { isMenuOpen = true },
-            border = BorderStroke(1.dp, colors.accent),
-            colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.accent),
+            shape = RoundedCornerShape(3.dp),
+            border = BorderStroke(1.dp, colors.ink),
+            colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.ink),
             modifier = Modifier
                 .padding(end = 8.dp)
                 .testTag("groups_add_menu"),

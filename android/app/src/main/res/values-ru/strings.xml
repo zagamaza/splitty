@@ -806,4 +806,13 @@
     <string name="expense_edit_amounts_unavailable_cents">В итоге есть копейки, а группа считает целыми — поправьте доли в позициях</string>
     <string name="expense_edit_amounts_unavailable_invalid">Доли в позициях не сходятся — поправьте позиции</string>
     <string name="brand_receipt_label">Общий чек</string>
+    <string name="receipt_your_share">Ваша доля</string>
+    <string name="receipt_your_balance">Ваш остаток</string>
+    <string name="receipt_settle_up">Рассчитаться ↗</string>
+    <string name="receipt_all_balances">Все балансы</string>
+    <string name="receipt_items">Позиции</string>
+    <string name="receipt_has_attachments">Есть вложения</string>
+    <string name="receipt_draft_note">Черновик — в группу ещё не записан</string>
+    <string name="receipt_left_on_debt">Останется по этому долгу</string>
+    <string name="receipt_debt_will_close">Долг будет закрыт</string>
 </resources>

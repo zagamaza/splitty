@@ -209,7 +209,7 @@ struct GroupTotalsView: View {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                     .scaledFont(size: 13, weight: .semibold, design: .default, relativeTo: .footnote)
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.ink)
                     .frame(width: 18, height: 18)
                 Text(title)
                     .sectionHeaderStyle()
@@ -725,7 +725,7 @@ private struct MemberNetCard: View {
                         topTrailingRadius: net > 0 ? 4 : 0,
                         style: .continuous
                     )
-                    .fill(net > 0 ? Color.accent : Color.negative)
+                    .fill(net > 0 ? Color.positive : Color.negative)
                     .frame(width: barWidth, height: Self.barHeight)
                     .offset(
                         x: net > 0 ? zeroX : zeroX - barWidth,

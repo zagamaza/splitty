@@ -706,4 +706,13 @@
     <string name="expense_edit_amounts_unavailable_cents">总额含零头，但此群组按整数计算——请在条目中调整份额</string>
     <string name="expense_edit_amounts_unavailable_invalid">条目中的份额对不上——请修改条目</string>
     <string name="brand_receipt_label">共享账单</string>
+    <string name="receipt_your_share">你的份额</string>
+    <string name="receipt_your_balance">你的余额</string>
+    <string name="receipt_settle_up">结清 ↗</string>
+    <string name="receipt_all_balances">所有余额</string>
+    <string name="receipt_items">明细</string>
+    <string name="receipt_has_attachments">有附件</string>
+    <string name="receipt_draft_note">草稿——尚未加入群组</string>
+    <string name="receipt_left_on_debt">这笔欠款还剩</string>
+    <string name="receipt_debt_will_close">欠款将结清</string>
 </resources>

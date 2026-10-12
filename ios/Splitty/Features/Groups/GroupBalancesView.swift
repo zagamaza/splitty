@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Балансы группы: карточный список вычисленных долгов «кто → кому»,
-/// у долгов с участием текущего пользователя — кнопка «Погасить».
+/// Балансы группы: план переводов на листе чека — долги «кто → кому»
+/// словами, у долгов с участием текущего пользователя — ссылка «Погасить».
 struct GroupBalancesView: View {
     private let room: RoomDetail
     private let embedded: Bool
@@ -56,11 +56,16 @@ struct GroupBalancesView: View {
                         Text(Glossary.debtsUnavailableSubtitle)
                     }
                 } else if room.debts.isEmpty {
-                    ContentUnavailableView {
-                        Label("Все в расчёте", systemImage: "checkmark.circle")
-                    } description: {
+                    VStack(spacing: 10) {
+                        StatusStamp(text: String(localized: "Все в расчёте").localizedUppercase)
                         Text("Все участники в расчёте")
+                            .scaledFont(size: 15)
+                            .foregroundStyle(Color.inkSecondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .receiptPaper(padding: 28)
+                    .padding(16)
+                    .frame(maxHeight: .infinity, alignment: .top)
                 } else {
                     debtsList(meId: meId)
                 }
@@ -75,8 +80,8 @@ struct GroupBalancesView: View {
                     Button("Повторить") {
                         Task { await session.refreshMe() }
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(Color.accent)
+                    .buttonStyle(.primaryPill)
+                    .frame(maxWidth: 220)
                 }
             }
         }
@@ -95,10 +100,12 @@ struct GroupBalancesView: View {
         }
     }
 
-    /// Одна карточка со строками долгов и hairline-разделителями.
+    /// План переводов — лист чека: строки обязательств, направление словами.
     private func debtsList(meId: Int) -> some View {
         ScrollView {
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Балансы").receiptLabel()
+                    .padding(.bottom, 6)
                 ForEach(room.debts) { debt in
                     DebtRow(debt: debt, meId: meId, currency: room.currency) {
                         // Погашения офлайн не работают (зафиксированный дизайн
@@ -110,14 +117,11 @@ struct GroupBalancesView: View {
                         }
                     }
                     if debt.id != room.debts.last?.id {
-                        Rectangle()
-                            .fill(Color.hairline)
-                            .frame(height: 1)
-                            .padding(.leading, 16)
+                        ReceiptDivider()
                     }
                 }
             }
-            .surfaceCard(padding: 0)
+            .receiptPaper(padding: 22)
             .padding(16)
         }
         .refreshable {
@@ -142,34 +146,30 @@ private struct DebtRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
             // Инфо-часть строки — один элемент VoiceOver («Петя должен(на)
             // Вася, 500 рублей»); кнопка «Погасить» остаётся отдельной.
-            HStack(spacing: 10) {
-                UserAvatarView(user: debt.debtor, size: 36)
-                // Стрелка — чистая декорация, направление уже есть в тексте.
-                Image(systemName: "arrow.right")
-                    .font(.caption.weight(.bold))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .scaledFont(size: 15, weight: .medium)
+                    .foregroundStyle(Color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundStyle(Color.inkSecondary)
                     .accessibilityHidden(true)
-                UserAvatarView(user: debt.lender, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.ink)
-                        .lineLimit(2)
-                    MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, currency: currency)
-                }
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 8)
-            if involvesMe {
-                Button("Погасить", action: onSettle)
-                    .buttonStyle(.softChip)
+            VStack(alignment: .trailing, spacing: 0) {
+                MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, weight: .bold, currency: currency)
+                if involvesMe {
+                    Button("Погасить", action: onSettle)
+                        .buttonStyle(.textLink(size: 13))
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
 
     private var title: String {

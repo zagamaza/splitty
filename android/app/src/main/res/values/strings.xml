@@ -789,4 +789,13 @@
     <string name="expense_edit_amounts_unavailable_cents">The total has cents but this group uses whole amounts — adjust shares in the items</string>
     <string name="expense_edit_amounts_unavailable_invalid">Shares in the items don\'t add up — fix the items</string>
     <string name="brand_receipt_label">Shared receipt</string>
+    <string name="receipt_your_share">Your share</string>
+    <string name="receipt_your_balance">Your balance</string>
+    <string name="receipt_settle_up">Settle up ↗</string>
+    <string name="receipt_all_balances">All balances</string>
+    <string name="receipt_items">Items</string>
+    <string name="receipt_has_attachments">Has attachments</string>
+    <string name="receipt_draft_note">Draft — not added to the group yet</string>
+    <string name="receipt_left_on_debt">Left on this debt</string>
+    <string name="receipt_debt_will_close">Debt will be closed</string>
 </resources>

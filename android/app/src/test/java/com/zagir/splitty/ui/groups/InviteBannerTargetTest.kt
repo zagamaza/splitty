@@ -41,9 +41,10 @@ class InviteBannerTargetTest {
             }
         }
 
-        composeRule.onNodeWithText(context.getString(R.string.invite_banner_title)).performClick()
+        // В чеке приглашение — строка документа, действие у ссылки «Пригласить».
+        composeRule.onNodeWithText(context.getString(R.string.invite_banner_action)).performClick()
 
-        assertEquals(1, taps, "баннер не сработал")
+        assertEquals(1, taps, "приглашение не сработало")
     }
 
     /**

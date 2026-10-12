@@ -1,5 +1,10 @@
 package com.zagir.splitty.ui.expense
 
+import androidx.compose.ui.semantics.heading
+import androidx.compose.material.icons.outlined.PhotoCamera
+import com.zagir.splitty.ui.components.TextLinkButton
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.core.ui.resolve
 import android.os.SystemClock
@@ -84,7 +89,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.boundsInRoot
@@ -340,7 +344,7 @@ fun AddExpenseScreen(
                         Text(
                             text = stringResource(R.string.common_cancel),
                             fontSize = 17.sp,
-                            color = colors.accentText,
+                            color = colors.ink,
                         )
                     }
                 },
@@ -912,6 +916,16 @@ private fun ReceiptSection(
             onToggleSurchargeRule = onToggleSurchargeRule,
             highlightedIndices = form.changedItemIndices,
         )
+        // Разобранный чек ещё не в группе: до «Сохранить» он ничего не меняет
+        // в балансах, и это сказано прямо под ним (паритет iOS).
+        if (!form.isEditing) {
+            ReceiptLabel(
+                text = stringResource(R.string.receipt_draft_note),
+                modifier = Modifier.fillMaxWidth(),
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
         if (form.hasUnknownItems) {
             form.firstUnknownName?.let { name ->
                 ReceiptHintRow(stringResource(R.string.expense_unknown_hint, name), warn = true)
@@ -1019,7 +1033,7 @@ private fun CorrectionBanner(hasItems: Boolean, onUndo: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.accent.copy(alpha = 0.1f))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1057,7 +1071,7 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.accent.copy(alpha = 0.1f))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1301,7 +1315,7 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
-                    .background(colors.ink.copy(alpha = 0.06f), RoundedCornerShape(12.dp)),
+                    .background(colors.ink.copy(alpha = 0.06f), RoundedCornerShape(3.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1323,7 +1337,7 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                     fontWeight = FontWeight.Medium,
                 ),
                 singleLine = true,
-                cursorBrush = SolidColor(colors.accent),
+                cursorBrush = SolidColor(colors.ink),
                 // Поле суммы с sumFocusRequester существует ТОЛЬКО без позиций
                 // чека (см. ниже if (form.hasDraftItems)). С распознанным чеком
                 // «Далее» звало requestFocus по неприкреплённому реквестеру —
@@ -1395,7 +1409,7 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                         textAlign = TextAlign.Center,
                     ),
                     singleLine = true,
-                    cursorBrush = SolidColor(colors.accent),
+                    cursorBrush = SolidColor(colors.ink),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = if (form.fractional) KeyboardType.Decimal else KeyboardType.Number,
                         imeAction = ImeAction.Done,
@@ -1707,7 +1721,7 @@ private fun AmountRow(
                 textAlign = TextAlign.End,
             ),
             singleLine = true,
-            cursorBrush = SolidColor(colors.accent),
+            cursorBrush = SolidColor(colors.ink),
             keyboardOptions = KeyboardOptions(
                 keyboardType = if (fractional) KeyboardType.Decimal else KeyboardType.Number,
             ),
@@ -1783,7 +1797,7 @@ private fun ScanActionChip(
     val colors = Splitty.colors
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(50))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.ink.copy(alpha = 0.06f))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -1846,7 +1860,7 @@ private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) 
         modifier = modifier
             // Тёмный скрим, а не светлый фон темы: оверлей должен читаться как
             // «приложение занято», одинаково в обеих темах (порт iOS black 0.55).
-            .background(Color(0xFF0C0F13))
+            .background(colors.recordingScrim)
             // Гасим тапы под оверлеем (форму нельзя трогать во время распознавания).
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
@@ -1909,68 +1923,49 @@ private fun ComposerCard(
 ) {
     val colors = Splitty.colors
     val disabled = aiDisabledReason != null
-    SurfaceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.GraphicEq,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = stringResource(R.string.expense_composer_title),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.ink,
-                )
-            }
-            Text(
-                text = stringResource(R.string.expense_composer_hint),
-                fontSize = 13.sp,
-                color = colors.inkSecondary,
-                textAlign = TextAlign.Center,
-                lineHeight = 18.sp,
-            )
-        }
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(
+            text = stringResource(R.string.expense_composer_title),
+            modifier = Modifier.semantics { heading() },
+            fontSize = 30.sp,
+            lineHeight = 33.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-1).sp,
+            color = colors.ink,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.expense_composer_hint),
+            fontSize = 15.sp,
+            color = colors.inkSecondary,
+            lineHeight = 20.sp,
+        )
         Spacer(Modifier.height(14.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = colors.hairline)
-            Text(
-                text = stringResource(R.string.expense_composer_or).uppercase(),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.inkSecondary,
-            )
-            HorizontalDivider(modifier = Modifier.weight(1f), color = colors.hairline)
+            ReceiptDivider(Modifier.weight(1f))
+            ReceiptLabel(stringResource(R.string.expense_composer_or))
+            ReceiptDivider(Modifier.weight(1f))
         }
         Spacer(Modifier.height(14.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .alpha(if (disabled) 0.45f else 1f)
-                .clip(RoundedCornerShape(50))
-                .background(colors.accent.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(3.dp))
+                .border(1.dp, colors.ink, RoundedCornerShape(3.dp))
                 .clickable(onClick = onTakePhoto)
                 .padding(vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
-                imageVector = Icons.Filled.PhotoCamera,
+                imageVector = Icons.Outlined.PhotoCamera,
                 contentDescription = null,
-                tint = colors.accent,
+                tint = colors.ink,
                 modifier = Modifier.size(18.dp),
             )
             Spacer(Modifier.width(8.dp))
@@ -1978,7 +1973,7 @@ private fun ComposerCard(
                 text = stringResource(R.string.expense_composer_photo),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = colors.accentText,
+                color = colors.ink,
             )
         }
         // Галерея остаётся доступной и в композере — снимок бывает уже сделан.
@@ -1994,28 +1989,20 @@ private fun ComposerCard(
                 text = reason.resolve(),
                 modifier = Modifier.fillMaxWidth(),
                 fontSize = 12.sp,
-                color = colors.inkSecondary,
-                textAlign = TextAlign.Center,
+                color = colors.negativeText,
             )
         }
     }
 }
 
-/** Текстовая ссылка-действие во всю ширину («Ввести вручную», «Заполнить голосом»). */
+/** Текстовая ссылка-действие («Ввести вручную», «Заполнить голосом»). */
 @Composable
 private fun TextLink(text: String, accent: Boolean, onClick: () -> Unit) {
-    val colors = Splitty.colors
-    Text(
+    TextLinkButton(
         text = text,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        fontSize = 15.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = if (accent) colors.accent else colors.inkSecondary,
-        textAlign = TextAlign.Center,
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        fontSize = if (accent) 14.sp else 15.sp,
     )
 }
 
@@ -2034,7 +2021,7 @@ private fun CircleIconButton(
             .alpha(if (enabled) 1f else 0.45f)
             .clip(CircleShape)
             .background(colors.surface)
-            .border(1.5.dp, colors.accent.copy(alpha = 0.4f), CircleShape)
+            .border(1.dp, colors.ink, CircleShape)
             .semantics { this.contentDescription = contentDescription }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -2086,7 +2073,7 @@ private fun ComposerMicBar(
                     .scale(if (voice.isMicPressed) 0.9f else 1f)
                     .onGloballyPositioned { onMicFrame(it.boundsInRoot()) }
                     .clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(colors.accent, colors.accentPressed)))
+                    .background(colors.accent)
                     .semantics { contentDescription = a11yLabel }
                     .micHold(
                         voice = voice,
@@ -2230,7 +2217,7 @@ private fun RecordedReviewOverlay(
     }
     Box(
         modifier = modifier
-            .background(Color(0xFF0C0F13))
+            .background(colors.recordingScrim)
             // Гасим касания по форме под оверлеем.
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
@@ -2295,7 +2282,7 @@ private fun RecordedReviewOverlay(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(3.dp))
                     .clickable(onClick = if (isPhoto) onAddVoice else onAddPhoto)
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2337,7 +2324,7 @@ private fun RecordedReviewOverlay(
                     if (isPhoto) R.string.rec_review_cancel_photo else R.string.rec_review_cancel
                 ),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(3.dp))
                     .clickable(onClick = onCancel)
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 fontSize = 14.sp,

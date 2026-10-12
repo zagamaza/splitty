@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import androidx.compose.ui.graphics.SolidColor
 import android.os.SystemClock
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
@@ -212,7 +213,7 @@ fun RecordingOverlay(
                     height = with(density) { windowSizePx.height.toDp() },
                 )
                 .alpha(overlayAlpha)
-                .background(RecordingScrim),
+                .background(Splitty.colors.recordingScrim),
         )
 
         RecordingContent(
@@ -579,15 +580,9 @@ private fun StopButton(
     Box(
         modifier = Modifier
             .size(size)
-            .shadow(
-                elevation = 20.dp,
-                shape = CircleShape,
-                ambientColor = colors.accent.copy(alpha = 0.5f),
-                spotColor = colors.accent.copy(alpha = 0.5f),
-            )
             .clip(CircleShape)
             .background(
-                Brush.linearGradient(listOf(colors.accent, colors.accentPressed)),
+                SolidColor(colors.accent),
             )
             .semantics { contentDescription = stopA11y }
             .clickable(
@@ -631,7 +626,7 @@ private fun MicCircle(
                     .copy(alpha = 0.5f),
             )
             .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(colors.accent, colors.accentPressed)))
+            .background(SolidColor(colors.accent))
             .alpha(if (isPreparing) 0.75f else 1f),
         contentAlignment = Alignment.Center,
     ) {
@@ -644,9 +639,7 @@ private fun MicCircle(
                     .fillMaxSize()
                     .alpha(cancelAlpha)
                     .background(
-                        Brush.linearGradient(
-                            listOf(colors.negative, colors.negative.copy(alpha = 0.8f)),
-                        ),
+                        colors.negative,
                     ),
             )
         }
@@ -819,9 +812,9 @@ private fun HintsCard(hints: List<String>, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .widthIn(max = 320.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(Color.White.copy(alpha = 0.1f))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(16.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(3.dp))
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
@@ -930,10 +923,3 @@ private enum class RecordingStatus(
     Recording(R.string.rec_status_recording_title, R.string.rec_status_recording_sub),
 }
 
-/**
- * Фон оверлея записи. На iOS это тёмный `ultraThinMaterial` + `Color.black.opacity(0.35)`,
- * что визуально читается СЕРЫМ, а не чёрным. Здесь берём сплошной серый (без
- * прозрачности — блюра под оверлеем всё равно нет): раньше стоял `bg` тёмной
- * темы `#0C0F13`, самый тёмный токен палитры, и экран выглядел чёрным.
- */
-private val RecordingScrim = Color(0xFF2B3038)

@@ -169,12 +169,12 @@
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/theme/Theme.kt`
 - Modify: `ios/SplittyTests/ContrastTests.swift`, `android/app/src/test/java/com/zagir/splitty/ui/theme/ContrastTest.kt`
 
-- [ ] заменить значения семантических токенов на палитру чека (светлая + тёмная), добавить `paperClosed`, `rule`, `ruleStrong`, `stamp`, `action`, `onAction`
-- [ ] `surface`/`receiptPaper` указывают на бумагу; легаси-алиасы остаются компилируемыми
-- [ ] пересчитать `accentText`/`negativeText`/`chartCategorical` под новые фоны
-- [ ] Android `toColorScheme()` — материал-схема из новых токенов (диалоги, поля, свитчи)
-- [ ] обновить тесты контраста: пары текст/фон ≥ 4.5:1, CTA-текст на action ≥ 4.5:1
-- [ ] прогнать тесты обеих платформ
+- [x] заменить значения семантических токенов на палитру чека (светлая + тёмная), добавить `paperClosed`, `rule`, `ruleStrong`, `stamp`, `action`, `onAction`
+- [x] `surface`/`receiptPaper` указывают на бумагу; легаси-алиасы остаются компилируемыми
+- [x] пересчитать `accentText`/`negativeText`/`chartCategorical` под новые фоны
+- [x] Android `toColorScheme()` — материал-схема из новых токенов (диалоги, поля, свитчи)
+- [x] обновить тесты контраста: пары текст/фон ≥ 4.5:1, CTA-текст на action ≥ 4.5:1
+- [x] прогнать тесты обеих платформ
 
 ### Task 2: Типографика и реквизиты
 
@@ -183,12 +183,12 @@
 - Modify: `android/app/src/main/java/com/zagir/splitty/ui/theme/Theme.kt` (Typography)
 - Create: `ios/SplittyTests/ReceiptTypographyTests.swift`, `android/.../ui/components/ReceiptTypographyTest.kt`
 
-- [ ] `scaledFont` по умолчанию `.default` вместо `.rounded`; явные `.rounded` в экранах убрать
-- [ ] стиль реквизита `receiptLabel` (моно, мелкий, капс с разрядкой) с правилом: ja/zh/ko — без капса и разрядки
-- [ ] `MoneyText` — tabular figures, крупные суммы — жирные с плотной разрядкой
-- [ ] Android: Typography без rounded, tabular-nums через `fontFeatureSettings = "tnum"`
-- [ ] тест правила регистра по локалям (обе платформы)
-- [ ] прогнать тесты
+- [x] `scaledFont` по умолчанию `.default` вместо `.rounded`; явные `.rounded` в экранах убрать
+- [x] стиль реквизита `receiptLabel` (моно, мелкий, капс с разрядкой) с правилом: ja/zh/ko — без капса и разрядки
+- [x] `MoneyText` — tabular figures, крупные суммы — жирные с плотной разрядкой
+- [x] Android: Typography без rounded, tabular-nums через `fontFeatureSettings = "tnum"`
+- [x] тест правила регистра по локалям (обе платформы)
+- [x] прогнать тесты
 
 ### Task 3: Компоненты чека
 
@@ -198,12 +198,12 @@
 - Modify: `ios/Splitty/Core/DesignSystem.swift`, `android/.../ui/components/DesignSystem.kt`
 - Modify: `android/.../ui/components/ComponentSnapshotTest.kt`, `ios/SplittyTests/SnapshotRenderTests.swift`
 
-- [ ] `ReceiptPaper` (форма с перфорированным краем, край скрыт от доступности), `ReceiptStub`
-- [ ] `ReceiptDivider` (dashed / total), `ReceiptLine`, `ReceiptTotal`, `StatusStamp`, `TextLinkButton`
-- [ ] `surfaceCard`/`SurfaceCard` → бумага с углами 3pt без тени; `PrimaryPill` → прямоугольный `action`; `SoftChip` → рамка 1pt, углы 3pt; `SectionHeader` → `receiptLabel`
-- [ ] снапшоты компонентов в обеих темах (Roborazzi + iOS render)
-- [ ] тесты: край и штамп не в дереве доступности
-- [ ] прогнать тесты
+- [x] `ReceiptPaper` (форма с перфорированным краем, край скрыт от доступности), `ReceiptStub`
+- [x] `ReceiptDivider` (dashed / total), `ReceiptLine`, `ReceiptTotal`, `StatusStamp`, `TextLinkButton`
+- [x] `surfaceCard`/`SurfaceCard` → бумага с углами 3pt без тени; `PrimaryPill` → прямоугольный `action`; `SoftChip` → рамка 1pt, углы 3pt; `SectionHeader` → `receiptLabel`
+- [x] снапшоты компонентов в обеих темах (Roborazzi + iOS render)
+- [x] тесты: край и штамп не в дереве доступности
+- [x] прогнать тесты
 
 ### Task 4: Каркас — навигация, табы, системные состояния
 
@@ -211,11 +211,11 @@
 - Modify: `ios/Splitty/App/MainTabView.swift`, `ios/Splitty/App/SplittyApp.swift`, `ios/Splitty/Core/Components.swift`, `ios/Splitty/Core/CacheNote.swift`, `ios/Splitty/Core/UserAvatarView.swift`
 - Modify: `android/.../ui/main/MainScaffold.kt`, `components/FailedState.kt`, `AppToast.kt`, `CacheNote.kt`, `GradientAvatar.kt`, `NudgeHighlight.kt`
 
-- [ ] внешний вид TabBar/NavigationBar: фон `bg`, hairline, активный таб чернилами; моно-заголовки по центру
-- [ ] центральная «+» — прямоугольная `action`
-- [ ] FailedState, тост, CacheNote, аватары — в новой палитре, без пилюль
-- [ ] убрать оставшиеся хардкод-цвета экранов (iOS 5, Android 15) в токены
-- [ ] обновить затронутые тесты; прогнать
+- [x] внешний вид TabBar/NavigationBar: фон `bg`, hairline, активный таб чернилами; моно-заголовки по центру
+- [x] центральная «+» — прямоугольная `action`
+- [x] FailedState, тост, CacheNote, аватары — в новой палитре, без пилюль
+- [x] убрать оставшиеся хардкод-цвета экранов (iOS 5, Android 15) в токены
+- [x] обновить затронутые тесты; прогнать
 
 ### Task 5: Приветствие и вход
 
@@ -224,10 +224,10 @@
 - Modify: `android/.../ui/onboarding/WelcomeScreen.kt`, `android/.../ui/auth/LoginScreen.kt`
 - Modify: каталоги строк обеих платформ
 
-- [ ] приветствие по `welcome.html`: реквизит, «Всё общее — в одном чеке.», наклонённый пример-чек (данные-пример), штамп, CTA; существующие страницы/пропуск/аналитика сохраняются
-- [ ] вход: та же бумага и шрифты, три пункта обещаний как строки чека; кнопки Apple/Google/Telegram — по гайдлайнам брендов
-- [ ] строки во всех 10 языках
-- [ ] обновить `WelcomeRenderTests`, `LoginValuePropsTests`, Android-тесты приветствия/входа; прогнать
+- [x] приветствие по `welcome.html`: реквизит, «Всё общее — в одном чеке.», наклонённый пример-чек (данные-пример), штамп, CTA; существующие страницы/пропуск/аналитика сохраняются
+- [x] вход: та же бумага и шрифты, три пункта обещаний как строки чека; кнопки Apple/Google/Telegram — по гайдлайнам брендов
+- [x] строки во всех 10 языках
+- [x] обновить `WelcomeRenderTests`, `LoginValuePropsTests`, Android-тесты приветствия/входа; прогнать
 
 ### Task 6: Список тус и архив
 
@@ -235,11 +235,11 @@
 - Modify: `ios/Splitty/Features/Groups/GroupsListView.swift`
 - Modify: `android/.../ui/groups/GroupsListScreen.kt`, `GroupsCommon.kt`
 
-- [ ] «Чеки тус» + «+ Новый» (меню создать/войти по коду сохраняется)
-- [ ] сегмент «Открытые · N / Закрытые»: закрытые = архив (вместо строки «Архив»)
-- [ ] корешок тусы: реквизит (дата создания · N чел.), название, остаток словами и сумма; непрочитанное — штамп-метка; `debtsUnavailable` — «Балансы недоступны»
-- [ ] сводка «вам должны / вы должны» — строкой-реквизитом, не карточкой
-- [ ] тесты: нулевой баланс открытой тусы не попадает в «Закрытые»; прогнать
+- [x] «Чеки тус» + «+ Новый» (меню создать/войти по коду сохраняется)
+- [x] сегмент «Открытые · N / Закрытые»: закрытые = архив (вместо строки «Архив»)
+- [x] корешок тусы: реквизит (дата создания · N чел.), название, остаток словами и сумма; непрочитанное — штамп-метка; `debtsUnavailable` — «Балансы недоступны»
+- [x] сводка «вам должны / вы должны» — строкой-реквизитом, не карточкой
+- [x] тесты: нулевой баланс открытой тусы не попадает в «Закрытые»; прогнать
 
 ### Task 7: Туса — документ
 
@@ -247,11 +247,11 @@
 - Modify: `ios/Splitty/Features/Groups/GroupDetailView.swift`
 - Modify: `android/.../ui/groups/GroupDetailScreen.kt`
 
-- [ ] шапка-документ, позиции по месяцам (`ReceiptLine`), погашения — с пометкой, офлайн-операции — штамп «НЕ ОТПРАВЛЕНО»
-- [ ] итог: «ВСЕГО», «Ваша доля» (`mySpent`), «ВАШ ОСТАТОК» словами, «Все балансы» / «Рассчитаться»
-- [ ] вкладки (Лента/Балансы/Итоги/Настройки) — текстовые табы с подчёркиванием; фильтр «Только мои» сохраняется
-- [ ] «+ Дописать расход» — нижняя `action`; баннер приглашения — строкой-ссылкой
-- [ ] тесты: `debtsUnavailable` → «Балансы недоступны», а не «в расчёте»; прогнать
+- [x] шапка-документ, позиции по месяцам (`ReceiptLine`), погашения — с пометкой, офлайн-операции — штамп «НЕ ОТПРАВЛЕНО»
+- [x] итог: «ВСЕГО», «Ваша доля» (`mySpent`), «ВАШ ОСТАТОК» словами, «Все балансы» / «Рассчитаться»
+- [x] вкладки (Лента/Балансы/Итоги/Настройки) — текстовые табы с подчёркиванием; фильтр «Только мои» сохраняется
+- [x] «+ Дописать расход» — нижняя `action`; баннер приглашения — строкой-ссылкой
+- [x] тесты: `debtsUnavailable` → «Балансы недоступны», а не «в расчёте»; прогнать
 
 ### Task 8: Добавление расхода
 
@@ -259,11 +259,11 @@
 - Modify: `ios/Splitty/Features/Expense/AddExpenseView.swift`, `ReceiptView.swift`, `MicTouchSurface.swift`
 - Modify: `android/.../ui/expense/AddExpenseScreen.kt`, `ReceiptCard.kt`, `ItemSheet.kt`, `RecordingOverlay.kt`, `PersonBreakdownCard.kt`
 
-- [ ] заголовок «Дописать в чек.», композер голоса — оранжевый круг с волной, фото и ручной ввод рядом
-- [ ] результат разбора — квитанция «ПРОВЕРКА ПЕРЕД ПЕЧАТЬЮ», «Изменить доли» / «Снять чек», пометка «ЧЕРНОВИК»
-- [ ] плоская форма (сумма, плательщик, участники, доли) — на бумаге, нативные поля
-- [ ] CTA «Подтвердить и дописать» / «Сохранить» — `action`
-- [ ] UI-тесты (`ManualSharesAfterParseUITests`, Android `ManualSharesButtonTest` и др.) — обновить подписи/идентификаторы; прогнать
+- [x] заголовок «Дописать в чек.», композер голоса — оранжевый круг с волной, фото и ручной ввод рядом
+- [x] результат разбора — квитанция «ПРОВЕРКА ПЕРЕД ПЕЧАТЬЮ», «Изменить доли» / «Снять чек», пометка «ЧЕРНОВИК»
+- [x] плоская форма (сумма, плательщик, участники, доли) — на бумаге, нативные поля
+- [x] CTA «Подтвердить и дописать» / «Сохранить» — `action`
+- [x] UI-тесты (`ManualSharesAfterParseUITests`, Android `ManualSharesButtonTest` и др.) — обновить подписи/идентификаторы; прогнать
 
 ### Task 9: Рассчитаться
 
@@ -271,15 +271,18 @@
 - Modify: `ios/Splitty/Features/SettleUp/SettleUpView.swift`
 - Modify: `android/.../ui/settleup/SettleUpScreen.kt`
 
-- [ ] бумага: состояние словами, сумма крупно, «Кто → кому», «После перевода ваш остаток», штамп при нуле
-- [ ] «План всей тусы · N переводов», «Почему?» — ссылки на существующие объяснения
-- [ ] подпись: перевод делается в банке; CTA «Деньги получены» / «Записать перевод»; защита от двойного нажатия сохраняется
-- [ ] тесты экрана обновить; прогнать
+- [x] бумага: состояние словами, сумма крупно, «Кто → кому», «После перевода ваш остаток», штамп при нуле
+- [x] «План всей тусы · N переводов», «Почему?» — ссылки на существующие объяснения
+- [x] подпись: перевод делается в банке; CTA «Деньги получены» / «Записать перевод»; защита от двойного нажатия сохраняется
+- [x] тесты экрана обновить; прогнать
 
 ### Task 10: Контрольная точка — пять основных экранов
 
-- [ ] скриншоты пяти экранов: iOS (светлая/тёмная, iPhone 17 Pro и узкий), Android (Roborazzi/эмулятор)
-- [ ] сравнить с `docs/design/receipt/receipt/*.png`, поправить расхождения
+➕ Найдено по живым скриншотам и исправлено: нижний бар Android растягивался на весь экран; сумма в расчёте Android обрезалась; шапка приветствия Android залезала под статус-бар; вырезы корешка на iOS торчали белыми кругами.
+⚠️ Вне редизайна: Android спрашивает уведомления в `MainActivity.onCreate` на первом кадре (на iOS — после первой тусы). Не трогал.
+
+- [x] скриншоты пяти экранов: iOS (iPhone 18 Pro, светлая), Android (эмулятор Pixel 7, API 35) — `/tmp/receipt-shots/`; тёмная и узкий — в Task 15
+- [x] сравнить с `docs/design/receipt/receipt/*.png`, поправить расхождения
 - [ ] отправить Codex через peer-chat: пути, diff, скриншоты; исправить его замечания
 
 ### Task 11: Балансы, итоги, операция

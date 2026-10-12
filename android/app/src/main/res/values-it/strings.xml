@@ -710,4 +710,13 @@
     <string name="expense_edit_amounts_unavailable_cents">Il totale ha dei centesimi, ma questo gruppo usa importi interi: correggi le quote nelle voci</string>
     <string name="expense_edit_amounts_unavailable_invalid">Le quote nelle voci non tornano: correggi le voci</string>
     <string name="brand_receipt_label">Conto comune</string>
+    <string name="receipt_your_share">La tua quota</string>
+    <string name="receipt_your_balance">Il tuo saldo</string>
+    <string name="receipt_settle_up">Saldare ↗</string>
+    <string name="receipt_all_balances">Tutti i saldi</string>
+    <string name="receipt_items">Voci</string>
+    <string name="receipt_has_attachments">Con allegati</string>
+    <string name="receipt_draft_note">Bozza — non ancora nel gruppo</string>
+    <string name="receipt_left_on_debt">Resterà su questo debito</string>
+    <string name="receipt_debt_will_close">Il debito sarà saldato</string>
 </resources>

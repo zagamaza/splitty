@@ -412,7 +412,7 @@ private fun FieldsCard(
             modifier = Modifier.fillMaxWidth(),
             textStyle = TextStyle(color = colors.ink, fontSize = 17.sp, fontWeight = FontWeight.Medium),
             singleLine = true,
-            cursorBrush = SolidColor(colors.accent),
+            cursorBrush = SolidColor(colors.ink),
             decorationBox = { inner ->
                 Box {
                     if (name.isEmpty()) {
@@ -439,7 +439,7 @@ private fun FieldsCard(
                     textAlign = TextAlign.End,
                 ),
                 singleLine = true,
-                cursorBrush = SolidColor(colors.accent),
+                cursorBrush = SolidColor(colors.ink),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { inner ->
                     Box(contentAlignment = Alignment.CenterEnd) {
@@ -608,7 +608,7 @@ private fun AmountField(text: String, currency: String, onChange: (String) -> Un
                 textAlign = TextAlign.End,
             ),
             singleLine = true,
-            cursorBrush = SolidColor(colors.accent),
+            cursorBrush = SolidColor(colors.ink),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             decorationBox = { inner ->
                 Box(contentAlignment = Alignment.CenterEnd) {

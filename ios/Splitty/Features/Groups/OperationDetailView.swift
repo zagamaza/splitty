@@ -114,13 +114,13 @@ struct OperationDetailView: View {
     private var headerCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(operation.isDebtRepayment ? Color.accent.opacity(0.14) : Color.ink.opacity(0.06))
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Color.ink.opacity(0.06))
                     .frame(width: 48, height: 48)
                     .overlay {
                         Image(systemName: operation.isDebtRepayment ? "banknote" : "doc.plaintext")
                             .scaledFont(size: 22, design: .default)
-                            .foregroundStyle(operation.isDebtRepayment ? Color.accent : Color.inkSecondary)
+                            .foregroundStyle(Color.inkSecondary)
                     }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -310,7 +310,7 @@ struct OperationDetailView: View {
                 } label: {
                     Label("Изменить", systemImage: "pencil")
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.ink)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)

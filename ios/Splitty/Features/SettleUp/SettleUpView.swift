@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Погашение долга («Записать платёж»): премиум-sheet на нейтральном фоне —
-/// карточка «должник → кредитор», крупная сумма (prefilled текущим долгом,
-/// не больше долга) и CTA «Записать платёж». Если долгов с участием
+/// Погашение долга («Записать платёж»): лист чека — «должник → кредитор»,
+/// крупная сумма (prefilled текущим долгом, не больше долга), остаток по
+/// долгу и CTA «Записать платёж». Если долгов с участием
 /// пользователя несколько — сначала список «Ваши долги» карточками.
 struct SettleUpView: View {
     private let roomId: String
@@ -82,7 +82,7 @@ struct SettleUpView: View {
                     Text(alertMessage ?? "")
                 }
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
         .onAppear { Analytics.shared.track(.settleUpOpened) }
     }
 
@@ -106,8 +106,8 @@ struct SettleUpView: View {
                 Button("Повторить") {
                     Task { await session.refreshMe() }
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.accent)
+                .buttonStyle(.primaryPill)
+                .frame(maxWidth: 220)
             }
         } else if let debt = selectedDebt {
             paymentForm(debt: debt)
@@ -135,9 +135,7 @@ struct SettleUpView: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Ваши долги")
-                            .sectionHeaderStyle()
-                            .padding(.horizontal, 4)
+                        Text("Ваши долги").receiptLabel()
                         ForEach(debts) { debt in
                             Button {
                                 select(debt)
@@ -157,33 +155,30 @@ struct SettleUpView: View {
         }
     }
 
-    /// Карточка долга: «А → Б», подпись и сумма семантическим цветом.
+    /// Корешок долга: «А → Б» словами и сумма; тап — к записи платежа.
     private func debtRow(_ debt: Debt) -> some View {
-        HStack(spacing: 10) {
-            UserAvatarView(user: debt.debtor, size: 40)
-            Image(systemName: "arrow.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.inkSecondary)
-            UserAvatarView(user: debt.lender, size: 40)
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(debtTitle(debt))
-                    .scaledFont(size: 15, weight: .medium)
+                    .scaledFont(size: 16, weight: .semibold)
                     .foregroundStyle(Color.ink)
                     .lineLimit(2)
-                MoneyText(
-                    debt.sum,
-                    exactMinor: debt.exactMinor,
-                    role: debt.debtor.id == meId ? .negative : .positive,
-                    size: 16,
-                    currency: currency
-                )
+                Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
+                    .scaledFont(size: 12, relativeTo: .caption)
+                    .foregroundStyle(Color.inkSecondary)
             }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.inkSecondary)
+            MoneyText(
+                debt.sum,
+                exactMinor: debt.exactMinor,
+                role: debt.debtor.id == meId ? .negative : .positive,
+                size: 16,
+                weight: .bold,
+                currency: currency
+            )
         }
-        .surfaceCard()
+        .receiptStub()
+        .accessibilityElement(children: .combine)
     }
 
     private func debtTitle(_ debt: Debt) -> String {
@@ -195,17 +190,26 @@ struct SettleUpView: View {
 
     // MARK: Форма платежа
 
+    /// Запись платежа — лист чека: кто кому словами, сумма крупно (правится),
+    /// сколько останется по этому долгу. Внизу — одно действие.
     private func paymentForm(debt: Debt) -> some View {
         ScrollView {
             VStack(spacing: 20) {
-                header(debt: debt)
-                sumCard(debt: debt)
+                VStack(alignment: .leading, spacing: 0) {
+                    header(debt: debt)
+                    ReceiptDivider().padding(.vertical, 18)
+                    sumCard(debt: debt)
+                    ReceiptDivider().padding(.vertical, 18)
+                    remainder(debt: debt)
+                }
+                .receiptPaper(padding: 22)
+
                 Button {
                     Task { await repay(debt: debt) }
                 } label: {
                     if isSaving {
                         ProgressView()
-                            .tint(.white)
+                            .tint(Color.onAccent)
                     } else {
                         Text("Записать платёж")
                     }
@@ -220,9 +224,8 @@ struct SettleUpView: View {
                 // и человек ждёт, что деньги уйдут сами
                 Text("Splitty только записывает: деньги передайте наличными или переводом")
                     .scaledFont(size: 13, relativeTo: .footnote)
-                    .multilineTextAlignment(.center)
                     .foregroundStyle(Color.inkSecondary)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !session.isOnline {
                     Text("Погашение доступно только онлайн")
@@ -235,23 +238,45 @@ struct SettleUpView: View {
         .scrollDismissesKeyboard(.interactively)
     }
 
-    /// Карточка-шапка: аватар должника → аватар кредитора, «Загир платит Алмаз».
+    /// Шапка листа: что произошло словами и «должник → кредитор».
     private func header(debt: Debt) -> some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 20) {
-                UserAvatarView(user: debt.debtor, size: 64)
-                Image(systemName: "arrow.right")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(Color.accentText)
-                UserAvatarView(user: debt.lender, size: 64)
-            }
+        VStack(alignment: .center, spacing: 8) {
+            Text("Записать платёж").receiptLabel()
             Text(paymentTitle(debt: debt))
-                .scaledFont(size: 17, weight: .semibold)
+                .scaledFont(size: 24, weight: .heavy, relativeTo: .title2)
+                .kerning(-0.6)
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
+                .scaledFont(size: 14)
+                .foregroundStyle(Color.inkSecondary)
         }
         .frame(maxWidth: .infinity)
-        .surfaceCard(padding: 24)
+    }
+
+    /// Сколько останется по ЭТОМУ долгу после записи. Считается из введённой
+    /// суммы и самого долга, а не обещается: при частичном платеже здесь
+    /// честный остаток, и только полная сумма даёт штамп «долг закрыт».
+    @ViewBuilder
+    private func remainder(debt: Debt) -> some View {
+        let entered = minorFromInput(sumText) ?? 0
+        let left = max(0, debt.exactMinor - min(entered, debt.exactMinor))
+        HStack(alignment: .firstTextBaseline) {
+            Text("Останется по этому долгу")
+                .scaledFont(size: 14)
+                .foregroundStyle(Color.ink)
+            Spacer(minLength: 8)
+            Text(money(minor: left, currency: currency))
+                .scaledFont(size: 15, weight: .semibold, design: .monospaced)
+                .foregroundStyle(Color.ink)
+        }
+        .accessibilityElement(children: .combine)
+        if isSumValid(debt: debt) && left == 0 {
+            StatusStamp(text: String(localized: "Долг будет закрыт").localizedUppercase)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 14)
+        }
     }
 
     private func paymentTitle(debt: Debt) -> String {
@@ -266,8 +291,8 @@ struct SettleUpView: View {
         return String(localized: "\(debt.debtor.displayName) отдал(а) — \(debt.lender.displayName)")
     }
 
-    /// Карточка суммы: hero-поле rounded + monospacedDigit по центру,
-    /// hairline и подсказка «Долг: …» / предупреждение о превышении.
+    /// Сумма платежа: крупное поле по центру (правится), черта и подсказка
+    /// «Долг: …» / предупреждение о превышении.
     private func sumCard(debt: Debt) -> some View {
         VStack(spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -275,7 +300,7 @@ struct SettleUpView: View {
                     .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                     .foregroundStyle(Color.inkSecondary)
                 TextField("0", text: $sumText)
-                    .scaledFont(size: 42, weight: .semibold, relativeTo: .title)
+                    .scaledFont(size: 52, weight: .heavy, relativeTo: .title)
                     .monospacedDigit()
                     .foregroundStyle(Color.ink)
                     .keyboardType(fractional ? .decimalPad : .numberPad)
@@ -294,9 +319,9 @@ struct SettleUpView: View {
             .onTapGesture { isSumFocused = true }
 
             Rectangle()
-                .fill(Color.hairline)
-                .frame(height: 1)
-                .frame(maxWidth: 160)
+                .fill(Color.ruleStrong)
+                .frame(height: 2)
+                .frame(maxWidth: 180)
 
             if let minor = minorFromInput(sumText), minor > debt.exactMinor {
                 Text("Не больше долга: \(money(minor: debt.exactMinor, currency: currency))")
@@ -310,7 +335,7 @@ struct SettleUpView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
         }
-        .surfaceCard(padding: 20)
+        .frame(maxWidth: .infinity)
     }
 
     /// В тусе без копеек в поле только цифры. В тусе с копейками пропускаем

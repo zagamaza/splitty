@@ -195,7 +195,7 @@ private fun ItemRow(
     // отступ — зеркало iOS (`Color.accent.opacity(0.12)`).
     val bgModifier = if (highlighted) {
         Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.accent.copy(alpha = 0.12f))
             .padding(horizontal = 8.dp)
     } else {

@@ -1,5 +1,22 @@
 package com.zagir.splitty.ui.groups
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import com.zagir.splitty.ui.components.ReceiptPaper
+import com.zagir.splitty.ui.components.PerforatedEdgeShape
+import com.zagir.splitty.ui.components.TextLinkButton
+import com.zagir.splitty.ui.components.StatusStamp
+import com.zagir.splitty.ui.components.ReceiptDividerStyle
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptLabel
+import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import com.zagir.splitty.core.ui.resolve
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -183,23 +200,33 @@ fun GroupDetailScreen(
     val colors = Splitty.colors
     val detail = (state as? UiState.Content)?.value
     val meId = meIdState
+    // Сводка документа уехала за верх ленты: внизу показывается её короткая
+    // строка, чтобы остаток и расчёт не терялись за длинной историей.
+    val opsListState = rememberLazyListState()
+    val isSummaryScrolledAway by remember {
+        derivedStateOf { opsListState.firstVisibleItemIndex > 1 }
+    }
 
     Scaffold(
         containerColor = colors.bg,
         // Экран вложен в Scaffold MainScaffold, который системные инсеты УЖЕ
         // применил (на детальных экранах его bottomBar скрыт, и нижний инсет
-        // уходит в innerPadding). Повторное применение здесь поднимало TusaBar
-        // на высоту системной навигации — бар «прыгал» относительно вкладок.
+        // уходит в innerPadding). Повторное применение здесь поднимало нижнюю
+        // кнопку на высоту системной навигации.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
+            Column {
+            // Имя тусы — крупно в шапке самого документа; навбар держит
+            // только реквизит, как печатный заголовок чека.
+            CenterAlignedTopAppBar(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
                     Text(
-                        text = detail?.name ?: stringResource(R.string.group_fallback_title),
-                        fontWeight = FontWeight.Bold,
+                        text = stringResource(R.string.group_fallback_title),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
@@ -210,21 +237,34 @@ fun GroupDetailScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = colors.bg,
                     titleContentColor = colors.ink,
                     navigationIconContentColor = colors.ink,
                     actionIconContentColor = colors.ink,
                 ),
             )
+            TusaTabs(selected = tusaTab, onSelect = { tusaTab = it })
+            }
         },
         bottomBar = {
-            TusaBar(
-                selected = tusaTab,
-                enabled = detail != null,
-                onSelect = { tusaTab = it },
-                onAdd = { onAddExpense(roomId) },
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.bg)
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 10.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (tusaTab == TUSA_TAB_OPS && isSummaryScrolledAway && detail != null) {
+                    PinnedSummary(room = detail, onClick = { tusaTab = TUSA_TAB_BALANCES })
+                }
+                PrimaryPillButton(
+                    text = "+ " + stringResource(R.string.group_add_expense),
+                    onClick = { if (detail != null) onAddExpense(roomId) },
+                    modifier = Modifier.testTag("group_add_expense"),
+                )
+            }
         },
     ) { innerPadding ->
         when (val current = state) {
@@ -301,6 +341,8 @@ fun GroupDetailScreen(
                         onInvite = { isInviteFriendsPresented = true },
                         onOpenOperation = { operationId -> onOpenOperation(roomId, operationId) },
                         onEditLocalOperation = { localId -> onEditLocalOperation(roomId, localId) },
+                        onAllBalances = { tusaTab = TUSA_TAB_BALANCES },
+                        listState = opsListState,
                         modifier = Modifier.padding(innerPadding),
                     )
                 }
@@ -422,62 +464,38 @@ private fun InviteBottomSheet(
     }
 }
 
-/** Баннер «В группе только вы»: зовёт добавить друзей. Порт iOS inviteBanner. */
+/** Приглашение «В группе только вы» — строка документа со ссылкой. Порт iOS inviteBanner. */
 @Composable
 internal fun InviteBanner(onClick: () -> Unit) {
     val colors = Splitty.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.linearGradient(listOf(colors.accent, colors.accentPressed))
-            )
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.PersonAddAlt,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(22.dp),
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.invite_banner_title),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
-            Text(
-                text = stringResource(R.string.invite_banner_subtitle),
-                fontSize = 12.5.sp,
-                color = Color.White.copy(alpha = 0.9f),
-            )
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
-            text = stringResource(R.string.invite_banner_action),
-            fontSize = 13.5.sp,
+            text = stringResource(R.string.invite_banner_title),
+            fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
-            // Белый текст на полупрозрачной подложке поверх градиента давал
-            // 2.6:1 — на ярком фоне надпись просто пропадала. Плашка
-            // непрозрачная, текст — тёмный акцент
-            color = colors.accentText,
-            modifier = Modifier
-                .clip(RoundedCornerShape(50))
-                .background(Color.White)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            color = colors.ink,
         )
+        Text(
+            text = stringResource(R.string.invite_banner_subtitle),
+            fontSize = 13.sp,
+            color = colors.inkSecondary,
+        )
+        TextLinkButton(text = stringResource(R.string.invite_banner_action), onClick = onClick)
     }
 }
 
 // MARK: - Контент
 
+/** Строка ленты на общей бумаге документа: фон бумаги и поля по бокам. */
+private fun Modifier.onPaper(paper: Color): Modifier =
+    this.fillMaxWidth().background(paper).padding(horizontal = 22.dp)
+
+/**
+ * Лента тусы — один документ на бумаге: шапка, сводка остатка, позиции по
+ * месяцам. Сводка стоит НАД позициями: при длинной истории итог и расчёт не
+ * должны прятаться за сотнями строк. Строки ленивые — каждая лежит на той же
+ * бумаге, внизу перфорированный край.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GroupDetailContent(
@@ -495,8 +513,11 @@ private fun GroupDetailContent(
     onInvite: () -> Unit,
     onOpenOperation: (String) -> Unit,
     onEditLocalOperation: (String) -> Unit,
+    onAllBalances: () -> Unit,
+    listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
+    val paper = Splitty.colors.surface
     // Фильтр «Со мной»: только операции, где я донор или в получателях
     // (аналог фильтра «Мои операции» в телеграм-боте).
     var isMineOnly by rememberSaveable { mutableStateOf(false) }
@@ -516,24 +537,32 @@ private fun GroupDetailContent(
         modifier = modifier.fillMaxSize(),
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
-            // Запас снизу — под FAB «+ Расход».
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
         ) {
+            item(key = "header") {
+                DocumentHeader(room = room, modifier = Modifier.onPaper(paper).padding(top = 22.dp, bottom = 18.dp))
+            }
             item(key = "hero") {
-                DebtHeroCard(
-                    room = room,
-                    meId = meId,
-                    pendingCount = localOperations.size,
-                    freshness = freshness,
-                    onSettleUp = onSettleUp,
-                )
+                Column(Modifier.onPaper(paper)) {
+                    ReceiptDivider()
+                    Spacer(Modifier.height(18.dp))
+                    DebtHeroCard(
+                        room = room,
+                        meId = meId,
+                        pendingCount = localOperations.size,
+                        freshness = freshness,
+                        onSettleUp = onSettleUp,
+                        onAllBalances = onAllBalances,
+                    )
+                }
             }
             // Пока в группе только вы — зовём добавить друзей.
             if (room.members.size <= 1 && !room.isArchived) {
                 item(key = "invite-banner") {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(Modifier.onPaper(paper)) {
+                        ReceiptDivider(Modifier.padding(vertical = 14.dp))
                         InviteBanner(onClick = onInvite)
                         // Почему это вообще важно: без второго участника делить нечего.
                         Text(
@@ -541,16 +570,18 @@ private fun GroupDetailContent(
                             fontSize = 12.sp,
                             lineHeight = 16.sp,
                             color = Splitty.colors.inkSecondary,
-                            modifier = Modifier.padding(horizontal = 4.dp),
                         )
                     }
                 }
             }
             item(key = "mine-segment") {
-                if (isBlockingOnly) {
-                    BlockingFilterNote(onClear = onClearBlockingFilter)
-                } else {
-                    MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
+                Column(Modifier.onPaper(paper)) {
+                    ReceiptDivider(Modifier.padding(vertical = 18.dp))
+                    if (isBlockingOnly) {
+                        BlockingFilterNote(onClear = onClearBlockingFilter)
+                    } else {
+                        MineSegment(isMineOnly = isMineOnly, onChange = { isMineOnly = it })
+                    }
                 }
             }
             // Неотправленные (локальные) операции — всегда сверху списка.
@@ -560,30 +591,41 @@ private fun GroupDetailContent(
                         entries = localOperations,
                         currency = room.currency,
                         onEdit = onEditLocalOperation,
+                        modifier = Modifier.onPaper(paper),
                     )
                 }
             }
             if (room.operations.isEmpty() && localOperations.isEmpty()) {
                 item(key = "empty") {
-                    GroupsEmptyCard(
-                        icon = Icons.Outlined.Description,
-                        title = stringResource(R.string.group_empty_ops_title),
-                        subtitle = stringResource(R.string.group_empty_ops_subtitle),
-                    ) {
-                        PrimaryPillButton(
-                            text = stringResource(R.string.group_add_expense),
-                            onClick = onAddExpense,
+                    Column(Modifier.onPaper(paper).padding(vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.group_empty_ops_title),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Splitty.colors.ink,
+                        )
+                        Text(
+                            text = stringResource(R.string.group_empty_ops_subtitle),
+                            fontSize = 14.sp,
+                            color = Splitty.colors.inkSecondary,
                         )
                     }
                 }
             } else {
                 displaySections.forEach { section ->
                     item(key = "month-${section.month}") {
-                        MonthSectionCard(
-                            section = section,
+                        ReceiptLabel(
+                            text = section.title,
+                            modifier = Modifier.onPaper(paper).padding(top = 14.dp, bottom = 2.dp),
+                        )
+                    }
+                    items(section.operations, key = { "op-${it.id}" }) { operation ->
+                        OperationRow(
+                            operation = operation,
                             meId = meId,
                             currency = room.currency,
-                            onOpenOperation = onOpenOperation,
+                            onClick = { onOpenOperation(operation.id) },
+                            modifier = Modifier.background(paper),
                         )
                     }
                 }
@@ -594,18 +636,94 @@ private fun GroupDetailContent(
                             fontSize = 15.sp,
                             color = Splitty.colors.inkSecondary,
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .onPaper(paper)
                                 .padding(vertical = 24.dp),
                             textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
+            item(key = "tail") { PaperTail(paper) }
         }
     }
 }
 
-/** Hero-карточка статуса долга (+ бейдж архива, + подпись про outbox). */
+/** Низ листа: поле бумаги и перфорированный край. */
+@Composable
+private fun PaperTail(paper: Color) {
+    val shape = remember { PerforatedEdgeShape() }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(28.dp)
+            .clip(shape)
+            .background(paper)
+    )
+}
+
+/** Шапка документа: реквизит (дата · участники), имя тусы, штамп архива. */
+@Composable
+private fun DocumentHeader(room: RoomDetail, modifier: Modifier = Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReceiptLabel(
+            text = GroupsDateFmt.dayMonth(room.createdAt) + " · " + memberCountText(room.members.size),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = room.name,
+            modifier = Modifier.semantics { heading() },
+            fontSize = 26.sp,
+            lineHeight = 30.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.8).sp,
+            color = Splitty.colors.ink,
+            textAlign = TextAlign.Center,
+        )
+        if (room.isArchived) {
+            StatusStamp(stringResource(R.string.group_archived_badge))
+        }
+    }
+}
+
+/**
+ * Короткая сводка над кнопкой, когда шапка документа уехала вверх: остаток
+ * словами и суммой, тап — к балансам.
+ */
+@Composable
+private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(3.dp))
+            .background(colors.surface)
+            .border(1.dp, colors.hairline, RoundedCornerShape(3.dp))
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) {}
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ReceiptLabel(stringResource(R.string.receipt_your_balance), Modifier.weight(1f), fontSize = 10.sp)
+        when {
+            room.debtsUnavailable -> Text(stringResource(R.string.groups_row_debts_unavailable), fontSize = 14.sp, color = colors.inkSecondary)
+            room.exactMyBalanceMinor == 0L -> Text(stringResource(R.string.groups_row_settled), fontSize = 14.sp, color = colors.inkSecondary)
+            else -> {
+                Text(
+                    stringResource(if (room.exactMyBalanceMinor > 0) R.string.groups_row_owed else R.string.groups_row_owes),
+                    fontSize = 14.sp,
+                    color = colors.ink,
+                )
+                MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 15.sp, weight = FontWeight.Bold, currency = room.currency)
+            }
+        }
+    }
+}
+
+/**
+ * Сводка документа: всего, ваша доля, ваш остаток словами, ссылки на балансы
+ * и расчёт (+ подпись про outbox: его суммы в балансах сервера не учтены).
+ */
 @Composable
 private fun DebtHeroCard(
     room: RoomDetail,
@@ -613,41 +731,50 @@ private fun DebtHeroCard(
     pendingCount: Int = 0,
     freshness: DataFreshness = DataFreshness(),
     onSettleUp: (() -> Unit)? = null,
+    onAllBalances: () -> Unit = {},
 ) {
     val colors = Splitty.colors
     val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
-        if (room.isArchived) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Archive,
-                    contentDescription = null,
-                    tint = colors.inkSecondary,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    text = stringResource(R.string.group_archived_badge),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.inkSecondary,
-                )
-            }
-            Spacer(Modifier.height(10.dp))
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
+            ReceiptLabel(stringResource(R.string.totals_total_spent), Modifier.weight(1f))
+            MoneyText(
+                room.totalSpent,
+                exactMinor = room.exactTotalSpentMinor,
+                role = MoneyRole.NEUTRAL,
+                size = 32.sp,
+                weight = FontWeight.ExtraBold,
+                currency = room.currency,
+            )
         }
+        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = stringResource(R.string.receipt_your_share),
+                modifier = Modifier.weight(1f),
+                fontSize = 14.sp,
+                color = colors.inkSecondary,
+            )
+            MoneyText(
+                room.mySpent.toLong(),
+                exactMinor = room.exactMySpentMinor,
+                role = MoneyRole.NEUTRAL,
+                size = 14.sp,
+                weight = FontWeight.Medium,
+                currency = room.currency,
+            )
+        }
+        ReceiptDivider(Modifier.padding(vertical = 4.dp))
+        ReceiptLabel(stringResource(R.string.receipt_your_balance))
         when {
-            // Долги неисчислимы (старые данные бота): честный бейдж вместо
-            // ложного «все в расчёте» — сервер прислал debtsUnavailable.
-            room.debtsUnavailable -> {
+            // Долги неисчислимы (старые данные бота): честная пометка вместо
+            // ложного «в расчёте» — сервер прислал debtsUnavailable.
+            room.debtsUnavailable -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(R.string.group_debts_unavailable_title),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
                     color = colors.ink,
                 )
-                Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.group_debts_unavailable_subtitle),
                     fontSize = 14.sp,
@@ -655,62 +782,29 @@ private fun DebtHeroCard(
                 )
             }
 
-            room.exactMyBalanceMinor > 0 -> {
-                SectionHeader(stringResource(R.string.group_you_are_owed))
-                Spacer(Modifier.height(4.dp))
-                MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp, currency = room.currency)
-            }
+            room.exactMyBalanceMinor > 0 ->
+                BalanceStatement(stringResource(R.string.group_you_are_owed), room)
 
             room.exactMyBalanceMinor < 0 -> {
-                // Один кредитор — называем его по имени, как в iOS.
+                // Один кредитор — называем его по имени, как в iOS. Сумма —
+                // НЕТТО по группе, а не долг одному кредитору: иначе здесь и в
+                // списке групп стояли бы две разные цифры про одну комнату.
                 val creditors = room.debts.filter { it.debtor.id == meId }
-                if (creditors.size == 1) {
-                    SectionHeader(
+                BalanceStatement(
+                    if (creditors.size == 1) {
                         stringResource(R.string.group_you_owe_name, creditors.first().lender.displayName)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    MoneyText(
-                        creditors.first().sum,
-                        role = MoneyRole.NEGATIVE,
-                        size = 40.sp,
-                        currency = room.currency,
-                    )
-                } else {
-                    SectionHeader(stringResource(R.string.group_you_owe))
-                    Spacer(Modifier.height(4.dp))
-                    MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp, currency = room.currency)
-                }
+                    } else {
+                        stringResource(R.string.group_you_owe)
+                    },
+                    room,
+                )
             }
 
-            else -> {
-                Text(
-                    text = stringResource(R.string.group_no_debts),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.ink,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.group_members_settled),
-                    fontSize = 14.sp,
-                    color = colors.inkSecondary,
-                )
-            }
-        }
-        // «Погасить» живёт рядом с долгом, а не в общем ряду кнопок. Тот же
-        // вид, что у «Погасить» в балансах — единый SoftChip; isSelected=true
-        // делает чип акцентным (порт iOS `.softChip(isSelected: true)`).
-        if (canSettle && onSettleUp != null) {
-            Spacer(Modifier.height(12.dp))
-            SoftChip(
-                text = stringResource(R.string.group_chip_settle_short),
-                onClick = onSettleUp,
-                isSelected = true,
-            )
+            // Ноль — штамп, а не крупный «0»: это состояние, а не сумма.
+            else -> StatusStamp(stringResource(R.string.groups_row_settled).uppercase())
         }
         // Балансы сервера не учитывают неотправленные офлайн-операции.
         if (pendingCount > 0) {
-            Spacer(Modifier.height(6.dp))
             Text(
                 text = pluralStringResource(
                     R.plurals.group_hero_pending_ops,
@@ -722,37 +816,68 @@ private fun DebtHeroCard(
             )
         }
         if (freshness.fromCache) {
-            Spacer(Modifier.height(6.dp))
             CacheNote(freshness = freshness, tag = "group_cache_note")
         }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextLinkButton(stringResource(R.string.receipt_all_balances), onClick = onAllBalances)
+            Spacer(Modifier.weight(1f))
+            // Расчёт живёт рядом с остатком, а не в общем ряду кнопок.
+            if (canSettle && onSettleUp != null) {
+                TextLinkButton(
+                    text = stringResource(R.string.receipt_settle_up),
+                    onClick = onSettleUp,
+                    modifier = Modifier.testTag("group_settle_up"),
+                )
+            }
+        }
+    }
+}
+
+/** Остаток словами крупно и суммой справа: направление долга читается текстом. */
+@Composable
+private fun BalanceStatement(words: String, room: RoomDetail) {
+    Row(
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = words,
+            modifier = Modifier.weight(1f),
+            fontSize = 22.sp,
+            lineHeight = 26.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-0.5).sp,
+            color = Splitty.colors.ink,
+        )
+        MoneyText(
+            room.myBalance,
+            exactMinor = room.exactMyBalanceMinor,
+            size = 22.sp,
+            weight = FontWeight.ExtraBold,
+            currency = room.currency,
+        )
     }
 }
 
 // MARK: - Неотправленные операции (outbox)
 
-/** Карточка локальных операций комнаты: заголовок + строки с бейджами. */
+/** Неотправленные операции комнаты: реквизит + строки с пометками. */
 @Composable
 private fun LocalOperationsCard(
     entries: List<OutboxEntry>,
     currency: String,
     onEdit: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(
-            stringResource(R.string.outbox_section_title),
-            modifier = Modifier.padding(start = 4.dp),
-        )
-        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-            entries.forEachIndexed { index, entry ->
-                LocalOperationRow(
-                    entry = entry,
-                    currency = currency,
-                    onClick = { onEdit(entry.localId) },
-                )
-                if (index < entries.lastIndex) {
-                    HairlineDivider(startIndent = 62.dp)
-                }
-            }
+    Column(modifier) {
+        ReceiptLabel(stringResource(R.string.outbox_section_title), Modifier.padding(top = 14.dp, bottom = 2.dp))
+        entries.forEach { entry ->
+            LocalOperationRow(
+                entry = entry,
+                currency = currency,
+                onClick = { onEdit(entry.localId) },
+            )
         }
     }
 }
@@ -780,50 +905,19 @@ private fun LocalOperationRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
         Column(
-            modifier = Modifier.width(34.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = GroupsDateFmt.monthShort(entry.createdAt),
-                fontSize = 11.sp,
-                color = colors.inkSecondary,
-            )
-            Text(
-                text = GroupsDateFmt.day(entry.createdAt),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.inkSecondary,
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(colors.ink.copy(alpha = 0.06f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CloudOff,
-                contentDescription = null,
-                tint = badgeColor,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
                 text = entry.payload.description.ifEmpty { stringResource(R.string.group_op_fallback) },
                 fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
                 color = colors.ink,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
             Row(
@@ -837,7 +931,7 @@ private fun LocalOperationRow(
                     modifier = Modifier.size(12.dp),
                 )
                 Text(
-                    text = badgeText,
+                    text = GroupsDateFmt.dayMonth(entry.createdAt) + " · " + badgeText,
                     fontSize = 12.sp,
                     color = badgeColor,
                     maxLines = 1,
@@ -850,13 +944,13 @@ private fun LocalOperationRow(
             exactMinor = entry.payload.sumMinor ?: (entry.payload.sum * MINOR_FACTOR),
             role = MoneyRole.NEUTRAL,
             size = 15.sp,
-            weight = FontWeight.Normal,
+            weight = FontWeight.Medium,
             currency = currency,
         )
     }
 }
 
-// MARK: - Нижний бар тусы
+// MARK: - Вкладки тусы
 
 internal const val TUSA_TAB_OPS = "ops"
 internal const val TUSA_TAB_BALANCES = "balances"
@@ -864,119 +958,60 @@ internal const val TUSA_TAB_TOTALS = "totals"
 internal const val TUSA_TAB_SETTINGS = "settings"
 
 /**
- * Контекстный таб-бар тусы: [Операции][Балансы] (+) [Итоги][Настройки].
- * Нативный Material NavigationBar (та же стилистика, что главный бар
- * MainScaffold), центральная позиция — приподнятая кнопка «+».
+ * Разделы тусы — текстовые вкладки под навбаром, как у бумажного документа
+ * (порт iOS tusaTabView): выбранная — чернилами с чертой снизу.
  */
 @Composable
-private fun TusaBar(
-    selected: String,
-    enabled: Boolean,
-    onSelect: (String) -> Unit,
-    onAdd: () -> Unit,
-) {
-    val colors = Splitty.colors
-    // Кнопку «+» рисуем ПОВЕРХ бара в Box (Box не клипует), а не как icon
-    // у NavigationBarItem: NavigationBar клипует контент по своей высоте, из-за
-    // чего приподнятая на -12dp кнопка обрезалась сверху, а переразмеренный
-    // item тянул высоту бара вверх. Тот же приём, что в MainScaffold.
-    Box {
-        // windowInsets = 0: инсет нижней системной навигации уже применён
-        // родительским MainScaffold (см. contentWindowInsets выше) — иначе бар
-        // приподнимался над низом экрана и не совпадал с баром вкладок.
-        NavigationBar(
-            containerColor = colors.surface,
-            windowInsets = WindowInsets(0, 0, 0, 0),
+private fun TusaTabs(selected: String, onSelect: (String) -> Unit) {
+    val haptics = rememberHaptics()
+    val tabs = listOf(
+        TUSA_TAB_OPS to stringResource(R.string.group_tab_operations),
+        TUSA_TAB_BALANCES to stringResource(R.string.group_balances_title),
+        TUSA_TAB_TOTALS to stringResource(R.string.totals_title),
+        TUSA_TAB_SETTINGS to stringResource(R.string.group_settings_short),
+    )
+    Box(Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            TusaTabItem(
-                title = stringResource(R.string.group_tab_operations),
-                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                isSelected = selected == TUSA_TAB_OPS,
-            ) { onSelect(TUSA_TAB_OPS) }
-            TusaTabItem(
-                title = stringResource(R.string.group_balances_title),
-                icon = Icons.Outlined.SwapHoriz,
-                isSelected = selected == TUSA_TAB_BALANCES,
-            ) { onSelect(TUSA_TAB_BALANCES) }
-            // Плейсхолдер центральной позиции: держит раскладку табов
-            // (сама кнопка — оверлеем ниже).
-            NavigationBarItem(
-                selected = false,
-                onClick = { if (enabled) onAdd() },
-                icon = { Spacer(Modifier.size(58.dp)) },
-                colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = Color.Transparent,
-                ),
-            )
-            TusaTabItem(
-                title = stringResource(R.string.totals_title),
-                icon = Icons.Outlined.PieChart,
-                isSelected = selected == TUSA_TAB_TOTALS,
-            ) { onSelect(TUSA_TAB_TOTALS) }
-            TusaTabItem(
-                title = stringResource(R.string.group_settings_short),
-                icon = Icons.Outlined.Settings,
-                isSelected = selected == TUSA_TAB_SETTINGS,
-            ) { onSelect(TUSA_TAB_SETTINGS) }
+            tabs.forEach { (tab, title) ->
+                ReceiptTab(title = title, isOn = selected == tab) {
+                    if (selected != tab) haptics.tap()
+                    onSelect(tab)
+                }
+            }
         }
-        TusaAddFab(
-            onClick = { if (enabled) onAdd() },
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
+        ReceiptDivider(Modifier.align(Alignment.BottomCenter), style = ReceiptDividerStyle.HAIR)
     }
 }
 
+/** Текстовая вкладка: выбранная — чернилами, с чертой снизу. */
 @Composable
-private fun RowScope.TusaTabItem(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
+private fun ReceiptTab(title: String, isOn: Boolean, fontSize: androidx.compose.ui.unit.TextUnit = 14.sp, onClick: () -> Unit) {
     val colors = Splitty.colors
-    NavigationBarItem(
-        selected = isSelected,
-        onClick = onClick,
-        icon = { Icon(icon, contentDescription = null) },
-        label = { Text(text = title, fontSize = 11.sp, maxLines = 1) },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = colors.accent,
-            selectedTextColor = colors.accent,
-            unselectedIconColor = colors.inkSecondary,
-            unselectedTextColor = colors.inkSecondary,
-            indicatorColor = colors.accent.copy(alpha = 0.14f),
-        ),
-    )
-}
-
-/** Приподнятая кнопка «+» бара тусы (копия AddExpenseFab из MainScaffold). */
-@Composable
-private fun TusaAddFab(onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = Splitty.colors
-    Box(
-        modifier = modifier
-            .offset(y = (-12).dp)
-            .size(58.dp)
-            .shadow(
-                elevation = 10.dp,
-                shape = CircleShape,
-                ambientColor = colors.accent.copy(alpha = 0.35f),
-                spotColor = colors.accent.copy(alpha = 0.35f),
-            )
-            .clip(CircleShape)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(colors.accent, colors.accentPressed),
-                ),
-                shape = CircleShape,
-            )
-            .clickable(role = Role.Button, onClick = onClick),
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = Modifier
+            .clickable(role = Role.Tab, onClick = onClick)
+            .semantics { selected = isOn }
+            .padding(top = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(
-            imageVector = Icons.Filled.Add,
-            contentDescription = stringResource(R.string.group_add_expense),
-            tint = Color.White,
+        Text(
+            text = title,
+            fontSize = fontSize,
+            fontWeight = if (isOn) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (isOn) colors.ink else colors.inkSecondary,
+            maxLines = 1,
+        )
+        Spacer(Modifier.height(10.dp))
+        Box(
+            Modifier
+                .height(1.5.dp)
+                .width(IntrinsicSize.Max)
+                .background(if (isOn) colors.ink else Color.Transparent)
         )
     }
 }
@@ -996,50 +1031,35 @@ private fun BlockingFilterNote(onClear: () -> Unit) {
             color = Splitty.colors.inkSecondary,
             modifier = Modifier.weight(1f),
         )
-        SoftChip(
+        TextLinkButton(
             text = stringResource(R.string.group_blocking_filter_reset),
             onClick = onClear,
             modifier = Modifier.testTag("group_blocking_filter_reset"),
+            fontSize = 13.sp,
         )
     }
 }
 
+/** Фильтр позиций «Все | Со мной» — реквизитом над строками. */
 @Composable
 private fun MineSegment(isMineOnly: Boolean, onChange: (Boolean) -> Unit) {
-    val colors = Splitty.colors
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(colors.surface)
-            .padding(3.dp),
-    ) {
-        SegmentButton(stringResource(R.string.group_filter_all), !isMineOnly) { onChange(false) }
-        SegmentButton(stringResource(R.string.group_chip_mine_only), isMineOnly) { onChange(true) }
-    }
-}
-
-@Composable
-private fun SegmentButton(title: String, isOn: Boolean, onClick: () -> Unit) {
-    val colors = Splitty.colors
     val haptics = rememberHaptics()
-    Text(
-        text = title,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
-        color = if (isOn) Color.White else colors.inkSecondary,
-        modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(if (isOn) colors.accent else Color.Transparent)
-            .clickable {
-                // Отклик только на реальное переключение, не на повторный тап
-                // по уже выбранному сегменту (порт iOS mineSegment).
-                if (!isOn) haptics.tap()
-                onClick()
-            }
-            // isSelected для TalkBack: сегмент читается как выбранный/невыбранный.
-            .semantics { selected = isOn }
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        ReceiptLabel(stringResource(R.string.receipt_items), Modifier.weight(1f))
+        ReceiptTab(stringResource(R.string.group_filter_all), !isMineOnly, 13.sp) {
+            // Отклик только на реальное переключение, не на повторный тап.
+            if (isMineOnly) haptics.tap()
+            onChange(false)
+        }
+        ReceiptTab(stringResource(R.string.group_chip_mine_only), isMineOnly, 13.sp) {
+            if (!isMineOnly) haptics.tap()
+            onChange(true)
+        }
+    }
 }
 
 /** Вкладка «Балансы»: карточный список долгов (бывший bottom sheet). */
@@ -1075,39 +1095,30 @@ private fun GroupBalancesTab(
             )
         }
     } else if (room.debts.isEmpty()) {
-        Column(
-            modifier = modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.CheckCircle,
-                contentDescription = null,
-                tint = colors.accent,
-                modifier = Modifier.size(36.dp),
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = stringResource(R.string.group_no_debts),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.ink,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.group_members_settled),
-                fontSize = 14.sp,
-                color = colors.inkSecondary,
-            )
+        Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
+            ReceiptPaper(padding = 28.dp) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    StatusStamp(stringResource(R.string.group_no_debts).uppercase())
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = stringResource(R.string.group_members_settled),
+                        fontSize = 15.sp,
+                        color = colors.inkSecondary,
+                    )
+                }
+            }
         }
     } else {
+        // План переводов — лист чека: строки обязательств, направление словами.
         Column(
             modifier = modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
-            SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+            ReceiptPaper {
+                ReceiptLabel(stringResource(R.string.group_balances_title))
+                Spacer(Modifier.height(6.dp))
                 room.debts.forEachIndexed { index, debt ->
                     DebtRow(
                         debt = debt,
@@ -1117,7 +1128,7 @@ private fun GroupBalancesTab(
                         onSettle = { onSettle(debt) },
                     )
                     if (index < room.debts.lastIndex) {
-                        HairlineDivider()
+                        ReceiptDivider()
                     }
                 }
             }
@@ -1125,36 +1136,10 @@ private fun GroupBalancesTab(
     }
 }
 
-/** Секция месяца: тихий заголовок + карточка со строками операций. */
-@Composable
-private fun MonthSectionCard(
-    section: MonthSection,
-    meId: Long,
-    currency: String,
-    onOpenOperation: (String) -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader(section.title, modifier = Modifier.padding(start = 4.dp))
-        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-            section.operations.forEachIndexed { index, operation ->
-                OperationRow(
-                    operation = operation,
-                    meId = meId,
-                    currency = currency,
-                    onClick = { onOpenOperation(operation.id) },
-                )
-                if (index < section.operations.lastIndex) {
-                    HairlineDivider(startIndent = 62.dp)
-                }
-            }
-        }
-    }
-}
-
 /**
- * Строка операции: колонка даты, иконка, описание и «кто заплатил», моя
- * позиция справа. Позиция — по ХРАНИМЫМ долям recipients[].sum
- * (Operation.netPosition), не пересчёт.
+ * Позиция чека: название и подпись «дата · кто платил» слева, сумма операции
+ * справа и под ней моя позиция по ней. Позиция — по ХРАНИМЫМ долям
+ * recipients[].sum (Operation.netPosition), не пересчёт.
  */
 @Composable
 private fun OperationRow(
@@ -1162,6 +1147,7 @@ private fun OperationRow(
     meId: Long,
     currency: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = Splitty.colors
     // Позиция ТОЧНАЯ: на округлённой доля 0,25 читается нулём, и строка
@@ -1184,144 +1170,99 @@ private fun OperationRow(
         operation.description.ifEmpty { stringResource(R.string.group_op_fallback) }
     }
 
-    val subtitle = if (operation.isDebtRepayment) {
-        null
-    } else if (operation.donor.id == meId) {
-        stringResource(R.string.group_op_you_paid_sum, moneyMinor(operation.exactMinor, currency))
-    } else {
-        stringResource(
-            R.string.group_op_paid_sum,
-            operation.donor.displayName,
-            moneyMinor(operation.exactMinor, currency),
-        )
+    // «5 окт · Маша»: когда и кто платил; у перевода — только дата.
+    val date = GroupsDateFmt.dayMonth(operation.createdAt)
+    val caption = when {
+        operation.isDebtRepayment -> date
+        operation.donor.id == meId -> date + " · " + stringResource(R.string.op_you)
+        else -> date + " · " + operation.donor.displayName
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 22.dp, vertical = 10.dp)
+            .semantics(mergeDescendants = true) {},
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        // Колонка даты: «июл» сверху, «5» снизу, вторичным цветом.
-        Column(
-            modifier = Modifier.width(34.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = GroupsDateFmt.monthShort(operation.createdAt),
-                fontSize = 11.sp,
-                color = colors.inkSecondary,
-            )
-            Text(
-                text = GroupsDateFmt.day(operation.createdAt),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = colors.inkSecondary,
-            )
-        }
-        OperationIconBox(isRepayment = operation.isDebtRepayment)
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
                     color = colors.ink,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
                 if (operation.hasFiles) {
                     Icon(
                         imageVector = Icons.Outlined.Attachment,
-                        contentDescription = null,
-                        tint = colors.accent,
+                        contentDescription = stringResource(R.string.receipt_has_attachments),
+                        tint = colors.inkSecondary,
                         modifier = Modifier.size(13.dp),
                     )
                 }
             }
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+            Text(
+                text = caption,
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
-        when {
-            operation.isDebtRepayment -> MoneyText(
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            MoneyText(
                 operation.sum,
                 exactMinor = operation.exactMinor,
                 role = MoneyRole.NEUTRAL,
                 size = 15.sp,
-                weight = FontWeight.Normal,
+                weight = if (operation.isDebtRepayment) FontWeight.Normal else FontWeight.Medium,
                 currency = currency,
             )
+            if (!operation.isDebtRepayment) {
+                when {
+                    netMinor != null && netMinor != 0L -> Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(if (netMinor > 0) R.string.group_op_lent else R.string.group_op_owe),
+                            fontSize = 11.sp,
+                            color = colors.inkSecondary,
+                        )
+                        MoneyText(
+                            minorToUnitsRounded(netMinor),
+                            exactMinor = netMinor,
+                            size = 11.sp,
+                            weight = FontWeight.SemiBold,
+                            currency = currency,
+                        )
+                    }
 
-            netMinor != null && netMinor != 0L -> Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = stringResource(
-                        if (netMinor > 0) R.string.group_op_lent else R.string.group_op_owe
-                    ),
-                    fontSize = 11.sp,
-                    color = colors.inkSecondary,
-                )
-                MoneyText(
-                    minorToUnitsRounded(netMinor),
-                    exactMinor = netMinor,
-                    size = 15.sp,
-                    currency = currency,
-                )
+                    netMinor != null -> Text(
+                        text = stringResource(R.string.group_op_settled),
+                        fontSize = 11.sp,
+                        color = colors.inkSecondary,
+                    )
+
+                    else -> Text(
+                        text = stringResource(R.string.group_op_not_involved),
+                        fontSize = 11.sp,
+                        color = colors.inkSecondary,
+                    )
+                }
             }
-
-            netMinor != null -> Text(
-                text = stringResource(R.string.group_op_settled),
-                fontSize = 12.sp,
-                color = colors.inkSecondary,
-            )
-
-            else -> Text(
-                text = stringResource(R.string.group_op_not_involved),
-                fontSize = 12.sp,
-                color = colors.inkSecondary,
-            )
         }
-    }
-}
-
-/** Квадрат-иконка операции: банкнота для погашений, документ для расходов. */
-@Composable
-private fun OperationIconBox(isRepayment: Boolean, size: androidx.compose.ui.unit.Dp = 36.dp) {
-    val colors = Splitty.colors
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(RoundedCornerShape(10.dp))
-            .background(
-                if (isRepayment) colors.accent.copy(alpha = 0.14f)
-                else colors.ink.copy(alpha = 0.06f)
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = if (isRepayment) Icons.Outlined.Payments else Icons.Outlined.Description,
-            contentDescription = null,
-            tint = if (isRepayment) colors.accent else colors.inkSecondary,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }
 
@@ -1351,44 +1292,36 @@ private fun DebtRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
     ) {
-        // Аватары+стрелка+подпись+сумма — один элемент для TalkBack (читается
-        // «Петя должен(на) Вася, 500 ₽»); «Погасить» остаётся отдельной кнопкой.
-        Row(
+        // Подпись+сумма — один элемент для TalkBack (читается «Петя должен(на)
+        // Вася, 500 ₽»); «Погасить» остаётся отдельной ссылкой.
+        Column(
             modifier = Modifier
                 .weight(1f)
                 .semantics(mergeDescendants = true) {},
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            GradientAvatar(user = debt.debtor, size = 36.dp)
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null, // декоративная стрелка
-                tint = colors.inkSecondary,
-                modifier = Modifier.size(14.dp),
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.ink,
             )
-            GradientAvatar(user = debt.lender, size = 36.dp)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.ink,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, currency = currency)
-            }
+            Text(
+                text = debt.debtor.displayName + " → " + debt.lender.displayName,
+                modifier = Modifier.clearAndSetSemantics {},
+                fontSize = 12.sp,
+                color = colors.inkSecondary,
+            )
         }
-        if (involvesMe) {
-            SoftChip(text = stringResource(R.string.group_debt_settle), onClick = onSettle)
+        Column(horizontalAlignment = Alignment.End) {
+            MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, weight = FontWeight.Bold, currency = currency)
+            if (involvesMe) {
+                TextLinkButton(text = stringResource(R.string.group_debt_settle), onClick = onSettle, fontSize = 13.sp)
+            }
         }
     }
 }

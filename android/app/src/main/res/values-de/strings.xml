@@ -769,4 +769,13 @@
     <string name="expense_edit_amounts_unavailable_cents">Die Summe hat Cent-Beträge, die Gruppe rechnet aber in ganzen — passen Sie die Anteile in den Positionen an</string>
     <string name="expense_edit_amounts_unavailable_invalid">Die Anteile in den Positionen gehen nicht auf — korrigieren Sie die Positionen</string>
     <string name="brand_receipt_label">Gemeinsame Rechnung</string>
+    <string name="receipt_your_share">Ihr Anteil</string>
+    <string name="receipt_your_balance">Ihr Saldo</string>
+    <string name="receipt_settle_up">Ausgleichen ↗</string>
+    <string name="receipt_all_balances">Alle Salden</string>
+    <string name="receipt_items">Posten</string>
+    <string name="receipt_has_attachments">Mit Anhängen</string>
+    <string name="receipt_draft_note">Entwurf — noch nicht in der Gruppe</string>
+    <string name="receipt_left_on_debt">Verbleibt bei dieser Schuld</string>
+    <string name="receipt_debt_will_close">Schuld wird beglichen</string>
 </resources>

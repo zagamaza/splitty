@@ -1,62 +1,26 @@
 {
- "Ваша доля": {
-  "ru": "Ваша доля",
-  "en": "Your share",
-  "de": "Ihr Anteil",
-  "es": "Tu parte",
-  "fr": "Votre part",
-  "it": "La tua quota",
-  "ja": "あなたの負担分",
-  "zh-Hans": "你的份额",
-  "ko": "내 몫",
-  "pt-BR": "Sua parte"
+ "Останется по этому долгу": {
+  "ru": "Останется по этому долгу",
+  "en": "Left on this debt",
+  "de": "Verbleibt bei dieser Schuld",
+  "es": "Quedará de esta deuda",
+  "fr": "Restera sur cette dette",
+  "it": "Resterà su questo debito",
+  "ja": "この借りの残り",
+  "zh-Hans": "这笔欠款还剩",
+  "ko": "이 빚의 남은 금액",
+  "pt-BR": "Restará desta dívida"
  },
- "Ваш остаток": {
-  "ru": "Ваш остаток",
-  "en": "Your balance",
-  "de": "Ihr Saldo",
-  "es": "Tu saldo",
-  "fr": "Votre solde",
-  "it": "Il tuo saldo",
-  "ja": "あなたの残高",
-  "zh-Hans": "你的余额",
-  "ko": "내 잔액",
-  "pt-BR": "Seu saldo"
- },
- "Рассчитаться": {
-  "ru": "Рассчитаться",
-  "en": "Settle up",
-  "de": "Ausgleichen",
-  "es": "Saldar cuentas",
-  "fr": "Régler",
-  "it": "Saldare",
-  "ja": "精算する",
-  "zh-Hans": "结清",
-  "ko": "정산하기",
-  "pt-BR": "Acertar contas"
- },
- "Все балансы": {
-  "ru": "Все балансы",
-  "en": "All balances",
-  "de": "Alle Salden",
-  "es": "Todos los saldos",
-  "fr": "Tous les soldes",
-  "it": "Tutti i saldi",
-  "ja": "すべての残高",
-  "zh-Hans": "所有余额",
-  "ko": "전체 잔액",
-  "pt-BR": "Todos os saldos"
- },
- "Есть вложения": {
-  "ru": "Есть вложения",
-  "en": "Has attachments",
-  "de": "Mit Anhängen",
-  "es": "Con adjuntos",
-  "fr": "Avec pièces jointes",
-  "it": "Con allegati",
-  "ja": "添付あり",
-  "zh-Hans": "有附件",
-  "ko": "첨부 파일 있음",
-  "pt-BR": "Com anexos"
+ "Долг будет закрыт": {
+  "ru": "Долг будет закрыт",
+  "en": "Debt will be closed",
+  "de": "Schuld wird beglichen",
+  "es": "La deuda quedará saldada",
+  "fr": "La dette sera soldée",
+  "it": "Il debito sarà saldato",
+  "ja": "借りは完済されます",
+  "zh-Hans": "欠款将结清",
+  "ko": "빚이 정산됩니다",
+  "pt-BR": "A dívida será quitada"
  }
 }

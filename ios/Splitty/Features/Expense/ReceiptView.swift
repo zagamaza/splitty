@@ -65,18 +65,14 @@ struct ReceiptView: View {
             Perforation(edge: .bottom)
         }
         .compositingGroup()
-        .shadow(color: Color.black.opacity(0.07), radius: 16, x: 0, y: 8)
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 3)
     }
 
     // MARK: header
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text("Позиции")
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.4)
-                .textCase(.uppercase)
-                .foregroundStyle(Color.ink.opacity(0.6))
+            Text("Позиции").receiptLabel()
             Spacer()
             Text("\(itemsOnly.count) поз.")
                 .font(.system(size: 11, design: .monospaced))
@@ -108,9 +104,9 @@ struct ReceiptView: View {
                         .foregroundStyle(Color.negativeText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.negative.opacity(0.1), in: Capsule())
+                        .background(Color.negative.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                         .overlay(
-                            Capsule().strokeBorder(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(
                                 Color.negative,
                                 style: StrokeStyle(lineWidth: 1, dash: [3, 3])
                             )
@@ -134,7 +130,7 @@ struct ReceiptView: View {
         .padding(.horizontal, highlightedIndices.contains(index) ? 8 : 0)
         .background(
             highlightedIndices.contains(index) ? Color.accent.opacity(0.12) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 3, style: .continuous)
         )
         .padding(.horizontal, highlightedIndices.contains(index) ? -8 : 0)
         .animation(.easeOut(duration: 0.4), value: highlightedIndices)
@@ -191,9 +187,9 @@ struct ReceiptView: View {
         .foregroundStyle(Color.negativeText)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Color.negative.opacity(0.1), in: Capsule())
+        .background(Color.negative.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .overlay(
-            Capsule().strokeBorder(
+            RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(
                 Color.negative,
                 style: StrokeStyle(lineWidth: 1, dash: [3, 3])
             )
@@ -278,9 +274,9 @@ struct ReceiptView: View {
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(Color.ink.opacity(0.05), in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.ink.opacity(0.12), lineWidth: 1))
-                .contentShape(Capsule())
+                .background(Color.ink.opacity(0.05), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(Color.ink.opacity(0.12), lineWidth: 1))
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(equally ? "Сбор делится поровну. Сменить" : "Сбор делится пропорционально. Сменить")
@@ -475,8 +471,8 @@ struct PersonBreakdownCard: View {
     private func bar(fraction: Double) -> some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.ink.opacity(0.06))
-                Capsule().fill(Color.accent)
+                Rectangle().fill(Color.ink.opacity(0.06))
+                Rectangle().fill(Color.ink)
                     .frame(width: max(geo.size.width * fraction, 4))
             }
         }
@@ -491,7 +487,7 @@ struct PersonBreakdownCard: View {
             Text("Сумма распределена полностью")
                 .font(.system(size: 12.5, weight: .semibold, design: .default))
         }
-        .foregroundStyle(Color.accentText)
+        .foregroundStyle(Color.positive)
         .padding(.top, 10)
         .overlay(alignment: .top) {
             Rectangle().fill(Color.hairline).frame(height: 1)
