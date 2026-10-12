@@ -72,18 +72,19 @@ TEMPLATE = """<!doctype html>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: %(W)dpx; height: %(H)dpx; overflow: hidden; }
+  /* «Общий чек»: тёплый стол, чернила, моноширинный реквизит — тот же
+     язык, что у самого приложения в кадре. */
   body {
-    background:
-      radial-gradient(120%% 60%% at 78%% -8%%, #35D89B 0%%, rgba(53,216,155,0) 62%%),
-      linear-gradient(168deg, #0B8F63 0%%, #046B4C 46%%, #023B2C 100%%);
+    background: #DEDBD2;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-    color: #fff;
+    color: #262722;
     position: relative;
   }
   .pad { padding: %(PAD)s; text-align: center; }
   .eyebrow {
-    font-size: %(EYEBROW_SIZE)dpx; font-weight: 800; letter-spacing: .18em;
-    color: rgba(255,255,255,.62); margin-bottom: 26px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: %(EYEBROW_SIZE)dpx; font-weight: 500; letter-spacing: .14em;
+    color: #5E5E54; margin-bottom: 26px;
   }
   h1 {
     font-size: %(TITLE_SIZE)dpx; line-height: 1.04; font-weight: 800; letter-spacing: -.028em;
@@ -99,8 +100,7 @@ TEMPLATE = """<!doctype html>
   .chip .ico {
     width: %(CHIP_ICO)dpx; height: %(CHIP_ICO)dpx; border-radius: 50%%;
     display: flex; align-items: center; justify-content: center;
-    font-size: %(CHIP_ICO_FONT)dpx; font-weight: 700; color: #fff;
-    box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    font-size: %(CHIP_ICO_FONT)dpx; font-weight: 700; color: #FFFDF4;
   }
   .chip .txt { font-size: %(CHIP_FONT)dpx; font-weight: 700; line-height: 1.18; }
 
@@ -109,7 +109,7 @@ TEMPLATE = """<!doctype html>
   .device {
     position: absolute; left: 50%%; transform: translateX(-50%%);
     top: %(DEVICE_TOP)dpx; width: %(DEVICE_W)dpx; height: %(DEVICE_H)dpx;
-    filter: drop-shadow(0 44px 80px rgba(0,0,0,.42));
+    filter: drop-shadow(0 36px 60px rgba(38,39,34,.28));
   }
   /* iPhone — корпус картинкой, снимок кладётся поверх чёрного экрана
      по обмеренным координатам мокапа. */
@@ -119,7 +119,7 @@ TEMPLATE = """<!doctype html>
     left: %(SCREEN_L)f%%; top: %(SCREEN_T)f%%;
     width: %(SCREEN_W)f%%; height: %(SCREEN_H)f%%;
     border-radius: %(SCREEN_RX)f%% / %(SCREEN_RY)f%%;
-    overflow: hidden; background: #F3F4F7;
+    overflow: hidden; background: #DEDBD2;
   }
   /* Android — своя плашка: у него другой силуэт, и подсовывать айфон нечестно. */
   .device.android {
@@ -127,7 +127,7 @@ TEMPLATE = """<!doctype html>
   }
   .device.android .screen {
     width: 100%%; height: 100%%; border-radius: %(RADIUS_IN)dpx;
-    overflow: hidden; background: #F3F4F7; position: relative;
+    overflow: hidden; background: #DEDBD2; position: relative;
   }
   .device.android .hole {
     position: absolute; left: 50%%; transform: translateX(-50%%);
@@ -149,9 +149,8 @@ TEMPLATE = """<!doctype html>
 CHIP = ('<div class="chip"><div class="ico" style="background:%(color)s">%(icon)s</div>'
         '<div class="txt">%(line1)s<br>%(line2)s</div></div>')
 
-# Свой цвет каждому чипу — из палитры приложения: зелёный акцент, синий
-# Telegram, янтарный из аватарок.
-CHIP_COLORS = ["#00A870", "#29A9EB", "#F2A93B"]
+# Палитра приложения: оранжевое действие, синий штамп, чернила.
+CHIP_COLORS = ["#C4502D", "#36579C", "#262722"]
 
 
 

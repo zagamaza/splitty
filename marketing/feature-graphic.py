@@ -36,19 +36,18 @@ TEMPLATE = """<!doctype html>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html, body { width:%(W)dpx; height:%(H)dpx; overflow:hidden; }
+  /* «Общий чек»: тёплый стол и чернила, как в самом приложении. */
   body {
-    background:
-      radial-gradient(90%% 120%% at 88%% 8%%, #35D89B 0%%, rgba(53,216,155,0) 60%%),
-      linear-gradient(120deg, #0B8F63 0%%, #046B4C 52%%, #023B2C 100%%);
+    background: #DEDBD2;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-    color:#fff; display:flex; align-items:center; gap:52px;
+    color:#262722; display:flex; align-items:center; gap:52px;
     /* Поля с запасом: витрина Play подрезает графику по краям. */
     padding: 0 92px;
   }
   .icon { width:150px; height:150px; border-radius:34px; flex:0 0 150px;
-          box-shadow:0 18px 40px rgba(0,0,0,.32); }
+          box-shadow:0 12px 28px rgba(38,39,34,.22); }
   h1 { font-size:56px; font-weight:800; letter-spacing:-.02em; line-height:1.1; }
-  p  { font-size:29px; font-weight:600; color:rgba(255,255,255,.78); margin-top:14px; }
+  p  { font-size:29px; font-weight:600; color:#5E5E54; margin-top:14px; }
 </style>
 <img class="icon" src="%(ICON)s">
 <div><h1>%(TITLE)s</h1><p>%(SUB)s</p></div>
