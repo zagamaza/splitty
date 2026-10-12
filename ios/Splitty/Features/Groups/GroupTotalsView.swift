@@ -325,7 +325,7 @@ private struct SelectionBadge: View {
                 .monospacedDigit()
                 .foregroundStyle(Color.ink)
         }
-        .font(.system(size: 12, design: .rounded))
+        .font(.system(size: 12, design: .default))
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(Color.surface, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -436,7 +436,7 @@ private struct DailySpendingCard: View {
                 AxisValueLabel(centered: true) {
                     if let date = value.as(Date.self) {
                         Text(DateFmt.dayMonth(date))
-                            .font(.system(size: 11, design: .rounded))
+                            .font(.system(size: 11, design: .default))
                             .foregroundStyle(Color.inkSecondary)
                     }
                 }
@@ -447,7 +447,7 @@ private struct DailySpendingCard: View {
                 AxisGridLine()
                     .foregroundStyle(Color.hairline)
                 AxisValueLabel()
-                    .font(.system(size: 11, design: .rounded))
+                    .font(.system(size: 11, design: .default))
                     .foregroundStyle(Color.inkSecondary)
             }
         }
@@ -502,7 +502,7 @@ private struct PaidDonutCard: View {
                     let frame = geo[anchor]
                     VStack(spacing: 2) {
                         Text("всего")
-                            .font(.system(size: 11, design: .rounded))
+                            .font(.system(size: 11, design: .default))
                             .foregroundStyle(Color.inkSecondary)
                         MoneyText(
                             minorToUnitsRounded(totalSpentMinor), exactMinor: totalSpentMinor,
@@ -618,7 +618,7 @@ private struct MemberBarsCard: View {
                 overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
             ) {
                 Text(money(minor: bar.sumMinor, currency: currency))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium, design: .default))
                     .monospacedDigit()
                     .foregroundStyle(Color.inkSecondary)
             }
@@ -634,7 +634,7 @@ private struct MemberBarsCard: View {
                 AxisValueLabel(horizontalSpacing: 8) {
                     if let label = value.as(String.self) {
                         Text(label)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 13, weight: .medium, design: .default))
                             .foregroundStyle(Color.ink)
                             .lineLimit(1)
                     }
@@ -793,7 +793,7 @@ private struct WeekdayCard: View {
                 AxisValueLabel(centered: true) {
                     if let label = value.as(String.self) {
                         Text(label)
-                            .font(.system(size: 11, design: .rounded))
+                            .font(.system(size: 11, design: .default))
                             .foregroundStyle(Color.inkSecondary)
                     }
                 }
@@ -804,7 +804,7 @@ private struct WeekdayCard: View {
                 AxisGridLine()
                     .foregroundStyle(Color.hairline)
                 AxisValueLabel()
-                    .font(.system(size: 11, design: .rounded))
+                    .font(.system(size: 11, design: .default))
                     .foregroundStyle(Color.inkSecondary)
             }
         }

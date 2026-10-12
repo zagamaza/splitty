@@ -1,0 +1,62 @@
+{
+ "Ваша доля": {
+  "ru": "Ваша доля",
+  "en": "Your share",
+  "de": "Ihr Anteil",
+  "es": "Tu parte",
+  "fr": "Votre part",
+  "it": "La tua quota",
+  "ja": "あなたの負担分",
+  "zh-Hans": "你的份额",
+  "ko": "내 몫",
+  "pt-BR": "Sua parte"
+ },
+ "Ваш остаток": {
+  "ru": "Ваш остаток",
+  "en": "Your balance",
+  "de": "Ihr Saldo",
+  "es": "Tu saldo",
+  "fr": "Votre solde",
+  "it": "Il tuo saldo",
+  "ja": "あなたの残高",
+  "zh-Hans": "你的余额",
+  "ko": "내 잔액",
+  "pt-BR": "Seu saldo"
+ },
+ "Рассчитаться": {
+  "ru": "Рассчитаться",
+  "en": "Settle up",
+  "de": "Ausgleichen",
+  "es": "Saldar cuentas",
+  "fr": "Régler",
+  "it": "Saldare",
+  "ja": "精算する",
+  "zh-Hans": "结清",
+  "ko": "정산하기",
+  "pt-BR": "Acertar contas"
+ },
+ "Все балансы": {
+  "ru": "Все балансы",
+  "en": "All balances",
+  "de": "Alle Salden",
+  "es": "Todos los saldos",
+  "fr": "Tous les soldes",
+  "it": "Tutti i saldi",
+  "ja": "すべての残高",
+  "zh-Hans": "所有余额",
+  "ko": "전체 잔액",
+  "pt-BR": "Todos os saldos"
+ },
+ "Есть вложения": {
+  "ru": "Есть вложения",
+  "en": "Has attachments",
+  "de": "Mit Anhängen",
+  "es": "Con adjuntos",
+  "fr": "Avec pièces jointes",
+  "it": "Con allegati",
+  "ja": "添付あり",
+  "zh-Hans": "有附件",
+  "ko": "첨부 파일 있음",
+  "pt-BR": "Com anexos"
+ }
+}

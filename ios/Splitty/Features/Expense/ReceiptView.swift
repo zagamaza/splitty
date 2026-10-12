@@ -104,7 +104,7 @@ struct ReceiptView: View {
                     // Цена не определена (модель услышала блюдо, но не цену):
                     // метка ведёт в шит позиции — там поле цены.
                     Text("цена?")
-                        .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                        .font(.system(size: 11.5, weight: .bold, design: .default))
                         .foregroundStyle(Color.negativeText)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -187,7 +187,7 @@ struct ReceiptView: View {
             Text(name)
             Text(verbatim: "?")
         }
-        .font(.system(size: 11.5, weight: .bold, design: .rounded))
+        .font(.system(size: 11.5, weight: .bold, design: .default))
         .foregroundStyle(Color.negativeText)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -273,7 +273,7 @@ struct ReceiptView: View {
                             Text("Пропорционально").fontWeight(.bold) + Text(" съеденному")
                         }
                     }
-                    .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                    .font(.system(size: 11.5, weight: .medium, design: .default))
                     .foregroundStyle(Color.ink)
                 }
                 .padding(.horizontal, 10)
@@ -450,7 +450,7 @@ struct PersonBreakdownCard: View {
             }
             VStack(alignment: .leading, spacing: 7) {
                 Text(name(share.userId))
-                    .font(.system(size: 15, design: .rounded))
+                    .font(.system(size: 15, design: .default))
                     .foregroundStyle(Color.ink)
                     .lineLimit(1)
                 bar(fraction: Double(share.total) / Double(maxTotal))
@@ -489,7 +489,7 @@ struct PersonBreakdownCard: View {
             Image(systemName: "checkmark")
                 .font(.system(size: 11, weight: .bold))
             Text("Сумма распределена полностью")
-                .font(.system(size: 12.5, weight: .semibold, design: .rounded))
+                .font(.system(size: 12.5, weight: .semibold, design: .default))
         }
         .foregroundStyle(Color.accentText)
         .padding(.top, 10)

@@ -6,11 +6,11 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Контраст текста в светлой теме.
+ * Контраст текста «Общего чека» в обеих темах.
  *
- * Акцентный изумруд на белом даёт 3.39:1. Крупной сумме и заливке кнопки этого
- * достаточно, а подписи в 12–15 sp — нет: минимум 4.5:1. Разница видна не всем
- * и не всегда: на солнце и на дешёвой матрице такая подпись просто пропадает.
+ * Текст лежит либо на столе (`bg`), либо на бумаге (`surface`), и на обоих
+ * мелкая подпись обязана давать 4.5:1. Стол темнее бумаги, поэтому проверка
+ * только по бумаге пропустила бы серую подпись, нечитаемую на фоне экрана.
  */
 class ContrastTest {
 
@@ -28,26 +28,32 @@ class ContrastTest {
         return (maxOf(la, lb) + 0.05) / (minOf(la, lb) + 0.05)
     }
 
-    private val light = splittyLightColorsForTest()
-    private val white = Color(0xFFFFFFFF)
+    private val themes = mapOf(
+        "светлая" to splittyLightColorsForTest(),
+        "тёмная" to splittyDarkColorsForTest(),
+    )
 
     @Test
-    fun `text tokens pass AA on white surface`() {
-        val accent = ratio(light.accentText, white)
-        val negative = ratio(light.negativeText, white)
-        assertTrue(accent >= 4.5, "акцентный текст даёт $accent:1 — мелкая подпись нечитаема")
-        assertTrue(negative >= 4.5, "негативный текст даёт $negative:1 — мелкая подпись нечитаема")
+    fun `small text passes AA on table and paper`() {
+        for ((theme, c) in themes) {
+            val texts = mapOf(
+                "ink" to c.ink, "inkSecondary" to c.inkSecondary, "accentText" to c.accentText,
+                "negativeText" to c.negativeText, "positive" to c.positive, "stamp" to c.stamp,
+            )
+            for ((name, text) in texts) {
+                for ((bgName, bg) in mapOf("bg" to c.bg, "surface" to c.surface)) {
+                    val r = ratio(text, bg)
+                    assertTrue(r >= 4.5, "$theme: $name на $bgName даёт $r:1 — мелкая подпись нечитаема")
+                }
+            }
+        }
     }
 
-    /**
-     * Крупные суммы и заливка кнопки остаются на прежнем акценте: смысл токена
-     * в том, чтобы поменять цвет ТОЛЬКО там, где кегль мелкий.
-     */
     @Test
-    fun `plain accent stays as it was`() {
-        assertTrue(
-            ratio(light.accent, white) < 4.5,
-            "цвет акцента изменился — проверьте, что это осознанно",
-        )
+    fun `button label passes AA on action fill`() {
+        for ((theme, c) in themes) {
+            val r = ratio(c.onAccent, c.accent)
+            assertTrue(r >= 4.5, "$theme: подпись основной кнопки даёт $r:1")
+        }
     }
 }

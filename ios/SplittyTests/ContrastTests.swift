@@ -2,49 +2,54 @@ import SwiftUI
 import XCTest
 @testable import Splitty
 
-/// Контраст текста в светлой теме.
+/// Контраст текста «Общего чека» в обеих темах.
 ///
-/// Акцентный изумруд на белом даёт 3.39:1. Крупной сумме и заливке кнопки этого
-/// достаточно, а подписи в 12–15 пунктов — нет: минимум 4.5:1. Разница видна не
-/// всем и не всегда: на солнце и на дешёвой матрице такая подпись пропадает.
+/// Текст лежит либо на столе (`bg`), либо на бумаге (`surface`), и на обоих
+/// мелкая подпись обязана давать 4.5:1. Стол темнее бумаги, поэтому проверка
+/// только по бумаге пропустила бы серую подпись, нечитаемую на фоне экрана.
+/// Цвета берутся из самих токенов, разрешённых под тему, а не переписываются
+/// сюда числами.
 final class ContrastTests: XCTestCase {
 
-    private func luminance(_ hex: Int) -> Double {
-        func channel(_ raw: Int) -> Double {
-            let v = Double(raw) / 255
+    private func luminance(_ color: Color, _ style: UIUserInterfaceStyle) -> Double {
+        let resolved = UIColor(color).resolvedColor(with: UITraitCollection(userInterfaceStyle: style))
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        resolved.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func channel(_ v: CGFloat) -> Double {
+            let v = Double(v)
             return v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
         }
-        return 0.2126 * channel((hex >> 16) & 0xFF)
-            + 0.7152 * channel((hex >> 8) & 0xFF)
-            + 0.0722 * channel(hex & 0xFF)
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
     }
 
-    private func ratio(_ a: Int, _ b: Int) -> Double {
-        let la = luminance(a), lb = luminance(b)
+    private func ratio(_ a: Color, _ b: Color, _ style: UIUserInterfaceStyle) -> Double {
+        let la = luminance(a, style), lb = luminance(b, style)
         return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
     }
 
-    /// Значения светлой темы из `Theme.swift` — держим их здесь явно: тест
-    /// обязан заметить, если кто-то осветлит токен обратно.
-    private let white = 0xFFFFFF
-    private let accentText = 0x0A6E4C
-    private let negativeText = 0xAF3F1C
-    private let accent = 0x0E9F6E
+    private let styles: [UIUserInterfaceStyle] = [.light, .dark]
 
-    func testTextTokensPassAA() {
-        XCTAssertGreaterThanOrEqual(
-            ratio(accentText, white), 4.5,
-            "акцентный текст не проходит по контрасту — мелкая подпись нечитаема"
-        )
-        XCTAssertGreaterThanOrEqual(
-            ratio(negativeText, white), 4.5,
-            "негативный текст не проходит по контрасту — мелкая подпись нечитаема"
-        )
+    func testSmallTextPassesAAOnTableAndPaper() {
+        let texts: [(String, Color)] = [
+            ("ink", .ink), ("inkSecondary", .inkSecondary), ("accentText", .accentText),
+            ("negativeText", .negativeText), ("positive", .positive), ("stamp", .stamp),
+        ]
+        for style in styles {
+            for (name, text) in texts {
+                for (bgName, bg) in [("bg", Color.bg), ("surface", Color.surface)] {
+                    let r = ratio(text, bg, style)
+                    XCTAssertGreaterThanOrEqual(
+                        r, 4.5, "\(style == .dark ? "тёмная" : "светлая"): \(name) на \(bgName) даёт \(r):1"
+                    )
+                }
+            }
+        }
     }
 
-    /// Крупные суммы и заливка кнопки остаются на прежнем акценте: смысл токена
-    /// в том, чтобы поменять цвет ТОЛЬКО там, где кегль мелкий.
-    func testPlainAccentStaysAsItWas() {
-        XCTAssertLessThan(ratio(accent, white), 4.5, "цвет акцента изменился — проверьте, что это осознанно")
+    func testButtonLabelPassesAAOnActionFill() {
+        for style in styles {
+            XCTAssertGreaterThanOrEqual(ratio(.onAccent, .accent, style), 4.5,
+                                        "подпись основной кнопки нечитаема")
+        }
     }
 }

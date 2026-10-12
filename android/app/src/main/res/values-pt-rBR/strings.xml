@@ -709,4 +709,5 @@
     <string name="expense_edit_amounts_unavailable_items">Primeiro complete os itens acima: quem divide e quanto custam</string>
     <string name="expense_edit_amounts_unavailable_cents">O total tem centavos, mas este grupo usa valores inteiros — ajuste as partes nos itens</string>
     <string name="expense_edit_amounts_unavailable_invalid">As partes dos itens não fecham — corrija os itens</string>
+    <string name="brand_receipt_label">Conta compartilhada</string>
 </resources>

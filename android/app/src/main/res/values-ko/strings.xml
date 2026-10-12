@@ -705,4 +705,5 @@
     <string name="expense_edit_amounts_unavailable_items">먼저 위 항목을 채워 주세요. 누가 나누는지, 얼마인지</string>
     <string name="expense_edit_amounts_unavailable_cents">합계에 소수점이 있지만 이 그룹은 정수만 사용합니다. 항목에서 몫을 조정하세요</string>
     <string name="expense_edit_amounts_unavailable_invalid">항목의 몫이 맞지 않습니다. 항목을 고쳐 주세요</string>
+    <string name="brand_receipt_label">공동 계산서</string>
 </resources>

@@ -768,4 +768,5 @@
     <string name="expense_edit_amounts_unavailable_items">Complétez d\'abord les lignes ci-dessus : qui les partage et combien elles coûtent</string>
     <string name="expense_edit_amounts_unavailable_cents">Le total a des centimes, mais ce groupe utilise des montants entiers : ajustez les parts dans les lignes</string>
     <string name="expense_edit_amounts_unavailable_invalid">Les parts des lignes ne tombent pas juste : corrigez les lignes</string>
+    <string name="brand_receipt_label">Addition commune</string>
 </resources>

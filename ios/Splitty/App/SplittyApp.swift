@@ -42,6 +42,7 @@ struct SplittyApp: App {
         let session = SessionStore()
         _session = State(initialValue: session)
         _subscriptions = State(initialValue: SubscriptionStore(api: { session.api }))
+        ReceiptChrome.configure()
     }
 
     var body: some Scene {
@@ -49,7 +50,9 @@ struct SplittyApp: App {
             RootView()
                 .environment(session)
                 .environment(subscriptions)
-                .tint(.accent)
+                // Системные кнопки и ссылки — чернилами: цвет в чеке только у
+                // основного действия и штампа.
+                .tint(.ink)
                 // Все цветовые токены адаптивные (light/dark) — override схемы
                 // на корне переключает их во всей иерархии.
                 .preferredColorScheme((AppTheme(rawValue: themeRaw) ?? .system).colorScheme)

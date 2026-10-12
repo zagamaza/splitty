@@ -705,4 +705,5 @@
     <string name="expense_edit_amounts_unavailable_items">请先完善上面的条目：由谁分摊、价格多少</string>
     <string name="expense_edit_amounts_unavailable_cents">总额含零头，但此群组按整数计算——请在条目中调整份额</string>
     <string name="expense_edit_amounts_unavailable_invalid">条目中的份额对不上——请修改条目</string>
+    <string name="brand_receipt_label">共享账单</string>
 </resources>

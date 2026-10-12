@@ -1,5 +1,15 @@
 package com.zagir.splitty.ui.onboarding
 
+import androidx.compose.foundation.layout.heightIn
+import com.zagir.splitty.ui.components.TextLinkButton
+import com.zagir.splitty.ui.components.ReceiptTotal
+import com.zagir.splitty.ui.components.ReceiptPaper
+import com.zagir.splitty.ui.components.ReceiptLabel
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.draw.rotate
+import androidx.compose.foundation.border
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -34,7 +44,6 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -121,16 +130,28 @@ fun WelcomeScreen(
             .background(colors.bg)
             .padding(bottom = 20.dp),
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            TextButton(
+        Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp)) {
+            Text(
+                text = "Splitor",
+                modifier = Modifier.align(Alignment.CenterStart).semantics { heading() },
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1).sp,
+                color = colors.ink,
+            )
+            ReceiptLabel(
+                text = stringResource(R.string.brand_receipt_label),
+                modifier = Modifier.align(Alignment.Center).clearAndSetSemantics {},
+                fontSize = 10.sp,
+            )
+            TextLinkButton(
+                text = stringResource(R.string.welcome_skip),
                 onClick = {
                     onEvent(AnalyticsEvent.OnboardingSkipped)
                     onFinish()
                 },
-                modifier = Modifier.testTag("welcome_skip"),
-            ) {
-                Text(stringResource(R.string.welcome_skip), fontSize = 16.sp, color = colors.inkSecondary)
-            }
+                modifier = Modifier.align(Alignment.CenterEnd).testTag("welcome_skip"),
+            )
         }
 
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
@@ -158,7 +179,7 @@ fun WelcomeScreen(
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 }
             },
-            modifier = Modifier.padding(horizontal = 20.dp).testTag("welcome_primary"),
+            modifier = Modifier.padding(horizontal = 22.dp).testTag("welcome_primary"),
         )
     }
 }
@@ -167,58 +188,61 @@ fun WelcomeScreen(
 private fun WelcomePage(titleRes: Int, bodyRes: Int, art: @Composable () -> Unit) {
     val colors = Splitty.colors
     Column(Modifier.fillMaxSize()) {
-        // Иллюстрация забирает всё свободное место, текст прижат к низу:
-        // маленькая картинка с пустотой под текстом читалась как заглушка.
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(colors.accent.copy(alpha = 0.07f)),
-        ) { art() }
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(top = 22.dp, bottom = 2.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(top = 18.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
                 text = stringResource(titleRes),
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
+                modifier = Modifier.semantics { heading() },
+                fontSize = 34.sp,
+                lineHeight = 37.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-1.2).sp,
                 color = colors.ink,
-                textAlign = TextAlign.Center,
             )
             Text(
                 text = stringResource(bodyRes),
                 fontSize = 16.sp,
                 lineHeight = 21.sp,
                 color = colors.inkSecondary,
-                textAlign = TextAlign.Center,
             )
+        }
+        // Иллюстрация — лист чека, чуть повёрнутый, как положенный на стол.
+        // Высота ограничена: растянутый на весь экран лист пустел внутри.
+        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+            ReceiptPaper(
+                modifier = Modifier
+                    .padding(horizontal = 30.dp)
+                    .padding(bottom = 6.dp)
+                    .heightIn(min = 280.dp, max = 430.dp)
+                    .rotate(-2f),
+                padding = 0.dp,
+            ) {
+                Box(Modifier.fillMaxSize()) { art() }
+            }
         }
     }
 }
 
+/** Страницы — короткие прямоугольники, текущая — длинная чернильная. */
 @Composable
 private fun PageDots(count: Int, current: Int) {
     val colors = Splitty.colors
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
     ) {
         repeat(count) { index ->
-            val width by animateDpAsState(if (index == current) 22.dp else 7.dp, label = "dot")
+            val width by animateDpAsState(if (index == current) 22.dp else 8.dp, label = "dot")
             Box(
                 Modifier
                     .width(width)
-                    .height(7.dp)
-                    .clip(CircleShape)
-                    .background(if (index == current) colors.accent else colors.hairline)
+                    .height(3.dp)
+                    .background(if (index == current) colors.ink else colors.dash)
             )
         }
     }
@@ -229,27 +253,24 @@ private fun PageDots(count: Int, current: Int) {
 /** Надзаголовок: капслок задаём здесь, чтобы не держать его в каждом переводе. */
 @Composable
 private fun Eyebrow(text: String) {
-    Text(
-        text = text.uppercase(),
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        fontFamily = FontFamily.Monospace,
-        color = Splitty.colors.inkSecondary,
-        modifier = Modifier.fillMaxWidth(),
-    )
+    ReceiptLabel(text = text, modifier = Modifier.fillMaxWidth())
 }
 
 @Composable
 private fun Avatar(letter: String, color: Color, size: Int = 46) {
     Box(
-        modifier = Modifier.size(size.dp).clip(CircleShape).background(color),
+        modifier = Modifier
+            .size(size.dp)
+            .clip(CircleShape)
+            .background(Splitty.colors.paperClosed)
+            .border(1.5.dp, color, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             letter,
             fontSize = (size * 0.42f).sp,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = Splitty.colors.ink,
         )
     }
 }
@@ -371,71 +392,49 @@ private fun SharedBillArt(isActive: Boolean) {
     }
 
     // Композиция собрана компактно и стоит по центру: тянуть строки распорками
-    // по всей карточке — значит порвать список на куски.
+    // по всему листу — значит порвать список на куски.
     Column(
         modifier = Modifier.fillMaxSize().padding(20.dp),
         verticalArrangement = Arrangement.Center,
     ) {
         Eyebrow(stringResource(R.string.welcome_bill_eyebrow))
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(8.dp))
 
         slips.forEachIndexed { index, slip ->
             val visible = index < shown
             val alpha by animateFloatAsState(if (visible) 1f else 0f, label = "slipAlpha")
-            val shift by animateFloatAsState(if (visible) 0f else -22f, label = "slipShift")
-            Card(
-                modifier = Modifier
+            val shift by animateFloatAsState(if (visible) 0f else -14f, label = "slipShift")
+            Row(
+                Modifier
                     .fillMaxWidth()
                     .graphicsLayer {
                         this.alpha = alpha
                         translationY = shift * density
-                    },
+                    }
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(slip.first, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        slip.second,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = FontFamily.Monospace,
-                        color = colors.ink,
-                    )
-                }
+                Text(slip.first, fontSize = 16.sp, color = colors.ink)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    slip.second,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    fontFamily = FontFamily.Monospace,
+                    color = colors.ink,
+                )
             }
-            if (index < slips.lastIndex) Spacer(Modifier.height(10.dp))
         }
 
-        ArrowDown(Modifier.padding(vertical = 14.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .dashedBorder(colors.accent.copy(alpha = 0.5f), 16.dp)
-                .padding(vertical = 18.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    stringResource(R.string.welcome_bill_tray),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.accentText.copy(alpha = 0.8f),
-                )
-                Text(
-                    runningTotals[shown.coerceIn(1, runningTotals.size) - 1],
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
-                    color = colors.accentText,
-                )
-            }
+        Spacer(Modifier.height(10.dp))
+        ReceiptTotal(label = stringResource(R.string.welcome_bill_tray)) {
+            Text(
+                runningTotals[shown.coerceIn(1, runningTotals.size) - 1],
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.ink,
+                style = androidx.compose.ui.text.TextStyle(fontFeatureSettings = "tnum"),
+            )
         }
     }
 }
@@ -489,7 +488,7 @@ private fun DictationArt(isActive: Boolean) {
     // Фон один на все стадии: распознавание и чек проявляются поверх той же
     // тёмной записи, а не подменяют экран вспышкой света.
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF2B313A)),
+        modifier = Modifier.fillMaxSize().background(colors.recordingScrim),
         contentAlignment = Alignment.Center,
     ) {
         when (stage) {
@@ -845,8 +844,8 @@ private fun WhoPaidArt(isActive: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .graphicsLayer { alpha = summaryAlpha }
-                .clip(RoundedCornerShape(18.dp))
-                .background(colors.accent.copy(alpha = 0.11f))
+                .clip(RoundedCornerShape(3.dp))
+                .background(colors.positive.copy(alpha = 0.11f))
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -874,16 +873,16 @@ private fun WhoPaidArt(isActive: Boolean) {
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold,
                     fontFamily = FontFamily.Monospace,
-                    color = colors.accentText,
+                    color = colors.positive,
                 )
             }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.accent.copy(alpha = 0.25f)))
+            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.positive.copy(alpha = 0.25f)))
             // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
             Text(
                 stringResource(R.string.welcome_share_math),
                 fontSize = 13.sp,
                 fontFamily = FontFamily.Monospace,
-                color = colors.accentText.copy(alpha = 0.75f),
+                color = colors.positive.copy(alpha = 0.75f),
             )
         }
     }
@@ -933,7 +932,7 @@ private fun PaidCard(
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
-                        .background(colors.accent.copy(alpha = 0.14f))
+                        .background(colors.positive.copy(alpha = 0.14f))
                         .padding(horizontal = 10.dp, vertical = 5.dp),
                 ) {
                     Text(
@@ -941,7 +940,7 @@ private fun PaidCard(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace,
-                        color = colors.accentText,
+                        color = colors.positive,
                     )
                 }
             }
@@ -1014,7 +1013,7 @@ private fun TransfersArt(isActive: Boolean) {
                 } else {
                     stringResource(R.string.demo_sum_200)
                 },
-                amountColor = if (withSplitty) colors.accentText else colors.negative,
+                amountColor = if (withSplitty) colors.positive else colors.negative,
             )
         }
 
@@ -1041,8 +1040,8 @@ private fun TransfersArt(isActive: Boolean) {
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(colors.accent.copy(alpha = 0.12f))
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(colors.positive.copy(alpha = 0.12f))
                     ) {
                         // Боря заплатил ровно свою долю: его баланс ноль, поэтому
                         // строка «вам переводить» исчезает — это и есть сведение.
@@ -1052,11 +1051,11 @@ private fun TransfersArt(isActive: Boolean) {
                             title = stringResource(R.string.welcome_to_borya),
                             subtitle = stringResource(R.string.welcome_settled),
                             amount = stringResource(R.string.demo_sum_0),
-                            amountColor = colors.accentText,
+                            amountColor = colors.positive,
                             titleColor = colors.inkSecondary,
                         )
                     }
-                    SideNote(stringResource(R.string.welcome_note_with), colors.accentText)
+                    SideNote(stringResource(R.string.welcome_note_with), colors.positive)
                 }
             }
         }
@@ -1066,8 +1065,8 @@ private fun TransfersArt(isActive: Boolean) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background((if (withSplitty) colors.accent else colors.negative).copy(alpha = 0.1f))
+                .clip(RoundedCornerShape(3.dp))
+                .background((if (withSplitty) colors.positive else colors.negative).copy(alpha = 0.1f))
                 .padding(vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
@@ -1081,7 +1080,7 @@ private fun TransfersArt(isActive: Boolean) {
                         .background(
                             when {
                                 !filled -> colors.hairline
-                                withSplitty -> colors.accent
+                                withSplitty -> colors.positive
                                 else -> colors.negative
                             }
                         )
@@ -1091,7 +1090,7 @@ private fun TransfersArt(isActive: Boolean) {
                 stringResource(if (withSplitty) R.string.welcome_one_transfer else R.string.welcome_two_transfers),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (withSplitty) colors.accentText else colors.negative,
+                color = if (withSplitty) colors.positive else colors.negative,
             )
         }
 
@@ -1117,7 +1116,7 @@ private fun CompareSegment(withSplitty: Boolean, onChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.ink.copy(alpha = 0.06f))
             .padding(4.dp)
             .testTag("welcome_compare"),
@@ -1134,8 +1133,8 @@ private fun RowScope.SegmentHalf(text: String, selected: Boolean, onClick: () ->
     Box(
         modifier = Modifier
             .weight(1f)
-            .clip(CircleShape)
-            .background(if (selected) colors.accent else Color.Transparent)
+            .clip(RoundedCornerShape(3.dp))
+            .background(if (selected) colors.ink else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 11.dp),
         contentAlignment = Alignment.Center,
@@ -1144,7 +1143,7 @@ private fun RowScope.SegmentHalf(text: String, selected: Boolean, onClick: () ->
             text = text,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (selected) Color.White else colors.inkSecondary,
+            color = if (selected) colors.bg else colors.inkSecondary,
         )
     }
 }

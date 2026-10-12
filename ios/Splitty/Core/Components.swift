@@ -47,8 +47,8 @@ struct FailedStateView: View {
             Button("Повторить") {
                 Task { await retry() }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accent)
+            .buttonStyle(.primaryPill)
+            .frame(maxWidth: 220)
         }
     }
 }
@@ -115,17 +115,17 @@ struct SuccessToast: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(Color.accent)
+            Image(systemName: "checkmark")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color.bg)
             Text(text)
                 .scaledFont(size: 14, weight: .medium)
-                .foregroundStyle(Color.ink)
+                .foregroundStyle(Color.bg)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.hairline, lineWidth: 1))
-        .shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+        .background(Color.ink, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
         .accessibilityAddTraits(.isStaticText)
     }
 }

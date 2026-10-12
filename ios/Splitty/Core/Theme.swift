@@ -34,38 +34,50 @@ extension Color {
     }
 }
 
-// MARK: - Семантические токены (премиум-палитра «финтех-минимализм»)
+// MARK: - Семантические токены («Общий чек»)
 
-// 90% интерфейса — нейтральные bg/surface/ink; цвет (accent/negative) —
-// только смысловой: CTA, позитивные и негативные суммы, активные состояния.
+// Туса — общий чек: тёплый «стол» `bg`, на нём бумага `surface`, чернила `ink`.
+// Цвет — только смысловой: оранжевое действие (`accent`), синий штамп
+// состояния (`stamp`), знак денег (`positive`/`negative`). Направление долга
+// всегда говорится словами, цвет его лишь подкрепляет.
 extension Color {
-    /// Фон всех экранов (вместо системного).
-    static let bg = Color(light: 0xF6F7F9, dark: 0x0C0F13)
-    /// Фон карточек и «плавающих» поверхностей (см. `.surfaceCard()`).
-    static let surface = Color(light: 0xFFFFFF, dark: 0x171C23)
-    /// Основной текст.
-    static let ink = Color(light: 0x101828, dark: 0xF2F4F7)
-    /// Вторичный текст: подписи, даты, «расчёт», нулевые суммы.
-    static let inkSecondary = Color(light: 0x667085, dark: 0x98A2B3)
-    /// Акцент (изумруд): CTA, позитивные суммы («вам должны»), активный таб.
-    static let accent = Color(light: 0x0E9F6E, dark: 0x34D399)
-    /// Негатив (приглушённый коралл): долги, «вы должны».
-    static let negative = Color(light: 0xDC5A2E, dark: 0xFB923C)
-    /// Тонкие разделители внутри карточек и hairline-бордеры в тёмной теме.
-    static let hairline = Color(light: 0xEAECF0, dark: 0x232A33)
-    /// Бумага чека: тёплый почти-белый в светлой теме (чтобы карточка-чек
-    /// читалась как бумага, а не как обычная surface), чуть светлее surface в тёмной.
-    static let receiptPaper = Color(light: 0xFDFCF9, dark: 0x1B2129)
-    /// Нажатое состояние акцента (тёмный изумруд): pressed CTA, градиенты.
-    static let accentPressed = Color(light: 0x0B7C56, dark: 0x2BB985)
-    /// Акцент ДЛЯ ТЕКСТА мелким кеглем.
-    ///
-    /// `accent` на белом даёт 3.39:1 — этого хватает крупной сумме и заливке
-    /// кнопки, но не подписи в 12–15 пунктов: минимум для такого текста 4.5:1.
-    /// Тёмная тема не трогается — там `accent` на тёмном фоне и так проходит.
-    static let accentText = Color(light: 0x0A6E4C, dark: 0x34D399)
-    /// Негатив ДЛЯ ТЕКСТА мелким кеглем: `negative` на белом даёт 3.79:1.
-    static let negativeText = Color(light: 0xAF3F1C, dark: 0xFB923C)
+    /// Стол под чеком — фон всех экранов.
+    static let bg = Color(light: 0xDEDBD2, dark: 0x1A1B16)
+    /// Бумага: поверхность документа, карточек и листов.
+    static let surface = Color(light: 0xFFFDF4, dark: 0x26271F)
+    /// Бумага закрытого счёта (архив, неактивное).
+    static let paperClosed = Color(light: 0xE9E8DD, dark: 0x202119)
+    /// Основной текст — чернила.
+    static let ink = Color(light: 0x262722, dark: 0xECEADF)
+    /// Вторичный текст: реквизиты, даты, подписи, нулевые суммы.
+    static let inkSecondary = Color(light: 0x5E5E54, dark: 0xA7A595)
+    /// Действие: заливка основной кнопки, активные элементы управления.
+    /// Текст на заливке — `onAccent`.
+    static let accent = Color(light: 0xC4502D, dark: 0xC4502D)
+    /// Текст и значки поверх `accent`.
+    static let onAccent = Color(light: 0xFFFDF4, dark: 0xFFFDF4)
+    /// Негатив: «вы должны», ошибки.
+    static let negative = Color(light: 0xA23B2A, dark: 0xF08A6E)
+    /// Позитив: «вам должны», «получено».
+    static let positive = Color(light: 0x2E6B45, dark: 0x8CCB9F)
+    /// Тонкие линии: разделители строк, рамки полей.
+    static let hairline = Color(light: 0xCBC9BC, dark: 0x3A3B32)
+    /// Пунктир между частями чека.
+    static let dash = Color(light: 0xAAA999, dark: 0x5A5B50)
+    /// Жирная итоговая черта над «ВСЕГО».
+    static let ruleStrong = Color(light: 0x2A2D24, dark: 0xECEADF)
+    /// Синий штамп состояния («ВЫ В РАСЧЁТЕ», «ЧЕРНОВИК»).
+    static let stamp = Color(light: 0x36579C, dark: 0x8FA9E0)
+    /// Бумага чека — та же, что `surface`: весь документ одна поверхность.
+    static let receiptPaper = Color.surface
+    /// Нажатое состояние действия.
+    static let accentPressed = Color(light: 0xA6421F, dark: 0xA6421F)
+    /// Действие ДЛЯ ТЕКСТА мелким кеглем: на столе и бумаге ≥ 4.5:1.
+    static let accentText = Color(light: 0x9E3F1D, dark: 0xE57A55)
+    /// Негатив ДЛЯ ТЕКСТА мелким кеглем.
+    static let negativeText = Color(light: 0xA23B2A, dark: 0xF08A6E)
+    /// Подложка записи голоса: тёмная лента под белым текстом расшифровки.
+    static let recordingScrim = Color(light: 0x262722, dark: 0x0F100C)
     /// Цвет бренда Telegram — не токен темы, одинаков в обеих.
     static let telegramBlue = Color(light: 0x2AABEE, dark: 0x2AABEE)
 

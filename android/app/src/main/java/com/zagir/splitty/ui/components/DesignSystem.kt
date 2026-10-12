@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -53,8 +52,9 @@ import kotlin.math.abs
 // MARK: Карточка-поверхность
 
 /**
- * Премиум-карточка: фон `surface`, скругление 20dp; светлая тема — мягкая
- * тень, тёмная — hairline-бордер без тени. Аналог iOS `.surfaceCard()`.
+ * Лист бумаги: фон `surface`, почти прямые углы (3dp), без мягкой тени.
+ * Светлая тема — едва заметная подложка, тёмная — hairline-рамка, чтобы
+ * бумага отделялась от стола. Аналог iOS `.surfaceCard()`.
  */
 @Composable
 fun SurfaceCard(
@@ -63,7 +63,7 @@ fun SurfaceCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = Splitty.colors
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(3.dp)
     val cardModifier = if (colors.isDark) {
         modifier
             .clip(shape)
@@ -72,10 +72,10 @@ fun SurfaceCard(
     } else {
         modifier
             .shadow(
-                elevation = 6.dp,
+                elevation = 1.dp,
                 shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.06f),
-                spotColor = Color.Black.copy(alpha = 0.06f),
+                ambientColor = Color.Black.copy(alpha = 0.05f),
+                spotColor = Color.Black.copy(alpha = 0.05f),
             )
             .clip(shape)
             .background(colors.surface)
@@ -86,8 +86,8 @@ fun SurfaceCard(
 // MARK: Кнопки
 
 /**
- * Основной CTA: pill во всю ширину, высота 54dp, фон `accent`, белый
- * semibold-текст, pressed — scale 0.98. Аналог iOS `.primaryPill`.
+ * Основное действие: прямоугольник во всю ширину (углы 3dp), высота 54dp,
+ * заливка `accent`, текст `onAccent`, pressed — scale 0.98. Аналог iOS `.primaryPill`.
  */
 @Composable
 fun PrimaryPillButton(
@@ -113,22 +113,27 @@ fun PrimaryPillButton(
             .defaultMinSize(minHeight = 54.dp)
             .scale(scale),
         enabled = enabled,
-        shape = CircleShape,
+        shape = RoundedCornerShape(3.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (pressed) colors.accentPressed else colors.accent,
-            contentColor = Color.White,
+            contentColor = colors.onAccent,
             disabledContainerColor = colors.accent.copy(alpha = 0.45f),
-            disabledContentColor = Color.White,
+            disabledContentColor = colors.onAccent,
         ),
         interactionSource = interactionSource,
     ) {
-        Text(text = text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(
+            text = text,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
 /**
- * Вторичная кнопка-чип: мягкая серая pill; [isSelected] — акцентная заливка
- * (для выбора группы/участника, фильтров). Аналог iOS `.softChip(isSelected:)`.
+ * Вторичная кнопка-чип: тонкая рамка, углы 3dp; [isSelected] — чернильная
+ * рамка и подложка (выбор группы/участника, фильтры). Аналог iOS `.softChip(isSelected:)`.
  *
  * [enabled] = false гасит и клик, и текст: чип в роли действия («Отвязать»
  * последний способ входа) обязан выглядеть недоступным ДО запроса, а не
@@ -152,27 +157,28 @@ fun SoftChip(
         label = "chipScale",
     )
     val background = when {
-        isSelected -> colors.accent.copy(alpha = 0.14f)
-        pressed && enabled -> colors.ink.copy(alpha = 0.12f)
-        else -> colors.ink.copy(alpha = 0.06f)
+        isSelected -> colors.ink.copy(alpha = 0.1f)
+        pressed && enabled -> colors.ink.copy(alpha = 0.08f)
+        else -> Color.Transparent
     }
     val contentColor = when {
         !enabled -> colors.inkSecondary.copy(alpha = 0.5f)
-        isSelected -> colors.accent
         else -> colors.ink
     }
+    val chipShape = RoundedCornerShape(3.dp)
     Box(
         modifier = modifier
             .scale(scale)
-            .clip(CircleShape)
+            .clip(chipShape)
             .background(background)
+            .border(1.dp, if (isSelected) colors.ink else colors.hairline, chipShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
                 onClick = onClick,
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -190,10 +196,10 @@ fun SoftChip(
 
 /** Семантическая роль суммы — определяет цвет [MoneyText]. */
 enum class MoneyRole {
-    /** По знаку: `> 0` — accent, `< 0` — negative, `0` — inkSecondary. */
+    /** По знаку: `> 0` — positive, `< 0` — negative, `0` — inkSecondary. */
     AUTO,
 
-    /** «Вам должны»/получено — всегда accent. */
+    /** «Вам должны»/получено — всегда positive. */
     POSITIVE,
 
     /** «Вы должны»/долг — всегда negative. */
@@ -231,13 +237,13 @@ fun MoneyText(
 ) {
     val colors = Splitty.colors
     val color = when (role) {
-        MoneyRole.POSITIVE -> colors.accent
+        MoneyRole.POSITIVE -> colors.positive
         MoneyRole.NEGATIVE -> colors.negative
         MoneyRole.NEUTRAL -> colors.ink
         // Знак берётся у ТОЧНОЙ величины: у округлённой долг 0,25 читается
         // нулём, и честный плюс красился бы «в расчёте».
         MoneyRole.AUTO -> when {
-            (exactMinor ?: (amount * MINOR_FACTOR)) > 0 -> colors.accent
+            (exactMinor ?: (amount * MINOR_FACTOR)) > 0 -> colors.positive
             (exactMinor ?: (amount * MINOR_FACTOR)) < 0 -> colors.negative
             else -> colors.inkSecondary
         }
@@ -359,18 +365,19 @@ fun MoneyTotalsText(
 // MARK: Заголовок секции
 
 /**
- * Заголовок секции: 13sp semibold, вторичный цвет, лёгкий kerning.
- * Регистр текста НЕ меняет. Аналог iOS `.sectionHeaderStyle()`.
+ * Заголовок секции — печатный реквизит: моноширинный 12sp, вторичный цвет.
+ * Регистр текста НЕ меняет; капс — у [ReceiptLabel]. Аналог iOS `.sectionHeaderStyle()`.
  */
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier, maxLines: Int = Int.MAX_VALUE) {
     Text(
         text = text,
         modifier = modifier,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
         color = Splitty.colors.inkSecondary,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.3.sp,
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
     )

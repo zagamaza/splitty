@@ -11,45 +11,50 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-// Семантические токены премиум-палитры «финтех-минимализм» — порт
-// ios/Splitty/Core/Theme.swift. 90% интерфейса — нейтральные bg/surface/ink;
-// цвет (accent/negative) — только смысловой: CTA, суммы, активные состояния.
+// Семантические токены «Общего чека» — порт ios/Splitty/Core/Theme.swift.
+// Туса — общий чек: тёплый стол `bg`, бумага `surface`, чернила `ink`. Цвет —
+// только смысловой: оранжевое действие (`accent`), синий штамп (`stamp`), знак
+// денег (`positive`/`negative`). Направление долга говорится словами.
 // В экранах запрещены сырые hex — только Splitty.colors.* и MaterialTheme.
 
 /** Набор семантических цветов текущей темы (light/dark). */
 @Immutable
 data class SplittyColors(
-    /** Фон всех экранов (вместо системного). */
+    /** Стол под чеком — фон всех экранов. */
     val bg: Color,
-    /** Фон карточек и «плавающих» поверхностей (см. SurfaceCard). */
+    /** Бумага: поверхность документа, карточек и листов. */
     val surface: Color,
+    /** Бумага закрытого счёта (архив, неактивное). */
+    val paperClosed: Color,
     /** Основной текст. */
     val ink: Color,
     /** Вторичный текст: подписи, даты, «расчёт», нулевые суммы. */
     val inkSecondary: Color,
-    /** Акцент (изумруд): CTA, позитивные суммы («вам должны»), активный таб. */
+    /** Действие: заливка основной кнопки, активные элементы. Текст на ней — [onAccent]. */
     val accent: Color,
-    /** Нажатое состояние акцента (тёмный изумруд): pressed CTA, градиенты. */
+    /** Текст и значки поверх [accent]. */
+    val onAccent: Color,
+    /** Позитив: «вам должны», «получено». */
+    val positive: Color,
+    /** Пунктир между частями чека. */
+    val dash: Color,
+    /** Жирная итоговая черта над «ВСЕГО». */
+    val ruleStrong: Color,
+    /** Синий штамп состояния («ВЫ В РАСЧЁТЕ», «ЧЕРНОВИК»). */
+    val stamp: Color,
+    /** Подложка записи голоса: тёмная лента под белым текстом расшифровки. */
+    val recordingScrim: Color,
+    /** Нажатое состояние действия. */
     val accentPressed: Color,
-    /** Негатив (приглушённый коралл): долги, «вы должны». */
+    /** Негатив: «вы должны», ошибки. */
     val negative: Color,
-    /**
-     * Акцент ДЛЯ ТЕКСТА мелким кеглем.
-     *
-     * [accent] на белом даёт 3.39:1 — этого хватает крупной сумме и заливке
-     * кнопки, но не подписи в 12–15 sp: минимум для такого текста 4.5:1.
-     * В тёмной теме совпадает с [accent] — там контраст и так проходит.
-     */
+    /** Действие ДЛЯ ТЕКСТА мелким кеглем: на столе и бумаге ≥ 4.5:1. */
     val accentText: Color,
-    /** Негатив ДЛЯ ТЕКСТА мелким кеглем: [negative] на белом даёт 3.79:1. */
+    /** Негатив ДЛЯ ТЕКСТА мелким кеглем. */
     val negativeText: Color,
-    /** Тонкие разделители внутри карточек и hairline-бордеры в тёмной теме. */
+    /** Тонкие линии: разделители строк, рамки полей. */
     val hairline: Color,
-    /**
-     * Бумага чек-карточки (ReceiptCard): чуть тёплый off-white в light и
-     * приподнятый над surface оттенок в dark — «настоящая» квитанция, а не
-     * обычная карточка. Порт iOS `Color.receiptPaper`.
-     */
+    /** Бумага чека — та же, что [surface]: весь документ одна поверхность. */
     val receiptPaper: Color,
     /**
      * Заливка баров графиков (дашборд «Итоги»). Отдельный от UI-акцента цвет
@@ -67,21 +72,29 @@ data class SplittyColors(
     val isDark: Boolean,
 )
 
-/** Светлая палитра для тестов контраста (сама палитра приватна). */
+/** Палитры для тестов контраста (сами палитры приватны). */
 internal fun splittyLightColorsForTest(): SplittyColors = LightColors
+internal fun splittyDarkColorsForTest(): SplittyColors = DarkColors
 
 private val LightColors = SplittyColors(
-    bg = Color(0xFFF6F7F9),
-    surface = Color(0xFFFFFFFF),
-    ink = Color(0xFF101828),
-    inkSecondary = Color(0xFF667085),
-    accent = Color(0xFF0E9F6E),
-    accentPressed = Color(0xFF0B7C56),
-    negative = Color(0xFFDC5A2E),
-    accentText = Color(0xFF0A6E4C),
-    negativeText = Color(0xFFAF3F1C),
-    hairline = Color(0xFFEAECF0),
-    receiptPaper = Color(0xFFFDFCF9),
+    bg = Color(0xFFDEDBD2),
+    surface = Color(0xFFFFFDF4),
+    paperClosed = Color(0xFFE9E8DD),
+    ink = Color(0xFF262722),
+    inkSecondary = Color(0xFF5E5E54),
+    accent = Color(0xFFC4502D),
+    onAccent = Color(0xFFFFFDF4),
+    positive = Color(0xFF2E6B45),
+    dash = Color(0xFFAAA999),
+    ruleStrong = Color(0xFF2A2D24),
+    stamp = Color(0xFF36579C),
+    recordingScrim = Color(0xFF262722),
+    accentPressed = Color(0xFFA6421F),
+    negative = Color(0xFFA23B2A),
+    accentText = Color(0xFF9E3F1D),
+    negativeText = Color(0xFFA23B2A),
+    hairline = Color(0xFFCBC9BC),
+    receiptPaper = Color(0xFFFFFDF4),
     chartAccent = Color(0xFF0E9F6E),
     chartCategorical = listOf(
         Color(0xFF0E9F6E), // 1 изумруд
@@ -95,17 +108,24 @@ private val LightColors = SplittyColors(
 )
 
 private val DarkColors = SplittyColors(
-    bg = Color(0xFF0C0F13),
-    surface = Color(0xFF171C23),
-    ink = Color(0xFFF2F4F7),
-    inkSecondary = Color(0xFF98A2B3),
-    accent = Color(0xFF34D399),
-    accentPressed = Color(0xFF2BB985),
-    negative = Color(0xFFFB923C),
-    accentText = Color(0xFF34D399),
-    negativeText = Color(0xFFFB923C),
-    hairline = Color(0xFF232A33),
-    receiptPaper = Color(0xFF1B2129),
+    bg = Color(0xFF1A1B16),
+    surface = Color(0xFF26271F),
+    paperClosed = Color(0xFF202119),
+    ink = Color(0xFFECEADF),
+    inkSecondary = Color(0xFFA7A595),
+    accent = Color(0xFFC4502D),
+    onAccent = Color(0xFFFFFDF4),
+    positive = Color(0xFF8CCB9F),
+    dash = Color(0xFF5A5B50),
+    ruleStrong = Color(0xFFECEADF),
+    stamp = Color(0xFF8FA9E0),
+    recordingScrim = Color(0xFF0F100C),
+    accentPressed = Color(0xFFA6421F),
+    negative = Color(0xFFF08A6E),
+    accentText = Color(0xFFE57A55),
+    negativeText = Color(0xFFF08A6E),
+    hairline = Color(0xFF3A3B32),
+    receiptPaper = Color(0xFF26271F),
     chartAccent = Color(0xFF0EA97A),
     chartCategorical = listOf(
         Color(0xFF0EA97A), // 1 изумруд
@@ -132,9 +152,9 @@ object Splitty {
 private fun SplittyColors.toColorScheme() = if (isDark) {
     darkColorScheme(
         primary = accent,
-        onPrimary = Color.White,
+        onPrimary = onAccent,
         primaryContainer = accentPressed,
-        onPrimaryContainer = Color.White,
+        onPrimaryContainer = onAccent,
         secondary = inkSecondary,
         onSecondary = bg,
         background = bg,
@@ -148,18 +168,18 @@ private fun SplittyColors.toColorScheme() = if (isDark) {
         surfaceContainerHigh = surface,
         surfaceContainerHighest = surface,
         error = negative,
-        onError = Color.White,
+        onError = onAccent,
         outline = hairline,
         outlineVariant = hairline,
     )
 } else {
     lightColorScheme(
         primary = accent,
-        onPrimary = Color.White,
+        onPrimary = onAccent,
         primaryContainer = accentPressed,
-        onPrimaryContainer = Color.White,
+        onPrimaryContainer = onAccent,
         secondary = inkSecondary,
-        onSecondary = Color.White,
+        onSecondary = surface,
         background = bg,
         onBackground = ink,
         surface = surface,
@@ -171,7 +191,7 @@ private fun SplittyColors.toColorScheme() = if (isDark) {
         surfaceContainerHigh = surface,
         surfaceContainerHighest = surface,
         error = negative,
-        onError = Color.White,
+        onError = onAccent,
         outline = hairline,
         outlineVariant = hairline,
     )

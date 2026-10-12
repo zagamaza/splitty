@@ -705,4 +705,5 @@
     <string name="expense_edit_amounts_unavailable_items">まず上の項目を確定してください。誰が分けるか、いくらかを</string>
     <string name="expense_edit_amounts_unavailable_cents">合計に端数がありますが、このグループは整数で計算します。項目内の配分を調整してください</string>
     <string name="expense_edit_amounts_unavailable_invalid">項目の配分が合いません。項目を修正してください</string>
+    <string name="brand_receipt_label">共有の伝票</string>
 </resources>

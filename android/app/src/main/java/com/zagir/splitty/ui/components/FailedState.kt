@@ -3,6 +3,7 @@ package com.zagir.splitty.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.WifiOff
@@ -25,7 +26,7 @@ import com.zagir.splitty.ui.theme.Splitty
 
 /**
  * Failed-состояние первичной загрузки: иконка «нет сети», заголовок, [message]
- * и чип «Повторить». Сам себя НЕ центрирует — вызывающий кладёт в Box/Column.
+ * и кнопка «Повторить». Сам себя НЕ центрирует — вызывающий кладёт в Box/Column.
  */
 @Composable
 fun FailedState(
@@ -59,6 +60,10 @@ fun FailedState(
             color = colors.inkSecondary,
             textAlign = TextAlign.Center,
         )
-        SoftChip(text = stringResource(R.string.common_retry), onClick = onRetry)
+        PrimaryPillButton(
+            text = stringResource(R.string.common_retry),
+            onClick = onRetry,
+            modifier = Modifier.padding(top = 8.dp).widthIn(max = 220.dp),
+        )
     }
 }

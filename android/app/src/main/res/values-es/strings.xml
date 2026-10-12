@@ -768,4 +768,5 @@
     <string name="expense_edit_amounts_unavailable_items">Primero completa las líneas de arriba: quién las comparte y cuánto cuestan</string>
     <string name="expense_edit_amounts_unavailable_cents">El total tiene céntimos, pero este grupo usa importes enteros: ajusta las partes en las líneas</string>
     <string name="expense_edit_amounts_unavailable_invalid">Las partes de las líneas no cuadran: corrige las líneas</string>
+    <string name="brand_receipt_label">Cuenta común</string>
 </resources>

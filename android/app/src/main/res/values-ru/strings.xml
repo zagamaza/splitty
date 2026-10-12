@@ -805,4 +805,5 @@
     <string name="expense_edit_amounts_unavailable_items">Сначала уточните позиции выше — кто их делит и сколько они стоят</string>
     <string name="expense_edit_amounts_unavailable_cents">В итоге есть копейки, а группа считает целыми — поправьте доли в позициях</string>
     <string name="expense_edit_amounts_unavailable_invalid">Доли в позициях не сходятся — поправьте позиции</string>
+    <string name="brand_receipt_label">Общий чек</string>
 </resources>

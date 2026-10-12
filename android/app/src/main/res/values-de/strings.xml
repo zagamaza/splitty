@@ -768,4 +768,5 @@
     <string name="expense_edit_amounts_unavailable_items">Vervollständigen Sie zuerst die Positionen oben — wer sie teilt und was sie kosten</string>
     <string name="expense_edit_amounts_unavailable_cents">Die Summe hat Cent-Beträge, die Gruppe rechnet aber in ganzen — passen Sie die Anteile in den Positionen an</string>
     <string name="expense_edit_amounts_unavailable_invalid">Die Anteile in den Positionen gehen nicht auf — korrigieren Sie die Positionen</string>
+    <string name="brand_receipt_label">Gemeinsame Rechnung</string>
 </resources>

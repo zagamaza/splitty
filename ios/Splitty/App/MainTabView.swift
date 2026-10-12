@@ -88,7 +88,7 @@ struct MainTabView: View {
                 .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
                 .tag(Tab.account)
         }
-        .tint(Color.accent)
+        .tint(Color.ink)
         .overlay(alignment: .bottom) {
             if !isKeyboardVisible && !isGlobalAddHidden {
                 addExpenseButton
@@ -231,31 +231,21 @@ struct MainTabView: View {
         }
     }
 
-    /// Центральная приподнятая кнопка добавления расхода:
-    /// изумрудный градиент, мягкая цветная тень, белый plus.
+    /// Центральное действие добавления расхода: прямоугольная печать
+    /// цвета действия в середине таббара, без подъёма и цветной тени.
     private var addExpenseButton: some View {
         Button {
             Haptics.tap()
             isAddExpensePresented = true
         } label: {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.accent, Color.accentPressed],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 58, height: 58)
-                    .shadow(color: Color.accent.opacity(0.35), radius: 10, y: 5)
-                Image(systemName: "plus")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
+            Image(systemName: "plus")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Color.onAccent)
+                .frame(width: 56, height: 40)
+                .background(Color.accent, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         }
         .accessibilityLabel("Добавить расход")
-        .offset(y: -18)
+        .offset(y: -6)
     }
 }
 

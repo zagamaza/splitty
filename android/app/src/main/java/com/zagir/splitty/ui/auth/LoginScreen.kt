@@ -1,5 +1,11 @@
 package com.zagir.splitty.ui.auth
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptPaper
+import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.core.ui.resolve
 import android.content.ActivityNotFoundException
@@ -7,7 +13,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -53,8 +58,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -76,11 +79,7 @@ import com.zagir.splitty.core.auth.TelegramWebAuth
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.ui.components.PrimaryPillButton
 import com.zagir.splitty.ui.theme.Splitty
-import androidx.compose.material.icons.filled.Merge
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 
 /**
  * Экран входа — паритет iOS LoginView: иконка с названием в верхней половине,
@@ -205,13 +204,8 @@ fun LoginScreen(viewModel: LoginViewModel = hiltViewModel()) {
 private const val SERVER_REVEAL_TAPS = 5
 
 /**
- * Иконка приложения, словомарка и тихий подзаголовок.
+ * Реквизит «Общий чек», словомарка и обещания строками чека.
  * В DEBUG она же — тайная дверь к полю «Сервер» (см. SERVER_REVEAL_TAPS).
- *
- * Иконка собирается из слоёв адаптивной: `painterResource` не умеет
- * `adaptive-icon`, поэтому фон берём цветом, а знак — `ic_launcher_foreground`.
- * Внутренняя обрезка 25% — требование adaptive-icon: без неё знак вылезает
- * за скругление.
  */
 @Composable
 private fun AppMark(modifier: Modifier = Modifier, onTap: () -> Unit) {
@@ -224,27 +218,17 @@ private fun AppMark(modifier: Modifier = Modifier, onTap: () -> Unit) {
                 indication = null,
                 onClick = onTap,
             ),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = Alignment.Start,
     ) {
-        Box(
-            modifier = Modifier
-                .size(84.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(colorResource(R.color.ic_launcher_background)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(R.mipmap.ic_launcher_foreground),
-                contentDescription = null,
-                modifier = Modifier.size(126.dp),
-            )
-        }
-        Spacer(Modifier.height(14.dp))
+        ReceiptLabel(stringResource(R.string.brand_receipt_label))
+        Spacer(Modifier.height(8.dp))
         Text(
             text = stringResource(R.string.app_name),
-            fontSize = 40.sp,
-            fontWeight = FontWeight.Bold,
-            color = Splitty.colors.accent,
+            modifier = Modifier.semantics { heading() },
+            fontSize = 48.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = (-2).sp,
+            color = Splitty.colors.ink,
         )
         Spacer(Modifier.height(20.dp))
         ValueProps()
@@ -261,47 +245,41 @@ private fun AppMark(modifier: Modifier = Modifier, onTap: () -> Unit) {
  */
 @Composable
 internal fun ValueProps() {
-    Column(
-        modifier = Modifier.fillMaxWidth().widthIn(max = 380.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        // Приветствие теперь стоит перед входом, но пункты остаются: его можно
-        // пропустить с любой страницы, и пропустивший приходит сюда, не узнав
-        // о продукте ничего.
-        ValueProp(
-            icon = Icons.AutoMirrored.Filled.FormatListBulleted,
-            title = stringResource(R.string.login_prop_split_title),
-            body = stringResource(R.string.login_prop_split_body),
-        )
-        ValueProp(
-            icon = Icons.Filled.Merge,
-            title = stringResource(R.string.login_prop_once_title),
-            body = stringResource(R.string.login_prop_once_body),
-        )
-        ValueProp(
-            icon = Icons.AutoMirrored.Filled.ArrowForward,
-            title = stringResource(R.string.login_prop_money_title),
-            body = stringResource(R.string.login_prop_money_body),
-        )
+    // Приветствие теперь стоит перед входом, но пункты остаются: его можно
+    // пропустить с любой страницы, и пропустивший приходит сюда, не узнав
+    // о продукте ничего.
+    val props = listOf(
+        R.string.login_prop_split_title to R.string.login_prop_split_body,
+        R.string.login_prop_once_title to R.string.login_prop_once_body,
+        R.string.login_prop_money_title to R.string.login_prop_money_body,
+    )
+    ReceiptPaper(modifier = Modifier.widthIn(max = 400.dp), padding = 18.dp) {
+        props.forEachIndexed { index, (title, body) ->
+            if (index > 0) ReceiptDivider(Modifier.padding(vertical = 4.dp))
+            ValueProp(number = index + 1, title = stringResource(title), body = stringResource(body))
+        }
     }
 }
 
+/** Пункт обещания — строка чека: номер позиции реквизитом, текст справа. */
 @Composable
-private fun ValueProp(icon: ImageVector, title: String, body: String) {
+private fun ValueProp(number: Int, title: String, body: String) {
     val colors = Splitty.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(colors.accent.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = colors.accentText, modifier = Modifier.size(16.dp))
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = title, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
-            Text(text = body, fontSize = 12.5.sp, lineHeight = 16.sp, color = colors.inkSecondary)
+    Row(
+        modifier = Modifier.padding(vertical = 8.dp).semantics(mergeDescendants = true) {},
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "%02d".format(number),
+            modifier = Modifier.clearAndSetSemantics {},
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Monospace,
+            color = colors.inkSecondary,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(text = title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.ink)
+            Text(text = body, fontSize = 13.sp, lineHeight = 17.sp, color = colors.inkSecondary)
         }
     }
 }
@@ -327,7 +305,8 @@ private fun EmailDisclosure(enabled: Boolean, onClick: () -> Unit) {
             text = stringResource(R.string.login_email_disclosure_action),
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Splitty.colors.accentText,
+            color = Splitty.colors.ink,
+            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
         )
     }
 }
@@ -344,7 +323,7 @@ private fun GoogleSignInButton(
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(3.dp)
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -476,7 +455,7 @@ private fun TelegramLoginButton(
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(3.dp))
             .background(TelegramBlue)
             .clickable(enabled = enabled) {
                 onOpen()
@@ -575,13 +554,13 @@ private fun LoginField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
     val colors = Splitty.colors
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(3.dp)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.bg, shape)
+            .background(colors.surface, shape)
             .border(1.dp, colors.hairline, shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         textStyle = TextStyle(
@@ -591,7 +570,7 @@ private fun LoginField(
             fontFamily = if (monospaced) FontFamily.Monospace else FontFamily.Default,
         ),
         singleLine = true,
-        cursorBrush = SolidColor(colors.accent),
+        cursorBrush = SolidColor(colors.ink),
         visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,

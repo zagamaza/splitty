@@ -48,17 +48,24 @@ struct WelcomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
+                Text(verbatim: "Splitor")
+                    .scaledFont(size: 22, weight: .heavy)
+                    .kerning(-1)
+                    .foregroundStyle(Color.ink)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button("Пропустить") {
                     onEvent(.onboardingSkipped)
                     onFinish()
                 }
-                    .scaledFont(size: 16, weight: .medium)
-                    .foregroundStyle(Color.inkSecondary)
+                    .buttonStyle(.textLink)
                     .accessibilityIdentifier("welcomeSkip")
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 10)
+            .overlay {
+                Text("Общий чек").receiptLabel(size: 10).accessibilityHidden(true)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 6)
 
             TabView(selection: $page) {
                 ForEach(WelcomeStep.allCases, id: \.rawValue) { step in
@@ -83,7 +90,7 @@ struct WelcomeView: View {
                 }
             }
             .buttonStyle(.primaryPill)
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 22)
             .padding(.bottom, 20)
             .accessibilityIdentifier("welcomePrimary")
         }
@@ -166,44 +173,47 @@ private struct WelcomePage<Art: View>: View {
     @ViewBuilder let art: () -> Art
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Иллюстрация забирает всё свободное место, текст прижат к низу:
-            // раньше под текстом пустовала четверть экрана, а картинке этого
-            // места как раз не хватало. Содержимое внутри иллюстрации
-            // центрируется само, так что растяжение его не разрывает.
-            art()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .padding(.horizontal, 16)
-
-            VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text(title)
-                    .scaledFont(size: 26, weight: .bold, relativeTo: .title2)
+                    .scaledFont(size: 34, weight: .heavy, relativeTo: .largeTitle)
+                    .kerning(-1.2)
                     .foregroundStyle(Color.ink)
-                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
                 Text(subtitle)
                     .scaledFont(size: 16, relativeTo: .subheadline)
                     .foregroundStyle(Color.inkSecondary)
-                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 22)
-            .padding(.bottom, 2)
+            .padding(.top, 18)
+            .padding(.bottom, 20)
+
+            // Иллюстрация — лист чека, чуть повёрнутый, как положенный на стол.
+            // Высота ограничена: растянутый на весь экран лист пустел внутри.
+            art()
+                .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 430)
+                .receiptPaper(padding: 0)
+                .rotationEffect(.degrees(-2))
+                .padding(.horizontal, 30)
+                .padding(.bottom, 6)
+                .frame(maxHeight: .infinity, alignment: .top)
         }
     }
 }
 
+/// Страницы — короткие прямоугольники, текущая — длинная чернильная.
 private struct PageDots: View {
     let count: Int
     let current: Int
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 6) {
             ForEach(0..<count, id: \.self) { index in
-                Capsule()
-                    .fill(index == current ? Color.accent : Color.hairline)
-                    .frame(width: index == current ? 22 : 7, height: 7)
+                Rectangle()
+                    .fill(index == current ? Color.ink : Color.dash)
+                    .frame(width: index == current ? 22 : 8, height: 3)
                     .animation(.easeInOut(duration: 0.2), value: current)
             }
         }
@@ -238,49 +248,34 @@ private struct SharedBillArt: View {
 
     var body: some View {
         // Композиция собрана компактно и стоит по центру: тянуть строки
-        // распорками по всей карточке — значит порвать список на куски.
-        VStack(spacing: 0) {
+        // распорками по всему листу — значит порвать список на куски.
+        VStack(alignment: .leading, spacing: 0) {
             welcomeEyebrow(String(localized: "РАСХОДЫ ГРУППЫ"))
-                .padding(.bottom, 14)
+                .padding(.bottom, 8)
 
-            VStack(spacing: 10) {
-                ForEach(Array(slips.enumerated()), id: \.offset) { index, slip in
-                    HStack(spacing: 14) {
-                        Text(slip.0)
-                            .scaledFont(size: 16, weight: .semibold)
-                            .foregroundStyle(Color.ink)
-                        Spacer(minLength: 8)
-                        Text(slip.1)
-                            .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Color.ink)
-                    }
-                    .surfaceCard()
-                    .opacity(index < shown ? 1 : 0)
-                    .offset(y: index < shown ? 0 : -22)
-                    .scaleEffect(index < shown ? 1 : 0.96)
+            ForEach(Array(slips.enumerated()), id: \.offset) { index, slip in
+                HStack(alignment: .firstTextBaseline, spacing: 14) {
+                    Text(slip.0)
+                        .scaledFont(size: 16)
+                        .foregroundStyle(Color.ink)
+                    Spacer(minLength: 8)
+                    Text(slip.1)
+                        .font(.system(size: 16, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.ink)
                 }
+                .padding(.vertical, 9)
+                .opacity(index < shown ? 1 : 0)
+                .offset(y: index < shown ? 0 : -14)
             }
 
-            Image(systemName: "arrow.down")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.accent.opacity(0.45))
-                .padding(.vertical, 14)
-
-            VStack(spacing: 2) {
-                Text(String(localized: "Общий счёт группы"))
-                    .scaledFont(size: 14, weight: .medium)
-                    .foregroundStyle(Color.accentText.opacity(0.8))
+            ReceiptTotal(label: String(localized: "Общий счёт группы")) {
                 Text(total)
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.accentText)
+                    .font(.system(size: 26, weight: .bold, design: .default))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.ink)
                     .contentTransition(.numericText())
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color.accent.opacity(0.5), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
-            )
+            .padding(.top, 10)
         }
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -352,7 +347,7 @@ private struct DictationArt: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(light: 0x2B313A, dark: 0x05080B))
+        .background(Color.recordingScrim)
         .onAppear { restart() }
         .onDisappear { loop?.cancel() }
         .onChange(of: isActive) { restart() }
@@ -550,7 +545,7 @@ private struct MiniReceipt: View {
             item(name: String(localized: "Кола"), sum: String(localized: "200 ₽"),
                  each: String(localized: "по 100 ₽ × 2"))
 
-            Rectangle().fill(Color.ink).frame(height: 1.5).padding(.vertical, 10)
+            ReceiptDivider(style: .total).padding(.vertical, 10)
 
             HStack {
                 Text("Итого").scaledFont(size: 16, weight: .bold)
@@ -558,14 +553,12 @@ private struct MiniReceipt: View {
                 Text(String(localized: "1000 ₽")).font(.system(size: 17, weight: .bold, design: .monospaced))
             }
         }
-        .padding(16)
-        .background(Color.receiptPaper)
-        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-        .shadow(color: .black.opacity(0.25), radius: 16, y: 8)
+        .foregroundStyle(Color.ink)
+        .receiptPaper(padding: 16)
     }
 
     private var dashed: some View {
-        Rectangle().fill(Color.hairline).frame(height: 1).padding(.vertical, 9)
+        ReceiptDivider().padding(.vertical, 9)
     }
 
     private func item(name: String, sum: String, each: String) -> some View {
@@ -577,8 +570,8 @@ private struct MiniReceipt: View {
             }
             HStack {
                 HStack(spacing: -6) {
-                    receiptAvatar(String(localized: "Я"), color: .accent)
-                    receiptAvatar(String(localized: "С"), color: Color(red: 0.55, green: 0.36, blue: 0.96))
+                    receiptAvatar(String(localized: "Я"), color: .stamp)
+                    receiptAvatar(String(localized: "С"), color: .accent)
                 }
                 Spacer()
                 Text(each).font(.system(size: 12, design: .monospaced)).foregroundStyle(Color.inkSecondary)
@@ -589,10 +582,10 @@ private struct MiniReceipt: View {
     private func receiptAvatar(_ letter: String, color: Color) -> some View {
         Text(letter)
             .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.ink)
             .frame(width: 20, height: 20)
-            .background(color, in: Circle())
-            .overlay(Circle().strokeBorder(Color.receiptPaper, lineWidth: 2))
+            .background(Color.paperClosed, in: Circle())
+            .overlay(Circle().strokeBorder(color, lineWidth: 1.5))
     }
 }
 
@@ -621,14 +614,14 @@ private struct WhoPaidArt: View {
                 initial: String(localized: "Б"), name: String(localized: "Боря"),
                 what: String(localized: "за такси"), sum: String(localized: "300 ₽"),
                 share: String(localized: "по 100 ₽"),
-                color: Color(red: 0.18, green: 0.43, blue: 0.89)
+                color: Color.stamp
             )
             .opacity(shown > 1 ? 1 : 0)
             .offset(y: shown > 1 ? 0 : -16)
 
             Image(systemName: "arrow.down")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.accent.opacity(0.45))
+                .foregroundStyle(Color.positive.opacity(0.45))
                 .opacity(shown > 2 ? 1 : 0)
                 .padding(.vertical, 2)
 
@@ -644,21 +637,21 @@ private struct WhoPaidArt: View {
                     Spacer(minLength: 8)
                     Text(String(localized: "300 ₽"))
                         .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.accentText)
+                        .foregroundStyle(Color.positive)
                 }
 
                 // Сумма долей выписана, чтобы 300 ₽ можно было проверить в уме.
                 HStack {
                     Text(String(localized: "ваша доля: 200 + 100"))
                         .font(.system(size: 13, design: .monospaced))
-                        .foregroundStyle(Color.accentText.opacity(0.75))
+                        .foregroundStyle(Color.positive.opacity(0.75))
                     Spacer(minLength: 0)
                 }
                 .padding(.top, 12)
-                .overlay(alignment: .top) { Rectangle().fill(Color.accent.opacity(0.25)).frame(height: 1) }
+                .overlay(alignment: .top) { Rectangle().fill(Color.positive.opacity(0.25)).frame(height: 1) }
             }
             .padding(16)
-            .background(Color.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Color.positive.opacity(0.11), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
             .opacity(shown > 2 ? 1 : 0)
             .scaleEffect(shown > 2 ? 1 : 0.97)
         }
@@ -711,10 +704,10 @@ private struct WhoPaidArt: View {
                 Text(String(localized: "делим на троих")).font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
                 Text(share)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.accentText)
+                    .foregroundStyle(Color.positive)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.accent.opacity(0.14), in: Capsule())
+                    .background(Color.positive.opacity(0.14), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
                 Spacer(minLength: 0)
             }
             .padding(.top, 12)
@@ -760,7 +753,7 @@ private struct TransfersArt: View {
                     VStack(alignment: .leading, spacing: 8) {
                         payRow(initial: String(localized: "Б"), name: String(localized: "Боре"),
                                note: String(localized: "за такси"), sum: String(localized: "100 ₽"),
-                               color: Color(red: 0.18, green: 0.43, blue: 0.89))
+                               color: Color.stamp)
                         sideNote(String(localized: "Два перевода, два подтверждения"), color: .negative)
                     }
                     .transition(.opacity)
@@ -784,13 +777,13 @@ private struct TransfersArt: View {
                 }
                 Text(withSplitty ? String(localized: "1 перевод") : String(localized: "2 перевода"))
                     .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(withSplitty ? Color.accentText : Color.negative)
+                    .foregroundStyle(withSplitty ? Color.positive : Color.negative)
                 Spacer(minLength: 0)
             }
             .padding(.vertical, 12)
             .background(
-                (withSplitty ? Color.accent : Color.negative).opacity(0.1),
-                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                (withSplitty ? Color.positive : Color.negative).opacity(0.1),
+                in: RoundedRectangle(cornerRadius: 3, style: .continuous)
             )
 
             // Свой сегмент, а не системный Picker: системный тянет чужую
@@ -801,7 +794,7 @@ private struct TransfersArt: View {
                 segmentHalf(String(localized: "Со Splitty"), isOn: withSplitty) { set(true) }
             }
             .padding(4)
-            .background(Color.ink.opacity(0.06), in: Capsule())
+            .background(Color.ink.opacity(0.06), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
             .accessibilityIdentifier("welcomeCompare")
         }
         .padding(18)
@@ -831,7 +824,7 @@ private struct TransfersArt: View {
     }
 
     private func mark(at index: Int) -> Color {
-        if withSplitty { return index == 0 ? Color.accent : Color.hairline }
+        if withSplitty { return index == 0 ? Color.positive : Color.hairline }
         return Color.negative
     }
 
@@ -846,7 +839,7 @@ private struct TransfersArt: View {
     /// переводить» для него исчезает — это и есть сведение долгов.
     private var settledRow: some View {
         HStack(spacing: 14) {
-            welcomeAvatar(String(localized: "Б"), color: Color(red: 0.18, green: 0.43, blue: 0.89).opacity(0.35), size: 46)
+            welcomeAvatar(String(localized: "Б"), color: Color.stamp.opacity(0.35), size: 46)
             VStack(alignment: .leading, spacing: 3) {
                 Text(String(localized: "Боре")).scaledFont(size: 16, weight: .semibold).foregroundStyle(Color.inkSecondary)
                 Text("в расчёте").font(.system(size: 13)).foregroundStyle(Color.inkSecondary)
@@ -854,10 +847,10 @@ private struct TransfersArt: View {
             Spacer(minLength: 8)
             Text(String(localized: "0 ₽"))
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                .foregroundStyle(Color.accentText)
+                .foregroundStyle(Color.positive)
         }
         .padding(16)
-        .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.positive.opacity(0.12), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
     private func payRow(initial: String, name: String, note: String, sum: String, color: Color) -> some View {
@@ -870,7 +863,7 @@ private struct TransfersArt: View {
             Spacer(minLength: 8)
             Text(sum)
                 .font(.system(size: 17, weight: .semibold, design: .monospaced))
-                .foregroundStyle(withSplitty ? Color.accentText : Color.negative)
+                .foregroundStyle(withSplitty ? Color.positive : Color.negative)
                 .contentTransition(.numericText())
         }
         .surfaceCard()
@@ -880,10 +873,10 @@ private struct TransfersArt: View {
         Button(action: action) {
             Text(title)
                 .scaledFont(size: 15, weight: .semibold)
-                .foregroundStyle(isOn ? .white : Color.inkSecondary)
+                .foregroundStyle(isOn ? Color.bg : Color.inkSecondary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 11)
-                .background(isOn ? Color.accent : .clear, in: Capsule())
+                .background(isOn ? Color.ink : .clear, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -893,15 +886,17 @@ private struct TransfersArt: View {
 
 private func welcomeEyebrow(_ text: String) -> some View {
     Text(text)
-        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-        .foregroundStyle(Color.inkSecondary)
+        .receiptLabel()
         .frame(maxWidth: .infinity, alignment: .leading)
 }
 
+/// Человек на иллюстрации: бумажный кружок с инициалом, `color` — обводка,
+/// по ней на соседних кадрах узнаётся тот же участник.
 private func welcomeAvatar(_ letter: String, color: Color, size: CGFloat) -> some View {
     Text(letter)
         .font(.system(size: size * 0.42, weight: .bold))
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.ink)
         .frame(width: size, height: size)
-        .background(color, in: Circle())
+        .background(Color.paperClosed, in: Circle())
+        .overlay(Circle().strokeBorder(color, lineWidth: 1.5))
 }

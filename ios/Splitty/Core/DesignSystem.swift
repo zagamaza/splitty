@@ -28,7 +28,7 @@ extension View {
     func scaledFont(
         size: CGFloat,
         weight: Font.Weight = .regular,
-        design: Font.Design = .rounded,
+        design: Font.Design = .default,
         relativeTo style: Font.TextStyle = .body
     ) -> some View {
         modifier(ScaledFontModifier(size: size, weight: weight, design: design, relativeTo: style))
@@ -37,14 +37,15 @@ extension View {
 
 // MARK: - Карточка-поверхность
 
-/// Премиум-карточка: фон `surface`, скругление 20pt (continuous);
-/// светлая тема — мягкая тень, тёмная — hairline-бордер без тени.
+/// Лист бумаги: фон `surface`, почти прямые углы (3pt), без мягкой тени.
+/// Светлая тема — едва заметная подложка, тёмная — hairline-рамка, чтобы
+/// бумага отделялась от стола.
 struct SurfaceCardModifier: ViewModifier {
     var padding: CGFloat
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: 3, style: .continuous)
         content
             .padding(padding)
             .background(Color.surface, in: shape)
@@ -54,15 +55,15 @@ struct SurfaceCardModifier: ViewModifier {
                 }
             }
             .shadow(
-                color: colorScheme == .dark ? .clear : Color.black.opacity(0.06),
-                radius: 14, x: 0, y: 6
+                color: colorScheme == .dark ? .clear : Color.black.opacity(0.05),
+                radius: 2, x: 0, y: 2
             )
     }
 }
 
 extension View {
-    /// Оформляет содержимое как мягкую карточку на фоне `Color.bg`.
-    /// Использовать для секций-«карточек» вместо системных Form/List-фонов.
+    /// Оформляет содержимое как лист бумаги на столе `Color.bg`.
+    /// Использовать для секций вместо системных Form/List-фонов.
     func surfaceCard(padding: CGFloat = 16) -> some View {
         modifier(SurfaceCardModifier(padding: padding))
     }
@@ -70,21 +71,23 @@ extension View {
 
 // MARK: - Кнопки
 
-/// Основной CTA: pill во всю ширину, высота 54pt, фон `accent`,
-/// белый semibold-текст, pressed — scale 0.98 со spring-анимацией.
+/// Основное действие: прямоугольник во всю ширину (углы 3pt), высота 54pt,
+/// заливка `accent`, текст `onAccent`, pressed — scale 0.98.
 struct PrimaryPillButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaledFont(size: 17, weight: .semibold)
-            .foregroundStyle(.white)
+            .scaledFont(size: 16, weight: .semibold)
+            .multilineTextAlignment(.center)
+            .foregroundStyle(Color.onAccent)
+            .padding(.horizontal, 18)
             .frame(maxWidth: .infinity, minHeight: 54)
             .background(
                 (configuration.isPressed ? Color.accentPressed : Color.accent)
                     .opacity(isEnabled ? 1 : 0.45),
-                in: Capsule()
+                in: RoundedRectangle(cornerRadius: 3, style: .continuous)
             )
             .scaleEffect(!reduceMotion && configuration.isPressed ? 0.98 : 1)
             .animation(.spring(duration: 0.25), value: configuration.isPressed)
@@ -96,8 +99,8 @@ extension ButtonStyle where Self == PrimaryPillButtonStyle {
     static var primaryPill: PrimaryPillButtonStyle { PrimaryPillButtonStyle() }
 }
 
-/// Вторичная кнопка-чип: мягкая серая pill; `isSelected` — акцентная заливка
-/// (для выбора группы/участника в чипах).
+/// Вторичная кнопка-чип: тонкая рамка, углы 3pt; `isSelected` — чернильная
+/// рамка и подложка (выбор группы/участника, фильтры).
 struct SoftChipButtonStyle: ButtonStyle {
     var isSelected: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -108,14 +111,16 @@ struct SoftChipButtonStyle: ButtonStyle {
             // Чип не переносит текст по буквам в тесных строках («Погасить»).
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
-            .foregroundStyle(isSelected ? Color.accent : Color.ink)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .foregroundStyle(Color.ink)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
             .background(
-                isSelected
-                    ? Color.accent.opacity(0.14)
-                    : Color.ink.opacity(configuration.isPressed ? 0.12 : 0.06),
-                in: Capsule()
+                Color.ink.opacity(isSelected ? 0.1 : (configuration.isPressed ? 0.08 : 0)),
+                in: RoundedRectangle(cornerRadius: 3, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .strokeBorder(isSelected ? Color.ink : Color.hairline, lineWidth: 1)
             )
             .scaleEffect(!reduceMotion && configuration.isPressed ? 0.98 : 1)
             .animation(.spring(duration: 0.25), value: configuration.isPressed)
@@ -133,16 +138,16 @@ extension ButtonStyle where Self == SoftChipButtonStyle {
 
 // MARK: - Деньги
 
-/// Сумма в рублях по правилам премиум-дизайна: rounded + monospacedDigit,
+/// Сумма по правилам чека: системный шрифт + monospacedDigit,
 /// семантическая окраска, `.contentTransition(.numericText())` при изменении.
 /// Всегда показывает модуль суммы — знак передаётся цветом/контекстом
 /// (единая конвенция проекта; единственная точка цветового правила денег).
 struct MoneyText: View {
     /// Семантическая роль суммы (определяет цвет).
     enum Role {
-        /// По знаку: `> 0` — accent, `< 0` — negative, `0` — inkSecondary.
+        /// По знаку: `> 0` — positive, `< 0` — negative, `0` — inkSecondary.
         case auto
-        /// «Вам должны»/получено — всегда accent.
+        /// «Вам должны»/получено — всегда positive.
         case positive
         /// «Вы должны»/долг — всегда negative.
         case negative
@@ -182,13 +187,13 @@ struct MoneyText: View {
 
     private var color: Color {
         switch role {
-        case .positive: return .accent
+        case .positive: return .positive
         case .negative: return .negative
         case .neutral: return .ink
         case .auto:
             // Знак берётся у ТОЧНОЙ величины: у округлённой долг 0,25 читается
             // нулём, и честный плюс красился бы «в расчёте».
-            if exactMinor > 0 { return .accent }
+            if exactMinor > 0 { return .positive }
             if exactMinor < 0 { return .negative }
             return .inkSecondary
         }
@@ -240,7 +245,7 @@ struct MoneyTotalsText: View {
             ForEach(Array(totals.dropFirst().enumerated()), id: \.element) { index, total in
                 if index > 0 {
                     Text(verbatim: "·")
-                        .font(.system(size: secondarySize, weight: .semibold, design: .rounded))
+                        .font(.system(size: secondarySize, weight: .semibold, design: .default))
                         .foregroundStyle(Color.inkSecondary)
                 }
                 MoneyText(
@@ -255,13 +260,13 @@ struct MoneyTotalsText: View {
 // MARK: - Заголовок секции
 
 extension View {
-    /// Стиль заголовка секции: 13pt semibold rounded, вторичный цвет.
-    /// Регистр текста НЕ меняет (важно для UI-тестов).
+    /// Заголовок секции — печатный реквизит: моноширинный 12pt, вторичный цвет.
+    /// Регистр текста НЕ меняет (важно для UI-тестов); капс — у `receiptLabel()`.
     func sectionHeaderStyle() -> some View {
         self
-            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+            .scaledFont(size: 12, weight: .medium, design: .monospaced, relativeTo: .footnote)
             .foregroundStyle(Color.inkSecondary)
-            .kerning(0.5)
+            .kerning(0.3)
     }
 }
 

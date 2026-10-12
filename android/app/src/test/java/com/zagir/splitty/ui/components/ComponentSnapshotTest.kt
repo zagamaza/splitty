@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.zagir.splitty.ui.theme.Splitty
@@ -69,4 +71,30 @@ class ComponentSnapshotTest {
     fun toastDark() = snapshot("toast_dark", dark = true) {
         AppToastPill(text = "Саня — это Александр. Запомнил")
     }
+
+    @Composable
+    private fun SampleReceipt() {
+        ReceiptPaper {
+            ReceiptLabel("Позиция / кто платил")
+            ReceiptLine(title = "Дом на выходные", caption = "10 окт. · Маша") {
+                MoneyText(12000, role = MoneyRole.NEUTRAL, size = 15.sp, weight = FontWeight.Medium)
+            }
+            ReceiptLine(title = "Такси к морю", caption = "11 окт. · Кирилл") {
+                MoneyText(1200, role = MoneyRole.NEUTRAL, size = 15.sp, weight = FontWeight.Medium)
+            }
+            ReceiptDivider()
+            ReceiptTotal(label = "Всего") {
+                MoneyText(19200, role = MoneyRole.NEUTRAL, size = 34.sp, weight = FontWeight.Bold)
+            }
+            StatusStamp("ВЫ В РАСЧЁТЕ")
+            TextLinkButton("Все балансы", onClick = {})
+            PrimaryPillButton("Дописать расход", onClick = {})
+        }
+    }
+
+    @Test
+    fun receiptLight() = snapshot("receipt_light", dark = false) { SampleReceipt() }
+
+    @Test
+    fun receiptDark() = snapshot("receipt_dark", dark = true) { SampleReceipt() }
 }

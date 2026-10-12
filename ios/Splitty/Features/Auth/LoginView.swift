@@ -99,7 +99,7 @@ struct LoginView: View {
                 Spacer(minLength: 0)
                 appMark
                 valueProps
-                    .padding(.bottom, 28)
+                    .padding(.bottom, 24)
                 Spacer(minLength: 0)
 
                 VStack(spacing: 10) {
@@ -131,7 +131,7 @@ struct LoginView: View {
         // Знаменатель воронки: сколько человек вообще дошли до экрана входа.
         // Событие анонимное — человека здесь ещё нет.
         .task { Analytics.shared.trackAnonymous(.loginShown, api: session.api) }
-        .tint(Color.accent)
+        .tint(Color.ink)
         .alert(
             "Ошибка",
             isPresented: Binding(
@@ -157,51 +157,50 @@ struct LoginView: View {
     /// Статичный блок, не карусель: он обязан помещаться на маленьком экране
     /// вместе с кнопками входа и при увеличенном системном шрифте.
     private var valueProps: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach(LoginValueProp.all) { prop in
-                valueProp(icon: prop.icon, title: prop.title, detail: prop.detail)
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(LoginValueProp.all.enumerated()), id: \.element.id) { index, prop in
+                if index > 0 { ReceiptDivider().padding(.vertical, 4) }
+                valueProp(number: index + 1, title: prop.title, detail: prop.detail)
             }
         }
-        .padding(.top, 22)
-        .padding(.horizontal, 4)
-        .frame(maxWidth: 380)
+        .receiptPaper(padding: 18)
+        .padding(.top, 20)
+        .frame(maxWidth: 400)
     }
 
-    private func valueProp(icon: String, title: String, detail: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.accentText)
-                .frame(width: 30, height: 30)
-                .background(Color.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    /// Пункт обещания — строка чека: номер позиции реквизитом, текст справа.
+    private func valueProp(number: Int, title: String, detail: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text(verbatim: String(format: "%02d", number))
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.inkSecondary)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .scaledFont(size: 14.5, weight: .semibold)
+                    .scaledFont(size: 15, weight: .semibold)
                     .foregroundStyle(Color.ink)
                 Text(detail)
-                    .scaledFont(size: 12.5, relativeTo: .footnote)
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
     }
 
     /// из кода недоступен, его забирает система.
     private var appMark: some View {
-        VStack(spacing: 14) {
-            Image("AppMark")
-                .resizable()
-                .frame(width: 84, height: 84)
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .shadow(color: .black.opacity(0.14), radius: 14, y: 7)
-                .accessibilityHidden(true)
-
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Общий чек").receiptLabel()
             Text("Splitor")
-                .scaledFont(size: 40, weight: .bold, relativeTo: .title)
-                .foregroundStyle(Color.accent)
+                .scaledFont(size: 48, weight: .heavy, relativeTo: .largeTitle)
+                .kerning(-2)
+                .foregroundStyle(Color.ink)
+                .accessibilityAddTraits(.isHeader)
         }
+        .frame(maxWidth: 400, alignment: .leading)
         #if DEBUG
         // contentShape: тапы ловятся и по пустому месту между строками,
         // иначе попасть надо ровно в глифы.
@@ -232,7 +231,7 @@ struct LoginView: View {
         }
         .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
         .frame(height: 52)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
         .disabled(isLoggingIn)
     }
 
@@ -256,7 +255,7 @@ struct LoginView: View {
         }
         .background(
             Color.telegramBlue,
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 3, style: .continuous)
         )
         .disabled(isLoggingIn)
     }
@@ -282,10 +281,10 @@ struct LoginView: View {
         }
         .background(
             Color.googleSurface,
-            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 3, style: .continuous)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .strokeBorder(Color.googleBorder, lineWidth: 1)
         }
         .disabled(isLoggingIn)
@@ -302,7 +301,8 @@ struct LoginView: View {
                 Text("Или")
                     .foregroundStyle(Color.inkSecondary)
                 Text("войдите по email")
-                    .foregroundStyle(Color.accent)
+                    .foregroundStyle(Color.ink)
+                    .underline()
                     .fontWeight(.semibold)
             }
             .scaledFont(size: 15)
@@ -597,11 +597,11 @@ private struct LoginFieldStyle: ViewModifier {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(
-                Color.bg,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                Color.surface,
+                in: RoundedRectangle(cornerRadius: 3, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
                     .strokeBorder(Color.hairline, lineWidth: 1)
             }
     }

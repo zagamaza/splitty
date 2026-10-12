@@ -709,4 +709,5 @@
     <string name="expense_edit_amounts_unavailable_items">Prima completa le voci qui sopra: chi le divide e quanto costano</string>
     <string name="expense_edit_amounts_unavailable_cents">Il totale ha dei centesimi, ma questo gruppo usa importi interi: correggi le quote nelle voci</string>
     <string name="expense_edit_amounts_unavailable_invalid">Le quote nelle voci non tornano: correggi le voci</string>
+    <string name="brand_receipt_label">Conto comune</string>
 </resources>

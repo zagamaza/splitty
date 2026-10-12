@@ -2,6 +2,7 @@ package com.zagir.splitty.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -14,12 +15,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.zagir.splitty.ui.theme.Splitty
 import androidx.compose.ui.layout.ContentScale
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.data.AvatarStore
@@ -28,42 +28,10 @@ import com.zagir.splitty.data.AvatarStore
 
 /**
  * Кеш аватаров Telegram для всех [GradientAvatar]; null (превью/тесты) —
- * аватары не грузятся, показывается градиент с инициалами.
+ * аватары не грузятся, показываются инициалы.
  * Провайдится в MainActivity.
  */
 val LocalAvatarStore = staticCompositionLocalOf<AvatarStore?> { null }
-
-/**
- * Пастельные пары градиентов (светлый → чуть глубже), подобраны так, чтобы
- * белые инициалы читались; индекс выбирается по id пользователя.
- */
-private val AvatarGradients: List<Pair<Color, Color>> = listOf(
-    Color(0xFF5EC9A7) to Color(0xFF3AA98F), // мята
-    Color(0xFF7FA8EC) to Color(0xFF5B87D8), // голубой
-    Color(0xFFA78BDB) to Color(0xFF8B6FC5), // лаванда
-    Color(0xFFE58BB0) to Color(0xFFD16A96), // розовый
-    Color(0xFFEDA06E) to Color(0xFFDD8452), // персик
-    Color(0xFFD9B45B) to Color(0xFFC49A3C), // песочный
-    Color(0xFF6BBBDF) to Color(0xFF4A9EC7), // небо
-    Color(0xFFE58B7E) to Color(0xFFD16C5D), // коралл
-    Color(0xFF9DBE6C) to Color(0xFF82A650), // оливковый
-    Color(0xFF8E9DBB) to Color(0xFF7183A6), // серо-синий
-)
-
-/**
- * Индекс палитры: биты id перемешиваются (SplitMix64) — иначе «круглые»
- * соседние id (100, 200, 300…) дают один и тот же градиент.
- * Обязан давать те же индексы, что и iOS UserAvatarView.gradientIndex.
- */
-internal fun avatarGradientIndex(userId: Long, paletteSize: Int = AvatarGradients.size): Int {
-    var x = userId.toULong()
-    x = x xor (x shr 30)
-    x *= 0xBF58_476D_1CE4_E5B9uL
-    x = x xor (x shr 27)
-    x *= 0x94D0_49BB_1331_11EBuL
-    x = x xor (x shr 31)
-    return (x % paletteSize.toULong()).toInt()
-}
 
 /** Инициалы: первые буквы первых двух слов displayName; пусто — «?». */
 internal fun avatarInitials(displayName: String): String {
@@ -76,8 +44,8 @@ internal fun avatarInitials(displayName: String): String {
 }
 
 /**
- * Аватар пользователя: круг с мягким градиентом и белыми инициалами.
- * Пастельная пара цветов детерминирована от [User.id] (как в iOS).
+ * Аватар пользователя: бумажный круг с инициалами чернилами (как в iOS):
+ * цвет в чеке остаётся за действием и штампом.
  */
 @Composable
 fun GradientAvatar(
@@ -91,10 +59,10 @@ fun GradientAvatar(
      * Так же гейтит загрузку iOS (`UserAvatarView.avatarUserId = nil`).
      */
     loadsPhoto: Boolean = true,
-    /** Готовая картинка (фото группы из своего хранилища) — вместо градиента. */
+    /** Готовая картинка (фото группы из своего хранилища) — вместо инициалов. */
     photo: ImageBitmap? = null,
 ) {
-    val pair = AvatarGradients[avatarGradientIndex(user.id)]
+    val colors = Splitty.colors
     val store = LocalAvatarStore.current
     val avatar = photo ?: store?.takeIf { loadsPhoto }?.let {
         val images by it.images.collectAsState()
@@ -107,9 +75,8 @@ fun GradientAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(
-                Brush.linearGradient(colors = listOf(pair.first, pair.second))
-            ),
+            .background(colors.paperClosed)
+            .border(1.dp, colors.hairline, CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (avatar != null) {
@@ -122,10 +89,10 @@ fun GradientAvatar(
         } else {
             Text(
                 text = avatarInitials(user.displayName),
-                color = Color.White,
+                color = colors.ink,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = with(androidx.compose.ui.platform.LocalDensity.current) {
-                    (size * 0.4f).toSp()
+                    (size * 0.38f).toSp()
                 },
             )
         }

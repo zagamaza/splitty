@@ -788,4 +788,5 @@
     <string name="expense_edit_amounts_unavailable_items">First finish the items above — who shares them and what they cost</string>
     <string name="expense_edit_amounts_unavailable_cents">The total has cents but this group uses whole amounts — adjust shares in the items</string>
     <string name="expense_edit_amounts_unavailable_invalid">Shares in the items don\'t add up — fix the items</string>
+    <string name="brand_receipt_label">Shared receipt</string>
 </resources>

@@ -43,7 +43,7 @@ func groupsAddMenuActions(hasGroups: Bool) -> [GroupsAddAction] {
     GroupsAddAction.allCases
 }
 
-/// Вкладка «Группы»: hero-карточка общего баланса, карточки групп, архив.
+/// Вкладка «Группы»: сводка остатка, корешки счетов групп, архив.
 struct GroupsListView: View {
     @Environment(SessionStore.self) private var session
     @State private var model = GroupsListViewModel()
@@ -157,8 +157,8 @@ struct GroupsListView: View {
                     archiveRow
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
             .padding(.bottom, 16)
         }
         .background(Color.bg)
@@ -183,32 +183,34 @@ struct GroupsListView: View {
             Button("Создать группу") {
                 isCreatePresented = true
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.accent)
+            .buttonStyle(.primaryPill)
+            .frame(maxWidth: 260)
             Button("Присоединиться по коду") {
                 isJoinPresented = true
             }
-            .tint(Color.accent)
+            .buttonStyle(.textLink)
         }
         .frame(maxWidth: .infinity)
-        .surfaceCard(padding: 8)
+        .receiptPaper(padding: 8)
     }
 
-    /// Hero-карточка: суммарный баланс по всем группам крупной суммой.
-    /// Разные валюты не складываются: основная валюта крупно,
+    /// Сводка по всем группам — реквизит на столе, без карточки: словами,
+    /// кто кому, и сумма. Разные валюты не складываются: основная крупно,
     /// остальные — вторичной строкой (MoneyTotalsText).
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Общий баланс")
-                .sectionHeaderStyle()
-            MoneyTotalsText(totals: model.totals)
-            Text(summarySubtitle)
-                .scaledFont(size: 15)
-                .foregroundStyle(Color.inkSecondary)
+            Text("Общий баланс").receiptLabel()
+            HStack(alignment: .firstTextBaseline) {
+                Text(summarySubtitle)
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                MoneyTotalsText(totals: model.totals, primarySize: 22, alignment: .trailing)
+            }
             freshnessNote
+            ReceiptDivider().padding(.top, 8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard(padding: 20)
     }
 
     /// Подпись о свежести — общая с карточкой группы, друзьями и активностью.
@@ -256,91 +258,87 @@ struct GroupsListView: View {
         }
     }
 
-    /// «Архив» — тихая строка внизу списка, без карточки.
+    /// «Архив» — закрытые счета: тихая подчёркнутая ссылка под корешками.
     private var archiveRow: some View {
         NavigationLink(value: GroupsRoute.archive) {
-            HStack(spacing: 10) {
-                Image(systemName: "archivebox")
+            HStack(spacing: 8) {
                 Text("Архив")
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .opacity(0.6)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .accessibilityHidden(true)
             }
-            .scaledFont(size: 15, weight: .medium)
-            .foregroundStyle(Color.inkSecondary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.textLink)
+        .padding(.top, 4)
     }
 }
 
 // MARK: - Карточка группы
 
+/// Корешок счёта группы: реквизит (дата · участники), название, остаток
+/// словами и суммой. Пунктир и вырезы снизу — отрывная часть ленты.
 private struct GroupCardRow: View {
     let room: RoomSummary
     var showsBalance = true
     /// true — в outbox есть неотправленные операции этой группы (бейдж).
     var hasLocalOperations = false
+    var closed = false
 
     var body: some View {
-        HStack(spacing: 14) {
-            GroupAvatarView(roomId: room.id, name: room.name, size: 46, avatarFileId: room.avatarFileId)
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 5) {
-                    Text(room.name)
-                        .scaledFont(size: 16, weight: .semibold)
-                        .foregroundStyle(Color.ink)
-                        .lineLimit(1)
-                    if hasLocalOperations {
-                        Image(systemName: "icloud.slash")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.inkSecondary)
-                            .accessibilityLabel("Есть неотправленные операции")
-                    }
-                    if let unread = MainTabView.badgeLabel(for: room.unreadCount) {
-                        UnreadBadge(text: unread)
-                            .accessibilityLabel("Новых событий: \(unread)")
-                    }
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(verbatim: DateFmt.dayMonth(room.createdAt)).receiptLabel()
+                Spacer(minLength: 8)
+                if hasLocalOperations {
+                    Image(systemName: "icloud.slash")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.inkSecondary)
+                        .accessibilityLabel("Есть неотправленные операции")
                 }
-                Text(memberCountText(room.memberCount))
-                    .font(.system(size: 13))
-                    .foregroundStyle(Color.inkSecondary)
+                if let unread = MainTabView.badgeLabel(for: room.unreadCount) {
+                    UnreadBadge(text: unread)
+                        .accessibilityLabel("Новых событий: \(unread)")
+                }
+                Text(memberCountText(room.memberCount)).receiptLabel()
             }
-            Spacer(minLength: 8)
+            Text(room.name)
+                .scaledFont(size: 19, weight: .semibold)
+                .foregroundStyle(Color.ink)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
             if showsBalance {
-                trailingBalance
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.inkSecondary.opacity(0.6))
+                ReceiptDivider().padding(.top, 2)
+                balanceRow
             }
         }
         .contentShape(Rectangle())
-        .surfaceCard()
+        .receiptStub(closed: closed)
     }
 
     @ViewBuilder
-    private var trailingBalance: some View {
-        if room.debtsUnavailable {
-            // Долги неисчислимы (легаси-данные бота): сервер шлёт myBalance=0 —
-            // без этой ветки строка утверждала бы «все в расчёте», хотя долги есть.
-            Text(Glossary.debtsUnavailableShort)
-                .font(.system(size: 14))
-                .foregroundStyle(Color.inkSecondary)
-        } else if room.exactMyBalanceMinor == 0 {
-            Text(Glossary.settled)
-                .font(.system(size: 14))
-                .foregroundStyle(Color.inkSecondary)
-        } else {
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(Glossary.balanceCaption(room.exactMyBalanceMinor))
-                    .font(.caption2)
+    private var balanceRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            if room.debtsUnavailable {
+                // Долги неисчислимы (легаси-данные бота): сервер шлёт myBalance=0 —
+                // без этой ветки строка утверждала бы «все в расчёте», хотя долги есть.
+                Text(Glossary.debtsUnavailableShort)
+                    .scaledFont(size: 14)
                     .foregroundStyle(Color.inkSecondary)
-                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 15, currency: room.currency)
+                Spacer(minLength: 0)
+            } else if room.exactMyBalanceMinor == 0 {
+                Text(Glossary.settled)
+                    .scaledFont(size: 14)
+                    .foregroundStyle(Color.inkSecondary)
+                Spacer(minLength: 0)
+            } else {
+                Text(Glossary.balanceCaption(room.exactMyBalanceMinor))
+                    .scaledFont(size: 14)
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 15, weight: .bold, currency: room.currency)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -352,11 +350,11 @@ private struct UnreadBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(.white)
+            .font(.system(size: 11, weight: .bold, design: .monospaced))
+            .foregroundStyle(Color.onAccent)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.accent, in: Capsule())
+            .background(Color.accent, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
     }
 }
 
@@ -426,24 +424,11 @@ private struct ArchivedGroupsView: View {
                     // Кнопка «Разархивировать» — СОСЕД NavigationLink, а не
                     // часть его label: вложенная кнопка конфликтовала хит-зоной
                     // с переходом в группу.
-                    HStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 4) {
                         // Архивная группа открывается так же, как обычная
                         // (внутри — read-only бейдж «Группа в архиве»).
                         NavigationLink(value: GroupsRoute.room(id: room.id)) {
-                            HStack(spacing: 14) {
-                                GroupAvatarView(roomId: room.id, name: room.name, size: 46, avatarFileId: room.avatarFileId)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(room.name)
-                                        .scaledFont(size: 16, weight: .semibold)
-                                        .foregroundStyle(Color.ink)
-                                        .lineLimit(1)
-                                    Text(memberCountText(room.memberCount))
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Color.inkSecondary)
-                                }
-                                Spacer(minLength: 8)
-                            }
-                            .contentShape(Rectangle())
+                            GroupCardRow(room: room, showsBalance: false, closed: true)
                         }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -454,18 +439,20 @@ private struct ArchivedGroupsView: View {
                                 }
                             }
                         }
+                        // Кнопка «Разархивировать» — СОСЕД NavigationLink, а не
+                        // часть его label: вложенная кнопка конфликтовала хит-зоной
+                        // с переходом в группу.
                         Button("Разархивировать") {
                             Task {
                                 await model.unarchive(repo: session.repo, roomId: room.id)
                                 session.noteDataChanged()
                             }
                         }
-                        .buttonStyle(.softChip)
+                        .buttonStyle(.textLink)
                     }
-                    .surfaceCard()
                 }
             }
-            .padding(16)
+            .padding(20)
         }
         .background(Color.bg)
         // Свой alert: корневой экран закрыт пушем, его alert не показывается —

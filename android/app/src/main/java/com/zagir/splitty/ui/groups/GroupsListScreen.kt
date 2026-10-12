@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.TextLinkButton
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptStub
+import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.core.ui.resolve
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
@@ -231,7 +235,7 @@ private fun RoomsList(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (rooms.isEmpty()) {
@@ -245,8 +249,8 @@ private fun RoomsList(
                             text = stringResource(R.string.groups_create_group),
                             onClick = onCreate,
                         )
-                        Spacer(Modifier.height(10.dp))
-                        SoftChip(
+                        Spacer(Modifier.height(4.dp))
+                        TextLinkButton(
                             text = stringResource(R.string.groups_join_by_code),
                             onClick = onJoin,
                         )
@@ -303,26 +307,116 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
         primarySign < 0 -> stringResource(R.string.group_you_owe)
         else -> stringResource(R.string.groups_all_settled)
     }
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 20.dp) {
-        SectionHeader(stringResource(R.string.groups_total_balance))
+    // Реквизит на столе, без карточки: словами — кто кому, справа сумма.
+    Column(Modifier.fillMaxWidth()) {
+        ReceiptLabel(stringResource(R.string.groups_total_balance))
         Spacer(Modifier.height(6.dp))
-        MoneyTotalsText(totals = totals)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = subtitle,
-            fontSize = 15.sp,
-            color = Splitty.colors.inkSecondary,
-        )
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = subtitle,
+                modifier = Modifier.weight(1f),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Splitty.colors.ink,
+            )
+            MoneyTotalsText(totals = totals, primarySize = 22.sp, horizontalAlignment = Alignment.End)
+        }
         // Подпись о свежести: без неё человек смотрел на старые суммы, ничего
         // об этом не зная, — и «неправильный» баланс выглядел как ошибка расчёта
         if (freshness.fromCache) {
             Spacer(Modifier.height(6.dp))
             CacheNote(freshness = freshness, tag = "groups_cache_note")
         }
+        Spacer(Modifier.height(14.dp))
+        ReceiptDivider()
     }
 }
 
-/** Карточка группы: аватар-градиент, название, участники, баланс, chevron. */
+/**
+ * Корешок счёта группы: реквизит (дата · участники), название, остаток словами
+ * и суммой. Пунктир и вырезы снизу — отрывная часть ленты (паритет iOS).
+ */
+@Composable
+internal fun GroupStub(
+    room: RoomSummary,
+    hasPending: Boolean = false,
+    showsBalance: Boolean = true,
+    closed: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Splitty.colors
+    ReceiptStub(modifier = modifier, closed = closed) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ReceiptLabel(GroupsDateFmt.dayMonth(room.createdAt), Modifier.weight(1f))
+            // Есть неотправленные офлайн-операции в этой группе.
+            if (hasPending) {
+                Icon(
+                    imageVector = Icons.Outlined.CloudOff,
+                    contentDescription = stringResource(R.string.group_card_pending_badge),
+                    tint = colors.inkSecondary,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+            // Непрочитанные события этой группы. Текст готовит общий с
+            // бейджем вкладки badgeLabel: одно и то же число не должно
+            // выглядеть на двух экранах по-разному.
+            val unread = badgeLabel(room.unreadCount, stringResource(R.string.notifications_badge_overflow))
+            if (unread != null) UnreadBadge(unread)
+            ReceiptLabel(memberCountText(room.memberCount))
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = room.name,
+            fontSize = 19.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = colors.ink,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (showsBalance) {
+            Spacer(Modifier.height(12.dp))
+            ReceiptDivider()
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                when {
+                    // Долги неисчислимы (легаси-данные): честная метка вместо
+                    // «в расчёте» — myBalance у таких комнат всегда 0.
+                    room.debtsUnavailable -> Text(
+                        text = stringResource(R.string.groups_row_debts_unavailable),
+                        fontSize = 14.sp,
+                        color = colors.inkSecondary,
+                    )
+                    room.exactMyBalanceMinor == 0L -> Text(
+                        text = stringResource(R.string.groups_row_settled),
+                        fontSize = 14.sp,
+                        color = colors.inkSecondary,
+                    )
+                    else -> {
+                        Text(
+                            text = stringResource(
+                                if (room.exactMyBalanceMinor > 0) R.string.groups_row_owed else R.string.groups_row_owes
+                            ),
+                            modifier = Modifier.weight(1f),
+                            fontSize = 14.sp,
+                            color = colors.ink,
+                        )
+                        MoneyText(
+                            room.myBalance,
+                            exactMinor = room.exactMyBalanceMinor,
+                            size = 15.sp,
+                            weight = FontWeight.Bold,
+                            currency = room.currency,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun GroupCard(
     room: RoomSummary,
@@ -330,103 +424,17 @@ private fun GroupCard(
     onClick: () -> Unit,
     onArchive: () -> Unit,
 ) {
-    val colors = Splitty.colors
-    // Долгое зажатие вместо свайпа: карточки лежат в LazyColumn как обычные
+    // Долгое зажатие вместо свайпа: корешки лежат в LazyColumn как обычные
     // элементы, и свайп пришлось бы городить руками поверх горизонтальных
     // жестов. Меню — паритет с iOS, где стоит .contextMenu.
     var isMenuOpen by remember { mutableStateOf(false) }
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .combinedClickable(onClick = onClick, onLongClick = { isMenuOpen = true })
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            GroupAvatar(roomId = room.id, name = room.name, size = 46.dp, avatarFileId = room.avatarFileId)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = room.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    // Есть неотправленные офлайн-операции в этой группе.
-                    if (hasPending) {
-                        Icon(
-                            imageVector = Icons.Outlined.CloudOff,
-                            contentDescription = stringResource(R.string.group_card_pending_badge),
-                            tint = colors.inkSecondary,
-                            modifier = Modifier.size(15.dp),
-                        )
-                    }
-                    // Непрочитанные события этой группы. Текст готовит общий с
-                    // бейджем вкладки badgeLabel: одно и то же число не должно
-                    // выглядеть на двух экранах по-разному.
-                    val unread = badgeLabel(
-                        room.unreadCount,
-                        stringResource(R.string.notifications_badge_overflow),
-                    )
-                    if (unread != null) {
-                        UnreadBadge(unread)
-                    }
-                }
-                Text(
-                    text = memberCountText(room.memberCount),
-                    fontSize = 13.sp,
-                    color = colors.inkSecondary,
-                )
-            }
-            if (room.debtsUnavailable) {
-                // Долги неисчислимы (легаси-данные): честная метка вместо
-                // «в расчёте» — myBalance у таких комнат всегда 0.
-                Text(
-                    text = stringResource(R.string.groups_row_debts_unavailable),
-                    fontSize = 13.sp,
-                    color = colors.inkSecondary,
-                )
-            } else if (room.exactMyBalanceMinor == 0L) {
-                Text(
-                    text = stringResource(R.string.groups_row_settled),
-                    fontSize = 14.sp,
-                    color = colors.inkSecondary,
-                )
-            } else {
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = stringResource(
-                            if (room.exactMyBalanceMinor > 0) R.string.groups_row_owed else R.string.groups_row_owes
-                        ),
-                        fontSize = 11.sp,
-                        color = colors.inkSecondary,
-                    )
-                    MoneyText(
-                        room.myBalance,
-                        exactMinor = room.exactMyBalanceMinor,
-                        size = 15.sp,
-                        currency = room.currency,
-                    )
-                }
-            }
-            ChevronIcon()
-        }
-        // Меню якорится к карточке: DropdownMenu внутри SurfaceCard всплывает
-        // там, где человек держал палец.
+    Box {
+        GroupStub(
+            room = room,
+            hasPending = hasPending,
+            modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = { isMenuOpen = true }),
+        )
+        // Меню якорится к корешку: всплывает там, где человек держал палец.
         DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.groups_archive_action)) },
@@ -451,43 +459,20 @@ private fun UnreadBadge(text: String) {
         text = text,
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
-        color = Color.White,
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        color = colors.onAccent,
         modifier = Modifier
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(2.dp))
             .background(colors.accent)
             .padding(horizontal = 6.dp, vertical = 2.dp)
             .semantics { contentDescription = description },
     )
 }
 
-/** «Архив» — тихая строка внизу списка, без карточки. */
+/** «Архив» — закрытые счета: тихая подчёркнутая ссылка под корешками. */
 @Composable
 private fun ArchiveRow(onClick: () -> Unit) {
-    val colors = Splitty.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Archive,
-            contentDescription = null,
-            tint = colors.inkSecondary,
-            modifier = Modifier.size(20.dp),
-        )
-        Text(
-            text = stringResource(R.string.groups_archive),
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            color = colors.inkSecondary,
-        )
-        Spacer(Modifier.weight(1f))
-        ChevronIcon()
-    }
+    TextLinkButton(text = stringResource(R.string.groups_archive) + " ↗", onClick = onClick)
 }
 
 // MARK: - Архив
@@ -556,8 +541,8 @@ fun ArchivedGroupsScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    contentPadding = PaddingValues(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (current.value.isEmpty()) {
                         item(key = "empty") {
@@ -585,6 +570,11 @@ fun ArchivedGroupsScreen(
     GroupsAlertDialog(alertMessage, viewModel::dismissAlert)
 }
 
+/**
+ * Закрытый счёт: корешок на бумаге закрытого счёта. «Разархивировать» —
+ * СОСЕД, а не часть clickable-зоны (иначе хит-зона конфликтует с переходом
+ * в группу; порт iOS ArchivedGroupsView).
+ */
 @Composable
 private fun ArchivedGroupCard(
     room: RoomSummary,
@@ -592,52 +582,17 @@ private fun ArchivedGroupCard(
     onOpen: () -> Unit,
     onUnarchive: () -> Unit,
 ) {
-    val colors = Splitty.colors
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Открытие группы — только по блоку аватар+имя: «Разархивировать» —
-            // СОСЕД, а не часть clickable-зоны (иначе хит-зона чипа конфликтует
-            // с переходом в группу; порт iOS ArchivedGroupsView).
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable(onClick = onOpen)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GroupAvatar(roomId = room.id, name = room.name, size = 46.dp, avatarFileId = room.avatarFileId)
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text(
-                        text = room.name,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = memberCountText(room.memberCount),
-                        fontSize = 13.sp,
-                        color = colors.inkSecondary,
-                    )
-                }
-            }
-            SoftChip(
-                text = stringResource(R.string.groups_unarchive),
-                onClick = { if (!isMutating) onUnarchive() },
-            )
-        }
+    Column(Modifier.fillMaxWidth()) {
+        GroupStub(
+            room = room,
+            showsBalance = false,
+            closed = true,
+            modifier = Modifier.clickable(onClick = onOpen),
+        )
+        TextLinkButton(
+            text = stringResource(R.string.groups_unarchive),
+            onClick = { if (!isMutating) onUnarchive() },
+        )
     }
 }
 
