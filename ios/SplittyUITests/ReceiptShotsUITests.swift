@@ -6,18 +6,27 @@ import XCTest
 ///
 /// Запуск: бэкенд на 127.0.0.1:7171 с API_DEV_AUTH=true и `make seed`.
 /// Картинки — в `RECEIPT_SHOTS_DIR` (по умолчанию /tmp/receipt-shots);
-/// тёмная тема — `RECEIPT_SHOTS_DARK=1`.
+/// тёмная тема — `RECEIPT_SHOTS_DARK=1`, крупный текст — `RECEIPT_SHOTS_XL=1`
+/// (через xcodebuild — с префиксом `TEST_RUNNER_`).
 final class ReceiptShotsUITests: XCTestCase {
     private var app: XCUIApplication!
     private let dir = ProcessInfo.processInfo.environment["RECEIPT_SHOTS_DIR"] ?? "/tmp/receipt-shots"
-    private var suffix: String { ProcessInfo.processInfo.environment["RECEIPT_SHOTS_DARK"] == "1" ? "-dark" : "" }
+    private var env: [String: String] { ProcessInfo.processInfo.environment }
+    private var suffix: String {
+        (env["RECEIPT_SHOTS_DARK"] == "1" ? "-dark" : "") + (env["RECEIPT_SHOTS_XL"] == "1" ? "-xl" : "")
+            + (env["RECEIPT_SHOTS_LANG"].map { "-\($0)" } ?? "")
+    }
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = makeApp()
-        app.launchArguments += ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU"]
-        if ProcessInfo.processInfo.environment["RECEIPT_SHOTS_DARK"] == "1" {
-            app.launchArguments += ["-AppleInterfaceStyle", "Dark"]
+        let lang = env["RECEIPT_SHOTS_LANG"] ?? "ru"
+        app.launchArguments += ["-AppleLanguages", "(\(lang))", "-AppleLocale", lang]
+        if env["RECEIPT_SHOTS_DARK"] == "1" {
+            app.launchArguments += ["-splitty.theme", "dark"]
+        }
+        if env["RECEIPT_SHOTS_XL"] == "1" {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
         }
         app.launch()
     }
@@ -25,7 +34,8 @@ final class ReceiptShotsUITests: XCTestCase {
     private func shot(_ name: String) {
         sleep(1)
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-        let url = URL(fileURLWithPath: dir).appendingPathComponent("ios-\(name)\(suffix).png")
+        let device = env["RECEIPT_SHOTS_DEVICE"].map { "-\($0)" } ?? ""
+        let url = URL(fileURLWithPath: dir).appendingPathComponent("ios-\(name)\(suffix)\(device).png")
         try? XCUIScreen.main.screenshot().pngRepresentation.write(to: url)
     }
 
@@ -109,5 +119,30 @@ final class ReceiptShotsUITests: XCTestCase {
                 shot("14-create-group")
             }
         }
+    }
+
+    /// Проход для других языков: вкладки и разделы — по позиции, а не по
+    /// русским подписям. Вход по email — те же поля, у них нет перевода в тесте,
+    /// поэтому язык меняется уже после входа (сессия переживает перезапуск).
+    func testGroupInLanguage() throws {
+        let lang = app.launchArguments
+        app.terminate()
+        let ru = makeApp()
+        ru.launchArguments += ["-AppleLanguages", "(ru)", "-AppleLocale", "ru_RU"]
+        ru.launch()
+        loginIfNeeded(ru)
+        ru.terminate()
+        app = makeApp()
+        app.launchArguments = lang
+        app.launch()
+        let tabs = app.tabBars.firstMatch
+        XCTAssertTrue(tabs.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        tabs.buttons.element(boundBy: 1).tap()
+        shot("02-groups")
+        let room = app.staticTexts["Поездка в Стамбул"]
+        XCTAssertTrue(room.waitForExistence(timeout: 10))
+        room.tap()
+        sleep(2)
+        shot("03-group")
     }
 }

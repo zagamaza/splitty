@@ -202,9 +202,13 @@ struct MoneyText: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        // Сумма не переносится никогда: «38 / 700 / ₽» в три строки читается
+        // как три числа. При крупном системном шрифте она ужимается.
         Text(money(minor: abs(exactMinor), currency: currency))
             .scaledFont(size: size, weight: weight)
             .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
             .foregroundStyle(color)
             .contentTransition(reduceMotion ? .identity : .numericText(value: Double(amount)))
             .animation(.spring(duration: 0.35), value: amount)

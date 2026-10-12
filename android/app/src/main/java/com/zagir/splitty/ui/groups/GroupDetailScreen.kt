@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.isLargeFontScale
 import com.zagir.splitty.ui.components.ReceiptPaperEnd
 import com.zagir.splitty.ui.components.onReceiptPaper
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -691,13 +692,20 @@ private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ReceiptLabel(stringResource(R.string.receipt_your_balance), Modifier.weight(1f), fontSize = 10.sp)
+        // На крупном шрифте реквизит и подпись вместе не помещаются — остаётся
+        // подпись: без неё сумма не говорит, кто кому должен (паритет iOS).
+        if (isLargeFontScale()) {
+            Spacer(Modifier.weight(1f, fill = false))
+        } else {
+            ReceiptLabel(stringResource(R.string.receipt_your_balance), Modifier.weight(1f), fontSize = 10.sp)
+        }
         when {
             room.debtsUnavailable -> Text(stringResource(R.string.groups_row_debts_unavailable), fontSize = 14.sp, color = colors.inkSecondary)
             room.exactMyBalanceMinor == 0L -> Text(stringResource(R.string.groups_row_settled), fontSize = 14.sp, color = colors.inkSecondary)
             else -> {
                 Text(
                     stringResource(if (room.exactMyBalanceMinor > 0) R.string.groups_row_owed else R.string.groups_row_owes),
+                    modifier = if (isLargeFontScale()) Modifier.weight(1f) else Modifier,
                     fontSize = 14.sp,
                     color = colors.ink,
                 )
@@ -805,10 +813,11 @@ private fun DebtHeroCard(
         if (freshness.fromCache) {
             CacheNote(freshness = freshness, tag = "group_cache_note")
         }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        // Расчёт живёт рядом с остатком, а не в общем ряду кнопок. На крупном
+        // шрифте две ссылки в строку не помещаются — тогда одна под другой.
+        val links: @Composable () -> Unit = {
             TextLinkButton(stringResource(R.string.receipt_all_balances), onClick = onAllBalances)
-            Spacer(Modifier.weight(1f))
-            // Расчёт живёт рядом с остатком, а не в общем ряду кнопок.
+            if (!isLargeFontScale()) Spacer(Modifier.weight(1f))
             if (canSettle && onSettleUp != null) {
                 TextLinkButton(
                     text = stringResource(R.string.receipt_settle_up),
@@ -817,12 +826,30 @@ private fun DebtHeroCard(
                 )
             }
         }
+        if (isLargeFontScale()) {
+            Column { links() }
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { links() }
+        }
     }
 }
 
 /** Остаток словами крупно и суммой справа: направление долга читается текстом. */
 @Composable
 private fun BalanceStatement(words: String, room: RoomDetail) {
+    if (isLargeFontScale()) {
+        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = words,
+                fontSize = 22.sp,
+                lineHeight = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Splitty.colors.ink,
+            )
+            MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 22.sp, weight = FontWeight.ExtraBold, currency = room.currency)
+        }
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.Top,
@@ -1165,19 +1192,16 @@ private fun OperationRow(
         else -> date + " · " + operation.donor.displayName
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 10.dp)
-            .semantics(mergeDescendants = true) {},
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
+    // На крупном шрифте суммы уходят под название: в одну строку с ним
+    // название обрезалось до пары букв.
+    val large = isLargeFontScale()
+    val rowModifier = modifier
+        .fillMaxWidth()
+        .clickable(onClick = onClick)
+        .padding(horizontal = 22.dp, vertical = 10.dp)
+        .semantics(mergeDescendants = true) {}
+    val titleBlock: @Composable (Modifier) -> Unit = { m ->
+        Column(modifier = m, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1186,7 +1210,7 @@ private fun OperationRow(
                     text = title,
                     fontSize = 15.sp,
                     color = colors.ink,
-                    maxLines = 2,
+                    maxLines = if (large) 4 else 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
@@ -1203,11 +1227,16 @@ private fun OperationRow(
                 text = caption,
                 fontSize = 12.sp,
                 color = colors.inkSecondary,
-                maxLines = 1,
+                maxLines = if (large) 2 else 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    }
+    val amounts: @Composable () -> Unit = {
+        Column(
+            horizontalAlignment = if (large) Alignment.Start else Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
             MoneyText(
                 operation.sum,
                 exactMinor = operation.exactMinor,
@@ -1249,6 +1278,21 @@ private fun OperationRow(
                     )
                 }
             }
+        }
+    }
+    if (large) {
+        Column(rowModifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            titleBlock(Modifier.fillMaxWidth())
+            amounts()
+        }
+    } else {
+        Row(
+            modifier = rowModifier,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            titleBlock(Modifier.weight(1f))
+            amounts()
         }
     }
 }

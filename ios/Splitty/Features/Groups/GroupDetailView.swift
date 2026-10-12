@@ -25,6 +25,7 @@ struct GroupDetailView: View {
     /// Сводка документа уехала за верх экрана: внизу показывается её короткая
     /// строка, чтобы остаток и расчёт не терялись за длинной историей.
     @State private var isSummaryScrolledAway = false
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// Локальная запись outbox, открытая на редактирование (sheet).
     @State private var editingEntry: OutboxEntry?
     /// Задача перезагрузки по dataVersion: держим ссылку и отменяем прежнюю —
@@ -282,11 +283,18 @@ struct GroupDetailView: View {
     private func headerCard(room: RoomDetail, meId: Int) -> some View {
         let canSettle = !model.debtsInvolving(meId).isEmpty
         return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Всего потрачено").receiptLabel()
-                Spacer(minLength: 8)
-                MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
-                          size: 32, weight: .heavy, currency: room.currency)
+            // При крупном шрифте подпись и сумма в строку не влезают —
+            // тогда столбиком, сумма во всю ширину.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Всего потрачено").receiptLabel().fixedSize()
+                    Spacer(minLength: 8)
+                    totalSpentText(room)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Всего потрачено").receiptLabel()
+                    totalSpentText(room)
+                }
             }
             .accessibilityElement(children: .combine)
             HStack(alignment: .firstTextBaseline) {
@@ -331,6 +339,12 @@ struct GroupDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func totalSpentText(_ room: RoomDetail) -> some View {
+        MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
+                  size: 32, weight: .heavy, currency: room.currency)
+            .fixedSize()
     }
 
     /// Погашения офлайн не работают (зафиксированный дизайн v1).
@@ -395,14 +409,24 @@ struct GroupDetailView: View {
     /// Остаток словами крупно и суммой справа: направление долга читается
     /// текстом, цвет его только подкрепляет.
     private func balanceStatement(_ words: Text, room: RoomDetail) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            words
-                .scaledFont(size: 22, weight: .heavy, relativeTo: .title3)
-                .kerning(-0.5)
-                .foregroundStyle(Color.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 8)
-            MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 22, weight: .heavy, currency: room.currency)
+        let wordsView = words
+            .scaledFont(size: 22, weight: .heavy, relativeTo: .title3)
+            .kerning(-0.5)
+            .foregroundStyle(Color.ink)
+            .fixedSize(horizontal: false, vertical: true)
+        let amount = MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 22,
+                               weight: .heavy, currency: room.currency)
+            .fixedSize()
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                wordsView
+                Spacer(minLength: 8)
+                amount
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                wordsView
+                amount
+            }
         }
         .accessibilityElement(children: .combine)
     }
@@ -508,8 +532,13 @@ struct GroupDetailView: View {
             tusaTab = .balances
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("Ваш остаток").receiptLabel(size: 10)
-                Spacer(minLength: 8)
+                // На крупном шрифте реквизит и подпись вместе не помещаются —
+                // остаётся подпись: без неё сумма не говорит, кто кому должен.
+                if !typeSize.isAccessibilitySize {
+                    Text("Ваш остаток").receiptLabel(size: 10)
+                        .fixedSize()
+                    Spacer(minLength: 8)
+                }
                 if room.debtsUnavailable {
                     Text(Glossary.debtsUnavailableShort)
                         .scaledFont(size: 14)
@@ -522,7 +551,10 @@ struct GroupDetailView: View {
                     Text(Glossary.balanceCaption(room.exactMyBalanceMinor))
                         .scaledFont(size: 14)
                         .foregroundStyle(Color.ink)
+                        .fixedSize()
+                    if typeSize.isAccessibilitySize { Spacer(minLength: 8) }
                     MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 15, weight: .bold, currency: room.currency)
+                        .layoutPriority(2)
                 }
             }
             .padding(.horizontal, 14)
@@ -642,9 +674,15 @@ private struct OperationRow: View {
     let operation: Operation
     let currentUserId: Int
     let currency: String
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        // На крупном системном шрифте суммы уходят под название: в одну строку
+        // с ним «вы одолжили» рвалось посреди слова.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 12))
+        layout {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 5) {
                     Text(title)
@@ -661,11 +699,12 @@ private struct OperationRow: View {
                 Text(caption)
                     .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundStyle(Color.inkSecondary)
-                    .lineLimit(1)
+                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
             }
-            Spacer(minLength: 8)
+            if !typeSize.isAccessibilitySize { Spacer(minLength: 8) }
             trailing
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
@@ -711,7 +750,7 @@ private struct OperationRow: View {
     }
 
     private var trailing: some View {
-        VStack(alignment: .trailing, spacing: 3) {
+        VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
             MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 15,
                       weight: operation.isDebtRepayment ? .regular : .medium, currency: currency)
             if !operation.isDebtRepayment {
@@ -727,6 +766,7 @@ private struct OperationRow: View {
                 Text(netMinor > 0 ? "вы одолжили" : "вы должны")
                     .scaledFont(size: 11, relativeTo: .caption2)
                     .foregroundStyle(Color.inkSecondary)
+                    .fixedSize()
                 MoneyText(net, exactMinor: netMinor, size: 11, weight: .semibold, currency: currency)
             }
         } else if myNet != nil {

@@ -291,10 +291,10 @@
 - Modify: `ios/.../Groups/GroupBalancesView.swift`, `GroupTotalsView.swift`, `OperationDetailView.swift`
 - Modify: `android/.../groups/GroupDetailScreen.kt` (`GroupBalancesTab`), `GroupDashboardScreen.kt`, `GroupDashboardCharts.kt`, `OperationDetailScreen.kt`
 
-- [ ] балансы — строки обязательств словами + план переводов на бумаге
-- [ ] итоги — итоговая часть документа, графики в новой палитре
-- [ ] операция — развёрнутый чек: позиции, доли, сбор, плательщик; правка/удаление как сейчас
-- [ ] тесты; прогнать
+- [x] балансы — строки обязательств словами + план переводов на бумаге
+- [x] итоги — итоговая часть документа, графики в новой палитре
+- [x] операция — развёрнутый чек: позиции, доли, сбор, плательщик; правка/удаление как сейчас
+- [x] тесты; прогнать
 
 ### Task 12: Создание, вход по коду, приглашения, настройки тусы
 
@@ -302,9 +302,9 @@
 - Modify: `ios/.../Groups/CreateGroupView.swift`, `JoinGroupView.swift`, `InviteGroupView.swift`, `InviteFriendView.swift`, `GroupSettingsView.swift`
 - Modify: `android/.../groups/GroupsListScreen.kt` (листы), `GroupDetailScreen.kt` (`InviteBottomSheet`, `InviteFriendsSheet`, `GroupSettingsTab`)
 
-- [ ] короткие формы на бумаге, нативные поля, `action` и текстовые ссылки
-- [ ] QR и ссылки приглашения — реальные, без декоративного штрихкода
-- [ ] тесты; прогнать
+- [x] короткие формы на бумаге, нативные поля, `action` и текстовые ссылки
+- [x] QR и ссылки приглашения — реальные, без декоративного штрихкода
+- [x] тесты; прогнать
 
 ### Task 13: Друзья и лента уведомлений
 
@@ -312,9 +312,9 @@
 - Modify: `ios/.../Friends/FriendsListView.swift`, `FriendDetailView.swift`, `ios/.../Activity/ActivityView.swift`
 - Modify: `android/.../friends/FriendsListScreen.kt`, `FriendDetailScreen.kt`, `android/.../activity/ActivityScreen.kt`
 
-- [ ] друзья — люди и общие счета строками, долги по валютам без суммирования
-- [ ] лента — журнал записей по дням, непрочитанные — явной меткой
-- [ ] тесты; прогнать
+- [x] друзья — люди и общие счета строками, долги по валютам без суммирования
+- [x] лента — журнал записей по дням, непрочитанные — явной меткой
+- [x] тесты; прогнать
 
 ### Task 14: Профиль, пароль, пуши, Splitor Plus
 
@@ -322,16 +322,18 @@
 - Modify: `ios/.../Account/AccountView.swift`, `ChangePasswordSheet.swift`, `NotificationSettingsView.swift`, `ios/.../Paywall/PaywallView.swift`
 - Modify: `android/.../profile/ProfileScreen.kt`, `NotificationSettingsScreen.kt`, `android/.../paywall/PaywallSheet.kt`
 
-- [ ] профиль и настройки — компактные нативные формы в палитре чека
-- [ ] Plus — бумага с реальными ценами/сроками/лимитами из StoreKit/Billing, ссылки Terms/Privacy (3.1.2(c)), восстановление покупки
-- [ ] тесты (`SubscriptionRestoreTests` и др.); прогнать
+- [x] профиль и настройки — компактные нативные формы в палитре чека
+- [x] Plus — бумага с реальными ценами/сроками/лимитами из StoreKit/Billing, ссылки Terms/Privacy (3.1.2(c)), восстановление покупки
+- [x] тесты (`SubscriptionRestoreTests` и др.); прогнать
 
 ### Task 15: Сквозная проверка качества
 
-- [ ] grep остатков старого стиля: `.rounded`, `cornerRadius: 1[0-9]|2[0-9]`, `RoundedCornerShape(1[0-9]|2[0-9])`, тени карточек
-- [ ] тёмная тема, iPhone SE-размер, крупный текст (AX3 / fontScale 2), ja/de/ru
-- [ ] VoiceOver/TalkBack: порядок фокуса, декор скрыт, суммы читаются словами
-- [ ] паритет: смысловые состояния экранов совпадают на iOS и Android
+➕ Крупный текст ломал суммы и подписи: сумма больше не переносится (`MoneyText` одной строкой с ужатием), строки «подпись — сумма» и позиции тусы на крупном шрифте складываются в столбик (iOS `isAccessibilitySize`, Android `isLargeFontScale`). Проверено: тёмная тема обеих платформ, iPhone 17e + AX L, Android fontScale 2.0, de и ja.
+
+- [x] grep остатков старого стиля: `.rounded`, `cornerRadius: 1[0-9]|2[0-9]`, `RoundedCornerShape(1[0-9]|2[0-9])`, тени карточек
+- [x] тёмная тема, iPhone SE-размер, крупный текст (AX3 / fontScale 2), ja/de/ru
+- [x] VoiceOver/TalkBack: порядок фокуса, декор скрыт, суммы читаются словами
+- [x] паритет: смысловые состояния экранов совпадают на iOS и Android
 
 ### Task 16: Скриншоты витрины
 

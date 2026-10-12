@@ -90,6 +90,14 @@ fun ReceiptLabel(
     )
 }
 
+/**
+ * Крупный системный шрифт: строки «подпись — сумма» в нём не помещаются в одну
+ * линию и складываются в столбик (паритет iOS `isAccessibilitySize`).
+ */
+@Composable
+@ReadOnlyComposable
+fun isLargeFontScale(): Boolean = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
+
 // MARK: Бумага
 
 /** Нижний край чека — мелкая пила, как у оторванной ленты. */

@@ -36,7 +36,6 @@ final class StoreShotsUITests: XCTestCase {
         let tabFriends: String
         let tabAdd: String
         let totals: String
-        let settle: String
         let firstRoom: String
         let balances: String
         let rooms: [String]
@@ -53,7 +52,7 @@ final class StoreShotsUITests: XCTestCase {
         "ru": Labels(
             appleLanguage: "ru", locale: "ru_RU",
             tabGroups: "Группы", tabFriends: "Друзья", tabAdd: "Добавить расход",
-            totals: "Итоги", settle: "Погасить", firstRoom: "Поездка в Стамбул",
+            totals: "Итоги", firstRoom: "Поездка в Стамбул",
             balances: "Балансы",
             rooms: ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"],
             receiptExpense: "Ужин в Кадыкёе",
@@ -63,7 +62,7 @@ final class StoreShotsUITests: XCTestCase {
         "en": Labels(
             appleLanguage: "en", locale: "en_US",
             tabGroups: "Groups", tabFriends: "Friends", tabAdd: "Add expense",
-            totals: "Totals", settle: "Settle up", firstRoom: "Trip to Lisbon",
+            totals: "Totals", firstRoom: "Trip to Lisbon",
             balances: "Balances",
             rooms: ["Weekend cabin", "Flat share", "Trip to Lisbon"],
             receiptExpense: "Dinner in Alfama",
@@ -73,7 +72,7 @@ final class StoreShotsUITests: XCTestCase {
         "es": Labels(
             appleLanguage: "es", locale: "es_ES",
             tabGroups: "Grupos", tabFriends: "Amigos", tabAdd: "Añadir gasto",
-            totals: "Totales", settle: "Saldar", firstRoom: "Viaje a Barcelona",
+            totals: "Totales", firstRoom: "Viaje a Barcelona",
             balances: "Saldos",
             rooms: ["Finca el finde", "Piso compartido", "Viaje a Barcelona"],
             receiptExpense: "Cena en el Born",
@@ -83,7 +82,7 @@ final class StoreShotsUITests: XCTestCase {
         "de": Labels(
             appleLanguage: "de", locale: "de_DE",
             tabGroups: "Gruppen", tabFriends: "Freunde", tabAdd: "Hinzufügen",
-            totals: "Auswertung", settle: "Begleichen", firstRoom: "Städtetrip Berlin",
+            totals: "Auswertung", firstRoom: "Städtetrip Berlin",
             balances: "Salden",
             rooms: ["Wochenende am See", "WG Prenzlauer Berg", "Städtetrip Berlin"],
             receiptExpense: "Abendessen in Kreuzberg",
@@ -93,7 +92,7 @@ final class StoreShotsUITests: XCTestCase {
         "fr": Labels(
             appleLanguage: "fr", locale: "fr_FR",
             tabGroups: "Groupes", tabFriends: "Amis", tabAdd: "Ajouter",
-            totals: "Bilan", settle: "Régler", firstRoom: "Week-end à Lyon",
+            totals: "Bilan", firstRoom: "Week-end à Lyon",
             balances: "Soldes",
             rooms: ["Chalet en montagne", "Coloc rue Vieille", "Week-end à Lyon"],
             receiptExpense: "Dîner à la Croix-Rousse",
@@ -103,7 +102,7 @@ final class StoreShotsUITests: XCTestCase {
         "ja": Labels(
             appleLanguage: "ja", locale: "ja_JP",
             tabGroups: "グループ", tabFriends: "友だち", tabAdd: "支出を追加",
-            totals: "集計", settle: "精算する", firstRoom: "京都旅行",
+            totals: "集計", firstRoom: "京都旅行",
             balances: "残高",
             rooms: ["シェアハウス", "京都旅行", "週末の別荘"],
             receiptExpense: "先斗町の夕食",
@@ -113,7 +112,7 @@ final class StoreShotsUITests: XCTestCase {
         "zh-Hans": Labels(
             appleLanguage: "zh-Hans", locale: "zh_CN",
             tabGroups: "群组", tabFriends: "好友", tabAdd: "添加支出",
-            totals: "合计", settle: "结算", firstRoom: "成都之行",
+            totals: "合计", firstRoom: "成都之行",
             balances: "余额",
             rooms: ["周末民宿", "合租公寓", "成都之行"],
             receiptExpense: "宽窄巷子晚餐",
@@ -123,7 +122,7 @@ final class StoreShotsUITests: XCTestCase {
         "ko": Labels(
             appleLanguage: "ko", locale: "ko_KR",
             tabGroups: "그룹", tabFriends: "친구", tabAdd: "지출 추가",
-            totals: "합계", settle: "정산하기", firstRoom: "제주도 여행",
+            totals: "합계", firstRoom: "제주도 여행",
             balances: "잔액",
             rooms: ["셰어하우스", "제주도 여행", "주말 펜션"],
             receiptExpense: "흑돼지 저녁",
@@ -133,7 +132,7 @@ final class StoreShotsUITests: XCTestCase {
         "pt-BR": Labels(
             appleLanguage: "pt-BR", locale: "pt_BR",
             tabGroups: "Grupos", tabFriends: "Amigos", tabAdd: "Adicionar despesa",
-            totals: "Totais", settle: "Acertar", firstRoom: "Viagem a Salvador",
+            totals: "Totais", firstRoom: "Viagem a Salvador",
             balances: "Saldos",
             rooms: ["República", "Sítio no fim de semana", "Viagem a Salvador"],
             receiptExpense: "Jantar no Pelourinho",
@@ -143,7 +142,7 @@ final class StoreShotsUITests: XCTestCase {
         "it": Labels(
             appleLanguage: "it", locale: "it_IT",
             tabGroups: "Gruppi", tabFriends: "Amici", tabAdd: "Aggiungi spesa",
-            totals: "Totali", settle: "Salda", firstRoom: "Viaggio a Napoli",
+            totals: "Totali", firstRoom: "Viaggio a Napoli",
             balances: "Saldi",
             rooms: ["Casa condivisa", "Viaggio a Napoli", "Weekend in montagna"],
             receiptExpense: "Cena a Spaccanapoli",
@@ -211,7 +210,9 @@ final class StoreShotsUITests: XCTestCase {
 
         // Погашение снимаем ЗДЕСЬ, не откатившись назад: кнопка живёт в шапке
         // группы, и со списка групп её уже не видно.
-        let settleButton = app.buttons[labels.settle].firstMatch
+        // По идентификатору: подпись ссылки («Рассчитаться ↗») в каждой
+        // локали своя, а ссылка одна.
+        let settleButton = app.buttons["settleUpLink"].firstMatch
         if settleButton.exists, settleButton.isHittable {
             settleButton.tap()
             settle(1.4); shoot(app, "settle")
