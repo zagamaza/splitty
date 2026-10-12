@@ -526,9 +526,6 @@
     <string name="settleup_you_owe">Вы отдали %1$s</string>
     <string name="settleup_owes_you">%1$s отдал(а) вам</string>
     <string name="settleup_owes">%1$s отдал(а) %2$s</string>
-    <string name="settleup_you_pay">Вы платите — %1$s</string>
-    <string name="settleup_pays_you">%1$s платит вам</string>
-    <string name="settleup_pays">%1$s платит — %2$s</string>
     <string name="settleup_debt_hint">Долг: %1$s</string>
     <string name="settleup_debt_max">Не больше долга: %1$s</string>
     <string name="settleup_submit">Записать платёж</string>

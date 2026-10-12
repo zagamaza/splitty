@@ -820,7 +820,7 @@ private fun HintsCard(hints: List<String>, modifier: Modifier = Modifier) {
     ) {
         Text(
             text = stringResource(R.string.rec_hints_title).uppercase(),
-            color = colors.ink,
+            color = Color.White.copy(alpha = 0.6f), // подложка записи всегда тёмная
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.2.sp,

@@ -429,9 +429,6 @@
     <string name="settleup_you_owe">Você pagou %1$s</string>
     <string name="settleup_owes_you">%1$s pagou a você</string>
     <string name="settleup_owes">%1$s pagou %2$s</string>
-    <string name="settleup_you_pay">Você paga — %1$s</string>
-    <string name="settleup_pays_you">%1$s paga a você</string>
-    <string name="settleup_pays">%1$s paga — %2$s</string>
     <string name="settleup_debt_hint">Dívida: %1$s</string>
     <string name="settleup_debt_max">No máximo o valor da dívida: %1$s</string>
     <string name="settleup_submit">Registrar pagamento</string>

@@ -281,13 +281,11 @@ private fun DebtRow(
 
 @Composable
 private fun debtTitle(debt: Debt, meId: Long?): String = when (meId) {
-    debt.debtor.id -> stringResource(R.string.settleup_you_owe, debt.lender.displayName)
-    debt.lender.id -> stringResource(R.string.settleup_owes_you, debt.debtor.displayName)
-    else -> stringResource(
-        R.string.settleup_owes,
-        debt.debtor.displayName,
-        debt.lender.displayName,
-    )
+    // Список — про долг, а не про платёж: «должен», как в балансах. Строки
+    // прошедшего времени («отдал(а) вам») — для шапки записи платежа.
+    debt.debtor.id -> stringResource(R.string.group_debt_you_owe, debt.lender.displayName)
+    debt.lender.id -> stringResource(R.string.group_debt_owes_you, debt.debtor.displayName)
+    else -> stringResource(R.string.group_debt_pair, debt.debtor.displayName, debt.lender.displayName)
 }
 
 /** Пустое состояние: в группе нет долгов с моим участием. */
@@ -439,13 +437,11 @@ private fun PaymentHeaderCard(debt: Debt, meId: Long?) {
 
 @Composable
 private fun paymentTitle(debt: Debt, meId: Long?): String = when (meId) {
-    debt.debtor.id -> stringResource(R.string.settleup_you_pay, debt.lender.displayName)
-    debt.lender.id -> stringResource(R.string.settleup_pays_you, debt.debtor.displayName)
-    else -> stringResource(
-        R.string.settleup_pays,
-        debt.debtor.displayName,
-        debt.lender.displayName,
-    )
+    // Прошедшее время, как на iOS: экран записывает состоявшийся факт, а не
+    // начинает перевод.
+    debt.debtor.id -> stringResource(R.string.settleup_you_owe, debt.lender.displayName)
+    debt.lender.id -> stringResource(R.string.settleup_owes_you, debt.debtor.displayName)
+    else -> stringResource(R.string.settleup_owes, debt.debtor.displayName, debt.lender.displayName)
 }
 
 /**

@@ -429,9 +429,6 @@
     <string name="settleup_you_owe">회원님이 %1$s을(를) 결제했습니다</string>
     <string name="settleup_owes_you">%1$s 님이 회원님께 지급했습니다</string>
     <string name="settleup_owes">%1$s 님이 %2$s을(를) 결제했습니다</string>
-    <string name="settleup_you_pay">회원님이 지급 — %1$s</string>
-    <string name="settleup_pays_you">%1$s 님이 회원님께 지급합니다</string>
-    <string name="settleup_pays">%1$s 님이 결제 — %2$s</string>
     <string name="settleup_debt_hint">빚: %1$s</string>
     <string name="settleup_debt_max">빚을 넘지 않게: %1$s</string>
     <string name="settleup_submit">결제 기록</string>

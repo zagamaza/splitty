@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.expense
 
+import com.zagir.splitty.ui.components.ReceiptPaper
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -97,18 +98,13 @@ fun ReceiptCard(
     val surchargeTotal = surcharges.sumOf { it.second.exactMinor }
     val hasPriceless = itemsOnly.any { it.second.exactMinor < 1 }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(4.dp)),
-    ) {
-        Perforation(top = true, paper = colors.receiptPaper, notch = colors.bg)
+    // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу (паритет iOS).
+    ReceiptPaper(modifier = modifier, padding = 0.dp) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(colors.receiptPaper)
                 .padding(horizontal = 18.dp)
-                .padding(top = 10.dp, bottom = 10.dp),
+                .padding(top = 16.dp, bottom = 10.dp),
         ) {
             Header(count = itemsOnly.size)
             RowDivider()
@@ -141,7 +137,6 @@ fun ReceiptCard(
                 total = true,
             )
         }
-        Perforation(top = false, paper = colors.receiptPaper, notch = colors.bg)
     }
 }
 
@@ -408,9 +403,9 @@ private fun SurchargeRule(index: Int, item: OperationItem, onToggle: ((Int) -> U
     if (onToggle != null) {
         Row(
             modifier = Modifier
-                .clip(CircleShape)
+                .clip(RoundedCornerShape(3.dp))
                 .background(colors.ink.copy(alpha = 0.05f))
-                .border(1.dp, colors.ink.copy(alpha = 0.12f), CircleShape)
+                .border(1.dp, colors.ink.copy(alpha = 0.12f), RoundedCornerShape(3.dp))
                 .clickable { onToggle(index) }
                 .padding(horizontal = 10.dp, vertical = 5.dp)
                 .wrapContentWidth(),
@@ -505,31 +500,6 @@ private fun TotalRule() {
     )
 }
 
-/**
- * Перфорированный (зубчатый) край чека: полоса цвета бумаги с полукруглыми
- * вырезами цвета фона по внешней кромке. Порт iOS `Perforation`.
- */
-@Composable
-private fun Perforation(top: Boolean, paper: Color, notch: Color) {
-    val d = 11.dp
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(d / 2)
-            .background(paper),
-    ) {
-        val dPx = d.toPx()
-        val count = max(1, (size.width / dPx).roundToInt())
-        val used = count * dPx
-        val startX = (size.width - used) / 2f + dPx / 2f
-        // Вырезы центрированы на внешней кромке полосы: у верхней — сверху (y=0),
-        // у нижней — снизу (y=height); ровно половина круга «надкусывает» бумагу.
-        val cy = if (top) 0f else size.height
-        for (i in 0 until count) {
-            drawCircle(color = notch, radius = dPx / 2f, center = Offset(startX + i * dPx, cy))
-        }
-    }
-}
 
 /**
  * Красный пунктирный чип-капсула («цена?» / «Саня ?»). Мягко пульсирует, когда

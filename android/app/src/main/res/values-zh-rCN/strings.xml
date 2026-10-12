@@ -429,9 +429,6 @@
     <string name="settleup_you_owe">你支付了 %1$s</string>
     <string name="settleup_owes_you">%1$s 向你支付了</string>
     <string name="settleup_owes">%1$s 支付了 %2$s</string>
-    <string name="settleup_you_pay">你支付 — %1$s</string>
-    <string name="settleup_pays_you">%1$s 付给你</string>
-    <string name="settleup_pays">%1$s 支付 — %2$s</string>
     <string name="settleup_debt_hint">欠款：%1$s</string>
     <string name="settleup_debt_max">不超过欠款：%1$s</string>
     <string name="settleup_submit">记录付款</string>

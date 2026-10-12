@@ -37,7 +37,6 @@ struct ReceiptView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Perforation(edge: .top)
             VStack(spacing: 0) {
                 header
                 rowDivider
@@ -59,13 +58,11 @@ struct ReceiptView: View {
                            subtotal + surchargeTotal, emphasis: .total)
             }
             .padding(.horizontal, 18)
-            .padding(.top, 10)
+            .padding(.top, 16)
             .padding(.bottom, 10)
-            .background(Color.receiptPaper)
-            Perforation(edge: .bottom)
+            // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу.
+            .receiptPaper(padding: 0)
         }
-        .compositingGroup()
-        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 3)
     }
 
     // MARK: header
@@ -381,29 +378,6 @@ private struct DashedRule: Shape {
         p.move(to: CGPoint(x: 0, y: rect.midY))
         p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
         return p
-    }
-}
-
-/// Перфорированный (зубчатый) край чека: полукруги цвета страницы, надрезающие
-/// бумагу. Полоса — цвет бумаги, вырезы — фон под карточкой.
-private struct Perforation: View {
-    enum Edge { case top, bottom }
-    let edge: Edge
-    var body: some View {
-        let d: CGFloat = 11
-        GeometryReader { geo in
-            let count = max(1, Int((geo.size.width / d).rounded()))
-            HStack(spacing: 0) {
-                ForEach(0..<count, id: \.self) { _ in
-                    Circle().fill(Color.bg).frame(width: d, height: d)
-                }
-            }
-            .frame(width: geo.size.width, alignment: .center)
-            .offset(y: edge == .top ? -d / 2 : d / 2)
-        }
-        .frame(height: d / 2)
-        .background(Color.receiptPaper)
-        .clipped()
     }
 }
 

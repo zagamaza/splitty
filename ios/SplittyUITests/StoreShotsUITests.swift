@@ -301,6 +301,11 @@ final class StoreShotsUITests: XCTestCase {
 
     /// Вход по email: форма живёт в шторке за ссылкой внизу экрана.
     private func login(_ app: XCUIApplication, email: String, password: String) {
+        // Приветствие стоит ПЕРЕД входом: на чистом симуляторе первым
+        // показывается оно, и без пропуска ссылки входа на экране нет.
+        let skipIntro = app.buttons["welcomeSkip"]
+        if skipIntro.waitForExistence(timeout: 8) { skipIntro.tap() }
+
         let disclosure = app.buttons[labels.emailDisclosure]
         guard disclosure.waitForExistence(timeout: 15) else { return } // уже вошли
         disclosure.tap()

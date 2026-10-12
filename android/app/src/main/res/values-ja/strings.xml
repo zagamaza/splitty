@@ -429,9 +429,6 @@
     <string name="settleup_you_owe">あなたが %1$s を支払いました</string>
     <string name="settleup_owes_you">%1$s さんがあなたに支払いました</string>
     <string name="settleup_owes">%1$s さんが %2$s を支払いました</string>
-    <string name="settleup_you_pay">あなたが支払う — %1$s</string>
-    <string name="settleup_pays_you">%1$s さんがあなたに支払います</string>
-    <string name="settleup_pays">%1$s さんが支払い — %2$s</string>
     <string name="settleup_debt_hint">借り：%1$s</string>
     <string name="settleup_debt_max">借りの額を超えないでください：%1$s</string>
     <string name="settleup_submit">支払いを記録</string>

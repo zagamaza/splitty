@@ -2338,7 +2338,7 @@ struct RecordingOverlay: View {
                 .scaledFont(size: 11, weight: .bold, relativeTo: .footnote)
                 .tracking(1.2)
                 .textCase(.uppercase)
-                .foregroundStyle(Color.ink)
+                .foregroundStyle(.white.opacity(0.6)) // подложка записи всегда тёмная
             ForEach(hints, id: \.self) { hint in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Circle().fill(Color.accent).frame(width: 5, height: 5)

@@ -26,12 +26,12 @@ LABELS = {
     "ru": {"locale": "ru", "email": "shots-ru@splitty.test", "room": "Поездка в Стамбул",
            "groups": "Группы", "friends": "Друзья", "totals": "Итоги",
            "balances": "Балансы", "disclosure": "войдите по email",
-           "settle": "Погасить",
+           "settle": "Рассчитаться ↗",
            "rooms": ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"]},
     "en": {"locale": "en", "email": "shots-en@splitty.test", "room": "Trip to Lisbon",
            "groups": "Groups", "friends": "Friends", "totals": "Totals",
            "balances": "Balances", "disclosure": "sign in with email",
-           "settle": "Settle up",
+           "settle": "Settle up ↗",
            "rooms": ["Weekend cabin", "Flat share", "Trip to Lisbon"]},
 }
 PASSWORD = "20260806"
@@ -114,7 +114,9 @@ def point_at_local_backend():
     # сбрасывается вместе с ним, а на медленном эмуляторе часть тапов теряется.
     field = None
     for attempt in range(4):
-        mark = find("Splitty", exact=True)
+        mark = find("Splitor", exact=True)
+        if mark is None:
+            mark = find("Splitty", exact=True)
         if mark is None:
             raise RuntimeError("не найден блок с названием — экран входа не открылся")
         x, y = center(mark)
@@ -177,14 +179,23 @@ def capture(lang: str):
        "-e", "command", "network", "-e", "wifi", "show", "-e", "level", "4")
     sh("shell", "am", "broadcast", "-a", "com.android.systemui.demo",
        "-e", "command", "notifications", "-e", "visible", "false")
-    sh("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
+    # `am start`, а не monkey: на образах без физических клавиш monkey
+    # завершается с кодом -5, ничего не запустив.
+    sh("shell", "am", "start", "-n", f"{PKG}/.MainActivity")
     time.sleep(6)
 
     # Системный запрос на уведомления перекрывает экран входа и в кадр
     # витрине не нужен: отклоняем, разрешение здесь ни на что не влияет.
-    for deny in ("Don\u2019t allow", "Don't allow", "Не разрешать", "No permitir",
+    for deny in ("Don\u2019t allow", "Don't allow", "Не разрешать", "Запретить", "No permitir",
                  "Nicht zulassen", "Ne pas autoriser"):
         if tap_text(deny, exact=True, required=False):
+            time.sleep(1.5)
+            break
+
+    # Приветствие стоит ПЕРЕД входом: на чистом старте первым показывается
+    # оно, и без пропуска экрана входа нет.
+    for skip in ("Пропустить", "Skip"):
+        if tap_text(skip, exact=True, required=False):
             time.sleep(1.5)
             break
 
