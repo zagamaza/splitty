@@ -41,7 +41,7 @@ PROFILES = {
         "W": 1320, "H": 2868,
         "pad": "132px 96px 0", "eyebrow": 40, "title": 104, "chip_gap": 40,
         "chip_ico": 118, "chip_font": 34, "chips_top": 76, "chip_w": 300,
-        "device_w": 1060, "device_h": int(1060 * 2082 / 1022), "device_top": 800,
+        "device_w": 1060, "device_h": int(1060 * 2082 / 1022), "device_top": 800, "device_top_bare": 540,
         "radius_out": 86, "radius_in": 72,
         "device_style": "ios", "island_w": 250, "island_h": 74, "island_top": 34,
     },
@@ -51,7 +51,7 @@ PROFILES = {
         "W": 1080, "H": 1920,
         "pad": "88px 76px 0", "eyebrow": 30, "title": 72, "chip_gap": 26,
         "chip_ico": 88, "chip_font": 25, "chips_top": 46, "chip_w": 240,
-        "device_w": 820, "device_h": 1560, "device_top": 520,
+        "device_w": 820, "device_h": 1560, "device_top": 520, "device_top_bare": 370,
         "radius_out": 64, "radius_in": 54,
         "device_style": "android", "island_w": 30, "island_h": 30, "island_top": 22,
     },
@@ -139,7 +139,7 @@ TEMPLATE = """<!doctype html>
 <div class="pad">
   <div class="eyebrow">%(EYEBROW)s</div>
   <h1>%(TITLE)s</h1>
-  <div class="chips">%(CHIPS)s</div>
+  %(CHIPS_BLOCK)s
 </div>
 <div class="device %(DEVICE_STYLE)s">%(BEZEL)s
   <div class="screen"><img src="%(SHOT)s">%(HOLE)s</div>
@@ -239,9 +239,11 @@ def frame(lang: str, profile: str) -> None:
             # Ширина устройства и отступ сверху подобраны так, чтобы под
             # текстом осталась ровно верхняя половина экрана телефона.
             "DEVICE_W": cfg["device_w"], "DEVICE_H": cfg["device_h"],
-            "DEVICE_TOP": cfg["device_top"],
+            # Без чипов под заголовком телефон поднимается: в кадр входит больше
+            # самого экрана, а не пустое поле.
+            "DEVICE_TOP": cfg["device_top"] if spec["chips"] else cfg["device_top_bare"],
             "EYEBROW": shot["eyebrow"], "TITLE": shot["title"],
-            "CHIPS": chips, "SHOT": f"data:image/png;base64,{data}",
+            "CHIPS_BLOCK": f'<div class="chips">{chips}</div>' if chips else "", "SHOT": f"data:image/png;base64,{data}",
         }
         out = dst_dir / f"{order:02d}-{shot['screen']}.png"
         render(html, out, cfg["W"], cfg["H"])

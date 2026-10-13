@@ -1,26 +1,10 @@
 {
   "ru": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Делите",
-        "line2": "поровну"
-      },
-      {
-        "icon": "∑",
-        "line1": "Считает",
-        "line2": "само"
-      },
-      {
-        "icon": "✈",
-        "line1": "Работает",
-        "line2": "офлайн"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "ГОЛОСОМ",
-        "title": "Скажите вслух —\nрасход готов",
+        "title": "Делите расходы\nодной фразой",
         "screen": "add"
       },
       {
@@ -29,19 +13,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "ГРУППЫ",
-        "title": "Все общие траты\nв одном месте",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "РАСХОДЫ",
         "title": "Видно, кто платил\nи кто сколько должен",
         "screen": "group"
-      },
-      {
-        "eyebrow": "РАСЧЁТ",
-        "title": "Один перевод\nвместо пяти",
-        "screen": "settle"
       },
       {
         "eyebrow": "БАЛАНСЫ",
@@ -49,39 +23,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "ГРУППЫ",
+        "title": "Каждая поездка —\nотдельной группой",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "ИТОГИ",
-        "title": "Куда ушли деньги\nза месяц",
+        "title": "Итоги общих трат —\nв одном отчёте",
         "screen": "totals"
       },
       {
         "eyebrow": "ДРУЗЬЯ",
-        "title": "Долги с друзьями\nсводятся сами",
+        "title": "Все долги с другом —\nв одном месте",
         "screen": "friends"
       }
     ]
   },
   "en": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Split",
-        "line2": "evenly"
-      },
-      {
-        "icon": "∑",
-        "line1": "Adds up",
-        "line2": "for you"
-      },
-      {
-        "icon": "✈",
-        "line1": "Works",
-        "line2": "offline"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "BY VOICE",
-        "title": "Say it out loud —\nthe expense is done",
+        "title": "Split expenses\nwith one sentence",
         "screen": "add"
       },
       {
@@ -90,19 +53,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GROUPS",
-        "title": "Every shared expense\nin one place",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "EXPENSES",
         "title": "See who paid\nand who owes what",
         "screen": "group"
-      },
-      {
-        "eyebrow": "SETTLE UP",
-        "title": "One transfer\ninstead of five",
-        "screen": "settle"
       },
       {
         "eyebrow": "BALANCES",
@@ -110,39 +63,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GROUPS",
+        "title": "Every trip —\nits own group",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "TOTALS",
-        "title": "Where the money went\nthis month",
+        "title": "All shared spending —\nin one report",
         "screen": "totals"
       },
       {
         "eyebrow": "FRIENDS",
-        "title": "Debts with friends\nnet out on their own",
+        "title": "Debts with friends —\nin one place",
         "screen": "friends"
       }
     ]
   },
   "es": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Reparte",
-        "line2": "a partes iguales"
-      },
-      {
-        "icon": "∑",
-        "line1": "Calcula",
-        "line2": "solo"
-      },
-      {
-        "icon": "✈",
-        "line1": "Funciona",
-        "line2": "sin conexión"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "POR VOZ",
-        "title": "Dilo en voz alta —\nel gasto ya está",
+        "title": "Divide gastos\ncon una frase",
         "screen": "add"
       },
       {
@@ -151,19 +93,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GRUPOS",
-        "title": "Todos los gastos\nen un solo sitio",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "GASTOS",
         "title": "Quién pagó\ny quién debe qué",
         "screen": "group"
-      },
-      {
-        "eyebrow": "SALDAR",
-        "title": "Una transferencia\nen vez de cinco",
-        "screen": "settle"
       },
       {
         "eyebrow": "SALDOS",
@@ -171,39 +103,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GRUPOS",
+        "title": "Cada viaje —\nen su propio grupo",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "TOTALES",
-        "title": "En qué se fue\nel dinero del mes",
+        "title": "Todo el gasto común —\nen un solo informe",
         "screen": "totals"
       },
       {
         "eyebrow": "AMIGOS",
-        "title": "Las deudas se\ncompensan solas",
+        "title": "Deudas con amigos —\nen un solo sitio",
         "screen": "friends"
       }
     ]
   },
   "de": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Teilt",
-        "line2": "gerecht"
-      },
-      {
-        "icon": "∑",
-        "line1": "Rechnet",
-        "line2": "von selbst"
-      },
-      {
-        "icon": "✈",
-        "line1": "Läuft",
-        "line2": "offline"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "PER SPRACHE",
-        "title": "Einfach sagen —\ndie Ausgabe steht",
+        "title": "Kosten teilen\nmit einem Satz",
         "screen": "add"
       },
       {
@@ -212,19 +133,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GRUPPEN",
-        "title": "Alle gemeinsamen\nKosten an einem Ort",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "AUSGABEN",
         "title": "Wer bezahlt hat\nund wer was schuldet",
         "screen": "group"
-      },
-      {
-        "eyebrow": "AUSGLEICH",
-        "title": "Eine Überweisung\nstatt fünf",
-        "screen": "settle"
       },
       {
         "eyebrow": "SALDEN",
@@ -232,39 +143,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GRUPPEN",
+        "title": "Jede Reise —\neine eigene Gruppe",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "AUSWERTUNG",
-        "title": "Wohin das Geld\ndiesen Monat ging",
+        "title": "Alle Ausgaben —\nin einem Bericht",
         "screen": "totals"
       },
       {
         "eyebrow": "FREUNDE",
-        "title": "Schulden gleichen\nsich von selbst aus",
+        "title": "Schulden mit Freunden —\nan einem Ort",
         "screen": "friends"
       }
     ]
   },
   "fr": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Partagez",
-        "line2": "à parts égales"
-      },
-      {
-        "icon": "∑",
-        "line1": "Calcule",
-        "line2": "tout seul"
-      },
-      {
-        "icon": "✈",
-        "line1": "Marche",
-        "line2": "hors ligne"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "À LA VOIX",
-        "title": "Dites-le —\nla dépense est prête",
+        "title": "Partagez vos dépenses\nen une phrase",
         "screen": "add"
       },
       {
@@ -273,19 +173,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GROUPES",
-        "title": "Toutes les dépenses\nau même endroit",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "DÉPENSES",
         "title": "Qui a payé\net qui doit quoi",
         "screen": "group"
-      },
-      {
-        "eyebrow": "RÉGLER",
-        "title": "Un virement\nau lieu de cinq",
-        "screen": "settle"
       },
       {
         "eyebrow": "SOLDES",
@@ -293,39 +183,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GROUPES",
+        "title": "Chaque voyage —\nson propre groupe",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "BILAN",
-        "title": "Où est parti\nl'argent du mois",
+        "title": "Toutes les dépenses —\nen un seul bilan",
         "screen": "totals"
       },
       {
         "eyebrow": "AMIS",
-        "title": "Les dettes se\ncompensent seules",
+        "title": "Dettes entre amis —\nau même endroit",
         "screen": "friends"
       }
     ]
   },
   "ja": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "均等に",
-        "line2": "割り勘"
-      },
-      {
-        "icon": "∑",
-        "line1": "計算は",
-        "line2": "おまかせ"
-      },
-      {
-        "icon": "✈",
-        "line1": "オフライン",
-        "line2": "でも動く"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "声で",
-        "title": "話すだけで\n支出が完成",
+        "title": "ひと言で\n支出を割り勘",
         "screen": "add"
       },
       {
@@ -334,19 +213,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "グループ",
-        "title": "みんなの支出が\nひとつの場所に",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "支出",
         "title": "誰が払って\n誰がいくら返すか",
         "screen": "group"
-      },
-      {
-        "eyebrow": "精算",
-        "title": "5回の送金が\n1回になる",
-        "screen": "settle"
       },
       {
         "eyebrow": "残高",
@@ -354,39 +223,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "グループ",
+        "title": "旅行ごとに —\nグループを分けて",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "集計",
-        "title": "今月のお金は\nどこへ消えたか",
+        "title": "みんなの支出を —\nひとつのレポートに",
         "screen": "totals"
       },
       {
         "eyebrow": "友だち",
-        "title": "友だちとの貸し借りは\n自動で相殺",
+        "title": "友だちとの貸し借りを —\nひとつにまとめて",
         "screen": "friends"
       }
     ]
   },
   "zh-Hans": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "平均",
-        "line2": "分摊"
-      },
-      {
-        "icon": "∑",
-        "line1": "自动",
-        "line2": "算清"
-      },
-      {
-        "icon": "✈",
-        "line1": "离线",
-        "line2": "也能用"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "用说的",
-        "title": "说一句\n支出就记好了",
+        "title": "一句话\n分摊支出",
         "screen": "add"
       },
       {
@@ -395,19 +253,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "群组",
-        "title": "共同的支出\n都在一处",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "支出",
         "title": "谁付了钱\n谁还欠多少",
         "screen": "group"
-      },
-      {
-        "eyebrow": "结算",
-        "title": "五次转账\n变成一次",
-        "screen": "settle"
       },
       {
         "eyebrow": "余额",
@@ -415,39 +263,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "群组",
+        "title": "每次旅行 —\n单独一个群组",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "合计",
-        "title": "这个月的钱\n花在哪儿",
+        "title": "所有共同支出 —\n一份报告看清",
         "screen": "totals"
       },
       {
         "eyebrow": "好友",
-        "title": "和朋友的欠款\n自动抵销",
+        "title": "和朋友的所有欠款 —\n集中一处",
         "screen": "friends"
       }
     ]
   },
   "ko": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "똑같이",
-        "line2": "나누기"
-      },
-      {
-        "icon": "∑",
-        "line1": "계산은",
-        "line2": "알아서"
-      },
-      {
-        "icon": "✈",
-        "line1": "오프라인",
-        "line2": "에서도"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "음성으로",
-        "title": "말만 하면\n지출 완성",
+        "title": "한 마디로\n지출을 나누세요",
         "screen": "add"
       },
       {
@@ -456,19 +293,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "그룹",
-        "title": "함께 쓴 돈이\n한곳에",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "지출",
         "title": "누가 냈고\n누가 얼마 빚졌나",
         "screen": "group"
-      },
-      {
-        "eyebrow": "정산",
-        "title": "다섯 번 송금이\n한 번으로",
-        "screen": "settle"
       },
       {
         "eyebrow": "잔액",
@@ -476,39 +303,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "그룹",
+        "title": "여행마다 —\n그룹을 따로",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "합계",
-        "title": "이번 달 돈이\n어디로 갔을까",
+        "title": "함께 쓴 돈을 —\n한 장의 리포트로",
         "screen": "totals"
       },
       {
         "eyebrow": "친구",
-        "title": "친구와의 빚은\n알아서 상계",
+        "title": "친구와의 모든 빚을 —\n한곳에서",
         "screen": "friends"
       }
     ]
   },
   "pt-BR": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Divide",
-        "line2": "igual"
-      },
-      {
-        "icon": "∑",
-        "line1": "Soma",
-        "line2": "por você"
-      },
-      {
-        "icon": "✈",
-        "line1": "Funciona",
-        "line2": "offline"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "POR VOZ",
-        "title": "Fale em voz alta —\na despesa está pronta",
+        "title": "Divida despesas\ncom uma frase",
         "screen": "add"
       },
       {
@@ -517,19 +333,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GRUPOS",
-        "title": "Toda despesa dividida\nem um só lugar",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "DESPESAS",
         "title": "Veja quem pagou\ne quem deve o quê",
         "screen": "group"
-      },
-      {
-        "eyebrow": "ACERTO",
-        "title": "Uma transferência\nno lugar de cinco",
-        "screen": "settle"
       },
       {
         "eyebrow": "SALDOS",
@@ -537,39 +343,28 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GRUPOS",
+        "title": "Cada viagem —\nno seu próprio grupo",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "TOTAIS",
-        "title": "Para onde foi\no dinheiro este mês",
+        "title": "Gastos do grupo —\nem um só relatório",
         "screen": "totals"
       },
       {
         "eyebrow": "AMIGOS",
-        "title": "Dívidas com amigos\nse compensam sozinhas",
+        "title": "Dívidas com amigos —\nem um só lugar",
         "screen": "friends"
       }
     ]
   },
   "it": {
-    "chips": [
-      {
-        "icon": "⇄",
-        "line1": "Dividi",
-        "line2": "in parti"
-      },
-      {
-        "icon": "∑",
-        "line1": "Fa i conti",
-        "line2": "per te"
-      },
-      {
-        "icon": "✈",
-        "line1": "Funziona",
-        "line2": "offline"
-      }
-    ],
+    "chips": [],
     "shots": [
       {
         "eyebrow": "A VOCE",
-        "title": "Dillo ad alta voce —\nla spesa è fatta",
+        "title": "Dividi le spese\ncon una frase",
         "screen": "add"
       },
       {
@@ -578,19 +373,9 @@
         "screen": "receipt"
       },
       {
-        "eyebrow": "GRUPPI",
-        "title": "Tutte le spese comuni\nin un posto solo",
-        "screen": "groups"
-      },
-      {
         "eyebrow": "SPESE",
         "title": "Chi ha pagato\ne chi deve cosa",
         "screen": "group"
-      },
-      {
-        "eyebrow": "SALDO",
-        "title": "Un bonifico\ninvece di cinque",
-        "screen": "settle"
       },
       {
         "eyebrow": "SALDI",
@@ -598,13 +383,18 @@
         "screen": "balances"
       },
       {
+        "eyebrow": "GRUPPI",
+        "title": "Ogni viaggio —\nil suo gruppo",
+        "screen": "groups"
+      },
+      {
         "eyebrow": "TOTALI",
-        "title": "Dove sono finiti\ni soldi questo mese",
+        "title": "Spese comuni —\nin un solo resoconto",
         "screen": "totals"
       },
       {
         "eyebrow": "AMICI",
-        "title": "I debiti tra amici\nsi compensano da soli",
+        "title": "Debiti con gli amici —\nin un solo posto",
         "screen": "friends"
       }
     ]

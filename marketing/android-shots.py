@@ -47,6 +47,21 @@ LOCALES = {
 }
 
 
+# Расход, разобранный по позициям, — кадр «чек» (те же демо-данные, что у iOS).
+RECEIPT_EXPENSE = {
+    'ru': 'Ужин в Кадыкёе',
+    'en': 'Dinner in Alfama',
+    'es': 'Cena en el Born',
+    'de': 'Abendessen in Kreuzberg',
+    'fr': 'Dîner à la Croix-Rousse',
+    'ja': '先斗町の夕食',
+    'zh-Hans': '宽窄巷子晚餐',
+    'ko': '흑돼지 저녁',
+    'pt-BR': 'Jantar no Pelourinho',
+    'it': 'Cena a Spaccanapoli',
+}
+
+
 def labels(lang: str) -> dict:
     values, email, rooms, room = LOCALES[lang]
     raw = (RES / values / "strings.xml").read_text(encoding="utf-8")
@@ -66,6 +81,7 @@ def labels(lang: str) -> dict:
         "disclosure": res("login_email_disclosure_action"),
         "email_field": res("login_email_placeholder"),
         "skip": res("welcome_skip"), "settle": res("group_settle_up"),
+        "receipt": RECEIPT_EXPENSE[lang],
     }
 
 
@@ -310,12 +326,25 @@ def capture(lang: str):
     time.sleep(1.5)
     shoot(dst, "group", index)
 
-    # Погашение — с экрана группы: кнопка живёт в шапке, со списка её не видно.
-    if tap_text(cfg["settle"], exact=True, required=False):
+    # Разбор чека: расход с позициями открывается документом, позиции — ниже
+    # участников. Кадр «погашение» витрина больше не берёт: список долгов
+    # повторял «Балансы» и не доказывал «один перевод вместо пяти».
+    for _ in range(4):
+        if find(cfg["receipt"]) is not None:
+            break
+        sh("shell", "input", "swipe", "540", "1700", "540", "1000", "400")
+        time.sleep(1.0)
+    if tap_text(cfg["receipt"], required=False):
+        time.sleep(2.0)
+        # Медленный свайп без броска: позиции встают под шапку экрана.
+        sh("shell", "input", "swipe", "540", "1850", "540", "550", "700")
         time.sleep(1.5)
-        shoot(dst, "settle", index)
+        shoot(dst, "receipt", index)
         sh("shell", "input", "keyevent", "4")
         time.sleep(1.5)
+        for _ in range(4):
+            sh("shell", "input", "swipe", "540", "800", "540", "1800", "300")
+        time.sleep(1.0)
 
     if tap_text(cfg["balances"], required=False):
         time.sleep(1.0)

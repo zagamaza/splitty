@@ -199,6 +199,12 @@ final class StoreShotsUITests: XCTestCase {
             // Прокручиваем к «Позициям чека»: сверху итог и участники, а
             // витрине нужен сам разбор — ради него кадр и снимается.
             app.swipeUp()
+            settle(1.0)
+            // Дотягиваем до «Позиций»: после одного свайпа сверху оставался
+            // хвост списка участников, а кадр продаёт именно разбор чека.
+            // Медленный протяг без броска — сдвиг точный на этом устройстве.
+            let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -320)))
             settle(1.2)
             shoot(app, "receipt")
             // Возвращаемся в группу: следующие кадры снимаются оттуда.
