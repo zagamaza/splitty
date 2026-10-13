@@ -211,7 +211,6 @@
     <string name="group_card_pending_badge">Ci sono operazioni non inviate</string>
     <string name="group_card_unread_badge">Novità: %1$s</string>
     <string name="group_settle_offline">Nessuna connessione. Saldare funziona solo online</string>
-    <string name="group_you_owe_name">Devi a %1$s</string>
     <string name="group_chip_settle">Salda</string>
     <string name="group_chip_balances">Saldi</string>
     <string name="group_chip_totals">Totali</string>
@@ -231,9 +230,6 @@
     <string name="group_repay_paid_you">%1$s ti ha pagato</string>
     <string name="group_repay_paid">%1$s ha pagato %2$s</string>
     <string name="group_balances_title">Saldi</string>
-    <string name="group_debt_you_owe">Devi a %1$s</string>
-    <string name="group_debt_owes_you">%1$s ti deve</string>
-    <string name="group_debt_pair">%1$s deve — %2$s</string>
     <string name="group_debt_settle">Salda</string>
     <string name="group_avatar_add">Aggiungi foto</string>
     <string name="group_avatar_replace">Sostituisci foto</string>
@@ -709,7 +705,6 @@
     <string name="brand_receipt_label">Conto comune</string>
     <string name="receipt_your_share">La tua quota</string>
     <string name="receipt_your_balance">Il tuo saldo</string>
-    <string name="receipt_settle_up">Saldare ↗</string>
     <string name="receipt_all_balances">Tutti i saldi</string>
     <string name="receipt_items">Voci</string>
     <string name="receipt_has_attachments">Con allegati</string>
@@ -721,4 +716,11 @@
     <string name="expense_check_title">Controlla la spesa</string>
     <string name="rec_status_recording_sub_finish">Rilascia per terminare · in alto per bloccare · a sinistra per annullare</string>
     <string name="rec_stop_finish_a11y">Ferma la registrazione</string>
+    <string name="group_your_debt">Il tuo debito</string>
+    <string name="group_debt_to">A: %1$s</string>
+    <string name="group_debt_from">Da: %1$s</string>
+    <string name="group_debt_from_to">Da: %1$s, a: %2$s</string>
+    <string name="group_balance_across">Nel gruppo</string>
+    <string name="group_debts_cancel_short">I debiti si compensano</string>
+    <string name="group_settle_up">Saldare</string>
 </resources>

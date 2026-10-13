@@ -4,8 +4,10 @@ import com.zagir.splitty.ui.components.isLargeFontScale
 import com.zagir.splitty.ui.components.ReceiptPaperEnd
 import com.zagir.splitty.ui.components.onReceiptPaper
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import com.zagir.splitty.ui.components.ReceiptPaper
 import com.zagir.splitty.ui.components.PerforatedEdgeShape
+import com.zagir.splitty.ui.components.OutlineActionButton
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.StatusStamp
 import com.zagir.splitty.ui.components.ReceiptDividerStyle
@@ -146,6 +148,7 @@ import com.zagir.splitty.ui.theme.Splitty
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import kotlin.math.abs
 
 /**
  * Экран группы: hero-карточка долга, чипы «Погасить долг»/«Балансы»/«Итоги»,
@@ -272,7 +275,11 @@ fun GroupDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 if (tusaTab == TUSA_TAB_OPS && isSummaryScrolledAway && detail != null) {
-                    PinnedSummary(room = detail, onClick = { tusaTab = TUSA_TAB_BALANCES })
+                    PinnedSummary(
+                        room = detail,
+                        hasOpenDebts = meId != null && detail.debts.any { it.debtor.id == meId || it.lender.id == meId },
+                        onClick = { tusaTab = TUSA_TAB_BALANCES },
+                    )
                 }
                 PrimaryPillButton(
                     text = "+ " + stringResource(R.string.group_add_expense),
@@ -694,7 +701,7 @@ private fun DocumentHeader(room: RoomDetail, modifier: Modifier = Modifier) {
  * словами и суммой, тап — к балансам.
  */
 @Composable
-private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
+private fun PinnedSummary(room: RoomDetail, hasOpenDebts: Boolean, onClick: () -> Unit) {
     val colors = Splitty.colors
     Row(
         modifier = Modifier
@@ -717,6 +724,7 @@ private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
         }
         when {
             room.debtsUnavailable -> Text(stringResource(R.string.groups_row_debts_unavailable), fontSize = 14.sp, color = colors.inkSecondary)
+            room.exactMyBalanceMinor == 0L && hasOpenDebts -> Text(stringResource(R.string.group_debts_cancel_short), fontSize = 14.sp, color = colors.inkSecondary)
             room.exactMyBalanceMinor == 0L -> Text(stringResource(R.string.groups_row_settled), fontSize = 14.sp, color = colors.inkSecondary)
             else -> {
                 Text(
@@ -732,8 +740,9 @@ private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
 }
 
 /**
- * Сводка документа: всего, ваша доля, ваш остаток словами, ссылки на балансы
- * и расчёт (+ подпись про outbox: его суммы в балансах сервера не учтены).
+ * Сводка документа: «Всего потрачено» и «Ваша доля» — строками шапки, а громче
+ * всего — ваш остаток вместе с расчётом: это нужно для следующего действия
+ * (+ подпись про outbox: его суммы в балансах сервера не учтены).
  */
 @Composable
 private fun DebtHeroCard(
@@ -745,50 +754,18 @@ private fun DebtHeroCard(
     onAllBalances: () -> Unit = {},
 ) {
     val colors = Splitty.colors
-    val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Итог не обрезается: при крупном шрифте — столбиком, сумма ужимается
-        // вместо потери последних цифр.
-        val totalAmount: @Composable () -> Unit = {
-            MoneyText(
-                room.totalSpent,
-                exactMinor = room.exactTotalSpentMinor,
-                role = MoneyRole.NEUTRAL,
-                size = 32.sp,
-                weight = FontWeight.ExtraBold,
-                currency = room.currency,
-                minScale = 0.5f,
-            )
+    val mine = room.debts.filter { it.debtor.id == meId || it.lender.id == meId }
+    val canSettle = mine.isNotEmpty()
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LedgerRow(stringResource(R.string.totals_total_spent), FontWeight.SemiBold) {
+            MoneyText(room.totalSpent, exactMinor = room.exactTotalSpentMinor, role = MoneyRole.NEUTRAL,
+                size = 17.sp, weight = FontWeight.SemiBold, currency = room.currency, minScale = 0.6f)
         }
-        if (isLargeFontScale()) {
-            Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
-                ReceiptLabel(stringResource(R.string.totals_total_spent))
-                totalAmount()
-            }
-        } else {
-            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
-                ReceiptLabel(stringResource(R.string.totals_total_spent), Modifier.weight(1f))
-                totalAmount()
-            }
+        LedgerRow(stringResource(R.string.receipt_your_share), FontWeight.Normal) {
+            MoneyText(room.mySpent.toLong(), exactMinor = room.exactMySpentMinor, role = MoneyRole.NEUTRAL,
+                size = 17.sp, weight = FontWeight.Normal, currency = room.currency, minScale = 0.6f)
         }
-        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
-            Text(
-                text = stringResource(R.string.receipt_your_share),
-                modifier = Modifier.weight(1f),
-                fontSize = 14.sp,
-                color = colors.inkSecondary,
-            )
-            MoneyText(
-                room.mySpent.toLong(),
-                exactMinor = room.exactMySpentMinor,
-                role = MoneyRole.NEUTRAL,
-                size = 14.sp,
-                weight = FontWeight.Medium,
-                currency = room.currency,
-            )
-        }
-        ReceiptDivider(Modifier.padding(vertical = 4.dp))
-        ReceiptLabel(stringResource(R.string.receipt_your_balance))
+        ReceiptDivider(Modifier.padding(vertical = 8.dp))
         when {
             // Долги неисчислимы (старые данные бота): честная пометка вместо
             // ложного «в расчёте» — сервер прислал debtsUnavailable.
@@ -806,26 +783,42 @@ private fun DebtHeroCard(
                 )
             }
 
-            room.exactMyBalanceMinor > 0 ->
-                BalanceStatement(stringResource(R.string.group_you_are_owed), room)
-
-            room.exactMyBalanceMinor < 0 -> {
-                // Один кредитор — называем его по имени, как в iOS. Сумма —
-                // НЕТТО по группе, а не долг одному кредитору: иначе здесь и в
-                // списке групп стояли бы две разные цифры про одну комнату.
-                val creditors = room.debts.filter { it.debtor.id == meId }
+            room.exactMyBalanceMinor != 0L -> {
+                val owesMe = room.exactMyBalanceMinor > 0
+                // Сумма — НЕТТО по группе. Имя — только когда нетто и есть ваш
+                // единственный долг в группе: «должен A 1000, C должен мне 400»
+                // с подписью «Кому: A» приписало бы A нетто 600 — тогда «По группе».
+                val single = mine.singleOrNull()?.takeIf { it.exactMinor == abs(room.exactMyBalanceMinor) }
                 BalanceStatement(
-                    if (creditors.size == 1) {
-                        stringResource(R.string.group_you_owe_name, creditors.first().lender.displayName)
-                    } else {
-                        stringResource(R.string.group_you_owe)
+                    label = stringResource(if (owesMe) R.string.group_you_are_owed else R.string.group_your_debt),
+                    counterpart = when {
+                        single == null -> stringResource(R.string.group_balance_across)
+                        owesMe -> stringResource(R.string.group_debt_from, single.debtor.displayName)
+                        else -> stringResource(R.string.group_debt_to, single.lender.displayName)
                     },
-                    room,
+                    room = room,
+                )
+            }
+
+            // Встречные долги в сумме дают ноль — это не «все рассчитались».
+            canSettle -> Column(
+                Modifier.semantics(mergeDescendants = true) {},
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ReceiptLabel(stringResource(R.string.receipt_your_balance))
+                Text(
+                    text = stringResource(R.string.groups_summary_cancel_out),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.ink,
                 )
             }
 
             // Ноль — штамп, а не крупный «0»: это состояние, а не сумма.
-            else -> StatusStamp(stringResource(R.string.groups_row_settled).uppercase())
+            else -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ReceiptLabel(stringResource(R.string.receipt_your_balance))
+                StatusStamp(stringResource(R.string.groups_row_settled).uppercase())
+            }
         }
         // Балансы сервера не учитывают неотправленные офлайн-операции.
         if (pendingCount > 0) {
@@ -842,65 +835,54 @@ private fun DebtHeroCard(
         if (freshness.fromCache) {
             CacheNote(freshness = freshness, tag = "group_cache_note")
         }
-        // Расчёт живёт рядом с остатком, а не в общем ряду кнопок. На крупном
-        // шрифте две ссылки в строку не помещаются — тогда одна под другой.
-        val links: @Composable () -> Unit = {
-            TextLinkButton(stringResource(R.string.receipt_all_balances), onClick = onAllBalances)
-            if (!isLargeFontScale()) Spacer(Modifier.weight(1f))
-            if (canSettle && onSettleUp != null) {
-                TextLinkButton(
-                    text = stringResource(R.string.receipt_settle_up),
-                    onClick = onSettleUp,
-                    modifier = Modifier.testTag("group_settle_up"),
-                )
-            }
+        // Расчёт — рамкой под самим остатком: заливка на экране одна, у
+        // «Добавить расход».
+        if (canSettle && onSettleUp != null) {
+            OutlineActionButton(
+                text = stringResource(R.string.group_settle_up),
+                onClick = onSettleUp,
+                modifier = Modifier.padding(top = 6.dp).testTag("group_settle_up"),
+            )
         }
-        if (isLargeFontScale()) {
-            Column { links() }
-        } else {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { links() }
+        Box(
+            Modifier.fillMaxWidth(),
+            contentAlignment = if (canSettle && onSettleUp != null) Alignment.Center else Alignment.CenterStart,
+        ) {
+            TextLinkButton(stringResource(R.string.receipt_all_balances), onClick = onAllBalances)
         }
     }
 }
 
-/** Остаток словами крупно и суммой справа: направление долга читается текстом. */
+/** Строка шапки: подпись слева, сумма справа; на крупном шрифте сумма под подписью. */
 @Composable
-private fun BalanceStatement(words: String, room: RoomDetail) {
-    if (isLargeFontScale()) {
-        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = words,
-                fontSize = 22.sp,
-                lineHeight = 26.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Splitty.colors.ink,
-            )
-            MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 22.sp, weight = FontWeight.ExtraBold, currency = room.currency, minScale = 0.5f)
-        }
-        return
+private fun LedgerRow(title: String, weight: FontWeight, amount: @Composable () -> Unit) {
+    val label: @Composable (Modifier) -> Unit = { m ->
+        Text(text = title, modifier = m, fontSize = 15.sp, fontWeight = weight, color = Splitty.colors.ink)
     }
-    Row(
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    if (isLargeFontScale()) {
+        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+            label(Modifier)
+            amount()
+        }
+    } else {
+        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
+            label(Modifier.weight(1f))
+            amount()
+        }
+    }
+}
+
+/** Остаток: реквизит, крупная сумма и контрагент словами; цвет только подкрепляет. */
+@Composable
+private fun BalanceStatement(label: String, counterpart: String, room: RoomDetail) {
+    Column(
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            text = words,
-            modifier = Modifier.weight(1f),
-            fontSize = 22.sp,
-            lineHeight = 26.sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = (-0.5).sp,
-            color = Splitty.colors.ink,
-        )
-        MoneyText(
-            room.myBalance,
-            exactMinor = room.exactMyBalanceMinor,
-            size = 22.sp,
-            weight = FontWeight.ExtraBold,
-            currency = room.currency,
-            minScale = 0.5f,
-        )
+        ReceiptLabel(label)
+        MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 40.sp,
+            weight = FontWeight.ExtraBold, currency = room.currency, minScale = 0.5f)
+        Text(text = counterpart, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = Splitty.colors.ink)
     }
 }
 
@@ -1338,11 +1320,21 @@ private fun DebtRow(
 ) {
     val colors = Splitty.colors
     val involvesMe = debt.debtor.id == meId || debt.lender.id == meId
+    // «Ваш долг» / «Вам должны» с контрагентом второй строкой; чужой долг —
+    // «Рустам → Алмаз». Имена не склоняем: надёжной морфологии нет.
     val title = when {
-        debt.debtor.id == meId -> stringResource(R.string.group_debt_you_owe, debt.lender.displayName)
-        debt.lender.id == meId -> stringResource(R.string.group_debt_owes_you, debt.debtor.displayName)
-        else -> stringResource(R.string.group_debt_pair, debt.debtor.displayName, debt.lender.displayName)
+        debt.debtor.id == meId -> stringResource(R.string.group_your_debt)
+        debt.lender.id == meId -> stringResource(R.string.group_you_are_owed)
+        else -> debt.debtor.displayName + " → " + debt.lender.displayName
     }
+    val party = when {
+        debt.debtor.id == meId -> stringResource(R.string.group_debt_to, debt.lender.displayName)
+        debt.lender.id == meId -> stringResource(R.string.group_debt_from, debt.debtor.displayName)
+        else -> null
+    }
+    // Диктору стрелка ничего не объясняет — роли словами.
+    val spoken = if (party != null) "$title, $party"
+    else stringResource(R.string.group_debt_from_to, debt.debtor.displayName, debt.lender.displayName)
     // Цвет суммы: мой долг — negative, долг мне — accent, чужие — нейтрально.
     val role = when {
         debt.debtor.id == meId -> MoneyRole.NEGATIVE
@@ -1351,26 +1343,30 @@ private fun DebtRow(
     }
 
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.End) {
-        // Кто кому и сколько — один элемент для TalkBack («Петя должен(на)
-        // Вася, 500 ₽»); ссылка «Погасить» остаётся отдельной (паритет iOS).
+        // Кто кому и сколько — один элемент для TalkBack; ссылка «Погасить»
+        // остаётся отдельной (паритет iOS). Направление словами, не стрелкой.
         Row(
             modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top,
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                Modifier.weight(1f).clearAndSetSemantics { contentDescription = spoken },
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 Text(
                     text = title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.ink,
                 )
-                Text(
-                    text = debt.debtor.displayName + " → " + debt.lender.displayName,
-                    modifier = Modifier.clearAndSetSemantics {},
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                )
+                if (party != null) {
+                    Text(
+                        text = party,
+                        fontSize = 13.sp,
+                        color = colors.inkSecondary,
+                    )
+                }
             }
             MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, weight = FontWeight.Bold, currency = currency, minScale = 0.6f)
         }

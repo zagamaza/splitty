@@ -237,7 +237,7 @@ private fun DebtListStep(
     }
 }
 
-/** Корешок долга: «А → Б» словами и сумма; тап — к записи платежа. */
+/** Корешок долга: роль и контрагент словами, сумма; тап — к записи платежа. */
 @Composable
 private fun DebtRow(
     debt: Debt,
@@ -261,8 +261,8 @@ private fun DebtRow(
                     maxLines = 2,
                 )
                 Text(
-                    text = debt.debtor.displayName + " → " + debt.lender.displayName,
-                    fontSize = 12.sp,
+                    text = debtParty(debt, meId),
+                    fontSize = 13.sp,
                     color = colors.inkSecondary,
                 )
             }
@@ -278,14 +278,15 @@ private fun DebtRow(
     }
 }
 
+/** Как на балансах: роль словами, контрагент второй строкой, имя без склонения. */
 @Composable
-private fun debtTitle(debt: Debt, meId: Long?): String = when (meId) {
-    // Список — про долг, а не про платёж: «должен», как в балансах. Строки
-    // прошедшего времени («отдал(а) вам») — для шапки записи платежа.
-    debt.debtor.id -> stringResource(R.string.group_debt_you_owe, debt.lender.displayName)
-    debt.lender.id -> stringResource(R.string.group_debt_owes_you, debt.debtor.displayName)
-    else -> stringResource(R.string.group_debt_pair, debt.debtor.displayName, debt.lender.displayName)
-}
+private fun debtTitle(debt: Debt, meId: Long?): String =
+    stringResource(if (debt.debtor.id == meId) R.string.group_your_debt else R.string.group_you_are_owed)
+
+@Composable
+private fun debtParty(debt: Debt, meId: Long?): String =
+    if (debt.debtor.id == meId) stringResource(R.string.group_debt_to, debt.lender.displayName)
+    else stringResource(R.string.group_debt_from, debt.debtor.displayName)
 
 /** Пустое состояние: в группе нет долгов с моим участием. */
 @Composable

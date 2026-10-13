@@ -2,6 +2,8 @@ package com.zagir.splitty.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -462,6 +464,37 @@ fun VoiceExampleReceipt(modifier: Modifier = Modifier) {
             Text(stringResource(R.string.plus_hero_split), color = colors.inkSecondary, fontSize = 13.sp)
             Text(stringResource(R.string.plus_hero_each), color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
+    }
+}
+
+// MARK: Действие рамкой
+
+/** Второе по силе действие листа («Рассчитаться»): чернильная рамка во всю ширину. Заливка остаётся одной кнопке экрана. */
+@Composable
+fun OutlineActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val colors = Splitty.colors
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .border(1.dp, colors.ink.copy(alpha = if (enabled) 1f else 0.4f), RoundedCornerShape(3.dp))
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = colors.ink.copy(alpha = if (enabled) 1f else 0.4f),
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 

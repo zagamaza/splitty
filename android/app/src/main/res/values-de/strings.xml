@@ -211,7 +211,6 @@
     <string name="group_card_pending_badge">Es gibt nicht gesendete Vorgänge</string>
     <string name="group_card_unread_badge">Neue Ereignisse: %1$s</string>
     <string name="group_settle_offline">Keine Verbindung. Begleichen geht nur online</string>
-    <string name="group_you_owe_name">Du schuldest %1$s</string>
     <string name="group_chip_settle">Schuld begleichen</string>
     <string name="group_chip_balances">Salden</string>
     <string name="group_chip_totals">Auswertung</string>
@@ -233,9 +232,6 @@
 
     <!-- Группы: балансы -->
     <string name="group_balances_title">Salden</string>
-    <string name="group_debt_you_owe">Du schuldest %1$s</string>
-    <string name="group_debt_owes_you">%1$s schuldet dir</string>
-    <string name="group_debt_pair">%1$s schuldet — %2$s</string>
     <string name="group_debt_settle">Begleichen</string>
 
     <!-- Группы: настройки -->
@@ -768,7 +764,6 @@
     <string name="brand_receipt_label">Gemeinsame Rechnung</string>
     <string name="receipt_your_share">Ihr Anteil</string>
     <string name="receipt_your_balance">Ihr Saldo</string>
-    <string name="receipt_settle_up">Ausgleichen ↗</string>
     <string name="receipt_all_balances">Alle Salden</string>
     <string name="receipt_items">Posten</string>
     <string name="receipt_has_attachments">Mit Anhängen</string>
@@ -780,4 +775,11 @@
     <string name="expense_check_title">Prüfe die Ausgabe</string>
     <string name="rec_status_recording_sub_finish">Loslassen zum Beenden · hoch zum Fixieren · links zum Abbrechen</string>
     <string name="rec_stop_finish_a11y">Aufnahme beenden</string>
+    <string name="group_your_debt">Du schuldest</string>
+    <string name="group_debt_to">An: %1$s</string>
+    <string name="group_debt_from">Von: %1$s</string>
+    <string name="group_debt_from_to">Von: %1$s, an: %2$s</string>
+    <string name="group_balance_across">In der Gruppe</string>
+    <string name="group_debts_cancel_short">Schulden gleichen sich aus</string>
+    <string name="group_settle_up">Ausgleichen</string>
 </resources>

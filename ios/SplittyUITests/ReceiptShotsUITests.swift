@@ -137,6 +137,41 @@ final class ReceiptShotsUITests: XCTestCase {
         }
     }
 
+    /// Блок остатка на экране тусы: один кредитор («Кому: Алмаз») и несколько
+    /// («По группе»), вкладка балансов и список долгов расчёта. Вторая туса
+    /// заводится руками через API (два кредитора), без неё кадр пропускается.
+    func testGroupMoney() throws {
+        loginIfNeeded(app)
+        XCTAssertTrue(app.otherElements["tabBar"].waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        app.buttons["tab.groups"].tap()
+        for (room, tag) in [("Поездка в Стамбул", "one"), ("Выходные на даче", "many")] {
+            let row = app.staticTexts[room]
+            guard row.waitForExistence(timeout: 5) else { continue }
+            // На крупном шрифте строка может оказаться под нижней панелью.
+            for _ in 0..<4 where !row.isHittable || row.frame.maxY > app.windows.firstMatch.frame.height * 0.75 {
+                app.swipeUp()
+            }
+            row.tap()
+            if !app.buttons["Балансы"].waitForExistence(timeout: 10) { shot("15-money-\(tag)-fail") }
+            XCTAssertTrue(app.buttons["Балансы"].exists, "экран группы не открылся")
+            shot("15-money-\(tag)")
+            app.buttons["Балансы"].tap()
+            shot("15-money-\(tag)-balances")
+            app.buttons["Операции"].tap()
+            let settle = app.buttons["settleUpLink"]
+            if settle.waitForExistence(timeout: 5) {
+                if !settle.isHittable { app.swipeUp() }
+                settle.tap()
+                // Один долг сразу открывает форму платежа, несколько — список.
+                sleep(1)
+                shot("15-money-\(tag)-settle")
+                app.swipeDown(velocity: .fast)
+                sleep(1)
+            }
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+    }
+
     /// Проход для других языков: вкладки и разделы — по позиции, а не по
     /// русским подписям. Вход по email — те же поля, у них нет перевода в тесте,
     /// поэтому язык меняется уже после входа (сессия переживает перезапуск).

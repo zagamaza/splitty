@@ -211,7 +211,6 @@
     <string name="group_card_pending_badge">未送信の操作があります</string>
     <string name="group_card_unread_badge">新着：%1$s</string>
     <string name="group_settle_offline">接続がありません。精算はオンラインでのみ可能です</string>
-    <string name="group_you_owe_name">%1$s さんへの借り</string>
     <string name="group_chip_settle">精算する</string>
     <string name="group_chip_balances">残高</string>
     <string name="group_chip_totals">集計</string>
@@ -231,9 +230,6 @@
     <string name="group_repay_paid_you">%1$s さんがあなたに支払いました</string>
     <string name="group_repay_paid">%1$s さんが %2$s を支払いました</string>
     <string name="group_balances_title">残高</string>
-    <string name="group_debt_you_owe">%1$s さんへの借り</string>
-    <string name="group_debt_owes_you">%1$s さんからの受け取り</string>
-    <string name="group_debt_pair">%1$s さんの借り — %2$s</string>
     <string name="group_debt_settle">精算する</string>
     <string name="group_avatar_add">写真を追加</string>
     <string name="group_avatar_replace">写真を変更</string>
@@ -705,7 +701,6 @@
     <string name="brand_receipt_label">共有の伝票</string>
     <string name="receipt_your_share">あなたの負担分</string>
     <string name="receipt_your_balance">あなたの残高</string>
-    <string name="receipt_settle_up">精算する ↗</string>
     <string name="receipt_all_balances">すべての残高</string>
     <string name="receipt_items">明細</string>
     <string name="receipt_has_attachments">添付あり</string>
@@ -717,4 +712,11 @@
     <string name="expense_check_title">支出を確認してください</string>
     <string name="rec_status_recording_sub_finish">指を離すと録音終了・上で固定・左でキャンセル</string>
     <string name="rec_stop_finish_a11y">録音を終了する</string>
+    <string name="group_your_debt">支払う</string>
+    <string name="group_debt_to">支払先: %1$s</string>
+    <string name="group_debt_from">支払元: %1$s</string>
+    <string name="group_debt_from_to">支払元: %1$s、支払先: %2$s</string>
+    <string name="group_balance_across">グループ全体で</string>
+    <string name="group_debts_cancel_short">貸し借りは相殺</string>
+    <string name="group_settle_up">精算する</string>
 </resources>

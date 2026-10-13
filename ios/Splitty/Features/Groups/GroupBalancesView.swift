@@ -147,19 +147,23 @@ private struct DebtRow: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 0) {
-            // Кто кому и сколько — один элемент VoiceOver («Петя должен(на)
-            // Вася, 500 рублей»); ссылка «Погасить» остаётся отдельной.
+            // Кто кому и сколько — один элемент VoiceOver; ссылка «Погасить»
+            // остаётся отдельной. Направление словами, не одной стрелкой.
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .scaledFont(size: 15, weight: .medium)
                         .foregroundStyle(Color.ink)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
-                        .scaledFont(size: 12, relativeTo: .caption)
-                        .foregroundStyle(Color.inkSecondary)
-                        .accessibilityHidden(true)
+                    if let party {
+                        Text(party)
+                            .scaledFont(size: 13, relativeTo: .footnote)
+                            .foregroundStyle(Color.inkSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(spokenParties)
                 Spacer(minLength: 8)
                 MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, weight: .bold, currency: currency)
             }
@@ -172,16 +176,24 @@ private struct DebtRow: View {
         .padding(.vertical, 10)
     }
 
+    /// «Ваш долг» / «Вам должны» с контрагентом второй строкой; чужой долг —
+    /// «Рустам → Алмаз». Имена не склоняем: надёжной морфологии нет.
     private var title: String {
-        if debt.debtor.id == meId {
-            return String(localized: "Вы должны \(debt.lender.displayName)")
-        }
-        if debt.lender.id == meId {
-            return String(localized: "\(debt.debtor.displayName) должен(на) вам")
-        }
-        // Имя кредитора не склоняем (нет надёжной морфологии) — тире вместо
-        // датива, по образцу «Вы платите — Алмаз» в форме погашения.
-        return String(localized: "\(debt.debtor.displayName) должен(на) — \(debt.lender.displayName)")
+        if debt.debtor.id == meId { return String(localized: "Ваш долг") }
+        if debt.lender.id == meId { return String(localized: "Вам должны") }
+        return "\(debt.debtor.displayName) → \(debt.lender.displayName)"
+    }
+
+    private var party: String? {
+        if debt.debtor.id == meId { return String(localized: "Кому: \(debt.lender.displayName)") }
+        if debt.lender.id == meId { return String(localized: "От кого: \(debt.debtor.displayName)") }
+        return nil
+    }
+
+    /// Диктору стрелка ничего не объясняет — роли словами.
+    private var spokenParties: String {
+        if let party { return "\(title), \(party)" }
+        return String(localized: "От кого: \(debt.debtor.displayName), кому: \(debt.lender.displayName)")
     }
 
     /// Цвет суммы: мой долг — negative, долг мне — accent, чужие — нейтрально.

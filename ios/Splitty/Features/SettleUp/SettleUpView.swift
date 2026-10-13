@@ -155,7 +155,7 @@ struct SettleUpView: View {
         }
     }
 
-    /// Корешок долга: «А → Б» словами и сумма; тап — к записи платежа.
+    /// Корешок долга: роль и контрагент словами, сумма; тап — к записи платежа.
     private func debtRow(_ debt: Debt) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
@@ -163,9 +163,10 @@ struct SettleUpView: View {
                     .scaledFont(size: 16, weight: .semibold)
                     .foregroundStyle(Color.ink)
                     .lineLimit(2)
-                Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
-                    .scaledFont(size: 12, relativeTo: .caption)
+                Text(debtParty(debt))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             MoneyText(
@@ -181,11 +182,15 @@ struct SettleUpView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// Как на балансах: роль словами, контрагент второй строкой, имя без склонения.
     private func debtTitle(_ debt: Debt) -> String {
-        if debt.debtor.id == meId {
-            return String(localized: "Вы должны \(debt.lender.displayName)")
-        }
-        return String(localized: "\(debt.debtor.displayName) должен(на) вам")
+        debt.debtor.id == meId ? String(localized: "Ваш долг") : String(localized: "Вам должны")
+    }
+
+    private func debtParty(_ debt: Debt) -> String {
+        debt.debtor.id == meId
+            ? String(localized: "Кому: \(debt.lender.displayName)")
+            : String(localized: "От кого: \(debt.debtor.displayName)")
     }
 
     // MARK: Форма платежа

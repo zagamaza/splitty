@@ -285,42 +285,24 @@ struct GroupDetailView: View {
         }
     }
 
-    /// Сводка документа: всего, ваша доля, ваш остаток словами и ссылки на
-    /// балансы и расчёт (+ подпись про неотправленные операции: их суммы в
-    /// балансах сервера не учтены).
+    /// Сводка документа: «Всего потрачено» и «Ваша доля» — строками шапки, а
+    /// громче всего на экране — ваш остаток вместе с расчётом: это то, что
+    /// нужно для следующего действия (+ подпись про неотправленные операции:
+    /// их суммы в балансах сервера не учтены).
     private func headerCard(room: RoomDetail, meId: Int) -> some View {
         let canSettle = !model.debtsInvolving(meId).isEmpty
-        return VStack(alignment: .leading, spacing: 12) {
-            // При крупном шрифте подпись и сумма в строку не влезают —
-            // тогда столбиком, сумма во всю ширину.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Всего потрачено").receiptLabel().fixedSize()
-                    Spacer(minLength: 8)
-                    totalSpentText(room)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Всего потрачено").receiptLabel()
-                    // Без fixedSize: в столбике сумма ограничена шириной листа
-                    // и ужимается, а не вылезает за него.
-                    MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
-                              size: 32, weight: .heavy, currency: room.currency)
-                }
+        return VStack(alignment: .leading, spacing: 8) {
+            ledgerRow(Text("Всего потрачено"), weight: .semibold) {
+                MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
+                          size: 17, weight: .semibold, currency: room.currency)
             }
-            .accessibilityElement(children: .combine)
-            HStack(alignment: .firstTextBaseline) {
-                Text("Ваша доля")
-                    .scaledFont(size: 14)
-                    .foregroundStyle(Color.inkSecondary)
-                Spacer(minLength: 8)
+            ledgerRow(Text("Ваша доля"), weight: .regular) {
                 MoneyText(room.mySpent, exactMinor: room.exactMySpentMinor, role: .neutral,
-                          size: 14, weight: .medium, currency: room.currency)
+                          size: 17, weight: .regular, currency: room.currency)
             }
-            .accessibilityElement(children: .combine)
 
-            ReceiptDivider().padding(.vertical, 4)
+            ReceiptDivider().padding(.vertical, 8)
 
-            Text("Ваш остаток").receiptLabel()
             debtHero(room: room, meId: meId)
 
             if !localEntries.isEmpty {
@@ -333,29 +315,42 @@ struct GroupDetailView: View {
             }
             CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
 
-            HStack {
-                Button("Все балансы") { tusaTab = .balances }
-                    .buttonStyle(.textLink)
-                Spacer(minLength: 8)
-                // Расчёт живёт рядом с остатком, а не в общем ряду кнопок.
-                if canSettle {
-                    Button {
-                        openSettleUp()
-                    } label: {
-                        Text("Рассчитаться") + Text(verbatim: " ↗")
-                    }
-                    .buttonStyle(.textLink)
+            // Расчёт — рамкой под самим остатком: заливка в листе одна, у
+            // «Добавить расход».
+            if canSettle {
+                Button("Рассчитаться") { openSettleUp() }
+                    .buttonStyle(.receiptOutline)
                     .accessibilityIdentifier("settleUpLink")
-                }
+                    .padding(.top, 6)
             }
+            Button("Все балансы") { tusaTab = .balances }
+                .buttonStyle(.textLink)
+                .frame(maxWidth: .infinity, alignment: canSettle ? .center : .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func totalSpentText(_ room: RoomDetail) -> some View {
-        MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
-                  size: 32, weight: .heavy, currency: room.currency)
-            .fixedSize()
+    /// Строка шапки: подпись слева, сумма справа. На крупном шрифте сумма
+    /// уходит под подпись, а не обрезается.
+    private func ledgerRow<Amount: View>(
+        _ title: Text, weight: Font.Weight, @ViewBuilder amount: () -> Amount
+    ) -> some View {
+        let label = title
+            .scaledFont(size: 15, weight: weight)
+            .foregroundStyle(Color.ink)
+        let value = amount()
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                label.fixedSize()
+                Spacer(minLength: 8)
+                value.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                label.fixedSize(horizontal: false, vertical: true)
+                value
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     /// Погашения офлайн не работают (зафиксированный дизайн v1).
@@ -383,7 +378,8 @@ struct GroupDetailView: View {
         .padding(.bottom, 8)
     }
 
-    /// Hero-статус: «Вам должны … ₽» / «Вы должны … ₽ (Имени)» / «Нет долгов».
+    /// Остаток: реквизит «Ваш долг» / «Вам должны», крупная сумма и строка
+    /// «Кому: Имя» / «От кого: Имя». Имя не склоняем — надёжной морфологии нет.
     @ViewBuilder
     private func debtHero(room: RoomDetail, meId: Int) -> some View {
         if room.debtsUnavailable {
@@ -398,47 +394,53 @@ struct GroupDetailView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Color.inkSecondary)
             }
-        } else if room.exactMyBalanceMinor > 0 {
-            balanceStatement(Text("Вам должны"), room: room)
-        } else if room.exactMyBalanceMinor < 0 {
-            let creditors = model.debtsOwedBy(meId)
-            // Сумма — НЕТТО по группе, а не долг одному кредитору:
-            // «должен A 100, C должен мне 30» давало здесь 100, а в
-            // списке групп 70 — две разные цифры про одну комнату.
-            if creditors.count == 1, let debt = creditors.first {
-                balanceStatement(Text("Вы должны \(debt.lender.displayName)"), room: room)
-            } else {
-                balanceStatement(Text("Вы должны"), room: room)
+        } else if room.exactMyBalanceMinor != 0 {
+            let owesMe = room.exactMyBalanceMinor > 0
+            // Сумма — НЕТТО по группе. Имя — только когда нетто и есть ваш
+            // единственный долг в группе. «Должен A 1000, C должен мне 400»
+            // с подписью «Кому: A» приписало бы A нетто 600 — тогда «По группе».
+            let mine = model.debtsInvolving(meId)
+            let single = mine.count == 1 && mine[0].exactMinor == abs(room.exactMyBalanceMinor) ? mine.first : nil
+            let counterpart: Text = single.map {
+                owesMe ? Text("От кого: \($0.debtor.displayName)") : Text("Кому: \($0.lender.displayName)")
+            } ?? Text("По группе")
+            balanceStatement(
+                label: owesMe ? Text("Вам должны") : Text("Ваш долг"),
+                counterpart: counterpart,
+                room: room
+            )
+        } else if !model.debtsInvolving(meId).isEmpty {
+            // Встречные долги в сумме дают ноль — это не «все рассчитались».
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ваш остаток").receiptLabel()
+                Text("Долги есть, но в сумме взаимно гасятся")
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .accessibilityElement(children: .combine)
         } else {
             // Ноль — штамп, а не крупный «0»: это состояние, а не сумма.
-            StatusStamp(text: Glossary.settled.localizedUppercase)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Ваш остаток").receiptLabel()
+                StatusStamp(text: Glossary.settled.localizedUppercase)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
-    /// Остаток словами крупно и суммой справа: направление долга читается
-    /// текстом, цвет его только подкрепляет.
-    private func balanceStatement(_ words: Text, room: RoomDetail) -> some View {
-        let wordsView = words
-            .scaledFont(size: 22, weight: .heavy, relativeTo: .title3)
-            .kerning(-0.5)
-            .foregroundStyle(Color.ink)
-            .fixedSize(horizontal: false, vertical: true)
-        let amount = MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 22,
-                               weight: .heavy, currency: room.currency)
-            .fixedSize()
-        return ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                wordsView
-                Spacer(minLength: 8)
-                amount
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                wordsView
-                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 22,
-                          weight: .heavy, currency: room.currency)
-            }
+    /// Направление долга читается подписью, цвет его только подкрепляет.
+    private func balanceStatement(label: Text, counterpart: Text, room: RoomDetail) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            label.receiptLabel()
+            // Без fixedSize: на узком экране с крупным шрифтом сумма ужимается
+            // в ширину листа, а не вылезает за него.
+            MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 40,
+                      weight: .heavy, currency: room.currency)
+            counterpart
+                .scaledFont(size: 16, weight: .medium)
+                .foregroundStyle(Color.ink)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
     }
@@ -553,6 +555,10 @@ struct GroupDetailView: View {
                 }
                 if room.debtsUnavailable {
                     Text(Glossary.debtsUnavailableShort)
+                        .scaledFont(size: 14)
+                        .foregroundStyle(Color.inkSecondary)
+                } else if room.exactMyBalanceMinor == 0, let meId, !model.debtsInvolving(meId).isEmpty {
+                    Text("Долги взаимно гасятся")
                         .scaledFont(size: 14)
                         .foregroundStyle(Color.inkSecondary)
                 } else if room.exactMyBalanceMinor == 0 {

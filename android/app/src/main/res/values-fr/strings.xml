@@ -211,7 +211,6 @@
     <string name="group_card_pending_badge">Certaines opérations n\'ont pas encore été envoyées</string>
     <string name="group_card_unread_badge">Nouveaux événements : %1$s</string>
     <string name="group_settle_offline">Pas de connexion. Le règlement ne fonctionne qu\'en ligne</string>
-    <string name="group_you_owe_name">Vous devez à %1$s</string>
     <string name="group_chip_settle">Régler la dette</string>
     <string name="group_chip_balances">Soldes</string>
     <string name="group_chip_totals">Bilan</string>
@@ -233,9 +232,6 @@
 
     <!-- Группы: балансы -->
     <string name="group_balances_title">Soldes</string>
-    <string name="group_debt_you_owe">Vous devez à %1$s</string>
-    <string name="group_debt_owes_you">%1$s vous doit</string>
-    <string name="group_debt_pair">%1$s doit — %2$s</string>
     <string name="group_debt_settle">Régler</string>
 
     <!-- Группы: настройки -->
@@ -768,7 +764,6 @@
     <string name="brand_receipt_label">Addition commune</string>
     <string name="receipt_your_share">Votre part</string>
     <string name="receipt_your_balance">Votre solde</string>
-    <string name="receipt_settle_up">Régler ↗</string>
     <string name="receipt_all_balances">Tous les soldes</string>
     <string name="receipt_items">Lignes</string>
     <string name="receipt_has_attachments">Avec pièces jointes</string>
@@ -780,4 +775,11 @@
     <string name="expense_check_title">Vérifiez la dépense</string>
     <string name="rec_status_recording_sub_finish">Relâchez pour terminer · haut pour verrouiller · gauche pour annuler</string>
     <string name="rec_stop_finish_a11y">Terminer l\'enregistrement</string>
+    <string name="group_your_debt">Vous devez</string>
+    <string name="group_debt_to">À : %1$s</string>
+    <string name="group_debt_from">De : %1$s</string>
+    <string name="group_debt_from_to">De : %1$s, à : %2$s</string>
+    <string name="group_balance_across">Sur le groupe</string>
+    <string name="group_debts_cancel_short">Les dettes se compensent</string>
+    <string name="group_settle_up">Régler</string>
 </resources>

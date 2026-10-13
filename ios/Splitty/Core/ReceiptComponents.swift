@@ -616,6 +616,34 @@ extension ButtonStyle where Self == TextLinkButtonStyle {
     static func textLink(size: CGFloat) -> TextLinkButtonStyle { TextLinkButtonStyle(size: size) }
 }
 
+// MARK: - Действие рамкой
+
+/// Второе по силе действие листа («Рассчитаться»): чернильная рамка во всю
+/// ширину. Заливка остаётся одной кнопке экрана.
+struct ReceiptOutlineButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaledFont(size: 16, weight: .semibold)
+            .foregroundStyle(Color.ink)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 48)
+            .padding(.horizontal, 12)
+            .background(Color.ink.opacity(configuration.isPressed ? 0.06 : 0))
+            .overlay(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .strokeBorder(Color.ink, lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+            .opacity(isEnabled ? 1 : 0.4)
+    }
+}
+
+extension ButtonStyle where Self == ReceiptOutlineButtonStyle {
+    static var receiptOutline: ReceiptOutlineButtonStyle { ReceiptOutlineButtonStyle() }
+}
+
 // MARK: - Вкладка
 
 /// Текстовая вкладка документа: выбранная — чернилами с чертой снизу.

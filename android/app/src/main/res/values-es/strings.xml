@@ -211,7 +211,6 @@
     <string name="group_card_pending_badge">Hay operaciones sin enviar</string>
     <string name="group_card_unread_badge">Eventos nuevos: %1$s</string>
     <string name="group_settle_offline">Sin conexión. Saldar deudas solo funciona en línea</string>
-    <string name="group_you_owe_name">Debes a %1$s</string>
     <string name="group_chip_settle">Saldar deuda</string>
     <string name="group_chip_balances">Saldos</string>
     <string name="group_chip_totals">Totales</string>
@@ -233,9 +232,6 @@
 
     <!-- Группы: балансы -->
     <string name="group_balances_title">Saldos</string>
-    <string name="group_debt_you_owe">Debes a %1$s</string>
-    <string name="group_debt_owes_you">%1$s te debe</string>
-    <string name="group_debt_pair">%1$s debe — %2$s</string>
     <string name="group_debt_settle">Saldar</string>
 
     <!-- Группы: настройки -->
@@ -768,7 +764,6 @@
     <string name="brand_receipt_label">Cuenta común</string>
     <string name="receipt_your_share">Tu parte</string>
     <string name="receipt_your_balance">Tu saldo</string>
-    <string name="receipt_settle_up">Saldar cuentas ↗</string>
     <string name="receipt_all_balances">Todos los saldos</string>
     <string name="receipt_items">Partidas</string>
     <string name="receipt_has_attachments">Con adjuntos</string>
@@ -780,4 +775,11 @@
     <string name="expense_check_title">Revisa el gasto</string>
     <string name="rec_status_recording_sub_finish">Suelta para terminar · arriba para fijar · izquierda para cancelar</string>
     <string name="rec_stop_finish_a11y">Terminar la grabación</string>
+    <string name="group_your_debt">Tu deuda</string>
+    <string name="group_debt_to">A: %1$s</string>
+    <string name="group_debt_from">De: %1$s</string>
+    <string name="group_debt_from_to">De: %1$s, a: %2$s</string>
+    <string name="group_balance_across">En el grupo</string>
+    <string name="group_debts_cancel_short">Las deudas se compensan</string>
+    <string name="group_settle_up">Saldar cuentas</string>
 </resources>
