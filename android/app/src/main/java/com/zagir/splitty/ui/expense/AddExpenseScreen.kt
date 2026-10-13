@@ -362,82 +362,84 @@ fun AddExpenseScreen(
                         .fillMaxWidth()
                         .background(colors.bg)
                         .navigationBarsPadding()
-                        .imePadding()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                        .imePadding(),
                 ) {
-                    if (showComposer) {
-                        // Пустая форма: БОЛЬШОЙ hold-to-talk микрофон в зоне
-                        // большого пальца — свайп вверх (замок) снизу естественен.
-                        ComposerMicBar(
-                            voice = voice,
-                            talkBack = talkBack,
-                            aiDisabled = aiDisabledReason != null,
-                            micGranted = micGranted,
-                            onBlockedTap = nudgeAiUnavailable,
-                            onRequestPermission = requestMic,
-                            onTalkBackTap = startVoice,
-                            onMicFrame = { micFrame = it },
-                            remaining = remainingRecognitions,
-                            onRemainingTap = viewModel::showPaywall,
-                        )
-                    } else {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(11.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            CircleIconButton(
-                                icon = Icons.Filled.PhotoCamera,
-                                contentDescription = stringResource(R.string.expense_recognized_add_photo),
-                                enabled = aiDisabledReason == null,
-                                onClick = {
-                                    if (aiDisabledReason != null) {
-                                        nudgeAiUnavailable()
-                                    } else {
-                                        receiptCapture.captureFromCamera()
-                                    }
-                                },
-                            )
-                            // Микрофон правки: скажи, что поправить — черновик
-                            // уйдёт на сервер вместе с голосом.
-                            VoiceCorrectionMic(
+                    if (!showComposer) HorizontalDivider(thickness = 1.dp, color = colors.hairline)
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                        if (showComposer) {
+                            // Пустая форма: БОЛЬШОЙ hold-to-talk микрофон в зоне
+                            // большого пальца — свайп вверх (замок) снизу естественен.
+                            ComposerMicBar(
                                 voice = voice,
                                 talkBack = talkBack,
-                                isRecording = recorder.isRecording,
                                 aiDisabled = aiDisabledReason != null,
                                 micGranted = micGranted,
                                 onBlockedTap = nudgeAiUnavailable,
                                 onRequestPermission = requestMic,
                                 onTalkBackTap = startVoice,
                                 onMicFrame = { micFrame = it },
+                                remaining = remainingRecognitions,
+                                onRemainingTap = viewModel::showPaywall,
                             )
-                            // Кнопка живая: тап при блокировке объясняет причину тостом
-                            // (нет группы → встряска поля + тост), а не молчит. Жёсткий
-                            // disabled — только сохранение в полёте и офлайн-правка синка.
-                            PrimaryPillButton(
-                                text = stringResource(R.string.common_save),
-                                onClick = onSave@{
-                                    when {
-                                        form.selectedRoomId == null -> {
-                                            haptics.warning()
-                                            groupNudge++
-                                            viewModel.nudgeSelectGroup()
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(11.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CircleIconButton(
+                                    icon = Icons.Filled.PhotoCamera,
+                                    contentDescription = stringResource(R.string.expense_recognized_add_photo),
+                                    enabled = aiDisabledReason == null,
+                                    onClick = {
+                                        if (aiDisabledReason != null) {
+                                            nudgeAiUnavailable()
+                                        } else {
+                                            receiptCapture.captureFromCamera()
                                         }
-                                        form.saveBlockedReason != null -> {
-                                            haptics.warning()
-                                            viewModel.showToast(form.saveBlockedReason!!)
+                                    },
+                                )
+                                // Микрофон правки: скажи, что поправить — черновик
+                                // уйдёт на сервер вместе с голосом.
+                                VoiceCorrectionMic(
+                                    voice = voice,
+                                    talkBack = talkBack,
+                                    isRecording = recorder.isRecording,
+                                    aiDisabled = aiDisabledReason != null,
+                                    micGranted = micGranted,
+                                    onBlockedTap = nudgeAiUnavailable,
+                                    onRequestPermission = requestMic,
+                                    onTalkBackTap = startVoice,
+                                    onMicFrame = { micFrame = it },
+                                )
+                                // Кнопка живая: тап при блокировке объясняет причину тостом
+                                // (нет группы → встряска поля + тост), а не молчит. Жёсткий
+                                // disabled — только сохранение в полёте и офлайн-правка синка.
+                                PrimaryPillButton(
+                                    text = stringResource(R.string.common_save),
+                                    onClick = onSave@{
+                                        when {
+                                            form.selectedRoomId == null -> {
+                                                haptics.warning()
+                                                groupNudge++
+                                                viewModel.nudgeSelectGroup()
+                                            }
+                                            form.saveBlockedReason != null -> {
+                                                haptics.warning()
+                                                viewModel.showToast(form.saveBlockedReason!!)
+                                            }
+                                            else -> viewModel.save()
                                         }
-                                        else -> viewModel.save()
-                                    }
-                                },
-                                // !isParsing обязателен: ParsingOverlay лежит
-                                // внутри контента Scaffold и НЕ перекрывает
-                                // нижнюю панель — без этого «Сохранить» во время
-                                // распознавания писал операцию по пустой форме,
-                                // а ответ парсера прилетал на закрывающийся экран.
-                                enabled = !form.isSaving && !form.isParsing &&
-                                    canSaveExpenseOffline(form.isEditingSynced, isOnline),
-                                modifier = Modifier.weight(1f),
-                            )
+                                    },
+                                    // !isParsing обязателен: ParsingOverlay лежит
+                                    // внутри контента Scaffold и НЕ перекрывает
+                                    // нижнюю панель — без этого «Сохранить» во время
+                                    // распознавания писал операцию по пустой форме,
+                                    // а ответ парсера прилетал на закрывающийся экран.
+                                    enabled = !form.isSaving && !form.isParsing &&
+                                        canSaveExpenseOffline(form.isEditingSynced, isOnline),
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                         }
                     }
                 }
@@ -1107,8 +1109,9 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .clip(CircleShape)
-                .background(colors.accent.copy(alpha = 0.12f))
+                .clip(RoundedCornerShape(3.dp))
+                .background(colors.surface)
+                .border(1.dp, colors.ruleStrong, RoundedCornerShape(3.dp))
                 .clickable(onClick = onAddPhoto),
             contentAlignment = Alignment.Center,
         ) {
@@ -1987,7 +1990,7 @@ private fun TextLink(text: String, accent: Boolean, onClick: () -> Unit) {
     )
 }
 
-/** Круглая кнопка-иконка нижней панели (фото чека). */
+/** Квадратная кнопка-иконка нижней панели (фото чека) — углы как у «Сохранить». */
 @Composable
 private fun CircleIconButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -2000,9 +2003,9 @@ private fun CircleIconButton(
         modifier = Modifier
             .size(54.dp)
             .alpha(if (enabled) 1f else 0.45f)
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(3.dp))
             .background(colors.surface)
-            .border(1.dp, colors.ink, CircleShape)
+            .border(1.dp, colors.ruleStrong, RoundedCornerShape(3.dp))
             .semantics { this.contentDescription = contentDescription }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -2097,7 +2100,7 @@ private fun ComposerMicBar(
     }
 }
 
-/** Круглый микрофон голосовой ПРАВКИ заполненного черновика (нижняя панель). */
+/** Микрофон голосовой ПРАВКИ заполненного черновика (нижняя панель), в паре с камерой. */
 @Composable
 private fun VoiceCorrectionMic(
     voice: VoiceController,
@@ -2118,9 +2121,9 @@ private fun VoiceCorrectionMic(
             .alpha(if (aiDisabled) 0.45f else 1f)
             .scale(if (voice.isMicPressed) 0.9f else 1f)
             .onGloballyPositioned { onMicFrame(it.boundsInRoot()) }
-            .clip(CircleShape)
+            .clip(RoundedCornerShape(3.dp))
             .background(if (isRecording) colors.accent else colors.surface)
-            .border(1.5.dp, colors.accent, CircleShape)
+            .border(1.dp, if (isRecording) colors.accent else colors.ruleStrong, RoundedCornerShape(3.dp))
             .semantics { contentDescription = a11yLabel }
             .micHold(
                 voice = voice,

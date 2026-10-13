@@ -666,7 +666,8 @@ struct AddExpenseView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.ink)
                     .frame(width: 38, height: 38)
-                    .background(Color.accent.opacity(0.12), in: Circle())
+                    .background(Color.surface, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Добавить фото чека")
@@ -810,6 +811,11 @@ struct AddExpenseView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .background(Color.bg)
+        .overlay(alignment: .top) {
+            if !showComposer {
+                Rectangle().fill(Color.hairline).frame(height: 1)
+            }
+        }
     }
 
     /// Большой микрофон композера в нижней панели (зона большого пальца).
@@ -879,14 +885,14 @@ struct AddExpenseView: View {
             }
         } label: {
             ZStack {
-                Circle().fill(Color.surface)
-                Circle().strokeBorder(Color.accent.opacity(0.4), lineWidth: 1.5)
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 19, weight: .semibold))
+                RoundedRectangle(cornerRadius: 3, style: .continuous).fill(Color.surface)
+                RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(Color.ruleStrong, lineWidth: 1)
+                Image(systemName: "camera")
+                    .font(.system(size: 19, weight: .medium))
                     .foregroundStyle(Color.ink)
             }
             .frame(width: 54, height: 54)
-            .contentShape(Circle())
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .opacity(aiDisabled ? 0.45 : 1)
@@ -897,16 +903,16 @@ struct AddExpenseView: View {
     /// текущий черновик уйдёт на сервер вместе с голосом.
     private var voiceCorrectionMic: some View {
         ZStack {
-            Circle()
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
                 .fill(recorder.isRecording ? Color.accent : Color.surface)
-            Circle()
-                .strokeBorder(Color.accent, lineWidth: 1.5)
-            Image(systemName: recorder.isRecording ? "waveform" : "mic.fill")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(recorder.isRecording ? .white : Color.accent)
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .strokeBorder(recorder.isRecording ? Color.accent : Color.ruleStrong, lineWidth: 1)
+            Image(systemName: recorder.isRecording ? "waveform" : "mic")
+                .font(.system(size: 21, weight: .medium))
+                .foregroundStyle(recorder.isRecording ? Color.onAccent : Color.accent)
         }
         .frame(width: 54, height: 54)
-        .contentShape(Circle())
+        .contentShape(Rectangle())
         .animation(.spring(duration: 0.2), value: recorder.isRecording)
         .scaleEffect(isMicPressed ? 0.9 : 1)
         .animation(.spring(duration: 0.15), value: isMicPressed)
