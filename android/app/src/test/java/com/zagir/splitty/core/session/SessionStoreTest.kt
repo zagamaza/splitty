@@ -68,7 +68,8 @@ class SessionStoreTest {
 
     /**
      * Тело теста с пределом: `first { … }` на DataStore без него при потерянном
-     * обновлении ждал вечно и держал весь прогон (зависание 25 минут).
+     * обновлении ждёт вечно и держит весь прогон — так однажды завис тест
+     * миграции токена.
      */
     private fun bounded(block: suspend CoroutineScope.() -> Unit) = runBlocking {
         withTimeout(IO_WAIT_MS) { block() }

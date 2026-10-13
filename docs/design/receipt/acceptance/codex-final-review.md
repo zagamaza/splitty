@@ -133,3 +133,22 @@ Codex принял по коду и кадрам (`badge-own-tab.png`, `and-badg
 Проверены показанные величины на AccessibilityL, а не любые числа на всех размерах.
 Прогоны на eb91cc2: iOS unit 467/467; Android `testDebugUnitTest` 666/666 на 8ca6cbf
 (в соседних прогонах `AppRootJoinTest` падал по таймауту 30 с — ограничение выше в силе).
+
+## Дополнение: стабильность Android-тестов
+
+Разбор Codex (`/tmp/splitor-test-diag/diagnosis.txt`, вне репозитория), правки — 160256f.
+
+- **Устранено:** утечки тестовых корутин. `AppRootJoinTest`, `AppRootIntroTest`,
+  `ActivityViewModelTest` теперь закрывают VM и ждут завершения их скоупов и скоупа
+  фикстуры до `resetMain`. Фоновых `MissingMainCoroutineDispatcher` в XML нет.
+  Ожидания `SessionStoreTest` ограничены; общий предел задачи — 5 минут. Два полных
+  прогона: 666/666 за 35 и 34 с.
+- **Открыто:** потеря обновлений DataStore 1.1.7 (b/431787506) — подтверждена
+  воспроизведением, см. `android/diagnostics/datastore-race/`; лечится обновлением
+  до 1.3.0-rc01 (релиз-кандидат), решение за пользователем. Два зелёных прогона
+  гонку не закрывают.
+- **Открыто:** `OutboxSurvivesExpiryTest` — чистильщик может пропустить короткое
+  состояние входа (StateFlow склеивает переходы), нужен явный барьер обработки
+  перехода, а не паузы. Лог: `/tmp/splitor-test-diag/outbox-failure.xml`.
+- **Не объяснено:** однократные 177 с в `ReceiptCardSnapshotTest` (NATIVE) и
+  историческое 25-минутное зависание (дампа не было).
