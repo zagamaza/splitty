@@ -259,7 +259,7 @@ struct ReceiptTabBar: View {
             Spacer(minLength: 6)
             addButton
             Spacer(minLength: 6)
-            item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge)
+            item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge, reservesBadge: true)
             Spacer(minLength: 6)
             item(.account, "Профиль", icon: "person.crop.circle", iconsOnly: iconsOnly)
         }
@@ -270,36 +270,51 @@ struct ReceiptTabBar: View {
         _ title: LocalizedStringKey,
         icon: String,
         iconsOnly: Bool,
-        badge: String? = nil
+        badge: String? = nil,
+        reservesBadge: Bool = false
     ) -> some View {
         let isOn = selection == tab
         return Button {
             if selection != tab { Haptics.tap() }
             selection = tab
         } label: {
+            // Ширина пункта не зависит ни от выбора, ни от счётчика: место под
+            // жирное начертание и бейдж «99+» занято всегда. Иначе гибкие зазоры
+            // перераспределялись, и «+» ездил при каждой смене вкладки.
             HStack(spacing: 5) {
-                // Точка — и в режиме значков: выбор виден формой, а не только
-                // заливкой значка или цветом.
-                if isOn {
-                    Circle().fill(Color.ink).frame(width: 5, height: 5)
-                }
+                Group {
                 if iconsOnly {
                     Image(systemName: isOn ? icon + ".fill" : icon)
                         .font(.system(size: 19, weight: .medium))
+                        .frame(width: 28)
                 } else {
                     Text(title)
-                        .scaledFont(size: 14, weight: isOn ? .semibold : .regular)
-                        .underline(!isOn, color: Color.ink.opacity(0.45))
+                        .scaledFont(size: 14, weight: .semibold)
                         .lineLimit(1)
                         .fixedSize()
+                        .hidden()
+                        .overlay(alignment: .leading) {
+                            Text(title)
+                                .scaledFont(size: 14, weight: isOn ? .semibold : .regular)
+                                .underline(!isOn, color: Color.ink.opacity(0.45))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
                 }
-                if let badge {
-                    Text(badge)
-                        .scaledFont(size: 11, weight: .bold, design: .monospaced, relativeTo: .caption2)
-                        .foregroundStyle(Color.onAccent)
-                        .padding(.horizontal, 4)
-                        .frame(minWidth: 16, minHeight: 16)
-                        .background(Color.accent, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
+                }
+                // Точка — в зазоре перед подписью, ширины не занимает; и в
+                // режиме значков: выбор виден формой, а не только заливкой.
+                .overlay(alignment: .leading) {
+                    if isOn {
+                        Circle().fill(Color.ink).frame(width: 5, height: 5).offset(x: -9)
+                    }
+                }
+                if reservesBadge {
+                    badgeView("99+")
+                        .hidden()
+                        .overlay(alignment: .leading) {
+                            if let badge { badgeView(badge) }
+                        }
                 }
             }
             .foregroundStyle(Color.ink)
@@ -311,6 +326,15 @@ struct ReceiptTabBar: View {
         .accessibilityValue(Text(verbatim: badge ?? ""))
         .accessibilityAddTraits(isOn ? .isSelected : [])
         .accessibilityIdentifier("tab.\(String(describing: tab))")
+    }
+
+    private func badgeView(_ text: String) -> some View {
+        Text(verbatim: text)
+            .scaledFont(size: 11, weight: .bold, design: .monospaced, relativeTo: .caption2)
+            .foregroundStyle(Color.onAccent)
+            .padding(.horizontal, 4)
+            .frame(minWidth: 16, minHeight: 16)
+            .background(Color.accent, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
     }
 
     private var addButton: some View {

@@ -70,6 +70,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.layout.offset
 import com.zagir.splitty.R
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -634,16 +637,14 @@ private fun ReceiptTabBar(
     ) {
         HorizontalDivider(thickness = 1.dp, color = colors.hairline)
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-            // Вместимость считается по настоящим ширинам: подпись (не уже зоны
-            // нажатия 48dp), точка выбранной, бейдж тем же стилем, «+» и зазоры.
-            val badgeWidth = badge?.let {
-                with(density) { measurer.measure(it, BadgeStyle).size.width.toDp() }.coerceAtLeast(8.dp) + 8.dp + 5.dp
-            } ?: 0.dp
+            // Вместимость — по настоящим ширинам, и та же, что займут пункты:
+            // бейдж «99+» зарезервирован всегда (см. ReceiptTab). Иначе
+            // режим и зазоры менялись от выбора и счётчика, и «+» ездил.
+            val badgeWidth = with(density) { measurer.measure(BADGE_RESERVE, BadgeStyle).size.width.toDp() } + 8.dp + 5.dp
             val tabsWidth = tabs.mapIndexed { index, tab ->
                 val label = with(density) { measurer.measure(labels[index], style).size.width.toDp() }
-                val dot = if (currentRoute == tab.route) 10.dp else 0.dp
                 val withBadge = if (tab.route == MainRoutes.ACTIVITY) badgeWidth else 0.dp
-                maxOf(48.dp, label + dot + withBadge)
+                maxOf(48.dp, label + withBadge)
             }.fold(0.dp) { acc, w -> acc + w }
             val iconsOnly = tabsWidth + 48.dp + 6.dp * tabs.size > maxWidth
             Row(
@@ -659,6 +660,7 @@ private fun ReceiptTabBar(
                         selected = currentRoute == tab.route,
                         iconsOnly = iconsOnly,
                         badge = if (tab.route == MainRoutes.ACTIVITY) badge else null,
+                        reservesBadge = tab.route == MainRoutes.ACTIVITY,
                         onClick = {
                             if (currentRoute != tab.route) haptics.tap()
                             onTab(tab.route)
@@ -677,6 +679,7 @@ private fun ReceiptTab(
     selected: Boolean,
     iconsOnly: Boolean,
     badge: String?,
+    reservesBadge: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
@@ -688,36 +691,54 @@ private fun ReceiptTab(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
     ) {
-        // Точка — и в режиме значков: выбор виден формой, а не только цветом.
-        if (selected) {
-            Box(Modifier.size(5.dp).clip(CircleShape).background(colors.ink))
+        // Ширина пункта не зависит ни от выбора, ни от счётчика: жирное
+        // начертание и бейдж «99+» занимают место всегда.
+        Box(contentAlignment = Alignment.CenterStart) {
+            if (iconsOnly) {
+                Icon(icon, contentDescription = label, tint = if (selected) colors.ink else colors.inkSecondary)
+            } else {
+                Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.alpha(0f).clearAndSetSemantics {})
+                Text(
+                    text = label,
+                    color = colors.ink,
+                    fontSize = 14.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    textDecoration = if (selected) null else TextDecoration.Underline,
+                    maxLines = 1,
+                )
+            }
+            // Точка — в зазоре перед подписью, ширины не занимает; и в режиме
+            // значков: выбор виден формой, а не только цветом.
+            if (selected) {
+                Box(Modifier.offset(x = (-9).dp).size(5.dp).clip(CircleShape).background(colors.ink))
+            }
         }
-        if (iconsOnly) {
-            Icon(icon, contentDescription = label, tint = if (selected) colors.ink else colors.inkSecondary)
-        } else {
-            Text(
-                text = label,
-                color = colors.ink,
-                fontSize = 14.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                textDecoration = if (selected) null else TextDecoration.Underline,
-                maxLines = 1,
-            )
-        }
-        if (badge != null) {
-            Box(
-                modifier = Modifier
-                    .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(colors.accent)
-                    .padding(horizontal = 4.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(badge, color = colors.onAccent, style = BadgeStyle)
+        if (reservesBadge) {
+            Box {
+                TabBadge(BADGE_RESERVE, Modifier.alpha(0f).clearAndSetSemantics {})
+                if (badge != null) TabBadge(badge)
             }
         }
     }
 }
+
+@Composable
+private fun TabBadge(text: String, modifier: Modifier = Modifier) {
+    val colors = Splitty.colors
+    Box(
+        modifier = modifier
+            .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(colors.accent)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, color = colors.onAccent, style = BadgeStyle)
+    }
+}
+
+/** Самый широкий бейдж: под него место у «Уведомлений» занято всегда. */
+private const val BADGE_RESERVE = "99+"
 
 private val BadgeStyle = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
 
