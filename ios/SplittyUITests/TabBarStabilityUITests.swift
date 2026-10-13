@@ -1,6 +1,6 @@
 import XCTest
 
-/// «+» в нижней строке не должен ездить при смене вкладки: точка выбранной,
+/// «+» в нижней строке стоит ровно по центру и не ездит при смене вкладки: точка выбранной,
 /// жирное начертание и гаснущий на «Уведомлениях» бейдж меняли ширины пунктов,
 /// гибкие зазоры перераспределялись, и кнопка сдвигалась на каждом переходе.
 ///
@@ -26,6 +26,8 @@ final class TabBarStabilityUITests: XCTestCase {
         let activity = app.buttons["tab.activity"]
         XCTAssertTrue(waitForValue(activity, equals: "1"), "бейджа «1» нет — сценарий без него ничего не проверяет")
         let origin = add.frame.origin
+        let bar = app.otherElements["tabBar"].frame
+        XCTAssertEqual(add.frame.midX, bar.midX, accuracy: 0.5, "«+» не по центру строки")
 
         activity.tap()
         XCTAssertTrue(waitForValue(activity, equals: ""), "бейдж не погас после открытия «Уведомлений»")

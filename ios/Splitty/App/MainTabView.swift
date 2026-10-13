@@ -225,10 +225,12 @@ struct MainTabView: View {
 }
 
 /// Нижняя строка чека вместо системного таббара: вкладки — текстом, как в
-/// референсе (`docs/design/receipt/receipt/groups.png`): выбранная — точкой и
-/// плотным начертанием, остальные — подчёркнутыми ссылками. «+» — плоская
-/// печать цвета действия вровень со строкой. Если текст не помещается
-/// (крупный шрифт, длинный язык), строка переходит на значки.
+/// референсе (`docs/design/receipt/receipt/groups.png`): выбранная — плотным
+/// начертанием и точкой, остальные — подчёркнутыми ссылками. «+» — плоская
+/// печать цвета действия ровно по центру строки, две вкладки слева, две справа.
+/// Ничто не меняет ширины: жирное начертание зарезервировано, бейдж —
+/// надстрочный, точка — под подписью. Поэтому «+» не ездит ни при смене вкладки,
+/// ни при появлении счётчика. Не помещаются подписи — строка переходит на значки.
 struct ReceiptTabBar: View {
     @Binding var selection: MainTabView.Tab
     let badge: String?
@@ -252,15 +254,11 @@ struct ReceiptTabBar: View {
     }
 
     private func row(iconsOnly: Bool) -> some View {
-        HStack(spacing: 0) {
+        CenteredTabsLayout(minGap: 6) {
             item(.friends, "Друзья", icon: "person.2", iconsOnly: iconsOnly)
-            Spacer(minLength: 6)
             item(.groups, "Группы", icon: "person.3", iconsOnly: iconsOnly)
-            Spacer(minLength: 6)
             addButton
-            Spacer(minLength: 6)
-            item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge, reservesBadge: true)
-            Spacer(minLength: 6)
+            item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge)
             item(.account, "Профиль", icon: "person.crop.circle", iconsOnly: iconsOnly)
         }
     }
@@ -270,51 +268,51 @@ struct ReceiptTabBar: View {
         _ title: LocalizedStringKey,
         icon: String,
         iconsOnly: Bool,
-        badge: String? = nil,
-        reservesBadge: Bool = false
+        badge: String? = nil
     ) -> some View {
         let isOn = selection == tab
         return Button {
             if selection != tab { Haptics.tap() }
             selection = tab
         } label: {
-            // Ширина пункта не зависит ни от выбора, ни от счётчика: место под
-            // жирное начертание и бейдж «99+» занято всегда. Иначе гибкие зазоры
-            // перераспределялись, и «+» ездил при каждой смене вкладки.
-            HStack(spacing: 5) {
-                Group {
+            Group {
                 if iconsOnly {
                     Image(systemName: isOn ? icon + ".fill" : icon)
                         .font(.system(size: 19, weight: .medium))
                         .frame(width: 28)
                 } else {
+                    // Невидимая жирная подпись держит ширину: выбор её не меняет.
                     Text(title)
-                        .scaledFont(size: 14, weight: .semibold)
+                        .scaledFont(size: 13, weight: .semibold)
                         .lineLimit(1)
                         .fixedSize()
                         .hidden()
-                        .overlay(alignment: .leading) {
+                        .overlay {
                             Text(title)
-                                .scaledFont(size: 14, weight: isOn ? .semibold : .regular)
+                                .scaledFont(size: 13, weight: isOn ? .semibold : .regular)
                                 .underline(!isOn, color: Color.ink.opacity(0.45))
                                 .lineLimit(1)
                                 .fixedSize()
                         }
                 }
+            }
+            // Надстрочный бейдж у правого верхнего угла подписи или значка:
+            // ширины не занимает, поэтому «+» не сдвигается при его появлении.
+            .overlay(alignment: .topTrailing) {
+                if let badge {
+                    // Рамка нулевого размера в углу: бейдж растёт от него вправо
+                    // и вверх, заходя на угол подписи (значка) на несколько точек.
+                    badgeView(badge)
+                        .fixedSize()
+                        .frame(width: 0, height: 0, alignment: .bottomLeading)
+                        .offset(x: iconsOnly ? -8 : -3, y: iconsOnly ? 8 : 3)
                 }
-                // Точка — в зазоре перед подписью, ширины не занимает; и в
-                // режиме значков: выбор виден формой, а не только заливкой.
-                .overlay(alignment: .leading) {
-                    if isOn {
-                        Circle().fill(Color.ink).frame(width: 5, height: 5).offset(x: -9)
-                    }
-                }
-                if reservesBadge {
-                    badgeView("99+")
-                        .hidden()
-                        .overlay(alignment: .leading) {
-                            if let badge { badgeView(badge) }
-                        }
+            }
+            // Точка под подписью — и в режиме значков: выбор виден формой, а не
+            // только начертанием или заливкой; ширины тоже не занимает.
+            .overlay(alignment: .bottom) {
+                if isOn {
+                    Circle().fill(Color.ink).frame(width: 4, height: 4).offset(y: 8)
                 }
             }
             .foregroundStyle(Color.ink)
@@ -330,10 +328,10 @@ struct ReceiptTabBar: View {
 
     private func badgeView(_ text: String) -> some View {
         Text(verbatim: text)
-            .scaledFont(size: 11, weight: .bold, design: .monospaced, relativeTo: .caption2)
+            .scaledFont(size: 10, weight: .bold, design: .monospaced, relativeTo: .caption2)
             .foregroundStyle(Color.onAccent)
-            .padding(.horizontal, 4)
-            .frame(minWidth: 16, minHeight: 16)
+            .padding(.horizontal, 3)
+            .frame(minWidth: 14, minHeight: 14)
             .background(Color.accent, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
     }
 
@@ -349,6 +347,43 @@ struct ReceiptTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Добавить расход")
+    }
+}
+
+/// Пять элементов строки: средний — ровно по центру, по два слева и справа
+/// делят свою половину поровну (равные зазоры, включая края). Идеальная
+/// ширина — по более широкой половине, чтобы ViewThatFits честно переходил на
+/// значки, когда подписи в половину не помещаются.
+struct CenteredTabsLayout: Layout {
+    var minGap: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let height = sizes.map(\.height).max() ?? 0
+        guard sizes.count == 5 else { return CGSize(width: proposal.width ?? 0, height: height) }
+        let side = max(sizes[0].width + sizes[1].width, sizes[3].width + sizes[4].width) + minGap * 3
+        let needed = side * 2 + sizes[2].width
+        return CGSize(width: proposal.width.map { max($0, needed) } ?? needed, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        guard sizes.count == 5 else { return }
+        let mid = sizes[2].width
+        let half = (bounds.width - mid) / 2
+        subviews[2].place(at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center, proposal: .unspecified)
+        place([0, 1], from: bounds.minX, width: half, sizes: sizes, subviews: subviews, y: bounds.midY)
+        place([3, 4], from: bounds.minX + half + mid, width: half, sizes: sizes, subviews: subviews, y: bounds.midY)
+    }
+
+    private func place(_ indices: [Int], from x: CGFloat, width: CGFloat, sizes: [CGSize], subviews: Subviews, y: CGFloat) {
+        let used = indices.map { sizes[$0].width }.reduce(0, +)
+        let gap = max(0, (width - used) / CGFloat(indices.count + 1))
+        var cursor = x + gap
+        for index in indices {
+            subviews[index].place(at: CGPoint(x: cursor, y: y), anchor: .leading, proposal: .unspecified)
+            cursor += sizes[index].width + gap
+        }
     }
 }
 

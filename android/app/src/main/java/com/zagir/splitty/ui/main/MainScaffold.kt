@@ -73,6 +73,10 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.layout.Layout
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import com.zagir.splitty.R
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -610,9 +614,12 @@ internal fun badgeLabel(count: Int, overflow: String): String? = when {
 /**
  * Нижняя строка чека вместо системной навигации (паритет iOS ReceiptTabBar):
  * вкладки — текстом, как в референсе docs/design/receipt/receipt/groups.png;
- * выбранная — точкой и плотным начертанием, остальные — подчёркнутыми
- * ссылками. «+» — плоская печать цвета действия вровень со строкой. Не
- * помещаются подписи (крупный шрифт, длинный язык) — строка переходит на значки.
+ * выбранная — плотным начертанием и точкой, остальные — подчёркнутыми
+ * ссылками. «+» — плоская печать цвета действия ровно по центру строки, по две
+ * вкладки слева и справа. Ничто не меняет ширины: жирное начертание
+ * зарезервировано, бейдж — надстрочный, точка — под подписью; поэтому «+» не
+ * ездит ни при смене вкладки, ни при появлении счётчика. Не помещаются
+ * подписи (крупный шрифт, длинный язык) — строка переходит на значки.
  */
 @Composable
 private fun ReceiptTabBar(
@@ -628,7 +635,9 @@ private fun ReceiptTabBar(
     val badge = badgeLabel(unread, stringResource(R.string.notifications_badge_overflow))
     val tabs = LeftTabs + RightTabs
     val labels = tabs.map { stringResource(it.labelRes) }
-    val style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    // Мерить тем же стилем, каким текст рисуется: у Material Text есть
+    // межбуквенный интервал, и без него расчёт обещал место, которого нет.
+    val style = LocalTextStyle.current.merge(TextStyle(fontSize = 13.sp, fontWeight = FontWeight.SemiBold))
     Column(
         Modifier
             .fillMaxWidth()
@@ -637,21 +646,12 @@ private fun ReceiptTabBar(
     ) {
         HorizontalDivider(thickness = 1.dp, color = colors.hairline)
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-            // Вместимость — по настоящим ширинам, и та же, что займут пункты:
-            // бейдж «99+» зарезервирован всегда (см. ReceiptTab). Иначе
-            // режим и зазоры менялись от выбора и счётчика, и «+» ездил.
-            val badgeWidth = with(density) { measurer.measure(BADGE_RESERVE, BadgeStyle).size.width.toDp() } + 8.dp + 5.dp
-            val tabsWidth = tabs.mapIndexed { index, tab ->
-                val label = with(density) { measurer.measure(labels[index], style).size.width.toDp() }
-                val withBadge = if (tab.route == MainRoutes.ACTIVITY) badgeWidth else 0.dp
-                maxOf(48.dp, label + withBadge)
-            }.fold(0.dp) { acc, w -> acc + w }
-            val iconsOnly = tabsWidth + 48.dp + 6.dp * tabs.size > maxWidth
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            // Та же арифметика, что у CenteredTabsLayout: более широкая половина
+            // (подписи не уже зоны нажатия 48dp и три зазора) ×2 плюс «+».
+            val widths = labels.map { with(density) { maxOf(48.dp, measurer.measure(it, style).size.width.toDp()) } }
+            val side = maxOf(widths[0] + widths[1], widths[2] + widths[3]) + MIN_GAP * 3
+            val iconsOnly = side * 2 + 48.dp > maxWidth
+            CenteredTabsLayout(Modifier.fillMaxWidth()) {
                 tabs.forEachIndexed { index, tab ->
                     if (index == LeftTabs.size) ReceiptAddButton(onAdd)
                     ReceiptTab(
@@ -660,7 +660,6 @@ private fun ReceiptTabBar(
                         selected = currentRoute == tab.route,
                         iconsOnly = iconsOnly,
                         badge = if (tab.route == MainRoutes.ACTIVITY) badge else null,
-                        reservesBadge = tab.route == MainRoutes.ACTIVITY,
                         onClick = {
                             if (currentRoute != tab.route) haptics.tap()
                             onTab(tab.route)
@@ -672,6 +671,37 @@ private fun ReceiptTabBar(
     }
 }
 
+private val MIN_GAP = 6.dp
+
+/**
+ * Пять элементов: средний ровно по центру, по два слева и справа делят свою
+ * половину поровну (равные зазоры, включая края).
+ */
+@Composable
+private fun CenteredTabsLayout(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        val height = placeables.maxOf { it.height }
+        layout(constraints.maxWidth, height) {
+            if (placeables.size != 5) return@layout
+            val mid = placeables[2]
+            val half = (constraints.maxWidth - mid.width) / 2
+            mid.place(half, (height - mid.height) / 2)
+            fun side(indices: List<Int>, from: Int) {
+                val used = indices.sumOf { placeables[it].width }
+                val gap = maxOf(0, (half - used) / (indices.size + 1))
+                var x = from + gap
+                indices.forEach { i ->
+                    placeables[i].place(x, (height - placeables[i].height) / 2)
+                    x += placeables[i].width + gap
+                }
+            }
+            side(listOf(0, 1), 0)
+            side(listOf(3, 4), half + mid.width)
+        }
+    }
+}
+
 @Composable
 private fun ReceiptTab(
     label: String,
@@ -679,44 +709,60 @@ private fun ReceiptTab(
     selected: Boolean,
     iconsOnly: Boolean,
     badge: String?,
-    reservesBadge: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = Splitty.colors
-    Row(
+    Box(
         modifier = Modifier
             .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
             .semantics(mergeDescendants = true) { this.selected = selected }
             .clickable(role = Role.Tab, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
+        contentAlignment = Alignment.Center,
     ) {
-        // Ширина пункта не зависит ни от выбора, ни от счётчика: жирное
-        // начертание и бейдж «99+» занимают место всегда.
-        Box(contentAlignment = Alignment.CenterStart) {
+        Box(contentAlignment = Alignment.Center) {
             if (iconsOnly) {
                 Icon(icon, contentDescription = label, tint = if (selected) colors.ink else colors.inkSecondary)
             } else {
-                Text(text = label, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.alpha(0f).clearAndSetSemantics {})
+                // Невидимая жирная подпись держит ширину: выбор её не меняет.
+                Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.alpha(0f).clearAndSetSemantics {})
                 Text(
                     text = label,
                     color = colors.ink,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                     textDecoration = if (selected) null else TextDecoration.Underline,
                     maxLines = 1,
                 )
             }
-            // Точка — в зазоре перед подписью, ширины не занимает; и в режиме
-            // значков: выбор виден формой, а не только цветом.
-            if (selected) {
-                Box(Modifier.offset(x = (-9).dp).size(5.dp).clip(CircleShape).background(colors.ink))
+            // Надстрочный бейдж над концом подписи — ширины не занимает.
+            if (badge != null) {
+                // Начало бейджа — у правого края подписи (у значка — заходит
+                // на угол), низ — чуть выше верха: надстрочно, без ширины.
+                TabBadge(
+                    badge,
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .layout { measurable, constraints ->
+                            val p = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+                            layout(0, 0) {
+                                val dx = if (iconsOnly) (-8).dp.roundToPx() else (-4).dp.roundToPx()
+                                val dy = if (iconsOnly) (-p.height + 8.dp.roundToPx()) else (-p.height + 3.dp.roundToPx())
+                                p.place(dx, dy)
+                            }
+                        },
+                )
             }
-        }
-        if (reservesBadge) {
-            Box {
-                TabBadge(BADGE_RESERVE, Modifier.alpha(0f).clearAndSetSemantics {})
-                if (badge != null) TabBadge(badge)
+            // Точка под подписью — и в режиме значков: выбор виден формой, а не
+            // только цветом; ширины тоже не занимает.
+            if (selected) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .offset(y = 8.dp)
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(colors.ink),
+                )
             }
         }
     }
@@ -727,20 +773,17 @@ private fun TabBadge(text: String, modifier: Modifier = Modifier) {
     val colors = Splitty.colors
     Box(
         modifier = modifier
-            .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+            .defaultMinSize(minWidth = 14.dp, minHeight = 14.dp)
             .clip(RoundedCornerShape(2.dp))
             .background(colors.accent)
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = 3.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(text, color = colors.onAccent, style = BadgeStyle)
     }
 }
 
-/** Самый широкий бейдж: под него место у «Уведомлений» занято всегда. */
-private const val BADGE_RESERVE = "99+"
-
-private val BadgeStyle = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+private val BadgeStyle = TextStyle(fontSize = 10.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
 
 /** «+» в строке: плоская печать 44×36 цвета действия в зоне нажатия 48×48. */
 @Composable
