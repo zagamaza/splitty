@@ -22,18 +22,53 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 ADB = str(pathlib.Path.home() / "Library/Android/sdk/platform-tools/adb")
 PKG = "com.zagir.splitty"
 
-LABELS = {
-    "ru": {"locale": "ru", "email": "shots-ru@splitty.test", "room": "Поездка в Стамбул",
-           "groups": "Группы", "friends": "Друзья", "totals": "Итоги",
-           "balances": "Балансы", "disclosure": "войдите по email",
-           "settle": "Рассчитаться ↗",
-           "rooms": ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"]},
-    "en": {"locale": "en", "email": "shots-en@splitty.test", "room": "Trip to Lisbon",
-           "groups": "Groups", "friends": "Friends", "totals": "Totals",
-           "balances": "Balances", "disclosure": "sign in with email",
-           "settle": "Settle up ↗",
-           "rooms": ["Weekend cabin", "Flat share", "Trip to Lisbon"]},
+# Подписи для поиска берутся из ресурсов приложения на нужном языке, а не
+# переписываются сюда руками: прежний список отставал от вёрстки («Рассчитаться ↗»
+# после редизайна стало «Рассчитаться») и знал только ru и en.
+RES = ROOT / "android" / "app" / "src" / "main" / "res"
+LOCALES = {
+    "ru": ("values-ru", "shots-ru@splitty.test",
+           ["Дача на выходные", "Квартира на Тверской", "Поездка в Стамбул"], "Поездка в Стамбул"),
+    "en": ("values", "shots-en@splitty.test",
+           ["Weekend cabin", "Flat share", "Trip to Lisbon"], "Trip to Lisbon"),
+    "es": ("values-es", "shots-es@splitty.test",
+           ["Finca el finde", "Piso compartido", "Viaje a Barcelona"], "Viaje a Barcelona"),
+    "de": ("values-de", "shots-de@splitty.test",
+           ["Wochenende am See", "WG Prenzlauer Berg", "Städtetrip Berlin"], "Städtetrip Berlin"),
+    "fr": ("values-fr", "shots-fr@splitty.test",
+           ["Chalet en montagne", "Coloc rue Vieille", "Week-end à Lyon"], "Week-end à Lyon"),
+    "ja": ("values-ja", "shots-ja@splitty.test", ["シェアハウス", "京都旅行", "週末の別荘"], "京都旅行"),
+    "zh-Hans": ("values-zh-rCN", "shots-zh@splitty.test", ["周末民宿", "合租公寓", "成都之行"], "成都之行"),
+    "ko": ("values-ko", "shots-ko@splitty.test", ["셰어하우스", "제주도 여행", "주말 펜션"], "제주도 여행"),
+    "pt-BR": ("values-pt-rBR", "shots-pt@splitty.test",
+              ["República", "Sítio no fim de semana", "Viagem a Salvador"], "Viagem a Salvador"),
+    "it": ("values-it", "shots-it@splitty.test",
+           ["Casa condivisa", "Viaggio a Napoli", "Weekend in montagna"], "Viaggio a Napoli"),
 }
+
+
+def labels(lang: str) -> dict:
+    values, email, rooms, room = LOCALES[lang]
+    raw = (RES / values / "strings.xml").read_text(encoding="utf-8")
+
+    def res(name: str) -> str:
+        m = re.search(rf'<string name="{name}">([^<]*)</string>', raw)
+        if not m:
+            sys.exit(f"[{lang}] нет строки {name}")
+        return m.group(1).replace("\\'", "'")
+
+    return {
+        # Язык приложения в Android — тег BCP 47: zh-Hans → zh-CN, pt-BR как есть.
+        "locale": {"zh-Hans": "zh-CN"}.get(lang, lang),
+        "email": email, "room": room, "rooms": rooms,
+        "groups": res("tab_groups"), "friends": res("tab_friends"),
+        "totals": res("totals_title"), "balances": res("group_balances_title"),
+        "disclosure": res("login_email_disclosure_action"),
+        "email_field": res("login_email_placeholder"),
+        "skip": res("welcome_skip"), "settle": res("group_settle_up"),
+    }
+
+
 PASSWORD = "20260806"
 
 
@@ -157,8 +192,43 @@ def tap_add_tab():
     time.sleep(1.2)
 
 
+def ensure_foreground():
+    """Перед съёмкой приложение обязано быть на экране: лишний «назад» или
+    запрос разрешения иногда уводят его в лаунчер, и кадры уезжают мимо."""
+    focus = sh("shell", "dumpsys", "window").stdout.split("mCurrentFocus=", 1)[-1].split("\n", 1)[0]
+    if PKG not in focus:
+        sh("shell", "am", "start", "-n", f"{PKG}/.MainActivity")
+        time.sleep(5)
+        deny_notifications()
+
+
+def deny_notifications():
+    """Системный запрос на уведомления перекрывает экран; в кадр он не нужен."""
+    for deny in ("Don\u2019t allow", "Don't allow", "Не разрешать", "Запретить", "No permitir",
+                 "Nicht zulassen", "Ne pas autoriser"):
+        if tap_text(deny, exact=True, required=False):
+            time.sleep(1.5)
+            return
+
+
+def dismiss_keyboard_setup():
+    """Мастер раскладки Gboard для нового языка (ja, ko, zh) встаёт поверх
+    приложения и прячет экран входа. В дерево uiautomator окно клавиатуры не
+    попадает, поэтому смотрим на сам метод ввода: показан до того, как мы
+    тронули поле, — значит это мастер, и «назад» его закрывает."""
+    shown = sh("shell", "dumpsys", "input_method").stdout
+    if "mInputShown=true" in shown:
+        sh("shell", "input", "keyevent", "4")
+        time.sleep(1.5)
+        # Если клавиатуры на деле не было, «назад» закрыл само приложение.
+        focus = sh("shell", "dumpsys", "window").stdout
+        if f"mCurrentFocus=Window{{" in focus and PKG not in focus.split("mCurrentFocus=", 1)[1].split("\n", 1)[0]:
+            sh("shell", "am", "start", "-n", f"{PKG}/.MainActivity")
+            time.sleep(4)
+
+
 def capture(lang: str):
-    cfg = LABELS[lang]
+    cfg = labels(lang)
     dst = ROOT / "metadata" / "screenshots-android" / lang
     dst.mkdir(parents=True, exist_ok=True)
     for old in dst.glob("*.png"):
@@ -166,8 +236,12 @@ def capture(lang: str):
     index = [0]
 
     # Чистый старт: язык приложения, снесённые данные, «заряжено» в статус-баре.
+    # Вход — латиницей: при языке приложения ja/zh/ko Gboard переключается на
+    # свою раскладку и переиначивает набранный пароль. Входим под английским
+    # интерфейсом, язык ставим уже после входа — сессия переживает перезапуск.
+    login_cfg = labels("en") if lang in ("ja", "zh-Hans", "ko") else cfg
     sh("shell", "pm", "clear", PKG)
-    sh("shell", "cmd", "locale", "set-app-locales", PKG, "--locales", cfg["locale"])
+    sh("shell", "cmd", "locale", "set-app-locales", PKG, "--locales", login_cfg["locale"])
     sh("shell", "settings", "put", "global", "sysui_demo_allowed", "1")
     sh("shell", "am", "broadcast", "-a", "com.android.systemui.demo",
        "-e", "command", "enter")
@@ -186,24 +260,27 @@ def capture(lang: str):
 
     # Системный запрос на уведомления перекрывает экран входа и в кадр
     # витрине не нужен: отклоняем, разрешение здесь ни на что не влияет.
-    for deny in ("Don\u2019t allow", "Don't allow", "Не разрешать", "Запретить", "No permitir",
-                 "Nicht zulassen", "Ne pas autoriser"):
-        if tap_text(deny, exact=True, required=False):
-            time.sleep(1.5)
-            break
+    deny_notifications()
 
     # Приветствие стоит ПЕРЕД входом: на чистом старте первым показывается
     # оно, и без пропуска экрана входа нет.
-    for skip in ("Пропустить", "Skip"):
-        if tap_text(skip, exact=True, required=False):
-            time.sleep(1.5)
-            break
+    if tap_text(login_cfg["skip"], exact=True, required=False):
+        time.sleep(1.5)
 
+    dismiss_keyboard_setup()
     point_at_local_backend()
 
-    tap_text(cfg["disclosure"])
+    # На длинных переводах (ja) ссылка входа по email ниже края экрана.
+    for _ in range(3):
+        dismiss_keyboard_setup()
+        if tap_text(login_cfg["disclosure"], required=False):
+            break
+        sh("shell", "input", "swipe", "540", "1800", "540", "700", "300")
+        time.sleep(1.0)
+    else:
+        tap_text(login_cfg["disclosure"])
     time.sleep(1.5)
-    tap_text("Email", exact=True)
+    tap_text(login_cfg["email_field"], exact=True)
     time.sleep(1.0)
     clear_focused_field(45)
     sh("shell", "input", "text", cfg["email"])
@@ -217,6 +294,14 @@ def capture(lang: str):
     sh("shell", "input", "keyevent", "66")
     time.sleep(8)
 
+    if login_cfg is not cfg:
+        sh("shell", "cmd", "locale", "set-app-locales", PKG, "--locales", cfg["locale"])
+        sh("shell", "am", "force-stop", PKG)
+        sh("shell", "am", "start", "-n", f"{PKG}/.MainActivity")
+        time.sleep(6)
+        deny_notifications()
+
+    ensure_foreground()
     tap_text(cfg["groups"])
     time.sleep(1.5)
     shoot(dst, "groups", index)
@@ -226,7 +311,7 @@ def capture(lang: str):
     shoot(dst, "group", index)
 
     # Погашение — с экрана группы: кнопка живёт в шапке, со списка её не видно.
-    if tap_text(cfg["settle"], required=False):
+    if tap_text(cfg["settle"], exact=True, required=False):
         time.sleep(1.5)
         shoot(dst, "settle", index)
         sh("shell", "input", "keyevent", "4")
@@ -262,6 +347,6 @@ def capture(lang: str):
 
 if __name__ == "__main__":
     for lang in (sys.argv[1:] or ["ru", "en"]):
-        if lang not in LABELS:
+        if lang not in LOCALES:
             sys.exit(f"нет набора для «{lang}»")
         capture(lang)
