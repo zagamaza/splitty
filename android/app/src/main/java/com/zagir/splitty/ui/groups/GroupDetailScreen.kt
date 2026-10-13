@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -209,6 +210,11 @@ fun GroupDetailScreen(
     val isSummaryScrolledAway by remember {
         derivedStateOf { opsListState.firstVisibleItemIndex > 1 }
     }
+    // Шапка с именем тусы ушла за верх — имя переезжает в навбар, как
+    // large title на iOS; пока шапка видна, навбар держит реквизит «Группа».
+    val isHeaderScrolledAway by remember {
+        derivedStateOf { opsListState.firstVisibleItemIndex > 0 }
+    }
 
     Scaffold(
         containerColor = colors.bg,
@@ -224,13 +230,17 @@ fun GroupDetailScreen(
             CenterAlignedTopAppBar(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    Text(
-                        text = stringResource(R.string.group_fallback_title),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                    )
+                    val collapsedName = detail?.name?.takeIf { tusaTab == TUSA_TAB_OPS && isHeaderScrolledAway }
+                    Crossfade(targetState = collapsedName, label = "groupTitle") { name ->
+                        Text(
+                            text = name ?: stringResource(R.string.group_fallback_title),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

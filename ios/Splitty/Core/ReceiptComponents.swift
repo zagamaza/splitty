@@ -74,6 +74,7 @@ struct ScreenHeading: View {
             .foregroundStyle(Color.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityAddTraits(.isHeader)
+            .collapsingTitleSource()
     }
 }
 
@@ -120,14 +121,74 @@ extension View {
 }
 
 extension View {
-    /// Корень вкладки: название остаётся системным для стека и VoiceOver, но
-    /// рисуется `ScreenHeading` в контенте, а навбар — без надписи.
+    /// Корень вкладки: название остаётся системным для стека и VoiceOver,
+    /// крупно рисуется `ScreenHeading` в контенте, а в навбар название
+    /// приходит, когда крупный заголовок уехал под него (как large title).
     func receiptRootTitle(_ title: LocalizedStringKey) -> some View {
         navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .modifier(CollapsingTitleModifier(title: Text(title), placeholder: nil))
+    }
+
+    /// Экран с крупным заголовком в контенте (`collapsingTitleSource`): пока он
+    /// виден, навбар показывает `placeholder` (реквизит вроде «Группа») или
+    /// ничего; уехал под навбар — там остаётся `title`.
+    func collapsingTitle(_ title: Text, placeholder: Text? = nil) -> some View {
+        modifier(CollapsingTitleModifier(title: title, placeholder: placeholder))
+    }
+
+    /// Крупный заголовок, по которому навбар решает, показывать ли название.
+    func collapsingTitleSource() -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: CollapsingTitleBottomKey.self, value: proxy.frame(in: .global).maxY)
+            }
+        }
+    }
+}
+
+private struct CollapsingTitleBottomKey: PreferenceKey {
+    static var defaultValue: CGFloat? = nil
+    static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+        value = nextValue() ?? value
+    }
+}
+
+/// Название в навбаре появляется, когда низ крупного заголовка ушёл выше
+/// верха контента. Заголовок в ленивом списке, прокрученный далеко, выгружается
+/// и перестаёт сообщать положение — тогда держится последнее известное, то
+/// есть «уехал».
+private struct CollapsingTitleModifier: ViewModifier {
+    let title: Text
+    let placeholder: Text?
+    @State private var headingBottom: CGFloat?
+    @State private var contentTop: CGFloat = 0
+
+    private var isCollapsed: Bool {
+        guard let headingBottom else { return false }
+        return headingBottom < contentTop + 2
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { contentTop = $0 }
+            .onPreferenceChange(CollapsingTitleBottomKey.self) { value in
+                if let value { headingBottom = value }
+            }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
+                    ZStack {
+                        placeholder?.opacity(isCollapsed ? 0 : 1)
+                        title.opacity(isCollapsed ? 1 : 0)
+                    }
+                    .scaledFont(size: 13, weight: .medium, design: .monospaced, relativeTo: .footnote)
+                    .kerning(0.6)
+                    .foregroundStyle(Color.ink)
+                    .lineLimit(1)
+                    .animation(.easeOut(duration: 0.18), value: isCollapsed)
+                    // Название экрана VoiceOver берёт из navigationTitle, а
+                    // крупный заголовок в контенте — заголовок раздела.
+                    .accessibilityHidden(true)
                 }
             }
     }

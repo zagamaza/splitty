@@ -185,6 +185,21 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         }
     }
 
+    /// Крупный заголовок уезжает под навбар — название остаётся в навбаре.
+    func testCollapsedTitles() throws {
+        app.launch()
+        openRoom()
+        shot("m-title-group-top")
+        app.swipeUp()
+        shot("m-title-group-scrolled")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.swipeUp()
+        shot("m-title-groups-scrolled")
+        app.buttons["tab.account"].tap()
+        app.swipeUp()
+        shot("m-title-profile-scrolled")
+    }
+
     /// Без сервера: данные из кеша с пометкой. Бэкенд останавливают снаружи,
     /// сессия должна остаться от прошлого прогона.
     func testOfflineCachedState() throws {

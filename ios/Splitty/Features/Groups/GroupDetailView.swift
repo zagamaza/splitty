@@ -50,10 +50,11 @@ struct GroupDetailView: View {
         content
             .background(Color.bg.ignoresSafeArea())
             // Имя тусы — крупно в шапке самого документа; навбар держит
-            // только реквизит, как печатный заголовок чека.
+            // реквизит «Группа», а когда шапка уехала под него — имя тусы.
             .navigationTitle(String(localized: "Группа"))
             .trackScreen("group")
             .navigationBarTitleDisplayMode(.inline)
+            .collapsingTitle(Text(verbatim: model.room?.name ?? ""), placeholder: Text("Группа"))
             // Туса — один документ: глобальный таб-бар скрыт, разделы
             // переключаются текстовыми вкладками, внизу — одно действие.
             .toolbar(.hidden, for: .tabBar)
@@ -220,6 +221,7 @@ struct GroupDetailView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
+                .collapsingTitleSource()
             if room.isArchived {
                 StatusStamp(text: String(localized: "Группа в архиве"))
             }
