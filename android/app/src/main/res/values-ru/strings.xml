@@ -815,4 +815,6 @@
     <string name="groups_summary_partial">Не во всех группах долги считаются</string>
     <string name="expense_composer_example">Например</string>
     <string name="expense_check_title">Проверьте расход</string>
+    <string name="rec_status_recording_sub_finish">Отпустите, чтобы закончить запись · вверх — закрепить · влево — отмена</string>
+    <string name="rec_stop_finish_a11y">Завершить запись</string>
 </resources>

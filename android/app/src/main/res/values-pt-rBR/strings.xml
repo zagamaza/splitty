@@ -719,4 +719,6 @@
     <string name="groups_summary_partial">Em alguns grupos as dívidas não são calculadas</string>
     <string name="expense_composer_example">Por exemplo</string>
     <string name="expense_check_title">Confira a despesa</string>
+    <string name="rec_status_recording_sub_finish">Solte para terminar · cima para travar · esquerda para cancelar</string>
+    <string name="rec_stop_finish_a11y">Parar a gravação</string>
 </resources>

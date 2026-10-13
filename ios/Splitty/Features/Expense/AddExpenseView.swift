@@ -145,6 +145,10 @@ struct AddExpenseView: View {
                 level: CGFloat(recorder.level),
                 micFrame: micButtonFrame,
                 hints: model.missingInfoHints,
+                // То же правило, что решает, остановиться ли на шаге «Записано».
+                releaseRecognizes: !AddExpenseViewModel.stopsAtReview(
+                    isEmptyForm: model.isEmptyForm, hasOtherCapture: capture.imageData != nil
+                ),
                 onStop: {
                     isRecordingLocked = false
                     stopRecordingAndParse()
@@ -265,7 +269,9 @@ struct AddExpenseView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .receiptPaper(padding: 20)
-                Spacer(minLength: 24)
+                // Лист и действия — одним блоком по центру, как на Android:
+                // гибкий зазор уводил кнопки к низу экрана, далеко от листа.
+                Spacer().frame(height: 28)
 
                 // Иерархия: главное действие — «Распознать» (основной путь),
                 // второй источник — вторичный усилитель, отмена — тихая третья.
@@ -320,7 +326,7 @@ struct AddExpenseView: View {
                     }
                     .buttonStyle(.textLink(size: 14))
                 }
-                .padding(.bottom, 40)
+                Spacer(minLength: 24)
             }
             .padding(.horizontal, 20)
         }
@@ -2070,6 +2076,10 @@ struct RecordingOverlay: View {
     /// «Что осталось уточнить» (цены, имена, вопросы модели) — подсказка,
     /// что говорить при правке. Пусто — блок не показывается.
     var hints: [String] = []
+    /// Отпускание (или «стоп») сразу отправляет на распознавание — так при
+    /// правке готового черновика. На первом вводе в пустую форму запись лишь
+    /// заканчивается и ведёт к шагу «Записано», и подсказки говорят об этом.
+    var releaseRecognizes: Bool = true
     /// Кнопки закреплённого режима: «Готово» (стоп → распознавание) и «Отмена».
     var onStop: () -> Void = {}
     var onCancel: () -> Void = {}
@@ -2229,7 +2239,7 @@ struct RecordingOverlay: View {
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Завершить запись и распознать")
+        .accessibilityLabel(releaseRecognizes ? "Завершить запись и распознать" : "Завершить запись")
     }
 
     /// Кольцо-прогресс лимита записи (минута) вокруг круга диаметром `size`.
@@ -2329,7 +2339,9 @@ struct RecordingOverlay: View {
             subtitle = String(localized: "Держите палец — микрофон включается")
         } else {
             title = String(localized: "Говорите…")
-            subtitle = String(localized: "Отпустите — распознать · вверх — закрепить · влево — отмена")
+            subtitle = releaseRecognizes
+                ? String(localized: "Отпустите — распознать · вверх — закрепить · влево — отмена")
+                : String(localized: "Отпустите, чтобы закончить запись · вверх — закрепить · влево — отмена")
         }
         return VStack(spacing: 6) {
             Text(title)

@@ -798,4 +798,6 @@
     <string name="groups_summary_partial">Debts can\'t be counted in some groups</string>
     <string name="expense_composer_example">For example</string>
     <string name="expense_check_title">Check the expense</string>
+    <string name="rec_status_recording_sub_finish">Release to finish recording · up to lock · left to cancel</string>
+    <string name="rec_stop_finish_a11y">Stop recording</string>
 </resources>

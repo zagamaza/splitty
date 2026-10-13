@@ -246,6 +246,60 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Распознать"].waitForExistence(timeout: 10), "«стоп» не привёл к шагу «Записано»")
     }
 
+    /// «Распознаю…» с появившейся отменой, отмена распознавания, затем ошибка
+    /// сети → «Повторить» → черновик из той же записи. Бэкенд гасит и поднимает
+    /// скрипт на хосте по файлам-флажкам в `FLOW_FLAGS_DIR` (симулятор видит
+    /// /tmp хоста): ставим `*.want`, ждём `*.done`. Без каталога тест пропускается.
+    func testParseCancelAndRetry() throws {
+        guard let flags = env["FLOW_FLAGS_DIR"] else { throw XCTSkip("нет FLOW_FLAGS_DIR") }
+        func signal(_ name: String) {
+            FileManager.default.createFile(atPath: "\(flags)/\(name).want", contents: nil)
+            let done = "\(flags)/\(name).done"
+            let deadline = Date().addingTimeInterval(30)
+            while !FileManager.default.fileExists(atPath: done), Date() < deadline { usleep(200_000) }
+            XCTAssertTrue(FileManager.default.fileExists(atPath: done), "хост не выполнил «\(name)»")
+        }
+
+        app.launch()
+        openRoom()
+        let fab = try XCTUnwrap(rightmostHittableButton(app, labeled: "Добавить расход"), "не нашли добавление расхода")
+        fab.tap()
+        let mic = app.descendants(matching: .any)["Записать голосом"].firstMatch
+        XCTAssertTrue(mic.waitForExistence(timeout: 10), "микрофона в пустой форме нет")
+        mic.press(forDuration: 3.5)
+        let recognize = app.buttons["Распознать"]
+        XCTAssertTrue(recognize.waitForExistence(timeout: 10), "после записи нет шага «Записано»")
+        recognize.tap()
+        let consent = app.buttons["Понятно"]
+        if consent.waitForExistence(timeout: 0.5) { consent.tap() }
+
+        // Бэкенд держит ответ (AI_FAKE_DELAY), отмена появляется через 2.5 с.
+        let cancel = app.buttons["Отмена"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 6), "на «Распознаю…» не появилась отмена")
+        shot("flow-4-parsing")
+        cancel.tap()
+        sleep(1)
+        shot("flow-6-after-cancel")
+        XCTAssertFalse(app.buttons["Сохранить"].exists && app.staticTexts["Проверьте расход"].exists,
+                       "отменённое распознавание всё равно дало черновик")
+
+        // Отмена возвращает к пустой форме — записываем заново, гасим бэкенд
+        // и отправляем: ошибка сети должна предложить «Повторить» той же записью.
+        XCTAssertTrue(mic.waitForExistence(timeout: 5), "после отмены не вернулись к пустой форме")
+        mic.press(forDuration: 3.5)
+        XCTAssertTrue(recognize.waitForExistence(timeout: 10), "после второй записи нет шага «Записано»")
+        signal("stop")
+        recognize.tap()
+        let retry = app.buttons["Повторить"].firstMatch
+        XCTAssertTrue(retry.waitForExistence(timeout: 20), "без сети не появилось «Повторить»")
+        shot("flow-7-error")
+        signal("start")
+        retry.tap()
+        XCTAssertTrue(app.staticTexts["Проверьте расход"].waitForExistence(timeout: 20),
+                      "после «Повторить» черновик не пришёл")
+        shot("flow-8-retried")
+    }
+
     /// Оверлей записи с Debug-заготовкой транскрипта (`SPLITTY_DEMO_RECORDING`).
     func testRecordingDemo() throws {
         app.launchEnvironment["SPLITTY_DEMO_RECORDING"] = "1"

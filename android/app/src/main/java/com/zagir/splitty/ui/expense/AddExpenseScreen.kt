@@ -585,6 +585,8 @@ fun AddExpenseScreen(
         transcript = recorder.transcript,
         onStop = voice::stopLocked,
         onCancel = voice::cancelLocked,
+        // То же правило, что решает, остановиться ли на шаге «Записано».
+        releaseRecognizes = !stopsAtReview(form?.isEmptyForm == true, pendingReceiptPath != null),
     )
 
         // Тост — самым верхним слоем, поверх оверлеев.

@@ -715,4 +715,6 @@
     <string name="groups_summary_partial">一部のグループでは借りを計算できません</string>
     <string name="expense_composer_example">例</string>
     <string name="expense_check_title">支出を確認してください</string>
+    <string name="rec_status_recording_sub_finish">指を離すと録音終了・上で固定・左でキャンセル</string>
+    <string name="rec_stop_finish_a11y">録音を終了する</string>
 </resources>

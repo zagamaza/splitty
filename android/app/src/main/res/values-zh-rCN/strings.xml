@@ -715,4 +715,6 @@
     <string name="groups_summary_partial">部分群组无法计算欠款</string>
     <string name="expense_composer_example">例如</string>
     <string name="expense_check_title">请核对这笔支出</string>
+    <string name="rec_status_recording_sub_finish">松手结束录音 · 上滑锁定 · 左滑取消</string>
+    <string name="rec_stop_finish_a11y">停止录音</string>
 </resources>

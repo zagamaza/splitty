@@ -108,6 +108,12 @@ fun RecordingOverlay(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
     /**
+     * Отпускание (или «стоп») сразу отправляет на распознавание — так при
+     * правке готового черновика. На первом вводе в пустую форму запись лишь
+     * заканчивается и ведёт к шагу «Записано», и подсказки говорят об этом.
+     */
+    releaseRecognizes: Boolean = true,
+    /**
      * Замороженное «сейчас» для снапшот-тестов. Волна и кольцо считают фазу от
      * живых часов, поэтому без пина картинка зависит от того, сколько миллисекунд
      * прошло до захвата — снапшоты расходились между прогонами. В проде — null.
@@ -231,6 +237,7 @@ fun RecordingOverlay(
             elapsedMs = elapsedMs,
             nowMs = nowMs,
             alpha = overlayAlpha,
+            releaseRecognizes = releaseRecognizes,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 34.dp)
@@ -312,6 +319,7 @@ fun RecordingOverlay(
             spinDegrees = spinDegrees,
             pulsePhase = pulsePhase,
             cancelAlpha = cancelAlpha,
+            releaseRecognizes = releaseRecognizes,
             size = micSize,
             onStop = onStop,
             modifier = Modifier
@@ -343,6 +351,7 @@ private fun RecordingContent(
     elapsedMs: Long?,
     nowMs: Long,
     alpha: Float,
+    releaseRecognizes: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -390,6 +399,7 @@ private fun RecordingContent(
                 else -> RecordingStatus.Recording
             },
             reduceMotion = reduceMotion,
+            releaseRecognizes = releaseRecognizes,
             modifier = Modifier.padding(top = 12.dp),
         )
     }
@@ -504,6 +514,7 @@ private fun MicOrStop(
     spinDegrees: Float,
     pulsePhase: Float,
     cancelAlpha: Float,
+    releaseRecognizes: Boolean,
     size: androidx.compose.ui.unit.Dp,
     onStop: () -> Unit,
     modifier: Modifier = Modifier,
@@ -520,7 +531,7 @@ private fun MicOrStop(
             spinDegrees = spinDegrees,
         )
         if (isLocked) {
-            StopButton(size = size, onStop = onStop)
+            StopButton(size = size, releaseRecognizes = releaseRecognizes, onStop = onStop)
         } else {
             MicCircle(
                 size = size,
@@ -580,10 +591,11 @@ private fun LimitAndPreparingRing(
 @Composable
 private fun StopButton(
     size: androidx.compose.ui.unit.Dp,
+    releaseRecognizes: Boolean,
     onStop: () -> Unit,
 ) {
     val colors = Splitty.colors
-    val stopA11y = stringResource(R.string.rec_stop_a11y)
+    val stopA11y = stringResource(if (releaseRecognizes) R.string.rec_stop_a11y else R.string.rec_stop_finish_a11y)
     val interactionSource = remember { MutableInteractionSource() }
     Box(
         modifier = Modifier
@@ -721,6 +733,7 @@ private fun TimerLabel(
 private fun StatusTexts(
     status: RecordingStatus,
     reduceMotion: Boolean,
+    releaseRecognizes: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Crossfade(
@@ -745,7 +758,13 @@ private fun StatusTexts(
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = stringResource(target.subtitleRes),
+                text = stringResource(
+                    if (target == RecordingStatus.Recording && !releaseRecognizes) {
+                        R.string.rec_status_recording_sub_finish
+                    } else {
+                        target.subtitleRes
+                    }
+                ),
                 color = Splitty.colors.inkSecondary,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,

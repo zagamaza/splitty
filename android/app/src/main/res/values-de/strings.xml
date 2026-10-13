@@ -778,4 +778,6 @@
     <string name="groups_summary_partial">Nicht in allen Gruppen werden Schulden berechnet</string>
     <string name="expense_composer_example">Zum Beispiel</string>
     <string name="expense_check_title">Prüfe die Ausgabe</string>
+    <string name="rec_status_recording_sub_finish">Loslassen zum Beenden · hoch zum Fixieren · links zum Abbrechen</string>
+    <string name="rec_stop_finish_a11y">Aufnahme beenden</string>
 </resources>

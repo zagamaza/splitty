@@ -778,4 +778,6 @@
     <string name="groups_summary_partial">Les dettes ne sont pas calculées dans tous les groupes</string>
     <string name="expense_composer_example">Par exemple</string>
     <string name="expense_check_title">Vérifiez la dépense</string>
+    <string name="rec_status_recording_sub_finish">Relâchez pour terminer · haut pour verrouiller · gauche pour annuler</string>
+    <string name="rec_stop_finish_a11y">Terminer l\'enregistrement</string>
 </resources>

@@ -715,4 +715,6 @@
     <string name="groups_summary_partial">일부 그룹에서는 빚을 계산할 수 없습니다</string>
     <string name="expense_composer_example">예시</string>
     <string name="expense_check_title">지출을 확인하세요</string>
+    <string name="rec_status_recording_sub_finish">손을 떼면 녹음 종료 · 위로 고정 · 왼쪽으로 취소</string>
+    <string name="rec_stop_finish_a11y">녹음 종료</string>
 </resources>

@@ -719,4 +719,6 @@
     <string name="groups_summary_partial">Non in tutti i gruppi si calcolano i debiti</string>
     <string name="expense_composer_example">Ad esempio</string>
     <string name="expense_check_title">Controlla la spesa</string>
+    <string name="rec_status_recording_sub_finish">Rilascia per terminare · in alto per bloccare · a sinistra per annullare</string>
+    <string name="rec_stop_finish_a11y">Ferma la registrazione</string>
 </resources>
