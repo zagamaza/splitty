@@ -54,7 +54,13 @@ struct GroupDetailView: View {
             .navigationTitle(String(localized: "Группа"))
             .trackScreen("group")
             .navigationBarTitleDisplayMode(.inline)
-            .collapsingTitle(Text(verbatim: model.room?.name ?? ""), placeholder: Text("Группа"))
+            .collapsingTitle(
+                Text(verbatim: model.room?.name ?? ""),
+                placeholder: Text("Группа"),
+                // Шапка с именем есть только в ленте; на балансах, итогах и
+                // настройках имя тусы стоит в навбаре сразу.
+                forceCollapsed: tusaTab != .operations
+            )
             // Туса — один документ: глобальный таб-бар скрыт, разделы
             // переключаются текстовыми вкладками, внизу — одно действие.
             .toolbar(.hidden, for: .tabBar)

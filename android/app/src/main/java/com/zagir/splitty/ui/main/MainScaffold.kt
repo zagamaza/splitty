@@ -736,8 +736,10 @@ private fun ReceiptTab(
             }
             // Надстрочный бейдж над концом подписи — ширины не занимает.
             if (badge != null) {
-                // Начало бейджа — у правого края подписи (у значка — заходит
-                // на угол), низ — чуть выше верха: надстрочно, без ширины.
+                // Надстрочный бейдж: правым краем — по правому краю подписи и
+                // растёт влево над ней, не заходя в соседнюю вкладку (иначе «99+»
+                // читался счётчиком «Профиля»). У значка — правым краем по краю
+                // зоны нажатия 48dp, едва касаясь верха значка. Ширины не занимает.
                 TabBadge(
                     badge,
                     Modifier
@@ -745,8 +747,8 @@ private fun ReceiptTab(
                         .layout { measurable, constraints ->
                             val p = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
                             layout(0, 0) {
-                                val dx = if (iconsOnly) (-8).dp.roundToPx() else (-4).dp.roundToPx()
-                                val dy = if (iconsOnly) (-p.height + 8.dp.roundToPx()) else (-p.height + 3.dp.roundToPx())
+                                val dx = -p.width + if (iconsOnly) 12.dp.roundToPx() else 0
+                                val dy = if (iconsOnly) (-p.height + 3.dp.roundToPx()) else (-p.height - 1.dp.roundToPx())
                                 p.place(dx, dy)
                             }
                         },

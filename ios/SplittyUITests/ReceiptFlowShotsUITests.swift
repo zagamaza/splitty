@@ -192,12 +192,23 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         shot("m-title-group-top")
         app.swipeUp()
         shot("m-title-group-scrolled")
+        app.swipeDown()
+        app.swipeDown()
+        shot("m-title-group-back-top")
+        app.swipeUp()
+        app.buttons["Балансы"].tap()
+        shot("m-title-group-balances")
+        app.buttons["Операции"].tap()
+        shot("m-title-group-ops-again")
         app.navigationBars.buttons.firstMatch.tap()
         app.swipeUp()
         shot("m-title-groups-scrolled")
         app.buttons["tab.account"].tap()
         app.swipeUp()
         shot("m-title-profile-scrolled")
+        app.swipeDown()
+        app.swipeDown()
+        shot("m-title-profile-back-top")
     }
 
     /// Без сервера: данные из кеша с пометкой. Бэкенд останавливают снаружи,

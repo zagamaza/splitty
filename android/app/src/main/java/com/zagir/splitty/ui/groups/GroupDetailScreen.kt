@@ -230,7 +230,8 @@ fun GroupDetailScreen(
             CenterAlignedTopAppBar(
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 title = {
-                    val collapsedName = detail?.name?.takeIf { tusaTab == TUSA_TAB_OPS && isHeaderScrolledAway }
+                    // Шапка с именем есть только в ленте: на других вкладках имя сразу в навбаре.
+                    val collapsedName = detail?.name?.takeIf { tusaTab != TUSA_TAB_OPS || isHeaderScrolledAway }
                     Crossfade(targetState = collapsedName, label = "groupTitle") { name ->
                         Text(
                             text = name ?: stringResource(R.string.group_fallback_title),

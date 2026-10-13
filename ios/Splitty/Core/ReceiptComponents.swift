@@ -127,14 +127,16 @@ extension View {
     func receiptRootTitle(_ title: LocalizedStringKey) -> some View {
         navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .modifier(CollapsingTitleModifier(title: Text(title), placeholder: nil))
+            .modifier(CollapsingTitleModifier(title: Text(title), placeholder: nil, forceCollapsed: false))
     }
 
     /// Экран с крупным заголовком в контенте (`collapsingTitleSource`): пока он
     /// виден, навбар показывает `placeholder` (реквизит вроде «Группа») или
     /// ничего; уехал под навбар — там остаётся `title`.
-    func collapsingTitle(_ title: Text, placeholder: Text? = nil) -> some View {
-        modifier(CollapsingTitleModifier(title: title, placeholder: placeholder))
+    /// `forceCollapsed` — крупного заголовка на экране сейчас нет вовсе
+    /// (другая вкладка тусы): название показывается сразу.
+    func collapsingTitle(_ title: Text, placeholder: Text? = nil, forceCollapsed: Bool = false) -> some View {
+        modifier(CollapsingTitleModifier(title: title, placeholder: placeholder, forceCollapsed: forceCollapsed))
     }
 
     /// Крупный заголовок, по которому навбар решает, показывать ли название.
@@ -161,10 +163,12 @@ private struct CollapsingTitleBottomKey: PreferenceKey {
 private struct CollapsingTitleModifier: ViewModifier {
     let title: Text
     let placeholder: Text?
+    let forceCollapsed: Bool
     @State private var headingBottom: CGFloat?
     @State private var contentTop: CGFloat = 0
 
     private var isCollapsed: Bool {
+        if forceCollapsed { return true }
         guard let headingBottom else { return false }
         return headingBottom < contentTop + 2
     }

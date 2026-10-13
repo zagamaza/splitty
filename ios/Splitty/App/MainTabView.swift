@@ -242,7 +242,9 @@ struct ReceiptTabBar: View {
             row(iconsOnly: true)
         }
         .padding(.horizontal, 12)
-        .padding(.top, 10)
+        // Запас сверху под надстрочный бейдж: на крупном шрифте он высокий и
+        // иначе заходил за черту строки.
+        .padding(.top, 14)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
         .background(Color.bg)
@@ -296,16 +298,16 @@ struct ReceiptTabBar: View {
                         }
                 }
             }
-            // Надстрочный бейдж у правого верхнего угла подписи или значка:
-            // ширины не занимает, поэтому «+» не сдвигается при его появлении.
+            // Надстрочный бейдж: правым краем — по правому краю подписи и растёт
+            // влево над ней, не заходя в соседнюю вкладку (иначе «99+» читался
+            // счётчиком «Профиля»). Ширины не занимает, «+» не сдвигается.
+            // У значка — правым краем по краю зоны нажатия, едва касаясь верха значка.
             .overlay(alignment: .topTrailing) {
                 if let badge {
-                    // Рамка нулевого размера в углу: бейдж растёт от него вправо
-                    // и вверх, заходя на угол подписи (значка) на несколько точек.
                     badgeView(badge)
                         .fixedSize()
-                        .frame(width: 0, height: 0, alignment: .bottomLeading)
-                        .offset(x: iconsOnly ? -8 : -3, y: iconsOnly ? 8 : 3)
+                        .frame(width: 0, height: 0, alignment: .bottomTrailing)
+                        .offset(x: iconsOnly ? 8 : 0, y: iconsOnly ? 3 : -1)
                 }
             }
             // Точка под подписью — и в режиме значков: выбор виден формой, а не
