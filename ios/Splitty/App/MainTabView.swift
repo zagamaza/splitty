@@ -239,7 +239,7 @@ struct ReceiptTabBar: View {
             row(iconsOnly: false)
             row(iconsOnly: true)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 6)
         .frame(maxWidth: .infinity)
@@ -254,13 +254,13 @@ struct ReceiptTabBar: View {
     private func row(iconsOnly: Bool) -> some View {
         HStack(spacing: 0) {
             item(.friends, "Друзья", icon: "person.2", iconsOnly: iconsOnly)
-            Spacer(minLength: 12)
+            Spacer(minLength: 6)
             item(.groups, "Группы", icon: "person.3", iconsOnly: iconsOnly)
-            Spacer(minLength: 12)
+            Spacer(minLength: 6)
             addButton
-            Spacer(minLength: 12)
+            Spacer(minLength: 6)
             item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge)
-            Spacer(minLength: 12)
+            Spacer(minLength: 6)
             item(.account, "Профиль", icon: "person.crop.circle", iconsOnly: iconsOnly)
         }
     }
@@ -278,7 +278,9 @@ struct ReceiptTabBar: View {
             selection = tab
         } label: {
             HStack(spacing: 5) {
-                if isOn && !iconsOnly {
+                // Точка — и в режиме значков: выбор виден формой, а не только
+                // заливкой значка или цветом.
+                if isOn {
                     Circle().fill(Color.ink).frame(width: 5, height: 5)
                 }
                 if iconsOnly {
@@ -301,7 +303,7 @@ struct ReceiptTabBar: View {
                 }
             }
             .foregroundStyle(Color.ink)
-            .frame(minHeight: 44)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

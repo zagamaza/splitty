@@ -633,10 +633,19 @@ private fun ReceiptTabBar(
             .windowInsetsPadding(WindowInsets.navigationBars),
     ) {
         HorizontalDivider(thickness = 1.dp, color = colors.hairline)
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
-            val textWidth = with(density) { labels.sumOf { measurer.measure(it, style).size.width }.toDp() }
-            // Подписи + «+» + точка выбранной + бейдж + минимальные зазоры.
-            val iconsOnly = textWidth + 44.dp + 10.dp + (if (badge != null) 24.dp else 0.dp) + 48.dp > maxWidth
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+            // Вместимость считается по настоящим ширинам: подпись (не уже зоны
+            // нажатия 48dp), точка выбранной, бейдж тем же стилем, «+» и зазоры.
+            val badgeWidth = badge?.let {
+                with(density) { measurer.measure(it, BadgeStyle).size.width.toDp() }.coerceAtLeast(8.dp) + 8.dp + 5.dp
+            } ?: 0.dp
+            val tabsWidth = tabs.mapIndexed { index, tab ->
+                val label = with(density) { measurer.measure(labels[index], style).size.width.toDp() }
+                val dot = if (currentRoute == tab.route) 10.dp else 0.dp
+                val withBadge = if (tab.route == MainRoutes.ACTIVITY) badgeWidth else 0.dp
+                maxOf(48.dp, label + dot + withBadge)
+            }.fold(0.dp) { acc, w -> acc + w }
+            val iconsOnly = tabsWidth + 48.dp + 6.dp * tabs.size > maxWidth
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -673,18 +682,19 @@ private fun ReceiptTab(
     val colors = Splitty.colors
     Row(
         modifier = Modifier
-            .heightIn(min = 48.dp)
+            .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
             .semantics(mergeDescendants = true) { this.selected = selected }
             .clickable(role = Role.Tab, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally),
     ) {
+        // Точка — и в режиме значков: выбор виден формой, а не только цветом.
+        if (selected) {
+            Box(Modifier.size(5.dp).clip(CircleShape).background(colors.ink))
+        }
         if (iconsOnly) {
             Icon(icon, contentDescription = label, tint = if (selected) colors.ink else colors.inkSecondary)
         } else {
-            if (selected) {
-                Box(Modifier.size(5.dp).clip(CircleShape).background(colors.ink))
-            }
             Text(
                 text = label,
                 color = colors.ink,
@@ -703,29 +713,37 @@ private fun ReceiptTab(
                     .padding(horizontal = 4.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(badge, color = colors.onAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                Text(badge, color = colors.onAccent, style = BadgeStyle)
             }
         }
     }
 }
 
-/** «+» в строке: плоская печать цвета действия вровень с подписями. */
+private val BadgeStyle = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+
+/** «+» в строке: плоская печать 44×36 цвета действия в зоне нажатия 48×48. */
 @Composable
 private fun ReceiptAddButton(onClick: () -> Unit) {
     val colors = Splitty.colors
     Box(
         modifier = Modifier
-            .size(width = 44.dp, height = 36.dp)
-            .clip(RoundedCornerShape(3.dp))
-            .background(colors.accent)
+            .size(48.dp)
             .clickable(role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Filled.Add,
-            contentDescription = stringResource(R.string.tab_add),
-            tint = colors.onAccent,
-            modifier = Modifier.size(22.dp),
-        )
+        Box(
+            modifier = Modifier
+                .size(width = 44.dp, height = 36.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(colors.accent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = stringResource(R.string.tab_add),
+                tint = colors.onAccent,
+                modifier = Modifier.size(22.dp),
+            )
+        }
     }
 }
