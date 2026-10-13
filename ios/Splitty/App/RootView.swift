@@ -201,7 +201,7 @@ struct RootView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
             .padding(20)
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(Color.surface, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         }
         .transition(.opacity)
     }

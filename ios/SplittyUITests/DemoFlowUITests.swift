@@ -73,15 +73,16 @@ final class DemoFlowUITests: XCTestCase {
             shot("07-итоги")
         }
 
-        // назад на операции — там hero-карточка с «Погасить»
+        // назад на операции — там сводка со ссылкой «Рассчитаться»
         if app.buttons["Операции"].waitForExistence(timeout: 5) {
             app.buttons["Операции"].tap()
             sleepShort()
         }
 
-        // --- Погашение долга (CTA в hero-карточке) ---
-        if app.buttons["Погасить"].waitForExistence(timeout: 5), app.buttons["Погасить"].isEnabled {
-            app.buttons["Погасить"].tap()
+        // --- Погашение долга (ссылка в сводке тусы) ---
+        let settleLink = app.buttons["settleUpLink"]
+        if settleLink.waitForExistence(timeout: 5), settleLink.isEnabled {
+            settleLink.tap()
             sleepShort()
             shot("08-выбор-долга")
             // Если открылся список «Ваши долги» — выбираем долг Алмаза
