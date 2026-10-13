@@ -1,8 +1,13 @@
 package com.zagir.splitty.ui.activity
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.IO_WAIT_MS
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.zagir.splitty.R
+import com.zagir.splitty.TEARDOWN_WAIT_MS
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.InviteStatus
 import com.zagir.splitty.core.model.Me
@@ -28,10 +33,11 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -69,6 +75,10 @@ class ActivityViewModelTest {
     private lateinit var scope: CoroutineScope
     private lateinit var session: SessionStore
 
+    /** VM живут в сторе, чтобы teardown закрыл их и дождался завершения. */
+    private val vmStore = ViewModelStore()
+    private val vmJobs = mutableListOf<Job>()
+
     @BeforeTest
     fun setUp(): Unit = runBlocking {
         Dispatchers.setMain(Dispatchers.Default)
@@ -85,9 +95,17 @@ class ActivityViewModelTest {
 
     @AfterTest
     fun tearDown() {
+        // Без закрытия viewModelScope работал после теста на Default, а его
+        // обработчики завершения шли в Main уже после resetMain.
+        runBlocking {
+            withTimeout(TEARDOWN_WAIT_MS) {
+                vmStore.clear()
+                vmJobs.joinAll()
+                scope.coroutineContext[Job]!!.cancelAndJoin()
+            }
+        }
         Dispatchers.resetMain()
         server.shutdown()
-        scope.cancel()
         dir.deleteRecursively()
     }
 
@@ -110,7 +128,13 @@ class ActivityViewModelTest {
             MutableStateFlow(true),
             scope,
         )
-        return ActivityViewModel(repository, session, syncer, testAnalytics(dir, SplittyJson, session, scope))
+        val factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                ActivityViewModel(repository, session, syncer, testAnalytics(dir, SplittyJson, session, scope)) as T
+        }
+        return ViewModelProvider(vmStore, factory)["vm${vmJobs.size}", ActivityViewModel::class.java]
+            .also { vmJobs.add(it.viewModelScope.coroutineContext[Job]!!) }
     }
 
     /** Ждёт запрос с нужным путём, пропуская посторонние (синк outbox и т.п.). */

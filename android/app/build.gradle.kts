@@ -1,3 +1,4 @@
+import java.time.Duration
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -333,4 +334,7 @@ tasks.withType<Test>().configureEach {
             languageVersion.set(JavaLanguageVersion.of(21))
         }
     )
+    // Полный прогон идёт около минуты. Зависший тест (ожидание без таймаута)
+    // без предела держал задачу 25 минут и выглядел как «тесты долго идут».
+    timeout.set(Duration.ofMinutes(5))
 }

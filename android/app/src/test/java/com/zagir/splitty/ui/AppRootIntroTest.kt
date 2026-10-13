@@ -8,7 +8,9 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.IO_WAIT_MS
+import com.zagir.splitty.TEARDOWN_WAIT_MS
 import com.zagir.splitty.core.analytics.testAnalytics
 import com.zagir.splitty.core.model.Me
 import com.zagir.splitty.core.model.SplittyJson
@@ -33,8 +35,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -68,6 +72,9 @@ class AppRootIntroTest {
 
     private val server = MockWebServer()
     private val vmStore = ViewModelStore()
+
+    /** Скоупы созданных VM: teardown ждёт их завершения, а не только отмены. */
+    private val vmJobs = mutableListOf<Job>()
     private lateinit var dir: File
     private lateinit var scope: CoroutineScope
     private lateinit var dataStore: DataStore<Preferences>
@@ -102,10 +109,19 @@ class AppRootIntroTest {
 
     @AfterTest
     fun tearDown() {
-        vmStore.clear()
+
+        // Отмена не ждёт завершения: без join'а обработчики завершения VM и
+        // фикстуры шли в Main уже после resetMain («Dispatchers.Main is used
+        // concurrently with setting it») и доживали до следующего теста.
+        runBlocking {
+            withTimeout(TEARDOWN_WAIT_MS) {
+                vmStore.clear()
+                vmJobs.joinAll()
+                scope.coroutineContext[Job]!!.cancelAndJoin()
+            }
+        }
         Dispatchers.resetMain()
         server.shutdown()
-        scope.cancel()
         dir.deleteRecursively()
     }
 
@@ -123,6 +139,7 @@ class AppRootIntroTest {
                 ) as T
         }
         return ViewModelProvider(vmStore, factory)[AppRootViewModel::class.java]
+            .also { vmJobs.add(it.viewModelScope.coroutineContext[Job]!!) }
     }
 
     private suspend fun awaitIntro(vm: AppRootViewModel): Boolean =

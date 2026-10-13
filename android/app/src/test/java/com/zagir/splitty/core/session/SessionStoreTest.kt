@@ -5,6 +5,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.zagir.splitty.IO_WAIT_MS
+import com.zagir.splitty.TEARDOWN_WAIT_MS
 import com.zagir.splitty.core.model.Me
 import java.io.File
 import java.nio.file.Files
@@ -17,10 +19,11 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 
 /**
  * SessionStore: миграция plaintext-токена в шифротекст без разлогина, чистая
@@ -59,18 +62,26 @@ class SessionStoreTest {
 
     @AfterTest
     fun tearDown() {
-        scope.cancel()
+        runBlocking { withTimeout(TEARDOWN_WAIT_MS) { scope.coroutineContext[Job]!!.cancelAndJoin() } }
         dir.deleteRecursively()
     }
 
+    /**
+     * Тело теста с пределом: `first { … }` на DataStore без него при потерянном
+     * обновлении ждал вечно и держал весь прогон (зависание 25 минут).
+     */
+    private fun bounded(block: suspend CoroutineScope.() -> Unit) = runBlocking {
+        withTimeout(IO_WAIT_MS) { block() }
+    }
+
     @Test
-    fun `clean install has no token`() = runBlocking {
+    fun `clean install has no token`() = bounded {
         val store = SessionStore(dataStore, FakeTokenCipher(), scope)
         assertNull(store.state.filterNotNull().first().token)
     }
 
     @Test
-    fun `plain token migrates to encrypted without logout`() = runBlocking {
+    fun `plain token migrates to encrypted without logout`() = bounded {
         // Формат ДО этой задачи: plaintext-токен под ключом "token".
         dataStore.edit { it[tokenKey] = "jwt-123" }
 
@@ -90,7 +101,7 @@ class SessionStoreTest {
     }
 
     @Test
-    fun `signIn stores encrypted token not plain`() = runBlocking {
+    fun `signIn stores encrypted token not plain`() = bounded {
         val store = SessionStore(dataStore, FakeTokenCipher(), scope)
         store.signIn("jwt-xyz", me)
 
@@ -101,7 +112,7 @@ class SessionStoreTest {
     }
 
     @Test
-    fun `logout clears both token formats and keystore key`() = runBlocking {
+    fun `logout clears both token formats and keystore key`() = bounded {
         val cipher = FakeTokenCipher()
         val store = SessionStore(dataStore, cipher, scope)
         store.signIn("jwt", me)
@@ -117,7 +128,7 @@ class SessionStoreTest {
     }
 
     @Test
-    fun `unreadable ciphertext yields no token`() = runBlocking {
+    fun `unreadable ciphertext yields no token`() = bounded {
         // Ключ Keystore пропал (сброс/перенос устройства): шифротекст не читается.
         dataStore.edit { it[tokenEncKey] = "garbage-not-enc" }
 

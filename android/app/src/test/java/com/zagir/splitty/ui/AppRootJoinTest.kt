@@ -1,6 +1,8 @@
 package com.zagir.splitty.ui
 
+import androidx.lifecycle.viewModelScope
 import com.zagir.splitty.IO_WAIT_MS
+import com.zagir.splitty.TEARDOWN_WAIT_MS
 import com.zagir.splitty.core.ui.UiText
 import com.zagir.splitty.R
 import androidx.lifecycle.ViewModel
@@ -40,8 +42,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -83,6 +87,9 @@ class AppRootJoinTest {
     private lateinit var cacheDir: File
     private lateinit var sessionDir: File
     private val vmStore = ViewModelStore()
+
+    /** Скоупы созданных VM: teardown ждёт их завершения, а не только отмены. */
+    private val vmJobs = mutableListOf<Job>()
     private lateinit var scope: CoroutineScope
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var session: SessionStore
@@ -131,11 +138,18 @@ class AppRootJoinTest {
 
     @AfterTest
     fun tearDown() {
-        // Сначала VM: её корутины иначе переживут и скоуп, и сам тест.
-        vmStore.clear()
+        // Отмена не ждёт завершения: без join'а обработчики завершения VM и
+        // фикстуры шли в Main уже после resetMain («Dispatchers.Main is used
+        // concurrently with setting it») и доживали до следующего теста.
+        runBlocking {
+            withTimeout(TEARDOWN_WAIT_MS) {
+                vmStore.clear()
+                vmJobs.joinAll()
+                scope.coroutineContext[Job]!!.cancelAndJoin()
+            }
+        }
         Dispatchers.resetMain()
         server.shutdown()
-        scope.cancel()
         cacheDir.deleteRecursively()
         sessionDir.deleteRecursively()
     }
@@ -169,6 +183,7 @@ class AppRootJoinTest {
                 ) as T
         }
         return ViewModelProvider(vmStore, factory)[AppRootViewModel::class.java]
+            .also { vmJobs.add(it.viewModelScope.coroutineContext[Job]!!) }
     }
 
     /** Вход: без токена вступление не начинается вовсе. */
