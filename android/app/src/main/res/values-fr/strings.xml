@@ -780,6 +780,4 @@
     <string name="op_doc_expense">Dépense · %1$s</string>
     <string name="op_doc_repayment">Remboursement · %1$s</string>
     <string name="op_amount">Montant</string>
-    <string name="op_your_debt">vous devez</string>
-    <string name="op_debt">doit</string>
 </resources>

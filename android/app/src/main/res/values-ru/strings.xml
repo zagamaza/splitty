@@ -817,6 +817,4 @@
     <string name="op_doc_expense">Расход · %1$s</string>
     <string name="op_doc_repayment">Погашение · %1$s</string>
     <string name="op_amount">Сумма</string>
-    <string name="op_your_debt">ваш долг</string>
-    <string name="op_debt">долг</string>
 </resources>

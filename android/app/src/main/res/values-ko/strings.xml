@@ -717,6 +717,4 @@
     <string name="op_doc_expense">지출 · %1$s</string>
     <string name="op_doc_repayment">상환 · %1$s</string>
     <string name="op_amount">금액</string>
-    <string name="op_your_debt">내 빚</string>
-    <string name="op_debt">빚</string>
 </resources>

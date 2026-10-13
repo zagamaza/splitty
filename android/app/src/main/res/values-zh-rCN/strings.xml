@@ -717,6 +717,4 @@
     <string name="op_doc_expense">支出 · %1$s</string>
     <string name="op_doc_repayment">还款 · %1$s</string>
     <string name="op_amount">金额</string>
-    <string name="op_your_debt">你欠款</string>
-    <string name="op_debt">欠款</string>
 </resources>

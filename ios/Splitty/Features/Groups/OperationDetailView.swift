@@ -210,7 +210,7 @@ struct OperationDetailView: View {
                     .foregroundStyle(Color.inkSecondary)
             }
         }
-        let amount = MoneyText(recipient.sum, exactMinor: recipient.exactMinor, role: recipientRole(recipient.user),
+        let amount = MoneyText(recipient.sum, exactMinor: recipient.exactMinor, role: .neutral,
                                size: 16, weight: .semibold, currency: currency)
         return ViewThatFits(in: .horizontal) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -244,25 +244,14 @@ struct OperationDetailView: View {
         user.id == currentUserId ? String(localized: "Вы") : user.displayName
     }
 
-    /// Подпись доли — роль словами, без «должен(на)»: «ваш долг», «долг»,
-    /// «доля» плательщика. У погашения подпись не нужна: раздел и так
-    /// называется «Кто получил».
+    /// Подпись доли — «ваша доля» / «доля» у всех, включая плательщика.
+    /// Сумма — историческая доля операции (`recipients[].sum`), а не текущий
+    /// долг: после расчёта «ваш долг 3000» под старым расходом врал бы.
+    /// Текущий долг честно показан в группе и на «Балансах». У погашения
+    /// подпись не нужна: раздел и так называется «Кто получил».
     private func recipientCaption(_ recipient: User) -> String? {
         if operation.isDebtRepayment { return nil }
-        if recipient.id == operation.donor.id {
-            return recipient.id == currentUserId ? String(localized: "ваша доля") : String(localized: "доля")
-        }
-        return recipient.id == currentUserId ? String(localized: "ваш долг") : String(localized: "долг")
-    }
-
-    /// Цвет доли: негатив — только для СВОЕГО долга; остальное нейтрально.
-    private func recipientRole(_ recipient: User) -> MoneyText.Role {
-        if !operation.isDebtRepayment,
-           recipient.id == currentUserId,
-           recipient.id != operation.donor.id {
-            return .negative
-        }
-        return .neutral
+        return recipient.id == currentUserId ? String(localized: "ваша доля") : String(localized: "доля")
     }
 
     /// Строка документа: подпись слева, значение справа; на крупном шрифте —

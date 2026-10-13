@@ -721,6 +721,4 @@
     <string name="op_doc_expense">Spesa · %1$s</string>
     <string name="op_doc_repayment">Rimborso · %1$s</string>
     <string name="op_amount">Importo</string>
-    <string name="op_your_debt">il tuo debito</string>
-    <string name="op_debt">deve</string>
 </resources>

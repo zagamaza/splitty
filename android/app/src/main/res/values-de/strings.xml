@@ -780,6 +780,4 @@
     <string name="op_doc_expense">Ausgabe · %1$s</string>
     <string name="op_doc_repayment">Rückzahlung · %1$s</string>
     <string name="op_amount">Betrag</string>
-    <string name="op_your_debt">du schuldest</string>
-    <string name="op_debt">schuldet</string>
 </resources>

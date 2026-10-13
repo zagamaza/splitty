@@ -721,6 +721,4 @@
     <string name="op_doc_expense">Despesa · %1$s</string>
     <string name="op_doc_repayment">Pagamento · %1$s</string>
     <string name="op_amount">Valor</string>
-    <string name="op_your_debt">você deve</string>
-    <string name="op_debt">deve</string>
 </resources>

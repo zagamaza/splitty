@@ -447,20 +447,14 @@ private fun RecipientRow(
 ) {
     val colors = Splitty.colors
     val user = recipient.user
-    // Роль словами, без «должен(на)»; у погашения подпись не нужна — раздел
-    // и так называется «Кто получил».
+    // «ваша доля» / «доля» у всех, включая плательщика: сумма — историческая
+    // доля операции, а не текущий долг (после расчёта «ваш долг» под старым
+    // расходом врал бы). У погашения подпись не нужна — раздел и так
+    // называется «Кто получил». Сумма нейтральная (паритет iOS).
     val caption = when {
         operation.isDebtRepayment -> null
-        user.id == operation.donor.id ->
-            stringResource(if (user.id == meId) R.string.op_share_yours else R.string.op_share)
-        user.id == meId -> stringResource(R.string.op_your_debt)
-        else -> stringResource(R.string.op_debt)
-    }
-    // Цвет доли: негатив — только для СВОЕГО долга; остальное нейтрально.
-    val role = if (!operation.isDebtRepayment && user.id == meId && user.id != operation.donor.id) {
-        MoneyRole.NEGATIVE
-    } else {
-        MoneyRole.NEUTRAL
+        user.id == meId -> stringResource(R.string.op_share_yours)
+        else -> stringResource(R.string.op_share)
     }
     val who: @Composable (Modifier) -> Unit = { m ->
         Column(m, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -469,7 +463,7 @@ private fun RecipientRow(
         }
     }
     val amount: @Composable () -> Unit = {
-        MoneyText(recipient.sum, exactMinor = recipient.exactMinor, role = role, size = 16.sp,
+        MoneyText(recipient.sum, exactMinor = recipient.exactMinor, role = MoneyRole.NEUTRAL, size = 16.sp,
             weight = FontWeight.SemiBold, currency = currency)
     }
     val rowModifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) {}
