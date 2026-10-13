@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
@@ -16,6 +18,8 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.zagir.splitty.core.model.ItemShare
 import com.zagir.splitty.core.model.OperationItem
 import com.zagir.splitty.core.model.PersonShare
+import com.zagir.splitty.core.model.personShares
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.ui.theme.Splitty
 import com.zagir.splitty.ui.theme.SplittyTheme
@@ -135,13 +139,30 @@ class ReceiptCardSnapshotTest {
         )
     }
 
+    // В минорных единицах — так их отдаёт personShares(): 605 ₽ из них 55 ₽ сбора.
+    private val breakdown = listOf(
+        PersonShare(userId = 1, total = 60_500, surchargePart = 5_500),
+        PersonShare(userId = 2, total = 60_500, surchargePart = 5_500),
+        PersonShare(userId = 3, total = 10_000, surchargePart = 0),
+    )
+
+    // Доли превью приходят в копейках. Карточка печатала их как рубли, и
+    // 400 ₽ на человека превращались в 40 000 ₽.
+    @Test fun personBreakdownPrintsMinorUnitsAsRubles() {
+        val shares = listOf(
+            OperationItem(name = "Хачапури", price = 1200, shares = listOf(ItemShare(1), ItemShare(2), ItemShare(3))),
+        ).personShares()!!
+        composeRule.setContent {
+            SplittyTheme {
+                PersonBreakdownCard(shares = shares, members = members, currency = "RUB", meId = 1)
+            }
+        }
+        composeRule.onAllNodesWithText(moneyMinor(40_000, "RUB"), useUnmergedTree = true).assertCountEquals(3)
+    }
+
     @Test fun personBreakdown() = snapshot("person_breakdown_light") {
         PersonBreakdownCard(
-            shares = listOf(
-                PersonShare(userId = 1, total = 605, surchargePart = 55),
-                PersonShare(userId = 2, total = 605, surchargePart = 55),
-                PersonShare(userId = 3, total = 100, surchargePart = 0),
-            ),
+            shares = breakdown,
             members = members,
             currency = "RUB",
             meId = 1,
@@ -150,11 +171,7 @@ class ReceiptCardSnapshotTest {
 
     @Test fun personBreakdownDark() = snapshot("person_breakdown_dark", dark = true) {
         PersonBreakdownCard(
-            shares = listOf(
-                PersonShare(userId = 1, total = 605, surchargePart = 55),
-                PersonShare(userId = 2, total = 605, surchargePart = 55),
-                PersonShare(userId = 3, total = 100, surchargePart = 0),
-            ),
+            shares = breakdown,
             members = members,
             currency = "RUB",
             meId = 1,

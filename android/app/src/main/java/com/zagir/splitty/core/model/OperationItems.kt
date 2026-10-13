@@ -28,7 +28,7 @@ val OperationItem.shareList: List<ItemShare> get() = shares ?: emptyList()
  */
 val OperationItem.hasUnknown: Boolean get() = !unknown.isNullOrEmpty()
 
-/** Результат превью долей: карта userId→сумма и общий итог (обе — целые единицы). */
+/** Результат превью долей: карта userId→сумма и общий итог (обе — минорные единицы). */
 data class DerivedShares(val shares: Map<Long, Long>, val total: Long)
 
 /**
@@ -37,7 +37,7 @@ data class DerivedShares(val shares: Map<Long, Long>, val total: Long)
  */
 data class PersonShare(
     val userId: Long,
-    /** Полная доля: позиции + сборы (ровно то, что сохранит сервер). */
+    /** Полная доля в минорных единицах: позиции + сборы (ровно то, что сохранит сервер). */
     val total: Long,
     /** Часть итога, пришедшая от сборов/чаевых; 0 — сборов нет. */
     val surchargePart: Long,

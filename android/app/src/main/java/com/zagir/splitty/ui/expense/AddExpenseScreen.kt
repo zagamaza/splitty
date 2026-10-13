@@ -115,6 +115,7 @@ import com.zagir.splitty.core.model.SplitType
 import com.zagir.splitty.core.model.User
 import com.zagir.splitty.core.money.currencySymbol
 import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.core.money.moneyRange
 import com.zagir.splitty.core.money.shares
 import com.zagir.splitty.ui.components.AppToast
@@ -1446,7 +1447,7 @@ private fun DerivedTotal(form: AddExpenseForm) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = money(total, form.currency),
+            text = moneyMinor(total, form.currency),
             fontSize = 40.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.ink,

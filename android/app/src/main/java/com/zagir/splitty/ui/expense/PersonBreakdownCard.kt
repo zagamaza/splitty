@@ -32,7 +32,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.zagir.splitty.core.model.PersonShare
 import com.zagir.splitty.core.model.User
-import com.zagir.splitty.core.money.money
+import com.zagir.splitty.core.money.minorToUnitsRounded
+import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.ui.components.GradientAvatar
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
@@ -100,10 +101,10 @@ fun PersonBreakdownCard(
                 }
                 Spacer(Modifier.width(8.dp))
                 Column(horizontalAlignment = Alignment.End) {
-                    MoneyText(share.total, role = MoneyRole.NEUTRAL, size = 15.sp, currency = currency)
+                    MoneyText(minorToUnitsRounded(share.total), role = MoneyRole.NEUTRAL, size = 15.sp, currency = currency, exactMinor = share.total)
                     if (share.surchargePart > 0) {
                         Text(
-                            text = stringResource(R.string.breakdown_surcharge_part, money(share.surchargePart, currency)),
+                            text = stringResource(R.string.breakdown_surcharge_part, moneyMinor(share.surchargePart, currency)),
                             fontSize = 11.sp,
                             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                             color = colors.inkSecondary,
