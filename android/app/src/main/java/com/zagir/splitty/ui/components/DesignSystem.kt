@@ -376,8 +376,17 @@ fun MoneyTotalsText(
  * Регистр текста НЕ меняет; капс — у [ReceiptLabel]. Аналог iOS `.sectionHeaderStyle()`.
  */
 @Composable
-fun SectionHeader(text: String, modifier: Modifier = Modifier, maxLines: Int = Int.MAX_VALUE) {
-    if (LocalReceiptSheetSections.current) {
+fun SectionHeader(
+    text: String,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+    // false — пунктир раздела ставится отдельной строкой над парой
+    // «заголовок + действие» (см. участников в настройках тусы).
+    withRule: Boolean = true,
+) {
+    if (LocalReceiptSheetSections.current && !withRule) {
+        SectionHeaderText(text, modifier.padding(start = 12.dp), maxLines)
+    } else if (LocalReceiptSheetSections.current) {
         // Заголовок стоит с отступом 4 от края секции, строки — 16: здесь
         // добираем до строк, а пунктир отделяет раздел от предыдущего.
         Column(modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

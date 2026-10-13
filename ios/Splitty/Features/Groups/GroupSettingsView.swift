@@ -302,26 +302,45 @@ struct GroupSettingsView: View {
         }
     }
 
+    private var membersTitle: some View {
+        Text("Участники").sectionHeaderLabelStyle()
+    }
+
+    private var addMemberButton: some View {
+        Button {
+            isInviteFriendsPresented = true
+        } label: {
+            // «Добавить», а не «Пригласить»: раньше два пункта экрана
+            // назывались одинаково, а вели в разные места
+            Label("Добавить", systemImage: "person.badge.plus")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.ink)
+        }
+        .padding(.leading, 12)
+    }
+
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Кнопка поверх строки заголовка, а не рядом: иначе пунктир
-            // раздела обрывался на ней.
-            Text("Участники")
-                .sectionHeaderStyle()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(alignment: .bottomTrailing) {
-                    Button {
-                        isInviteFriendsPresented = true
-                    } label: {
-                        // «Добавить», а не «Пригласить»: раньше два пункта экрана
-                        // назывались одинаково, а вели в разные места
-                        Label("Добавить", systemImage: "person.badge.plus")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.ink)
+            // Пунктир — своей строкой, а пара «заголовок + действие» под ним
+            // адаптивная: не помещается (крупный шрифт, длинный перевод) —
+            // кнопка уходит на следующую строку, а не наезжает на заголовок.
+            VStack(alignment: .leading, spacing: 14) {
+                ReceiptDivider()
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) {
+                        membersTitle.fixedSize()
+                        Spacer(minLength: 8)
+                        addMemberButton.fixedSize()
                     }
-                    .padding(.trailing, 12)
+                    VStack(alignment: .leading, spacing: 6) {
+                        membersTitle
+                        addMemberButton
+                    }
                 }
-                .padding(.horizontal, 4)
+                .padding(.trailing, 12)
+            }
+            .padding(.top, 4)
+            .padding(.horizontal, 4)
             VStack(spacing: 0) {
                 ForEach(room.members) { member in
                     HStack(spacing: 12) {

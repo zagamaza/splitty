@@ -275,7 +275,13 @@ extension View {
     /// Заголовок секции — печатный реквизит: моноширинный 12pt, вторичный цвет.
     /// Регистр текста НЕ меняет (важно для UI-тестов); капс — у `receiptLabel()`.
     func sectionHeaderStyle() -> some View {
-        modifier(SectionHeaderModifier())
+        modifier(SectionHeaderModifier(withRule: true))
+    }
+
+    /// То же оформление без пунктира раздела: когда пунктир ставится
+    /// отдельной строкой над парой «заголовок + действие».
+    func sectionHeaderLabelStyle() -> some View {
+        modifier(SectionHeaderModifier(withRule: false))
     }
 
     /// Секции экрана настроек — разделами ОДНОГО листа чека: карточки секций
@@ -300,6 +306,7 @@ extension EnvironmentValues {
 }
 
 private struct SectionHeaderModifier: ViewModifier {
+    let withRule: Bool
     @Environment(\.receiptSheetSections) private var inSheet
 
     func body(content: Content) -> some View {
@@ -307,7 +314,9 @@ private struct SectionHeaderModifier: ViewModifier {
             .scaledFont(size: 12, weight: .medium, design: .monospaced, relativeTo: .footnote)
             .foregroundStyle(Color.inkSecondary)
             .kerning(0.3)
-        if inSheet {
+        if inSheet && !withRule {
+            styled.padding(.leading, 12)
+        } else if inSheet {
             // Заголовок стоит с отступом 4 от края секции, строки — 16: здесь
             // добираем до строк, а пунктир отделяет раздел от предыдущего.
             VStack(alignment: .leading, spacing: 14) {

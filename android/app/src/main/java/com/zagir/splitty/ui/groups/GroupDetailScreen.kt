@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import androidx.compose.foundation.layout.FlowRow
 import com.zagir.splitty.ui.components.isLargeFontScale
 import com.zagir.splitty.ui.components.ReceiptPaperEnd
 import com.zagir.splitty.ui.components.onReceiptPaper
@@ -1624,36 +1625,46 @@ private fun GroupSettingsTab(
 
                 // Участники
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Кнопка поверх строки заголовка, а не рядом: иначе пунктир
-                    // раздела обрывался на ней.
-                    Box(
+                    // Пунктир — своей строкой, а пара «заголовок + действие» под ним
+                    // переносится: не помещается (крупный шрифт, длинный перевод) —
+                    // кнопка уходит на следующую строку, а не наезжает на заголовок.
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
+                            .padding(horizontal = 4.dp)
+                            .padding(top = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        SectionHeader(stringResource(R.string.group_settings_members), Modifier.fillMaxWidth())
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 4.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .clickable(onClick = onInviteFriends)
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        ReceiptDivider()
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth().padding(end = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            itemVerticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                imageVector = Icons.Outlined.PersonAddAlt,
-                                contentDescription = null,
-                                tint = colors.ink,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Text(
-                                text = stringResource(R.string.group_settings_members_invite),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.ink,
-                            )
+                            SectionHeader(stringResource(R.string.group_settings_members), withRule = false)
+                            Row(
+                                modifier = Modifier
+                                    .padding(start = 8.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .clickable(onClick = onInviteFriends)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PersonAddAlt,
+                                    contentDescription = null,
+                                    tint = colors.ink,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Text(
+                                    text = stringResource(R.string.group_settings_members_invite),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.ink,
+                                )
+                            }
                         }
                     }
                     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
