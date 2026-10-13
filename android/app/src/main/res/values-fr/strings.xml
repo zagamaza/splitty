@@ -780,4 +780,5 @@
     <string name="op_doc_expense">Dépense · %1$s</string>
     <string name="op_doc_repayment">Remboursement · %1$s</string>
     <string name="op_amount">Montant</string>
+    <string name="groups_new">+ Nouveau</string>
 </resources>

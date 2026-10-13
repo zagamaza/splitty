@@ -50,6 +50,9 @@ struct AccountView: View {
                 VStack(spacing: 16) {
                     ScreenHeading("Профиль")
                         .padding(.horizontal, 4)
+                    // Реквизиты аккаунта — один лист с разделами, а не стопка
+                    // отдельных форм.
+                    VStack(spacing: 16) {
                     headerSection
                     // Профиль не загрузился: показываем это честно и даём
                     // повтор. Раньше экран навсегда оставался скелетоном, а
@@ -72,6 +75,8 @@ struct AccountView: View {
                     supportSection
                     legalSection
                     deleteAccountSection
+                    }
+                    .receiptSheetSections()
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)

@@ -717,4 +717,5 @@
     <string name="op_doc_expense">支出 · %1$s</string>
     <string name="op_doc_repayment">返済 · %1$s</string>
     <string name="op_amount">金額</string>
+    <string name="groups_new">+ 新規</string>
 </resources>

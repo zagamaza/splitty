@@ -284,6 +284,8 @@ struct ReceiptTabBar: View {
                         .frame(width: 28)
                 } else {
                     // Невидимая жирная подпись держит ширину: выбор её не меняет.
+                    // Без подчёркиваний: четыре подчёркнутые подписи читались
+                    // мелким футером сайта. Выбор — чернилами, начертанием и точкой.
                     Text(title)
                         .scaledFont(size: 13, weight: .semibold)
                         .lineLimit(1)
@@ -292,7 +294,7 @@ struct ReceiptTabBar: View {
                         .overlay {
                             Text(title)
                                 .scaledFont(size: 13, weight: isOn ? .semibold : .regular)
-                                .underline(!isOn, color: Color.ink.opacity(0.45))
+                                .foregroundStyle(isOn ? Color.ink : Color.inkSecondary)
                                 .lineLimit(1)
                                 .fixedSize()
                         }

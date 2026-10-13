@@ -780,4 +780,5 @@
     <string name="op_doc_expense">Ausgabe · %1$s</string>
     <string name="op_doc_repayment">Rückzahlung · %1$s</string>
     <string name="op_amount">Betrag</string>
+    <string name="groups_new">+ Neu</string>
 </resources>

@@ -224,7 +224,7 @@
     <string name="groups_all_settled">Все долги погашены</string>
     <string name="groups_row_owed">вам должны</string>
     <string name="groups_row_owes">вы должны</string>
-    <string name="groups_row_settled">расчёт</string>
+    <string name="groups_row_settled">в расчёте</string>
     <string name="groups_archive">Архив</string>
     <string name="groups_archive_empty_title">Архив пуст</string>
     <string name="groups_archive_empty_subtitle">Архивные группы появятся здесь</string>
@@ -817,4 +817,5 @@
     <string name="op_doc_expense">Расход · %1$s</string>
     <string name="op_doc_repayment">Погашение · %1$s</string>
     <string name="op_amount">Сумма</string>
+    <string name="groups_new">+ Новая</string>
 </resources>

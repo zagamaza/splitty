@@ -800,4 +800,5 @@
     <string name="op_doc_expense">Expense · %1$s</string>
     <string name="op_doc_repayment">Repayment · %1$s</string>
     <string name="op_amount">Amount</string>
+    <string name="groups_new">+ New</string>
 </resources>

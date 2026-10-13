@@ -114,10 +114,16 @@ struct GroupsListView: View {
                                 }
                             }
                         } label: {
-                            Image(systemName: "plus")
+                            // Текстом, а не круглым «+»: второй «+» рядом с
+                            // оранжевым «Добавить расход» внизу путал, что
+                            // именно добавляется.
+                            Text("+ Новая")
+                                .scaledFont(size: 16, weight: .semibold)
+                                .foregroundStyle(Color.ink)
                         }
                         .accessibilityLabel("Создать группу или присоединиться по коду")
                     }
+                    .withoutGlassBackground()
                 }
                 .sheet(isPresented: $isCreatePresented) {
                     // Список обновится через session.dataVersion (bump внутри).

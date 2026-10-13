@@ -668,3 +668,18 @@ struct ReceiptTab: View {
             .contentShape(Rectangle())
     }
 }
+
+// MARK: - Пункт панели без стеклянной подложки
+
+extension ToolbarContent {
+    /// Текстовое действие панели без капсулы iOS 26: в чеке это подпись-ссылка,
+    /// а не кнопка-таблетка. На прежних системах подложки и так нет.
+    @ToolbarContentBuilder
+    func withoutGlassBackground() -> some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            sharedBackgroundVisibility(.hidden)
+        } else {
+            self
+        }
+    }
+}

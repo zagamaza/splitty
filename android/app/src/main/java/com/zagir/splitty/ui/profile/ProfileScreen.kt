@@ -58,6 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.BuildConfig
 import com.zagir.splitty.R
+import com.zagir.splitty.ui.components.ReceiptSheetSections
 import com.zagir.splitty.core.auth.rememberCredentialManagerHost
 import com.zagir.splitty.core.session.SessionStore
 import com.zagir.splitty.core.model.LoginProvider
@@ -142,63 +143,65 @@ fun ProfileScreen(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            HeaderSection(me)
-            PlusSection(
-                tier = tier,
-                subscription = subscription,
-                load = plusLoad,
-                onRetry = viewModel::refreshSubscription,
-            )
-            SettingsSection(
-                me = me,
-                lang = langDraft,
-                theme = theme,
-                onOpenNotifications = onOpenNotifications,
-                enabled = !isSaving,
-                onEditName = {
-                    nameDraft = me?.displayName.orEmpty()
-                    isEditNamePresented = true
-                },
-                onLangSelected = { newLang ->
-                    if (newLang != langDraft) {
-                        langDraft = newLang
-                        viewModel.updateProfile(lang = newLang)
-                    }
-                },
-                onThemeSelected = viewModel::onThemeSelected,
-            )
-            LoginMethodsSection(
-                me = me,
-                enabled = !isIdentityBusy && !isDeleting,
-                onLink = {
-                    credentialHost.launch(onError = viewModel::showError) { host ->
-                        viewModel.linkGoogle(host)
-                    }
-                },
-                onUnlinkRequest = { providerToUnlink = it },
-                onPasswordRequest = { isPasswordDialogPresented = true },
-            )
-            // Адрес сервера — отладочная информация, в релизе пользователю не
-            // нужна (менять его всё равно можно только в DEBUG на экране входа).
-            if (BuildConfig.DEBUG) {
-                ServerSection(baseUrl)
+            ReceiptSheetSections(spacing = 16.dp) {
+                HeaderSection(me)
+                PlusSection(
+                    tier = tier,
+                    subscription = subscription,
+                    load = plusLoad,
+                    onRetry = viewModel::refreshSubscription,
+                )
+                SettingsSection(
+                    me = me,
+                    lang = langDraft,
+                    theme = theme,
+                    onOpenNotifications = onOpenNotifications,
+                    enabled = !isSaving,
+                    onEditName = {
+                        nameDraft = me?.displayName.orEmpty()
+                        isEditNamePresented = true
+                    },
+                    onLangSelected = { newLang ->
+                        if (newLang != langDraft) {
+                            langDraft = newLang
+                            viewModel.updateProfile(lang = newLang)
+                        }
+                    },
+                    onThemeSelected = viewModel::onThemeSelected,
+                )
+                LoginMethodsSection(
+                    me = me,
+                    enabled = !isIdentityBusy && !isDeleting,
+                    onLink = {
+                        credentialHost.launch(onError = viewModel::showError) { host ->
+                            viewModel.linkGoogle(host)
+                        }
+                    },
+                    onUnlinkRequest = { providerToUnlink = it },
+                    onPasswordRequest = { isPasswordDialogPresented = true },
+                )
+                // Адрес сервера — отладочная информация, в релизе пользователю не
+                // нужна (менять его всё равно можно только в DEBUG на экране входа).
+                if (BuildConfig.DEBUG) {
+                    ServerSection(baseUrl)
+                }
+                // Пригодится, если телефон потерян: до этого отозвать доступ было
+                // нечем — токен жил 90 дней
+                RevokeSessionsSection(onClick = { isRevokeConfirmPresented = true })
+                // Единственное место в приложении, где можно прочитать, куда уходят
+                // голос и фото чека и что остаётся после удаления аккаунта
+                ReportProblemSection()
+                PolicyLinkSection(baseUrl = baseUrl)
+                LogoutSection(onClick = { isLogoutConfirmPresented = true })
+                // «Удалить аккаунт» — последним пунктом экрана: и Apple Guideline
+                // 5.1.1(v), и Google Play требуют удаление в пару тапов от профиля.
+                DeleteAccountSection(
+                    isDeleting = isDeleting,
+                    onClick = { isDeleteConfirmPresented = true },
+                )
+                // Запас снизу — под центральную кнопку «+» таб-бара.
+                Spacer(Modifier.height(32.dp))
             }
-            // Пригодится, если телефон потерян: до этого отозвать доступ было
-            // нечем — токен жил 90 дней
-            RevokeSessionsSection(onClick = { isRevokeConfirmPresented = true })
-            // Единственное место в приложении, где можно прочитать, куда уходят
-            // голос и фото чека и что остаётся после удаления аккаунта
-            ReportProblemSection()
-            PolicyLinkSection(baseUrl = baseUrl)
-            LogoutSection(onClick = { isLogoutConfirmPresented = true })
-            // «Удалить аккаунт» — последним пунктом экрана: и Apple Guideline
-            // 5.1.1(v), и Google Play требуют удаление в пару тапов от профиля.
-            DeleteAccountSection(
-                isDeleting = isDeleting,
-                onClick = { isDeleteConfirmPresented = true },
-            )
-            // Запас снизу — под центральную кнопку «+» таб-бара.
-            Spacer(Modifier.height(32.dp))
         }
     }
 

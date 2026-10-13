@@ -69,7 +69,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.offset
@@ -731,12 +730,13 @@ private fun ReceiptTab(
             } else {
                 // Невидимая жирная подпись держит ширину: выбор её не меняет.
                 Text(text = label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.alpha(0f).clearAndSetSemantics {})
+                // Без подчёркиваний: четыре подчёркнутые подписи читались
+                // мелким футером сайта. Выбор — чернилами, начертанием и точкой.
                 Text(
                     text = label,
-                    color = colors.ink,
+                    color = if (selected) colors.ink else colors.inkSecondary,
                     fontSize = 13.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                    textDecoration = if (selected) null else TextDecoration.Underline,
                     maxLines = 1,
                 )
             }

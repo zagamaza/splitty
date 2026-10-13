@@ -95,6 +95,8 @@ struct GroupSettingsView: View {
                 archiveSection
                 leaveSection
             }
+            // Настройки тусы — разделы одного листа, а не отдельные формы.
+            .receiptSheetSections()
             .padding(16)
         }
         .background(Color.bg)
@@ -187,7 +189,16 @@ struct GroupSettingsView: View {
                         .accessibilityIdentifier("groupNameSave")
                 }
             }
-            .surfaceCard()
+            // Лист без своей бумаги у секции — поле отмечено рамкой, иначе имя
+            // читалось обычным текстом, а не тем, что можно править.
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .strokeBorder(Color.ruleStrong, lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
         }
     }
 
@@ -293,21 +304,24 @@ struct GroupSettingsView: View {
 
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Участники")
-                    .sectionHeaderStyle()
-                Spacer(minLength: 8)
-                Button {
-                    isInviteFriendsPresented = true
-                } label: {
-                    // «Добавить», а не «Пригласить»: раньше два пункта экрана
-                    // назывались одинаково, а вели в разные места
-                    Label("Добавить", systemImage: "person.badge.plus")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.ink)
+            // Кнопка поверх строки заголовка, а не рядом: иначе пунктир
+            // раздела обрывался на ней.
+            Text("Участники")
+                .sectionHeaderStyle()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        isInviteFriendsPresented = true
+                    } label: {
+                        // «Добавить», а не «Пригласить»: раньше два пункта экрана
+                        // назывались одинаково, а вели в разные места
+                        Label("Добавить", systemImage: "person.badge.plus")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color.ink)
+                    }
+                    .padding(.trailing, 12)
                 }
-            }
-            .padding(.horizontal, 4)
+                .padding(.horizontal, 4)
             VStack(spacing: 0) {
                 ForEach(room.members) { member in
                     HStack(spacing: 12) {

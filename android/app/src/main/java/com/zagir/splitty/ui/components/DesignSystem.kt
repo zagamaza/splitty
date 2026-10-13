@@ -22,10 +22,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +65,11 @@ fun SurfaceCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = Splitty.colors
+    if (LocalReceiptSheetSections.current) {
+        // Секция общего листа: своя бумага и тень не нужны.
+        Column(modifier = modifier.padding(padding), content = content)
+        return
+    }
     val shape = RoundedCornerShape(3.dp)
     val cardModifier = if (colors.isDark) {
         modifier
@@ -370,6 +377,20 @@ fun MoneyTotalsText(
  */
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier, maxLines: Int = Int.MAX_VALUE) {
+    if (LocalReceiptSheetSections.current) {
+        // Заголовок стоит с отступом 4 от края секции, строки — 16: здесь
+        // добираем до строк, а пунктир отделяет раздел от предыдущего.
+        Column(modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            ReceiptDivider()
+            SectionHeaderText(text, Modifier.padding(start = 12.dp), maxLines)
+        }
+    } else {
+        SectionHeaderText(text, modifier, maxLines)
+    }
+}
+
+@Composable
+private fun SectionHeaderText(text: String, modifier: Modifier, maxLines: Int) {
     Text(
         text = text,
         modifier = modifier,
@@ -381,4 +402,26 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier, maxLines: Int = I
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
     )
+}
+
+/** true — внутри [ReceiptSheetSections]: секции без своей бумаги, заголовки с пунктиром. */
+val LocalReceiptSheetSections = staticCompositionLocalOf { false }
+
+/**
+ * Секции экрана настроек — разделами ОДНОГО листа чека: карточки секций
+ * теряют свою бумагу, заголовки получают пунктир сверху и выравнивание по
+ * строкам. Строки внутри секций уже имеют поля 16, поэтому у листа 6
+ * (паритет iOS `receiptSheetSections()`).
+ */
+@Composable
+fun ReceiptSheetSections(
+    modifier: Modifier = Modifier,
+    spacing: Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    ReceiptPaper(modifier = modifier, padding = 6.dp) {
+        CompositionLocalProvider(LocalReceiptSheetSections provides true) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing), content = content)
+        }
+    }
 }

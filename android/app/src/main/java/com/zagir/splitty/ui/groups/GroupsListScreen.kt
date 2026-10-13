@@ -1,5 +1,9 @@
 package com.zagir.splitty.ui.groups
 
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
 import com.zagir.splitty.ui.components.BalanceSummaryLines
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.ReceiptDivider
@@ -7,7 +11,6 @@ import com.zagir.splitty.ui.components.ReceiptStub
 import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.core.ui.resolve
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
@@ -26,13 +29,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ContentPaste
@@ -43,10 +44,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.platform.testTag
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,7 +52,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
-import com.zagir.splitty.ui.activity.relativeTimeText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,8 +64,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -87,10 +82,7 @@ import com.zagir.splitty.core.model.RoomSummary
 import com.zagir.splitty.core.money.aggregateByCurrency
 import com.zagir.splitty.ui.components.CacheNote
 import com.zagir.splitty.ui.components.MoneyText
-import com.zagir.splitty.ui.components.MoneyTotalsText
 import com.zagir.splitty.ui.components.PrimaryPillButton
-import com.zagir.splitty.ui.components.SectionHeader
-import com.zagir.splitty.ui.components.SoftChip
 import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.main.badgeLabel
 import com.zagir.splitty.ui.theme.Splitty
@@ -146,36 +138,30 @@ private fun GroupsListContent(
     var isCreatePresented by rememberSaveable { mutableStateOf(false) }
     var isJoinPresented by rememberSaveable { mutableStateOf(false) }
     val colors = Splitty.colors
-    // Большой заголовок «Группы» схлопывается в инлайн-тайтл при скролле,
-    // кнопки остаются (порт iOS large-title navigation).
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = colors.bg,
         topBar = {
-            LargeTopAppBar(
-                scrollBehavior = scrollBehavior,
-                title = {
-                    Text(
-                        text = stringResource(R.string.groups_title),
-                        fontWeight = FontWeight.Bold,
-                    )
-                },
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = colors.bg,
-                    scrolledContainerColor = colors.bg,
-                    titleContentColor = colors.ink,
-                    navigationIconContentColor = colors.accent,
-                    actionIconContentColor = colors.accent,
-                ),
-                actions = {
-                    GroupsAddMenu(
-                        onCreate = { isCreatePresented = true },
-                        onJoinByCode = { isJoinPresented = true },
-                    )
-                },
-            )
+            // Простой заголовок, как на «Друзьях»: большой сворачивающийся
+            // заголовок Material давал над «Группами» пустоту, которой нет ни
+            // на соседних вкладках, ни на iOS.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.groups_title),
+                    modifier = Modifier.weight(1f).semantics { heading() },
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.ink,
+                )
+                GroupsAddMenu(
+                    onCreate = { isCreatePresented = true },
+                    onJoinByCode = { isJoinPresented = true },
+                )
+            }
         },
     ) { innerPadding ->
         when (val current = state) {
@@ -879,18 +865,25 @@ internal fun GroupsAddMenu(onCreate: () -> Unit, onJoinByCode: () -> Unit) {
     val colors = Splitty.colors
     var isMenuOpen by rememberSaveable { mutableStateOf(false) }
     Box {
-        OutlinedIconButton(
-            onClick = { isMenuOpen = true },
-            shape = RoundedCornerShape(3.dp),
-            border = BorderStroke(1.dp, colors.ink),
-            colors = IconButtonDefaults.outlinedIconButtonColors(contentColor = colors.ink),
+        // Текстом, а не квадратным «+»: второй «+» рядом с оранжевым
+        // «Добавить расход» внизу путал, что именно добавляется.
+        val description = stringResource(R.string.groups_create_group)
+        Box(
             modifier = Modifier
                 .padding(end = 8.dp)
+                .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
+                .clickable(role = Role.Button, onClick = { isMenuOpen = true })
+                .semantics { contentDescription = description }
+                .padding(horizontal = 8.dp)
                 .testTag("groups_add_menu"),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Add,
-                contentDescription = stringResource(R.string.groups_create_group),
+            Text(
+                text = stringResource(R.string.groups_new),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+                modifier = Modifier.clearAndSetSemantics {},
             )
         }
         DropdownMenu(expanded = isMenuOpen, onDismissRequest = { isMenuOpen = false }) {

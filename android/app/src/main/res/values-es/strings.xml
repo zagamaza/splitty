@@ -780,4 +780,5 @@
     <string name="op_doc_expense">Gasto · %1$s</string>
     <string name="op_doc_repayment">Pago de deuda · %1$s</string>
     <string name="op_amount">Importe</string>
+    <string name="groups_new">+ Nuevo</string>
 </resources>

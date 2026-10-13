@@ -44,8 +44,15 @@ struct SurfaceCardModifier: ViewModifier {
     var padding: CGFloat
     @Environment(\.colorScheme) private var colorScheme
 
+    @Environment(\.receiptSheetSections) private var inSheet
+
+    @ViewBuilder
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: 3, style: .continuous)
+        if inSheet {
+            // Секция общего листа: своя бумага и тень не нужны.
+            content.padding(padding)
+        } else {
         content
             .padding(padding)
             .background(Color.surface, in: shape)
@@ -58,6 +65,7 @@ struct SurfaceCardModifier: ViewModifier {
                 color: colorScheme == .dark ? .clear : Color.black.opacity(0.05),
                 radius: 2, x: 0, y: 2
             )
+        }
     }
 }
 
@@ -267,10 +275,49 @@ extension View {
     /// Заголовок секции — печатный реквизит: моноширинный 12pt, вторичный цвет.
     /// Регистр текста НЕ меняет (важно для UI-тестов); капс — у `receiptLabel()`.
     func sectionHeaderStyle() -> some View {
-        self
+        modifier(SectionHeaderModifier())
+    }
+
+    /// Секции экрана настроек — разделами ОДНОГО листа чека: карточки секций
+    /// теряют свою бумагу, заголовки получают пунктир сверху и выравнивание
+    /// по строкам. Строки внутри секций уже имеют поля 16, поэтому у листа 6.
+    func receiptSheetSections() -> some View {
+        environment(\.receiptSheetSections, true)
+            .receiptPaper(padding: 6)
+    }
+}
+
+private struct ReceiptSheetSectionsKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// true — внутри `receiptSheetSections()`.
+    var receiptSheetSections: Bool {
+        get { self[ReceiptSheetSectionsKey.self] }
+        set { self[ReceiptSheetSectionsKey.self] = newValue }
+    }
+}
+
+private struct SectionHeaderModifier: ViewModifier {
+    @Environment(\.receiptSheetSections) private var inSheet
+
+    func body(content: Content) -> some View {
+        let styled = content
             .scaledFont(size: 12, weight: .medium, design: .monospaced, relativeTo: .footnote)
             .foregroundStyle(Color.inkSecondary)
             .kerning(0.3)
+        if inSheet {
+            // Заголовок стоит с отступом 4 от края секции, строки — 16: здесь
+            // добираем до строк, а пунктир отделяет раздел от предыдущего.
+            VStack(alignment: .leading, spacing: 14) {
+                ReceiptDivider()
+                styled.padding(.leading, 12)
+            }
+            .padding(.top, 4)
+        } else {
+            styled
+        }
     }
 }
 

@@ -717,4 +717,5 @@
     <string name="op_doc_expense">지출 · %1$s</string>
     <string name="op_doc_repayment">상환 · %1$s</string>
     <string name="op_amount">금액</string>
+    <string name="groups_new">+ 새 그룹</string>
 </resources>

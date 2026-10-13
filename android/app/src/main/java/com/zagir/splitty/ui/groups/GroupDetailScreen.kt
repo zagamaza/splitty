@@ -121,6 +121,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.res.pluralStringResource
 import com.zagir.splitty.R
+import com.zagir.splitty.ui.components.ReceiptSheetSections
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.DataFreshness
 import com.zagir.splitty.core.model.CurrencyInfo
@@ -1616,305 +1617,309 @@ private fun GroupSettingsTab(
             .padding(top = 4.dp, bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-            GroupAvatarSection(room = room, viewModel = viewModel)
+            ReceiptSheetSections(spacing = 20.dp) {
+                GroupAvatarSection(room = room, viewModel = viewModel)
 
-            GroupNameSection(room = room, viewModel = viewModel)
+                GroupNameSection(room = room, viewModel = viewModel)
 
-            // Участники
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    SectionHeader(stringResource(R.string.group_settings_members))
-                    Spacer(Modifier.weight(1f))
-                    Row(
+                // Участники
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Кнопка поверх строки заголовка, а не рядом: иначе пунктир
+                    // раздела обрывался на ней.
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(3.dp))
-                            .clickable(onClick = onInviteFriends)
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.PersonAddAlt,
-                            contentDescription = null,
-                            tint = colors.ink,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.group_settings_members_invite),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = colors.ink,
-                        )
-                    }
-                }
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    room.members.forEachIndexed { index, member ->
+                        SectionHeader(stringResource(R.string.group_settings_members), Modifier.fillMaxWidth())
                         Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                .align(Alignment.BottomEnd)
+                                .padding(end = 4.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .clickable(onClick = onInviteFriends)
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            GradientAvatar(user = member, size = 36.dp)
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = if (member.id == meId) {
-                                        stringResource(R.string.group_settings_member_you, member.displayName)
-                                    } else {
-                                        member.displayName
-                                    },
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = colors.ink,
-                                )
-                                member.username?.takeIf { it.isNotEmpty() }?.let { username ->
-                                    Text(
-                                        text = "@$username",
-                                        fontSize = 12.sp,
-                                        color = colors.inkSecondary,
-                                    )
-                                }
-                            }
-                            // Лекарство от «позвал не того»: убрать участника
-                            // может любой в комнате, как и править расходы.
-                            if (member.id != meId) {
-                                Spacer(Modifier.weight(1f))
-                                TextButton(onClick = { memberToRemove = member }) {
-                                    Text(
-                                        text = stringResource(R.string.group_remove_member_confirm),
-                                        fontSize = 13.sp,
-                                        color = colors.negativeText,
-                                    )
-                                }
-                            }
-                        }
-                        if (index < room.members.lastIndex) {
-                            HairlineDivider(startIndent = 64.dp)
-                        }
-                    }
-                }
-            }
-
-            // Валюта
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SectionHeader(
-                    stringResource(R.string.group_settings_currency),
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    when (val list = currencies) {
-                        UiState.Loading -> Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 20.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                color = colors.ink,
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
+                            Icon(
+                                imageVector = Icons.Outlined.PersonAddAlt,
+                                contentDescription = null,
+                                tint = colors.ink,
+                                modifier = Modifier.size(18.dp),
                             )
-                        }
-
-                        is UiState.Error -> Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
                             Text(
-                                text = list.message.resolve(),
-                                fontSize = 13.sp,
-                                color = colors.inkSecondary,
-                            )
-                            SoftChip(
-                                text = stringResource(R.string.common_retry),
-                                onClick = viewModel::loadCurrencies,
+                                text = stringResource(R.string.group_settings_members_invite),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.ink,
                             )
                         }
-
-                        is UiState.Content -> list.value.forEachIndexed { index, currency ->
-                            CurrencyRow(
-                                currency = currency,
-                                isSelected = selectedCurrency == currency.code,
-                                isSaving = savingCurrency == currency.code,
-                                enabled = savingCurrency == null,
-                                // Подтверждаем только реальную смену (не текущую валюту).
-                                onClick = {
-                                    if (currency.code != selectedCurrency) pendingCurrency = currency
-                                },
-                            )
-                            if (index < list.value.lastIndex) {
-                                HairlineDivider(startIndent = 52.dp)
+                    }
+                    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                        room.members.forEachIndexed { index, member ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                GradientAvatar(user = member, size = 36.dp)
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(
+                                        text = if (member.id == meId) {
+                                            stringResource(R.string.group_settings_member_you, member.displayName)
+                                        } else {
+                                            member.displayName
+                                        },
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = colors.ink,
+                                    )
+                                    member.username?.takeIf { it.isNotEmpty() }?.let { username ->
+                                        Text(
+                                            text = "@$username",
+                                            fontSize = 12.sp,
+                                            color = colors.inkSecondary,
+                                        )
+                                    }
+                                }
+                                // Лекарство от «позвал не того»: убрать участника
+                                // может любой в комнате, как и править расходы.
+                                if (member.id != meId) {
+                                    Spacer(Modifier.weight(1f))
+                                    TextButton(onClick = { memberToRemove = member }) {
+                                        Text(
+                                            text = stringResource(R.string.group_remove_member_confirm),
+                                            fontSize = 13.sp,
+                                            color = colors.negativeText,
+                                        )
+                                    }
+                                }
+                            }
+                            if (index < room.members.lastIndex) {
+                                HairlineDivider(startIndent = 64.dp)
                             }
                         }
                     }
                 }
-                Text(
-                    text = stringResource(R.string.group_settings_currency_footer),
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-            }
 
-            // Копейки
-            if (canShowCents) {
+                // Валюта
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     SectionHeader(
-                        stringResource(R.string.group_settings_cents),
+                        stringResource(R.string.group_settings_currency),
                         modifier = Modifier.padding(start = 4.dp),
                     )
                     SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text(
-                                text = stringResource(R.string.group_cents_toggle),
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = colors.ink,
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (isSavingFractional) {
+                        when (val list = currencies) {
+                            UiState.Loading -> Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 20.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 CircularProgressIndicator(
                                     color = colors.ink,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.dp,
                                 )
                             }
-                            Switch(
-                                checked = fractional,
-                                enabled = !isSavingFractional,
-                                colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
-                                onCheckedChange = { wants ->
-                                    haptics.tap()
-                                    // В обе стороны сразу: записанные суммы не
-                                    // меняются, округлять нечего, спрашивать не о чем.
-                                    viewModel.setFractional(wants)
-                                },
-                            )
+
+                            is UiState.Error -> Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Text(
+                                    text = list.message.resolve(),
+                                    fontSize = 13.sp,
+                                    color = colors.inkSecondary,
+                                )
+                                SoftChip(
+                                    text = stringResource(R.string.common_retry),
+                                    onClick = viewModel::loadCurrencies,
+                                )
+                            }
+
+                            is UiState.Content -> list.value.forEachIndexed { index, currency ->
+                                CurrencyRow(
+                                    currency = currency,
+                                    isSelected = selectedCurrency == currency.code,
+                                    isSaving = savingCurrency == currency.code,
+                                    enabled = savingCurrency == null,
+                                    // Подтверждаем только реальную смену (не текущую валюту).
+                                    onClick = {
+                                        if (currency.code != selectedCurrency) pendingCurrency = currency
+                                    },
+                                )
+                                if (index < list.value.lastIndex) {
+                                    HairlineDivider(startIndent = 52.dp)
+                                }
+                            }
                         }
                     }
                     Text(
-                        text = stringResource(R.string.group_settings_cents_footer),
+                        text = stringResource(R.string.group_settings_currency_footer),
                         fontSize = 12.sp,
                         color = colors.inkSecondary,
                         modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
-            }
 
-            // Архив
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = !isArchiving) {
-                                // Вкладка (не шторка): после архива экран
-                                // обновится сам через dataVersion — закрывать нечего.
-                                viewModel.toggleArchive(onDone = {})
+                // Копейки
+                if (canShowCents) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SectionHeader(
+                            stringResource(R.string.group_settings_cents),
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                        SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.group_cents_toggle),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = colors.ink,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (isSavingFractional) {
+                                    CircularProgressIndicator(
+                                        color = colors.ink,
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
+                                Switch(
+                                    checked = fractional,
+                                    enabled = !isSavingFractional,
+                                    colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
+                                    onCheckedChange = { wants ->
+                                        haptics.tap()
+                                        // В обе стороны сразу: записанные суммы не
+                                        // меняются, округлять нечего, спрашивать не о чем.
+                                        viewModel.setFractional(wants)
+                                    },
+                                )
                             }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // «Архивировать» — нейтральный ink, не «опасный» красный:
-                        // действие обратимо и скрывает группу только у самого юзера.
-                        val actionColor = if (room.isArchived) colors.accent else colors.ink
-                        Icon(
-                            imageVector = if (room.isArchived) Icons.Outlined.Unarchive else Icons.Outlined.Archive,
-                            contentDescription = null,
-                            tint = actionColor,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        }
                         Text(
-                            text = stringResource(
-                                if (room.isArchived) R.string.group_settings_unarchive
-                                else R.string.group_settings_archive
-                            ),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = actionColor,
+                            text = stringResource(R.string.group_settings_cents_footer),
+                            fontSize = 12.sp,
+                            color = colors.inkSecondary,
+                            modifier = Modifier.padding(horizontal = 4.dp),
                         )
-                        Spacer(Modifier.weight(1f))
-                        if (isArchiving) {
-                            CircularProgressIndicator(
-                                color = colors.inkSecondary,
+                    }
+                }
+
+                // Архив
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !isArchiving) {
+                                    // Вкладка (не шторка): после архива экран
+                                    // обновится сам через dataVersion — закрывать нечего.
+                                    viewModel.toggleArchive(onDone = {})
+                                }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            // «Архивировать» — нейтральный ink, не «опасный» красный:
+                            // действие обратимо и скрывает группу только у самого юзера.
+                            val actionColor = if (room.isArchived) colors.accent else colors.ink
+                            Icon(
+                                imageVector = if (room.isArchived) Icons.Outlined.Unarchive else Icons.Outlined.Archive,
+                                contentDescription = null,
+                                tint = actionColor,
                                 modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
+                            )
+                            Text(
+                                text = stringResource(
+                                    if (room.isArchived) R.string.group_settings_unarchive
+                                    else R.string.group_settings_archive
+                                ),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = actionColor,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            if (isArchiving) {
+                                CircularProgressIndicator(
+                                    color = colors.inkSecondary,
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.group_settings_archive_footer),
+                        fontSize = 12.sp,
+                        color = colors.inkSecondary,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
+
+                // Выход из группы
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Кнопка гаснет ЗАРАНЕЕ: расходы видно в самой комнате, и ждать
+                    // отказа сервера, чтобы сообщить об этом, незачем
+                    val blocking = meId?.let { room.operationsBlockingLeave(it) }.orEmpty()
+                    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = blocking.isEmpty()) { isLeaveConfirmVisible = true }
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = colors.negative,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.group_leave_action),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.negativeText,
                             )
                         }
                     }
-                }
-                Text(
-                    text = stringResource(R.string.group_settings_archive_footer),
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-            }
-
-            // Выход из группы
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Кнопка гаснет ЗАРАНЕЕ: расходы видно в самой комнате, и ждать
-                // отказа сервера, чтобы сообщить об этом, незачем
-                val blocking = meId?.let { room.operationsBlockingLeave(it) }.orEmpty()
-                SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 0.dp) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = blocking.isEmpty()) { isLeaveConfirmVisible = true }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = colors.negative,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(
-                            text = stringResource(R.string.group_leave_action),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = colors.negativeText,
+                    Text(
+                        text = if (blocking.isEmpty()) {
+                            stringResource(R.string.group_leave_message)
+                        } else {
+                            stringResource(R.string.group_leave_blocked, blocking.size)
+                        },
+                        fontSize = 12.sp,
+                        color = colors.inkSecondary,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                    // Совет «уберите себя из расходов» невыполним, пока непонятно,
+                    // из каких именно: расходов в группе бывают сотни
+                    if (blocking.isNotEmpty()) {
+                        SoftChip(
+                            text = stringResource(R.string.group_leave_show_blocking),
+                            onClick = onShowBlocking,
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .testTag("group_leave_show_blocking"),
                         )
                     }
-                }
-                Text(
-                    text = if (blocking.isEmpty()) {
-                        stringResource(R.string.group_leave_message)
-                    } else {
-                        stringResource(R.string.group_leave_blocked, blocking.size)
-                    },
-                    fontSize = 12.sp,
-                    color = colors.inkSecondary,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-                // Совет «уберите себя из расходов» невыполним, пока непонятно,
-                // из каких именно: расходов в группе бывают сотни
-                if (blocking.isNotEmpty()) {
-                    SoftChip(
-                        text = stringResource(R.string.group_leave_show_blocking),
-                        onClick = onShowBlocking,
-                        modifier = Modifier
-                            .padding(horizontal = 4.dp)
-                            .testTag("group_leave_show_blocking"),
-                    )
                 }
             }
         }
