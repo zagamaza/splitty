@@ -1663,13 +1663,10 @@ struct AddExpenseView: View {
     /// Крупное поле суммы: rounded + monospacedDigit, по центру карточки;
     /// слева — символ валюты выбранной группы.
     private func sumField(text: Binding<String>) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(currencySymbol(model.currency))
-                .scaledFont(size: 28, weight: .medium, relativeTo: .title)
-                .foregroundStyle(Color.inkSecondary)
+        AmountEntryRow(symbol: currencySymbol(model.currency), text: text.wrappedValue, size: 40, weight: .semibold) { font in
             TextField("0", text: text)
-                .scaledFont(size: 40, weight: .semibold, relativeTo: .title)
-                .monospacedDigit()
+                .font(font)
+                .lineLimit(1)
                 .foregroundStyle(Color.ink)
                 .multilineTextAlignment(.center)
                 .fixedSize()

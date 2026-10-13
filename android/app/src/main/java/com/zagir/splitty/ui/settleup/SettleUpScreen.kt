@@ -5,6 +5,7 @@ import com.zagir.splitty.ui.components.ReceiptStub
 import com.zagir.splitty.ui.components.ReceiptDivider
 import com.zagir.splitty.ui.components.ReceiptPaper
 import com.zagir.splitty.ui.components.ReceiptLabel
+import com.zagir.splitty.ui.components.AmountEntryRow
 import com.zagir.splitty.core.ui.resolve
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,7 +13,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -331,8 +331,8 @@ private fun PaymentStep(
 ) {
     Column(
         modifier = modifier
-            .verticalScroll(rememberScrollState())
             .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
@@ -456,26 +456,14 @@ private fun PaymentSumCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = currencySymbol(form.currency),
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.inkSecondary,
-                )
-                Spacer(Modifier.width(8.dp))
+            AmountEntryRow(symbol = currencySymbol(form.currency), text = form.sumText, baseSize = 52.sp, weight = FontWeight.ExtraBold) { fontSize, width ->
                 BasicTextField(
                     value = form.sumText,
                     onValueChange = onSumChange,
-                    // Ширина — по содержимому: IntrinsicSize.Min недооценивал
-                    // крупный кегль, и сумма обрезалась справа.
-                    modifier = Modifier.widthIn(min = 48.dp, max = 280.dp),
+                    modifier = Modifier.width(width),
                     textStyle = TextStyle(
                         color = colors.ink,
-                        fontSize = 52.sp,
+                        fontSize = fontSize,
                         fontWeight = FontWeight.ExtraBold,
                         fontFeatureSettings = "tnum",
                         textAlign = TextAlign.Center,
@@ -490,7 +478,7 @@ private fun PaymentSumCard(
                             if (form.sumText.isEmpty()) {
                                 Text(
                                     text = "0",
-                                    fontSize = 52.sp,
+                                    fontSize = fontSize,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = colors.inkSecondary,
                                     style = TextStyle(fontFeatureSettings = "tnum"),

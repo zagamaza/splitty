@@ -304,6 +304,86 @@ struct BalanceSummaryLines: View {
     }
 }
 
+// MARK: - Поле суммы
+
+/// Крупная сумма в поле ввода, которая всегда помещается в лист целиком:
+/// кегль уменьшается под число знаков и реальную ширину, а на крупном шрифте
+/// символ валюты уходит над числом, чтобы не отнимать у него строку.
+/// Внутренний скролл поля не годится — он прячет часть суммы, которую
+/// человек подтверждает.
+struct AmountEntryRow<Field: View>: View {
+    let symbol: String
+    let text: String
+    let size: CGFloat
+    let weight: Font.Weight
+    @ViewBuilder let field: (Font) -> Field
+
+    @ScaledMetric private var scaledSize: CGFloat
+    @ScaledMetric(relativeTo: .title) private var symbolSize: CGFloat = 28
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var width: CGFloat = 0
+
+    init(symbol: String, text: String, size: CGFloat, weight: Font.Weight, @ViewBuilder field: @escaping (Font) -> Field) {
+        self.symbol = symbol
+        self.text = text
+        self.size = size
+        self.weight = weight
+        self.field = field
+        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: .title)
+    }
+
+    var body: some View {
+        let stacked = typeSize.isAccessibilitySize
+        Group {
+            if stacked {
+                VStack(spacing: 2) {
+                    symbolText
+                    field(.system(size: fittedSize(stacked: true), weight: weight).monospacedDigit())
+                }
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    symbolText
+                    field(.system(size: fittedSize(stacked: false), weight: weight).monospacedDigit())
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    private var symbolText: some View {
+        Text(symbol)
+            .font(.system(size: symbolSize, weight: .medium))
+            .foregroundStyle(Color.inkSecondary)
+    }
+
+    /// Кегль из настоящей ширины набранной строки: если при базовом кегле
+    /// она не влезает, кегль уменьшается ровно настолько. Пока ширина не
+    /// измерена — базовый кегль.
+    private func fittedSize(stacked: Bool) -> CGFloat {
+        guard width > 0 else { return scaledSize }
+        let symbolWidth = stacked ? 0 : textWidth(symbol, font: .systemFont(ofSize: symbolSize, weight: .medium)) + 8
+        let available = width - symbolWidth - 8
+        let natural = textWidth(text.isEmpty ? "0" : text, font: .monospacedDigitSystemFont(ofSize: scaledSize, weight: uiWeight))
+        guard natural > available else { return scaledSize }
+        return max(12, scaledSize * available / natural)
+    }
+
+    private func textWidth(_ string: String, font: UIFont) -> CGFloat {
+        ceil((string as NSString).size(withAttributes: [.font: font]).width)
+    }
+
+    private var uiWeight: UIFont.Weight {
+        switch weight {
+        case .heavy: .heavy
+        case .bold: .bold
+        case .semibold: .semibold
+        case .medium: .medium
+        default: .regular
+        }
+    }
+}
+
 // MARK: - Штамп
 
 /// Синий штамп истинного состояния («ВЫ В РАСЧЁТЕ», «ЧЕРНОВИК»). Рамка и
@@ -311,11 +391,13 @@ struct BalanceSummaryLines: View {
 struct StatusStamp: View {
     let text: String
     var angle: Double = -6
+    @Environment(\.locale) private var locale
 
     var body: some View {
+        let caps = ReceiptCaps.allowsCaps(languageCode: locale.language.languageCode?.identifier)
         Text(text)
-            .scaledFont(size: 12, weight: .semibold, design: .monospaced, relativeTo: .caption)
-            .kerning(1)
+            .scaledFont(size: 12, weight: .semibold, design: caps ? .monospaced : .default, relativeTo: .caption)
+            .kerning(caps ? 1 : 0)
             .multilineTextAlignment(.center)
             .foregroundStyle(Color.stamp)
             .padding(.horizontal, 12)

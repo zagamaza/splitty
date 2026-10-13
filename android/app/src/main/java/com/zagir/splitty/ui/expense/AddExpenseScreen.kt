@@ -2,6 +2,7 @@ package com.zagir.splitty.ui.expense
 
 import androidx.compose.ui.semantics.heading
 import androidx.compose.material.icons.outlined.PhotoCamera
+import com.zagir.splitty.ui.components.AmountEntryRow
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.ReceiptDivider
 import com.zagir.splitty.ui.components.ReceiptLabel
@@ -16,7 +17,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -725,8 +725,8 @@ private fun ExpenseFormContent(
     var confirmDeleteLocal by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
-            .verticalScroll(rememberScrollState())
             .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)
             .padding(top = 16.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -1375,36 +1375,16 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
             DerivedTotal(form = form)
         } else {
             // Крупная сумма по центру: символ валюты группы + tnum-цифры.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = currencySymbol(form.currency),
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.inkSecondary,
-                )
-                Spacer(Modifier.width(8.dp))
-                // Шрифт ступенчато уменьшается с длиной числа, чтобы сумма
-                // целиком помещалась на экране (BasicTextField сам не сжимает).
-                val sumFontSize = when {
-                    form.sumText.length <= 6 -> 40.sp
-                    form.sumText.length <= 8 -> 32.sp
-                    else -> 26.sp
-                }
+            AmountEntryRow(symbol = currencySymbol(form.currency), text = form.sumText, baseSize = 40.sp, weight = FontWeight.SemiBold) { fontSize, width ->
                 BasicTextField(
                     value = form.sumText,
                     onValueChange = viewModel::onSumChange,
                     modifier = Modifier
-                        .widthIn(min = 48.dp)
-                        .weight(1f, fill = false)
-                        .width(IntrinsicSize.Min)
+                        .width(width)
                         .focusRequester(sumFocusRequester),
                     textStyle = TextStyle(
                         color = colors.ink,
-                        fontSize = sumFontSize,
+                        fontSize = fontSize,
                         fontWeight = FontWeight.SemiBold,
                         fontFeatureSettings = "tnum",
                         textAlign = TextAlign.Center,
@@ -1421,7 +1401,7 @@ private fun ExpenseCard(form: AddExpenseForm, viewModel: AddExpenseViewModel) {
                             if (form.sumText.isEmpty()) {
                                 Text(
                                     text = "0",
-                                    fontSize = 40.sp,
+                                    fontSize = fontSize,
                                     fontWeight = FontWeight.SemiBold,
                                     color = colors.inkSecondary,
                                     style = TextStyle(fontFeatureSettings = "tnum"),

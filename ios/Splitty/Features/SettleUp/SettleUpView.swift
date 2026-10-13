@@ -293,13 +293,10 @@ struct SettleUpView: View {
     /// «Долг: …» / предупреждение о превышении.
     private func sumCard(debt: Debt) -> some View {
         VStack(spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(currencySymbol(currency))
-                    .scaledFont(size: 28, weight: .medium, relativeTo: .title)
-                    .foregroundStyle(Color.inkSecondary)
+            AmountEntryRow(symbol: currencySymbol(currency), text: sumText, size: 52, weight: .heavy) { font in
                 TextField("0", text: $sumText)
-                    .scaledFont(size: 52, weight: .heavy, relativeTo: .title)
-                    .monospacedDigit()
+                    .font(font)
+                    .lineLimit(1)
                     .foregroundStyle(Color.ink)
                     .keyboardType(fractional ? .decimalPad : .numberPad)
                     .multilineTextAlignment(.center)
@@ -312,7 +309,6 @@ struct SettleUpView: View {
                         }
                     }
             }
-            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture { isSumFocused = true }
 

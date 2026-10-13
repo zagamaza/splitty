@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -34,10 +35,12 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -351,6 +354,7 @@ fun BalanceSummaryLines(totals: List<com.zagir.splitty.core.model.CurrencySum>, 
 @Composable
 fun StatusStamp(text: String, modifier: Modifier = Modifier, angle: Float = -6f) {
     val colors = Splitty.colors
+    val caps = ReceiptCaps.allowsCaps(LocalConfiguration.current.locales[0].language)
     Box(modifier = modifier.padding(vertical = 6.dp).rotate(angle)) {
         Text(
             text = text,
@@ -360,10 +364,64 @@ fun StatusStamp(text: String, modifier: Modifier = Modifier, angle: Float = -6f)
             color = colors.stamp,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp,
+            fontFamily = if (caps) FontFamily.Monospace else FontFamily.Default,
+            letterSpacing = if (caps) 1.sp else 0.sp,
             textAlign = TextAlign.Center,
         )
+    }
+}
+
+// MARK: Поле суммы
+
+/**
+ * Крупная сумма в поле ввода, которая всегда помещается в лист целиком: кегль
+ * уменьшается под реальную ширину набранной строки, а на крупном шрифте символ
+ * валюты уходит над числом. Внутренний скролл поля не годится — он прячет часть
+ * суммы, которую человек подтверждает. `field` получает кегль и ширину поля —
+ * ровно по тексту, чтобы символ валюты стоял вплотную к числу.
+ */
+@Composable
+fun AmountEntryRow(
+    symbol: String,
+    text: String,
+    baseSize: TextUnit,
+    weight: FontWeight,
+    modifier: Modifier = Modifier,
+    field: @Composable (fontSize: TextUnit, width: Dp) -> Unit,
+) {
+    val colors = Splitty.colors
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val stacked = isLargeFontScale()
+    val symbolStyle = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Medium)
+    BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val cursor = 4.dp
+        val symbolWidth = if (stacked) 0.dp else with(density) {
+            measurer.measure(symbol, symbolStyle).size.width.toDp()
+        } + 8.dp
+        val available = maxWidth - symbolWidth - cursor
+        val style = TextStyle(fontSize = baseSize, fontWeight = weight, fontFeatureSettings = "tnum")
+        val natural = with(density) { measurer.measure(text.ifEmpty { "0" }, style, maxLines = 1).size.width.toDp() }
+        val scale = if (natural > available) available / natural else 1f
+        // Через dp, а не умножением sp: крупный шрифт Android растит кегли
+        // нелинейно, и уменьшенный кегль в sp получил бы больший множитель.
+        val fontSize = with(density) { (baseSize.toDp() * scale).coerceAtLeast(12.dp).toSp() }
+        val width = (natural * scale + cursor).coerceIn(48.dp, available + cursor)
+        val symbolText = @Composable {
+            Text(text = symbol, style = symbolStyle, color = colors.inkSecondary)
+        }
+        if (stacked) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                symbolText()
+                field(fontSize, width)
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                symbolText()
+                Spacer(Modifier.width(8.dp))
+                field(fontSize, width)
+            }
+        }
     }
 }
 
