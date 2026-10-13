@@ -76,9 +76,12 @@ Codex принял по коду и кадрам (`badge-own-tab.png`, `and-badg
    сообщением, на 3e8aa09 — 0 из 20. Значит, нестабильность существовала до редизайна;
    причина **не диагностирована** — нужно отдельное расследование.
 2. **Android, семейство `AppRoot*`** (`AppRootJoinTest`, `AppRootIntroTest`) — в полном прогоне
-   1–2 падения («Dispatchers.Main is used concurrently with setting it»), изолированно зелёные.
-   Это гонка подмены Main-диспетчера между тестами одного семейства, а не дефект Join.
-   Причина не диагностирована.
+   1–2 падения, изолированно зелёные. Встречались два вида: «Dispatchers.Main is used
+   concurrently with setting it» и, 13.10, `AppRootJoinTest` «guest invite survives a logout of
+   the previous account» по таймауту 30 с (`TimeoutCancellationException`). Отдельно и в паре
+   с `AppRootIntroTest` тест зелёный, то есть падение зависит от классов, прошедших раньше в
+   том же JVM, — это наблюдение, причина **не установлена**. Однажды прогон завис на 25 минут:
+   общего таймаута у тестовой задачи Gradle нет. Обычный полный прогон — около 70 с.
 3. **Android Plus** с ценами Play Billing не проверен (нет Billing в эмуляторе).
 
 ## Дополнение: отмена распознавания и подсказка записи

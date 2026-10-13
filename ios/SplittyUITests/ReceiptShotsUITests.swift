@@ -215,7 +215,7 @@ final class ReceiptShotsUITests: XCTestCase {
         room.tap()
         XCTAssertTrue(app.buttons["Итоги"].waitForExistence(timeout: 10), "экран группы не открылся")
         let screen = app.windows.firstMatch.frame.height
-        for (prefix, tag) in [("Продукты на выходные", "plain"), ("Ужин в грузинском", "items"), ("Вы заплатили", "repayment")] {
+        for (prefix, tag) in [("Продукты на выходные", "plain"), ("Ужин в грузинском", "items"), ("Банкет", "long"), ("Вы заплатили", "repayment")] {
             let row = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
             for _ in 0..<6 where !row.exists || !row.isHittable || row.frame.maxY > screen * 0.75 {
                 app.swipeUp()

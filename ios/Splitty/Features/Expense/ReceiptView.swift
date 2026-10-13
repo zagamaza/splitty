@@ -83,7 +83,7 @@ struct ReceiptView: View {
             Text("Позиции").receiptLabel()
             Spacer()
             Text("\(itemsOnly.count) поз.")
-                .font(.system(size: 11, design: .monospaced))
+                .scaledFont(size: 11, design: .monospaced, relativeTo: .caption2)
                 .foregroundStyle(Color.ink.opacity(0.6))
         }
         .padding(.bottom, 12)
@@ -92,46 +92,45 @@ struct ReceiptView: View {
     // MARK: rows
 
     private func itemRow(index: Int, item: OperationItem) -> some View {
-        let row = VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(item.name.isEmpty ? String(localized: "Позиция") : item.name)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.ink)
-                    .multilineTextAlignment(.leading)
-                if item.qty > 1 {
-                    Text(verbatim: "×\(item.qty)")
-                        .font(.system(size: 12.5, weight: .regular, design: .monospaced))
-                        .foregroundStyle(Color.inkSecondary)
-                }
-                Spacer(minLength: 8)
-                if item.exactMinor < 1 {
-                    // Цена не определена (модель услышала блюдо, но не цену):
-                    // метка ведёт в шит позиции — там поле цены.
-                    Text("цена?")
-                        .font(.system(size: 11.5, weight: .bold, design: .default))
-                        .foregroundStyle(Color.negativeText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.negative.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(
-                                Color.negative,
-                                style: StrokeStyle(lineWidth: 1, dash: [3, 3])
-                            )
-                        )
-                        .modifier(SoftPulse(active: onEditItem != nil))
-                } else {
-                    Text(money(minor: item.exactMinor, currency: currency))
-                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(Color.ink)
-                }
+        // На крупном шрифте строка не умещается в ширину листа: тогда цена
+        // уходит под название, а подсказка деления — под аватарки. Текст
+        // масштабируется, аватарки и бейджи — нет (это оформление).
+        let title = HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(item.name.isEmpty ? String(localized: "Позиция") : item.name)
+                .scaledFont(size: 16, weight: .medium)
+                .foregroundStyle(Color.ink)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+            if item.qty > 1 {
+                Text(verbatim: "×\(item.qty)")
+                    .scaledFont(size: 12.5, design: .monospaced, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
             }
-            HStack(spacing: 8) {
-                avatarStack(index: index, item: item)
-                Spacer(minLength: 8)
-                Text(shareHint(item))
-                    .font(.system(size: 11.5, design: .monospaced))
-                    .foregroundStyle(Color.ink.opacity(0.6))
+        }
+        let row = VStack(alignment: .leading, spacing: 9) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    title.fixedSize()
+                    Spacer(minLength: 8)
+                    itemPrice(item)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    title
+                    itemPrice(item)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    avatarStack(index: index, item: item)
+                    Spacer(minLength: 8)
+                    shareHintText(item).fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    avatarStack(index: index, item: item)
+                    shareHintText(item)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.vertical, 13)
@@ -152,6 +151,38 @@ struct ReceiptView: View {
                 row
             }
         }
+    }
+
+    /// Цена позиции или метка «цена?» (модель услышала блюдо, но не цену):
+    /// метка ведёт в шит позиции — там поле цены.
+    @ViewBuilder
+    private func itemPrice(_ item: OperationItem) -> some View {
+        if item.exactMinor < 1 {
+            Text("цена?")
+                .scaledFont(size: 11.5, weight: .bold, relativeTo: .caption)
+                .foregroundStyle(Color.negativeText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.negative.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(
+                        Color.negative,
+                        style: StrokeStyle(lineWidth: 1, dash: [3, 3])
+                    )
+                )
+                .modifier(SoftPulse(active: onEditItem != nil))
+        } else {
+            Text(money(minor: item.exactMinor, currency: currency))
+                .scaledFont(size: 15, weight: .semibold, design: .monospaced)
+                .foregroundStyle(Color.ink)
+                .fixedSize()
+        }
+    }
+
+    private func shareHintText(_ item: OperationItem) -> some View {
+        Text(shareHint(item))
+            .scaledFont(size: 11.5, design: .monospaced, relativeTo: .caption)
+            .foregroundStyle(Color.ink.opacity(0.6))
     }
 
     private func avatarStack(index: Int, item: OperationItem) -> some View {
@@ -191,7 +222,7 @@ struct ReceiptView: View {
             Text(name)
             Text(verbatim: "?")
         }
-        .font(.system(size: 11.5, weight: .bold, design: .default))
+        .scaledFont(size: 11.5, weight: .bold, relativeTo: .caption)
         .foregroundStyle(Color.negativeText)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -239,20 +270,33 @@ struct ReceiptView: View {
     // MARK: surcharges
 
     private func surchargeRow(index: Int, item: OperationItem) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(item.name.isEmpty ? String(localized: "Сбор") : item.name)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.ink)
-                if let p = item.percent {
-                    Text(verbatim: "\(p)%")
-                        .font(.system(size: 12.5, design: .monospaced))
-                        .foregroundStyle(Color.ink.opacity(0.6))
+        let title = HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(item.name.isEmpty ? String(localized: "Сбор") : item.name)
+                .scaledFont(size: 15, weight: .medium)
+                .foregroundStyle(Color.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if let p = item.percent {
+                Text(verbatim: "\(p)%")
+                    .scaledFont(size: 12.5, design: .monospaced, relativeTo: .footnote)
+                    .foregroundStyle(Color.ink.opacity(0.6))
+            }
+        }
+        let price = Text(money(minor: item.exactMinor, currency: currency))
+            .scaledFont(size: 15, weight: .semibold, design: .monospaced)
+            .foregroundStyle(Color.ink)
+            .fixedSize()
+        return VStack(alignment: .leading, spacing: 7) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    title.fixedSize()
+                    Spacer(minLength: 8)
+                    price
                 }
-                Spacer(minLength: 8)
-                Text(money(minor: item.exactMinor, currency: currency))
-                    .font(.system(size: 15, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.ink)
+                VStack(alignment: .leading, spacing: 4) {
+                    title
+                    price
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             surchargeRule(index: index, item: item)
         }
@@ -277,8 +321,9 @@ struct ReceiptView: View {
                             Text("Пропорционально").fontWeight(.bold) + Text(" съеденному")
                         }
                     }
-                    .font(.system(size: 11.5, weight: .medium, design: .default))
+                    .scaledFont(size: 11.5, weight: .medium, relativeTo: .caption)
                     .foregroundStyle(Color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -290,7 +335,8 @@ struct ReceiptView: View {
             .accessibilityLabel(equally ? "Сбор делится поровну. Сменить" : "Сбор делится пропорционально. Сменить")
         } else {
             Text(equally ? "делится поровну" : "делится пропорционально съеденному")
-                .font(.system(size: 11.5, design: .monospaced))
+                .scaledFont(size: 11.5, design: .monospaced, relativeTo: .caption)
+                .fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(Color.ink.opacity(0.6))
         }
     }
@@ -299,17 +345,26 @@ struct ReceiptView: View {
 
     /// `amount` — в МИНОРНЫХ единицах: чек считается до копейки.
     private func footerLine(_ title: LocalizedStringKey, _ amount: Int, emphasis: Emphasis) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 12, weight: emphasis == .total ? .bold : .semibold))
-                .tracking(emphasis == .total ? 1.2 : 0.4)
-                .textCase(emphasis == .total ? .uppercase : nil)
-                .foregroundStyle(emphasis == .total ? Color.ink : Color.inkSecondary)
-            Spacer()
-            Text(money(minor: amount, currency: currency))
-                .font(.system(size: emphasis == .total ? 19 : 14,
-                              weight: emphasis == .total ? .bold : .semibold, design: .monospaced))
-                .foregroundStyle(Color.ink)
+        let label = Text(title)
+            .scaledFont(size: 12, weight: emphasis == .total ? .bold : .semibold, relativeTo: .caption)
+            .tracking(emphasis == .total ? 1.2 : 0.4)
+            .textCase(emphasis == .total ? .uppercase : nil)
+            .foregroundStyle(emphasis == .total ? Color.ink : Color.inkSecondary)
+        let value = Text(money(minor: amount, currency: currency))
+            .scaledFont(size: emphasis == .total ? 19 : 14,
+                        weight: emphasis == .total ? .bold : .semibold, design: .monospaced)
+            .foregroundStyle(Color.ink)
+        return ViewThatFits(in: .horizontal) {
+            HStack {
+                label.fixedSize()
+                Spacer()
+                value.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                label
+                value
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, emphasis == .total ? 12 : 7)
     }
@@ -431,9 +486,9 @@ struct PersonBreakdownCard: View {
             }
             VStack(alignment: .leading, spacing: 7) {
                 Text(name(share.userId))
-                    .font(.system(size: 15, design: .default))
+                    .scaledFont(size: 15)
                     .foregroundStyle(Color.ink)
-                    .lineLimit(1)
+                    .lineLimit(2)
                 bar(fraction: Double(share.total) / Double(maxTotal))
             }
             Spacer(minLength: 8)
@@ -444,7 +499,7 @@ struct PersonBreakdownCard: View {
                 )
                 if share.surchargePart > 0 {
                     Text("+\(money(minor: share.surchargePart, currency: currency)) сбор")
-                        .font(.system(size: 11, design: .monospaced))
+                        .scaledFont(size: 11, design: .monospaced, relativeTo: .caption2)
                         .foregroundStyle(Color.inkSecondary)
                 }
             }
@@ -470,7 +525,7 @@ struct PersonBreakdownCard: View {
             Image(systemName: "checkmark")
                 .font(.system(size: 11, weight: .bold))
             Text("Сумма распределена полностью")
-                .font(.system(size: 12.5, weight: .semibold, design: .default))
+                .scaledFont(size: 12.5, weight: .semibold, relativeTo: .footnote)
         }
         .foregroundStyle(Color.positive)
         .padding(.top, 10)
