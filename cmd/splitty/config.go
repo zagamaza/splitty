@@ -123,12 +123,16 @@ type config struct {
 
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
-	GeminiApiKey      string `env:"GEMINI_API_KEY" envDefault:""`
-	GeminiModel       string `env:"GEMINI_MODEL" envDefault:"gemini-3.1-flash-lite"`
+	GeminiApiKey string `env:"GEMINI_API_KEY" envDefault:""`
+	GeminiModel  string `env:"GEMINI_MODEL" envDefault:"gemini-3.1-flash-lite"`
 	// AiFakeParser — предсказуемый разбор «текст → чек из одной позиции» для
 	// сквозных UI-прогонов. Только вместе с API_DEV_AUTH: подставной разбор на
 	// проде раздавал бы людям выдуманные черновики, и старт это запрещает.
 	AiFakeParser bool `env:"AI_FAKE_PARSER" envDefault:"false"`
+	// AiFakePhrase — что подставной разбор «слышит», когда текста в запросе
+	// нет: Android шлёт только запись голоса, и без этой фразы до черновика
+	// на эмуляторе не дойти.
+	AiFakePhrase      string `env:"AI_FAKE_PHRASE"`
 	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
 	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
 

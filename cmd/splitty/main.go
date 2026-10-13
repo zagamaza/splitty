@@ -535,7 +535,7 @@ func initRestServer(ctx context.Context, cfg *config) (*rest.Server, *restNotifi
 		}
 		var parser ai.Parser
 		if cfg.AiFakeParser {
-			parser = ai.FakeParser{}
+			parser = ai.FakeParser{Fallback: cfg.AiFakePhrase}
 			log.Warn().Msg("AI expense parsing: ПОДСТАВНОЙ разбор для UI-прогонов")
 		} else {
 			parser = ai.NewGemini(cfg.GeminiApiKey, cfg.GeminiModel)

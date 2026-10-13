@@ -123,6 +123,8 @@ final class ReceiptShotsUITests: XCTestCase {
             app.navigationBars.buttons.firstMatch.tap()
         }
         app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["Поездка в Стамбул"].waitForExistence(timeout: 5))
+        shot("02-groups-return")
 
         let plus = app.buttons["Создать группу или присоединиться по коду"]
         if plus.waitForExistence(timeout: 5) {

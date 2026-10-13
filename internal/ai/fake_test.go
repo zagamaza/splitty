@@ -33,3 +33,33 @@ func TestFakeParserAsksWhenNoAmount(t *testing.T) {
 		t.Fatalf("без суммы — вопрос, а не выдуманный чек: %+v", res)
 	}
 }
+
+func TestFakeParserSplitsItemsByComma(t *testing.T) {
+	res, err := FakeParser{}.Parse(context.Background(), ParseInput{
+		Text:         "Ужин: хачапури 1200, вино 2400",
+		Participants: []Participant{{UserId: 1}, {UserId: 2}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Draft.Description != "Ужин" || res.Draft.Sum != 3600 || len(res.Draft.Items) != 2 {
+		t.Fatalf("черновик не тот: %+v", res.Draft)
+	}
+	if res.Draft.Items[1].Name != "вино" || res.Draft.Items[1].Price != 2400 {
+		t.Fatalf("вторая позиция не та: %+v", res.Draft.Items[1])
+	}
+}
+
+func TestFakeParserAsksWhenOneItemHasNoAmount(t *testing.T) {
+	res, _ := FakeParser{}.Parse(context.Background(), ParseInput{Text: "хачапури 1200, вино"})
+	if len(res.Questions) == 0 || len(res.Draft.Items) != 0 {
+		t.Fatalf("позиция без цены — вопрос, а не половина чека: %+v", res)
+	}
+}
+
+func TestFakeParserUsesFallbackWithoutText(t *testing.T) {
+	res, _ := FakeParser{Fallback: "Ужин: чай 300"}.Parse(context.Background(), ParseInput{})
+	if res.Draft.Sum != 300 || res.Draft.Description != "Ужин" {
+		t.Fatalf("без текста — запасная фраза: %+v", res)
+	}
+}
