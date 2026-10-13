@@ -221,7 +221,7 @@ struct SettleUpView: View {
                 // Приложение только ведёт счёт: деньги оно не переводит.
                 // Без этой строки «Записать платёж» читается как перевод,
                 // и человек ждёт, что деньги уйдут сами
-                Text("Splitty только записывает: деньги передайте наличными или переводом")
+                Text("Splitor только записывает: деньги передайте наличными или переводом")
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

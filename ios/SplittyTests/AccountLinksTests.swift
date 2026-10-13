@@ -109,7 +109,7 @@ final class AccountLinksTests: XCTestCase {
     func testIdentityErrorTextHidesServerCodes() {
         let taken = APIError.server(status: 409, code: "identity_taken", message: "любой серверный текст")
         let text = identityErrorText(taken)
-        XCTAssertEqual(text, "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него")
+        XCTAssertEqual(text, "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него")
         // Код ошибки пользователю не показываем — ни в каком виде.
         XCTAssertFalse(text.contains("identity_taken"))
         XCTAssertFalse(text.contains("409"))
@@ -228,7 +228,7 @@ final class AccountLinksTests: XCTestCase {
     func testLinkGoogleConflictIsIdentityTaken() async {
         StubURLProtocol.handler = { _ in
             (409, Data(#"""
-            {"error":{"code":"identity_taken","message":"Этот аккаунт уже связан с другим профилем Splitty. Войдите через него."}}
+            {"error":{"code":"identity_taken","message":"Этот аккаунт уже связан с другим профилем Splitor. Войдите через него."}}
             """#.utf8))
         }
 
@@ -239,7 +239,7 @@ final class AccountLinksTests: XCTestCase {
             XCTAssertFalse(error.isUnauthorized)
             XCTAssertEqual(
                 identityErrorText(error),
-                "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
+                "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него"
             )
         } catch {
             XCTFail("ожидали APIError, получили \(error)")

@@ -142,9 +142,9 @@ enum WelcomeStep: Int, CaseIterable {
         case .dictate:
             return String(localized: "Продиктуйте расход вслух, и он появится в группе. Можно снять чек или вписать руками.")
         case .whoPaid:
-            return String(localized: "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.")
+            return String(localized: "Splitor делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.")
         case .transfers:
-            return String(localized: "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы.")
+            return String(localized: "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitor сводит долги внутри группы.")
         }
     }
 }
@@ -790,8 +790,8 @@ private struct TransfersArt: View {
             // типографику и серую заливку — рядом с карточками приложения он
             // выглядит вставленным из другой программы.
             HStack(spacing: 4) {
-                segmentHalf(String(localized: "Без Splitty"), isOn: !withSplitty) { set(false) }
-                segmentHalf(String(localized: "Со Splitty"), isOn: withSplitty) { set(true) }
+                segmentHalf(String(localized: "Без Splitor"), isOn: !withSplitty) { set(false) }
+                segmentHalf(String(localized: "Со Splitor"), isOn: withSplitty) { set(true) }
             }
             .padding(4)
             .background(Color.ink.opacity(0.06), in: RoundedRectangle(cornerRadius: 3, style: .continuous))

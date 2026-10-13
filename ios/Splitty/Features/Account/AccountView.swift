@@ -968,7 +968,7 @@ func identityErrorText(_ error: Error) -> String {
     }
     switch code {
     case "identity_taken":
-        return String(localized: "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него")
+        return String(localized: "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него")
     case "identity_already_linked":
         // У аккаунта уже есть ДРУГАЯ личность этого провайдера. Сервер не
         // подменяет её молча: подмена отцепила бы прежний Apple ID без

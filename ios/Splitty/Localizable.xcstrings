@@ -3934,132 +3934,132 @@
         }
       }
     },
-    "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.": {
+    "Splitor делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty teilt jede Ausgabe unter den Teilnehmern auf. Abendessen für 6,00 € durch drei sind je 2,00 €, Taxi für 3,00 € je 1,00 €."
+            "value": "Splitor teilt jede Ausgabe unter den Teilnehmern auf. Abendessen für 6,00 € durch drei sind je 2,00 €, Taxi für 3,00 € je 1,00 €."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty divides every expense among the members. A $6.00 dinner for three is $2.00 each, a $3.00 taxi is $1.00 each."
+            "value": "Splitor divides every expense among the members. A $6.00 dinner for three is $2.00 each, a $3.00 taxi is $1.00 each."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty divide cada gasto entre los participantes. Una cena de 6,00 € entre tres son 2,00 € cada uno; un taxi de 3,00 €, 1,00 € cada uno."
+            "value": "Splitor divide cada gasto entre los participantes. Una cena de 6,00 € entre tres son 2,00 € cada uno; un taxi de 3,00 €, 1,00 € cada uno."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty répartit chaque dépense entre les participants. Un dîner à 6,00 € pour trois, c’est 2,00 € chacun ; un taxi à 3,00 €, 1,00 € chacun."
+            "value": "Splitor répartit chaque dépense entre les participants. Un dîner à 6,00 € pour trois, c’est 2,00 € chacun ; un taxi à 3,00 €, 1,00 € chacun."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100."
+            "value": "Splitor делит каждый расход на участников. Ужин 600 на троих — по 200, такси 300 — по 100."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty はすべての支出をメンバーで分割します。夕食 600円 を3人なら1人 200円、タクシー 300円 なら1人 100円です。"
+            "value": "Splitor はすべての支出をメンバーで分割します。夕食 600円 を3人なら1人 200円、タクシー 300円 なら1人 100円です。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty 会把每笔支出分摊给成员。三人 ¥60.00 的晚餐每人 ¥20.00，¥30.00 的打车每人 ¥10.00。"
+            "value": "Splitor 会把每笔支出分摊给成员。三人 ¥60.00 的晚餐每人 ¥20.00，¥30.00 的打车每人 ¥10.00。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty는 모든 지출을 참여자에게 나눕니다. 3인 ₩6,000 저녁은 1인 ₩2,000, ₩3,000 택시는 1인 ₩1,000입니다."
+            "value": "Splitor는 모든 지출을 참여자에게 나눕니다. 3인 ₩6,000 저녁은 1인 ₩2,000, ₩3,000 택시는 1인 ₩1,000입니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Splitty divide cada despesa entre os participantes. Um jantar de R$ 60,00 para três fica R$ 20,00 por pessoa; um táxi de R$ 30,00, R$ 10,00 cada."
+            "value": "O Splitor divide cada despesa entre os participantes. Um jantar de R$ 60,00 para três fica R$ 20,00 por pessoa; um táxi de R$ 30,00, R$ 10,00 cada."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty divide ogni spesa tra i partecipanti. Una cena da € 6,00 per tre fa € 2,00 a testa, un taxi da € 3,00 fa € 1,00 a testa."
+            "value": "Splitor divide ogni spesa tra i partecipanti. Una cena da € 6,00 per tre fa € 2,00 a testa, un taxi da € 3,00 fa € 1,00 a testa."
           }
         }
       }
     },
-    "Splitty только записывает: деньги передайте наличными или переводом": {
+    "Splitor только записывает: деньги передайте наличными или переводом": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty hält es nur fest: Das Geld übergibst du bar oder per Überweisung"
+            "value": "Splitor hält es nur fest: Das Geld übergibst du bar oder per Überweisung"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty only records it: hand over the money in cash or by transfer"
+            "value": "Splitor only records it: hand over the money in cash or by transfer"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty solo lo anota: el dinero lo entregas en efectivo o por transferencia"
+            "value": "Splitor solo lo anota: el dinero lo entregas en efectivo o por transferencia"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty ne fait que l’enregistrer : l’argent se remet en espèces ou par virement"
+            "value": "Splitor ne fait que l’enregistrer : l’argent se remet en espèces ou par virement"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty только записывает: деньги передайте наличными или переводом"
+            "value": "Splitor только записывает: деньги передайте наличными или переводом"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty は記録するだけです。お金は現金または送金でお渡しください"
+            "value": "Splitor は記録するだけです。お金は現金または送金でお渡しください"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty 只做记录：请用现金或转账把钱交给对方"
+            "value": "Splitor 只做记录：请用现金或转账把钱交给对方"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty는 기록만 합니다. 금액은 현금이나 송금으로 직접 전달해 주십시오"
+            "value": "Splitor는 기록만 합니다. 금액은 현금이나 송금으로 직접 전달해 주십시오"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Splitty apenas registra: entregue o dinheiro em espécie ou por transferência"
+            "value": "O Splitor apenas registra: entregue o dinheiro em espécie ou por transferência"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty si limita a registrare: i soldi passateveli in contanti o con un bonifico"
+            "value": "Splitor si limita a registrare: i soldi passateveli in contanti o con un bonifico"
           }
         }
       }
@@ -5494,67 +5494,67 @@
         }
       }
     },
-    "Без Splitty": {
+    "Без Splitor": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ohne Splitty"
+            "value": "Ohne Splitor"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without Splitty"
+            "value": "Without Splitor"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sin Splitty"
+            "value": "Sin Splitor"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sans Splitty"
+            "value": "Sans Splitor"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Без Splitty"
+            "value": "Без Splitor"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty なしの場合"
+            "value": "Splitor なしの場合"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "不用 Splitty"
+            "value": "不用 Splitor"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty가 없다면"
+            "value": "Splitor가 없다면"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sem o Splitty"
+            "value": "Sem o Splitor"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Senza Splitty"
+            "value": "Senza Splitor"
           }
         }
       }
@@ -7103,67 +7103,67 @@
         }
       }
     },
-    "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы.": {
+    "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitor сводит долги внутри группы.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dein Anteil von 3,00 € geht als eine Überweisung statt zweier: Splitty verrechnet die Schulden innerhalb der Gruppe."
+            "value": "Dein Anteil von 3,00 € geht als eine Überweisung statt zweier: Splitor verrechnet die Schulden innerhalb der Gruppe."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Your $3.00 share goes out as one transfer instead of two: Splitty nets the debts inside the group."
+            "value": "Your $3.00 share goes out as one transfer instead of two: Splitor nets the debts inside the group."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tu parte de 3,00 € sale en una sola transferencia en vez de dos: Splitty compensa las deudas dentro del grupo."
+            "value": "Tu parte de 3,00 € sale en una sola transferencia en vez de dos: Splitor compensa las deudas dentro del grupo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Votre part de 3,00 € part en un seul virement au lieu de deux : Splitty compense les dettes au sein du groupe."
+            "value": "Votre part de 3,00 € part en un seul virement au lieu de deux : Splitor compense les dettes au sein du groupe."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitty сводит долги внутри группы."
+            "value": "Ваша доля 300 ₽ уходит одним переводом, а не двумя: Splitor сводит долги внутри группы."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "あなたの負担分 300円 は2回ではなく1回の送金で済みます。Splitty がグループ内の貸し借りを相殺します。"
+            "value": "あなたの負担分 300円 は2回ではなく1回の送金で済みます。Splitor がグループ内の貸し借りを相殺します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你的 ¥30.00 只需一次转账，而不是两次：Splitty 会在群组内抵销欠款。"
+            "value": "你的 ¥30.00 只需一次转账，而不是两次：Splitor 会在群组内抵销欠款。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "회원님의 몫 ₩3,000은 두 번이 아니라 한 번의 송금으로 나갑니다. Splitty가 그룹 내 빚을 상계합니다."
+            "value": "회원님의 몫 ₩3,000은 두 번이 아니라 한 번의 송금으로 나갑니다. Splitor가 그룹 내 빚을 상계합니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sua parte de R$ 30,00 sai em uma transferência, não em duas: o Splitty compensa as dívidas dentro do grupo."
+            "value": "Sua parte de R$ 30,00 sai em uma transferência, não em duas: o Splitor compensa as dívidas dentro do grupo."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La tua quota di € 3,00 parte con un solo trasferimento invece di due: Splitty compensa i debiti dentro al gruppo."
+            "value": "La tua quota di € 3,00 parte con un solo trasferimento invece di due: Splitor compensa i debiti dentro al gruppo."
           }
         }
       }
@@ -10873,67 +10873,67 @@
         }
       }
     },
-    "Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.": {
+    "Голосовая запись и фото чека уходят на сервер Splitor и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Sprachaufnahme und das Belegfoto gehen an den Splitty-Server und an ein Drittanbieter-Modell, das daraus eine Ausgabe macht. Die Ausgabe selbst bleibt in deiner Gruppe."
+            "value": "Die Sprachaufnahme und das Belegfoto gehen an den Splitor-Server und an ein Drittanbieter-Modell, das daraus eine Ausgabe macht. Die Ausgabe selbst bleibt in deiner Gruppe."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The voice recording and the receipt photo go to the Splitty server and to a third-party model that turns them into an expense. The expense itself stays in your group."
+            "value": "The voice recording and the receipt photo go to the Splitor server and to a third-party model that turns them into an expense. The expense itself stays in your group."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La grabación de voz y la foto del recibo se envían al servidor de Splitty y a un modelo de terceros que los convierte en un gasto. El gasto en sí permanece en tu grupo."
+            "value": "La grabación de voz y la foto del recibo se envían al servidor de Splitor y a un modelo de terceros que los convierte en un gasto. El gasto en sí permanece en tu grupo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’enregistrement vocal et la photo du ticket partent vers le serveur Splitty et vers un modèle tiers qui les transforme en dépense. La dépense elle-même reste dans votre groupe."
+            "value": "L’enregistrement vocal et la photo du ticket partent vers le serveur Splitor et vers un modèle tiers qui les transforme en dépense. La dépense elle-même reste dans votre groupe."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Голосовая запись и фото чека уходят на сервер Splitty и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе."
+            "value": "Голосовая запись и фото чека уходят на сервер Splitor и в стороннюю модель, которая превращает их в расход. Сам расход остаётся в вашей группе."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "音声とレシートの写真は Splitty のサーバーと、それを支出に変換する外部モデルに送信されます。作成された支出はグループ内に留まります。"
+            "value": "音声とレシートの写真は Splitor のサーバーと、それを支出に変換する外部モデルに送信されます。作成された支出はグループ内に留まります。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "语音和小票照片会发送到 Splitty 服务器以及负责识别的第三方模型。生成的支出仍保留在你的群组中。"
+            "value": "语音和小票照片会发送到 Splitor 服务器以及负责识别的第三方模型。生成的支出仍保留在你的群组中。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "음성 녹음과 영수증 사진은 Splitty 서버와 이를 지출로 변환하는 외부 모델로 전송됩니다. 생성된 지출은 그룹 안에 남습니다."
+            "value": "음성 녹음과 영수증 사진은 Splitor 서버와 이를 지출로 변환하는 외부 모델로 전송됩니다. 생성된 지출은 그룹 안에 남습니다."
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A gravação e a foto do recibo vão para o servidor do Splitty e para um modelo de terceiros que os transforma em despesa. A despesa em si fica no seu grupo."
+            "value": "A gravação e a foto do recibo vão para o servidor do Splitor e para um modelo de terceiros que os transforma em despesa. A despesa em si fica no seu grupo."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La registrazione e la foto dello scontrino vengono inviate al server di Splitty e a un modello di terze parti che le trasforma in una spesa. La spesa resta nel tuo gruppo."
+            "value": "La registrazione e la foto dello scontrino vengono inviate al server di Splitor e a un modello di terze parti che le trasforma in una spesa. La spesa resta nel tuo gruppo."
           }
         }
       }
@@ -15862,67 +15862,67 @@
         }
       }
     },
-    "Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания": {
+    "Запись уйдёт на сервер Splitor и в стороннюю модель для распознавания": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Die Aufnahme geht an den Splitty-Server und an ein Drittanbieter-Modell zur Erkennung"
+            "value": "Die Aufnahme geht an den Splitor-Server und an ein Drittanbieter-Modell zur Erkennung"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The recording goes to the Splitty server and to a third-party model for recognition"
+            "value": "The recording goes to the Splitor server and to a third-party model for recognition"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La grabación se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento"
+            "value": "La grabación se envía al servidor de Splitor y a un modelo de terceros para el reconocimiento"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’enregistrement part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance"
+            "value": "L’enregistrement part vers le serveur Splitor et vers un modèle tiers pour la reconnaissance"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Запись уйдёт на сервер Splitty и в стороннюю модель для распознавания"
+            "value": "Запись уйдёт на сервер Splitor и в стороннюю модель для распознавания"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音は Splitty のサーバーと、認識のための外部モデルに送信されます"
+            "value": "録音は Splitor のサーバーと、認識のための外部モデルに送信されます"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "录音会发送到 Splitty 服务器以及负责识别的第三方模型"
+            "value": "录音会发送到 Splitor 服务器以及负责识别的第三方模型"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "녹음은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
+            "value": "녹음은 Splitor 서버와 인식용 외부 모델로 전송됩니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A gravação vai para o servidor do Splitty e para um modelo de terceiros para reconhecimento"
+            "value": "A gravação vai para o servidor do Splitor e para um modelo de terceiros para reconhecimento"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La registrazione viene inviata al server di Splitty e a un modello di terze parti per il riconoscimento"
+            "value": "La registrazione viene inviata al server di Splitor e a un modello di terze parti per il riconoscimento"
           }
         }
       }
@@ -34810,132 +34810,132 @@
         }
       }
     },
-    "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания": {
+    "Снимок уйдёт на сервер Splitor и в стороннюю модель для распознавания": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Foto geht an den Splitty-Server und an ein Drittanbieter-Modell zur Erkennung"
+            "value": "Das Foto geht an den Splitor-Server und an ein Drittanbieter-Modell zur Erkennung"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The photo goes to the Splitty server and to a third-party model for recognition"
+            "value": "The photo goes to the Splitor server and to a third-party model for recognition"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La foto se envía al servidor de Splitty y a un modelo de terceros para el reconocimiento"
+            "value": "La foto se envía al servidor de Splitor y a un modelo de terceros para el reconocimiento"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La photo part vers le serveur Splitty et vers un modèle tiers pour la reconnaissance"
+            "value": "La photo part vers le serveur Splitor et vers un modèle tiers pour la reconnaissance"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Снимок уйдёт на сервер Splitty и в стороннюю модель для распознавания"
+            "value": "Снимок уйдёт на сервер Splitor и в стороннюю модель для распознавания"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "写真は Splitty のサーバーと、認識のための外部モデルに送信されます"
+            "value": "写真は Splitor のサーバーと、認識のための外部モデルに送信されます"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "照片会发送到 Splitty 服务器以及负责识别的第三方模型"
+            "value": "照片会发送到 Splitor 服务器以及负责识别的第三方模型"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사진은 Splitty 서버와 인식용 외부 모델로 전송됩니다"
+            "value": "사진은 Splitor 서버와 인식용 외부 모델로 전송됩니다"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A foto vai para o servidor do Splitty e para um modelo de terceiros para reconhecimento"
+            "value": "A foto vai para o servidor do Splitor e para um modelo de terceiros para reconhecimento"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La foto viene inviata al server di Splitty e a un modello di terze parti per il riconoscimento"
+            "value": "La foto viene inviata al server di Splitor e a un modello di terze parti per il riconoscimento"
           }
         }
       }
     },
-    "Со Splitty": {
+    "Со Splitor": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mit Splitty"
+            "value": "Mit Splitor"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "With Splitty"
+            "value": "With Splitor"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Con Splitty"
+            "value": "Con Splitor"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Avec Splitty"
+            "value": "Avec Splitor"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Со Splitty"
+            "value": "Со Splitor"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty ありの場合"
+            "value": "Splitor ありの場合"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用 Splitty"
+            "value": "用 Splitor"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Splitty가 있다면"
+            "value": "Splitor가 있다면"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Com o Splitty"
+            "value": "Com o Splitor"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Con Splitty"
+            "value": "Con Splitor"
           }
         }
       }
@@ -39703,13 +39703,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta cuenta ya está vinculada a otro perfil de Splitor. Entra con ese"
+            "value": "Esta cuenta ya está vinculada a otro perfil de Splitor. Inicia sesión con ese"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ce compte est déjà lié à un autre profil Splitor. Connectez-vous avec celui-là"
+            "value": "Ce compte est déjà lié à un autre profil Splitor. Connectez-vous avec celui-ci"
           }
         },
         "ru": {
@@ -39746,71 +39746,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Questo account è già collegato a un altro profilo Splitor. Accedi con quello"
-          }
-        }
-      }
-    },
-    "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Konto ist bereits mit einem anderen Splitty-Profil verknüpft. Melde dich damit an"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This account is already linked to another Splitty profile. Sign in with that one"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta cuenta ya está vinculada a otro perfil de Splitty. Inicia sesión con ese"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce compte est déjà lié à un autre profil Splitty. Connectez-vous avec celui-ci"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このアカウントはすでに別の Splitty プロフィールに連携されています。そちらでサインインしてください"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该账号已关联到另一个 Splitty 账号。请用那个账号登录"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 계정은 이미 다른 Splitty 프로필에 연결되어 있습니다. 해당 계정으로 로그인해 주십시오"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta conta já está vinculada a outro perfil do Splitty. Entre por ele"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Questo account è già collegato a un altro profilo Splitty. Accedi con quello"
           }
         }
       }

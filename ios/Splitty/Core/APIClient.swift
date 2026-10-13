@@ -155,7 +155,7 @@ enum APIError: LocalizedError {
         case "invalid_password":
             return String(localized: "Неверный текущий пароль")
         case "identity_taken":
-            return String(localized: "Этот аккаунт уже связан с другим профилем Splitty. Войдите через него")
+            return String(localized: "Этот аккаунт уже связан с другим профилем Splitor. Войдите через него")
         case "identity_already_linked":
             return String(localized: "К аккаунту уже привязан другой аккаунт этого способа входа. Сначала отвяжите текущий")
         case "last_identity":
