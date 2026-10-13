@@ -106,6 +106,107 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         shot("t10-05-settle-large")
     }
 
+    /// Экраны, которые основной сценарий не задевает: вход по коду, архив,
+    /// приглашение, Plus, пароль, настройки уведомлений. Каждый — если открылся.
+    func testSecondaryScreens() throws {
+        app.launch()
+        loginIfNeeded(app)
+        let groupsTab = app.tabBars.buttons["Группы"]
+        XCTAssertTrue(groupsTab.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        groupsTab.tap()
+
+        let plus = app.buttons["Создать группу или присоединиться по коду"]
+        if plus.waitForExistence(timeout: 5) {
+            plus.tap()
+            let join = app.buttons["Присоединиться по коду"]
+            if join.waitForExistence(timeout: 3) {
+                join.tap()
+                shot("m-11-join")
+                closeSheet()
+            }
+        }
+        let archive = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Архив'")).firstMatch
+        if archive.waitForExistence(timeout: 5) {
+            bringIntoView(archive)
+            archive.tap()
+            shot("m-04-archive")
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+
+        let room = app.staticTexts["Поездка в Стамбул"]
+        XCTAssertTrue(room.waitForExistence(timeout: 10))
+        room.tap()
+        let settings = app.buttons["Настройки"]
+        if settings.waitForExistence(timeout: 10) {
+            settings.tap()
+            let add = app.buttons["Добавить"].firstMatch
+            if add.waitForExistence(timeout: 5) {
+                add.tap()
+                shot("m-11-invite-friend")
+                let link = app.buttons["Отправить ссылку"]
+                if link.waitForExistence(timeout: 3) {
+                    link.tap()
+                    shot("m-11-invite-link")
+                    closeSheet()
+                }
+                closeSheet()
+            }
+        }
+        for _ in 0..<4 where !app.tabBars.firstMatch.isHittable {
+            if app.navigationBars.buttons.firstMatch.isHittable {
+                app.navigationBars.buttons.firstMatch.tap()
+            } else {
+                app.swipeDown(velocity: .fast)
+            }
+            sleep(1)
+        }
+
+        app.tabBars.buttons["Профиль"].tap()
+        let plusRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Splitor Plus'")).firstMatch
+        if plusRow.waitForExistence(timeout: 5) {
+            plusRow.tap()
+            shot("m-16-plus")
+            closeSheet()
+        }
+        let notifications = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Уведомления'"))
+            .allElementsBoundByIndex.first { $0.frame.minY < app.tabBars.firstMatch.frame.minY - 1 }
+        if let notifications {
+            bringIntoView(notifications)
+            notifications.tap()
+            shot("m-15-notif-settings")
+            app.navigationBars.buttons.firstMatch.tap()
+        }
+        let password = app.buttons["Изменить"].firstMatch
+        if password.waitForExistence(timeout: 5) {
+            bringIntoView(password)
+            password.tap()
+            shot("m-15-password")
+            closeSheet()
+        }
+    }
+
+    /// Без сервера: данные из кеша с пометкой. Бэкенд останавливают снаружи,
+    /// сессия должна остаться от прошлого прогона.
+    func testOfflineCachedState() throws {
+        app.launch()
+        let groupsTab = app.tabBars.buttons["Группы"]
+        XCTAssertTrue(groupsTab.waitForExistence(timeout: 10), "нет таб-бара — сессии нет")
+        groupsTab.tap()
+        shot("m-17-offline-groups")
+        app.tabBars.buttons["Уведомления"].tap()
+        shot("m-17-offline-activity")
+    }
+
+    private func closeSheet() {
+        let cancel = app.buttons["Отмена"].firstMatch
+        if cancel.waitForExistence(timeout: 2) && cancel.isHittable {
+            cancel.tap()
+        } else {
+            app.swipeDown(velocity: .fast)
+        }
+        sleep(1)
+    }
+
     private func openRoom() {
         loginIfNeeded(app)
         let tab = app.tabBars.buttons["Группы"]
