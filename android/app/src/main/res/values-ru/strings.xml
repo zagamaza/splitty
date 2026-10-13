@@ -819,4 +819,6 @@
     <string name="group_balance_across">По группе</string>
     <string name="group_debts_cancel_short">Долги взаимно гасятся</string>
     <string name="group_settle_up">Рассчитаться</string>
+    <string name="totals_period_30_days">Последние 30 дней</string>
+    <string name="totals_period_all_time">За всё время</string>
 </resources>

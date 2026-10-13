@@ -1,10 +1,11 @@
 import Charts
 import SwiftUI
 
-/// «Итоги» — дашборд группы v2 (sheet по чипу «Итоги», лейбл не менять):
-/// плитки 2×2 (всего/за месяц/операций/средний чек), личные плитки,
-/// «Траты по дням» (30 дней), донат «Кто платил», бары «На кого потрачено»,
-/// diverging «Кто в плюсе, кто в минусе», дни недели, топ-5 расходов.
+/// «Итоги» — один сводный отчёт на листе чека: крупно «Всего потрачено»,
+/// строками месяц/операции/средний чек, через пунктир личные суммы, затем
+/// разделами того же листа — «Траты по дням» (30 дней), донат «Кто платил»,
+/// бары «На кого потрачено», diverging «Кто в плюсе, кто в минусе», дни
+/// недели, топ-5 расходов. У каждого раздела подписан период.
 /// Все суммы — в валюте комнаты (`statistics.currency`); участники окрашены
 /// фиксированной палитрой `Color.chartCategorical` (по user.id ASC, см.
 /// `MemberPalette`); magnitude-графики — единым `Color.chartAccent`;
@@ -82,12 +83,24 @@ struct GroupTotalsView: View {
         }
     }
 
-    /// Пустая комната: дружелюбное состояние вместо нулевых графиков.
+    /// Пустая комната: тот же лист отчёта, но без нулевых строк и графиков.
     private var emptyState: some View {
-        ContentUnavailableView {
-            Label("Итоги появятся с первым расходом", systemImage: "chart.bar")
-        } description: {
-            Text("Добавьте первый расход — здесь появится статистика группы")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Итоги").receiptLabel()
+                    .frame(maxWidth: .infinity)
+                ReceiptDivider().padding(.vertical, 10)
+                Text("Итоги появятся с первым расходом")
+                    .scaledFont(size: 17, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Добавьте первый расход — здесь появится статистика группы")
+                    .scaledFont(size: 14, relativeTo: .subheadline)
+                    .foregroundStyle(Color.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .receiptPaper(padding: 22)
+            .padding(16)
         }
     }
 
@@ -101,11 +114,13 @@ struct GroupTotalsView: View {
         let nets = DashboardMath.netBalances(paid: stats.paidByMember, share: stats.shareByMember)
         let weekdays = DashboardMath.weekdayTotals(byDay: stats.byDay)
         return ScrollView {
-            VStack(spacing: 16) {
-                statTiles(stats)
-                myTiles(stats)
+            VStack(alignment: .leading, spacing: 0) {
+                reportHeader(stats)
+                myRows(stats)
+                sectionBreak
                 DailySpendingCard(byDay: stats.byDay, currency: stats.currency)
                 if !slices.isEmpty {
+                    sectionBreak
                     PaidDonutCard(
                         slices: slices,
                         palette: palette,
@@ -114,6 +129,7 @@ struct GroupTotalsView: View {
                     )
                 }
                 if let shares = MemberBarsCard.prepared(stats.shareByMember) {
+                    sectionBreak
                     MemberBarsCard(
                         title: String(localized: "На кого потрачено"),
                         bars: shares,
@@ -122,106 +138,114 @@ struct GroupTotalsView: View {
                     )
                 }
                 if !nets.isEmpty {
+                    sectionBreak
                     MemberNetCard(nets: nets, currency: stats.currency)
                 }
                 if weekdays.contains(where: { $0 > 0 }) {
+                    sectionBreak
                     WeekdayCard(totals: weekdays)
                 }
                 if !stats.topOperations.isEmpty {
+                    sectionBreak
                     topOperationsCard(stats)
                 }
             }
+            .receiptPaper(padding: 22)
             .padding(16)
         }
         .refreshable { await load() }
     }
 
-    // MARK: Стат-плитки 2×2
+    /// Пунктир между разделами одного листа — вместо отдельных карточек.
+    private var sectionBreak: some View {
+        ReceiptDivider().padding(.vertical, 20)
+    }
 
-    /// Плитки: «Всего потрачено», «За <месяц>», «Операций», «Средний чек».
-    /// Иконки тонированы единым `accent`: категориальная палитра кодирует
-    /// участников, декоративное использование её цветов ломало язык дата-виза.
-    private func statTiles(_ stats: Statistics) -> some View {
+    // MARK: Шапка отчёта
+
+    /// Название отчёта и крупное «Всего потрачено», ниже строками месяц,
+    /// число операций и средний чек.
+    private func reportHeader(_ stats: Statistics) -> some View {
         // Средний чек — от ТОЧНОГО итога: у тусы с копейками деление
         // округлённого промахивается на рубли при больших числах расходов.
         let averageMinor = stats.operationCount > 0
             ? stats.exactTotalSpentMinor / stats.operationCount
             : 0
-        return VStack(spacing: 16) {
-            HStack(spacing: 16) {
-                statTile(title: "Всего потрачено", icon: "banknote") {
-                    MoneyText(stats.totalSpent, exactMinor: stats.exactTotalSpentMinor, role: .neutral, size: 22, currency: stats.currency)
-                }
-                statTile(title: "За \(Self.currentMonthName())", icon: "calendar") {
-                    MoneyText(stats.monthSpent, exactMinor: stats.exactMonthSpentMinor, role: .neutral, size: 22, currency: stats.currency)
-                }
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Итоги").receiptLabel()
+                .frame(maxWidth: .infinity)
+                .accessibilityAddTraits(.isHeader)
+            ReceiptDivider().padding(.vertical, 10)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Всего потрачено").receiptLabel()
+                // Без fixedSize: на узком экране с крупным шрифтом сумма
+                // ужимается в ширину листа, а не вылезает за него.
+                MoneyText(stats.totalSpent, exactMinor: stats.exactTotalSpentMinor, role: .neutral,
+                          size: 40, weight: .heavy, currency: stats.currency)
             }
-            HStack(spacing: 16) {
-                statTile(title: "Операций", icon: "list.bullet") {
-                    Text(verbatim: "\(stats.operationCount)")
-                        .scaledFont(size: 22, weight: .semibold)
-                        .monospacedDigit()
-                        .foregroundStyle(Color.ink)
-                }
-                statTile(title: "Средний чек", icon: "chart.bar") {
-                    MoneyText(
-                        minorToUnitsRounded(averageMinor), exactMinor: averageMinor,
-                        role: .neutral, size: 22, currency: stats.currency
-                    )
-                }
+            .accessibilityElement(children: .combine)
+            ReceiptDivider().padding(.vertical, 10)
+            reportRow(Text("За \(Self.currentMonthName())")) {
+                MoneyText(stats.monthSpent, exactMinor: stats.exactMonthSpentMinor, role: .neutral,
+                          size: 16, weight: .semibold, currency: stats.currency)
+            }
+            reportRow(Text("Операций")) {
+                Text(verbatim: "\(stats.operationCount)")
+                    .scaledFont(size: 16, weight: .semibold)
+                    .monospacedDigit()
+                    .foregroundStyle(Color.ink)
+            }
+            reportRow(Text("Средний чек")) {
+                MoneyText(minorToUnitsRounded(averageMinor), exactMinor: averageMinor, role: .neutral,
+                          size: 16, weight: .semibold, currency: stats.currency)
             }
         }
     }
 
-    /// Личные плитки: «Заплачено мной» (донор операций) и «Моя доля» (по
-    /// хранимым долям получателей) — ответ на «сколько я потратил в этой тусе».
+    /// Личные строки: «Заплачено мной» (донор операций) и «Потрачено на меня»
+    /// (по хранимым долям получателей) — сколько я потратил в этой тусе.
+    /// Это не долг: долг — на вкладке «Балансы».
     @ViewBuilder
-    private func myTiles(_ stats: Statistics) -> some View {
+    private func myRows(_ stats: Statistics) -> some View {
         if let meId = session.me?.id {
             let paid = stats.paidByMember.first { $0.user.id == meId }?.exactMinor ?? 0
             let share = stats.shareByMember.first { $0.user.id == meId }?.exactMinor ?? 0
             if paid > 0 || share > 0 {
-                HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ReceiptDivider().padding(.vertical, 10)
                     // Без гендерной формы: «Я заплатил» врало для половины людей.
-                    statTile(title: "Заплачено мной", icon: "person.crop.circle") {
-                        MoneyText(
-                            minorToUnitsRounded(paid), exactMinor: paid,
-                            role: .neutral, size: 22, currency: stats.currency
-                        )
+                    reportRow(Text("Заплачено мной")) {
+                        MoneyText(minorToUnitsRounded(paid), exactMinor: paid, role: .neutral,
+                                  size: 16, weight: .semibold, currency: stats.currency)
                     }
-                    statTile(title: "Потрачено на меня", icon: "chart.pie") {
-                        MoneyText(
-                            minorToUnitsRounded(share), exactMinor: share,
-                            role: .neutral, size: 22, currency: stats.currency
-                        )
+                    reportRow(Text("Потрачено на меня")) {
+                        MoneyText(minorToUnitsRounded(share), exactMinor: share, role: .neutral,
+                                  size: 16, weight: .semibold, currency: stats.currency)
                     }
                 }
             }
         }
     }
 
-    private func statTile(
-        title: LocalizedStringKey,
-        icon: String,
-        @ViewBuilder value: () -> some View
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .scaledFont(size: 13, weight: .semibold, design: .default, relativeTo: .footnote)
-                    .foregroundStyle(Color.ink)
-                    .frame(width: 18, height: 18)
-                Text(title)
-                    .sectionHeaderStyle()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+    /// Строка отчёта: подпись слева, значение по правому краю. На крупном
+    /// шрифте значение уходит под подпись, а не обрезается.
+    private func reportRow<Value: View>(_ title: Text, @ViewBuilder value: () -> Value) -> some View {
+        let label = title
+            .scaledFont(size: 15)
+            .foregroundStyle(Color.ink)
+        let amount = value()
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                label.fixedSize()
+                Spacer(minLength: 8)
+                amount.fixedSize()
             }
-            value()
-                .lineLimit(1)
-                .minimumScaleFactor(0.55)
+            VStack(alignment: .leading, spacing: 2) {
+                label.fixedSize(horizontal: false, vertical: true)
+                amount
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
+        .accessibilityElement(children: .combine)
     }
 
     /// «июль» — текущий месяц на языке приложения (для плитки «За июль»).
@@ -236,42 +260,39 @@ struct GroupTotalsView: View {
     // MARK: Топ расходов
 
     private func topOperationsCard(_ stats: Statistics) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Самые крупные расходы")
-                .sectionHeaderStyle()
+        ReportSection(title: String(localized: "Самые крупные расходы"), period: .allTime) {
             VStack(spacing: 0) {
                 let top = Array(stats.topOperations.prefix(5))
                 ForEach(top) { operation in
                     topOperationRow(operation, currency: stats.currency)
                     if operation.id != top.last?.id {
-                        Rectangle()
-                            .fill(Color.hairline)
-                            .frame(height: 1)
+                        ReceiptDivider()
                     }
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private func topOperationRow(_ operation: TopOperation, currency: String) -> some View {
-        HStack(spacing: 12) {
+        // Название и подпись переносятся, а не режутся многоточием: на крупном
+        // шрифте от «Отель на…» оставалось одно слово.
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(operation.description.isEmpty ? String(localized: "Расход") : operation.description)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.ink)
-                    .lineLimit(1)
+                    .lineLimit(3)
                 Text(verbatim: "\(operation.donor.displayName) · \(DateFmt.dayMonth(operation.createdAt))")
                     .font(.caption)
                     .foregroundStyle(Color.inkSecondary)
-                    .lineLimit(1)
+                    .lineLimit(2)
             }
             Spacer(minLength: 8)
             MoneyText(
                 operation.sum, exactMinor: operation.exactMinor,
                 role: .neutral, size: 15, currency: currency
             )
+            .fixedSize()
         }
         .padding(.vertical, 10)
     }
@@ -294,6 +315,44 @@ struct GroupTotalsView: View {
             if error.isTaskCancellation { return }
             errorMessage = humanErrorText(error)
         }
+    }
+}
+
+// MARK: - Раздел отчёта
+
+/// Период, за который посчитан раздел: дни и дни недели — окно сервера в 30
+/// дней (`byDayWindowDays`), остальное — за всё время тусы.
+private enum ReportPeriod {
+    case last30, allTime
+
+    var title: String {
+        switch self {
+        case .last30: String(localized: "Последние 30 дней")
+        case .allTime: String(localized: "За всё время")
+        }
+    }
+}
+
+/// Раздел общего листа «Итогов»: реквизит, период и содержимое — без
+/// собственной карточки, разделы отделены пунктиром.
+private struct ReportSection<Content: View>: View {
+    let title: String
+    let period: ReportPeriod
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).receiptLabel()
+                Text(period.title)
+                    .scaledFont(size: 12, relativeTo: .caption)
+                    .foregroundStyle(Color.inkSecondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -390,16 +449,12 @@ private struct DailySpendingCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Траты по дням")
-                .sectionHeaderStyle()
+        ReportSection(title: String(localized: "Траты по дням"), period: .last30) {
             chart
                 .frame(height: 180)
                 // VoiceOver: без сводки график — немой набор баров.
                 .accessibilityLabel("График трат по дням за последний месяц")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private var chart: some View {
@@ -473,17 +528,13 @@ private struct PaidDonutCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Кто платил")
-                .sectionHeaderStyle()
+        ReportSection(title: String(localized: "Кто платил"), period: .allTime) {
             chart
                 .frame(height: 200)
                 // VoiceOver: сводка вместо немого доната (детали — в легенде).
                 .accessibilityLabel("Диаграмма долей участников в оплатах")
             legend
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private var chart: some View {
@@ -591,16 +642,12 @@ private struct MemberBarsCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .sectionHeaderStyle()
+        ReportSection(title: title, period: .allTime) {
             chart
                 .frame(height: CGFloat(bars.count) * Self.rowHeight)
                 // VoiceOver: краткая сводка вместо немого набора баров.
                 .accessibilityLabel("График «\(title)» — суммы по участникам")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private var chart: some View {
@@ -671,9 +718,7 @@ private struct MemberNetCard: View {
     private var span: Int { max(maxPositive + maxNegative, 1) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Кто в плюсе, кто в минусе")
-                .sectionHeaderStyle()
+        ReportSection(title: String(localized: "Кто в плюсе, кто в минусе"), period: .allTime) {
             VStack(spacing: 0) {
                 ForEach(nets) { net in
                     row(net)
@@ -681,8 +726,6 @@ private struct MemberNetCard: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private func row(_ net: MemberNet) -> some View {
@@ -759,16 +802,12 @@ private struct WeekdayCard: View {
     private var maxSum: Int { totals.max() ?? 0 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Траты по дням недели")
-                .sectionHeaderStyle()
+        ReportSection(title: String(localized: "Траты по дням недели"), period: .last30) {
             chart
                 .frame(height: 160)
                 // VoiceOver: без сводки график — немой набор баров.
                 .accessibilityLabel("График трат по дням недели")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard()
     }
 
     private var chart: some View {

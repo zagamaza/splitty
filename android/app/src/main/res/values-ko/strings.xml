@@ -719,4 +719,6 @@
     <string name="group_balance_across">그룹 전체 기준</string>
     <string name="group_debts_cancel_short">빚이 서로 상쇄됨</string>
     <string name="group_settle_up">정산하기</string>
+    <string name="totals_period_30_days">최근 30일</string>
+    <string name="totals_period_all_time">전체 기간</string>
 </resources>

@@ -782,4 +782,6 @@
     <string name="group_balance_across">Sur le groupe</string>
     <string name="group_debts_cancel_short">Les dettes se compensent</string>
     <string name="group_settle_up">Régler</string>
+    <string name="totals_period_30_days">30 derniers jours</string>
+    <string name="totals_period_all_time">Depuis le début</string>
 </resources>

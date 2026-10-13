@@ -172,6 +172,37 @@ final class ReceiptShotsUITests: XCTestCase {
         }
     }
 
+    /// «Итоги» одним листом: верх, середина и низ отчёта на тусе с данными и
+    /// пустая туса («Пустая туса» заводится через API; без неё кадр пропускается).
+    func testTotalsReport() throws {
+        loginIfNeeded(app)
+        XCTAssertTrue(app.otherElements["tabBar"].waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        app.buttons["tab.groups"].tap()
+        for (room, tag) in [("Поездка в Стамбул", "full"), ("Пустая туса", "empty")] {
+            let row = app.staticTexts[room]
+            guard row.waitForExistence(timeout: 5) else { continue }
+            for _ in 0..<4 where !row.isHittable || row.frame.maxY > app.windows.firstMatch.frame.height * 0.75 {
+                app.swipeUp()
+            }
+            row.tap()
+            XCTAssertTrue(app.buttons["Итоги"].waitForExistence(timeout: 10), "экран группы не открылся")
+            app.buttons["Итоги"].tap()
+            sleep(2)
+            shot("16-totals-\(tag)-top")
+            if tag == "full" {
+                app.swipeUp()
+                shot("16-totals-\(tag)-mid")
+                for _ in 0..<6 { app.swipeUp() }
+                shot("16-totals-\(tag)-bottom")
+            }
+            app.navigationBars.buttons.firstMatch.tap()
+            // Из глубины листа «назад» может не сразу попасть в кнопку.
+            if !app.otherElements["tabBar"].waitForExistence(timeout: 3) {
+                app.navigationBars.buttons.firstMatch.tap()
+            }
+        }
+    }
+
     /// Проход для других языков: вкладки и разделы — по позиции, а не по
     /// русским подписям. Вход по email — те же поля, у них нет перевода в тесте,
     /// поэтому язык меняется уже после входа (сессия переживает перезапуск).

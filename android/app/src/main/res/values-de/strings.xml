@@ -782,4 +782,6 @@
     <string name="group_balance_across">In der Gruppe</string>
     <string name="group_debts_cancel_short">Schulden gleichen sich aus</string>
     <string name="group_settle_up">Ausgleichen</string>
+    <string name="totals_period_30_days">Letzte 30 Tage</string>
+    <string name="totals_period_all_time">Gesamter Zeitraum</string>
 </resources>

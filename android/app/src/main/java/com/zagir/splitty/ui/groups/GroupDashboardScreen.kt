@@ -23,13 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Calculate
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,7 +47,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -71,6 +63,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zagir.splitty.R
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.semantics.heading
+import com.zagir.splitty.ui.components.isLargeFontScale
+import com.zagir.splitty.ui.components.ReceiptDivider
+import com.zagir.splitty.ui.components.ReceiptLabel
+import com.zagir.splitty.ui.components.ReceiptPaper
 import com.zagir.splitty.core.UiState
 import com.zagir.splitty.core.model.DailySum
 import com.zagir.splitty.core.model.MemberSum
@@ -81,8 +79,6 @@ import com.zagir.splitty.core.money.money
 import com.zagir.splitty.core.money.moneyMinor
 import com.zagir.splitty.ui.components.MoneyRole
 import com.zagir.splitty.ui.components.MoneyText
-import com.zagir.splitty.ui.components.SectionHeader
-import com.zagir.splitty.ui.components.SurfaceCard
 import com.zagir.splitty.ui.theme.Splitty
 import com.zagir.splitty.ui.theme.SplittyColors
 import java.time.LocalDate
@@ -213,8 +209,8 @@ internal fun GroupDashboardContent(
         is UiState.Content -> {
             val stats = state.value
             if (stats.totalSpent == 0L && stats.topOperations.isEmpty()) {
-                // Пустая комната: дружелюбное состояние вместо нулевых графиков.
-                Box(modifier = modifier, contentAlignment = Alignment.Center) {
+                // Пустая комната: тот же лист сверху, как у полного отчёта.
+                Box(modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp)) {
                     DashboardEmptyState()
                 }
             } else {
@@ -222,47 +218,54 @@ internal fun GroupDashboardContent(
                     modifier = modifier
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    StatTiles(stats)
-                    MyTiles(stats, meId)
-                    DailySpendingCard(byDay = stats.byDay, currency = stats.currency)
-                    // Личные цвета участников — единые для доната и «Чьей доли».
-                    val colorIndices = remember(stats) {
-                        memberColorIndices(
-                            (stats.paidByMember + stats.shareByMember).map { it.user.id }
-                        )
-                    }
-                    val paid = remember(stats) { preparedMemberBars(stats.paidByMember) }
-                    if (paid.isNotEmpty()) {
-                        WhoPaidDonutCard(
-                            bars = paid,
-                            colorIndices = colorIndices,
-                            totalSpentMinor = stats.exactTotalSpentMinor,
-                            currency = stats.currency,
-                        )
-                    }
-                    val shares = remember(stats) { preparedMemberBars(stats.shareByMember) }
-                    if (shares.isNotEmpty()) {
-                        MemberBarsCard(
-                            title = stringResource(R.string.totals_whose_share),
-                            bars = shares,
-                            currency = stats.currency,
-                            colorIndices = colorIndices,
-                        )
-                    }
-                    val nets = remember(stats) {
-                        memberNetBalances(stats.paidByMember, stats.shareByMember)
-                    }
-                    if (nets.isNotEmpty()) {
-                        MemberBalanceCard(nets = nets, currency = stats.currency)
-                    }
-                    val weekdays = remember(stats) { weekdayTotals(stats.byDay) }
-                    if (weekdays.any { it > 0 }) {
-                        WeekdayCard(totals = weekdays, currency = stats.currency)
-                    }
-                    if (stats.topOperations.isNotEmpty()) {
-                        TopOperationsCard(stats)
+                    ReceiptPaper {
+                        ReportHeader(stats)
+                        MyRows(stats, meId)
+                        SectionBreak()
+                        DailySpendingCard(byDay = stats.byDay, currency = stats.currency)
+                        // Личные цвета участников — единые для доната и «Чьей доли».
+                        val colorIndices = remember(stats) {
+                            memberColorIndices(
+                                (stats.paidByMember + stats.shareByMember).map { it.user.id }
+                            )
+                        }
+                        val paid = remember(stats) { preparedMemberBars(stats.paidByMember) }
+                        if (paid.isNotEmpty()) {
+                            SectionBreak()
+                            WhoPaidDonutCard(
+                                bars = paid,
+                                colorIndices = colorIndices,
+                                totalSpentMinor = stats.exactTotalSpentMinor,
+                                currency = stats.currency,
+                            )
+                        }
+                        val shares = remember(stats) { preparedMemberBars(stats.shareByMember) }
+                        if (shares.isNotEmpty()) {
+                            SectionBreak()
+                            MemberBarsCard(
+                                title = stringResource(R.string.totals_whose_share),
+                                bars = shares,
+                                currency = stats.currency,
+                                colorIndices = colorIndices,
+                            )
+                        }
+                        val nets = remember(stats) {
+                            memberNetBalances(stats.paidByMember, stats.shareByMember)
+                        }
+                        if (nets.isNotEmpty()) {
+                            SectionBreak()
+                            MemberBalanceCard(nets = nets, currency = stats.currency)
+                        }
+                        val weekdays = remember(stats) { weekdayTotals(stats.byDay) }
+                        if (weekdays.any { it > 0 }) {
+                            SectionBreak()
+                            WeekdayCard(totals = weekdays, currency = stats.currency)
+                        }
+                        if (stats.topOperations.isNotEmpty()) {
+                            SectionBreak()
+                            TopOperationsCard(stats)
+                        }
                     }
                 }
             }
@@ -270,187 +273,154 @@ internal fun GroupDashboardContent(
     }
 }
 
+/** Пунктир между разделами одного листа — вместо отдельных карточек. */
+@Composable
+private fun SectionBreak() {
+    ReceiptDivider(Modifier.padding(vertical = 20.dp))
+}
+
+/** Период раздела: дни и дни недели — окно сервера в 30 дней, остальное — за всё время. */
+private enum class ReportPeriod { LAST_30, ALL_TIME }
+
+/** Раздел общего листа «Итогов»: реквизит, период и содержимое без своей карточки. */
+@Composable
+private fun ReportSection(title: String, period: ReportPeriod, content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.semantics(mergeDescendants = true) { heading() },
+            verticalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            ReceiptLabel(title)
+            Text(
+                text = stringResource(
+                    if (period == ReportPeriod.LAST_30) R.string.totals_period_30_days else R.string.totals_period_all_time
+                ),
+                fontSize = 12.sp,
+                color = Splitty.colors.inkSecondary,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        content()
+    }
+}
+
+/** Пустая комната: тот же лист отчёта, но без нулевых строк и графиков. */
 @Composable
 private fun DashboardEmptyState() {
     val colors = Splitty.colors
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(
-            imageVector = Icons.Filled.BarChart,
-            contentDescription = null,
-            tint = colors.inkSecondary,
-            modifier = Modifier.size(40.dp),
-        )
-        Spacer(Modifier.height(12.dp))
+    ReceiptPaper {
+        ReceiptLabel(stringResource(R.string.totals_title), Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+        ReceiptDivider(Modifier.padding(vertical = 18.dp))
         Text(
             text = stringResource(R.string.totals_empty_title),
-            fontSize = 16.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.ink,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             text = stringResource(R.string.totals_empty_subtitle),
             fontSize = 14.sp,
             color = colors.inkSecondary,
-            textAlign = TextAlign.Center,
         )
     }
 }
 
-// MARK: - Стат-плитки 2×2
+// MARK: - Шапка отчёта
 
 /**
- * Личные плитки: «Я заплатил» (донор операций) и «Моя доля» (по хранимым
- * долям получателей) — ответ на «сколько я потратил именно в этой тусе».
- * Не показываются, пока профиль не загружен или обе суммы нулевые.
+ * Название отчёта и крупное «Всего потрачено», ниже строками месяц, число
+ * операций и средний чек (totalSpent / operationCount; 0 при пустоте).
  */
 @Composable
-private fun MyTiles(stats: Statistics, meId: Long?) {
+private fun ReportHeader(stats: Statistics) {
+    val colors = Splitty.colors
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReceiptLabel(
+            stringResource(R.string.totals_title),
+            Modifier.fillMaxWidth().semantics { heading() },
+            textAlign = TextAlign.Center,
+        )
+        ReceiptDivider(Modifier.padding(vertical = 10.dp))
+        Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ReceiptLabel(stringResource(R.string.totals_total_spent))
+            MoneyText(
+                stats.totalSpent,
+                exactMinor = stats.exactTotalSpentMinor,
+                role = MoneyRole.NEUTRAL,
+                size = 40.sp,
+                weight = FontWeight.ExtraBold,
+                currency = stats.currency,
+                minScale = 0.5f,
+            )
+        }
+        ReceiptDivider(Modifier.padding(vertical = 10.dp))
+        ReportRow(stringResource(R.string.totals_for_month, GroupsDateFmt.monthName())) {
+            MoneyText(stats.monthSpent, exactMinor = stats.exactMonthSpentMinor, role = MoneyRole.NEUTRAL,
+                size = 16.sp, weight = FontWeight.SemiBold, currency = stats.currency, minScale = 0.6f)
+        }
+        ReportRow(stringResource(R.string.totals_operation_count)) {
+            // Счётчик — не деньги: обычное число теми же tabular-цифрами.
+            Text(
+                text = stats.operationCount.toString(),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.ink,
+                maxLines = 1,
+                style = TextStyle(fontFeatureSettings = "tnum"),
+            )
+        }
+        ReportRow(stringResource(R.string.totals_avg_check)) {
+            val average = averageCheck(stats.exactTotalSpentMinor, stats.operationCount)
+            MoneyText(minorToUnitsRounded(average), exactMinor = average, role = MoneyRole.NEUTRAL,
+                size = 16.sp, weight = FontWeight.SemiBold, currency = stats.currency, minScale = 0.6f)
+        }
+    }
+}
+
+/**
+ * Личные строки: «Заплачено мной» (донор операций) и «Потрачено на меня» (по
+ * хранимым долям получателей) — сколько я потратил в этой тусе. Это не долг:
+ * долг — на вкладке «Балансы». Не показываются, пока профиль не загружен или
+ * обе суммы нулевые.
+ */
+@Composable
+private fun MyRows(stats: Statistics, meId: Long?) {
     meId ?: return
     val paid = stats.paidByMember.firstOrNull { it.user.id == meId }?.exactMinor ?: 0L
     val share = stats.shareByMember.firstOrNull { it.user.id == meId }?.exactMinor ?: 0L
     if (paid == 0L && share == 0L) return
-    val colors = Splitty.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        StatTile(
-            title = stringResource(R.string.totals_i_paid),
-            icon = Icons.Outlined.Person,
-            iconTint = colors.accent,
-            modifier = Modifier.weight(1f),
-        ) {
-            MoneyText(
-                minorToUnitsRounded(paid),
-                exactMinor = paid,
-                role = MoneyRole.NEUTRAL,
-                size = 28.sp,
-                currency = stats.currency,
-                minScale = 0.55f,
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ReceiptDivider(Modifier.padding(top = 18.dp, bottom = 10.dp))
+        ReportRow(stringResource(R.string.totals_i_paid)) {
+            MoneyText(minorToUnitsRounded(paid), exactMinor = paid, role = MoneyRole.NEUTRAL,
+                size = 16.sp, weight = FontWeight.SemiBold, currency = stats.currency, minScale = 0.6f)
         }
-        StatTile(
-            title = stringResource(R.string.totals_my_share),
-            icon = Icons.Outlined.PieChart,
-            iconTint = colors.accent,
-            modifier = Modifier.weight(1f),
-        ) {
-            MoneyText(
-                minorToUnitsRounded(share),
-                exactMinor = share,
-                role = MoneyRole.NEUTRAL,
-                size = 28.sp,
-                currency = stats.currency,
-                minScale = 0.55f,
-            )
+        ReportRow(stringResource(R.string.totals_my_share)) {
+            MoneyText(minorToUnitsRounded(share), exactMinor = share, role = MoneyRole.NEUTRAL,
+                size = 16.sp, weight = FontWeight.SemiBold, currency = stats.currency, minScale = 0.6f)
         }
     }
 }
 
-/**
- * Плитки 2×2: «Всего потрачено», «За <месяц>», «Операций», «Средний чек»
- * (totalSpent / operationCount; 0 при пустоте). Иконка у заголовка —
- * декоративная, цвета chartCategorical по порядку плиток.
- */
+/** Строка отчёта: подпись слева, значение по правому краю; на крупном шрифте — под подписью. */
 @Composable
-private fun StatTiles(stats: Statistics) {
+private fun ReportRow(title: String, value: @Composable () -> Unit) {
     val colors = Splitty.colors
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatTile(
-                title = stringResource(R.string.totals_total_spent),
-                icon = Icons.Outlined.AccountBalanceWallet,
-                iconTint = colors.accent,
-                modifier = Modifier.weight(1f),
-            ) {
-                MoneyText(
-                    stats.totalSpent,
-                    exactMinor = stats.exactTotalSpentMinor,
-                    role = MoneyRole.NEUTRAL,
-                    size = 28.sp,
-                    currency = stats.currency,
-                    minScale = 0.55f,
-                )
-            }
-            StatTile(
-                title = stringResource(R.string.totals_for_month, GroupsDateFmt.monthName()),
-                icon = Icons.Outlined.CalendarMonth,
-                iconTint = colors.accent,
-                modifier = Modifier.weight(1f),
-            ) {
-                MoneyText(
-                    stats.monthSpent,
-                    exactMinor = stats.exactMonthSpentMinor,
-                    role = MoneyRole.NEUTRAL,
-                    size = 28.sp,
-                    currency = stats.currency,
-                    minScale = 0.55f,
-                )
-            }
+    if (isLargeFontScale()) {
+        Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+            Text(text = title, fontSize = 15.sp, color = colors.ink)
+            value()
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            StatTile(
-                title = stringResource(R.string.totals_operation_count),
-                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                iconTint = colors.accent,
-                modifier = Modifier.weight(1f),
-            ) {
-                // Счётчик — не деньги: обычное число теми же tabular-цифрами.
-                Text(
-                    text = stats.operationCount.toString(),
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.ink,
-                    maxLines = 1,
-                    style = TextStyle(fontFeatureSettings = "tnum"),
-                )
-            }
-            StatTile(
-                title = stringResource(R.string.totals_avg_check),
-                icon = Icons.Outlined.Calculate,
-                iconTint = colors.accent,
-                modifier = Modifier.weight(1f),
-            ) {
-                val average = averageCheck(stats.exactTotalSpentMinor, stats.operationCount)
-                MoneyText(
-                    minorToUnitsRounded(average),
-                    exactMinor = average,
-                    role = MoneyRole.NEUTRAL,
-                    size = 28.sp,
-                    currency = stats.currency,
-                    minScale = 0.55f,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatTile(
-    title: String,
-    icon: ImageVector,
-    iconTint: Color,
-    modifier: Modifier = Modifier,
-    value: @Composable () -> Unit,
-) {
-    SurfaceCard(modifier = modifier, padding = 16.dp) {
+    } else {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null, // декоративная
-                tint = iconTint,
-                modifier = Modifier.size(14.dp),
-            )
-            SectionHeader(title, maxLines = 1)
+            Text(text = title, modifier = Modifier.weight(1f), fontSize = 15.sp, color = colors.ink)
+            value()
         }
-        Spacer(Modifier.height(6.dp))
-        value()
     }
 }
 
@@ -522,8 +492,7 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
     val labelStyle = TextStyle(fontSize = 11.sp, color = colors.inkSecondary)
     val allZero = points.all { it.sumMinor == 0L }
 
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_by_day))
+    ReportSection(stringResource(R.string.totals_by_day), ReportPeriod.LAST_30) {
         Spacer(Modifier.height(8.dp))
 
         // Аннотация выбранного бара; высота зарезервирована — layout не прыгает.
@@ -601,6 +570,9 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
                 }
 
                 // Подписи дат каждые 7 дней (11sp, вторичный цвет — ось тише данных).
+                // На крупном шрифте подписи шире недели — налезающую пропускаем,
+                // иначе выходило «14 сен21 сент».
+                var lastRight = Float.NEGATIVE_INFINITY
                 for (index in points.indices step 7) {
                     val layout = textMeasurer.measure(
                         AnnotatedString(GroupsDateFmt.dayMonth(points[index].date)),
@@ -609,7 +581,9 @@ private fun DailySpendingCard(byDay: List<DailySum>, currency: String) {
                     val centerX = slotWidth * index + slotWidth / 2f
                     val textX = (centerX - layout.size.width / 2f)
                         .coerceIn(0f, max(0f, size.width - layout.size.width))
+                    if (textX < lastRight + 6.dp.toPx()) continue
                     drawText(layout, topLeft = Offset(textX, chartHeight + 4.dp.toPx()))
+                    lastRight = textX + layout.size.width
                 }
             }
             if (allZero) {
@@ -653,8 +627,7 @@ private fun WhoPaidDonutCard(
         }
     }
 
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_who_paid))
+    ReportSection(stringResource(R.string.totals_who_paid), ReportPeriod.ALL_TIME) {
         Spacer(Modifier.height(12.dp))
         val donutChartLabel = stringResource(R.string.totals_chart_donut_a11y)
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -775,8 +748,7 @@ private fun MemberBarsCard(
 ) {
     val colors = Splitty.colors
     val maxSum = max(bars.maxOf { it.sumMinor }, 1L)
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(title)
+    ReportSection(title, ReportPeriod.ALL_TIME) {
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             bars.forEach { bar ->
@@ -836,8 +808,7 @@ private fun MemberBarsCard(
 private fun MemberBalanceCard(nets: List<MemberNetBar>, currency: String) {
     val colors = Splitty.colors
     val maxAbs = max(nets.maxOf { abs(it.netMinor) }, 1)
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_member_balance))
+    ReportSection(stringResource(R.string.totals_member_balance), ReportPeriod.ALL_TIME) {
         Spacer(Modifier.height(12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             nets.forEach { bar ->
@@ -930,8 +901,7 @@ private fun WeekdayCard(totals: List<Long>, currency: String) {
     val maxSum = max(totals.max(), 1L)
     val maxIndex = totals.indexOf(totals.max())
 
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_by_weekday))
+    ReportSection(stringResource(R.string.totals_by_weekday), ReportPeriod.LAST_30) {
         Spacer(Modifier.height(8.dp))
         val weekdayChartLabel = stringResource(R.string.totals_chart_weekday_a11y)
         Canvas(
@@ -1006,8 +976,7 @@ private fun WeekdayCard(totals: List<Long>, currency: String) {
 private fun TopOperationsCard(stats: Statistics) {
     val colors = Splitty.colors
     val top = stats.topOperations.take(5)
-    SurfaceCard(modifier = Modifier.fillMaxWidth(), padding = 16.dp) {
-        SectionHeader(stringResource(R.string.totals_top_operations))
+    ReportSection(stringResource(R.string.totals_top_operations), ReportPeriod.ALL_TIME) {
         Spacer(Modifier.height(4.dp))
         top.forEachIndexed { index, operation ->
             Row(
@@ -1028,7 +997,9 @@ private fun TopOperationsCard(stats: Statistics) {
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         color = colors.ink,
-                        maxLines = 1,
+                        // Переносится, а не режется: на крупном шрифте от
+                        // «Отель на…» оставалось одно слово.
+                        maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
@@ -1036,7 +1007,7 @@ private fun TopOperationsCard(stats: Statistics) {
                             GroupsDateFmt.dayMonth(operation.createdAt),
                         fontSize = 12.sp,
                         color = colors.inkSecondary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
@@ -1049,7 +1020,7 @@ private fun TopOperationsCard(stats: Statistics) {
                 )
             }
             if (index < top.lastIndex) {
-                HairlineDivider()
+                ReceiptDivider()
             }
         }
     }

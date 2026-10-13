@@ -719,4 +719,6 @@
     <string name="group_balance_across">グループ全体で</string>
     <string name="group_debts_cancel_short">貸し借りは相殺</string>
     <string name="group_settle_up">精算する</string>
+    <string name="totals_period_30_days">過去30日間</string>
+    <string name="totals_period_all_time">全期間</string>
 </resources>

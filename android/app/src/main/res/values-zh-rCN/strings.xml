@@ -719,4 +719,6 @@
     <string name="group_balance_across">按整个群组</string>
     <string name="group_debts_cancel_short">债务相互抵消</string>
     <string name="group_settle_up">结清</string>
+    <string name="totals_period_30_days">最近 30 天</string>
+    <string name="totals_period_all_time">全部时间</string>
 </resources>

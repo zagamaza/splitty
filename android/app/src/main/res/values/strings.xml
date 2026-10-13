@@ -802,4 +802,6 @@
     <string name="group_balance_across">Across the group</string>
     <string name="group_debts_cancel_short">Debts cancel out</string>
     <string name="group_settle_up">Settle up</string>
+    <string name="totals_period_30_days">Last 30 days</string>
+    <string name="totals_period_all_time">All time</string>
 </resources>
