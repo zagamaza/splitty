@@ -38,11 +38,20 @@ enum GroupsAddAction: CaseIterable {
 /// +500 в одной группе и −500 в другой дают ноль при двух открытых долгах,
 /// а группы со старыми данными в итог не входят вовсе.
 enum ZeroBalanceSummary: Equatable {
-    case cancelOut, unavailable, settled
+    /// Открытые долги есть, но в сумме гасятся.
+    case cancelOut
+    /// Ни в одной группе долги не считаются.
+    case unavailable
+    /// Где считаются — ноль, но часть групп не считается: «всё погашено»
+    /// было бы утверждением о деньгах, которых никто не видел.
+    case partial
+    case settled
 
     static func of(_ rooms: [RoomSummary]) -> ZeroBalanceSummary {
         if rooms.contains(where: { !$0.debtsUnavailable && $0.exactMyBalanceMinor != 0 }) { return .cancelOut }
-        if !rooms.isEmpty && rooms.allSatisfy(\.debtsUnavailable) { return .unavailable }
+        if rooms.contains(where: \.debtsUnavailable) {
+            return rooms.allSatisfy(\.debtsUnavailable) ? .unavailable : .partial
+        }
         return .settled
     }
 }
@@ -221,7 +230,8 @@ struct GroupsListView: View {
                 BalanceSummaryLines(totals: model.totals)
             }
             // Группы со старыми данными в итог не входят — и это сказано.
-            if hasUnavailableRooms && hasCountableRooms {
+            if hasUnavailableRooms && hasCountableRooms
+                && !(model.totals.isEmpty && ZeroBalanceSummary.of(model.rooms) == .partial) {
                 Text("Не во всех группах долги считаются")
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(Color.inkSecondary)
@@ -244,6 +254,7 @@ struct GroupsListView: View {
         switch ZeroBalanceSummary.of(model.rooms) {
         case .cancelOut: return String(localized: "Долги есть, но в сумме взаимно гасятся")
         case .unavailable: return Glossary.debtsUnavailableHero
+        case .partial: return String(localized: "Не во всех группах долги считаются")
         case .settled: return Glossary.settledHero
         }
     }

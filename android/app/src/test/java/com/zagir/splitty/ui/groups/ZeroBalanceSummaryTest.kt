@@ -25,9 +25,15 @@ class ZeroBalanceSummaryTest {
         assertEquals(ZeroBalanceSummary.UNAVAILABLE, zeroBalanceSummary(listOf(room("a", 0, unavailable = true))))
     }
 
+    /** Часть групп не считается — «всё погашено» сказать нельзя. */
+    @Test
+    fun `mixed with unavailable is partial`() {
+        assertEquals(ZeroBalanceSummary.PARTIAL, zeroBalanceSummary(listOf(room("a", 0), room("b", 0, unavailable = true))))
+    }
+
     @Test
     fun `truly settled`() {
-        assertEquals(ZeroBalanceSummary.SETTLED, zeroBalanceSummary(listOf(room("a", 0), room("b", 0, unavailable = true))))
+        assertEquals(ZeroBalanceSummary.SETTLED, zeroBalanceSummary(listOf(room("a", 0), room("b", 0))))
         assertEquals(ZeroBalanceSummary.SETTLED, zeroBalanceSummary(emptyList()))
     }
 }

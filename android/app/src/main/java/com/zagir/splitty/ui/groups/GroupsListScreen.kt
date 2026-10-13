@@ -289,11 +289,12 @@ private fun RoomsList(
  * одной группе и −500 в другой дают ноль при двух открытых долгах, а группы со
  * старыми данными в итог не входят вовсе (паритет iOS `ZeroBalanceSummary`).
  */
-internal enum class ZeroBalanceSummary { CANCEL_OUT, UNAVAILABLE, SETTLED }
+internal enum class ZeroBalanceSummary { CANCEL_OUT, UNAVAILABLE, PARTIAL, SETTLED }
 
 internal fun zeroBalanceSummary(rooms: List<RoomSummary>): ZeroBalanceSummary = when {
     rooms.any { !it.debtsUnavailable && it.exactMyBalanceMinor != 0L } -> ZeroBalanceSummary.CANCEL_OUT
-    rooms.isNotEmpty() && rooms.all { it.debtsUnavailable } -> ZeroBalanceSummary.UNAVAILABLE
+    rooms.any { it.debtsUnavailable } ->
+        if (rooms.all { it.debtsUnavailable }) ZeroBalanceSummary.UNAVAILABLE else ZeroBalanceSummary.PARTIAL
     else -> ZeroBalanceSummary.SETTLED
 }
 
@@ -321,6 +322,7 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
         when (zeroBalanceSummary(rooms)) {
             ZeroBalanceSummary.CANCEL_OUT -> R.string.groups_summary_cancel_out
             ZeroBalanceSummary.UNAVAILABLE -> R.string.group_debts_unavailable_title
+            ZeroBalanceSummary.PARTIAL -> R.string.groups_summary_partial
             ZeroBalanceSummary.SETTLED -> R.string.groups_all_settled
         }
     )
@@ -338,7 +340,7 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
             BalanceSummaryLines(totals)
         }
         // Группы со старыми данными в итог не входят — и это сказано.
-        if (hasUnavailable && hasCountable) {
+        if (hasUnavailable && hasCountable && !(totals.isEmpty() && zeroBalanceSummary(rooms) == ZeroBalanceSummary.PARTIAL)) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.groups_summary_partial),

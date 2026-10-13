@@ -155,9 +155,11 @@ struct FriendsListView: View {
     }
 
     /// Нулевой итог — не всегда «всё погашено»: долг одному другу и долг
-    /// другого друга вам в одной валюте дают ноль при двух открытых долгах.
+    /// другого друга вам — или встречные долги одному другу в разных группах —
+    /// дают ноль при открытых долгах. Смотрим на балансы по группам, а не на
+    /// уже свёрнутый итог.
     private var zeroCaption: String {
-        if model.friends.contains(where: { !$0.totals.isEmpty }) {
+        if model.friends.contains(where: { $0.rooms.contains { $0.exactMinor != 0 } }) {
             return String(localized: "Долги есть, но в сумме взаимно гасятся")
         }
         return Glossary.settledHero

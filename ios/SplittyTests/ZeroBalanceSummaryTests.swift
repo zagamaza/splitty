@@ -21,8 +21,13 @@ final class ZeroBalanceSummaryTests: XCTestCase {
         XCTAssertEqual(ZeroBalanceSummary.of([room("a", balance: 0, unavailable: true)]), .unavailable)
     }
 
+    /// Часть групп не считается — «всё погашено» сказать нельзя.
+    func testMixedWithUnavailableIsPartial() {
+        XCTAssertEqual(ZeroBalanceSummary.of([room("a", balance: 0), room("b", balance: 0, unavailable: true)]), .partial)
+    }
+
     func testTrulySettled() {
-        XCTAssertEqual(ZeroBalanceSummary.of([room("a", balance: 0), room("b", balance: 0, unavailable: true)]), .settled)
+        XCTAssertEqual(ZeroBalanceSummary.of([room("a", balance: 0), room("b", balance: 0)]), .settled)
         XCTAssertEqual(ZeroBalanceSummary.of([]), .settled)
     }
 }

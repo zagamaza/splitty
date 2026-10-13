@@ -155,7 +155,7 @@ private fun FriendsList(
                     )
                 }
             } else {
-                item { TotalHeader(totals, freshness, hasOpenDebts = friends.any { it.totals.isNotEmpty() }) }
+                item { TotalHeader(totals, freshness, hasOpenDebts = friends.any { f -> f.rooms.any { it.exactMinor != 0L } }) }
                 // Люди — строки одного листа, а не стопка карточек.
                 item(key = "paper-start") { ReceiptPaperStart() }
                 itemsIndexed(friends, key = { _, it -> it.user.id }) { index, friend ->
@@ -177,7 +177,8 @@ private fun FriendsList(
 @Composable
 private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness, hasOpenDebts: Boolean) {
     // Реквизит на столе, без карточки: каждая валюта своей строкой. Нулевой
-    // итог при открытых долгах друзьям — не «всё погашено» (паритет iOS).
+    // итог при открытых долгах — в том числе встречных одному другу в разных
+    // группах — не «всё погашено» (паритет iOS).
     Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
         ReceiptLabel(stringResource(R.string.friends_total_balance))
         Spacer(Modifier.height(6.dp))
