@@ -201,23 +201,26 @@ private fun ItemRow(
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = item.name.ifEmpty { stringResource(R.string.receipt_item_fallback) },
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.ink,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            if (item.qty > 1) {
-                Spacer(Modifier.width(8.dp))
+            // Название с количеством — свой ряд на всю свободную ширину: два веса
+            // в одном ряду делили остаток пополам, и цена отъезжала от края.
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "×${item.qty}",
-                    fontSize = 12.5.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = colors.inkSecondary,
+                    text = item.name.ifEmpty { stringResource(R.string.receipt_item_fallback) },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.ink,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
+                if (item.qty > 1) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "×${item.qty}",
+                        fontSize = 12.5.sp,
+                        fontFamily = FontFamily.Monospace,
+                        color = colors.inkSecondary,
+                    )
+                }
             }
-            Spacer(Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             if (item.exactMinor < 1) {
                 // Цена не определена (модель услышала блюдо, но не цену): метка ведёт
