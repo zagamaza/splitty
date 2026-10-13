@@ -527,6 +527,49 @@ struct AmountEntryRow<Field: View>: View {
     }
 }
 
+// MARK: - Образец разбора
+
+/// Сказанная фраза и чек, в который она превращается: пустая форма расхода
+/// показывает его как образец, Plus — как то, за что платят. Только
+/// содержимое: фон и рамку задаёт место, где образец стоит.
+struct VoiceExampleReceipt: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "mic.fill")
+                    .scaledFont(size: 13)
+                    .foregroundStyle(Color.ink)
+                Text("«Ужин 3200, делим на четверых»")
+                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
+                    .foregroundStyle(Color.ink)
+            }
+            ReceiptDivider()
+            HStack {
+                Text("Ужин")
+                    .scaledFont(size: 16, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                Spacer()
+                Text("3 200 ₽")
+                    .scaledFont(size: 16, weight: .semibold)
+                    .foregroundStyle(Color.ink)
+                    .monospacedDigit()
+            }
+            HStack {
+                Text("Поровну на четверых")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
+                Spacer()
+                Text("по 800 ₽")
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                    .foregroundStyle(Color.ink)
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Сказанная фраза превращается в готовый расход, разделённый на четверых"))
+    }
+}
+
 // MARK: - Штамп
 
 /// Синий штамп истинного состояния («ВЫ В РАСЧЁТЕ», «ЧЕРНОВИК»). Рамка и

@@ -983,8 +983,8 @@ struct AddExpenseView: View {
     /// черновика. Недоступен офлайн (AI требует сети) и во время распознавания.
     // MARK: AI-композер
 
-    /// Композер на пустой форме: подсказка «микрофон внизу» + «Сфотографировать
-    /// чек». Сам микрофон — в нижней панели, в зоне большого пальца
+    /// Композер на пустой форме: подсказка «микрофон внизу», образец разбора на
+    /// бумаге и «Сфотографировать чек». Сам микрофон — в нижней панели, в зоне большого пальца
     /// (`composerMicBar`). Кнопки требуют сети — офлайн заблокированы.
     private var composerCard: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -1000,12 +1000,15 @@ struct AddExpenseView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            HStack(spacing: 12) {
-                ReceiptDivider()
-                Text("или").receiptLabel()
-                ReceiptDivider()
+            // Образец на бумаге — что сказать и что из этого получится: пустая
+            // середина экрана объясняет весь сценарий «сказал → готовый чек».
+            VStack(alignment: .leading, spacing: 12) {
+                // Реквизит «Например»: без него образец читался как уже
+                // начатый черновик «Ужин 3 200 ₽».
+                Text("Например").receiptLabel()
+                VoiceExampleReceipt()
             }
-            .padding(.vertical, 2)
+            .receiptPaper(padding: 18)
 
             Button {
                 // Кнопка живая и при aiDisabled: тап объясняет причину

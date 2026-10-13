@@ -713,4 +713,5 @@
     <string name="receipt_shortfall">全額まで残り</string>
     <string name="groups_summary_cancel_out">借りはありますが、合計では相殺されます</string>
     <string name="groups_summary_partial">一部のグループでは借りを計算できません</string>
+    <string name="expense_composer_example">例</string>
 </resources>

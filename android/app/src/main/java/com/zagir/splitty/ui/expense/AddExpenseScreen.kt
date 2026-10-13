@@ -3,6 +3,8 @@ package com.zagir.splitty.ui.expense
 import androidx.compose.ui.semantics.heading
 import androidx.compose.material.icons.outlined.PhotoCamera
 import com.zagir.splitty.ui.components.AmountEntryRow
+import com.zagir.splitty.ui.components.ReceiptPaper
+import com.zagir.splitty.ui.components.VoiceExampleReceipt
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.ReceiptDivider
 import com.zagir.splitty.ui.components.ReceiptLabel
@@ -1925,14 +1927,13 @@ private fun ComposerCard(
             lineHeight = 20.sp,
         )
         Spacer(Modifier.height(14.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            ReceiptDivider(Modifier.weight(1f))
-            ReceiptLabel(stringResource(R.string.expense_composer_or))
-            ReceiptDivider(Modifier.weight(1f))
+        // Образец на бумаге — что сказать и что из этого получится; реквизит
+        // «Например», иначе он читался как уже начатый черновик.
+        ReceiptPaper {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ReceiptLabel(stringResource(R.string.expense_composer_example))
+                VoiceExampleReceipt()
+            }
         }
         Spacer(Modifier.height(14.dp))
         Row(

@@ -796,4 +796,5 @@
     <string name="receipt_shortfall">Left to the full transfer</string>
     <string name="groups_summary_cancel_out">You have debts, but they cancel out overall</string>
     <string name="groups_summary_partial">Debts can\'t be counted in some groups</string>
+    <string name="expense_composer_example">For example</string>
 </resources>

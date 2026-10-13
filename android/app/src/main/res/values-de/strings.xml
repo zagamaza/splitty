@@ -776,4 +776,5 @@
     <string name="receipt_shortfall">Bis zum vollen Betrag</string>
     <string name="groups_summary_cancel_out">Es gibt Schulden, aber sie gleichen sich aus</string>
     <string name="groups_summary_partial">Nicht in allen Gruppen werden Schulden berechnet</string>
+    <string name="expense_composer_example">Zum Beispiel</string>
 </resources>

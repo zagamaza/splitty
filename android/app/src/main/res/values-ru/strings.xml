@@ -813,4 +813,5 @@
     <string name="receipt_shortfall">До полной суммы перевода</string>
     <string name="groups_summary_cancel_out">Долги есть, но в сумме взаимно гасятся</string>
     <string name="groups_summary_partial">Не во всех группах долги считаются</string>
+    <string name="expense_composer_example">Например</string>
 </resources>

@@ -132,47 +132,13 @@ struct PaywallView: View {
     /// Момент, ради которого платят: сказанная фраза становится готовым расходом.
     /// Компактнее прежнего — заголовок выше уже всё назвал словами.
     private var heroCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "mic.fill")
-                    .scaledFont(size: 13)
-                    .foregroundStyle(Color.ink)
-                Text("«Ужин 3200, делим на четверых»")
-                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
-                    .foregroundStyle(Color.ink)
+        VoiceExampleReceipt()
+            .padding(14)
+            .background(Color.receiptPaper, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .strokeBorder(Color.hairline, lineWidth: 1)
             }
-
-            Divider().overlay(Color.hairline)
-
-            HStack {
-                Text("Ужин")
-                    .scaledFont(size: 16, weight: .semibold)
-                    .foregroundStyle(Color.ink)
-                Spacer()
-                Text("3 200 ₽")
-                    .scaledFont(size: 16, weight: .semibold)
-                    .foregroundStyle(Color.ink)
-                    .monospacedDigit()
-            }
-            HStack {
-                Text("Поровну на четверых")
-                    .scaledFont(size: 13, relativeTo: .footnote)
-                    .foregroundStyle(Color.inkSecondary)
-                Spacer()
-                Text("по 800 ₽")
-                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                    .foregroundStyle(Color.ink)
-                    .monospacedDigit()
-            }
-        }
-        .padding(14)
-        .background(Color.receiptPaper, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .strokeBorder(Color.hairline, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("Сказанная фраза превращается в готовый расход, разделённый на четверых"))
     }
 
     // MARK: - Что даёт Plus

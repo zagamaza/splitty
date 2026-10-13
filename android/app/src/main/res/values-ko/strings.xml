@@ -713,4 +713,5 @@
     <string name="receipt_shortfall">전액까지 남은 금액</string>
     <string name="groups_summary_cancel_out">빚이 있지만 합계로는 서로 상쇄됩니다</string>
     <string name="groups_summary_partial">일부 그룹에서는 빚을 계산할 수 없습니다</string>
+    <string name="expense_composer_example">예시</string>
 </resources>

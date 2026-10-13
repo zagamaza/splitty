@@ -713,4 +713,5 @@
     <string name="receipt_shortfall">距全额还差</string>
     <string name="groups_summary_cancel_out">有欠款，但总体相互抵消</string>
     <string name="groups_summary_partial">部分群组无法计算欠款</string>
+    <string name="expense_composer_example">例如</string>
 </resources>

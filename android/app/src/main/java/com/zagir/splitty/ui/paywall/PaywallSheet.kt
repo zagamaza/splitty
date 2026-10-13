@@ -51,6 +51,7 @@ import com.android.billingclient.api.ProductDetails
 import com.zagir.splitty.R
 import com.zagir.splitty.billing.BillingService
 import com.zagir.splitty.core.model.AiQuota
+import com.zagir.splitty.ui.components.VoiceExampleReceipt
 import com.zagir.splitty.ui.theme.Splitty
 import java.text.NumberFormat
 import java.time.Duration
@@ -299,63 +300,14 @@ private fun BenefitRow(icon: ImageVector, text: Int) {
 @Composable
 private fun HeroCard() {
     val colors = Splitty.colors
-    Column(
-        modifier = Modifier
+    VoiceExampleReceipt(
+        Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(3.dp))
             .background(colors.receiptPaper)
             .border(1.dp, colors.hairline, RoundedCornerShape(3.dp))
             .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Filled.Mic,
-                contentDescription = null,
-                tint = colors.ink,
-                modifier = Modifier.size(16.dp),
-            )
-            Text(
-                text = stringResource(R.string.plus_hero_phrase),
-                color = colors.ink,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        HorizontalDivider(color = colors.hairline)
-
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Text(
-                stringResource(R.string.plus_hero_expense),
-                color = colors.ink,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                stringResource(R.string.plus_hero_sum),
-                color = colors.ink,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Text(
-                stringResource(R.string.plus_hero_split),
-                color = colors.inkSecondary,
-                fontSize = 13.sp,
-            )
-            Text(
-                stringResource(R.string.plus_hero_each),
-                color = colors.ink,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-    }
+    )
 }
 
 @Composable

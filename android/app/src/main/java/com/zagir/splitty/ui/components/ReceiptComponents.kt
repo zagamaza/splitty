@@ -52,6 +52,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.Mic
+import com.zagir.splitty.R
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.res.stringResource
 import com.zagir.splitty.ui.theme.Splitty
 import java.util.Locale
 
@@ -421,6 +425,42 @@ fun AmountEntryRow(
                 Spacer(Modifier.width(8.dp))
                 field(fontSize, width)
             }
+        }
+    }
+}
+
+// MARK: Образец разбора
+
+/**
+ * Сказанная фраза и чек, в который она превращается (паритет iOS
+ * VoiceExampleReceipt): пустая форма расхода показывает его как образец, Plus —
+ * как то, за что платят. Только содержимое: фон и рамку задаёт место.
+ */
+@Composable
+fun VoiceExampleReceipt(modifier: Modifier = Modifier) {
+    val colors = Splitty.colors
+    Column(
+        modifier = modifier.semantics(mergeDescendants = true) {},
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Icon(
+                androidx.compose.material.icons.Icons.Filled.Mic,
+                contentDescription = null,
+                tint = colors.ink,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.plus_hero_phrase), color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        }
+        ReceiptDivider()
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.plus_hero_expense), color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.plus_hero_sum), color = colors.ink, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.plus_hero_split), color = colors.inkSecondary, fontSize = 13.sp)
+            Text(stringResource(R.string.plus_hero_each), color = colors.ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

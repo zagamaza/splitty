@@ -776,4 +776,5 @@
     <string name="receipt_shortfall">Falta para el total</string>
     <string name="groups_summary_cancel_out">Hay deudas, pero se compensan entre sí</string>
     <string name="groups_summary_partial">En algunos grupos no se calculan las deudas</string>
+    <string name="expense_composer_example">Por ejemplo</string>
 </resources>
