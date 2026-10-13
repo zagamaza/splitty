@@ -30,8 +30,7 @@ struct InviteFriendView: View {
         NavigationStack {
             content
                 .background(Color.bg)
-                .navigationTitle("Добавить в группу")
-                .navigationBarTitleDisplayMode(.inline)
+                .receiptSheetTitle("Добавить в группу")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Отмена") { dismiss() }

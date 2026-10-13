@@ -100,6 +100,26 @@ struct HeadedState<Content: View>: View {
 }
 
 extension View {
+    /// Заголовок листа с кнопками по обе стороны: системный обрезал длинный
+    /// («Добавить в груп…») — этот в том же стиле ужимается, а не режется.
+    func receiptSheetTitle(_ title: LocalizedStringKey) -> some View {
+        navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(title)
+                        .scaledFont(size: 13, weight: .medium, design: .monospaced, relativeTo: .footnote)
+                        .kerning(0.6)
+                        .foregroundStyle(Color.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .accessibilityAddTraits(.isHeader)
+                }
+            }
+    }
+}
+
+extension View {
     /// Корень вкладки: название остаётся системным для стека и VoiceOver, но
     /// рисуется `ScreenHeading` в контенте, а навбар — без надписи.
     func receiptRootTitle(_ title: LocalizedStringKey) -> some View {
