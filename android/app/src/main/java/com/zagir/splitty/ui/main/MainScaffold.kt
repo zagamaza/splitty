@@ -651,7 +651,13 @@ private fun ReceiptTabBar(
             val widths = labels.map { with(density) { maxOf(48.dp, measurer.measure(it, style).size.width.toDp()) } }
             val side = maxOf(widths[0] + widths[1], widths[2] + widths[3]) + MIN_GAP * 3
             val iconsOnly = side * 2 + 48.dp > maxWidth
-            CenteredTabsLayout(Modifier.fillMaxWidth()) {
+            // Запас сверху под надстрочный бейдж — по измеренной высоте «99+»
+            // и постоянный: есть счётчик или нет, строка одной высоты. Иначе на
+            // крупном шрифте бейдж заходил за черту строки.
+            val badgeHeight = with(density) { measurer.measure(BADGE_RESERVE, BadgeStyle).size.height.toDp() }.coerceAtLeast(14.dp)
+            val labelHeight = with(density) { measurer.measure(labels[0], style).size.height.toDp() }
+            val overhang = if (iconsOnly) badgeHeight - 3.dp - 12.dp else badgeHeight + 1.dp - (48.dp - labelHeight) / 2
+            CenteredTabsLayout(Modifier.fillMaxWidth().padding(top = overhang.coerceAtLeast(0.dp) + 2.dp)) {
                 tabs.forEachIndexed { index, tab ->
                     if (index == LeftTabs.size) ReceiptAddButton(onAdd)
                     ReceiptTab(
@@ -769,6 +775,9 @@ private fun ReceiptTab(
         }
     }
 }
+
+/** Самый широкий и высокий бейдж: под него запас сверху занят всегда. */
+private const val BADGE_RESERVE = "99+"
 
 @Composable
 private fun TabBadge(text: String, modifier: Modifier = Modifier) {
