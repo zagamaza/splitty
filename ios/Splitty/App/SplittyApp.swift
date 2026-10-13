@@ -45,9 +45,24 @@ struct SplittyApp: App {
         ReceiptChrome.configure()
     }
 
+    /// В отладке витрина чека подменяет приложение по переменной окружения
+    /// (съёмка вёрстки без сервера, см. `ReceiptShowcase`).
+    @ViewBuilder
+    private var rootView: some View {
+        #if DEBUG
+        if ReceiptShowcase.isRequested {
+            ReceiptShowcase()
+        } else {
+            RootView()
+        }
+        #else
+        RootView()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            rootView
                 .environment(session)
                 .environment(subscriptions)
                 // Системные кнопки и ссылки — чернилами: цвет в чеке только у

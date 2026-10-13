@@ -232,6 +232,26 @@ final class ReceiptShotsUITests: XCTestCase {
         }
     }
 
+    /// Витрина чека без сервера (`SPLITTY_RECEIPT_SHOWCASE`, только Debug):
+    /// дробная цена шире листа, длинное название, сбор — отдельным листом и
+    /// встроенным разделом.
+    func testReceiptShowcase() throws {
+        app.terminate()
+        app = makeApp()
+        app.launchEnvironment["SPLITTY_RECEIPT_SHOWCASE"] = "1"
+        if env["RECEIPT_SHOTS_XL"] == "1" {
+            app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityL"]
+        }
+        app.launch()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Хачапури'")).firstMatch
+            .waitForExistence(timeout: 10), "витрина не открылась")
+        shot("18-showcase-top")
+        app.swipeUp()
+        shot("18-showcase-mid")
+        for _ in 0..<4 { app.swipeUp() }
+        shot("18-showcase-bottom")
+    }
+
     /// Проход для других языков: вкладки и разделы — по позиции, а не по
     /// русским подписям. Вход по email — те же поля, у них нет перевода в тесте,
     /// поэтому язык меняется уже после входа (сессия переживает перезапуск).

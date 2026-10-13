@@ -1798,26 +1798,65 @@ struct AddExpenseView: View {
         .opacity(model.members.isEmpty ? 0.4 : 1)
     }
 
+    /// «Заплатили [вы] и разделено [поровну]» одной фразой; не помещается
+    /// (крупный шрифт, длинное имя) — двумя строками «Кто платил» / «Как
+    /// разделить», а если и так тесно — кнопка под своей подписью. Раньше
+    /// фраза ужималась до «За… вы и…». Кнопки и их действия те же.
     private var splitSentence: some View {
-        HStack(spacing: 6) {
-            Text(payerIsMe ? "Заплатили" : "Заплатил(а)")
-                .foregroundStyle(Color.ink)
-            segmentButton(payerLabel) {
-                isPayerPickerPresented = true
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 6) {
+                Text(payerIsMe ? "Заплатили" : "Заплатил(а)")
+                    .foregroundStyle(Color.ink)
+                payerButton
+                Text("и разделено")
+                    .foregroundStyle(Color.ink)
+                splitButton
             }
-            Text("и разделено")
-                .foregroundStyle(Color.ink)
-            segmentButton(model.splitType == .equally
-                ? String(localized: "поровну")
-                : String(localized: "по суммам")) {
-                isSplitPickerPresented = true
+            .fixedSize()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    splitRowLabel("Кто платил")
+                    payerButton
+                }
+                .fixedSize()
+                HStack(spacing: 8) {
+                    splitRowLabel("Как разделить")
+                    splitButton
+                }
+                .fixedSize()
             }
+            VStack(alignment: .leading, spacing: 6) {
+                splitRowLabel("Кто платил")
+                payerButton
+                splitRowLabel("Как разделить")
+                    .padding(.top, 4)
+                splitButton
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scaledFont(size: 15)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
         .disabled(model.members.isEmpty)
         .opacity(model.members.isEmpty ? 0.4 : 1)
+    }
+
+    private func splitRowLabel(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .foregroundStyle(Color.inkSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var payerButton: some View {
+        segmentButton(payerLabel) {
+            isPayerPickerPresented = true
+        }
+    }
+
+    private var splitButton: some View {
+        segmentButton(model.splitType == .equally
+            ? String(localized: "поровну")
+            : String(localized: "по суммам")) {
+            isSplitPickerPresented = true
+        }
     }
 
     // MARK: Режим «По суммам»: поля долей и остаток

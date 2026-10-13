@@ -23,6 +23,10 @@ final class HardcodedTextTests: XCTestCase {
         "Дача": "демо-данные #Preview в FriendDetailView",
         "Бали": "демо-данные #Preview в FriendDetailView",
         "Дизайн-система": "имя #Preview: видно в Xcode, не в приложении",
+        "Константин Константинопольский": "заготовка Debug-витрины ReceiptShowcase, в релизе её нет",
+        "Хачапури по-аджарски с двойным сыром, яйцом и сливочным маслом": "заготовка Debug-витрины ReceiptShowcase",
+        "Вино": "заготовка Debug-витрины ReceiptShowcase",
+        "Обслуживание": "заготовка Debug-витрины ReceiptShowcase",
         "Некорректная дата RFC3339: \u{1}": "debugDescription DecodingError — уходит в лог, не на экран",
     ]
 

@@ -116,7 +116,7 @@ struct ReceiptView: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     title
-                    itemPrice(item)
+                    itemPrice(item, fitWidth: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -155,8 +155,10 @@ struct ReceiptView: View {
 
     /// Цена позиции или метка «цена?» (модель услышала блюдо, но не цену):
     /// метка ведёт в шит позиции — там поле цены.
+    /// `fitWidth` — столбиком под названием: число шире листа не вылезает за
+    /// край и не теряет цифр, а ужимается в доступную ширину.
     @ViewBuilder
-    private func itemPrice(_ item: OperationItem) -> some View {
+    private func itemPrice(_ item: OperationItem, fitWidth: Bool = false) -> some View {
         if item.exactMinor < 1 {
             Text("цена?")
                 .scaledFont(size: 11.5, weight: .bold, relativeTo: .caption)
@@ -172,10 +174,20 @@ struct ReceiptView: View {
                 )
                 .modifier(SoftPulse(active: onEditItem != nil))
         } else {
-            Text(money(minor: item.exactMinor, currency: currency))
+            fitted(Text(money(minor: item.exactMinor, currency: currency))
                 .scaledFont(size: 15, weight: .semibold, design: .monospaced)
-                .foregroundStyle(Color.ink)
-                .fixedSize()
+                .foregroundStyle(Color.ink), fitWidth: fitWidth)
+        }
+    }
+
+    /// В строке — своя ширина целиком; столбиком — одна строка, ужатая до
+    /// ширины листа (цифры не переносятся и не обрезаются).
+    @ViewBuilder
+    private func fitted(_ amount: some View, fitWidth: Bool) -> some View {
+        if fitWidth {
+            amount.lineLimit(1).minimumScaleFactor(0.4)
+        } else {
+            amount.fixedSize()
         }
     }
 
@@ -284,17 +296,16 @@ struct ReceiptView: View {
         let price = Text(money(minor: item.exactMinor, currency: currency))
             .scaledFont(size: 15, weight: .semibold, design: .monospaced)
             .foregroundStyle(Color.ink)
-            .fixedSize()
         return VStack(alignment: .leading, spacing: 7) {
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     title.fixedSize()
                     Spacer(minLength: 8)
-                    price
+                    fitted(price, fitWidth: false)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     title
-                    price
+                    fitted(price, fitWidth: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -362,7 +373,7 @@ struct ReceiptView: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 label
-                value
+                fitted(value, fitWidth: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
