@@ -604,7 +604,12 @@ struct GroupDetailView: View {
                 .receiptLabel()
                 .padding(.top, 14)
             VStack(spacing: 0) {
-                ForEach(section.operations) { operation in
+                // Пунктир между позициями, как в чеке: без него строки месяца
+                // сливались в один сплошной столбец.
+                ForEach(Array(section.operations.enumerated()), id: \.element.id) { index, operation in
+                    if index > 0 {
+                        ReceiptDivider()
+                    }
                     NavigationLink {
                         OperationDetailView(
                             roomId: roomId,

@@ -19,6 +19,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.animation.Crossfade
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyListState
 import com.zagir.splitty.core.ui.resolve
@@ -631,14 +632,18 @@ private fun GroupDetailContent(
                             modifier = Modifier.onPaper(paper).padding(top = 14.dp, bottom = 2.dp),
                         )
                     }
-                    items(section.operations, key = { "op-${it.id}" }) { operation ->
-                        OperationRow(
-                            operation = operation,
-                            meId = meId,
-                            currency = room.currency,
-                            onClick = { onOpenOperation(operation.id) },
-                            modifier = Modifier.background(paper),
-                        )
+                    itemsIndexed(section.operations, key = { _, op -> "op-${op.id}" }) { index, operation ->
+                        Column(Modifier.background(paper)) {
+                            // Пунктир между позициями, как в чеке: без него строки
+                            // месяца сливались в один сплошной столбец.
+                            if (index > 0) ReceiptDivider(Modifier.padding(horizontal = 22.dp))
+                            OperationRow(
+                                operation = operation,
+                                meId = meId,
+                                currency = room.currency,
+                                onClick = { onOpenOperation(operation.id) },
+                            )
+                        }
                     }
                 }
                 if (displaySections.isEmpty() && isMineOnly) {
