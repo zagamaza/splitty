@@ -560,7 +560,7 @@
     <string name="welcome_bill_tray">群组账单</string>
     <string name="welcome_2_title">说出来即可 — 我们来记录</string>
     <string name="welcome_2_body">把支出说出来，它就会出现在群组里。也可以拍小票或手动输入。</string>
-    <string name="welcome_rec_hint">松手识别 · 上滑锁定</string>
+    <string name="welcome_rec_hint">松手结束录音 · 上滑锁定</string>
     <string name="welcome_rcpt_items">项目</string>
     <string name="welcome_rcpt_count">2 项</string>
     <string name="welcome_rcpt_total">合计</string>

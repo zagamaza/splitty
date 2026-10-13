@@ -560,7 +560,7 @@
     <string name="welcome_bill_tray">Conto del gruppo</string>
     <string name="welcome_2_title">Dillo e basta: ci pensiamo noi</string>
     <string name="welcome_2_body">Di’ la spesa ad alta voce e comparirà nel gruppo. Puoi fotografare lo scontrino o scriverla a mano.</string>
-    <string name="welcome_rec_hint">Rilascia per riconoscere · scorri in alto per bloccare</string>
+    <string name="welcome_rec_hint">Rilascia per terminare · scorri in alto per bloccare</string>
     <string name="welcome_rcpt_items">voci</string>
     <string name="welcome_rcpt_count">2 voci</string>
     <string name="welcome_rcpt_total">Totale</string>

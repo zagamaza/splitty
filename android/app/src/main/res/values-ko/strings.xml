@@ -560,7 +560,7 @@
     <string name="welcome_bill_tray">그룹 계산서</string>
     <string name="welcome_2_title">말씀만 하십시오. 저희가 기록합니다</string>
     <string name="welcome_2_body">지출을 소리 내어 말씀하시면 그룹에 나타납니다. 영수증을 찍거나 직접 입력하셔도 됩니다.</string>
-    <string name="welcome_rec_hint">손을 떼면 인식 · 위로 밀면 고정</string>
+    <string name="welcome_rec_hint">손을 떼면 녹음 종료 · 위로 밀면 고정</string>
     <string name="welcome_rcpt_items">항목</string>
     <string name="welcome_rcpt_count">2개 항목</string>
     <string name="welcome_rcpt_total">합계</string>

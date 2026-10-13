@@ -32,7 +32,7 @@ Android — эмулятор 411dp; -xl-narrow — 329dp, fontScale 2.0. -dark �
 ## Замечено, не тронуто
 - Без сети лента уведомлений: Android показывает кеш, iOS — «Не удалось загрузить» (кеша ленты на iOS нет). Поведение, не стиль.
 - Android: переключатели в настройках уведомлений — Material-свитч в цвете действия; iOS — системный чёрный.
-- AppRootJoinTest на Android флейкает под нагрузкой (Dispatchers.Main гонка), три изолированных прогона подряд зелёные.
+- Семейство AppRoot* на Android (AppRootJoinTest, AppRootIntroTest) флейкает в полном прогоне (гонка Dispatchers.Main), изолированно зелёное.
 
 ## Тесты на 688cc67
 go test ./... — зелёный (до этих правок, Go не менялся); iOS unit 467/467; Android testDebugUnitTest 664, 2 падения AppRootJoinTest (флейк, изолированно зелёный).

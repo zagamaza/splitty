@@ -399,7 +399,7 @@ private struct DictationArt: View {
                 Text("Говорите…")
                     .scaledFont(size: 20, weight: .bold)
                     .foregroundStyle(.white)
-                Text(String(localized: "Отпустите — распознать · вверх — закрепить"))
+                Text(String(localized: "Отпустите — закончить запись · вверх — закрепить"))
                     .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundStyle(.white.opacity(0.75))
                     .multilineTextAlignment(.center)

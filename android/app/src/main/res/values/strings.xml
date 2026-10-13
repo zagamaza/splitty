@@ -643,7 +643,7 @@
     <string name="welcome_bill_tray">Group bill</string>
     <string name="welcome_2_title">Say it — we write it down</string>
     <string name="welcome_2_body">Say the expense out loud and it appears in the group. You can snap a receipt or type it in.</string>
-    <string name="welcome_rec_hint">Release to recognise · swipe up to lock</string>
+    <string name="welcome_rec_hint">Release to finish recording · swipe up to lock</string>
     <string name="welcome_rcpt_items">items</string>
     <string name="welcome_rcpt_count">2 items</string>
     <string name="welcome_rcpt_total">Total</string>

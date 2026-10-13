@@ -25450,6 +25450,71 @@
         }
       }
     },
+    "Отпустите — закончить запись · вверх — закрепить": {
+      "extractionState": "manual",
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отпустите — закончить запись · вверх — закрепить"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Release to finish recording · swipe up to lock"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loslassen zum Beenden · nach oben zum Fixieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suelta para terminar · desliza arriba para fijar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relâchez pour terminer · glissez vers le haut pour fixer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rilascia per terminare · scorri in alto per bloccare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指を離すと録音終了・上へスワイプで固定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손을 떼면 녹음 종료 · 위로 밀면 고정"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solte para terminar · deslize para cima para travar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松手结束录音 · 上滑锁定"
+          }
+        }
+      }
+    },
     "Отпустите — отмена": {
       "extractionState": "manual",
       "localizations": {
@@ -25511,71 +25576,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rilascia per annullare"
-          }
-        }
-      }
-    },
-    "Отпустите — распознать · вверх — закрепить": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Loslassen zum Erkennen · nach oben zum Fixieren"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Release to recognize · swipe up to lock"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suelta para reconocer · desliza arriba para fijar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Relâchez pour reconnaître · glissez vers le haut pour fixer"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Отпустите — распознать · вверх — закрепить"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指を離すと認識・上へスワイプで固定"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "松手识别 · 上滑锁定"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손을 떼면 인식 · 위로 밀면 고정"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solte para reconhecer · deslize para cima para travar"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rilascia per riconoscere · scorri in alto per bloccare"
           }
         }
       }

@@ -627,7 +627,7 @@
     <string name="welcome_bill_tray">Note du groupe</string>
     <string name="welcome_2_title">Dites-le — on l\'écrit</string>
     <string name="welcome_2_body">Dites la dépense à voix haute et elle apparaît dans le groupe. Vous pouvez aussi photographier le reçu ou la saisir.</string>
-    <string name="welcome_rec_hint">Relâchez pour reconnaître · vers le haut pour verrouiller</string>
+    <string name="welcome_rec_hint">Relâchez pour terminer · vers le haut pour verrouiller</string>
     <string name="welcome_rcpt_items">positions</string>
     <string name="welcome_rcpt_count">2 pos.</string>
     <string name="welcome_rcpt_total">Total</string>

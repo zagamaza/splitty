@@ -627,7 +627,7 @@
     <string name="welcome_bill_tray">Cuenta del grupo</string>
     <string name="welcome_2_title">Dilo y lo anotamos</string>
     <string name="welcome_2_body">Di el gasto en voz alta y aparecerá en el grupo. También puedes fotografiar el recibo o escribirlo.</string>
-    <string name="welcome_rec_hint">Suelta para reconocer · arriba para fijar</string>
+    <string name="welcome_rec_hint">Suelta para terminar · arriba para fijar</string>
     <string name="welcome_rcpt_items">posiciones</string>
     <string name="welcome_rcpt_count">2 pos.</string>
     <string name="welcome_rcpt_total">Total</string>

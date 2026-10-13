@@ -627,7 +627,7 @@
     <string name="welcome_bill_tray">Gruppenrechnung</string>
     <string name="welcome_2_title">Sag es — wir schreiben es auf</string>
     <string name="welcome_2_body">Sprich die Ausgabe aus, und sie erscheint in der Gruppe. Oder Beleg fotografieren, oder eintippen.</string>
-    <string name="welcome_rec_hint">Loslassen zum Erkennen · nach oben zum Fixieren</string>
+    <string name="welcome_rec_hint">Loslassen zum Beenden · nach oben zum Fixieren</string>
     <string name="welcome_rcpt_items">Positionen</string>
     <string name="welcome_rcpt_count">2 Pos.</string>
     <string name="welcome_rcpt_total">Gesamt</string>

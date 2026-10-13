@@ -560,7 +560,7 @@
     <string name="welcome_bill_tray">グループの会計</string>
     <string name="welcome_2_title">話すだけで記録します</string>
     <string name="welcome_2_body">支出を声に出して伝えると、グループに追加されます。レシートを撮る、手で入力することもできます。</string>
-    <string name="welcome_rec_hint">指を離すと認識・上へスワイプで固定</string>
+    <string name="welcome_rec_hint">指を離すと録音終了・上へスワイプで固定</string>
     <string name="welcome_rcpt_items">品目</string>
     <string name="welcome_rcpt_count">2 品</string>
     <string name="welcome_rcpt_total">合計</string>

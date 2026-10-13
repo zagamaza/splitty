@@ -664,7 +664,7 @@
     <string name="welcome_bill_tray">Общий счёт группы</string>
     <string name="welcome_2_title">Скажите — запишем</string>
     <string name="welcome_2_body">Продиктуйте расход вслух, и он появится в группе. Можно снять чек или вписать руками.</string>
-    <string name="welcome_rec_hint">Отпустите — распознать · вверх — закрепить</string>
+    <string name="welcome_rec_hint">Отпустите — закончить запись · вверх — закрепить</string>
     <string name="welcome_rcpt_items">позиции</string>
     <string name="welcome_rcpt_count">2 поз.</string>
     <string name="welcome_rcpt_total">Итого</string>
