@@ -22,7 +22,7 @@ struct FriendsListView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
-                .navigationTitle("Друзья")
+                .receiptRootTitle("Друзья")
                 // .task на контенте (не на NavigationStack): срабатывает и при
                 // возврате (pop) с экрана друга/группы — балансы обновляются.
                 .task {
@@ -52,9 +52,9 @@ struct FriendsListView: View {
     private var content: some View {
         switch model.state {
         case .idle, .loading:
-            ProgressView()
+            HeadedState("Друзья") { ProgressView() }
         case .failed(let message):
-            failedView(message)
+            HeadedState("Друзья") { failedView(message) }
         case .loaded:
             friendsList
         }
@@ -79,6 +79,7 @@ struct FriendsListView: View {
     private var friendsList: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                ScreenHeading("Друзья")
                 if !model.friends.isEmpty {
                     totalHeader
                     // Люди — строки одного листа, а не стопка карточек.

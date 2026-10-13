@@ -48,6 +48,8 @@ struct AccountView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    ScreenHeading("Профиль")
+                        .padding(.horizontal, 4)
                     headerSection
                     // Профиль не загрузился: показываем это честно и даём
                     // повтор. Раньше экран навсегда оставался скелетоном, а
@@ -77,7 +79,7 @@ struct AccountView: View {
             .background(Color.bg)
             // Запас под центральную кнопку «+» — как на остальных вкладках.
             .contentMargins(.bottom, 40, for: .scrollContent)
-            .navigationTitle("Профиль")
+            .receiptRootTitle("Профиль")
         }
         .task {
             await session.refreshMe()

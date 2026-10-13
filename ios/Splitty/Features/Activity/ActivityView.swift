@@ -44,7 +44,7 @@ struct ActivityView: View {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.bg)
-                .navigationTitle("Уведомления")
+                .receiptRootTitle("Уведомления")
                 .trackScreen("activity")
                 // .task на контенте (не на NavigationStack): срабатывает и при
                 // возврате (pop) с экрана группы — лента обновляется.
@@ -107,9 +107,9 @@ struct ActivityView: View {
     private var content: some View {
         switch model.state {
         case .idle, .loading:
-            ProgressView()
+            HeadedState("Уведомления") { ProgressView() }
         case .failed(let message):
-            failedView(message)
+            HeadedState("Уведомления") { failedView(message) }
         case .loaded:
             feed
         }
@@ -134,6 +134,8 @@ struct ActivityView: View {
     /// (.task на строке — LazyVStack создаёт строки по мере прокрутки).
     private var feed: some View {
         ScrollView {
+            ScreenHeading("Уведомления")
+                .padding(.horizontal, 20)
             // Лента не имеет сводки, к которой крепится подпись, — поэтому
             // отдельной строкой сверху: старые события молча выглядят как
             // «ничего нового»

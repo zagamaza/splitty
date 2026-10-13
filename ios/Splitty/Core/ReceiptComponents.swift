@@ -55,6 +55,64 @@ enum ReceiptChrome {
     }
 }
 
+// MARK: - Заголовок вкладки
+
+/// Заголовок корня вкладки строкой контента. Системный large title на iOS 26
+/// пропадал: в тёмной теме, после возврата из стека — место под ним
+/// оставалось, а самого названия не было.
+struct ScreenHeading: View {
+    let title: LocalizedStringKey
+
+    init(_ title: LocalizedStringKey) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .scaledFont(size: 34, weight: .bold, relativeTo: .largeTitle)
+            .kerning(-1.2)
+            .foregroundStyle(Color.ink)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Состояние без прокрутки (загрузка, ошибка) под тем же заголовком.
+struct HeadedState<Content: View>: View {
+    let title: LocalizedStringKey
+    @ViewBuilder let content: Content
+
+    init(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ScreenHeading(title)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(Color.bg)
+    }
+}
+
+extension View {
+    /// Корень вкладки: название остаётся системным для стека и VoiceOver, но
+    /// рисуется `ScreenHeading` в контенте, а навбар — без надписи.
+    func receiptRootTitle(_ title: LocalizedStringKey) -> some View {
+        navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Color.clear.frame(width: 1, height: 1).accessibilityHidden(true)
+                }
+            }
+    }
+}
+
 // MARK: - Реквизит
 
 /// Можно ли печатать реквизит капсом с разрядкой. У японского, китайского и

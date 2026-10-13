@@ -94,7 +94,7 @@ struct GroupsListView: View {
                         ArchivedGroupsView(model: model)
                     }
                 }
-                .navigationTitle("Группы")
+                .receiptRootTitle("Группы")
                 .trackScreen("groups")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -147,14 +147,13 @@ struct GroupsListView: View {
     private var content: some View {
         switch model.state {
         case .idle, .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.bg)
+            HeadedState("Группы") { ProgressView() }
         case .failed(let message):
-            FailedStateView(message: message) {
-                await model.load(repo: session.repo)
+            HeadedState("Группы") {
+                FailedStateView(message: message) {
+                    await model.load(repo: session.repo)
+                }
             }
-            .background(Color.bg)
         case .loaded:
             list
         }
@@ -163,6 +162,7 @@ struct GroupsListView: View {
     private var list: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
+                ScreenHeading("Группы")
                 if model.rooms.isEmpty {
                     // В пустом состоянии «Архив» отвлекает от первого шага —
                     // создать группу или присоединиться. Но если архив не пуст,
