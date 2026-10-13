@@ -718,4 +718,5 @@
     <string name="groups_summary_cancel_out">Há dívidas, mas elas se compensam</string>
     <string name="groups_summary_partial">Em alguns grupos as dívidas não são calculadas</string>
     <string name="expense_composer_example">Por exemplo</string>
+    <string name="expense_check_title">Confira a despesa</string>
 </resources>

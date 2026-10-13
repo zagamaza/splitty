@@ -233,36 +233,38 @@ struct AddExpenseView: View {
 
     private var reviewOverlay: some View {
         ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .environment(\.colorScheme, .dark)
-                .ignoresSafeArea()
-            Color.black.opacity(0.35).ignoresSafeArea()
+            // Непрозрачный стол и лист бумаги вместо тёмного стекла: шаг
+            // «записано → распознать» в той же подаче, что весь сценарий.
+            Color.bg.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer(minLength: 40)
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: reviewIsPhoto ? "doc.text.viewfinder" : "waveform")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color.ink)
+                        Text(reviewIsPhoto ? "Чек снят" : "Записано")
+                            .scaledFont(size: 20, weight: .bold)
+                            .foregroundStyle(Color.ink)
+                    }
+                    Text(reviewIsPhoto ? "Фото чека" : "Голосовая запись · \(recordedSeconds) сек")
+                        .scaledFont(size: 15, weight: .medium)
+                        .monospacedDigit()
                         .foregroundStyle(Color.ink)
-                    Text(reviewIsPhoto ? "Чек снят" : "Записано")
-                        .scaledFont(size: 20, weight: .bold)
-                        .foregroundStyle(.white)
+                    ReceiptDivider()
+                        .padding(.vertical, 4)
+                    // Куда уходит запись — говорим до отправки, а не в политике,
+                    // которую никто не открывает
+                    Text(reviewIsPhoto
+                         ? "Снимок уйдёт на сервер Splitor и в стороннюю модель для распознавания"
+                         : "Запись уйдёт на сервер Splitor и в стороннюю модель для распознавания")
+                        .scaledFont(size: 12.5, relativeTo: .footnote)
+                        .foregroundStyle(Color.inkSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(reviewIsPhoto ? "Фото чека" : "Голосовая запись · \(recordedSeconds) сек")
-                    .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .padding(.top, 12)
-                // Куда уходит запись — говорим до отправки, а не в политике,
-                // которую никто не открывает
-                Text(reviewIsPhoto
-                     ? "Снимок уйдёт на сервер Splitor и в стороннюю модель для распознавания"
-                     : "Запись уйдёт на сервер Splitor и в стороннюю модель для распознавания")
-                    .scaledFont(size: 12.5, relativeTo: .footnote)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.65))
-                    .padding(.top, 8)
-                    .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .receiptPaper(padding: 20)
                 Spacer(minLength: 24)
 
                 // Иерархия: главное действие — «Распознать» (основной путь),
@@ -285,18 +287,22 @@ struct AddExpenseView: View {
                         VStack(spacing: 3) {
                             Label(
                                 reviewIsPhoto ? "Добавить голосом" : "Добавить фото чека",
-                                systemImage: reviewIsPhoto ? "mic.fill" : "camera.fill"
+                                systemImage: reviewIsPhoto ? "mic" : "camera"
                             )
                             .scaledFont(size: 15, weight: .semibold)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.ink)
                             Text(reviewIsPhoto
                                 ? "скажите, кто что взял — точнее"
                                 : "цены возьмём с чека — точнее")
                                 .scaledFont(size: 12, relativeTo: .footnote)
-                                .foregroundStyle(.white.opacity(0.65))
+                                .foregroundStyle(Color.inkSecondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .strokeBorder(Color.ruleStrong, lineWidth: 1)
+                        )
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -311,16 +317,12 @@ struct AddExpenseView: View {
                         }
                     } label: {
                         Text(reviewIsPhoto ? "Убрать фото" : "Отменить запись")
-                            .scaledFont(size: 14, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.6))
-                            .padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.textLink(size: 14))
                 }
-                .padding(.horizontal, 28)
                 .padding(.bottom, 40)
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
         }
         .transition(.opacity)
     }
@@ -624,10 +626,10 @@ struct AddExpenseView: View {
     }
 
     /// Заголовок плашки по источнику распознавания.
+    /// Черновик ещё не записан: заголовок говорит, что сделать, — проверить.
+    /// Источник (голос или фото) показывает значок плашки.
     private var recognizedTitle: String {
-        model.lastParseSource == .photo
-            ? String(localized: "Распознано с чека")
-            : String(localized: "Распознано голосом")
+        String(localized: "Проверьте расход")
     }
 
     /// Подсказка «не то?» — по тому же источнику: предлагать добавить фото
@@ -720,34 +722,41 @@ struct AddExpenseView: View {
         .buttonStyle(.plain)
     }
 
-    /// Полноэкранный оверлей распознавания: тёмный фон + спиннер. Через пару
+    /// Полноэкранный оверлей распознавания: лист «Распознаю…» на столе. Через пару
     /// секунд появляется «Отмена» — зависший запрос не должен запирать
     /// пользователя на экране (запись сохранена, повтор ничего не теряет).
     private var parsingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.55).ignoresSafeArea()
-            VStack(spacing: 18) {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
-                Text("Распознаю…")
-                    .scaledFont(size: 17, weight: .semibold)
-                    .foregroundStyle(.white)
+            // Тот же стол, что у формы; статус — на листе бумаги, без
+            // выдуманных процентов и этапов: ждём ответа, и это всё, что известно.
+            // Непрозрачно: сквозь полупрозрачный фон проступал образец «Ужин
+            // 3 200 ₽» и читался как результат человека.
+            Color.bg.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .tint(Color.ink)
+                    Text("Распознаю…")
+                        .scaledFont(size: 17, weight: .semibold)
+                        .foregroundStyle(Color.ink)
+                }
+                ReceiptDivider()
+                    .padding(.vertical, 2)
                 Text("Считываю расход и раскладываю по позициям")
                     .scaledFont(size: 13, relativeTo: .footnote)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+                    .foregroundStyle(Color.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 if showParsingCancel {
                     Button("Отмена") {
                         model.cancelParse()
                     }
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.top, 8)
+                    .buttonStyle(.textLink(size: 15))
                     .transition(.opacity)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .receiptPaper(padding: 20)
+            .padding(.horizontal, 20)
         }
         .transition(.opacity)
         .task {
@@ -2090,13 +2099,9 @@ struct RecordingOverlay: View {
                 // Фон проявляется ИЗ нажатия быстрым fade (не снапом и не
                 // медленно): резкое затемнение читалось как «сначала открылся
                 // экран, потом анимация», долгий fade — как задержка.
-                Group {
-                    Rectangle()
-                        .fill(.ultraThinMaterial)
-                        .environment(\.colorScheme, .dark)
-                        .ignoresSafeArea()
-                    Color.black.opacity(0.35).ignoresSafeArea()
-                }
+                // Непрозрачный стол, как у всей формы: тёмное стекло разрывало
+                // бумажную подачу сценария «сказал → чек».
+                Color.bg.ignoresSafeArea()
                 .opacity(isActive ? 1 : 0)
                 .animation(.easeOut(duration: 0.12), value: isActive)
 
@@ -2106,17 +2111,22 @@ struct RecordingOverlay: View {
                             .padding(.top, 70)
                     }
                     Spacer(minLength: 12)
-                    transcriptWindow
-                    Spacer(minLength: 16)
-                    // active гейтится по isActive: скрытый (постоянно
-                    // смонтированный) оверлей не должен крутить 30 fps.
-                    Waveform(active: isActive && !reduceMotion && !isCancelling, level: level)
-                        .frame(width: 240, height: 44)
-                        .opacity(isCancelling ? 0.25 : 1)
-                    if let startedAt {
-                        timerLabel(startedAt: startedAt)
-                            .padding(.top, 12)
+                    // Лист бумаги, на котором «пишется» расход: расшифровка,
+                    // живая волна и настоящее время записи.
+                    VStack(spacing: 0) {
+                        transcriptWindow
+                        Spacer(minLength: 16).frame(maxHeight: 16)
+                        // active гейтится по isActive: скрытый (постоянно
+                        // смонтированный) оверлей не должен крутить 30 fps.
+                        Waveform(active: isActive && !reduceMotion && !isCancelling, level: level)
+                            .frame(width: 240, height: 44)
+                            .opacity(isCancelling ? 0.25 : 1)
+                        if let startedAt {
+                            timerLabel(startedAt: startedAt)
+                                .padding(.top, 12)
+                        }
                     }
+                    .receiptPaper(padding: 18)
                     statusTexts
                         .padding(.top, 12)
                 }
@@ -2133,7 +2143,7 @@ struct RecordingOverlay: View {
                     } else {
                         Text("Нажмите, когда закончите")
                             .scaledFont(size: 12, weight: .medium, relativeTo: .footnote)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(Color.inkSecondary)
                             .position(x: center.x, y: center.y - micSize / 2 - 24)
                     }
                     cancelControl
@@ -2231,7 +2241,7 @@ struct RecordingOverlay: View {
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
-                        progress > 0.85 ? Color.negative : Color.white.opacity(0.9),
+                        progress > 0.85 ? Color.negative : Color.ink.opacity(0.8),
                         style: StrokeStyle(lineWidth: 3.5, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))
@@ -2244,17 +2254,17 @@ struct RecordingOverlay: View {
     private var lockZone: some View {
         VStack(spacing: 5) {
             ZStack {
-                Circle().fill(lockProgress > 0.99 ? Color.accent : Color.white.opacity(0.12))
-                Circle().strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5)
+                Circle().fill(lockProgress > 0.99 ? Color.accent : Color.surface)
+                Circle().strokeBorder(lockProgress > 0.99 ? Color.accent : Color.ruleStrong.opacity(0.4), lineWidth: 1.5)
                 Image(systemName: lockProgress > 0.5 ? "lock.fill" : "lock.open")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(lockProgress > 0.99 ? Color.onAccent : Color.ink)
             }
             .frame(width: 44, height: 44)
             .scaleEffect(1 + lockProgress * 0.3)
             Image(systemName: "chevron.up")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(Color.inkSecondary)
         }
         .animation(.spring(duration: 0.15), value: lockProgress)
     }
@@ -2264,14 +2274,14 @@ struct RecordingOverlay: View {
         HStack(spacing: 5) {
             Image(systemName: "chevron.left")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(Color.inkSecondary)
             ZStack {
-                Circle().fill(isCancelling ? Color.negative : Color.white.opacity(0.12))
+                Circle().fill(isCancelling ? Color.negative : Color.surface)
                 Circle().strokeBorder(
-                    isCancelling ? Color.negative : Color.white.opacity(0.3), lineWidth: 1.5)
+                    isCancelling ? Color.negative : Color.ruleStrong.opacity(0.4), lineWidth: 1.5)
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(isCancelling ? Color.onAccent : Color.ink)
             }
             .frame(width: 44, height: 44)
             .scaleEffect(1 + cancelProgress * 0.3)
@@ -2294,7 +2304,7 @@ struct RecordingOverlay: View {
                 Text(String(format: "%d:%02d", Int(elapsed) / 60, Int(elapsed) % 60))
                     .scaledFont(size: 18, weight: .bold)
                     .monospacedDigit()
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.ink)
                 if remaining <= 15 {
                     Text("· осталось \(remaining) с")
                         .scaledFont(size: 14, weight: .semibold)
@@ -2324,10 +2334,10 @@ struct RecordingOverlay: View {
         return VStack(spacing: 6) {
             Text(title)
                 .scaledFont(size: 20, weight: .bold)
-                .foregroundStyle(isCancelling ? Color.negative : .white)
+                .foregroundStyle(isCancelling ? Color.negativeText : Color.ink)
             Text(subtitle)
                 .scaledFont(size: 13, relativeTo: .footnote)
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(Color.inkSecondary)
                 .multilineTextAlignment(.center)
         }
         // Crossfade при смене состояния вместо мгновенной подмены текста.
@@ -2344,14 +2354,14 @@ struct RecordingOverlay: View {
                 .scaledFont(size: 11, weight: .bold, relativeTo: .footnote)
                 .tracking(1.2)
                 .textCase(.uppercase)
-                .foregroundStyle(.white.opacity(0.6)) // подложка записи всегда тёмная
+                .foregroundStyle(Color.inkSecondary)
             ForEach(hints, id: \.self) { hint in
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Circle().fill(Color.accent).frame(width: 5, height: 5)
                         .padding(.top, 5)
                     Text(hint)
                         .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.white.opacity(0.92))
+                        .foregroundStyle(Color.ink)
                         .multilineTextAlignment(.leading)
                 }
             }
@@ -2359,10 +2369,10 @@ struct RecordingOverlay: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
         .frame(maxWidth: 320, alignment: .leading)
-        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .background(Color.surface, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                .strokeBorder(Color.hairline, lineWidth: 1)
         )
         .transition(.opacity)
     }
@@ -2374,11 +2384,11 @@ struct RecordingOverlay: View {
             if transcript.isEmpty {
                 Text("Слушаю…")
                     .scaledFont(size: 19, weight: .semibold)
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(Color.inkSecondary)
             } else {
                 Text(transcript)
                     .scaledFont(size: 21, weight: .semibold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.ink)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -2419,7 +2429,7 @@ struct RecordingOverlay: View {
             if isPreparing, isActive, !reduceMotion {
                 Circle()
                     .trim(from: 0, to: 0.28)
-                    .stroke(Color.white.opacity(0.85),
+                    .stroke(Color.ink.opacity(0.6),
                             style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .frame(width: size + 16, height: size + 16)
                     .rotationEffect(.degrees(spin ? 360 : 0))
@@ -2477,7 +2487,7 @@ private struct Waveform: View {
                 ForEach(0..<bars, id: \.self) { i in
                     let h = barHeight(i: i, t: t)
                     Capsule()
-                        .fill(Color.white.opacity(0.9))
+                        .fill(Color.ink.opacity(0.8))
                         .frame(width: 4, height: h)
                 }
             }

@@ -42,6 +42,8 @@ import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.zagir.splitty.ui.components.ReceiptPaper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -213,7 +215,7 @@ fun RecordingOverlay(
                     height = with(density) { windowSizePx.height.toDp() },
                 )
                 .alpha(overlayAlpha)
-                .background(Splitty.colors.recordingScrim),
+                .background(Splitty.colors.bg),
         )
 
         RecordingContent(
@@ -269,7 +271,7 @@ fun RecordingOverlay(
                                 ).roundToInt(),
                         )
                     },
-                color = Color.White.copy(alpha = 0.7f),
+                color = Splitty.colors.inkSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
@@ -348,31 +350,37 @@ private fun RecordingContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {
-        if (transcript != null && !isCancelling) {
-            KaraokeWindow(
-                transcript = transcript,
-                reduceMotion = reduceMotion,
-                modifier = Modifier.padding(bottom = 20.dp),
-            )
-        }
         if (showHints) {
             HintsCard(hints = hints)
             Spacer(modifier = Modifier.height(24.dp))
         }
-        Waveform(
-            active = isActive && !isCancelling && !reduceMotion,
-            level = level,
-            timeSeconds = nowMs / 1_000.0,
-            modifier = Modifier
-                .size(width = 240.dp, height = 44.dp)
-                .alpha(if (isCancelling) 0.25f else 1f),
-        )
-        if (elapsedMs != null) {
-            TimerLabel(
-                elapsedMs = elapsedMs,
-                reduceMotion = reduceMotion,
-                modifier = Modifier.padding(top = 12.dp),
-            )
+        // Лист бумаги, на котором «пишется» расход: расшифровка, живая волна и
+        // настоящее время записи (паритет iOS).
+        ReceiptPaper(padding = 18.dp) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (transcript != null && !isCancelling) {
+                    KaraokeWindow(
+                        transcript = transcript,
+                        reduceMotion = reduceMotion,
+                        modifier = Modifier.padding(bottom = 20.dp),
+                    )
+                }
+                Waveform(
+                    active = isActive && !isCancelling && !reduceMotion,
+                    level = level,
+                    timeSeconds = nowMs / 1_000.0,
+                    modifier = Modifier
+                        .size(width = 240.dp, height = 44.dp)
+                        .alpha(if (isCancelling) 0.25f else 1f),
+                )
+                if (elapsedMs != null) {
+                    TimerLabel(
+                        elapsedMs = elapsedMs,
+                        reduceMotion = reduceMotion,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
+                }
+            }
         }
         StatusTexts(
             status = when {
@@ -404,22 +412,22 @@ private fun LockZone(
                 .scale(1f + progress * 0.3f)
                 .clip(CircleShape)
                 .background(
-                    if (progress > 0.99f) colors.accent else Color.White.copy(alpha = 0.12f),
+                    if (progress > 0.99f) colors.accent else Splitty.colors.surface,
                 )
-                .border(1.5.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                .border(1.5.dp, if (progress > 0.99f) colors.accent else colors.ruleStrong.copy(alpha = 0.4f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = if (progress > 0.5f) Icons.Filled.Lock else Icons.Outlined.LockOpen,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.9f),
+                tint = if (progress > 0.99f) colors.onAccent else colors.ink,
                 modifier = Modifier.size(18.dp),
             )
         }
         Icon(
             imageVector = Icons.Filled.KeyboardArrowUp,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.55f),
+            tint = Splitty.colors.inkSecondary,
             modifier = Modifier.size(18.dp),
         )
     }
@@ -456,7 +464,7 @@ private fun CancelControl(
         Icon(
             imageVector = Icons.Filled.KeyboardArrowLeft,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.55f),
+            tint = Splitty.colors.inkSecondary,
             modifier = Modifier.size(18.dp),
         )
         Box(
@@ -465,11 +473,11 @@ private fun CancelControl(
                 .scale(1f + progress * 0.3f)
                 .clip(CircleShape)
                 .background(
-                    if (isCancelling) colors.negative else Color.White.copy(alpha = 0.12f),
+                    if (isCancelling) colors.negative else Splitty.colors.surface,
                 )
                 .border(
                     width = 1.5.dp,
-                    color = if (isCancelling) colors.negative else Color.White.copy(alpha = 0.3f),
+                    color = if (isCancelling) colors.negative else Splitty.colors.ruleStrong.copy(alpha = 0.4f),
                     shape = CircleShape,
                 ),
             contentAlignment = Alignment.Center,
@@ -477,7 +485,7 @@ private fun CancelControl(
             Icon(
                 imageVector = Icons.Filled.Close,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.9f),
+                tint = if (isCancelling) colors.onAccent else colors.ink,
                 modifier = Modifier.size(18.dp),
             )
         }
@@ -550,7 +558,7 @@ private fun LimitAndPreparingRing(
     Canvas(modifier = Modifier.size(ringSize)) {
         if (hasStarted) {
             drawArc(
-                color = if (progress > 0.85f) colors.negative else Color.White.copy(alpha = 0.9f),
+                color = if (progress > 0.85f) colors.negative else colors.ink.copy(alpha = 0.8f),
                 startAngle = -90f,
                 sweepAngle = 360f * progress.coerceIn(0f, 1f),
                 useCenter = false,
@@ -559,7 +567,7 @@ private fun LimitAndPreparingRing(
         }
         if (isPreparing) {
             drawArc(
-                color = Color.White.copy(alpha = 0.85f),
+                color = colors.ink.copy(alpha = 0.6f),
                 startAngle = spinDegrees - 90f,
                 sweepAngle = 360f * 0.28f,
                 useCenter = false,
@@ -689,7 +697,7 @@ private fun TimerLabel(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = "${elapsedSeconds / 60}:${(elapsedSeconds % 60).toString().padStart(2, '0')}",
-            color = Color.White,
+            color = Splitty.colors.ink,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
             fontFamily = FontFamily.Monospace,
@@ -730,7 +738,7 @@ private fun StatusTexts(
                 color = if (target == RecordingStatus.Cancelling) {
                     Splitty.colors.negative
                 } else {
-                    Color.White
+                    Splitty.colors.ink
                 },
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
@@ -738,7 +746,7 @@ private fun StatusTexts(
             )
             Text(
                 text = stringResource(target.subtitleRes),
-                color = Color.White.copy(alpha = 0.75f),
+                color = Splitty.colors.inkSecondary,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
@@ -787,7 +795,7 @@ private fun KaraokeWindow(
             if (text.isEmpty()) {
                 Text(
                     text = stringResource(R.string.rec_karaoke_listening),
-                    color = Color.White.copy(alpha = 0.45f),
+                    color = Splitty.colors.inkSecondary,
                     fontSize = 19.sp,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
@@ -795,7 +803,7 @@ private fun KaraokeWindow(
             } else {
                 Text(
                     text = text,
-                    color = Color.White,
+                    color = Splitty.colors.ink,
                     fontSize = 21.sp,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 27.sp,
@@ -813,14 +821,14 @@ private fun HintsCard(hints: List<String>, modifier: Modifier = Modifier) {
         modifier = modifier
             .widthIn(max = 320.dp)
             .clip(RoundedCornerShape(3.dp))
-            .background(Color.White.copy(alpha = 0.1f))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(3.dp))
+            .background(Splitty.colors.surface)
+            .border(1.dp, Splitty.colors.hairline, RoundedCornerShape(3.dp))
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
         Text(
             text = stringResource(R.string.rec_hints_title).uppercase(),
-            color = Color.White.copy(alpha = 0.6f), // подложка записи всегда тёмная
+            color = Splitty.colors.inkSecondary, 
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.2.sp,
@@ -836,7 +844,7 @@ private fun HintsCard(hints: List<String>, modifier: Modifier = Modifier) {
                 )
                 Text(
                     text = hint,
-                    color = Color.White.copy(alpha = 0.92f),
+                    color = Splitty.colors.ink,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -852,6 +860,7 @@ private fun Waveform(
     timeSeconds: Double,
     modifier: Modifier = Modifier,
 ) {
+    val barColor = Splitty.colors.ink.copy(alpha = 0.8f)
     Canvas(modifier = modifier) {
         val bars = 26
         val barWidth = 4.dp.toPx()
@@ -872,7 +881,7 @@ private fun Waveform(
             }
             val x = startX + i * (barWidth + gap)
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.9f),
+                color = barColor,
                 topLeft = Offset(x, centerY - h / 2f),
                 size = Size(barWidth, h),
                 cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f),

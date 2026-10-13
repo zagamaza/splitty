@@ -185,6 +185,78 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         }
     }
 
+    /// Весь основной сценарий по шагам: пустой чек → запись → «Записано» →
+    /// «Распознаю…» → черновик. Запись — настоящая, с микрофона хоста (доступ
+    /// выдаётся `simctl privacy grant`); подставной разбор подменяет фразу
+    /// (AI_FAKE_PHRASE) и держит паузу (AI_FAKE_DELAY), чтобы «Распознаю…»
+    /// успел в кадр. Сама запись в покое не снимается — её снимает
+    /// `testRecordingDemo`.
+    func testAddFlowStates() throws {
+        app.launch()
+        openRoom()
+        let fab = try XCTUnwrap(rightmostHittableButton(app, labeled: "Добавить расход"), "не нашли добавление расхода")
+        fab.tap()
+        let mic = app.descendants(matching: .any)["Записать голосом"].firstMatch
+        XCTAssertTrue(mic.waitForExistence(timeout: 10), "микрофона в пустой форме нет")
+        shot("flow-1-start")
+        // Короче трёх секунд запись не успевала подняться и шаг «Записано»
+        // не наступал.
+        mic.press(forDuration: 3.5)
+        let recognize = app.buttons["Распознать"]
+        XCTAssertTrue(recognize.waitForExistence(timeout: 10), "после записи нет шага «Записано»")
+        shot("flow-3-recorded")
+        recognize.tap()
+        // Разовое согласие на отправку — только при первом распознавании; ждать
+        // его дольше нельзя: разбор успел бы закончиться до кадра «Распознаю…».
+        let consent = app.buttons["Понятно"]
+        if consent.waitForExistence(timeout: 0.5) { consent.tap() }
+        shot("flow-4-parsing")
+        XCTAssertTrue(app.buttons["Сохранить"].waitForExistence(timeout: 15), "черновик не пришёл")
+        sleep(1)
+        shot("flow-5-draft")
+    }
+
+    /// Отмена записи возвращает на пустую форму; закреплённая свайпом вверх
+    /// запись по «стоп» приводит к шагу «Записано». Проверка поведения, а не
+    /// вида — новый оверлей не должен был потерять жесты.
+    func testRecordingCancelAndLock() throws {
+        app.launch()
+        openRoom()
+        let fab = try XCTUnwrap(rightmostHittableButton(app, labeled: "Добавить расход"), "не нашли добавление расхода")
+        fab.tap()
+        let mic = app.descendants(matching: .any)["Записать голосом"].firstMatch
+        XCTAssertTrue(mic.waitForExistence(timeout: 10), "микрофона в пустой форме нет")
+
+        mic.press(forDuration: 3.5)
+        let cancel = app.buttons["Отменить запись"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10), "после записи нет шага «Записано»")
+        cancel.tap()
+        XCTAssertTrue(mic.waitForExistence(timeout: 5), "после отмены не вернулись к пустой форме")
+        XCTAssertFalse(app.buttons["Распознать"].exists, "отменённая запись осталась на экране")
+
+        let start = mic.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 1.0, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -160)))
+        XCTAssertTrue(app.staticTexts["Нажмите, когда закончите"].waitForExistence(timeout: 5),
+                      "свайп вверх не закрепил запись")
+        sleep(2)
+        shot("flow-locked")
+        let stop = app.buttons["Завершить запись и распознать"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5), "нет кнопки «стоп» закреплённой записи")
+        stop.tap()
+        XCTAssertTrue(app.buttons["Распознать"].waitForExistence(timeout: 10), "«стоп» не привёл к шагу «Записано»")
+    }
+
+    /// Оверлей записи с Debug-заготовкой транскрипта (`SPLITTY_DEMO_RECORDING`).
+    func testRecordingDemo() throws {
+        app.launchEnvironment["SPLITTY_DEMO_RECORDING"] = "1"
+        app.launch()
+        openRoom()
+        let fab = try XCTUnwrap(rightmostHittableButton(app, labeled: "Добавить расход"), "не нашли добавление расхода")
+        fab.tap()
+        sleep(3)
+        shot("flow-2-recording")
+    }
+
     /// Крупный заголовок уезжает под навбар — название остаётся в навбаре.
     func testCollapsedTitles() throws {
         app.launch()

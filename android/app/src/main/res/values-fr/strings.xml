@@ -777,4 +777,5 @@
     <string name="groups_summary_cancel_out">Il y a des dettes, mais elles s\'annulent</string>
     <string name="groups_summary_partial">Les dettes ne sont pas calculées dans tous les groupes</string>
     <string name="expense_composer_example">Par exemple</string>
+    <string name="expense_check_title">Vérifiez la dépense</string>
 </resources>

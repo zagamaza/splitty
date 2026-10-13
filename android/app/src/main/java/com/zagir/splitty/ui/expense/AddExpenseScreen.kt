@@ -1092,8 +1092,9 @@ private fun RecognizedBanner(source: ParseSource, onAddPhoto: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(
-                    if (fromPhoto) R.string.expense_recognized_title_photo
-                    else R.string.expense_recognized_title
+                    // Черновик ещё не записан: заголовок говорит, что сделать, —
+                    // проверить. Источник (голос или фото) показывает значок плашки.
+                    R.string.expense_check_title
                 ),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1831,7 +1832,8 @@ private fun ParseRetryBanner(message: String, onRetry: () -> Unit, onDismiss: ()
 }
 
 /**
- * Оверлей распознавания: затемнение + спиннер + подпись; кнопка «Отмена»
+ * Оверлей распознавания: лист «Распознаю…» на столе формы, без выдуманных
+ * процентов и этапов — ждём ответа, и это всё, что известно. Кнопка «Отмена»
  * появляется через 2.5с (иначе для быстрого ответа она лишь мигает). Порт iOS.
  */
 @Composable
@@ -1844,41 +1846,40 @@ private fun ParsingOverlay(onCancel: () -> Unit, modifier: Modifier = Modifier) 
     }
     Box(
         modifier = modifier
-            // Тёмный скрим, а не светлый фон темы: оверлей должен читаться как
-            // «приложение занято», одинаково в обеих темах (порт iOS black 0.55).
-            .background(colors.recordingScrim)
+            // Непрозрачно: сквозь полупрозрачный фон проступал образец «Ужин
+            // 3 200 ₽» и читался как результат человека.
+            .background(colors.bg)
             // Гасим тапы под оверлеем (форму нельзя трогать во время распознавания).
-            .clickable(enabled = false, onClick = {}),
+            .clickable(enabled = false, onClick = {})
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            CircularProgressIndicator(color = Color.White)
-            Text(
-                text = stringResource(R.string.expense_parsing),
-                fontSize = 17.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White,
-            )
+        ReceiptPaper(padding = 20.dp) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                CircularProgressIndicator(color = colors.ink, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                Text(
+                    text = stringResource(R.string.expense_parsing),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.ink,
+                )
+            }
+            ReceiptDivider(Modifier.padding(vertical = 12.dp))
             // Подзаголовок объясняет, почему ожидание длится секунды, а не мгновение.
             Text(
                 text = stringResource(R.string.expense_parsing_subtitle),
                 fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 40.dp),
+                color = colors.inkSecondary,
             )
             if (showCancel) {
-                TextButton(onClick = onCancel) {
-                    Text(
-                        text = stringResource(R.string.expense_parsing_cancel),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.9f),
-                    )
-                }
+                TextLinkButton(
+                    text = stringResource(R.string.expense_parsing_cancel),
+                    onClick = onCancel,
+                    fontSize = 15.sp,
+                )
             }
         }
     }
@@ -2096,6 +2097,10 @@ private fun ComposerMicBar(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.inkSecondary,
+                // Во время записи подсказку «удерживайте» говорит оверлей своими
+                // словами («отпустите — распознать»); на светлом столе она
+                // проступала под ним и спорила с ним.
+                modifier = Modifier.alpha(if (voice.isMicPressed || voice.isLocked) 0f else 1f),
             )
         }
     }
@@ -2200,9 +2205,11 @@ private fun RecordedReviewOverlay(
     val seconds = remember(audioPath) {
         audioPath?.let { recordedSeconds(java.io.File(it).length()) } ?: 0
     }
+    // Непрозрачный стол и лист бумаги вместо тёмной подложки: шаг «записано →
+    // распознать» в той же подаче, что весь сценарий (паритет iOS).
     Box(
         modifier = modifier
-            .background(colors.recordingScrim)
+            .background(colors.bg)
             // Гасим касания по форме под оверлеем.
             .clickable(enabled = false, onClick = {}),
         contentAlignment = Alignment.Center,
@@ -2210,51 +2217,52 @@ private fun RecordedReviewOverlay(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = colors.ink,
-                    modifier = Modifier.size(20.dp),
+            ReceiptPaper(padding = 20.dp) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = if (isPhoto) Icons.Outlined.PhotoCamera else Icons.Filled.GraphicEq,
+                        contentDescription = null,
+                        tint = colors.ink,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text = stringResource(
+                            if (isPhoto) R.string.rec_review_title_photo else R.string.rec_review_title
+                        ),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.ink,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = if (isPhoto) {
+                        stringResource(R.string.rec_review_subtitle_photo)
+                    } else {
+                        stringResource(R.string.rec_review_subtitle, seconds)
+                    },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.ink,
+                    style = TextStyle(fontFeatureSettings = "tnum"),
                 )
+                ReceiptDivider(Modifier.padding(vertical = 12.dp))
+                // Куда уходит запись — говорим до отправки, а не в политике,
+                // которую никто не открывает
                 Text(
                     text = stringResource(
-                        if (isPhoto) R.string.rec_review_title_photo else R.string.rec_review_title
+                        if (isPhoto) R.string.rec_review_privacy_photo else R.string.rec_review_privacy_voice
                     ),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    fontSize = 12.5.sp,
+                    color = colors.inkSecondary,
                 )
             }
-            Spacer(Modifier.height(12.dp))
-            Text(
-                text = if (isPhoto) {
-                    stringResource(R.string.rec_review_subtitle_photo)
-                } else {
-                    stringResource(R.string.rec_review_subtitle, seconds)
-                },
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.75f),
-            )
-            Spacer(Modifier.height(8.dp))
-            // Куда уходит запись — говорим до отправки, а не в политике,
-            // которую никто не открывает
-            Text(
-                text = stringResource(
-                    if (isPhoto) R.string.rec_review_privacy_photo else R.string.rec_review_privacy_voice
-                ),
-                fontSize = 12.5.sp,
-                textAlign = TextAlign.Center,
-                color = Color.White.copy(alpha = 0.65f),
-                modifier = Modifier.padding(horizontal = 32.dp),
-            )
             Spacer(Modifier.height(28.dp))
             // Иерархия: главное — «Распознать», второй источник вторичен,
             // отмена третья.
@@ -2268,6 +2276,7 @@ private fun RecordedReviewOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(3.dp))
+                    .border(1.dp, colors.ruleStrong, RoundedCornerShape(3.dp))
                     .clickable(onClick = if (isPhoto) onAddVoice else onAddPhoto)
                     .padding(vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2278,9 +2287,9 @@ private fun RecordedReviewOverlay(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        imageVector = if (isPhoto) Icons.Filled.Mic else Icons.Filled.PhotoCamera,
+                        imageVector = if (isPhoto) Icons.Filled.Mic else Icons.Outlined.PhotoCamera,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = colors.ink,
                         modifier = Modifier.size(17.dp),
                     )
                     Text(
@@ -2289,7 +2298,7 @@ private fun RecordedReviewOverlay(
                         ),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = colors.ink,
                     )
                 }
                 Text(
@@ -2301,20 +2310,15 @@ private fun RecordedReviewOverlay(
                         }
                     ),
                     fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.65f),
+                    color = colors.inkSecondary,
                 )
             }
-            Text(
+            TextLinkButton(
                 text = stringResource(
                     if (isPhoto) R.string.rec_review_cancel_photo else R.string.rec_review_cancel
                 ),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(3.dp))
-                    .clickable(onClick = onCancel)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                onClick = onCancel,
                 fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.6f),
             )
         }
     }

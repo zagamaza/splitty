@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 // Подставной разбор обязан быть предсказуемым: на нём держатся сквозные
@@ -61,5 +62,14 @@ func TestFakeParserUsesFallbackWithoutText(t *testing.T) {
 	res, _ := FakeParser{Fallback: "Ужин: чай 300"}.Parse(context.Background(), ParseInput{})
 	if res.Draft.Sum != 300 || res.Draft.Description != "Ужин" {
 		t.Fatalf("без текста — запасная фраза: %+v", res)
+	}
+}
+
+func TestFakeParserDelayRespectsCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := FakeParser{Delay: time.Hour}.Parse(ctx, ParseInput{Text: "чай 100"})
+	if err == nil {
+		t.Fatal("отменённый запрос не должен ждать задержку")
 	}
 }

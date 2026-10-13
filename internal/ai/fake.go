@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // FakeParser — предсказуемый разбор для сквозных UI-прогонов.
@@ -22,11 +23,21 @@ import (
 type FakeParser struct {
 	// Fallback — фраза на случай запроса без текста (голос или фото).
 	Fallback string
+	// Delay — задержка ответа: состояние «Распознаю…» живёт доли секунды, и
+	// без паузы его не снять ни кадром, ни глазами.
+	Delay time.Duration
 }
 
 var firstNumber = regexp.MustCompile(`\d+`)
 
-func (f FakeParser) Parse(_ context.Context, in ParseInput) (ParseResult, error) {
+func (f FakeParser) Parse(ctx context.Context, in ParseInput) (ParseResult, error) {
+	if f.Delay > 0 {
+		select {
+		case <-time.After(f.Delay):
+		case <-ctx.Done():
+			return ParseResult{}, ctx.Err()
+		}
+	}
 	text := strings.TrimSpace(in.Text)
 	if text == "" {
 		text = strings.TrimSpace(f.Fallback)

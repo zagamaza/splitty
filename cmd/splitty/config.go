@@ -132,9 +132,11 @@ type config struct {
 	// AiFakePhrase — что подставной разбор «слышит», когда текста в запросе
 	// нет: Android шлёт только запись голоса, и без этой фразы до черновика
 	// на эмуляторе не дойти.
-	AiFakePhrase      string `env:"AI_FAKE_PHRASE"`
-	AiParseRatePerMin int    `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
-	AiMaxBodyBytes    int64  `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
+	AiFakePhrase string `env:"AI_FAKE_PHRASE"`
+	// AiFakeDelay — пауза подставного разбора, чтобы «Распознаю…» попадал в кадр.
+	AiFakeDelay       time.Duration `env:"AI_FAKE_DELAY"`
+	AiParseRatePerMin int           `env:"AI_PARSE_RATE_PER_MIN" envDefault:"5"`
+	AiMaxBodyBytes    int64         `env:"AI_MAX_BODY_BYTES" envDefault:"15728640"` // 15 МБ
 
 	// Суточные лимиты распознавания по тарифам. -1 — безлимит.
 	//

@@ -718,4 +718,5 @@
     <string name="groups_summary_cancel_out">Ci sono debiti, ma si compensano</string>
     <string name="groups_summary_partial">Non in tutti i gruppi si calcolano i debiti</string>
     <string name="expense_composer_example">Ad esempio</string>
+    <string name="expense_check_title">Controlla la spesa</string>
 </resources>
