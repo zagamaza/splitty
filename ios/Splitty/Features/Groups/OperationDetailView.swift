@@ -1,9 +1,10 @@
 import SwiftUI
 import UIKit
 
-/// Карточка операции: hero-сумма, участники с аватарами и долями,
-/// файл-чек, «Изменить»/«Удалить» — доступны любому участнику комнаты
-/// (Splitwise-семантика, сервер разрешает участникам).
+/// Карточка операции — один документ-чек: дата и название, сумма и кто
+/// платил, доли, позиции чека и вложения разделами того же листа. Под листом
+/// «Изменить»/«Удалить» — доступны любому участнику комнаты (Splitwise-
+/// семантика, сервер разрешает участникам).
 struct OperationDetailView: View {
     private let roomId: String
     private let currentUserId: Int
@@ -48,14 +49,7 @@ struct OperationDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                headerCard
-                participantsSection
-                if !operation.itemList.isEmpty {
-                    itemsSection(operation.itemList)
-                }
-                if let files = operation.files, !files.isEmpty {
-                    filesSection(files)
-                }
+                document
                 // Редактировать/удалять может любой участник комнаты
                 // (Splitwise-семантика, сервер разрешает участникам).
                 actionsSection
@@ -108,33 +102,49 @@ struct OperationDetailView: View {
         )
     }
 
-    // MARK: Секции
+    // MARK: Документ
 
-    /// Hero-карточка: иконка, описание, крупная сумма, дата.
-    private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Color.ink.opacity(0.06))
-                    .frame(width: 48, height: 48)
-                    .overlay {
-                        Image(systemName: operation.isDebtRepayment ? "banknote" : "doc.plaintext")
-                            .scaledFont(size: 22, design: .default)
-                            .foregroundStyle(Color.inkSecondary)
-                    }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .scaledFont(size: 17, weight: .semibold)
-                        .foregroundStyle(Color.ink)
-                    Text("Добавлено \(Self.fullDate.string(from: operation.createdAt))")
-                        .font(.caption)
-                        .foregroundStyle(Color.inkSecondary)
-                }
+    /// Один лист: шапка, сумма и плательщик, доли, позиции, вложения —
+    /// разделы через пунктир, без отдельных карточек.
+    private var document: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            sectionBreak
+            amountBlock
+            sectionBreak
+            recipientsBlock
+            if !operation.itemList.isEmpty {
+                sectionBreak
+                itemsBlock(operation.itemList)
             }
-            MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 40, currency: currency)
+            if let files = operation.files, !files.isEmpty {
+                sectionBreak
+                filesBlock(files)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCard(padding: 20)
+        .receiptPaper(padding: 22)
+    }
+
+    private var sectionBreak: some View {
+        ReceiptDivider().padding(.vertical, 16)
+    }
+
+    /// Шапка документа: тип и дата реквизитом, название. Погашение — другой
+    /// документ, а не расход: это видно с первой строки.
+    private var header: some View {
+        let date = Self.fullDate.string(from: operation.createdAt)
+        return VStack(spacing: 8) {
+            Text(operation.isDebtRepayment ? "Погашение · \(date)" : "Расход · \(date)").receiptLabel()
+            Text(title)
+                .scaledFont(size: 24, weight: .heavy, relativeTo: .title2)
+                .kerning(-0.6)
+                .foregroundStyle(Color.ink)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private var title: String {
@@ -144,101 +154,105 @@ struct OperationDetailView: View {
         return operation.description.isEmpty ? String(localized: "Расход") : operation.description
     }
 
-    /// Две раздельные секции вместо сплошного списка: «Кто платил» (донор с
-    /// полной суммой) и «Кто участвует» (получатели с долями). Доли — ХРАНИМЫЕ
-    /// суммы операции (`recipients[].sum`): при «по суммам» именно они.
-    private var participantsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            payerSection
-            recipientsSection
+    /// Сумма крупно и строкой — кто платил. Роль словами в подписи, имя без
+    /// глагола: «заплатил(а)» не нужно гадать.
+    private var amountBlock: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Сумма").receiptLabel()
+                // Без fixedSize: на узком экране с крупным шрифтом сумма
+                // ужимается в ширину листа, а не вылезает за него.
+                MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral,
+                          size: 40, weight: .heavy, currency: currency)
+            }
+            .accessibilityElement(children: .combine)
+            documentRow(
+                Text(operation.isDebtRepayment ? "Кто отправил" : "Кто платил"),
+                value: Text(name(operation.donor))
+            )
         }
     }
 
-    private var payerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(operation.isDebtRepayment ? "Кто отправил" : "Кто платил")
-                .sectionHeaderStyle()
-                .padding(.leading, 4)
-            donorRow
-                .surfaceCard(padding: 0)
-        }
-    }
-
-    private var recipientsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Text(operation.isDebtRepayment ? "Кто получил" : "Кто участвует")
-                    .sectionHeaderStyle()
-                if !operation.isDebtRepayment {
-                    Text(operation.splitType == .byExactAmount ? "· по суммам" : "· поровну")
-                        .scaledFont(size: 12, relativeTo: .footnote)
-                        .foregroundStyle(Color.inkSecondary.opacity(0.7))
+    /// Доли — ХРАНИМЫЕ суммы операции (`recipients[].sum`): при «по суммам»
+    /// именно они, а не пересчёт поровну.
+    private var recipientsBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    recipientsLabel.fixedSize()
+                    splitLabel.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    recipientsLabel
+                    splitLabel
                 }
             }
-            .padding(.leading, 4)
-            VStack(spacing: 0) {
-                ForEach(operation.recipients) { recipient in
-                    if recipient.id != operation.recipients.first?.id {
-                        Rectangle()
-                            .fill(Color.hairline)
-                            .frame(height: 1)
-                            .padding(.leading, 64)
-                    }
-                    recipientRow(recipient)
-                }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            .padding(.bottom, 4)
+            ForEach(operation.recipients) { recipient in
+                recipientRow(recipient)
             }
-            .surfaceCard(padding: 0)
         }
     }
 
-    private var donorRow: some View {
-        HStack(spacing: 12) {
-            UserAvatarView(user: operation.donor, size: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(operation.donor.id == currentUserId ? String(localized: "Вы") : operation.donor.displayName)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.ink)
-                Text(operation.donor.id == currentUserId ? "заплатили за всех" : "заплатил(а) за всех")
-                    .font(.caption)
-                    .foregroundStyle(Color.inkSecondary)
-            }
-            Spacer(minLength: 8)
-            MoneyText(operation.sum, exactMinor: operation.exactMinor, role: .neutral, size: 15, currency: currency)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
+    /// Имя слева, доля справа; длинное имя на крупном шрифте не рвётся
+    /// посреди слова — тогда доля уходит под имя.
     private func recipientRow(_ recipient: OperationRecipient) -> some View {
-        HStack(spacing: 12) {
-            UserAvatarView(user: recipient.user, size: 36)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(recipient.user.id == currentUserId ? String(localized: "Вы") : recipient.user.displayName)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.ink)
-                Text(recipientCaption(recipient.user))
-                    .font(.caption)
+        let who = VStack(alignment: .leading, spacing: 2) {
+            Text(name(recipient.user))
+                .scaledFont(size: 16)
+                .foregroundStyle(Color.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if let caption = recipientCaption(recipient.user) {
+                Text(caption)
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundStyle(Color.inkSecondary)
             }
-            Spacer(minLength: 8)
-            MoneyText(recipient.sum, exactMinor: recipient.exactMinor, role: recipientRole(recipient.user), size: 15, currency: currency)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        let amount = MoneyText(recipient.sum, exactMinor: recipient.exactMinor, role: recipientRole(recipient.user),
+                               size: 16, weight: .semibold, currency: currency)
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                who.fixedSize()
+                Spacer(minLength: 8)
+                amount.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                who
+                amount
+            }
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 
-    /// Подпись позиции получателя (словоформы — как в боте).
-    private func recipientCaption(_ recipient: User) -> String {
-        if operation.isDebtRepayment {
-            return recipient.id == currentUserId ? String(localized: "получили") : String(localized: "получил(а)")
+    private var recipientsLabel: some View {
+        Text(operation.isDebtRepayment ? "Кто получил" : "Кто участвует").receiptLabel()
+    }
+
+    @ViewBuilder
+    private var splitLabel: some View {
+        if !operation.isDebtRepayment {
+            Text(operation.splitType == .byExactAmount ? "· по суммам" : "· поровну")
+                .scaledFont(size: 12, relativeTo: .footnote)
+                .foregroundStyle(Color.inkSecondary)
         }
+    }
+
+    private func name(_ user: User) -> String {
+        user.id == currentUserId ? String(localized: "Вы") : user.displayName
+    }
+
+    /// Подпись доли — роль словами, без «должен(на)»: «ваш долг», «долг»,
+    /// «доля» плательщика. У погашения подпись не нужна: раздел и так
+    /// называется «Кто получил».
+    private func recipientCaption(_ recipient: User) -> String? {
+        if operation.isDebtRepayment { return nil }
         if recipient.id == operation.donor.id {
             return recipient.id == currentUserId ? String(localized: "ваша доля") : String(localized: "доля")
         }
-        if recipient.id == currentUserId {
-            return String(localized: "вы должны")
-        }
-        return String(localized: "должен(на)")
+        return recipient.id == currentUserId ? String(localized: "ваш долг") : String(localized: "долг")
     }
 
     /// Цвет доли: негатив — только для СВОЕГО долга; остальное нейтрально.
@@ -251,76 +265,71 @@ struct OperationDetailView: View {
         return .neutral
     }
 
-    /// Позиции чека (itemized-операция, AI-распознавание) — только чтение:
-    /// название, количество, участники и цена; подвал Подытог→Сборы→Итого.
-    private func itemsSection(_ items: [OperationItem]) -> some View {
+    /// Строка документа: подпись слева, значение справа; на крупном шрифте —
+    /// значение под подписью.
+    private func documentRow(_ title: Text, value: Text) -> some View {
+        let label = title
+            .scaledFont(size: 15)
+            .foregroundStyle(Color.inkSecondary)
+        let content = value
+            .scaledFont(size: 16, weight: .semibold)
+            .foregroundStyle(Color.ink)
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                label.fixedSize()
+                Spacer(minLength: 8)
+                content.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                label.fixedSize(horizontal: false, vertical: true)
+                content.fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Позиции чека (itemized-операция, AI-распознавание) — только чтение,
+    /// разделом того же листа: своя шапка «Позиции · N поз.» и подвал Итого.
+    private func itemsBlock(_ items: [OperationItem]) -> some View {
         var members = operation.recipients.map(\.user)
         if !members.contains(where: { $0.id == operation.donor.id }) {
             members.append(operation.donor)
         }
-        return VStack(alignment: .leading, spacing: 10) {
-            Text("Позиции чека")
-                .sectionHeaderStyle()
-                .padding(.leading, 4)
-            ReceiptView(items: items, members: members, currency: currency)
-        }
+        return ReceiptView(items: items, members: members, currency: currency, embedded: true)
     }
 
-    private func filesSection(_ files: [OperationFile]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Вложения")
-                .sectionHeaderStyle()
-                .padding(.leading, 4)
-            VStack(spacing: 0) {
-                ForEach(files) { file in
-                    Button {
-                        previewFile = file
-                    } label: {
-                        HStack {
-                            Label(attachmentTypeName(file.type), systemImage: "paperclip")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.ink)
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.inkSecondary.opacity(0.6))
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    if file.id != files.last?.id {
-                        Rectangle()
-                            .fill(Color.hairline)
-                            .frame(height: 1)
-                            .padding(.leading, 16)
-                    }
-                }
-            }
-            .surfaceCard(padding: 0)
-        }
-    }
-
-    private var actionsSection: some View {
-        VStack(spacing: 0) {
-            if !operation.isDebtRepayment {
+    private func filesBlock(_ files: [OperationFile]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Вложения").receiptLabel()
+                .accessibilityAddTraits(.isHeader)
+            ForEach(files) { file in
                 Button {
-                    isEditPresented = true
+                    previewFile = file
                 } label: {
-                    Label("Изменить", systemImage: "pencil")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(Color.ink)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .contentShape(Rectangle())
+                    HStack {
+                        Label(attachmentTypeName(file.type), systemImage: "paperclip")
+                            .scaledFont(size: 16)
+                            .foregroundStyle(Color.ink)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.inkSecondary.opacity(0.6))
+                    }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Rectangle()
-                    .fill(Color.hairline)
-                    .frame(height: 1)
-                    .padding(.leading, 16)
+            }
+        }
+    }
+
+    /// Под листом: «Изменить» рамкой (у погашений его нет) и «Удалить»
+    /// красной ссылкой — разрушительное действие тише основного.
+    private var actionsSection: some View {
+        VStack(spacing: 4) {
+            if !operation.isDebtRepayment {
+                Button("Изменить") { isEditPresented = true }
+                    .buttonStyle(.receiptOutline)
             }
             Button(role: .destructive) {
                 isDeleteConfirmPresented = true
@@ -332,20 +341,18 @@ struct OperationDetailView: View {
                             Text("Удаление…")
                         }
                     } else {
-                        Label("Удалить", systemImage: "trash")
+                        Text("Удалить")
+                            .underline(true, color: Color.negativeText.opacity(0.6))
                     }
                 }
-                .font(.subheadline.weight(.medium))
+                .scaledFont(size: 15, weight: .medium)
                 .foregroundStyle(Color.negativeText)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity, minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .disabled(isDeleting)
         }
-        .surfaceCard(padding: 0)
     }
 
     // MARK: Действия

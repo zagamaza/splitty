@@ -264,19 +264,12 @@
     <string name="op_title_expense">Dépense</string>
     <string name="op_title_repayment">Paiement</string>
     <string name="op_repayment_title">Remboursement</string>
-    <string name="op_added_date">Ajouté le %1$s</string>
     <string name="op_details">Détails</string>
     <string name="op_split_equally">· à parts égales</string>
     <string name="op_split_exact">· par montants</string>
     <string name="op_you">Vous</string>
-    <string name="op_paid_you">avez payé</string>
-    <string name="op_paid">a payé</string>
     <string name="op_share_yours">votre part</string>
     <string name="op_share">part</string>
-    <string name="op_you_owe">vous devez</string>
-    <string name="op_owes">doit</string>
-    <string name="op_received_you">avez reçu</string>
-    <string name="op_received">a reçu</string>
     <string name="op_edit">Modifier</string>
     <string name="op_delete">Supprimer</string>
     <string name="op_deleting">Suppression…</string>
@@ -784,4 +777,9 @@
     <string name="group_settle_up">Régler</string>
     <string name="totals_period_30_days">30 derniers jours</string>
     <string name="totals_period_all_time">Depuis le début</string>
+    <string name="op_doc_expense">Dépense · %1$s</string>
+    <string name="op_doc_repayment">Remboursement · %1$s</string>
+    <string name="op_amount">Montant</string>
+    <string name="op_your_debt">vous devez</string>
+    <string name="op_debt">doit</string>
 </resources>

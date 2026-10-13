@@ -320,19 +320,12 @@
     <string name="op_title_expense">Расход</string>
     <string name="op_title_repayment">Погашение</string>
     <string name="op_repayment_title">Погашение долга</string>
-    <string name="op_added_date">Добавлено %1$s</string>
     <string name="op_details">Детали</string>
     <string name="op_split_equally">· поровну</string>
     <string name="op_split_exact">· по суммам</string>
     <string name="op_you">Вы</string>
-    <string name="op_paid_you">заплатили</string>
-    <string name="op_paid">заплатил(а)</string>
     <string name="op_share_yours">ваша доля</string>
     <string name="op_share">доля</string>
-    <string name="op_you_owe">вы должны</string>
-    <string name="op_owes">должен(на)</string>
-    <string name="op_received_you">получили</string>
-    <string name="op_received">получил(а)</string>
     <string name="op_edit">Изменить</string>
     <string name="op_delete">Удалить</string>
     <string name="op_deleting">Удаление…</string>
@@ -821,4 +814,9 @@
     <string name="group_settle_up">Рассчитаться</string>
     <string name="totals_period_30_days">Последние 30 дней</string>
     <string name="totals_period_all_time">За всё время</string>
+    <string name="op_doc_expense">Расход · %1$s</string>
+    <string name="op_doc_repayment">Погашение · %1$s</string>
+    <string name="op_amount">Сумма</string>
+    <string name="op_your_debt">ваш долг</string>
+    <string name="op_debt">долг</string>
 </resources>

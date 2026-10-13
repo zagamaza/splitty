@@ -258,19 +258,12 @@
     <string name="op_title_expense">支出</string>
     <string name="op_title_repayment">支払い</string>
     <string name="op_repayment_title">借りの返済</string>
-    <string name="op_added_date">%1$s に追加</string>
     <string name="op_details">詳細</string>
     <string name="op_split_equally">・均等</string>
     <string name="op_split_exact">・金額で指定</string>
     <string name="op_you">あなた</string>
-    <string name="op_paid_you">支払い</string>
-    <string name="op_paid">支払い</string>
     <string name="op_share_yours">あなたの負担分</string>
     <string name="op_share">負担分</string>
-    <string name="op_you_owe">あなたの借り</string>
-    <string name="op_owes">借り</string>
-    <string name="op_received_you">受け取りました</string>
-    <string name="op_received">受け取りました</string>
     <string name="op_edit">編集</string>
     <string name="op_delete">削除</string>
     <string name="op_deleting">削除しています…</string>
@@ -721,4 +714,9 @@
     <string name="group_settle_up">精算する</string>
     <string name="totals_period_30_days">過去30日間</string>
     <string name="totals_period_all_time">全期間</string>
+    <string name="op_doc_expense">支出 · %1$s</string>
+    <string name="op_doc_repayment">返済 · %1$s</string>
+    <string name="op_amount">金額</string>
+    <string name="op_your_debt">あなたの借り</string>
+    <string name="op_debt">借り</string>
 </resources>

@@ -19,6 +19,8 @@ struct ReceiptView: View {
     /// Индексы позиций, изменённых последней голосовой правкой — мягкая
     /// акцентная подсветка строки (гасится вью-моделью по таймеру).
     var highlightedIndices: Set<Int> = []
+    /// Раздел чужого листа (карточка операции): без своей бумаги и полей.
+    var embedded = false
 
     /// (индекс в исходном массиве, позиция) — колбэки работают по исходным индексам.
     private var indexed: [(index: Int, item: OperationItem)] {
@@ -35,7 +37,21 @@ struct ReceiptView: View {
     /// Есть позиции без цены — итог чека неполный (рисуем «Итого ≥»).
     private var hasPriceless: Bool { itemsOnly.contains { $0.item.exactMinor < 1 } }
 
+    @ViewBuilder
     var body: some View {
+        if embedded {
+            lines
+        } else {
+            lines
+                .padding(.horizontal, 18)
+                .padding(.top, 16)
+                .padding(.bottom, 10)
+                // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу.
+                .receiptPaper(padding: 0)
+        }
+    }
+
+    private var lines: some View {
         VStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
@@ -57,11 +73,6 @@ struct ReceiptView: View {
                 footerLine(hasPriceless ? "Итого ≥" : "Итого",
                            subtotal + surchargeTotal, emphasis: .total)
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 16)
-            .padding(.bottom, 10)
-            // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу.
-            .receiptPaper(padding: 0)
         }
     }
 

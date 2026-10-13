@@ -264,19 +264,12 @@
     <string name="op_title_expense">Gasto</string>
     <string name="op_title_repayment">Pago</string>
     <string name="op_repayment_title">Pago de deuda</string>
-    <string name="op_added_date">Añadido el %1$s</string>
     <string name="op_details">Detalles</string>
     <string name="op_split_equally">· a partes iguales</string>
     <string name="op_split_exact">· por importes</string>
     <string name="op_you">Tú</string>
-    <string name="op_paid_you">pagaste</string>
-    <string name="op_paid">pagó</string>
     <string name="op_share_yours">tu parte</string>
     <string name="op_share">parte</string>
-    <string name="op_you_owe">debes</string>
-    <string name="op_owes">debe</string>
-    <string name="op_received_you">recibiste</string>
-    <string name="op_received">recibió</string>
     <string name="op_edit">Editar</string>
     <string name="op_delete">Eliminar</string>
     <string name="op_deleting">Eliminando…</string>
@@ -784,4 +777,9 @@
     <string name="group_settle_up">Saldar cuentas</string>
     <string name="totals_period_30_days">Últimos 30 días</string>
     <string name="totals_period_all_time">Todo el tiempo</string>
+    <string name="op_doc_expense">Gasto · %1$s</string>
+    <string name="op_doc_repayment">Pago de deuda · %1$s</string>
+    <string name="op_amount">Importe</string>
+    <string name="op_your_debt">tu deuda</string>
+    <string name="op_debt">debe</string>
 </resources>

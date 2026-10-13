@@ -264,19 +264,12 @@
     <string name="op_title_expense">Ausgabe</string>
     <string name="op_title_repayment">Zahlung</string>
     <string name="op_repayment_title">Schuldenzahlung</string>
-    <string name="op_added_date">Hinzugefügt am %1$s</string>
     <string name="op_details">Details</string>
     <string name="op_split_equally">· gleichmäßig</string>
     <string name="op_split_exact">· nach Beträgen</string>
     <string name="op_you">Du</string>
-    <string name="op_paid_you">hast bezahlt</string>
-    <string name="op_paid">hat bezahlt</string>
     <string name="op_share_yours">dein Anteil</string>
     <string name="op_share">Anteil</string>
-    <string name="op_you_owe">du schuldest</string>
-    <string name="op_owes">schuldet</string>
-    <string name="op_received_you">hast erhalten</string>
-    <string name="op_received">hat erhalten</string>
     <string name="op_edit">Bearbeiten</string>
     <string name="op_delete">Löschen</string>
     <string name="op_deleting">Wird gelöscht…</string>
@@ -784,4 +777,9 @@
     <string name="group_settle_up">Ausgleichen</string>
     <string name="totals_period_30_days">Letzte 30 Tage</string>
     <string name="totals_period_all_time">Gesamter Zeitraum</string>
+    <string name="op_doc_expense">Ausgabe · %1$s</string>
+    <string name="op_doc_repayment">Rückzahlung · %1$s</string>
+    <string name="op_amount">Betrag</string>
+    <string name="op_your_debt">du schuldest</string>
+    <string name="op_debt">schuldet</string>
 </resources>

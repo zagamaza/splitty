@@ -258,19 +258,12 @@
     <string name="op_title_expense">支出</string>
     <string name="op_title_repayment">付款</string>
     <string name="op_repayment_title">还款</string>
-    <string name="op_added_date">%1$s 添加</string>
     <string name="op_details">详情</string>
     <string name="op_split_equally">· 平摊</string>
     <string name="op_split_exact">· 按金额</string>
     <string name="op_you">你</string>
-    <string name="op_paid_you">支付</string>
-    <string name="op_paid">支付</string>
     <string name="op_share_yours">你的份额</string>
     <string name="op_share">份额</string>
-    <string name="op_you_owe">你欠</string>
-    <string name="op_owes">欠</string>
-    <string name="op_received_you">已收到</string>
-    <string name="op_received">已收到</string>
     <string name="op_edit">编辑</string>
     <string name="op_delete">删除</string>
     <string name="op_deleting">正在删除…</string>
@@ -721,4 +714,9 @@
     <string name="group_settle_up">结清</string>
     <string name="totals_period_30_days">最近 30 天</string>
     <string name="totals_period_all_time">全部时间</string>
+    <string name="op_doc_expense">支出 · %1$s</string>
+    <string name="op_doc_repayment">还款 · %1$s</string>
+    <string name="op_amount">金额</string>
+    <string name="op_your_debt">你欠款</string>
+    <string name="op_debt">欠款</string>
 </resources>

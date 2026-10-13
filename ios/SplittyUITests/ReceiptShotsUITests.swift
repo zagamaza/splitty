@@ -203,6 +203,35 @@ final class ReceiptShotsUITests: XCTestCase {
         }
     }
 
+    /// Карточка операции одним листом: обычный расход, расход с позициями и
+    /// длинными именами, погашение. Данные «Выходных на даче» заводятся через
+    /// API; без тусы тест пропускается.
+    func testOperationDocuments() throws {
+        loginIfNeeded(app)
+        XCTAssertTrue(app.otherElements["tabBar"].waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        app.buttons["tab.groups"].tap()
+        let room = app.staticTexts["Выходные на даче"]
+        guard room.waitForExistence(timeout: 5) else { throw XCTSkip("нет тусы «Выходные на даче»") }
+        room.tap()
+        XCTAssertTrue(app.buttons["Итоги"].waitForExistence(timeout: 10), "экран группы не открылся")
+        let screen = app.windows.firstMatch.frame.height
+        for (prefix, tag) in [("Продукты на выходные", "plain"), ("Ужин в грузинском", "items"), ("Вы заплатили", "repayment")] {
+            let row = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
+            for _ in 0..<6 where !row.exists || !row.isHittable || row.frame.maxY > screen * 0.75 {
+                app.swipeUp()
+            }
+            guard row.exists else { continue }
+            row.tap()
+            sleep(2)
+            shot("17-op-\(tag)-top")
+            for _ in 0..<5 { app.swipeUp() }
+            shot("17-op-\(tag)-bottom")
+            app.navigationBars.buttons.firstMatch.tap()
+            sleep(1)
+            for _ in 0..<4 { app.swipeDown() }
+        }
+    }
+
     /// Проход для других языков: вкладки и разделы — по позиции, а не по
     /// русским подписям. Вход по email — те же поля, у них нет перевода в тесте,
     /// поэтому язык меняется уже после входа (сессия переживает перезапуск).

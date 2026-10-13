@@ -88,6 +88,8 @@ fun ReceiptCard(
     onResolveUnknown: ((Int, String) -> Unit)? = null,
     onToggleSurchargeRule: ((Int) -> Unit)? = null,
     highlightedIndices: Set<Int> = emptySet(),
+    /** Раздел чужого листа (карточка операции): без своей бумаги и полей. */
+    embedded: Boolean = false,
 ) {
     val colors = Splitty.colors
     // (исходный индекс, позиция) — колбэки работают по исходным индексам.
@@ -98,14 +100,8 @@ fun ReceiptCard(
     val surchargeTotal = surcharges.sumOf { it.second.exactMinor }
     val hasPriceless = itemsOnly.any { it.second.exactMinor < 1 }
 
-    // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу (паритет iOS).
-    ReceiptPaper(modifier = modifier, padding = 0.dp) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 18.dp)
-                .padding(top = 16.dp, bottom = 10.dp),
-        ) {
+    val lines: @Composable (Modifier) -> Unit = { linesModifier ->
+        Column(modifier = linesModifier.fillMaxWidth()) {
             Header(count = itemsOnly.size)
             RowDivider()
             itemsOnly.forEachIndexed { pos, (index, item) ->
@@ -136,6 +132,14 @@ fun ReceiptCard(
                 currency = currency,
                 total = true,
             )
+        }
+    }
+    if (embedded) {
+        lines(modifier)
+    } else {
+        // Тот же лист, что у тусы и расчёта: прямой верх, пила внизу (паритет iOS).
+        ReceiptPaper(modifier = modifier, padding = 0.dp) {
+            lines(Modifier.padding(horizontal = 18.dp).padding(top = 16.dp, bottom = 10.dp))
         }
     }
 }
