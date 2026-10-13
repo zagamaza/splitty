@@ -167,7 +167,11 @@ fun PaywallSheet(
                     )
                 } else {
                     Text(
-                        text = stringResource(R.string.plus_buy, selected?.priceText().orEmpty()),
+                        // Пока цены нет, «Оформить за» с пустым местом читалось
+                        // как обрыв; купить в этот момент всё равно нельзя.
+                        text = selected?.priceText()?.takeIf { it.isNotEmpty() }
+                            ?.let { stringResource(R.string.plus_buy, it) }
+                            ?: stringResource(R.string.plus_title),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -176,13 +180,15 @@ fun PaywallSheet(
 
             // Обязательное раскрытие: без явного «продлевается автоматически»
             // подписку заворачивают на ревью.
-            Text(
-                text = renewalNotice(selected),
-                color = colors.inkSecondary,
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            renewalNotice(selected)?.let { notice ->
+                Text(
+                    text = notice,
+                    color = colors.inkSecondary,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -499,8 +505,10 @@ private fun discountBadge(product: ProductDetails, all: List<ProductDetails>): S
 }
 
 @Composable
-private fun renewalNotice(product: ProductDetails?): String {
-    if (product == null) return stringResource(R.string.plus_renewal_notice, "", "")
+private fun renewalNotice(product: ProductDetails?): String? {
+    // Без цены условие читалось бы « за . Продлевается…»: оно нужно рядом с
+    // покупкой, а покупки без загруженного тарифа нет.
+    if (product == null || product.priceText().isEmpty()) return null
     val period = if (product.productId == BillingService.YEARLY_ID) {
         stringResource(R.string.plus_period_year)
     } else {
