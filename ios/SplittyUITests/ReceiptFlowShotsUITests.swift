@@ -246,8 +246,9 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Распознать"].waitForExistence(timeout: 10), "«стоп» не привёл к шагу «Записано»")
     }
 
-    /// «Распознаю…» с появившейся отменой, отмена распознавания, затем ошибка
-    /// сети → «Повторить» → черновик из той же записи. Бэкенд гасит и поднимает
+    /// «Распознаю…» с появившейся отменой → отмена возвращает ту же запись на
+    /// лист «Записано», поздний ответ отменённого запроса форму не трогает →
+    /// ошибка сети → «Повторить» → черновик. Всё одной записью, без второй. Бэкенд гасит и поднимает
     /// скрипт на хосте по файлам-флажкам в `FLOW_FLAGS_DIR` (симулятор видит
     /// /tmp хоста): ставим `*.want`, ждём `*.done`. Без каталога тест пропускается.
     func testParseCancelAndRetry() throws {
@@ -278,16 +279,18 @@ final class ReceiptFlowShotsUITests: XCTestCase {
         XCTAssertTrue(cancel.waitForExistence(timeout: 6), "на «Распознаю…» не появилась отмена")
         shot("flow-4-parsing")
         cancel.tap()
-        sleep(1)
-        shot("flow-6-after-cancel")
-        XCTAssertFalse(app.buttons["Сохранить"].exists && app.staticTexts["Проверьте расход"].exists,
-                       "отменённое распознавание всё равно дало черновик")
 
-        // Отмена возвращает к пустой форме — записываем заново, гасим бэкенд
-        // и отправляем: ошибка сети должна предложить «Повторить» той же записью.
-        XCTAssertTrue(mic.waitForExistence(timeout: 5), "после отмены не вернулись к пустой форме")
-        mic.press(forDuration: 3.5)
-        XCTAssertTrue(recognize.waitForExistence(timeout: 10), "после второй записи нет шага «Записано»")
+        // Отменили ожидание, а не запись: та же запись снова на листе «Записано».
+        XCTAssertTrue(recognize.waitForExistence(timeout: 5), "после отмены не вернулся лист «Записано»")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Голосовая запись'")).firstMatch.exists,
+                      "на листе нет прежней записи")
+        shot("flow-6-after-cancel")
+        // Поздний ответ отменённого запроса (AI_FAKE_DELAY) не должен изменить форму.
+        sleep(7)
+        XCTAssertFalse(app.staticTexts["Проверьте расход"].exists, "поздний ответ отменённого запроса дал черновик")
+        XCTAssertTrue(recognize.exists, "поздний ответ закрыл лист «Записано»")
+
+        // Ошибка сети на той же записи: гасим бэкенд и отправляем явно.
         signal("stop")
         recognize.tap()
         let retry = app.buttons["Повторить"].firstMatch

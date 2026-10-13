@@ -1432,11 +1432,21 @@ class AddExpenseViewModel @Inject constructor(
         // все 90 секунд таймаута (и оплачивался на стороне модели). Рвём корутину.
         parseJob?.cancel()
         parseJob = null
-        // Пути к медиа тоже сбрасываем: иначе отменённая диктовка/фото висели
-        // в savedStateHandle и молча уезжали со СЛЕДУЮЩИМ запросом — ровно та
-        // «дважды применённая правка», от которой защищается parseGeneration.
-        savedStateHandle.remove<String>(KEY_AUDIO_PATH)
-        savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
+        // Первый ввод в пустую форму: отменили ожидание, а не сам ввод. Те же
+        // голос и фото возвращаются на лист «Записано» — видимо, с явным
+        // «Распознать» и отдельным «Отменить запись»/«Убрать фото»; надиктовывать
+        // заново не нужно.
+        if (currentForm()?.isEmptyForm == true) {
+            savedStateHandle[KEY_PENDING_AUDIO] = savedStateHandle.get<String>(KEY_AUDIO_PATH)
+            savedStateHandle[KEY_PENDING_RECEIPT] = savedStateHandle.get<String>(KEY_RECEIPT_PATH)
+        } else {
+            // Правка черновика: пути сбрасываем, иначе отменённая диктовка/фото
+            // висели в savedStateHandle и молча уезжали со СЛЕДУЮЩИМ запросом —
+            // ровно та «дважды применённая правка», от которой защищается
+            // parseGeneration. Черновик при этом не меняется.
+            savedStateHandle.remove<String>(KEY_AUDIO_PATH)
+            savedStateHandle.remove<String>(KEY_RECEIPT_PATH)
+        }
         updateForm { it.copy(isParsing = false, parseRetryMessage = null) }
     }
 

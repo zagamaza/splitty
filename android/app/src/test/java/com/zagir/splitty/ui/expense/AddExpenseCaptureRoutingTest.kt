@@ -249,7 +249,53 @@ class AddExpenseCaptureRoutingTest {
         assertEquals(1, server.requestCount)
     }
 
+    /**
+     * Отмена ожидания на первом вводе не выбрасывает запись: тот же голос
+     * возвращается на лист «Записано», поздний ответ отменённого запроса форму
+     * не трогает, а явное «Распознать» с той же записью даёт черновик.
+     */
+    @Test
+    fun `cancelled first recognition returns the same voice to review`() = runBlocking {
+        val vm = loadedViewModel()
+        val voice = File(dir, "voice.wav").apply { writeBytes(ByteArray(32) { 1 }) }.absolutePath
+        vm.onVoiceRecorded(voice)
+        // Ответ на отменённый запрос придёт поздно — уже после отмены.
+        server.enqueue(MockResponse().setBody(PARSE_JSON).setBodyDelay(600, java.util.concurrent.TimeUnit.MILLISECONDS))
+        vm.parseVoice(voice)
+        assertTrue(form(vm).isParsing)
+
+        vm.cancelParse()
+
+        assertFalse(form(vm).isParsing)
+        assertEquals(voice, vm.pendingAudioPath.value, "отменённая запись не вернулась на лист «Записано»")
+        Thread.sleep(1_000)
+        assertTrue(form(vm).isEmptyForm, "поздний ответ отменённого запроса изменил форму")
+
+        server.enqueue(MockResponse().setBody(PARSE_JSON))
+        vm.parseVoice(voice)
+        withTimeout(IO_WAIT_MS) { vm.state.first { (it as? UiState.Content)?.value?.isParsing == false } }
+        assertEquals("Ужин", form(vm).description, "повтор той же записью не дал черновик")
+    }
+
+    /** Отмена правки готового черновика черновик не меняет и запись не держит. */
+    @Test
+    fun `cancelled correction keeps the draft and drops the media`() = runBlocking {
+        val vm = loadedViewModel()
+        vm.onDescriptionChange("Кофе")
+        val voice = File(dir, "voice.wav").apply { writeBytes(ByteArray(32) { 1 }) }.absolutePath
+        server.enqueue(MockResponse().setBody(PARSE_JSON).setBodyDelay(600, java.util.concurrent.TimeUnit.MILLISECONDS))
+        vm.onVoiceRecorded(voice)
+        assertTrue(form(vm).isParsing)
+
+        vm.cancelParse()
+        Thread.sleep(1_000)
+
+        assertEquals("Кофе", form(vm).description)
+        assertNull(vm.pendingAudioPath.value)
+    }
+
     private companion object {
+        val PARSE_JSON = """{"draft": {"description": "Ужин", "sum": 300}}"""
         val ROOMS_JSON = """
             [
               {"id": "cents", "name": "С копейками", "createdAt": "2026-07-05T12:00:00Z",

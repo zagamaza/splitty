@@ -755,6 +755,17 @@ struct AddExpenseView: View {
                 if showParsingCancel {
                     Button("Отмена") {
                         model.cancelParse()
+                        if model.isEmptyForm && (lastAudio != nil || capture.imageData != nil) {
+                            // Первый ввод: отменили ожидание, а не сам ввод. Та же
+                            // запись и фото возвращаются на лист «Записано» с явным
+                            // «Распознать» — надиктовывать заново не нужно.
+                            isReviewPresented = true
+                        } else {
+                            // Правка черновика: черновик не меняется, а отменённая
+                            // диктовка не должна молча уехать со следующим запросом.
+                            lastAudio = nil
+                            recorder.reset()
+                        }
                     }
                     .buttonStyle(.textLink(size: 15))
                     .transition(.opacity)
