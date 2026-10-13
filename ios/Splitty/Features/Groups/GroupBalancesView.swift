@@ -146,27 +146,27 @@ private struct DebtRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            // Инфо-часть строки — один элемент VoiceOver («Петя должен(на)
-            // Вася, 500 рублей»); кнопка «Погасить» остаётся отдельной.
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .scaledFont(size: 15, weight: .medium)
-                    .foregroundStyle(Color.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
-                    .scaledFont(size: 12, relativeTo: .caption)
-                    .foregroundStyle(Color.inkSecondary)
-                    .accessibilityHidden(true)
+        VStack(alignment: .trailing, spacing: 0) {
+            // Кто кому и сколько — один элемент VoiceOver («Петя должен(на)
+            // Вася, 500 рублей»); ссылка «Погасить» остаётся отдельной.
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .scaledFont(size: 15, weight: .medium)
+                        .foregroundStyle(Color.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(verbatim: "\(debt.debtor.displayName) → \(debt.lender.displayName)")
+                        .scaledFont(size: 12, relativeTo: .caption)
+                        .foregroundStyle(Color.inkSecondary)
+                        .accessibilityHidden(true)
+                }
+                Spacer(minLength: 8)
+                MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, weight: .bold, currency: currency)
             }
             .accessibilityElement(children: .combine)
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 0) {
-                MoneyText(debt.sum, exactMinor: debt.exactMinor, role: sumRole, size: 15, weight: .bold, currency: currency)
-                if involvesMe {
-                    Button("Погасить", action: onSettle)
-                        .buttonStyle(.textLink(size: 13))
-                }
+            if involvesMe {
+                Button("Погасить", action: onSettle)
+                    .buttonStyle(.textLink(size: 13))
             }
         }
         .padding(.vertical, 10)

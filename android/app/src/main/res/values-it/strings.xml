@@ -714,6 +714,7 @@
     <string name="receipt_items">Voci</string>
     <string name="receipt_has_attachments">Con allegati</string>
     <string name="receipt_draft_note">Bozza — non ancora nel gruppo</string>
-    <string name="receipt_left_on_debt">Resterà su questo debito</string>
-    <string name="receipt_debt_will_close">Il debito sarà saldato</string>
+    <string name="receipt_shortfall">Manca al totale</string>
+    <string name="groups_summary_cancel_out">Ci sono debiti, ma si compensano</string>
+    <string name="groups_summary_partial">Non in tutti i gruppi si calcolano i debiti</string>
 </resources>

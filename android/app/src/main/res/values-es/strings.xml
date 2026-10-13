@@ -773,6 +773,7 @@
     <string name="receipt_items">Partidas</string>
     <string name="receipt_has_attachments">Con adjuntos</string>
     <string name="receipt_draft_note">Borrador: aún no está en el grupo</string>
-    <string name="receipt_left_on_debt">Quedará de esta deuda</string>
-    <string name="receipt_debt_will_close">La deuda quedará saldada</string>
+    <string name="receipt_shortfall">Falta para el total</string>
+    <string name="groups_summary_cancel_out">Hay deudas, pero se compensan entre sí</string>
+    <string name="groups_summary_partial">En algunos grupos no se calculan las deudas</string>
 </resources>

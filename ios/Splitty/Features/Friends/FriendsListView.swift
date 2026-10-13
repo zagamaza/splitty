@@ -142,29 +142,27 @@ struct FriendsListView: View {
     private var totalHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Общий баланс").receiptLabel()
-            HStack(alignment: .firstTextBaseline) {
-                Text(totalCaption)
+            if model.totals.isEmpty {
+                Text(zeroCaption)
                     .scaledFont(size: 17, weight: .semibold)
                     .foregroundStyle(Color.ink)
-                Spacer(minLength: 8)
-                MoneyTotalsText(totals: model.totals, primarySize: 22, alignment: .trailing)
+            } else {
+                BalanceSummaryLines(totals: model.totals)
             }
             CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Подпись — по знаку основной валюты (цвет — в самих суммах).
-    private var totalCaption: String {
-        let primary = model.totals.first?.exactMinor ?? 0
-        if primary > 0 {
-            return String(localized: "Вам должны")
-        }
-        if primary < 0 {
-            return String(localized: "Вы должны")
+    /// Нулевой итог — не всегда «всё погашено»: долг одному другу и долг
+    /// другого друга вам в одной валюте дают ноль при двух открытых долгах.
+    private var zeroCaption: String {
+        if model.friends.contains(where: { !$0.totals.isEmpty }) {
+            return String(localized: "Долги есть, но в сумме взаимно гасятся")
         }
         return Glossary.settledHero
     }
+
 }
 
 /// Строка друга на листе: инициалы, имя, справа нетто-баланс.

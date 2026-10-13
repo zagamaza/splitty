@@ -63,11 +63,25 @@ final class ReceiptShotsUITests: XCTestCase {
         shot("08-settings")
         app.buttons["Операции"].tap()
 
+        // На крупном шрифте ссылка ниже края экрана: докручиваем до неё и
+        // снимаем, только убедившись, что открылся именно расчёт.
         let settle = app.buttons["settleUpLink"]
         if settle.waitForExistence(timeout: 5) {
+            // isHittable не видит нижнюю панель с кнопкой поверх ссылки —
+            // доводим ссылку малыми шагами до верхней половины экрана.
+            let screenHeight = app.windows.firstMatch.frame.height
+            let center = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            for _ in 0..<10 {
+                let frame = settle.exists ? settle.frame : .zero
+                if settle.exists && frame.minY > 120 && frame.maxY < screenHeight * 0.6 { break }
+                let up = settle.exists && frame.maxY >= screenHeight * 0.6
+                center.press(forDuration: 0.05, thenDragTo: center.withOffset(CGVector(dx: 0, dy: up ? -200 : 200)))
+            }
             settle.tap()
+            XCTAssertTrue(app.navigationBars["Записать платёж"].waitForExistence(timeout: 5), "расчёт не открылся")
             shot("05-settle")
             app.swipeDown(velocity: .fast)
+            for _ in 0..<4 { app.swipeDown() }
         }
 
         let add = app.buttons["Добавить расход"].firstMatch

@@ -293,7 +293,10 @@ struct GroupDetailView: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Всего потрачено").receiptLabel()
-                    totalSpentText(room)
+                    // Без fixedSize: в столбике сумма ограничена шириной листа
+                    // и ужимается, а не вылезает за него.
+                    MoneyText(room.totalSpent, exactMinor: room.exactTotalSpentMinor, role: .neutral,
+                              size: 32, weight: .heavy, currency: room.currency)
                 }
             }
             .accessibilityElement(children: .combine)
@@ -425,7 +428,8 @@ struct GroupDetailView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 wordsView
-                amount
+                MoneyText(room.myBalance, exactMinor: room.exactMyBalanceMinor, size: 22,
+                          weight: .heavy, currency: room.currency)
             }
         }
         .accessibilityElement(children: .combine)

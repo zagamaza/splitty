@@ -810,6 +810,7 @@
     <string name="receipt_items">Позиции</string>
     <string name="receipt_has_attachments">Есть вложения</string>
     <string name="receipt_draft_note">Черновик — в группу ещё не записан</string>
-    <string name="receipt_left_on_debt">Останется по этому долгу</string>
-    <string name="receipt_debt_will_close">Долг будет закрыт</string>
+    <string name="receipt_shortfall">До полной суммы перевода</string>
+    <string name="groups_summary_cancel_out">Долги есть, но в сумме взаимно гасятся</string>
+    <string name="groups_summary_partial">Не во всех группах долги считаются</string>
 </resources>

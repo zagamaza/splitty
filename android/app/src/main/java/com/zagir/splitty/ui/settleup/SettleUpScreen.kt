@@ -1,7 +1,6 @@
 package com.zagir.splitty.ui.settleup
 
 import androidx.compose.ui.semantics.semantics
-import com.zagir.splitty.ui.components.StatusStamp
 import com.zagir.splitty.ui.components.ReceiptStub
 import com.zagir.splitty.ui.components.ReceiptDivider
 import com.zagir.splitty.ui.components.ReceiptPaper
@@ -343,8 +342,7 @@ private fun PaymentStep(
             PaymentHeaderCard(debt = debt, meId = form.meId)
             ReceiptDivider(Modifier.padding(vertical = 18.dp))
             PaymentSumCard(form = form, debt = debt, onSumChange = viewModel::onSumChange)
-            ReceiptDivider(Modifier.padding(vertical = 18.dp))
-            PaymentRemainder(form = form, debt = debt)
+            PaymentShortfall(form = form, debt = debt)
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Офлайн — CTA заблокирован с подписью-причиной (а не алерт по тапу).
@@ -377,34 +375,31 @@ private fun PaymentStep(
 }
 
 /**
- * Сколько останется по ЭТОМУ долгу после записи. Считается из введённой суммы
- * и самого долга, а не обещается: при частичном платеже здесь честный остаток,
- * и только полная сумма даёт штамп «долг будет закрыт» (паритет iOS).
+ * Сколько не хватает до полной суммы этого перевода — только при частичном
+ * платеже. Прогноза «останется должны» нет и быть не может: после записи
+ * сервер заново строит план переводов из балансов всех участников, и долг
+ * этой паре может исчезнуть или перейти другому (паритет iOS).
  */
 @Composable
-private fun PaymentRemainder(form: SettleUpForm, debt: Debt) {
+private fun PaymentShortfall(form: SettleUpForm, debt: Debt) {
+    val entered = form.sumMinor ?: return
+    if (!form.isSumValid || entered >= debt.exactMinor) return
     val colors = Splitty.colors
-    val entered = (form.sumMinor ?: 0L).coerceIn(0L, debt.exactMinor)
-    val left = debt.exactMinor - entered
+    ReceiptDivider(Modifier.padding(vertical = 18.dp))
     Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
         Text(
-            text = stringResource(R.string.receipt_left_on_debt),
+            text = stringResource(R.string.receipt_shortfall),
             modifier = Modifier.weight(1f),
             fontSize = 14.sp,
             color = colors.ink,
         )
         Text(
-            text = moneyMinor(left, form.currency),
+            text = moneyMinor(debt.exactMinor - entered, form.currency),
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
             color = colors.ink,
         )
-    }
-    if (form.isSumValid && left == 0L) {
-        Box(Modifier.fillMaxWidth().padding(top = 14.dp), contentAlignment = Alignment.Center) {
-            StatusStamp(stringResource(R.string.receipt_debt_will_close).uppercase())
-        }
     }
 }
 

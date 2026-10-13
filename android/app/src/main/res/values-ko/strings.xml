@@ -710,6 +710,7 @@
     <string name="receipt_items">항목</string>
     <string name="receipt_has_attachments">첨부 파일 있음</string>
     <string name="receipt_draft_note">초안 — 아직 그룹에 추가되지 않음</string>
-    <string name="receipt_left_on_debt">이 빚의 남은 금액</string>
-    <string name="receipt_debt_will_close">빚이 정산됩니다</string>
+    <string name="receipt_shortfall">전액까지 남은 금액</string>
+    <string name="groups_summary_cancel_out">빚이 있지만 합계로는 서로 상쇄됩니다</string>
+    <string name="groups_summary_partial">일부 그룹에서는 빚을 계산할 수 없습니다</string>
 </resources>

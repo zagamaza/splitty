@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.friends
 
+import com.zagir.splitty.ui.components.BalanceSummaryLines
 import androidx.compose.foundation.lazy.itemsIndexed
 import com.zagir.splitty.ui.components.ReceiptLabel
 import com.zagir.splitty.ui.components.ReceiptDivider
@@ -154,7 +155,7 @@ private fun FriendsList(
                     )
                 }
             } else {
-                item { TotalHeader(totals, freshness) }
+                item { TotalHeader(totals, freshness, hasOpenDebts = friends.any { it.totals.isNotEmpty() }) }
                 // Люди — строки одного листа, а не стопка карточек.
                 item(key = "paper-start") { ReceiptPaperStart() }
                 itemsIndexed(friends, key = { _, it -> it.user.id }) { index, friend ->
@@ -174,25 +175,23 @@ private fun FriendsList(
  * вторичной строкой; подпись — по знаку основной валюты.
  */
 @Composable
-private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness) {
-    // Реквизит на столе, без карточки: словами — кто кому, справа сумма.
+private fun TotalHeader(totals: List<CurrencySum>, freshness: DataFreshness, hasOpenDebts: Boolean) {
+    // Реквизит на столе, без карточки: каждая валюта своей строкой. Нулевой
+    // итог при открытых долгах друзьям — не «всё погашено» (паритет iOS).
     Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
         ReceiptLabel(stringResource(R.string.friends_total_balance))
         Spacer(Modifier.height(6.dp))
-        val primary = totals.firstOrNull()?.exactMinor ?: 0
-        Row(verticalAlignment = Alignment.Bottom) {
+        if (totals.isEmpty()) {
             Text(
-                text = when {
-                    primary > 0 -> stringResource(R.string.friends_you_are_owed)
-                    primary < 0 -> stringResource(R.string.friends_you_owe)
-                    else -> stringResource(R.string.friends_all_settled)
-                },
-                modifier = Modifier.weight(1f),
+                text = stringResource(
+                    if (hasOpenDebts) R.string.groups_summary_cancel_out else R.string.friends_all_settled
+                ),
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Splitty.colors.ink,
             )
-            MoneyTotalsText(totals = totals, primarySize = 22.sp, horizontalAlignment = Alignment.End)
+        } else {
+            BalanceSummaryLines(totals)
         }
         if (freshness.fromCache) {
             Spacer(Modifier.height(6.dp))

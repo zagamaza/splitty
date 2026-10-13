@@ -710,6 +710,7 @@
     <string name="receipt_items">明細</string>
     <string name="receipt_has_attachments">添付あり</string>
     <string name="receipt_draft_note">下書き — まだグループに追加されていません</string>
-    <string name="receipt_left_on_debt">この借りの残り</string>
-    <string name="receipt_debt_will_close">借りは完済されます</string>
+    <string name="receipt_shortfall">全額まで残り</string>
+    <string name="groups_summary_cancel_out">借りはありますが、合計では相殺されます</string>
+    <string name="groups_summary_partial">一部のグループでは借りを計算できません</string>
 </resources>

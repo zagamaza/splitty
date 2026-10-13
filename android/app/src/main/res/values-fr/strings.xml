@@ -773,6 +773,7 @@
     <string name="receipt_items">Lignes</string>
     <string name="receipt_has_attachments">Avec pièces jointes</string>
     <string name="receipt_draft_note">Brouillon — pas encore ajouté au groupe</string>
-    <string name="receipt_left_on_debt">Restera sur cette dette</string>
-    <string name="receipt_debt_will_close">La dette sera soldée</string>
+    <string name="receipt_shortfall">Reste avant le montant total</string>
+    <string name="groups_summary_cancel_out">Il y a des dettes, mais elles s\'annulent</string>
+    <string name="groups_summary_partial">Les dettes ne sont pas calculées dans tous les groupes</string>
 </resources>

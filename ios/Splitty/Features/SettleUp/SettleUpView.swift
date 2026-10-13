@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Погашение долга («Записать платёж»): лист чека — «должник → кредитор»,
-/// крупная сумма (prefilled текущим долгом, не больше долга), остаток по
-/// долгу и CTA «Записать платёж». Если долгов с участием
+/// крупная сумма (prefilled текущим долгом, не больше долга), при частичном
+/// платеже — сколько не хватает до полной суммы, и CTA «Записать платёж». Если долгов с участием
 /// пользователя несколько — сначала список «Ваши долги» карточками.
 struct SettleUpView: View {
     private let roomId: String
@@ -199,8 +199,7 @@ struct SettleUpView: View {
                     header(debt: debt)
                     ReceiptDivider().padding(.vertical, 18)
                     sumCard(debt: debt)
-                    ReceiptDivider().padding(.vertical, 18)
-                    remainder(debt: debt)
+                    shortfall(debt: debt)
                 }
                 .receiptPaper(padding: 22)
 
@@ -255,29 +254,28 @@ struct SettleUpView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// Сколько останется по ЭТОМУ долгу после записи. Считается из введённой
-    /// суммы и самого долга, а не обещается: при частичном платеже здесь
-    /// честный остаток, и только полная сумма даёт штамп «долг закрыт».
+    /// Сколько не хватает до полной суммы этого перевода — только при
+    /// частичном платеже. Прогноза «останется должны» здесь нет и быть не
+    /// может: после записи сервер заново строит план переводов из балансов
+    /// всех участников, и долг этой паре может исчезнуть или перейти другому.
     @ViewBuilder
-    private func remainder(debt: Debt) -> some View {
+    private func shortfall(debt: Debt) -> some View {
         let entered = minorFromInput(sumText) ?? 0
-        let left = max(0, debt.exactMinor - min(entered, debt.exactMinor))
-        HStack(alignment: .firstTextBaseline) {
-            Text("Останется по этому долгу")
-                .scaledFont(size: 14)
-                .foregroundStyle(Color.ink)
-            Spacer(minLength: 8)
-            Text(money(minor: left, currency: currency))
-                .scaledFont(size: 15, weight: .semibold, design: .monospaced)
-                .foregroundStyle(Color.ink)
-        }
-        .accessibilityElement(children: .combine)
-        if isSumValid(debt: debt) && left == 0 {
-            StatusStamp(text: String(localized: "Долг будет закрыт").localizedUppercase)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 14)
+        if isSumValid(debt: debt) && entered < debt.exactMinor {
+            ReceiptDivider().padding(.vertical, 18)
+            HStack(alignment: .firstTextBaseline) {
+                Text("До полной суммы перевода")
+                    .scaledFont(size: 14)
+                    .foregroundStyle(Color.ink)
+                Spacer(minLength: 8)
+                Text(money(minor: debt.exactMinor - entered, currency: currency))
+                    .scaledFont(size: 15, weight: .semibold, design: .monospaced)
+                    .foregroundStyle(Color.ink)
+            }
+            .accessibilityElement(children: .combine)
         }
     }
+
 
     private func paymentTitle(debt: Debt) -> String {
         // Прошедшее время: экран записывает состоявшийся факт, а не начинает

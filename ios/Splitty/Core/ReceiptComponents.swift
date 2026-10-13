@@ -265,6 +265,45 @@ struct ReceiptTotal<Amount: View>: View {
     }
 }
 
+// MARK: - Сводка по валютам
+
+/// Сводный остаток по валютам: каждая валюта — своей строкой со своей
+/// подписью. Одна подпись по знаку первой валюты рядом с модулями всех сумм
+/// говорила «вам должны» и про валюту, в которой должны вы.
+struct BalanceSummaryLines: View {
+    /// Ненулевые итоги (`aggregateByCurrency`), основная валюта первой.
+    let totals: [CurrencySum]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(totals, id: \.self) { total in
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline) {
+                        caption(total)
+                        Spacer(minLength: 8)
+                        amount(total)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        caption(total)
+                        amount(total)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+        }
+    }
+
+    private func caption(_ total: CurrencySum) -> some View {
+        Text(total.exactMinor > 0 ? String(localized: "Вам должны") : String(localized: "Вы должны"))
+            .scaledFont(size: 17, weight: .semibold)
+            .foregroundStyle(Color.ink)
+    }
+
+    private func amount(_ total: CurrencySum) -> some View {
+        MoneyText(total.sum, exactMinor: total.exactMinor, size: 22, currency: total.currency)
+    }
+}
+
 // MARK: - Штамп
 
 /// Синий штамп истинного состояния («ВЫ В РАСЧЁТЕ», «ЧЕРНОВИК»). Рамка и

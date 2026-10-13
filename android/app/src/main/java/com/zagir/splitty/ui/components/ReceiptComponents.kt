@@ -304,6 +304,44 @@ fun ReceiptTotal(label: String, modifier: Modifier = Modifier, amount: @Composab
     }
 }
 
+// MARK: Сводка по валютам
+
+/**
+ * Сводный остаток по валютам: каждая валюта — своей строкой со своей подписью.
+ * Одна подпись по знаку первой валюты рядом с модулями всех сумм говорила
+ * «вам должны» и про валюту, в которой должны вы (паритет iOS).
+ */
+@Composable
+fun BalanceSummaryLines(totals: List<com.zagir.splitty.core.model.CurrencySum>, modifier: Modifier = Modifier) {
+    val large = isLargeFontScale()
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        totals.forEach { total ->
+            val caption: @Composable () -> Unit = {
+                Text(
+                    text = androidx.compose.ui.res.stringResource(
+                        if (total.exactMinor > 0) com.zagir.splitty.R.string.group_you_are_owed
+                        else com.zagir.splitty.R.string.group_you_owe
+                    ),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Splitty.colors.ink,
+                )
+            }
+            val amount: @Composable () -> Unit = {
+                MoneyText(total.sum, exactMinor = total.exactMinor, size = 22.sp, currency = total.currency, minScale = 0.5f)
+            }
+            if (large) {
+                Column(Modifier.semantics(mergeDescendants = true) {}) { caption(); amount() }
+            } else {
+                Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
+                    Box(Modifier.weight(1f)) { caption() }
+                    amount()
+                }
+            }
+        }
+    }
+}
+
 // MARK: Штамп
 
 /**

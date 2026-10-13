@@ -1,5 +1,6 @@
 package com.zagir.splitty.ui.groups
 
+import com.zagir.splitty.ui.components.BalanceSummaryLines
 import com.zagir.splitty.ui.components.TextLinkButton
 import com.zagir.splitty.ui.components.ReceiptDivider
 import com.zagir.splitty.ui.components.ReceiptStub
@@ -283,6 +284,19 @@ private fun RoomsList(
  * Hero-карточка: суммарный баланс по всем группам крупной суммой. Разные
  * валюты не складываются: основная крупно, остальные — вторичной строкой.
  */
+/**
+ * Что сказать при нулевом общем итоге. Ноль — не всегда «всё погашено»: +500 в
+ * одной группе и −500 в другой дают ноль при двух открытых долгах, а группы со
+ * старыми данными в итог не входят вовсе (паритет iOS `ZeroBalanceSummary`).
+ */
+internal enum class ZeroBalanceSummary { CANCEL_OUT, UNAVAILABLE, SETTLED }
+
+internal fun zeroBalanceSummary(rooms: List<RoomSummary>): ZeroBalanceSummary = when {
+    rooms.any { !it.debtsUnavailable && it.exactMyBalanceMinor != 0L } -> ZeroBalanceSummary.CANCEL_OUT
+    rooms.isNotEmpty() && rooms.all { it.debtsUnavailable } -> ZeroBalanceSummary.UNAVAILABLE
+    else -> ZeroBalanceSummary.SETTLED
+}
+
 @Composable
 private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
     val totals = remember(rooms) {
@@ -301,25 +315,36 @@ private fun SummaryCard(rooms: List<RoomSummary>, freshness: DataFreshness) {
                 }
         )
     }
-    val primarySign = totals.firstOrNull()?.exactMinor ?: 0
-    val subtitle = when {
-        primarySign > 0 -> stringResource(R.string.group_you_are_owed)
-        primarySign < 0 -> stringResource(R.string.group_you_owe)
-        else -> stringResource(R.string.groups_all_settled)
-    }
-    // Реквизит на столе, без карточки: словами — кто кому, справа сумма.
+    val hasUnavailable = rooms.any { it.debtsUnavailable }
+    val hasCountable = rooms.any { !it.debtsUnavailable }
+    val zeroSummary = stringResource(
+        when (zeroBalanceSummary(rooms)) {
+            ZeroBalanceSummary.CANCEL_OUT -> R.string.groups_summary_cancel_out
+            ZeroBalanceSummary.UNAVAILABLE -> R.string.group_debts_unavailable_title
+            ZeroBalanceSummary.SETTLED -> R.string.groups_all_settled
+        }
+    )
     Column(Modifier.fillMaxWidth()) {
         ReceiptLabel(stringResource(R.string.groups_total_balance))
         Spacer(Modifier.height(6.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
+        if (totals.isEmpty()) {
             Text(
-                text = subtitle,
-                modifier = Modifier.weight(1f),
+                text = zeroSummary,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Splitty.colors.ink,
             )
-            MoneyTotalsText(totals = totals, primarySize = 22.sp, horizontalAlignment = Alignment.End)
+        } else {
+            BalanceSummaryLines(totals)
+        }
+        // Группы со старыми данными в итог не входят — и это сказано.
+        if (hasUnavailable && hasCountable) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.groups_summary_partial),
+                fontSize = 13.sp,
+                color = Splitty.colors.inkSecondary,
+            )
         }
         // Подпись о свежести: без неё человек смотрел на старые суммы, ничего
         // об этом не зная, — и «неправильный» баланс выглядел как ошибка расчёта

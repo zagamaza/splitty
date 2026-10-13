@@ -709,7 +709,7 @@ private fun PinnedSummary(room: RoomDetail, onClick: () -> Unit) {
                     fontSize = 14.sp,
                     color = colors.ink,
                 )
-                MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 15.sp, weight = FontWeight.Bold, currency = room.currency)
+                MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 15.sp, weight = FontWeight.Bold, currency = room.currency, minScale = 0.6f)
             }
         }
     }
@@ -731,8 +731,9 @@ private fun DebtHeroCard(
     val colors = Splitty.colors
     val canSettle = room.debts.any { it.debtor.id == meId || it.lender.id == meId }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
-            ReceiptLabel(stringResource(R.string.totals_total_spent), Modifier.weight(1f))
+        // Итог не обрезается: при крупном шрифте — столбиком, сумма ужимается
+        // вместо потери последних цифр.
+        val totalAmount: @Composable () -> Unit = {
             MoneyText(
                 room.totalSpent,
                 exactMinor = room.exactTotalSpentMinor,
@@ -740,7 +741,19 @@ private fun DebtHeroCard(
                 size = 32.sp,
                 weight = FontWeight.ExtraBold,
                 currency = room.currency,
+                minScale = 0.5f,
             )
+        }
+        if (isLargeFontScale()) {
+            Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
+                ReceiptLabel(stringResource(R.string.totals_total_spent))
+                totalAmount()
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
+                ReceiptLabel(stringResource(R.string.totals_total_spent), Modifier.weight(1f))
+                totalAmount()
+            }
         }
         Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Bottom) {
             Text(
@@ -846,7 +859,7 @@ private fun BalanceStatement(words: String, room: RoomDetail) {
                 fontWeight = FontWeight.ExtraBold,
                 color = Splitty.colors.ink,
             )
-            MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 22.sp, weight = FontWeight.ExtraBold, currency = room.currency)
+            MoneyText(room.myBalance, exactMinor = room.exactMyBalanceMinor, size = 22.sp, weight = FontWeight.ExtraBold, currency = room.currency, minScale = 0.5f)
         }
         return
     }
@@ -870,6 +883,7 @@ private fun BalanceStatement(words: String, room: RoomDetail) {
             size = 22.sp,
             weight = FontWeight.ExtraBold,
             currency = room.currency,
+            minScale = 0.5f,
         )
     }
 }
@@ -1320,39 +1334,32 @@ private fun DebtRow(
         else -> MoneyRole.NEUTRAL
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        // Подпись+сумма — один элемент для TalkBack (читается «Петя должен(на)
-        // Вася, 500 ₽»); «Погасить» остаётся отдельной ссылкой.
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .semantics(mergeDescendants = true) {},
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalAlignment = Alignment.End) {
+        // Кто кому и сколько — один элемент для TalkBack («Петя должен(на)
+        // Вася, 500 ₽»); ссылка «Погасить» остаётся отдельной (паритет iOS).
+        Row(
+            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top,
         ) {
-            Text(
-                text = title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.ink,
-            )
-            Text(
-                text = debt.debtor.displayName + " → " + debt.lender.displayName,
-                modifier = Modifier.clearAndSetSemantics {},
-                fontSize = 12.sp,
-                color = colors.inkSecondary,
-            )
-        }
-        Column(horizontalAlignment = Alignment.End) {
-            MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, weight = FontWeight.Bold, currency = currency)
-            if (involvesMe) {
-                TextLinkButton(text = stringResource(R.string.group_debt_settle), onClick = onSettle, fontSize = 13.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.ink,
+                )
+                Text(
+                    text = debt.debtor.displayName + " → " + debt.lender.displayName,
+                    modifier = Modifier.clearAndSetSemantics {},
+                    fontSize = 12.sp,
+                    color = colors.inkSecondary,
+                )
             }
+            MoneyText(debt.sum, exactMinor = debt.exactMinor, role = role, size = 15.sp, weight = FontWeight.Bold, currency = currency, minScale = 0.6f)
+        }
+        if (involvesMe) {
+            TextLinkButton(text = stringResource(R.string.group_debt_settle), onClick = onSettle, fontSize = 13.sp)
         }
     }
 }

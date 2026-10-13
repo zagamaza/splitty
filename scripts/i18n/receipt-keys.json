@@ -1,26 +1,38 @@
 {
- "Останется по этому долгу": {
-  "ru": "Останется по этому долгу",
-  "en": "Left on this debt",
-  "de": "Verbleibt bei dieser Schuld",
-  "es": "Quedará de esta deuda",
-  "fr": "Restera sur cette dette",
-  "it": "Resterà su questo debito",
-  "ja": "この借りの残り",
-  "zh-Hans": "这笔欠款还剩",
-  "ko": "이 빚의 남은 금액",
-  "pt-BR": "Restará desta dívida"
+ "До полной суммы перевода": {
+  "ru": "До полной суммы перевода",
+  "en": "Left to the full transfer",
+  "de": "Bis zum vollen Betrag",
+  "es": "Falta para el total",
+  "fr": "Reste avant le montant total",
+  "it": "Manca al totale",
+  "ja": "全額まで残り",
+  "zh-Hans": "距全额还差",
+  "ko": "전액까지 남은 금액",
+  "pt-BR": "Falta para o valor total"
  },
- "Долг будет закрыт": {
-  "ru": "Долг будет закрыт",
-  "en": "Debt will be closed",
-  "de": "Schuld wird beglichen",
-  "es": "La deuda quedará saldada",
-  "fr": "La dette sera soldée",
-  "it": "Il debito sarà saldato",
-  "ja": "借りは完済されます",
-  "zh-Hans": "欠款将结清",
-  "ko": "빚이 정산됩니다",
-  "pt-BR": "A dívida será quitada"
+ "Долги есть, но в сумме взаимно гасятся": {
+  "ru": "Долги есть, но в сумме взаимно гасятся",
+  "en": "You have debts, but they cancel out overall",
+  "de": "Es gibt Schulden, aber sie gleichen sich aus",
+  "es": "Hay deudas, pero se compensan entre sí",
+  "fr": "Il y a des dettes, mais elles s'annulent",
+  "it": "Ci sono debiti, ma si compensano",
+  "ja": "借りはありますが、合計では相殺されます",
+  "zh-Hans": "有欠款，但总体相互抵消",
+  "ko": "빚이 있지만 합계로는 서로 상쇄됩니다",
+  "pt-BR": "Há dívidas, mas elas se compensam"
+ },
+ "Не во всех группах долги считаются": {
+  "ru": "Не во всех группах долги считаются",
+  "en": "Debts can't be counted in some groups",
+  "de": "Nicht in allen Gruppen werden Schulden berechnet",
+  "es": "En algunos grupos no se calculan las deudas",
+  "fr": "Les dettes ne sont pas calculées dans tous les groupes",
+  "it": "Non in tutti i gruppi si calcolano i debiti",
+  "ja": "一部のグループでは借りを計算できません",
+  "zh-Hans": "部分群组无法计算欠款",
+  "ko": "일부 그룹에서는 빚을 계산할 수 없습니다",
+  "pt-BR": "Em alguns grupos as dívidas não são calculadas"
  }
 }

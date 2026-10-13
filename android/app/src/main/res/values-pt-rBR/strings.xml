@@ -714,6 +714,7 @@
     <string name="receipt_items">Itens</string>
     <string name="receipt_has_attachments">Com anexos</string>
     <string name="receipt_draft_note">Rascunho — ainda não adicionado ao grupo</string>
-    <string name="receipt_left_on_debt">Restará desta dívida</string>
-    <string name="receipt_debt_will_close">A dívida será quitada</string>
+    <string name="receipt_shortfall">Falta para o valor total</string>
+    <string name="groups_summary_cancel_out">Há dívidas, mas elas se compensam</string>
+    <string name="groups_summary_partial">Em alguns grupos as dívidas não são calculadas</string>
 </resources>

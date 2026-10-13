@@ -34,6 +34,19 @@ enum GroupsAddAction: CaseIterable {
     }
 }
 
+/// Что сказать при нулевом общем итоге. Ноль — не всегда «всё погашено»:
+/// +500 в одной группе и −500 в другой дают ноль при двух открытых долгах,
+/// а группы со старыми данными в итог не входят вовсе.
+enum ZeroBalanceSummary: Equatable {
+    case cancelOut, unavailable, settled
+
+    static func of(_ rooms: [RoomSummary]) -> ZeroBalanceSummary {
+        if rooms.contains(where: { !$0.debtsUnavailable && $0.exactMyBalanceMinor != 0 }) { return .cancelOut }
+        if !rooms.isEmpty && rooms.allSatisfy(\.debtsUnavailable) { return .unavailable }
+        return .settled
+    }
+}
+
 /// Что предлагает меню «+».
 ///
 /// Вход по коду жил ТОЛЬКО в пустом состоянии: человек с одной группой попасть
@@ -200,12 +213,18 @@ struct GroupsListView: View {
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Общий баланс").receiptLabel()
-            HStack(alignment: .firstTextBaseline) {
-                Text(summarySubtitle)
+            if model.totals.isEmpty {
+                Text(zeroSummary)
                     .scaledFont(size: 17, weight: .semibold)
                     .foregroundStyle(Color.ink)
-                Spacer(minLength: 8)
-                MoneyTotalsText(totals: model.totals, primarySize: 22, alignment: .trailing)
+            } else {
+                BalanceSummaryLines(totals: model.totals)
+            }
+            // Группы со старыми данными в итог не входят — и это сказано.
+            if hasUnavailableRooms && hasCountableRooms {
+                Text("Не во всех группах долги считаются")
+                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .foregroundStyle(Color.inkSecondary)
             }
             freshnessNote
             ReceiptDivider().padding(.top, 8)
@@ -218,19 +237,15 @@ struct GroupsListView: View {
         CacheNote(isFromCache: model.isFromCache, updatedAt: model.lastUpdatedAt)
     }
 
-    /// Подпись под hero-суммой — по знаку основной валюты
-    /// (цветовое правило — в самой сумме).
-    private var summarySubtitle: String {
-        // Знак — у точной величины: 0,25 на округлённой читается нулём, и под
-        // ненулевой суммой стояло бы «все долги погашены».
-        let primary = model.totals.first?.exactMinor ?? 0
-        if primary > 0 {
-            return String(localized: "Вам должны")
+    private var hasUnavailableRooms: Bool { model.rooms.contains { $0.debtsUnavailable } }
+    private var hasCountableRooms: Bool { model.rooms.contains { !$0.debtsUnavailable } }
+
+    private var zeroSummary: String {
+        switch ZeroBalanceSummary.of(model.rooms) {
+        case .cancelOut: return String(localized: "Долги есть, но в сумме взаимно гасятся")
+        case .unavailable: return Glossary.debtsUnavailableHero
+        case .settled: return Glossary.settledHero
         }
-        if primary < 0 {
-            return String(localized: "Вы должны")
-        }
-        return Glossary.settledHero
     }
 
     /// Карточки групп: аватар-градиент, название, баланс справа;
