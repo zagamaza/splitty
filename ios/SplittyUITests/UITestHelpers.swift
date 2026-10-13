@@ -12,6 +12,13 @@ extension XCTestCase {
         return app
     }
 
+    /// Вкладка нижней строки по русскому названию. Строка — своя, не системный
+    /// таббар, поэтому `app.tabBars` её не видит: ищем по идентификатору.
+    func tabButton(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+        let ids = ["Друзья": "friends", "Группы": "groups", "Уведомления": "activity", "Профиль": "account"]
+        return app.buttons["tab.\(ids[name] ?? name)"]
+    }
+
     /// Учётка протагониста прогонов. Та же пара зашита в scripts/seed-local.py,
     /// который её и заводит вместе с демо-группами — меняете здесь, меняйте там.
     static let seedEmail = "ui-tests@splitty.test"
@@ -59,7 +66,7 @@ extension XCTestCase {
             // закрывает клавиатура, а привычный swipeDown утащил бы саму шторку.
             passwordField.typeText("\n")
 
-            if app.tabBars.firstMatch.waitForExistence(timeout: 15) { return }
+            if app.otherElements["tabBar"].waitForExistence(timeout: 15) { return }
 
             XCTAssertTrue(
                 emailField.waitForExistence(timeout: 3),

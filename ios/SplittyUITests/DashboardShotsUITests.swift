@@ -9,7 +9,7 @@ final class DashboardShotsUITests: XCTestCase {
         // алфавиту раньше DemoFlowUITests — сессии от него тут не бывает.
         loginIfNeeded(app)
 
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10))
         tab.tap()
         XCTAssertTrue(app.staticTexts["Поездка в Стамбул"].waitForExistence(timeout: 10))

@@ -11,14 +11,14 @@ struct HidesGlobalAddButtonKey: PreferenceKey {
     }
 }
 
-/// Главный таб-бар: 5 вкладок, центральная — приподнятая зелёная кнопка «+»,
-/// открывающая AddExpenseView как sheet (с выбором группы внутри).
+/// Главный экран: четыре вкладки и строка чека внизу (`ReceiptTabBar`) с
+/// действием «+», открывающим AddExpenseView (с выбором группы внутри).
 /// Здесь же — глобальный офлайн-баннер (тонкая полоса сверху) и триггеры
 /// синка outbox: сеть появилась / приложение стало активным.
 struct MainTabView: View {
     /// Не private: по вкладке проверяется маршрут push (`pushTarget`).
     enum Tab: Hashable {
-        case friends, groups, add, activity, account
+        case friends, groups, activity, account
 
         /// Вкладка, на которой открывается приложение. Новый аккаунт попадал на
         /// «Друзей», где по определению пусто, и первым читал отрицание.
@@ -61,37 +61,36 @@ struct MainTabView: View {
     }
 
     private var tabs: some View {
+        // Системный таббар iOS 26 — стеклянная капсула с иконками, и в чек она
+        // не вписывается никак; его место занимает строка чека ReceiptTabBar.
         TabView(selection: $selection) {
             FriendsListView()
-                .tabItem { Label("Друзья", systemImage: "person.2.fill") }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(Tab.friends)
 
             GroupsListView(path: $groupsPath)
-                .tabItem { Label("Группы", systemImage: "person.3.fill") }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(Tab.groups)
 
-            // Пустая вкладка-заглушка под центральной кнопкой «+»:
-            // для VoiceOver невидима — реальное действие у overlay-кнопки.
-            Color.clear
-                .accessibilityHidden(true)
-                .tabItem { Text("").accessibilityHidden(true) }
-                .tag(Tab.add)
-
-            // Раздел стал не журналом, а входящими: тут лежат приглашения с
-            // кнопками, поэтому колокол и бейдж, а не часы.
             ActivityView()
-                .tabItem { Label("Уведомления", systemImage: "bell.fill") }
-                .badge(Self.badgeLabel(for: session.unreadNotifications))
+                .toolbar(.hidden, for: .tabBar)
                 .tag(Tab.activity)
 
             AccountView()
-                .tabItem { Label("Профиль", systemImage: "person.crop.circle.fill") }
+                .toolbar(.hidden, for: .tabBar)
                 .tag(Tab.account)
         }
         .tint(Color.ink)
-        .overlay(alignment: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if !isKeyboardVisible && !isGlobalAddHidden {
-                addExpenseButton
+                ReceiptTabBar(
+                    selection: $selection,
+                    badge: Self.badgeLabel(for: session.unreadNotifications),
+                    onAdd: {
+                        Haptics.tap()
+                        isAddExpensePresented = true
+                    }
+                )
             }
         }
         .onPreferenceChange(HidesGlobalAddButtonKey.self) { isGlobalAddHidden = $0 }
@@ -99,13 +98,6 @@ struct MainTabView: View {
         // статус-баром над навбарами всех вкладок; онлайн без синка — скрыт.
         .safeAreaInset(edge: .top, spacing: 0) {
             statusBanner
-        }
-        .onChange(of: selection) { oldValue, newValue in
-            // Вкладку «+» не открываем — возвращаем прежнюю и показываем sheet.
-            if newValue == .add {
-                selection = oldValue
-                isAddExpensePresented = true
-            }
         }
         // Полноэкранно, а не sheet: форму со введёнными данными нельзя
         // случайно смахнуть — выход только «Отмена»/«Сохранить».
@@ -230,22 +222,107 @@ struct MainTabView: View {
                 .frame(height: 1)
         }
     }
+}
 
-    /// Центральное действие добавления расхода: прямоугольная печать
-    /// цвета действия в середине таббара, без подъёма и цветной тени.
-    private var addExpenseButton: some View {
-        Button {
-            Haptics.tap()
-            isAddExpensePresented = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Color.onAccent)
-                .frame(width: 56, height: 40)
-                .background(Color.accent, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+/// Нижняя строка чека вместо системного таббара: вкладки — текстом, как в
+/// референсе (`docs/design/receipt/receipt/groups.png`): выбранная — точкой и
+/// плотным начертанием, остальные — подчёркнутыми ссылками. «+» — плоская
+/// печать цвета действия вровень со строкой. Если текст не помещается
+/// (крупный шрифт, длинный язык), строка переходит на значки.
+struct ReceiptTabBar: View {
+    @Binding var selection: MainTabView.Tab
+    let badge: String?
+    let onAdd: () -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            row(iconsOnly: false)
+            row(iconsOnly: true)
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity)
+        .background(Color.bg)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.hairline).frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("tabBar")
+    }
+
+    private func row(iconsOnly: Bool) -> some View {
+        HStack(spacing: 0) {
+            item(.friends, "Друзья", icon: "person.2", iconsOnly: iconsOnly)
+            Spacer(minLength: 12)
+            item(.groups, "Группы", icon: "person.3", iconsOnly: iconsOnly)
+            Spacer(minLength: 12)
+            addButton
+            Spacer(minLength: 12)
+            item(.activity, "Уведомления", icon: "bell", iconsOnly: iconsOnly, badge: badge)
+            Spacer(minLength: 12)
+            item(.account, "Профиль", icon: "person.crop.circle", iconsOnly: iconsOnly)
+        }
+    }
+
+    private func item(
+        _ tab: MainTabView.Tab,
+        _ title: LocalizedStringKey,
+        icon: String,
+        iconsOnly: Bool,
+        badge: String? = nil
+    ) -> some View {
+        let isOn = selection == tab
+        return Button {
+            if selection != tab { Haptics.tap() }
+            selection = tab
+        } label: {
+            HStack(spacing: 5) {
+                if isOn && !iconsOnly {
+                    Circle().fill(Color.ink).frame(width: 5, height: 5)
+                }
+                if iconsOnly {
+                    Image(systemName: isOn ? icon + ".fill" : icon)
+                        .font(.system(size: 19, weight: .medium))
+                } else {
+                    Text(title)
+                        .scaledFont(size: 14, weight: isOn ? .semibold : .regular)
+                        .underline(!isOn, color: Color.ink.opacity(0.45))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                if let badge {
+                    Text(badge)
+                        .scaledFont(size: 11, weight: .bold, design: .monospaced, relativeTo: .caption2)
+                        .foregroundStyle(Color.onAccent)
+                        .padding(.horizontal, 4)
+                        .frame(minWidth: 16, minHeight: 16)
+                        .background(Color.accent, in: RoundedRectangle(cornerRadius: 2, style: .continuous))
+                }
+            }
+            .foregroundStyle(Color.ink)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(verbatim: badge ?? ""))
+        .accessibilityAddTraits(isOn ? .isSelected : [])
+        .accessibilityIdentifier("tab.\(String(describing: tab))")
+    }
+
+    private var addButton: some View {
+        Button(action: onAdd) {
+            Image(systemName: "plus")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(Color.onAccent)
+                .frame(width: 44, height: 36)
+                .background(Color.accent, in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .accessibilityLabel("Добавить расход")
-        .offset(y: -6)
     }
 }
 

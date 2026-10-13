@@ -111,7 +111,7 @@ final class ReceiptFlowShotsUITests: XCTestCase {
     func testSecondaryScreens() throws {
         app.launch()
         loginIfNeeded(app)
-        let groupsTab = app.tabBars.buttons["Группы"]
+        let groupsTab = app.buttons["tab.groups"]
         XCTAssertTrue(groupsTab.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
         groupsTab.tap()
 
@@ -152,7 +152,7 @@ final class ReceiptFlowShotsUITests: XCTestCase {
                 closeSheet()
             }
         }
-        for _ in 0..<4 where !app.tabBars.firstMatch.isHittable {
+        for _ in 0..<4 where !app.otherElements["tabBar"].isHittable {
             if app.navigationBars.buttons.firstMatch.isHittable {
                 app.navigationBars.buttons.firstMatch.tap()
             } else {
@@ -161,7 +161,7 @@ final class ReceiptFlowShotsUITests: XCTestCase {
             sleep(1)
         }
 
-        app.tabBars.buttons["Профиль"].tap()
+        app.buttons["tab.account"].tap()
         let plusRow = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Splitor Plus'")).firstMatch
         if plusRow.waitForExistence(timeout: 5) {
             plusRow.tap()
@@ -169,7 +169,7 @@ final class ReceiptFlowShotsUITests: XCTestCase {
             closeSheet()
         }
         let notifications = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Уведомления'"))
-            .allElementsBoundByIndex.first { $0.frame.minY < app.tabBars.firstMatch.frame.minY - 1 }
+            .allElementsBoundByIndex.first { $0.frame.minY < app.otherElements["tabBar"].frame.minY - 1 }
         if let notifications {
             bringIntoView(notifications)
             notifications.tap()
@@ -189,11 +189,11 @@ final class ReceiptFlowShotsUITests: XCTestCase {
     /// сессия должна остаться от прошлого прогона.
     func testOfflineCachedState() throws {
         app.launch()
-        let groupsTab = app.tabBars.buttons["Группы"]
+        let groupsTab = app.buttons["tab.groups"]
         XCTAssertTrue(groupsTab.waitForExistence(timeout: 10), "нет таб-бара — сессии нет")
         groupsTab.tap()
         shot("m-17-offline-groups")
-        app.tabBars.buttons["Уведомления"].tap()
+        app.buttons["tab.activity"].tap()
         shot("m-17-offline-activity")
     }
 
@@ -209,7 +209,7 @@ final class ReceiptFlowShotsUITests: XCTestCase {
 
     private func openRoom() {
         loginIfNeeded(app)
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
         tab.tap()
         let room = app.staticTexts["Поездка в Стамбул"]

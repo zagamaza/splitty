@@ -27,7 +27,7 @@ final class OfflineSmokeUITests: XCTestCase {
     func testOnlineWarmup() throws {
         loginIfNeeded(app)
 
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10))
         tab.tap()
         XCTAssertTrue(app.staticTexts["Поездка в Стамбул"].waitForExistence(timeout: 10),
@@ -40,7 +40,7 @@ final class OfflineSmokeUITests: XCTestCase {
     /// Бэкенд недоступен: данные из кеша, баннер офлайна, расход — в очередь.
     func testOfflineCacheAndQueue() throws {
         // Группы из кеша (сервер лежит).
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10), "Таб-бар не появился (нет сессии?)")
         tab.tap()
         XCTAssertTrue(
@@ -82,7 +82,7 @@ final class OfflineSmokeUITests: XCTestCase {
 
     /// Бэкенд снова доступен: очередь досылается, бейдж исчезает.
     func testAfterSync() throws {
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10))
         tab.tap()
         XCTAssertTrue(app.staticTexts["Поездка в Стамбул"].waitForExistence(timeout: 10))

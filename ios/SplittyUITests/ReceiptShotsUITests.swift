@@ -41,7 +41,7 @@ final class ReceiptShotsUITests: XCTestCase {
 
     func testMainScreens() throws {
         loginIfNeeded(app)
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
         tab.tap()
         let room = app.staticTexts["Поездка в Стамбул"]
@@ -93,9 +93,9 @@ final class ReceiptShotsUITests: XCTestCase {
 
     func testOtherScreens() throws {
         loginIfNeeded(app)
-        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
+        XCTAssertTrue(app.otherElements["tabBar"].waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
 
-        app.tabBars.buttons["Друзья"].tap()
+        app.buttons["tab.friends"].tap()
         shot("10-friends")
         let friend = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Алмаз'")).firstMatch
         if friend.waitForExistence(timeout: 5) {
@@ -104,15 +104,15 @@ final class ReceiptShotsUITests: XCTestCase {
             app.navigationBars.buttons.firstMatch.tap()
         }
 
-        app.tabBars.buttons["Уведомления"].tap()
+        app.buttons["tab.activity"].tap()
         shot("12-activity")
 
-        app.tabBars.buttons["Профиль"].tap()
+        app.buttons["tab.account"].tap()
         shot("13-profile")
         app.swipeUp()
         shot("13-profile-scrolled")
 
-        app.tabBars.buttons["Группы"].tap()
+        app.buttons["tab.groups"].tap()
         let room = app.staticTexts["Поездка в Стамбул"]
         XCTAssertTrue(room.waitForExistence(timeout: 10))
         room.tap()
@@ -151,7 +151,7 @@ final class ReceiptShotsUITests: XCTestCase {
         app = makeApp()
         app.launchArguments = lang
         app.launch()
-        let tabs = app.tabBars.firstMatch
+        let tabs = app.otherElements["tabBar"]
         XCTAssertTrue(tabs.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
         tabs.buttons.element(boundBy: 1).tap()
         shot("02-groups")

@@ -133,7 +133,7 @@ final class DemoFlowUITests: XCTestCase {
     // MARK: - Хелперы
 
     private func tapTab(_ name: String) {
-        let tab = app.tabBars.buttons[name]
+        let tab = tabButton(app, name)
         if tab.waitForExistence(timeout: 5) {
             tab.tap()
         }

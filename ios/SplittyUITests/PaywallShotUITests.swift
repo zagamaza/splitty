@@ -87,9 +87,7 @@ final class PaywallShotUITests: XCTestCase {
               email: env["SHOTS_EMAIL"] ?? "shots-ru@splitty.test",
               password: env["SHOTS_PASSWORD"] ?? "20260806")
 
-        let groups = app.tabBars.buttons.matching(
-            NSPredicate(format: "label IN %@", labels.groups)
-        ).firstMatch
+        let groups = app.buttons["tab.groups"]
         XCTAssertTrue(groups.waitForExistence(timeout: 25), "вход не прошёл")
 
         // Композер расхода — центральная кнопка таб-бара.
@@ -168,9 +166,7 @@ final class PaywallShotUITests: XCTestCase {
     /// не упёршийся в лимит (и ревьюер по нашим заметкам).
     private func openPaywallFromProfile(_ app: XCUIApplication) {
         app.buttons[labels.cancel].firstMatch.tap()
-        let profile = app.tabBars.buttons.matching(
-            NSPredicate(format: "label IN %@", labels.profile)
-        ).firstMatch
+        let profile = app.buttons["tab.account"]
         XCTAssertTrue(profile.waitForExistence(timeout: 15), "нет вкладки профиля")
         profile.tap()
         // CONTAINS, а не точное совпадение: в подпись кнопки склеивается ещё и

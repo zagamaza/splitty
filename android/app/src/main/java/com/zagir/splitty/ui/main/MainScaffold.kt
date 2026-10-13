@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,12 +20,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.WifiOff
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarDuration
@@ -60,6 +54,22 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextDecoration
 import com.zagir.splitty.R
 import com.zagir.splitty.core.network.NetworkMonitor
 import com.zagir.splitty.core.session.SessionStore
@@ -347,30 +357,17 @@ fun MainScaffold(
         bottomBar = {
             // Нижний бар — только на вкладках; на детальных экранах скрыт.
             if (currentRoute in MainRoutes.tabs) {
-                // «+» — обычный элемент ряда, а не пустая вкладка под оверлеем:
-                // для TalkBack это одно действие «Добавить расход».
-                NavigationBar(containerColor = colors.bg, tonalElevation = 0.dp) {
-                    LeftTabs.forEach { tab -> TabItem(tab, currentRoute, ::switchTab) }
-                    Box(
-                        modifier = Modifier.weight(1f).align(Alignment.CenterVertically),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AddExpenseButton(
-                            onClick = {
-                                haptics.tap()
-                                navController.navigate(MainRoutes.addExpense())
-                            },
-                        )
-                    }
-                    RightTabs.forEach { tab ->
-                        TabItem(
-                            tab,
-                            currentRoute,
-                            ::switchTab,
-                            badgeCount = if (tab.route == MainRoutes.ACTIVITY) unread else 0,
-                        )
-                    }
-                }
+                // Строка чека вместо Material NavigationBar: вкладки — текстом,
+                // «+» — обычный элемент ряда (для TalkBack одно действие).
+                ReceiptTabBar(
+                    currentRoute = currentRoute,
+                    unread = unread,
+                    onTab = ::switchTab,
+                    onAdd = {
+                        haptics.tap()
+                        navController.navigate(MainRoutes.addExpense())
+                    },
+                )
             }
         },
     ) { innerPadding ->
@@ -607,55 +604,118 @@ internal fun badgeLabel(count: Int, overflow: String): String? = when {
     else -> count.toString()
 }
 
+/**
+ * Нижняя строка чека вместо системной навигации (паритет iOS ReceiptTabBar):
+ * вкладки — текстом, как в референсе docs/design/receipt/receipt/groups.png;
+ * выбранная — точкой и плотным начертанием, остальные — подчёркнутыми
+ * ссылками. «+» — плоская печать цвета действия вровень со строкой. Не
+ * помещаются подписи (крупный шрифт, длинный язык) — строка переходит на значки.
+ */
 @Composable
-private fun RowScope.TabItem(
-    tab: TabSpec,
+private fun ReceiptTabBar(
     currentRoute: String?,
-    onClick: (String) -> Unit,
-    badgeCount: Int = 0,
+    unread: Int,
+    onTab: (String) -> Unit,
+    onAdd: () -> Unit,
 ) {
     val colors = Splitty.colors
     val haptics = rememberHaptics()
-    NavigationBarItem(
-        selected = currentRoute == tab.route,
-        onClick = {
-            // Лёгкий отклик на смену таба (порт iOS MainTabView Haptics.tap()).
-            if (currentRoute != tab.route) haptics.tap()
-            onClick(tab.route)
-        },
-        icon = {
-            val badgeText = badgeLabel(badgeCount, stringResource(R.string.notifications_badge_overflow))
-            if (badgeText != null) {
-                BadgedBox(badge = { Badge { Text(badgeText) } }) {
-                    Icon(tab.icon, contentDescription = null)
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val badge = badgeLabel(unread, stringResource(R.string.notifications_badge_overflow))
+    val tabs = LeftTabs + RightTabs
+    val labels = tabs.map { stringResource(it.labelRes) }
+    val style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.bg)
+            .windowInsetsPadding(WindowInsets.navigationBars),
+    ) {
+        HorizontalDivider(thickness = 1.dp, color = colors.hairline)
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
+            val textWidth = with(density) { labels.sumOf { measurer.measure(it, style).size.width }.toDp() }
+            // Подписи + «+» + точка выбранной + бейдж + минимальные зазоры.
+            val iconsOnly = textWidth + 44.dp + 10.dp + (if (badge != null) 24.dp else 0.dp) + 48.dp > maxWidth
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    if (index == LeftTabs.size) ReceiptAddButton(onAdd)
+                    ReceiptTab(
+                        label = labels[index],
+                        icon = tab.icon,
+                        selected = currentRoute == tab.route,
+                        iconsOnly = iconsOnly,
+                        badge = if (tab.route == MainRoutes.ACTIVITY) badge else null,
+                        onClick = {
+                            if (currentRoute != tab.route) haptics.tap()
+                            onTab(tab.route)
+                        },
+                    )
                 }
-            } else {
-                Icon(tab.icon, contentDescription = null)
             }
-        },
-        label = {
-            Text(text = stringResource(tab.labelRes), fontSize = 11.sp, maxLines = 1)
-        },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = colors.ink,
-            selectedTextColor = colors.ink,
-            unselectedIconColor = colors.inkSecondary,
-            unselectedTextColor = colors.inkSecondary,
-            indicatorColor = colors.ink.copy(alpha = 0.08f),
-        ),
-    )
+        }
+    }
 }
 
-/**
- * Центральное действие добавления расхода: прямоугольная печать цвета
- * действия в ряду таббара, без подъёма и цветной тени (порт iOS addExpenseButton).
- */
 @Composable
-private fun AddExpenseButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ReceiptTab(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    iconsOnly: Boolean,
+    badge: String?,
+    onClick: () -> Unit,
+) {
+    val colors = Splitty.colors
+    Row(
+        modifier = Modifier
+            .heightIn(min = 48.dp)
+            .semantics(mergeDescendants = true) { this.selected = selected }
+            .clickable(role = Role.Tab, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        if (iconsOnly) {
+            Icon(icon, contentDescription = label, tint = if (selected) colors.ink else colors.inkSecondary)
+        } else {
+            if (selected) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(colors.ink))
+            }
+            Text(
+                text = label,
+                color = colors.ink,
+                fontSize = 14.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                textDecoration = if (selected) null else TextDecoration.Underline,
+                maxLines = 1,
+            )
+        }
+        if (badge != null) {
+            Box(
+                modifier = Modifier
+                    .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(colors.accent)
+                    .padding(horizontal = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(badge, color = colors.onAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            }
+        }
+    }
+}
+
+/** «+» в строке: плоская печать цвета действия вровень с подписями. */
+@Composable
+private fun ReceiptAddButton(onClick: () -> Unit) {
     val colors = Splitty.colors
     Box(
-        modifier = modifier
-            .size(width = 56.dp, height = 40.dp)
+        modifier = Modifier
+            .size(width = 44.dp, height = 36.dp)
             .clip(RoundedCornerShape(3.dp))
             .background(colors.accent)
             .clickable(role = Role.Button, onClick = onClick),
@@ -665,7 +725,7 @@ private fun AddExpenseButton(onClick: () -> Unit, modifier: Modifier = Modifier)
             imageVector = Icons.Filled.Add,
             contentDescription = stringResource(R.string.tab_add),
             tint = colors.onAccent,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(22.dp),
         )
     }
 }

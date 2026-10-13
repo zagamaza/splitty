@@ -178,7 +178,7 @@ final class StoreShotsUITests: XCTestCase {
         login(app, email: env["SHOTS_EMAIL"] ?? "shots-ru@splitty.test",
               password: env["SHOTS_PASSWORD"] ?? "20260806")
 
-        let groups = app.tabBars.buttons[labels.tabGroups]
+        let groups = app.buttons["tab.groups"]
         XCTAssertTrue(groups.waitForExistence(timeout: 20), "нет таб-бара — вход не прошёл")
         groups.tap()
         XCTAssertTrue(app.staticTexts[labels.firstRoom].waitForExistence(timeout: 15),
@@ -232,7 +232,7 @@ final class StoreShotsUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         settle()
 
-        app.tabBars.buttons[labels.tabFriends].tap()
+        app.buttons["tab.friends"].tap()
         settle(); shoot(app, "friends")
 
         // Композер надиктовки — главный кадр витрины, и снимать его в покое
@@ -279,9 +279,9 @@ final class StoreShotsUITests: XCTestCase {
     /// Вход после перезапуска: сессия обычно переживает его, и тогда логиниться
     /// заново не надо — но полагаться на это нельзя.
     private func relogin(_ app: XCUIApplication, email: String, password: String) {
-        if app.tabBars.buttons[labels.tabGroups].waitForExistence(timeout: 12) { return }
+        if app.buttons["tab.groups"].waitForExistence(timeout: 12) { return }
         login(app, email: email, password: password)
-        XCTAssertTrue(app.tabBars.buttons[labels.tabGroups].waitForExistence(timeout: 20),
+        XCTAssertTrue(app.buttons["tab.groups"].waitForExistence(timeout: 20),
                       "после перезапуска вход не прошёл")
     }
 

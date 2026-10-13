@@ -45,7 +45,7 @@ final class ManualSharesAfterParseUITests: XCTestCase {
 
     func testParsedReceiptCanBeTurnedIntoEditableAmounts() throws {
         loginIfNeeded(app)
-        let tab = app.tabBars.buttons["Группы"]
+        let tab = app.buttons["tab.groups"]
         XCTAssertTrue(tab.waitForExistence(timeout: 10), "нет таб-бара — вход не прошёл")
         tab.tap()
         let room = app.staticTexts["Поездка в Стамбул"]
