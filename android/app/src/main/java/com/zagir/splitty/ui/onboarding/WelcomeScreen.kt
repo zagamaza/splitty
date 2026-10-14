@@ -9,7 +9,6 @@ import com.zagir.splitty.ui.components.ReceiptLabel
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.border
 import com.zagir.splitty.core.analytics.AnalyticsEvent
 import androidx.compose.animation.core.Animatable
@@ -213,15 +212,14 @@ private fun WelcomePage(titleRes: Int, bodyRes: Int, art: @Composable () -> Unit
                 color = colors.inkSecondary,
             )
         }
-        // Иллюстрация — лист чека, чуть повёрнутый, как положенный на стол.
-        // Высота ограничена: растянутый на весь экран лист пустел внутри.
+        // Иллюстрация — лист чека. Высота ограничена: растянутый на весь
+        // экран лист пустел внутри.
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
             ReceiptPaper(
                 modifier = Modifier
                     .padding(horizontal = 30.dp)
                     .padding(bottom = 6.dp)
-                    .heightIn(min = 280.dp, max = 430.dp)
-                    .rotate(-2f),
+                    .heightIn(min = 280.dp, max = 430.dp),
                 padding = 0.dp,
             ) {
                 Box(Modifier.fillMaxSize()) { art() }

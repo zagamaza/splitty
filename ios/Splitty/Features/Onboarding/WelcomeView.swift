@@ -190,12 +190,11 @@ private struct WelcomePage<Art: View>: View {
             .padding(.top, 18)
             .padding(.bottom, 20)
 
-            // Иллюстрация — лист чека, чуть повёрнутый, как положенный на стол.
-            // Высота ограничена: растянутый на весь экран лист пустел внутри.
+            // Иллюстрация — лист чека. Высота ограничена: растянутый на весь
+            // экран лист пустел внутри.
             art()
                 .frame(maxWidth: .infinity, minHeight: 280, maxHeight: 430)
                 .receiptPaper(padding: 0)
-                .rotationEffect(.degrees(-2))
                 .padding(.horizontal, 30)
                 .padding(.bottom, 6)
                 .frame(maxHeight: .infinity, alignment: .top)
