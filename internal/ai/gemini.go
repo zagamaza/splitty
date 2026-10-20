@@ -5,12 +5,16 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/rs/zerolog/log"
 )
 
 const defaultBaseURL = "https://generativelanguage.googleapis.com/v1beta"
@@ -28,23 +32,64 @@ type httpDoer interface {
 // Медиа передаётся как inline_data (base64) внутри JSON-тела, ответ
 // возвращается по responseSchema как JSON-черновик.
 type GeminiClient struct {
-	apiKey  string
-	model   string
-	baseURL string
-	http    httpDoer
+	apiKey    string
+	model     string
+	fallbacks []string
+	backoff   time.Duration
+	baseURL   string
+	http      httpDoer
+}
+
+// statusError — ответ Gemini не 200. Код нужен, чтобы отличить перегрузку
+// («high demand», 503/429) от отказа по сути запроса.
+type statusError struct {
+	code int
+	body string
+}
+
+func (e *statusError) Error() string {
+	return fmt.Sprintf("ai: Gemini вернул %d: %s", e.code, e.body)
+}
+
+// transient — сбой на стороне Google, который лечится повтором или другой
+// моделью. Отменённый клиентом запрос сюда не входит: ждать его уже некому.
+func transient(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	var se *statusError
+	if errors.As(err, &se) {
+		return se.code == http.StatusTooManyRequests || se.code >= 500
+	}
+	// Минутный таймаут уже съел всё терпение человека: повтор с тем же
+	// потолком только удвоит ожидание.
+	var ne net.Error
+	if errors.As(err, &ne) && ne.Timeout() {
+		return false
+	}
+	return true
 }
 
 // NewGemini создаёт клиент. Пустой apiKey допускается конструктором, но Parse
 // вернёт ошибку — вызывающий код обязан отключать фичу при пустом ключе.
-func NewGemini(apiKey, model string) *GeminiClient {
+// fallbacks — модели, к которым уходит запрос, когда основная перегружена.
+func NewGemini(apiKey, model string, fallbacks ...string) *GeminiClient {
 	if model == "" {
 		model = "gemini-3.1-flash-lite"
 	}
+	var fb []string
+	for _, m := range fallbacks {
+		if m = strings.TrimSpace(m); m != "" && m != model {
+			fb = append(fb, m)
+		}
+	}
 	return &GeminiClient{
-		apiKey:  apiKey,
-		model:   model,
-		baseURL: defaultBaseURL,
-		http:    &http.Client{Timeout: 60 * time.Second},
+		apiKey:    apiKey,
+		model:     model,
+		fallbacks: fb,
+		backoff:   time.Second,
+		baseURL:   defaultBaseURL,
+		http:      &http.Client{Timeout: 60 * time.Second},
 	}
 }
 
@@ -86,7 +131,7 @@ func (c *GeminiClient) Parse(ctx context.Context, in ParseInput) (ParseResult, e
 		return ParseResult{}, err
 	}
 
-	res, err := c.call(ctx, body)
+	res, err := c.callWithFallback(ctx, body)
 	if err != nil {
 		return ParseResult{}, err
 	}
@@ -132,10 +177,41 @@ func (c *GeminiClient) buildRequest(in ParseInput) ([]byte, error) {
 	return json.Marshal(req)
 }
 
-func (c *GeminiClient) call(ctx context.Context, body []byte) (geminiResponse, error) {
+// callWithFallback: основная модель — попытка и один повтор после паузы,
+// затем по одной попытке на каждую запасную. Перегрузка у Google длится
+// минутами, а человек ждёт у микрофона, поэтому повторов немного.
+func (c *GeminiClient) callWithFallback(ctx context.Context, body []byte) (geminiResponse, error) {
+	attempts := []string{c.model, c.model}
+	attempts = append(attempts, c.fallbacks...)
+	var err error
+	for i, model := range attempts {
+		if i == 1 {
+			select {
+			case <-ctx.Done():
+				return geminiResponse{}, err
+			case <-time.After(c.backoff):
+			}
+		}
+		var res geminiResponse
+		res, err = c.call(ctx, model, body)
+		if err == nil {
+			if i > 0 {
+				log.Warn().Str("model", model).Int("attempt", i+1).Msg("ai: Gemini ответил после повтора")
+			}
+			return res, nil
+		}
+		if !transient(ctx, err) {
+			return geminiResponse{}, err
+		}
+		log.Warn().Err(err).Str("model", model).Int("attempt", i+1).Msg("ai: Gemini недоступен, пробую дальше")
+	}
+	return geminiResponse{}, err
+}
+
+func (c *GeminiClient) call(ctx context.Context, model string, body []byte) (geminiResponse, error) {
 	// ключ передаём заголовком x-goog-api-key, а не query-параметром, чтобы он
 	// не утёк в логи вместе с URL при сетевых/HTTP-ошибках
-	url := fmt.Sprintf("%s/models/%s:generateContent", c.baseURL, c.model)
+	url := fmt.Sprintf("%s/models/%s:generateContent", c.baseURL, model)
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return geminiResponse{}, err
@@ -157,7 +233,7 @@ func (c *GeminiClient) call(ctx context.Context, body []byte) (geminiResponse, e
 		return geminiResponse{}, fmt.Errorf("ai: чтение ответа Gemini: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return geminiResponse{}, fmt.Errorf("ai: Gemini вернул %d: %s", resp.StatusCode, truncate(string(raw), 300))
+		return geminiResponse{}, &statusError{code: resp.StatusCode, body: truncate(string(raw), 300)}
 	}
 
 	var gr geminiResponse

@@ -109,14 +109,80 @@ func TestGemini_InvalidJSONNotRetried(t *testing.T) {
 	}
 }
 
-func TestGemini_HTTPErrorNotRetried(t *testing.T) {
-	f := &fakeDoer{responses: []fakeResp{{status: 500, body: `{"error":"boom"}`}}}
+func TestGemini_ClientErrorNotRetried(t *testing.T) {
+	f := &fakeDoer{responses: []fakeResp{{status: 400, body: `{"error":"bad"}`}}}
 	c := newTestClient(f)
+	c.fallbacks = []string{"gemini-reserve"}
 	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err == nil {
-		t.Fatal("ожидалась ошибка на HTTP 500")
+		t.Fatal("ожидалась ошибка на HTTP 400")
 	}
 	if f.calls != 1 {
-		t.Fatalf("HTTP-ошибка не должна ретраиться; вызовов %d", f.calls)
+		t.Fatalf("отказ по сути запроса не должен повторяться; вызовов %d", f.calls)
+	}
+}
+
+func TestGemini_OverloadRetriedThenSucceeds(t *testing.T) {
+	draft := `{"draft":{"description":"кофе","sum":300},"questions":[]}`
+	f := &fakeDoer{responses: []fakeResp{
+		{status: 503, body: `{"error":{"status":"UNAVAILABLE"}}`},
+		{status: 200, body: candidate(draft)},
+	}}
+	c := newTestClient(f)
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err != nil {
+		t.Fatalf("повтор после 503 должен был пройти: %v", err)
+	}
+	if f.calls != 2 || !strings.Contains(f.lastURL, "/models/gemini-2.0-flash:") {
+		t.Fatalf("ожидался повтор той же модели; вызовов %d, url %s", f.calls, f.lastURL)
+	}
+}
+
+func TestGemini_OverloadFallsBackToReserveModel(t *testing.T) {
+	draft := `{"draft":{"description":"кофе","sum":300},"questions":[]}`
+	f := &fakeDoer{responses: []fakeResp{
+		{status: 503, body: `{}`},
+		{status: 429, body: `{}`},
+		{status: 200, body: candidate(draft)},
+	}}
+	c := newTestClient(f)
+	c.fallbacks = []string{"gemini-reserve"}
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err != nil {
+		t.Fatalf("запасная модель должна была ответить: %v", err)
+	}
+	if f.calls != 3 || !strings.Contains(f.lastURL, "/models/gemini-reserve:") {
+		t.Fatalf("ожидался переход на запасную модель; вызовов %d, url %s", f.calls, f.lastURL)
+	}
+}
+
+func TestGemini_OverloadEverywhereReturnsError(t *testing.T) {
+	f := &fakeDoer{responses: []fakeResp{{status: 503}, {status: 503}, {status: 503}}}
+	c := newTestClient(f)
+	c.fallbacks = []string{"gemini-reserve"}
+	if _, err := c.Parse(context.Background(), ParseInput{Text: "тест"}); err == nil {
+		t.Fatal("ожидалась ошибка, когда перегружены все модели")
+	}
+	if f.calls != 3 {
+		t.Fatalf("ожидалось 3 попытки, было %d", f.calls)
+	}
+}
+
+func TestGemini_CanceledRequestNotRetried(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	f := &fakeDoer{responses: []fakeResp{{err: context.Canceled}}}
+	c := newTestClient(f)
+	c.fallbacks = []string{"gemini-reserve"}
+	if _, err := c.Parse(ctx, ParseInput{Text: "тест"}); err == nil {
+		t.Fatal("ожидалась ошибка отменённого запроса")
+	}
+	if f.calls != 1 {
+		t.Fatalf("отменённый запрос повторять некому; вызовов %d", f.calls)
+	}
+}
+
+func TestNewGemini_DropsEmptyAndDuplicateFallbacks(t *testing.T) {
+	c := NewGemini("k", "main", " ", "main", "reserve")
+	if len(c.fallbacks) != 1 || c.fallbacks[0] != "reserve" {
+		t.Fatalf("запасные модели: %v", c.fallbacks)
 	}
 }
 
