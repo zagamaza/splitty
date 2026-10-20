@@ -124,11 +124,11 @@ type config struct {
 	// AI-распознавание расхода (голос/фото чека). Пустой ключ отключает фичу
 	// (эндпоинт /parse вернёт 503), остальной сервер работает как раньше.
 	GeminiApiKey string `env:"GEMINI_API_KEY" envDefault:""`
-	GeminiModel  string `env:"GEMINI_MODEL" envDefault:"gemini-3.1-flash-lite"`
+	GeminiModel  string `env:"GEMINI_MODEL" envDefault:"gemini-3.5-flash-lite"`
 	// GeminiFallbackModels — куда уходит разбор, когда основная модель отвечает
 	// 503 «high demand» или 429: перегрузка у Google бывает часами. Только
 	// lite-модели: полноразмерные дороже в разы, а разбор с ними справляется.
-	GeminiFallbackModels []string `env:"GEMINI_FALLBACK_MODELS" envSeparator:"," envDefault:"gemini-2.5-flash-lite"`
+	GeminiFallbackModels []string `env:"GEMINI_FALLBACK_MODELS" envSeparator:"," envDefault:"gemini-3.1-flash-lite,gemini-2.5-flash-lite"`
 	// AiFakeParser — предсказуемый разбор «текст → чек из одной позиции» для
 	// сквозных UI-прогонов. Только вместе с API_DEV_AUTH: подставной разбор на
 	// проде раздавал бы людям выдуманные черновики, и старт это запрещает.

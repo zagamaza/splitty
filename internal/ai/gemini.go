@@ -75,7 +75,7 @@ func transient(ctx context.Context, err error) bool {
 // fallbacks — модели, к которым уходит запрос, когда основная перегружена.
 func NewGemini(apiKey, model string, fallbacks ...string) *GeminiClient {
 	if model == "" {
-		model = "gemini-3.1-flash-lite"
+		model = "gemini-3.5-flash-lite"
 	}
 	var fb []string
 	for _, m := range fallbacks {
